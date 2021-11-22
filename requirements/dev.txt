@@ -1,0 +1,8 @@
+-r prod.txt
+
+# Testing
+pytest==6.2.5
+
+# Lint and code style
+black==21.11b1
+isort==5.10.1
