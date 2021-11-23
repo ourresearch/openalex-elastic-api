@@ -4,7 +4,6 @@ from apispec_webframeworks.flask import FlaskPlugin
 
 from works.schemas import WorksSchema
 
-
 spec = APISpec(
     title="OpenAlex works API",
     version="1.0.0",

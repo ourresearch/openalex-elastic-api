@@ -1,5 +1,5 @@
-from collections import OrderedDict
 import json
+from collections import OrderedDict
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
