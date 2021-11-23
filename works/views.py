@@ -1,10 +1,12 @@
 from collections import OrderedDict
+import json
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
-from flask import Blueprint, abort, request
+from flask import Blueprint, abort, render_template, request
 
 import settings
+from works.api_spec import spec
 from works.search import filter_records, group_by_records, search_records
 from works.utils import map_query_params
 
@@ -79,3 +81,13 @@ def index():
     result["results"] = [item.to_dict() for item in response]
 
     return result
+
+
+@blueprint.route("/openapi_json")
+def openapi_json():
+    return json.dumps(spec.to_dict(), indent=2)
+
+
+@blueprint.route("/docs")
+def docs():
+    return render_template("redoc.html")
