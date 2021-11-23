@@ -16,6 +16,17 @@ blueprint = Blueprint("works", __name__, static_folder="../static")
 
 @blueprint.route("/")
 def index():
+    """
+    ---
+    get:
+      description: Search and filter works
+      responses:
+        200:
+          description: Return works
+          content:
+            application/json:
+              schema: WorksSchema
+    """
     details = request.args.get("details")
     filters = map_query_params(request.args.get("filter"))
     group_by = request.args.get("group_by")
