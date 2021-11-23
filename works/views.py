@@ -7,6 +7,7 @@ from flask import Blueprint, abort, render_template, request
 
 import settings
 from works.api_spec import spec
+from works.schemas import WorksSchema
 from works.search import filter_records, group_by_records, search_records
 from works.utils import map_query_params
 
@@ -77,9 +78,8 @@ def index():
             key=lambda item: item["key"],
             reverse=True,
         )
-
-    result["results"] = [item.to_dict() for item in response]
-
+    works_schema = WorksSchema(many=True)
+    result["results"] = works_schema.dump(response)
     return result
 
 
