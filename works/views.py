@@ -2,10 +2,11 @@ from collections import OrderedDict
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
-from flask import abort, Blueprint, request
+from flask import Blueprint, abort, request
+
 import settings
-from works.utils import map_query_params
 from works.search import filter_records, group_by_records, search_records
+from works.utils import map_query_params
 
 blueprint = Blueprint("works", __name__, static_folder="../static")
 
@@ -13,9 +14,9 @@ blueprint = Blueprint("works", __name__, static_folder="../static")
 @blueprint.route("/")
 def index():
     details = request.args.get("details")
-    filters = map_query_params(request.args.get('filter'))
+    filters = map_query_params(request.args.get("filter"))
     group_by = request.args.get("group_by")
-    search_params = map_query_params(request.args.get('search'))
+    search_params = map_query_params(request.args.get("search"))
 
     if details == "true":
         s = Search(using=Elasticsearch(settings.ES_URL), index="works-*").params(
@@ -35,7 +36,8 @@ def index():
         and "year" in filters
         and (group_by == "author_id" or group_by == "issn")
         and ("<" in filters["year"] or ">" in filters["year"])
-        and len(filters) == 1 and not search_params
+        and len(filters) == 1
+        and not search_params
     ):
         # do not allow query like /?year>2000&group_by=author_id
         abort(404, description="Not allowed")

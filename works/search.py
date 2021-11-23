@@ -1,5 +1,5 @@
 from elasticsearch_dsl import A, Q
-from elasticsearch_dsl.aggs import Terms, Nested
+from elasticsearch_dsl.aggs import Nested, Terms
 
 
 def filter_records(filters, s):
@@ -35,7 +35,10 @@ def search_records(search_params, s):
         s = s.query(
             "nested",
             path="affiliations",
-            query=Q("match_phrase", affiliations__author_display_name=search_params["author"]),
+            query=Q(
+                "match_phrase",
+                affiliations__author_display_name=search_params["author"],
+            ),
         )
     if search_params and "journal_title" in search_params:
         s = s.query("match", journal__title=search_params["journal_title"])
