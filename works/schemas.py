@@ -1,4 +1,4 @@
-from marshmallow import INCLUDE, Schema, fields
+from marshmallow import INCLUDE, Schema, fields, validate
 
 
 class AffiliationsSchema(Schema):
@@ -82,3 +82,23 @@ class WorksSchema(Schema):
 
     class Meta:
         ordered = True
+
+
+class WorksQuerySchema(Schema):
+    filter = fields.Str(
+        description="List of filters",
+        validate=validate.Length(min=2, max=40),
+        required=False,
+    )
+    search = fields.List(
+        fields.Dict(keys=fields.Str, values=fields.Str),
+        description="Search by keywords",
+        validate=validate.Length(min=2, max=40),
+        required=False,
+    )
+    query = fields.Str(
+        description="General query to search by work title, journal title, and author.",
+        validate=validate.Length(min=5),
+        required=False,
+    )
+    details = fields.Bool(description="Display records. Default is 10.")

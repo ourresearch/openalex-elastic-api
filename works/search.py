@@ -3,6 +3,8 @@ from elasticsearch_dsl.aggs import Nested, Terms
 
 
 def filter_records(filters, s):
+    if filters and "id" in filters:
+        s = s.filter("term", paper_id=filters["id"])
     if filters and "author_id" in filters:
         s = s.filter(
             "nested",

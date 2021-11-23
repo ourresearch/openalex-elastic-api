@@ -11,7 +11,7 @@ from works.schemas import WorksSchema
 from works.search import filter_records, group_by_records, search_records
 from works.utils import map_query_params
 
-blueprint = Blueprint("works", __name__, static_folder="../static")
+blueprint = Blueprint("works", __name__)
 
 
 @blueprint.route("/")
@@ -20,6 +20,9 @@ def index():
     ---
     get:
       description: Search and filter works
+      parameters:
+      - in: query
+        schema: WorksQuerySchema
       responses:
         200:
           description: Return works
