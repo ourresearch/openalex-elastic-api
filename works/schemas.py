@@ -1,4 +1,5 @@
 from marshmallow import INCLUDE, Schema, fields, validate
+from marshmallow.validate import OneOf
 
 
 class AffiliationsSchema(Schema):
@@ -85,7 +86,8 @@ class WorksSchema(Schema):
 
 
 class WorksQuerySchema(Schema):
-    filter = fields.Str(
+    filter = fields.List(
+        fields.Dict(keys=fields.Str, values=fields.Str),
         description="List of filters",
         validate=validate.Length(min=2, max=40),
         required=False,
@@ -96,9 +98,9 @@ class WorksQuerySchema(Schema):
         validate=validate.Length(min=2, max=40),
         required=False,
     )
-    query = fields.Str(
-        description="General query to search by work title, journal title, and author.",
-        validate=validate.Length(min=5),
-        required=False,
-    )
     details = fields.Bool(description="Display records. Default is 10.")
+    sort = fields.Str(validate=OneOf(["asc", "desc"]))
+    page = fields.Int()
+
+    class Meta:
+        ordered = True
