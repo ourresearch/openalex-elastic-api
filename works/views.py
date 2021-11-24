@@ -23,6 +23,25 @@ def index():
       parameters:
       - in: query
         schema: WorksQuerySchema
+      - in: query
+        name: filter
+        style: deepObject
+        explode: false
+        schema:
+          type: object
+          description: Use pagination when retrieving results from the API.
+          properties:
+            year:
+              type: int
+              description: filter by year
+              example: asdf
+            ror_id:
+              type: string
+              description: filter by ROR ID
+          example:
+            year: 2020
+            ror_id: 23429wf
+
       responses:
         200:
           description: Return works

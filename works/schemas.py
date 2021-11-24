@@ -86,7 +86,7 @@ class WorksSchema(Schema):
 
 
 class WorksQuerySchema(Schema):
-    filter = fields.List(
+    filter_old = fields.List(
         fields.Dict(keys=fields.Str, values=fields.Str),
         description="List of filters in format filter=year:2020,issn:9982-2342",
         validate=validate.Length(min=2, max=40),
