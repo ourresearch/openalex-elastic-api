@@ -29,18 +29,14 @@ def index():
         explode: false
         schema:
           type: object
-          description: Use pagination when retrieving results from the API.
+          description: Filter works in format ?filter=year:2020.
           properties:
             year:
               type: int
               description: filter by year
-              example: asdf
             ror_id:
               type: string
               description: filter by ROR ID
-          example:
-            year: 2020
-            ror_id: 23429wf
 
       responses:
         200:

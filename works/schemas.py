@@ -86,18 +86,6 @@ class WorksSchema(Schema):
 
 
 class WorksQuerySchema(Schema):
-    filter_old = fields.List(
-        fields.Dict(keys=fields.Str, values=fields.Str),
-        description="List of filters in format filter=year:2020,issn:9982-2342",
-        validate=validate.Length(min=2, max=40),
-        required=False,
-    )
-    search = fields.List(
-        fields.Dict(keys=fields.Str, values=fields.Str),
-        description="List of search options in format search=author_name:greg jones",
-        validate=validate.Length(min=2, max=40),
-        required=False,
-    )
     details = fields.Bool(description="Display detailed records. Default is 10.")
     sort = fields.Str(validate=OneOf(["asc", "desc"]))
     page = fields.Int()
