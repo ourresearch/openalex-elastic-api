@@ -86,7 +86,12 @@ class WorksSchema(Schema):
 
 
 class WorksQuerySchema(Schema):
-    details = fields.Bool(description="Display detailed records. Default is 10.")
+    group_by = fields.Str(
+        validate=OneOf(["author_id", "year"]), description="Group by a field."
+    )
+    details = fields.Bool(
+        description="Display detailed list of works. Default number of records returned is 10."
+    )
     sort = fields.Str(validate=OneOf(["asc", "desc"]))
     page = fields.Int()
 

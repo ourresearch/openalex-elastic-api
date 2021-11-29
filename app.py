@@ -21,3 +21,4 @@ def register_blueprints(app):
 def register_extensions(app):
     with app.test_request_context():
         spec.path(view=works.views.index)
+        spec.path(view=works.views.detail)
