@@ -27,7 +27,7 @@ def index():
         explode: false
         schema:
           type: object
-          description: Filter works with a list of filters in format /?filter=year:2020,ror_id=03vek6s52
+          description: Filter works with a list of filters in format works/?filter=year:2020,ror_id=03vek6s52
           properties:
             issn:
               type: string
@@ -45,7 +45,7 @@ def index():
         explode: false
         schema:
           type: object
-          description: Search works in format /?search=title:covid-19,publisher:elsevier
+          description: Search works in format works/?search=title:covid-19,publisher:elsevier
           properties:
             author:
               type: string
@@ -73,16 +73,10 @@ def index():
     group_by = request.args.get("group_by")
     search_params = map_query_params(request.args.get("search"))
 
-    if details == "true":
-        s = Search(using=Elasticsearch(settings.ES_URL), index="works-*").params(
-            request_timeout=30
-        )
-    else:
-        s = (
-            Search(using=Elasticsearch(settings.ES_URL), index="works-*")
-            .params(request_timeout=30)
-            .extra(from_=0, size=0)
-        )
+    s = Search(index="works-*")
+
+    if details != "true":
+        s = s.extra(size=0)
 
     # guard rails
     if (
