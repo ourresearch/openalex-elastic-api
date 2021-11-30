@@ -16,27 +16,39 @@ class User(HttpUser):
     @task
     def random_query(self):
         year_query = (
-            f"year={random.choice(GREATER_LESS_THAN)}{str(random.choice(YEARS))}"
-        )
-        group_by = random.choice(
-            [f"group_by=issn", "group_by=year", "group_by=author_id"]
+            f"year:{random.choice(GREATER_LESS_THAN)}{str(random.choice(YEARS))}"
         )
 
         title = f"{random.choice(WORDS).decode('utf-8')}"
-        title_query = f"title={str(title)}"
+        title_query = f"title:{str(title)}"
 
         name = random.choice([names.get_full_name(), names.get_last_name()])
-        name_query = f"author_name={name}"
+        name_query = f"author:{name}"
 
         publisher = random.choice(PUBLISHERS)
-        publisher_query = f"publisher={publisher}"
+        publisher_query = f"publisher:{publisher}"
 
-        options = range(1, 6)
-        query_options = [year_query, group_by, title_query, name_query, publisher_query]
-        queries = random.sample(query_options, random.choice(options))
+        filter_query_options = random.sample([year_query], random.choice(range(0, 2)))
+        search_query_options = random.sample(
+            [title_query, name_query, publisher_query], random.choice(range(0, 4))
+        )
 
-        queries_combined = "&".join(queries)
-        self.client.get(f"/?{queries_combined}")
+        filters_combined = ",".join(filter_query_options)
+        filters_query = f"filter={filters_combined}"
+        search_combined = ",".join(search_query_options)
+        search_query = f"search={search_combined}"
+        group_by = random.choice(
+            [f"group_by=issn", "group_by=year", "group_by=author_id"]
+        )
+        details = random.choice([f"details=true", "details=false"])
+
+        combined_sample = random.sample(
+            [filters_query, search_query, group_by, details],
+            random.choice(range(1, 5)),
+        )
+        combined_query = "&".join(combined_sample)
+
+        self.client.get(f"/works?{combined_query}")
 
     # @task(1)
     # def search_by_title(self):
