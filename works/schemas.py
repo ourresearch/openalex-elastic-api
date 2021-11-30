@@ -7,6 +7,10 @@ class MetaSchema(Schema):
     response_time = fields.Str()
     page = fields.Int()
     per_page = fields.Int()
+    query = fields.Dict()
+
+    class Meta:
+        ordered = True
 
 
 class AffiliationsSchema(Schema):
@@ -116,7 +120,6 @@ class WorksQuerySchema(Schema):
     details = fields.Bool(
         description="Display detailed list of works. Default number of records returned is 10."
     )
-    sort = fields.Str(validate=OneOf(["asc", "desc"]))
     page = fields.Int(missing=1)
     per_page = fields.Int(missing=10)
     group_by_size = fields.Int(missing=50)

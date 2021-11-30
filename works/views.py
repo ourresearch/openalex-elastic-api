@@ -122,6 +122,7 @@ def index():
         "response_time": response.took,
         "page": page,
         "per_page": per_page,
+        "query": s.to_dict(),
     }
 
     if group_by == "author_id":
