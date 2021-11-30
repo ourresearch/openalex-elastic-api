@@ -3,13 +3,15 @@ from collections import OrderedDict
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
-from flask import Blueprint, abort, render_template, request
+from flask import (Blueprint, abort, current_app, jsonify, render_template,
+                   request)
 
 import settings
 from works.api_spec import spec
+from works.exceptions import APIError
 from works.schemas import GroupBySchema, WorksSchema
 from works.search import filter_records, group_by_records, search_records
-from works.utils import map_query_params
+from works.utils import map_query_params, validate_per_page
 
 blueprint = Blueprint("works", __name__)
 
@@ -71,9 +73,11 @@ def index():
     details = request.args.get("details")
     filters = map_query_params(request.args.get("filter"))
     group_by = request.args.get("group_by")
+    page = request.args.get("page", 1, type=int)
+    per_page = validate_per_page(request.args.get("per-page", 10, type=int))
     search_params = map_query_params(request.args.get("search"))
 
-    s = Search(index="works-*")
+    s = Search(index="works-*").extra(size=per_page)
 
     if details != "true":
         s = s.extra(size=0)
@@ -100,10 +104,19 @@ def index():
     # group by
     s = group_by_records(group_by, s)
 
-    response = s.execute()
+    start = 0 if page == 1 else (per_page * page) - per_page + 1
+    end = per_page * page
+    response = s[start:end].execute()
 
     result = OrderedDict()
-    result["meta"] = {"hits": s.count(), "response_time": response.took}
+    result["meta"] = {
+        "count": s.count(),
+        "response_time": response.took,
+        "page": page,
+        "per_page": per_page,
+        "from": start,
+        "to": end,
+    }
 
     group_by_schema = GroupBySchema(many=True)
     if group_by == "author_id":
@@ -155,3 +168,14 @@ def openapi_json():
 @blueprint.route("/docs")
 def docs():
     return render_template("redoc.html")
+
+
+@blueprint.errorhandler(APIError)
+def handle_exception(err):
+    """Return custom JSON when APIError or its children are raised"""
+    response = {"error": err.description, "message": ""}
+    if len(err.args) > 0:
+        response["message"] = err.args[0]
+    # Add some logging so that we can monitor different types of errors
+    current_app.logger.error("{}: {}".format(err.description, response["message"]))
+    return jsonify(response), err.code
