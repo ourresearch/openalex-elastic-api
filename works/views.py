@@ -73,13 +73,16 @@ def index():
     details = request.args.get("details")
     filters = map_query_params(request.args.get("filter"))
     group_by = request.args.get("group_by")
+    group_by_size = request.args.get("group-by-size", 50, type=int)
     page = request.args.get("page", 1, type=int)
     per_page = validate_per_page(request.args.get("per-page", 10, type=int))
     search_params = map_query_params(request.args.get("search"))
 
-    s = Search(index="works-*").extra(size=per_page)
+    s = Search(index="works-*")
 
-    if details != "true":
+    if details == "true" and not group_by:
+        s = s.extra(size=per_page)
+    else:
         s = s.extra(size=0)
 
     # guard rails
@@ -102,12 +105,16 @@ def index():
     s = search_records(search_params, s)
 
     # group by
-    s = group_by_records(group_by, s)
+    s = group_by_records(group_by, s, group_by_size)
 
     # pagination
     start = 0 if page == 1 else (per_page * page) - per_page + 1
     end = per_page * page
-    response = s[start:end].execute()
+
+    if details == "true" and not group_by:
+        response = s[start:end].execute()
+    else:
+        response = s.execute()
 
     result = OrderedDict()
     result["meta"] = {

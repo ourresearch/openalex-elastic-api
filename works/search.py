@@ -57,13 +57,13 @@ def search_records(search_params, s):
     return s
 
 
-def group_by_records(group_by, s):
+def group_by_records(group_by, s, group_by_size):
     if group_by and group_by == "year":
-        a = A("terms", field="year", order={"_term": "desc"})
+        a = A("terms", field="year", order={"_term": "desc"}, size=group_by_size)
         s.aggs.bucket("groupby", a)
 
     if group_by and group_by == "issn":
-        a = A("terms", field="journal.all_issns")
+        a = A("terms", field="journal.all_issns", size=group_by_size)
         s.aggs.bucket("groupby", a)
 
     if group_by and group_by == "author_id":
