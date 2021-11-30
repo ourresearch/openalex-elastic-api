@@ -1,5 +1,12 @@
-from marshmallow import INCLUDE, Schema, fields, validate
+from marshmallow import INCLUDE, Schema, fields
 from marshmallow.validate import OneOf
+
+
+class MetaSchema(Schema):
+    count = fields.Int()
+    response_time = fields.Str()
+    page = fields.Int()
+    per_page = fields.Int()
 
 
 class AffiliationsSchema(Schema):
@@ -93,6 +100,15 @@ class GroupBySchema(Schema):
         ordered = True
 
 
+class MessageSchema(Schema):
+    meta = fields.Nested(MetaSchema)
+    details = fields.Nested(WorksSchema, many=True)
+    group_by = fields.Nested(GroupBySchema, many=True)
+
+    class Meta:
+        ordered = True
+
+
 class WorksQuerySchema(Schema):
     group_by = fields.Str(
         validate=OneOf(["author_id", "year"]), description="Group by a field."
@@ -101,7 +117,8 @@ class WorksQuerySchema(Schema):
         description="Display detailed list of works. Default number of records returned is 10."
     )
     sort = fields.Str(validate=OneOf(["asc", "desc"]))
-    page = fields.Int()
+    page = fields.Int(missing=1)
+    per_page = fields.Int(missing=10)
 
     class Meta:
         ordered = True

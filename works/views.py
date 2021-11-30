@@ -9,7 +9,7 @@ from flask import (Blueprint, abort, current_app, jsonify, render_template,
 import settings
 from works.api_spec import spec
 from works.exceptions import APIError
-from works.schemas import GroupBySchema, WorksSchema
+from works.schemas import GroupBySchema, MessageSchema, WorksSchema
 from works.search import filter_records, group_by_records, search_records
 from works.utils import map_query_params, validate_per_page
 
@@ -68,7 +68,7 @@ def index():
           description: Return works
           content:
             application/json:
-              schema: WorksSchema
+              schema: MessageSchema
     """
     details = request.args.get("details")
     filters = map_query_params(request.args.get("filter"))
@@ -104,6 +104,7 @@ def index():
     # group by
     s = group_by_records(group_by, s)
 
+    # pagination
     start = 0 if page == 1 else (per_page * page) - per_page + 1
     end = per_page * page
     response = s[start:end].execute()
@@ -114,22 +115,19 @@ def index():
         "response_time": response.took,
         "page": page,
         "per_page": per_page,
-        "from": start,
-        "to": end,
     }
 
-    group_by_schema = GroupBySchema(many=True)
     if group_by == "author_id":
-        result["group_by"] = group_by_schema.dump(
-            response.aggregations.affiliations.groupby.buckets
-        )
+        result["group_by"] = response.aggregations.affiliations.groupby.buckets
     elif group_by == "issn":
-        result["group_by"] = group_by_schema.dump(response.aggregations.groupby.buckets)
+        result["group_by"] = response.aggregations.groupby.buckets
     elif group_by:
-        result["group_by"] = group_by_schema.dump(response.aggregations.groupby.buckets)
-    works_schema = WorksSchema(many=True)
-    result["results"] = works_schema.dump(response)
-    return result
+        result["group_by"] = response.aggregations.groupby.buckets
+    else:
+        result["group_by"] = []
+    result["details"] = response
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
 
 
 @blueprint.route("/work/<work_id>")
