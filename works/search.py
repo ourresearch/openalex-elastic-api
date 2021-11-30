@@ -39,11 +39,17 @@ def search_records(search_params, s):
             path="affiliations",
             query=Q(
                 "match_phrase",
-                affiliations__author_display_name=search_params["author"],
+                affiliations__author_display_name={
+                    "query": search_params["author"],
+                    "slop": 1,
+                },
             ),
         )
     if search_params and "journal_title" in search_params:
-        s = s.query("match", journal__title=search_params["journal_title"])
+        s = s.query(
+            "match_phrase",
+            journal__title={"query": search_params["journal_title"], "slop": 1},
+        )
     if search_params and "publisher" in search_params:
         s = s.query("match", journal__publisher=search_params["publisher"])
     if search_params and "title" in search_params:
