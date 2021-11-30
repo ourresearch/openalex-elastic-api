@@ -53,7 +53,7 @@ def search_records(search_params, s):
 
 def group_by_records(group_by, s):
     if group_by and group_by == "year":
-        a = A("terms", field="year")
+        a = A("terms", field="year", order={"_term": "desc"})
         s.aggs.bucket("groupby", a)
 
     if group_by and group_by == "issn":

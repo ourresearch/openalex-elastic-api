@@ -85,6 +85,14 @@ class WorksSchema(Schema):
         ordered = True
 
 
+class GroupBySchema(Schema):
+    key = fields.Str()
+    count = fields.Int(attribute="doc_count")
+
+    class Meta:
+        ordered = True
+
+
 class WorksQuerySchema(Schema):
     group_by = fields.Str(
         validate=OneOf(["author_id", "year"]), description="Group by a field."

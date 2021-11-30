@@ -7,7 +7,7 @@ from flask import Blueprint, abort, render_template, request
 
 import settings
 from works.api_spec import spec
-from works.schemas import WorksSchema
+from works.schemas import GroupBySchema, WorksSchema
 from works.search import filter_records, group_by_records, search_records
 from works.utils import map_query_params
 
@@ -105,25 +105,15 @@ def index():
     result = OrderedDict()
     result["meta"] = {"hits": s.count(), "response_time": response.took}
 
+    group_by_schema = GroupBySchema(many=True)
     if group_by == "author_id":
-        result["group_by"] = sorted(
-            [
-                item.to_dict()
-                for item in response.aggregations.affiliations.groupby.buckets
-            ],
-            key=lambda item: item["key"],
+        result["group_by"] = group_by_schema.dump(
+            response.aggregations.affiliations.groupby.buckets
         )
     elif group_by == "issn":
-        result["group_by"] = sorted(
-            [item.to_dict() for item in response.aggregations.groupby.buckets],
-            key=lambda item: item["key"],
-        )
+        result["group_by"] = group_by_schema.dump(response.aggregations.groupby.buckets)
     elif group_by:
-        result["group_by"] = sorted(
-            [item.to_dict() for item in response.aggregations.groupby.buckets],
-            key=lambda item: item["key"],
-            reverse=True,
-        )
+        result["group_by"] = group_by_schema.dump(response.aggregations.groupby.buckets)
     works_schema = WorksSchema(many=True)
     result["results"] = works_schema.dump(response)
     return result
