@@ -125,7 +125,7 @@ def index():
         "query": s.to_dict(),
     }
 
-    if group_by == "author_id":
+    if group_by == "author_id" or group_by == "country":
         result["group_by"] = response.aggregations.affiliations.groupby.buckets
     elif group_by == "issn":
         result["group_by"] = response.aggregations.groupby.buckets

@@ -115,7 +115,8 @@ class MessageSchema(Schema):
 
 class WorksQuerySchema(Schema):
     group_by = fields.Str(
-        validate=OneOf(["author_id", "issn", "year"]), description="Group by a field."
+        validate=OneOf(["author_id", "country", "issn", "open_access", "year"]),
+        description="Group by a field.",
     )
     details = fields.Bool(
         description="Display detailed list of works. Default number of records returned is 10."
