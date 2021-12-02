@@ -109,6 +109,9 @@ def works():
         # do not allow query like /?year>2000&group_by=author_id
         abort(404, description="Not allowed")
 
+    if not filters and not search_params and group_by == "author_id":
+        abort(404, description="Not allowed")
+
     # filter
     s = filter_records(filters, s)
 
