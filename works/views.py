@@ -9,15 +9,26 @@ from flask import (Blueprint, abort, current_app, jsonify, render_template,
 import settings
 from works.api_spec import spec
 from works.exceptions import APIError
-from works.schemas import GroupBySchema, MessageSchema, WorksSchema
+from works.schemas import MessageSchema, WorksSchema
 from works.search import filter_records, group_by_records, search_records
 from works.utils import map_query_params, validate_per_page
 
 blueprint = Blueprint("works", __name__)
 
 
-@blueprint.route("/works")
+@blueprint.route("/")
 def index():
+    return jsonify(
+        {
+            "version": "0.1",
+            "documentation_url": "/docs",
+            "msg": "Don't panic",
+        }
+    )
+
+
+@blueprint.route("/works")
+def works():
     """
     ---
     get:
@@ -78,7 +89,7 @@ def index():
     per_page = validate_per_page(request.args.get("per-page", 10, type=int))
     search_params = map_query_params(request.args.get("search"))
 
-    s = Search(index="works-*")
+    s = Search(index="works-master")
 
     if details == "true" and not group_by:
         s = s.extra(size=per_page)
@@ -125,7 +136,7 @@ def index():
         "query": s.to_dict(),
     }
 
-    if group_by == "author_id" or group_by == "country":
+    if group_by == "country":
         result["group_by"] = response.aggregations.affiliations.groupby.buckets
     elif group_by == "issn":
         result["group_by"] = response.aggregations.groupby.buckets
