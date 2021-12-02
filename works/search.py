@@ -59,8 +59,9 @@ def search_records(search_params, s):
 
 def group_by_records(group_by, s, group_by_size):
     if group_by and group_by == "author_id":
-        a = A("terms", field="author_ids", size=group_by_size)
-        s.aggs.bucket("groupby", a)
+        s.aggs.bucket("affiliations", Nested(path="affiliations")).bucket(
+            "groupby", Terms(field="affiliations.author_id")
+        )
 
     if group_by and group_by == "country":
         s.aggs.bucket("affiliations", Nested(path="affiliations")).bucket(

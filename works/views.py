@@ -89,7 +89,7 @@ def works():
     per_page = validate_per_page(request.args.get("per-page", 10, type=int))
     search_params = map_query_params(request.args.get("search"))
 
-    s = Search(index="works-master")
+    s = Search(index="works-*,-*master")
 
     if details == "true" and not group_by:
         s = s.extra(size=per_page)
@@ -139,7 +139,7 @@ def works():
         "query": s.to_dict(),
     }
 
-    if group_by == "country":
+    if group_by == "author_id" or group_by == "country":
         result["group_by"] = response.aggregations.affiliations.groupby.buckets
     elif group_by == "issn":
         result["group_by"] = response.aggregations.groupby.buckets
