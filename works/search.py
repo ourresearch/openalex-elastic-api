@@ -85,7 +85,4 @@ def group_by_records(group_by, s, group_by_size):
         a = A("terms", field="year", order={"_term": "desc"}, size=group_by_size)
         s.aggs.bucket("groupby", a)
 
-    if not group_by:
-        # sort
-        s = s.sort("-year")
     return s

@@ -81,6 +81,7 @@ def works():
             application/json:
               schema: MessageSchema
     """
+    cursor = request.args.get("cursor")
     details = request.args.get("details")
     filters = map_query_params(request.args.get("filter"))
     group_by = request.args.get("group_by")
@@ -118,9 +119,17 @@ def works():
     # group by
     s = group_by_records(group_by, s, group_by_size)
 
+    # sort
+    if not group_by:
+        # sort
+        s = s.sort("-year", "_doc")
+
     # pagination
     start = 0 if page == 1 else (per_page * page) - per_page + 1
     end = per_page * page
+
+    # if cursor:
+    #     s = s.extra(search_after=cursor)
 
     if details == "true" and not group_by:
         response = s[start:end].execute()
@@ -134,6 +143,7 @@ def works():
         "page": page,
         "per_page": per_page,
         "query": s.to_dict(),
+        # "next_cursor": response["hits"]["hits"][-1]["sort"]
     }
 
     if group_by == "author_id" or group_by == "country":
