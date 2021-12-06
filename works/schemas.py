@@ -7,7 +7,7 @@ class MetaSchema(Schema):
     response_time = fields.Str()
     page = fields.Int()
     per_page = fields.Int()
-    next_cursor = fields.List(fields.Str)
+    # next_cursor = fields.List(fields.Str)
     query = fields.Dict()
 
     class Meta:
