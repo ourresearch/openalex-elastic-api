@@ -123,6 +123,8 @@ def works():
     if not group_by:
         # sort
         s = s.sort("-year", "_doc")
+    elif not group_by and "title" in search_params:
+        s = s.sort("_score", "-year", "_doc")
 
     # pagination
     start = 0 if page == 1 else (per_page * page) - per_page + 1
@@ -154,6 +156,7 @@ def works():
     else:
         result["group_by"] = []
     result["details"] = response
+    print(s.to_dict())
     message_schema = MessageSchema()
     return message_schema.dump(result)
 

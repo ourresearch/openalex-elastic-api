@@ -53,6 +53,13 @@ def search_records(search_params, s):
     if search_params and "publisher" in search_params:
         s = s.query("match", journal__publisher=search_params["publisher"])
     if search_params and "title" in search_params:
+        # alternate method
+        # q = (
+        #     Q("match", work_title={"query": search_params["title"]})
+        #     | Q("match", work_title={"query": search_params["title"], "operator": "and"})
+        #     | Q("match_phrase", work_title={"query": search_params["title"], "boost": 2})
+        # )
+        # s = s.query(q)
         s = s.query(
             "match_phrase", work_title={"query": search_params["title"], "slop": 1}
         )
