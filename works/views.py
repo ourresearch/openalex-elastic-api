@@ -142,7 +142,6 @@ def works():
         "response_time": response.took,
         "page": page,
         "per_page": per_page,
-        "query": s.to_dict(),
         # "next_cursor": response["hits"]["hits"][-1]["sort"]
     }
 
