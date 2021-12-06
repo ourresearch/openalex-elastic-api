@@ -147,7 +147,7 @@ def works():
         # "next_cursor": response["hits"]["hits"][-1]["sort"]
     }
 
-    if group_by == "author_id" or group_by == "country":
+    if group_by == "country":
         result["group_by"] = response.aggregations.affiliations.groupby.buckets
     elif group_by == "issn":
         result["group_by"] = response.aggregations.groupby.buckets
@@ -156,7 +156,6 @@ def works():
     else:
         result["group_by"] = []
     result["details"] = response
-    print(s.to_dict())
     message_schema = MessageSchema()
     return message_schema.dump(result)
 
