@@ -81,7 +81,7 @@ def works():
             application/json:
               schema: MessageSchema
     """
-    cursor = request.args.get("cursor")
+    # cursor = request.args.get("cursor")
     details = request.args.get("details")
     filters = map_query_params(request.args.get("filter"))
     group_by = request.args.get("group_by")
@@ -90,7 +90,7 @@ def works():
     per_page = validate_per_page(request.args.get("per-page", 10, type=int))
     search_params = map_query_params(request.args.get("search"))
 
-    s = Search(index="works-*,-*master")
+    s = Search(index="works-year-*")
 
     if details == "true" and not group_by:
         s = s.extra(size=per_page)
@@ -129,7 +129,7 @@ def works():
     end = per_page * page
 
     # if cursor:
-    #     s = s.extra(search_after=cursor)
+    #     s = s.extra(search_after=[cursor])
 
     if details == "true" and not group_by:
         response = s[start:end].execute()
