@@ -121,9 +121,9 @@ def works():
     # sort
     if not group_by:
         # sort
-        s = s.sort("-year", "_doc")
+        s = s.sort("-year")
     elif not group_by and "title" in search_params:
-        s = s.sort("_score", "-year", "_doc")
+        s = s.sort("_score", "-year")
 
     # pagination
     start = 0 if page == 1 else (per_page * page) - per_page + 1
