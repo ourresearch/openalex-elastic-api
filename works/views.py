@@ -11,7 +11,8 @@ from works.api_spec import spec
 from works.exceptions import APIError
 from works.schemas import MessageSchema, WorksSchema
 from works.search import filter_records, group_by_records, search_records
-from works.utils import map_query_params, validate_per_page
+from works.utils import map_query_params
+from works.validate import validate_params, validate_per_page
 
 blueprint = Blueprint("works", __name__)
 
@@ -96,18 +97,8 @@ def works():
     else:
         s = s.extra(size=0)
 
-    # guard rails
-    if (
-        group_by
-        and filters
-        and "year" in filters
-        and (group_by == "author_id" or group_by == "issn")
-        and ("<" in filters["year"] or ">" in filters["year"])
-        and len(filters) == 1
-        and not search_params
-    ):
-        # do not allow query like /?year>2000&group_by=author_id
-        abort(404, description="Not allowed")
+    # validate
+    validate_params(filters, group_by, search_params)
 
     # filter
     s = filter_records(filters, s)

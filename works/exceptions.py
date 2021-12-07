@@ -8,4 +8,11 @@ class APIPaginationError(APIError):
     """Error when per-page parameter is out of bounds."""
 
     code = 403
-    description = "pagination error"
+    description = "Pagination error."
+
+
+class APIQueryParamsError(APIError):
+    """Error when per-page parameter is out of bounds."""
+
+    code = 403
+    description = "Invalid query parameters error."
