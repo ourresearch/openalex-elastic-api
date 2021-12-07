@@ -3,15 +3,14 @@ from collections import OrderedDict
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
-from flask import (Blueprint, abort, current_app, jsonify, render_template,
-                   request)
+from flask import Blueprint, current_app, jsonify, render_template, request
 
 import settings
 from works.api_spec import spec
 from works.exceptions import APIError
 from works.schemas import MessageSchema, WorksSchema
 from works.search import filter_records, group_by_records, search_records
-from works.utils import map_query_params
+from works.utils import convert_author_group_by, map_query_params
 from works.validate import validate_params, validate_per_page
 
 blueprint = Blueprint("works", __name__)
@@ -90,10 +89,25 @@ def works():
     per_page = validate_per_page(request.args.get("per-page", 10, type=int))
     search_params = map_query_params(request.args.get("search"))
 
-    s = Search(index="works-year-*")
+    query_type = None
+
+    if (
+        group_by
+        and group_by == "author_id"
+        and filters
+        and "year" in filters
+        and len(filters) == 1
+        and not search_params
+    ):
+        s = Search(index="transform-author-id-by-year")
+        query_type = "author_id_by_year"
+    else:
+        s = Search(index="works-year-*")
 
     if details == "true" and not group_by:
         s = s.extra(size=per_page)
+    elif query_type == "author_id_by_year":
+        s = s.extra(size=10)
     else:
         s = s.extra(size=0)
 
@@ -116,7 +130,7 @@ def works():
     elif not group_by and "title" in search_params:
         s = s.sort("_score", "-year")
 
-    # pagination
+    # paginate
     start = 0 if page == 1 else (per_page * page) - per_page + 1
     end = per_page * page
 
@@ -133,13 +147,16 @@ def works():
         "per_page": per_page,
     }
 
+    result["details"] = []
     if group_by == "country":
         result["group_by"] = response.aggregations.affiliations.groupby.buckets
+    elif group_by and query_type == "author_id_by_year":
+        result["group_by"] = convert_author_group_by(response)
     elif group_by:
         result["group_by"] = response.aggregations.groupby.buckets
     else:
         result["group_by"] = []
-    result["details"] = response
+        result["details"] = response
     message_schema = MessageSchema()
     return message_schema.dump(result)
 
