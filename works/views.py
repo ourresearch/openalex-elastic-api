@@ -10,7 +10,7 @@ from works.api_spec import spec
 from works.exceptions import APIError
 from works.schemas import MessageSchema, WorksSchema
 from works.search import filter_records, group_by_records, search_records
-from works.utils import convert_author_group_by, map_query_params
+from works.utils import convert_group_by, map_query_params
 from works.validate import validate_params, validate_per_page
 
 blueprint = Blueprint("works", __name__)
@@ -101,12 +101,22 @@ def works():
     ):
         s = Search(index="transform-author-id-by-year")
         query_type = "author_id_by_year"
+    elif (
+        group_by
+        and group_by == "issn"
+        and filters
+        and "year" in filters
+        and len(filters) == 1
+        and not search_params
+    ):
+        s = Search(index="transform-issns-by-year")
+        query_type = "issns_by_year"
     else:
         s = Search(index="works-year-*")
 
     if details == "true" and not group_by:
         s = s.extra(size=per_page)
-    elif query_type == "author_id_by_year":
+    elif query_type:
         s = s.extra(size=10)
     else:
         s = s.extra(size=0)
@@ -121,7 +131,7 @@ def works():
     s = search_records(search_params, s)
 
     # group by
-    s = group_by_records(group_by, s, group_by_size)
+    s = group_by_records(group_by, s, group_by_size, query_type)
 
     # sort
     if not group_by:
@@ -151,7 +161,9 @@ def works():
     if group_by == "country":
         result["group_by"] = response.aggregations.affiliations.groupby.buckets
     elif group_by and query_type == "author_id_by_year":
-        result["group_by"] = convert_author_group_by(response)
+        result["group_by"] = convert_group_by(response, "author_id")
+    elif group_by and query_type == "issns_by_year":
+        result["group_by"] = convert_group_by(response, "issn")
     elif group_by:
         result["group_by"] = response.aggregations.groupby.buckets
     else:
