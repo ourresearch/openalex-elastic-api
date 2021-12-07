@@ -6,11 +6,7 @@ def filter_records(filters, s):
     if filters and "id" in filters:
         s = s.filter("term", paper_id=filters["id"])
     if filters and "author_id" in filters:
-        s = s.filter(
-            "nested",
-            path="affiliations",
-            query=Q("term", affiliations__author_id=int(filters["author_id"])),
-        )
+        s = s.filter("term", author_ids=filters["author_id"])
     if filters and "issn" in filters:
         s = s.filter("term", journal__all_issns=filters["issn"])
     if filters and "ror_id" in filters:
