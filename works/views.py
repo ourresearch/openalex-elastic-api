@@ -81,7 +81,6 @@ def works():
             application/json:
               schema: MessageSchema
     """
-    # cursor = request.args.get("cursor")
     details = request.args.get("details")
     filters = map_query_params(request.args.get("filter"))
     group_by = request.args.get("group_by")
@@ -130,9 +129,6 @@ def works():
     start = 0 if page == 1 else (per_page * page) - per_page + 1
     end = per_page * page
 
-    # if cursor:
-    #     s = s.extra(search_after=[cursor])
-
     if details == "true" and not group_by:
         response = s[start:end].execute()
     else:
@@ -144,13 +140,10 @@ def works():
         "response_time": response.took,
         "page": page,
         "per_page": per_page,
-        # "next_cursor": response["hits"]["hits"][-1]["sort"]
     }
 
     if group_by == "country":
         result["group_by"] = response.aggregations.affiliations.groupby.buckets
-    elif group_by == "issn":
-        result["group_by"] = response.aggregations.groupby.buckets
     elif group_by:
         result["group_by"] = response.aggregations.groupby.buckets
     else:
