@@ -141,9 +141,7 @@ def works():
         or filters
         and not ("year" in filters and len(filters) == 1)
     ):
-        s = s.sort("-year")
-    elif details and not group_by and search_params and "title" in search_params:
-        s = s.sort("_score", "-year")
+        s = s.sort("-publication_date")
 
     # paginate
     start = 0 if page == 1 else (per_page * page) - per_page + 1
