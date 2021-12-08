@@ -134,10 +134,15 @@ def works():
     s = group_by_records(group_by, s, group_by_size, query_type)
 
     # sort
-    if not group_by:
-        # sort
+    if (
+        details
+        and not group_by
+        and search_params
+        or filters
+        and not ("year" in filters and len(filters) == 1)
+    ):
         s = s.sort("-year")
-    elif not group_by and "title" in search_params:
+    elif details and not group_by and search_params and "title" in search_params:
         s = s.sort("_score", "-year")
 
     # paginate
@@ -149,6 +154,7 @@ def works():
     else:
         response = s.execute()
 
+    print(s.to_dict())
     result = OrderedDict()
     result["meta"] = {
         "count": s.count(),
