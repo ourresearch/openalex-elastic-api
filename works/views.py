@@ -154,7 +154,6 @@ def works():
     else:
         response = s.execute()
 
-    print(s.to_dict())
     result = OrderedDict()
     result["meta"] = {
         "count": s.count(),
