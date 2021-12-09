@@ -11,7 +11,8 @@ from works.exceptions import APIError
 from works.schemas import MessageSchema, WorksSchema
 from works.search import filter_records, group_by_records, search_records
 from works.utils import convert_group_by, map_query_params
-from works.validate import validate_params, validate_per_page
+from works.validate import (validate_params, validate_per_page,
+                            validate_result_size)
 
 blueprint = Blueprint("works", __name__)
 
@@ -89,6 +90,10 @@ def works():
     per_page = validate_per_page(request.args.get("per-page", 10, type=int))
     search_params = map_query_params(request.args.get("search"))
 
+    # validate
+    validate_params(filters, group_by, search_params)
+    validate_result_size(page, per_page)
+
     query_type = None
 
     if (
@@ -120,9 +125,6 @@ def works():
         s = s.extra(size=10)
     else:
         s = s.extra(size=0)
-
-    # validate
-    validate_params(filters, group_by, search_params)
 
     # filter
     s = filter_records(filters, s)
