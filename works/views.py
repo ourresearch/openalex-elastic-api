@@ -136,7 +136,9 @@ def works():
     s = group_by_records(group_by, s, group_by_size, query_type)
 
     # sort
-    if (
+    if search_params and "title" in search_params and details:
+        s = s.sort("_score")
+    elif (
         details
         and not group_by
         and search_params
