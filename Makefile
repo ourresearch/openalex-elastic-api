@@ -5,5 +5,5 @@ format:
 load-test:
 	locust \
     --locustfile loadtest/locustfile.py \
-    --host https://openalex-test-api.herokuapp.com
+    --host https://elastic.api.openalex.org
 
