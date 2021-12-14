@@ -2,7 +2,6 @@ from works.exceptions import APIPaginationError, APIQueryParamsError
 
 
 def validate_per_page(per_page):
-    valid_results_size = 10000
     if per_page and per_page > 25 or per_page < 1:
         raise APIPaginationError("per-page parameter must be between 1 and 25")
 
