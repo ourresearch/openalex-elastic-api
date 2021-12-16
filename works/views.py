@@ -64,7 +64,7 @@ def works():
         s = Search(index="transform-issns-by-year")
         query_type = "issns_by_year"
     else:
-        s = Search(index="works-year-*")
+        s = Search(index="works-v2-*")
 
     if not group_by:
         s = s.extra(size=per_page)
@@ -110,7 +110,7 @@ def works():
         "per_page": per_page,
     }
 
-    result["details"] = []
+    result["results"] = []
     if group_by == "country":
         result["group_by"] = response.aggregations.affiliations.groupby.buckets
     elif group_by and query_type == "author_id_by_year":
@@ -121,7 +121,7 @@ def works():
         result["group_by"] = response.aggregations.groupby.buckets
     else:
         result["group_by"] = []
-        result["details"] = response
+        result["results"] = response
     message_schema = MessageSchema()
     return message_schema.dump(result)
 

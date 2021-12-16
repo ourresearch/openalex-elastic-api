@@ -9,22 +9,22 @@ def filter_records(filters, s):
         s = s.filter("term", author_ids=filters["author_id"])
     if filters and "issn" in filters:
         s = s.filter("term", journal__all_issns=filters["issn"])
-    if filters and "ror_id" in filters:
+    if filters and "ror" in filters:
         s = s.filter(
             "nested",
             path="affiliations",
             query=Q("term", affiliations__ror=filters["ror_id"]),
         )
-    if filters and "year" in filters:
-        year = filters["year"]
-        if "<" in year:
-            year = year[1:]
-            s = s.filter("range", year={"lte": int(year)})
-        if ">" in year:
-            year = year[1:]
-            s = s.filter("range", year={"gt": int(year)})
+    if filters and "publication_year" in filters:
+        publication_year = filters["publication_year"]
+        if "<" in publication_year:
+            publication_year = publication_year[1:]
+            s = s.filter("range", publication_year={"lte": int(publication_year)})
+        if ">" in publication_year:
+            publication_year = publication_year[1:]
+            s = s.filter("range", publication_year={"gt": int(publication_year)})
         else:
-            s = s.filter("term", year=int(year))
+            s = s.filter("term", publication_year=int(publication_year))
     return s
 
 
@@ -48,12 +48,19 @@ def search_records(search_params, s):
         )
     if search_params and "publisher" in search_params:
         s = s.query("match", journal__publisher=search_params["publisher"])
-    if search_params and "title" in search_params:
+    if search_params and "display_name" in search_params:
         q = (
             # Q("match", work_title={"query": search_params["title"]})
-            Q("match", work_title={"query": search_params["title"], "operator": "and"})
+            Q(
+                "match",
+                display_name={
+                    "query": search_params["display_name"],
+                    "operator": "and",
+                },
+            )
             | Q(
-                "match_phrase", work_title={"query": search_params["title"], "boost": 2}
+                "match_phrase",
+                display_name={"query": search_params["display_name"], "boost": 2},
             )
         )
         s = s.query(q)

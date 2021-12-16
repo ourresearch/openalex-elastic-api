@@ -1,5 +1,4 @@
 from marshmallow import INCLUDE, Schema, fields
-from marshmallow.validate import OneOf
 
 
 class MetaSchema(Schema):
@@ -12,40 +11,64 @@ class MetaSchema(Schema):
         ordered = True
 
 
-class AffiliationsSchema(Schema):
-    author_display_name = fields.Str()
-    institution_display_name = fields.Str()
-    city = fields.Str()
-    country = fields.Str()
-    country_code = fields.Str()
-    author_sequence_number = fields.Int()
-    author_id = fields.Int()
-    ror = fields.List(fields.Str())
-    institution_id = fields.Int()
-    grid_id = fields.Str()
+class AuthorSchema(Schema):
+    id = fields.Str()
+    display_name = fields.Str()
     orcid = fields.List(fields.Str())
 
     class Meta:
         ordered = True
 
 
+class InstitutionsSchema(Schema):
+    id = fields.Str()
+    display_name = fields.Str()
+    ror = fields.Str()
+    country_code = fields.Str()
+    type = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
+class AuthorshipsSchema(Schema):
+    author = fields.Nested(AuthorSchema)
+    institutions = fields.Nested(InstitutionsSchema, many=True)
+    author_position = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class ConceptsSchema(Schema):
-    name = fields.Str(attribute="display_name")
-    field_of_study_id = fields.Int()
+    id = fields.Str()
+    display_name = fields.Str()
     score = fields.Decimal()
+    level = fields.Int()
+    wikidata = fields.Str()
 
     class Meta:
         ordered = True
 
 
-class JournalSchema(Schema):
-    title = fields.Str()
+class VenueSchema(Schema):
+    id = fields.Str()
+    display_name = fields.Str()
     publisher = fields.Str()
-    issns = fields.Str(attribute="all_issns")
-    journal_id = fields.Int()
+    issn = fields.List(fields.Str())
+    issn_l = fields.Str()
 
     class Meta:
         ordered = True
+
+
+class AlternateLocationsSchema(Schema):
+    is_best = fields.Str()
+    is_oa = fields.Bool()
+    license = fields.Str()
+    url = fields.Str()
+    venue_id = fields.Str()
+    version = fields.Str()
 
 
 class UnpaywallSchema(Schema):
@@ -65,8 +88,8 @@ class UnpaywallSchema(Schema):
 
 
 class IDsSchema(Schema):
-    doi = fields.List(fields.Str)
-    pmid = fields.List(fields.Str)
+    doi = fields.Str()
+    pmid = fields.Str()
 
     class Meta:
         ordered = True
@@ -74,22 +97,16 @@ class IDsSchema(Schema):
 
 
 class WorksSchema(Schema):
-    id = fields.Int(attribute="paper_id")
-    work_title = fields.Str()
+    id = fields.Str()
+    display_name = fields.Str()
     publication_date = fields.Str()
-    journal = fields.Nested(JournalSchema)
-    affiliations = fields.Nested(AffiliationsSchema, many=True)
+    venue = fields.Nested(VenueSchema)
+    authorships = fields.Nested(AuthorshipsSchema, many=True)
     concepts = fields.Nested(ConceptsSchema, many=True)
-    unpaywall = fields.Nested(UnpaywallSchema)
+    alternate_locations = fields.Nested(AlternateLocationsSchema)
+    cited_by_count = fields.Int()
     ids = fields.Nested(IDsSchema)
-    locations = fields.List(fields.List(fields.Str()))
-    citation_count = fields.Int()
-    issue = fields.Str()
-    volume = fields.Str()
-    first_page = fields.Str()
-    last_page = fields.Str()
-    doc_type = fields.Str()
-    year = fields.Int()
+    publication_year = fields.Int()
 
     class Meta:
         ordered = True
@@ -105,7 +122,7 @@ class GroupBySchema(Schema):
 
 class MessageSchema(Schema):
     meta = fields.Nested(MetaSchema)
-    details = fields.Nested(WorksSchema, many=True)
+    results = fields.Nested(WorksSchema, many=True)
     group_by = fields.Nested(GroupBySchema, many=True)
 
     class Meta:
