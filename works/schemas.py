@@ -14,7 +14,7 @@ class MetaSchema(Schema):
 class AuthorSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
-    orcid = fields.List(fields.Str())
+    orcid = fields.Str()
 
     class Meta:
         ordered = True

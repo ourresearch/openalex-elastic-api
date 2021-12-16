@@ -35,10 +35,10 @@ def works():
     group_by_size = request.args.get("group-by-size", 50, type=int)
     page = request.args.get("page", 1, type=int)
     per_page = validate_per_page(request.args.get("per-page", 10, type=int))
-    search_params = map_query_params(request.args.get("search"))
+    search = request.args.get("search")
 
     # validate
-    validate_params(filters, group_by, search_params)
+    validate_params(filters, group_by, search)
     validate_result_size(page, per_page)
 
     query_type = None
@@ -49,7 +49,7 @@ def works():
         and filters
         and "year" in filters
         and len(filters) == 1
-        and not search_params
+        and not search
     ):
         s = Search(index="transform-author-id-by-year")
         query_type = "author_id_by_year"
@@ -59,7 +59,7 @@ def works():
         and filters
         and "year" in filters
         and len(filters) == 1
-        and not search_params
+        and not search
     ):
         s = Search(index="transform-issns-by-year")
         query_type = "issns_by_year"
@@ -77,17 +77,17 @@ def works():
     s = filter_records(filters, s)
 
     # search
-    s = search_records(search_params, s)
+    s = search_records(search, s)
 
     # group by
     s = group_by_records(group_by, s, group_by_size, query_type)
 
     # sort
-    if search_params and "title" in search_params:
+    if search:
         s = s.sort("_score")
     elif (
         not group_by
-        and search_params
+        and search
         or filters
         and not ("year" in filters and len(filters) == 1)
     ):

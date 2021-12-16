@@ -28,39 +28,20 @@ def filter_records(filters, s):
     return s
 
 
-def search_records(search_params, s):
-    if search_params and "author" in search_params:
-        s = s.query(
-            "nested",
-            path="affiliations",
-            query=Q(
-                "match_phrase",
-                affiliations__author_display_name={
-                    "query": search_params["author"],
-                    "slop": 1,
-                },
-            ),
-        )
-    if search_params and "journal_title" in search_params:
-        s = s.query(
-            "match_phrase",
-            journal__title={"query": search_params["journal_title"], "slop": 1},
-        )
-    if search_params and "publisher" in search_params:
-        s = s.query("match", journal__publisher=search_params["publisher"])
-    if search_params and "display_name" in search_params:
+def search_records(search, s):
+    if search:
         q = (
             # Q("match", work_title={"query": search_params["title"]})
             Q(
                 "match",
                 display_name={
-                    "query": search_params["display_name"],
+                    "query": search,
                     "operator": "and",
                 },
             )
             | Q(
                 "match_phrase",
-                display_name={"query": search_params["display_name"], "boost": 2},
+                display_name={"query": search, "boost": 2},
             )
         )
         s = s.query(q)
