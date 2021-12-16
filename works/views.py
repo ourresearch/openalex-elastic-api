@@ -30,7 +30,6 @@ def index():
 
 @blueprint.route("/works")
 def works():
-    details = request.args.get("details")
     filters = map_query_params(request.args.get("filter"))
     group_by = request.args.get("group_by")
     group_by_size = request.args.get("group-by-size", 50, type=int)
@@ -67,7 +66,7 @@ def works():
     else:
         s = Search(index="works-year-*")
 
-    if details == "true" and not group_by:
+    if not group_by:
         s = s.extra(size=per_page)
     elif query_type:
         s = s.extra(size=10)
@@ -84,11 +83,10 @@ def works():
     s = group_by_records(group_by, s, group_by_size, query_type)
 
     # sort
-    if search_params and "title" in search_params and details:
+    if search_params and "title" in search_params:
         s = s.sort("_score")
     elif (
-        details
-        and not group_by
+        not group_by
         and search_params
         or filters
         and not ("year" in filters and len(filters) == 1)
@@ -99,7 +97,7 @@ def works():
     start = 0 if page == 1 else (per_page * page) - per_page + 1
     end = per_page * page
 
-    if details == "true" and not group_by:
+    if not group_by:
         response = s[start:end].execute()
     else:
         response = s.execute()
