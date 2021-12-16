@@ -110,19 +110,3 @@ class MessageSchema(Schema):
 
     class Meta:
         ordered = True
-
-
-class WorksQuerySchema(Schema):
-    group_by = fields.Str(
-        validate=OneOf(["author_id", "country", "issn", "open_access", "year"]),
-        description="Group by a field.",
-    )
-    details = fields.Bool(
-        description="Display detailed list of works. Default number of records returned is 10."
-    )
-    page = fields.Int(missing=1)
-    per_page = fields.Int(missing=10)
-    group_by_size = fields.Int(missing=50)
-
-    class Meta:
-        ordered = True

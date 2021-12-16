@@ -7,7 +7,6 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 
 import settings
 import works
-from works.api_spec import spec
 
 
 def create_app(config_object="settings"):
@@ -31,6 +30,3 @@ def register_extensions(app):
         traces_sample_rate=0.5,
     )
     connections.create_connection(hosts=[settings.ES_URL], timeout=30)
-    with app.test_request_context():
-        spec.path(view=works.views.works)
-        spec.path(view=works.views.detail)

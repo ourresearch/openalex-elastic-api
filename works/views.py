@@ -30,58 +30,6 @@ def index():
 
 @blueprint.route("/works")
 def works():
-    """
-    ---
-    get:
-      description: Filter, search, and group works records.
-      parameters:
-      - in: query
-        name: filter
-        style: deepObject
-        explode: false
-        schema:
-          type: object
-          description: Filter works with a list of filters in format works/?filter=year:2020,ror_id=03vek6s52
-          properties:
-            issn:
-              type: string
-              description: filter by journal issn
-            ror_id:
-              type: string
-              description: filter by ROR ID
-            year:
-              type: int
-              description: filter by publication year with exact (filter=year:2020), less than (filter=year:<2020)
-                or greater than (filter=year:>2020)
-      - in: query
-        name: search
-        style: deepObject
-        explode: false
-        schema:
-          type: object
-          description: Search works in format works/?search=title:covid-19,publisher:elsevier
-          properties:
-            author:
-              type: string
-              description: search by author name
-            journal_title:
-              type: string
-              description: search by journal title
-            publisher:
-              type: string
-              description: search by publisher name
-            title:
-              type: string
-              description: search by works title
-      - in: query
-        schema: WorksQuerySchema
-      responses:
-        200:
-          description: Return works
-          content:
-            application/json:
-              schema: MessageSchema
-    """
     details = request.args.get("details")
     filters = map_query_params(request.args.get("filter"))
     group_by = request.args.get("group_by")
