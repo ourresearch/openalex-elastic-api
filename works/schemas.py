@@ -90,6 +90,7 @@ class UnpaywallSchema(Schema):
 class IDsSchema(Schema):
     doi = fields.Str()
     pmid = fields.Str()
+    openalex = fields.Str()
 
     class Meta:
         ordered = True
@@ -107,6 +108,16 @@ class WorksSchema(Schema):
     cited_by_count = fields.Int()
     ids = fields.Nested(IDsSchema)
     publication_year = fields.Int()
+    cited_by_api_url = fields.Str()
+    doi = fields.Str()
+    genre = fields.Str()
+    is_oa = fields.Bool()
+    is_paratext = fields.Bool()
+    oa_status = fields.Str()
+    oa_url = fields.Str()
+    references_count = fields.Int()
+    related_works = fields.List(fields.Str())
+    url = fields.Str()
 
     class Meta:
         ordered = True
