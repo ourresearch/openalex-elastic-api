@@ -118,10 +118,12 @@ class WorksSchema(Schema):
     references_count = fields.Int()
     related_works = fields.List(fields.Str())
     url = fields.Str()
-    bibio = fields.Function(lambda obj: obj.bibio.to_dict())
+    bibio = fields.Function(
+        lambda obj: obj.bibio.to_dict() if "bibio" in obj and obj.bibio else None
+    )
     abstract_inverted_index = fields.Function(
         lambda obj: obj.abstract_inverted_index.to_dict()
-        if obj.abstract_inverted_index
+        if "abstract_inverted_index" in obj and obj.abstract_inverted_index
         else None
     )
 
