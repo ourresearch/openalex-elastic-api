@@ -64,7 +64,7 @@ def works():
         s = Search(index="transform-issns-by-year")
         query_type = "issns_by_year"
     else:
-        s = Search(index="works-v2-*")
+        s = Search(index="works-v2-*,-*invalid-data")
 
     if not group_by:
         s = s.extra(size=per_page)
