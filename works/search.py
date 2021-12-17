@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
 
 from elasticsearch_dsl import A, Q
@@ -74,6 +75,26 @@ def filter_records(filter_params, s):
                 kwargs = {filter.es_field(): param}
                 s = s.filter("term", **kwargs)
 
+        # date query
+        elif filter.param in filter_params and filter.is_date_query:
+            param = filter_params[filter.param]
+            if "<" in param:
+                param = param[1:]
+                validate_date_param(filter, param)
+                kwargs = {filter.es_field(): {"lte": param}}
+                s = s.filter("range", **kwargs)
+            elif ">" in param:
+                param = param[1:]
+                validate_date_param(filter, param)
+                kwargs = {filter.es_field(): {"gt": param}}
+                s = s.filter("range", **kwargs)
+            elif param == "null":
+                s = s.exclude("exists", field=filter.es_field())
+            else:
+                validate_date_param(filter, param)
+                kwargs = {filter.es_field(): param}
+                s = s.filter("term", **kwargs)
+
         # boolean query
         elif filter.param in filter_params and filter.is_bool_query:
             param = filter_params[filter.param]
@@ -103,6 +124,15 @@ def validate_range_param(filter, param):
         param = int(param)
     except ValueError:
         raise APIQueryParamsError(f"Value for param {filter.param} must be a number.")
+
+
+def validate_date_param(filter, param):
+    try:
+        date = datetime.strptime(param, "%Y-%m-%d")
+    except ValueError:
+        raise APIQueryParamsError(
+            f"Value for param {filter.param} must be a date in format 2020-05-17."
+        )
 
 
 def search_records(search, s):
