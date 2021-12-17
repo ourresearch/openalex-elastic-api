@@ -74,7 +74,8 @@ def works():
         s = s.extra(size=0)
 
     # filter
-    s = filter_records(filter_params, s)
+    if filter_params:
+        s = filter_records(filter_params, s)
 
     # search
     s = search_records(search, s)
@@ -123,6 +124,7 @@ def works():
         result["group_by"] = []
         result["results"] = response
     message_schema = MessageSchema()
+    print(s.to_dict())
     return message_schema.dump(result)
 
 

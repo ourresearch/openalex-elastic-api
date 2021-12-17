@@ -4,6 +4,8 @@ from typing import Optional
 from elasticsearch_dsl import A, Q
 from elasticsearch_dsl.aggs import Nested, Terms
 
+from works.exceptions import APIQueryParamsError
+
 
 @dataclass(frozen=True)
 class Filter:
@@ -29,39 +31,62 @@ filters = [
     Filter(param="venue.issn"),
     Filter(param="venue.publisher"),
     Filter(param="genre"),
-    Filter(param="is_para_text", is_bool_query=True),
+    Filter(param="is_paratext", is_bool_query=True),
 ]
 
 
 def filter_records(filter_params, s):
     for filter in filters:
-        if filter_params and filter.param in filter_params:
-            kwargs = {filter.es_field(): filter_params[filter.param]}
-            s = s.filter("term", **kwargs)
 
-    # if filter_params and "id" in filter_params:
-    #     s = s.filter("term", paper_id=filter_params["id"])
-    # if filter_params and "author_id" in filter_params:
-    #     s = s.filter("term", author_ids=filter_params["author_id"])
-    # if filter_params and "issn" in filter_params:
-    #     s = s.filter("term", journal__all_issns=filter_params["issn"])
-    # if filter_params and "ror" in filter_params:
-    #     s = s.filter(
-    #         "nested",
-    #         path="affiliations",
-    #         query=Q("term", affiliations__ror=filter_params["ror_id"]),
-    #     )
-    # if filter_params and "publication_year" in filter_params:
-    #     publication_year = filter_params["publication_year"]
-    #     if "<" in publication_year:
-    #         publication_year = publication_year[1:]
-    #         s = s.filter("range", publication_year={"lte": int(publication_year)})
-    #     if ">" in publication_year:
-    #         publication_year = publication_year[1:]
-    #         s = s.filter("range", publication_year={"gt": int(publication_year)})
-    #     else:
-    #         s = s.filter("term", publication_year=int(publication_year))
+        # range query
+        if filter.param in filter_params and filter.is_range_query:
+            param = filter_params[filter.param]
+            if "<" in param:
+                param = param[1:]
+                validate_range_param(filter, param)
+                kwargs = {filter.es_field(): {"lte": int(param)}}
+                s = s.filter("range", **kwargs)
+            elif ">" in param:
+                param = param[1:]
+                validate_range_param(filter, param)
+                kwargs = {filter.es_field(): {"gt": int(param)}}
+                s = s.filter("range", **kwargs)
+            elif param == "null":
+                s = s.exclude("exists", field=filter.es_field())
+            else:
+                validate_range_param(filter, param)
+                kwargs = {filter.es_field(): param}
+                s = s.filter("term", **kwargs)
+
+        # boolean query
+        elif filter.param in filter_params and filter.is_bool_query:
+            param = filter_params[filter.param]
+            param = param.lower()
+            if param == "null":
+                s = s.exclude("exists", field=filter.es_field())
+            else:
+                kwargs = {filter.es_field(): param}
+                s = s.filter("term", **kwargs)
+
+        # regular query
+        elif filter.param in filter_params:
+            param = filter_params[filter.param]
+            if param == "null":
+                field = filter.es_field()
+                field = field.replace("__", ".")
+                s = s.exclude("exists", field=field)
+            else:
+                param = param.lower().split(" ")
+                kwargs = {filter.es_field(): param}
+                s = s.filter("terms", **kwargs)
     return s
+
+
+def validate_range_param(filter, param):
+    try:
+        param = int(param)
+    except ValueError:
+        raise APIQueryParamsError(f"Value for param {filter.param} must be a number.")
 
 
 def search_records(search, s):
