@@ -35,12 +35,17 @@ filters = [
     Filter(param="is_paratext", is_bool_query=True),
     Filter(param="oa_status"),
     Filter(param="is_oa", is_bool_query=True),
-    Filter(param="author.id"),
-    Filter(param="author.orcid"),
-    Filter(param="institutions.id"),
-    Filter(param="institutions.ror"),
-    Filter(param="institutions.country_code"),
-    Filter(param="institutions.type"),
+    Filter(param="author.id", custom_es_field="authorships__author__id"),
+    Filter(param="author.orcid", custom_es_field="authorships__author__orcid"),
+    Filter(param="institutions.id", custom_es_field="authorships__institutions__id"),
+    Filter(param="institutions.ror", custom_es_field="authorships__institutions__ror"),
+    Filter(
+        param="institutions.country_code",
+        custom_es_field="authorships__institutions__country_code",
+    ),
+    Filter(
+        param="institutions.type", custom_es_field="authorships__institutions__type"
+    ),
     Filter(param="cited_by_count", is_range_query=True),
     Filter(param="is_retracted", is_bool_query=True),
     Filter(param="concepts.id"),
@@ -112,6 +117,10 @@ def filter_records(filter_params, s):
                 field = filter.es_field()
                 field = field.replace("__", ".")
                 s = s.exclude("exists", field=field)
+            elif "country_code" in filter.param:
+                param = param.upper()
+                kwargs = {filter.es_field(): param}
+                s = s.filter("term", **kwargs)
             else:
                 param = param.lower().split(" ")
                 kwargs = {filter.es_field(): param}
