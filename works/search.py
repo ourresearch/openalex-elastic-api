@@ -32,6 +32,22 @@ filters = [
     Filter(param="venue.publisher"),
     Filter(param="genre"),
     Filter(param="is_paratext", is_bool_query=True),
+    Filter(param="oa_status"),
+    Filter(param="is_oa", is_bool_query=True),
+    Filter(param="author.id"),
+    Filter(param="author.orcid"),
+    Filter(param="institutions.id"),
+    Filter(param="institutions.ror"),
+    Filter(param="institutions.country_code"),
+    Filter(param="institutions.type"),
+    Filter(param="cited_by_count", is_range_query=True),
+    Filter(param="is_retracted", is_bool_query=True),
+    Filter(param="concepts.id"),
+    Filter(param="concepts.wikidata"),
+    Filter(param="alternate_locations.license"),
+    Filter(param="alternate_locations.version"),
+    Filter(param="alternate_locations.venue_id"),
+    Filter(param="referenced_works"),
 ]
 
 
