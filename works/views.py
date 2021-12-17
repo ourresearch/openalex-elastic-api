@@ -30,7 +30,7 @@ def index():
 
 @blueprint.route("/works")
 def works():
-    filters = map_query_params(request.args.get("filter"))
+    filter_params = map_query_params(request.args.get("filter"))
     group_by = request.args.get("group_by")
     group_by_size = request.args.get("group-by-size", 50, type=int)
     page = request.args.get("page", 1, type=int)
@@ -38,7 +38,7 @@ def works():
     search = request.args.get("search")
 
     # validate
-    validate_params(filters, group_by, search)
+    validate_params(filter_params, group_by, search)
     validate_result_size(page, per_page)
 
     query_type = None
@@ -46,9 +46,9 @@ def works():
     if (
         group_by
         and group_by == "author_id"
-        and filters
-        and "year" in filters
-        and len(filters) == 1
+        and filter_params
+        and "year" in filter_params
+        and len(filter_params) == 1
         and not search
     ):
         s = Search(index="transform-author-id-by-year")
@@ -56,9 +56,9 @@ def works():
     elif (
         group_by
         and group_by == "issn"
-        and filters
-        and "year" in filters
-        and len(filters) == 1
+        and filter_params
+        and "year" in filter_params
+        and len(filter_params) == 1
         and not search
     ):
         s = Search(index="transform-issns-by-year")
@@ -74,7 +74,7 @@ def works():
         s = s.extra(size=0)
 
     # filter
-    s = filter_records(filters, s)
+    s = filter_records(filter_params, s)
 
     # search
     s = search_records(search, s)
@@ -88,8 +88,8 @@ def works():
     elif (
         not group_by
         and search
-        or filters
-        and not ("year" in filters and len(filters) == 1)
+        or filter_params
+        and not ("year" in filter_params and len(filter_params) == 1)
     ):
         s = s.sort("-publication_date")
 

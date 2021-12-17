@@ -26,12 +26,12 @@ def validate_params(filters, group_by, search):
             f"Invalid group by param provided. Valid params are {', '.join(valid_group_by_params)}."
         )
 
-    if filters:
-        for filter_param in filters:
-            if filter_param not in valid_filter_params:
-                raise APIQueryParamsError(
-                    f"Invalid filter param provided. Valid params are {', '.join(valid_filter_params)}."
-                )
+    # if filters:
+    #     for filter_param in filters:
+    #         if filter_param not in valid_filter_params:
+    #             raise APIQueryParamsError(
+    #                 f"Invalid filter param provided. Valid params are {', '.join(valid_filter_params)}."
+    #             )
 
     # do not allow query like:
     # /works?year>2000&group_by=author_id

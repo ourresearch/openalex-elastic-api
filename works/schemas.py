@@ -108,7 +108,7 @@ class WorksSchema(Schema):
     cited_by_count = fields.Int()
     ids = fields.Nested(IDsSchema)
     publication_year = fields.Int()
-    cited_by_api_url = fields.Str()
+    cited_by_api_url = fields.List(fields.Str())
     doi = fields.Str()
     genre = fields.Str()
     is_oa = fields.Bool()
@@ -118,6 +118,12 @@ class WorksSchema(Schema):
     references_count = fields.Int()
     related_works = fields.List(fields.Str())
     url = fields.Str()
+    bibio = fields.Function(lambda obj: obj.bibio.to_dict())
+    abstract_inverted_index = fields.Function(
+        lambda obj: obj.abstract_inverted_index.to_dict()
+        if obj.abstract_inverted_index
+        else None
+    )
 
     class Meta:
         ordered = True
