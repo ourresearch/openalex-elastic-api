@@ -26,8 +26,8 @@ def validate_params(filters, group_by, search):
             f"Invalid group by param provided. Valid params are {', '.join(valid_group_by_params)}."
         )
 
-    # if filters:
-    #     for filter_param in filters:
+    # if fields:
+    #     for filter_param in fields:
     #         if filter_param not in valid_filter_params:
     #             raise APIQueryParamsError(
     #                 f"Invalid filter param provided. Valid params are {', '.join(valid_filter_params)}."
@@ -57,7 +57,7 @@ def validate_params(filters, group_by, search):
     #     and search
     #     and len(search_params) == 1
     #     and len(search_params["title"]) < title_length
-    #     and not filters
+    #     and not fields
     # ):
     #     raise APIQueryParamsError(
     #         f"Group by author ID with title search requires longer query (over {title_length -1} characters)."
