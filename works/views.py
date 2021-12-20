@@ -6,10 +6,11 @@ from elasticsearch_dsl import Search
 from flask import Blueprint, current_app, jsonify, render_template, request
 
 import settings
+from core.exceptions import APIError
 from works.api_spec import spec
-from works.exceptions import APIError
+from works.filter import filter_records
 from works.schemas import MessageSchema, WorksSchema
-from works.search import filter_records, group_by_records, search_records
+from works.search import group_by_records, search_records
 from works.utils import convert_group_by, map_query_params
 from works.validate import (validate_params, validate_per_page,
                             validate_result_size)

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from works.exceptions import APIQueryParamsError
+from core.exceptions import APIQueryParamsError
 from works.fields import fields
 
 

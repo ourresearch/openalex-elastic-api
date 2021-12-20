@@ -1,4 +1,4 @@
-from works.exceptions import APIPaginationError, APIQueryParamsError
+from core.exceptions import APIPaginationError, APIQueryParamsError
 
 
 def validate_per_page(per_page):

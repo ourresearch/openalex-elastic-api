@@ -1,4 +1,4 @@
-from works.exceptions import APIQueryParamsError
+from core.exceptions import APIQueryParamsError
 
 
 def map_query_params(param):
