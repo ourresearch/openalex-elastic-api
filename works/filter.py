@@ -5,107 +5,107 @@ from works.fields import fields
 
 
 def filter_records(filter_params, s):
-    for filter in fields:
+    for field in fields:
 
         # range query
-        if filter.param in filter_params and filter.is_range_query:
-            s = execute_range_query(filter, filter_params, s)
+        if field.param in filter_params and field.is_range_query:
+            s = execute_range_query(field, filter_params, s)
 
         # date query
-        elif filter.param in filter_params and filter.is_date_query:
-            s = execute_date_query(filter, filter_params, s)
+        elif field.param in filter_params and field.is_date_query:
+            s = execute_date_query(field, filter_params, s)
 
         # boolean query
-        elif filter.param in filter_params and filter.is_bool_query:
-            s = execute_boolean_query(filter, filter_params, s)
+        elif field.param in filter_params and field.is_bool_query:
+            s = execute_boolean_query(field, filter_params, s)
 
         # regular query
-        elif filter.param in filter_params:
-            s = execute_regular_query(filter, filter_params, s)
+        elif field.param in filter_params:
+            s = execute_regular_query(field, filter_params, s)
     return s
 
 
-def execute_regular_query(filter, filter_params, s):
-    param = filter_params[filter.param]
+def execute_regular_query(field, filter_params, s):
+    param = filter_params[field.param]
     if param == "null":
-        field = filter.es_field()
+        field = field.es_field()
         field = field.replace("__", ".")
         s = s.exclude("exists", field=field)
-    elif "country_code" in filter.param:
+    elif "country_code" in field.param:
         param = param.upper()
-        kwargs = {filter.es_field(): param}
+        kwargs = {field.es_field(): param}
         s = s.filter("term", **kwargs)
     else:
         param = param.lower().split(" ")
-        kwargs = {filter.es_field(): param}
+        kwargs = {field.es_field(): param}
         s = s.filter("terms", **kwargs)
     return s
 
 
-def execute_boolean_query(filter, filter_params, s):
-    param = filter_params[filter.param]
+def execute_boolean_query(field, filter_params, s):
+    param = filter_params[field.param]
     param = param.lower()
     if param == "null":
-        s = s.exclude("exists", field=filter.es_field())
+        s = s.exclude("exists", field=field.es_field())
     else:
-        kwargs = {filter.es_field(): param}
+        kwargs = {field.es_field(): param}
         s = s.filter("term", **kwargs)
     return s
 
 
-def execute_date_query(filter, filter_params, s):
-    param = filter_params[filter.param]
+def execute_date_query(field, filter_params, s):
+    param = filter_params[field.param]
     if "<" in param:
         param = param[1:]
-        validate_date_param(filter, param)
-        kwargs = {filter.es_field(): {"lte": param}}
+        validate_date_param(field, param)
+        kwargs = {field.es_field(): {"lte": param}}
         s = s.filter("range", **kwargs)
     elif ">" in param:
         param = param[1:]
-        validate_date_param(filter, param)
-        kwargs = {filter.es_field(): {"gt": param}}
+        validate_date_param(field, param)
+        kwargs = {field.es_field(): {"gt": param}}
         s = s.filter("range", **kwargs)
     elif param == "null":
-        s = s.exclude("exists", field=filter.es_field())
+        s = s.exclude("exists", field=field.es_field())
     else:
-        validate_date_param(filter, param)
-        kwargs = {filter.es_field(): param}
+        validate_date_param(field, param)
+        kwargs = {field.es_field(): param}
         s = s.filter("term", **kwargs)
     return s
 
 
-def execute_range_query(filter, filter_params, s):
-    param = filter_params[filter.param]
+def execute_range_query(field, filter_params, s):
+    param = filter_params[field.param]
     if "<" in param:
         param = param[1:]
-        validate_range_param(filter, param)
-        kwargs = {filter.es_field(): {"lte": int(param)}}
+        validate_range_param(field, param)
+        kwargs = {field.es_field(): {"lte": int(param)}}
         s = s.filter("range", **kwargs)
     elif ">" in param:
         param = param[1:]
-        validate_range_param(filter, param)
-        kwargs = {filter.es_field(): {"gt": int(param)}}
+        validate_range_param(field, param)
+        kwargs = {field.es_field(): {"gt": int(param)}}
         s = s.filter("range", **kwargs)
     elif param == "null":
-        s = s.exclude("exists", field=filter.es_field())
+        s = s.exclude("exists", field=field.es_field())
     else:
-        validate_range_param(filter, param)
-        kwargs = {filter.es_field(): param}
+        validate_range_param(field, param)
+        kwargs = {field.es_field(): param}
         s = s.filter("term", **kwargs)
     return s
 
 
-def validate_range_param(filter, param):
+def validate_range_param(field, param):
     try:
         param = int(param)
     except ValueError:
-        raise APIQueryParamsError(f"Value for param {filter.param} must be a number.")
+        raise APIQueryParamsError(f"Value for param {field.param} must be a number.")
 
 
-def validate_date_param(filter, param):
+def validate_date_param(field, param):
     try:
         date = datetime.strptime(param, "%Y-%m-%d")
     except ValueError:
         raise APIQueryParamsError(
-            f"Value for param {filter.param} must be a date in format 2020-05-17."
+            f"Value for param {field.param} must be a date in format 2020-05-17."
         )
