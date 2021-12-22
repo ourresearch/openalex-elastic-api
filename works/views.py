@@ -5,12 +5,13 @@ from flask import Blueprint, current_app, jsonify, request
 
 from core.exceptions import APIError
 from core.filter import filter_records
+from core.search import search_records
 from core.sort import sort_records
 from core.utils import map_query_params
 from core.validate import (validate_params, validate_per_page,
                            validate_result_size)
 from works.schemas import MessageSchema
-from works.search import group_by_records, search_records
+from works.search import group_by_records
 from works.utils import convert_group_by
 
 blueprint = Blueprint("works", __name__)
