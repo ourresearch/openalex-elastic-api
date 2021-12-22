@@ -10,8 +10,8 @@ from core.sort import sort_records
 from core.utils import map_query_params
 from core.validate import (validate_params, validate_per_page,
                            validate_result_size)
+from works.groupby import group_by_records
 from works.schemas import MessageSchema
-from works.search import group_by_records
 from works.utils import convert_group_by
 
 blueprint = Blueprint("works", __name__)
