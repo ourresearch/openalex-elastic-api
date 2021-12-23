@@ -50,25 +50,29 @@ def works():
     else:
         s = s.extra(size=per_page)
 
-    # filter
-    if filter_params:
-        for filter_param in filter_params:
-            for key, value in filter_param.items():
-                field = fields_dict[key]
-                field.value = value
-                s += filter_records(field, s)
-
     # search
     s = search_records(search, s)
 
-    # group by
-    # s = group_by_records(group_by, s, group_by_size, query_type)
+    # filter
+    if filter_params:
+        for key, value in filter_params.items():
+            field = fields_dict[key]
+            field.value = value
+            field.validate()
+            s = filter_records(field, s)
 
     # sort
-    if search and sort_params:
-        s = sort_records(sort_params, s)
-    elif sort_params and not search:
-        s = sort_records(sort_params, s)
+    # if search and sort_params:
+    #     s = sort_records(sort_params, s)
+    if sort_params and not search:
+        sort_fields = []
+        for key, value in sort_params.items():
+            field = fields_dict[key]
+            if value == "asc":
+                sort_fields.append(field.es_sort_field())
+            elif value == "desc":
+                sort_fields.append(f"-{field.es_sort_field()}")
+        s = s.sort(*sort_fields)
     elif search and not sort_params:
         s = s.sort("_score")
     elif (
@@ -78,6 +82,9 @@ def works():
         and not ("publication_year" in filter_params and len(filter_params) == 1)
     ):
         s = s.sort("-publication_date")
+
+    # group by
+    # s = group_by_records(group_by, s, group_by_size, query_type)
 
     # paginate
     start = 0 if page == 1 else (per_page * page) - per_page + 1
