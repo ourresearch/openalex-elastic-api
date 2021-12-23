@@ -9,6 +9,7 @@ class Field:
     """
 
     param: str
+    value: Optional[str, int]
     custom_es_field: Optional[str] = None
     is_bool_query: bool = False
     is_date_query: bool = False

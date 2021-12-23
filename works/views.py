@@ -10,7 +10,7 @@ from core.sort import sort_records
 from core.utils import map_query_params
 from core.validate import (validate_params, validate_per_page,
                            validate_result_size)
-from works.fields import fields
+from works.fields import fields_dict
 from works.groupby import group_by_records
 from works.schemas import MessageSchema
 from works.utils import convert_group_by
@@ -52,7 +52,11 @@ def works():
 
     # filter
     if filter_params:
-        s = filter_records(filter_params, s)
+        for filter_param in filter_params:
+            for key, value in filter_param.items():
+                field = fields_dict[key]
+                field.value = value
+                s += filter_records(field, s)
 
     # search
     s = search_records(search, s)

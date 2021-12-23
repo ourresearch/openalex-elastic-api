@@ -27,3 +27,5 @@ fields = [
     Field(param="alternate_locations.venue_id"),
     Field(param="referenced_works"),
 ]
+
+fields_dict = {f.param: f for f in fields}
