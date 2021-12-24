@@ -1,6 +1,7 @@
 from elasticsearch_dsl import Search
 
 from core.filter import filter_records
+from core.sort import sort_records
 from core.utils import map_query_params
 from works.fields import fields_dict
 
@@ -14,11 +15,7 @@ def test_filter_query(client):
     s = Search()
     filter_args = "venue.publisher:wiley,publication_year:>2015"
     filter_params = map_query_params(filter_args)
-    for key, value in filter_params.items():
-        field = fields_dict[key]
-        field.value = value
-        field.validate()
-        s = filter_records(field, s)
+    s = filter_records(fields_dict, filter_params, s)
     assert s.to_dict() == {
         "query": {
             "bool": {
@@ -38,22 +35,10 @@ def test_sort_query(client):
     filter_params = map_query_params(filter_args)
     sort_params = map_query_params(sort_args)
 
-    # filter
-    for key, value in filter_params.items():
-        field = fields_dict[key]
-        field.value = value
-        field.validate()
-        s = filter_records(field, s)
+    s = filter_records(fields_dict, filter_params, s)
 
     # sort
-    sort_fields = []
-    for key, value in sort_params.items():
-        field = fields_dict[key]
-        if value == "asc":
-            sort_fields.append(field.es_sort_field())
-        elif value == "desc":
-            sort_fields.append(f"-{field.es_sort_field()}")
-    s = s.sort(*sort_fields)
+    s = sort_records(fields_dict, sort_params, s)
 
     assert s.to_dict() == {
         "query": {

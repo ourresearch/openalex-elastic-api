@@ -3,7 +3,16 @@ from datetime import datetime
 from core.exceptions import APIQueryParamsError
 
 
-def filter_records(field, s):
+def filter_records(fields_dict, filter_params, s):
+    for key, value in filter_params.items():
+        field = fields_dict[key]
+        field.value = value
+        field.validate()
+        s = filter_field(field, s)
+    return s
+
+
+def filter_field(field, s):
     # range query
     if field.is_range_query:
         s = execute_range_query(field, s)

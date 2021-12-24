@@ -11,9 +11,7 @@ from core.utils import map_query_params
 from core.validate import (validate_params, validate_per_page,
                            validate_result_size)
 from works.fields import fields_dict
-from works.groupby import group_by_records
 from works.schemas import MessageSchema
-from works.utils import convert_group_by
 
 blueprint = Blueprint("works", __name__)
 
@@ -55,24 +53,13 @@ def works():
 
     # filter
     if filter_params:
-        for key, value in filter_params.items():
-            field = fields_dict[key]
-            field.value = value
-            field.validate()
-            s = filter_records(field, s)
+        s = filter_records(fields_dict, filter_params, s)
 
     # sort
     # if search and sort_params:
     #     s = sort_records(sort_params, s)
     if sort_params and not search:
-        sort_fields = []
-        for key, value in sort_params.items():
-            field = fields_dict[key]
-            if value == "asc":
-                sort_fields.append(field.es_sort_field())
-            elif value == "desc":
-                sort_fields.append(f"-{field.es_sort_field()}")
-        s = s.sort(*sort_fields)
+        s = sort_records(fields_dict, sort_params, s)
     elif search and not sort_params:
         s = s.sort("_score")
     elif (
