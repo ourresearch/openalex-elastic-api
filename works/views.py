@@ -5,11 +5,11 @@ from flask import Blueprint, current_app, jsonify, request
 
 from core.exceptions import APIError
 from core.filter import filter_records
+from core.paginate import Paginate
 from core.search import search_records
 from core.sort import sort_records
 from core.utils import map_query_params
-from core.validate import (validate_params, validate_per_page,
-                           validate_result_size)
+from core.validate import validate_params
 from works.fields import fields_dict
 from works.schemas import MessageSchema
 
@@ -33,13 +33,15 @@ def works():
     group_by = request.args.get("group_by")
     group_by_size = request.args.get("group-by-size", 50, type=int)
     page = request.args.get("page", 1, type=int)
-    per_page = validate_per_page(request.args.get("per-page", 10, type=int))
+    per_page = request.args.get("per-page", 10, type=int)
     search = request.args.get("search")
     sort_params = map_query_params(request.args.get("sort"))
 
+    paginate = Paginate(page, per_page)
+    paginate.validate()
+
     # validate
     validate_params(filter_params, group_by, search)
-    validate_result_size(page, per_page)
 
     s = Search(index="works-v2-*,-*invalid-data")
 
@@ -73,12 +75,8 @@ def works():
     # group by
     # s = group_by_records(group_by, s, group_by_size, query_type)
 
-    # paginate
-    start = 0 if page == 1 else (per_page * page) - per_page + 1
-    end = per_page * page
-
     if not group_by:
-        response = s[start:end].execute()
+        response = s[paginate.start : paginate.end].execute()
     else:
         response = s.execute()
 

@@ -1,21 +1,6 @@
 from core.exceptions import APIPaginationError, APIQueryParamsError
 
 
-def validate_per_page(per_page):
-    if per_page and per_page > 25 or per_page < 1:
-        raise APIPaginationError("per-page parameter must be between 1 and 25")
-
-    return per_page
-
-
-def validate_result_size(page, per_page):
-    valid_results_size = 10000
-    if page * per_page > valid_results_size:
-        raise APIPaginationError(
-            "Maximum results size of 10,000 records is exceeded. Cursor pagination is required for records beyond 10,000 and is coming soon."
-        )
-
-
 def validate_params(filters, group_by, search):
     valid_filter_params = ["author_id", "issn", "ror_id", "year"]
     valid_group_by_params = ["author_id", "country", "issn", "open_access", "year"]
