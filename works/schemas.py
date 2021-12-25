@@ -101,6 +101,7 @@ class WorksSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     publication_date = fields.Str()
+    relevance_score = fields.Float(attribute="meta.score")
     venue = fields.Nested(VenueSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
     concepts = fields.Nested(ConceptsSchema, many=True)
