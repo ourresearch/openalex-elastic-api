@@ -1,11 +1,27 @@
 from core.exceptions import APIQueryParamsError
 
 
-def map_query_params(param):
+def map_filter_params(param):
     if param:
         try:
             params = param.split(",")
             result = {k: v for k, v in (x.split(":") for x in params)}
+        except ValueError:
+            raise APIQueryParamsError(f"Invalid query parameter in {param}.")
+    else:
+        result = None
+    return result
+
+
+def map_sort_params(param):
+    if param:
+        try:
+            params = param.split(",")
+            # parse params and set desc as default
+            result = {
+                k: v
+                for k, v in (x.split(":") if ":" in x else (x, "desc") for x in params)
+            }
         except ValueError:
             raise APIQueryParamsError(f"Invalid query parameter in {param}.")
     else:

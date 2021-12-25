@@ -9,7 +9,7 @@ from core.group_by import group_by_records
 from core.paginate import Paginate
 from core.search import search_records
 from core.sort import sort_records
-from core.utils import map_query_params
+from core.utils import map_filter_params, map_sort_params
 from works.fields import fields_dict
 from works.schemas import MessageSchema
 
@@ -29,13 +29,13 @@ def index():
 
 @blueprint.route("/works")
 def works():
-    filter_params = map_query_params(request.args.get("filter"))
+    filter_params = map_filter_params(request.args.get("filter"))
     group_by = request.args.get("group_by")
     group_by_size = request.args.get("group-by-size", 50, type=int)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per-page", 10, type=int)
     search = request.args.get("search")
-    sort_params = map_query_params(request.args.get("sort"))
+    sort_params = map_sort_params(request.args.get("sort"))
 
     paginate = Paginate(page, per_page)
     paginate.validate()
