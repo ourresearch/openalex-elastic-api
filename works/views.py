@@ -3,13 +3,13 @@ from collections import OrderedDict
 from elasticsearch_dsl import Search
 from flask import Blueprint, current_app, jsonify, request
 
-from core.exceptions import APIError
+from core.exceptions import APIError, APIQueryParamsError
 from core.filter import filter_records
+from core.group_by import group_by_records
 from core.paginate import Paginate
 from core.search import search_records
 from core.sort import sort_records
 from core.utils import map_query_params
-from core.validate import validate_params
 from works.fields import fields_dict
 from works.schemas import MessageSchema
 
@@ -39,9 +39,6 @@ def works():
 
     paginate = Paginate(page, per_page)
     paginate.validate()
-
-    # validate
-    validate_params(filter_params, group_by, search)
 
     s = Search(index="works-v2-*,-*invalid-data")
 
@@ -73,7 +70,11 @@ def works():
         s = s.sort("-publication_date")
 
     # group by
-    # s = group_by_records(group_by, s, group_by_size, query_type)
+    if group_by:
+        field = fields_dict[group_by]
+        if field.is_date_query:
+            raise APIQueryParamsError("Cannot group by date fields.")
+        s = group_by_records(field, group_by_size, s)
 
     if not group_by:
         response = s[paginate.start : paginate.end].execute()
