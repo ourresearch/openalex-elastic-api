@@ -1,9 +1,16 @@
+from core.exceptions import APIQueryParamsError
+
+
 def sort_records(fields_dict, sort_params, s):
     sort_fields = []
     for key, value in sort_params.items():
-        if key == "relevance_score":
+        if key == "relevance_score" and value == "asc":
             sort_fields.append("_score")
             continue
+        elif key == "relevance_score" and value == "desc":
+            raise APIQueryParamsError(
+                "Sorting relevance score descending is not allowed."
+            )
 
         field = fields_dict[key]
         if value == "asc":

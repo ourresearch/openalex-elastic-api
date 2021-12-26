@@ -31,7 +31,7 @@ def test_filter_query(client):
 def test_sort_query(client):
     s = Search()
     filter_args = "venue.publisher:wiley,publication_year:>2015"
-    sort_args = "publication_date,cited_by_count:asc"
+    sort_args = "publication_date,cited_by_count:asc,venue.publisher:desc"
     filter_params = map_filter_params(filter_args)
     sort_params = map_sort_params(sort_args)
 
@@ -49,5 +49,9 @@ def test_sort_query(client):
                 ]
             }
         },
-        "sort": [{"publication_date": {"order": "desc"}}, "cited_by_count"],
+        "sort": [
+            "publication_date",
+            "cited_by_count",
+            {"venue.publisher.keyword": {"order": "desc"}},
+        ],
     }

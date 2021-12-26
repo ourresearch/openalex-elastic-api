@@ -20,7 +20,7 @@ def map_sort_params(param):
             # parse params and set desc as default
             result = {
                 k: v
-                for k, v in (x.split(":") if ":" in x else (x, "desc") for x in params)
+                for k, v in (x.split(":") if ":" in x else (x, "asc") for x in params)
             }
         except ValueError:
             raise APIQueryParamsError(f"Invalid query parameter in {param}.")
