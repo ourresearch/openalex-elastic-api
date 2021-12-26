@@ -100,6 +100,23 @@ def works():
     return message_schema.dump(result)
 
 
+@blueprint.route("/complete")
+def complete():
+    q = request.args.get("q")
+    s = Search(index="works-v2-*,-*invalid-data")
+    s = s.suggest("title_suggestion", q, completion={"field": "display_name.complete"})
+    s = s.suggest(
+        "author_suggestion",
+        q,
+        completion={"field": "authorships.author.display_name.complete"},
+    )
+    response = s.execute()
+    title_results = [r.text for r in response.suggest.title_suggestion[0].options]
+    author_results = [r.text for r in response.suggest.author_suggestion[0].options]
+    result = list(set(title_results + author_results))
+    return jsonify(result)
+
+
 @blueprint.errorhandler(APIError)
 def handle_exception(err):
     """Return custom JSON when APIError or its children are raised"""
