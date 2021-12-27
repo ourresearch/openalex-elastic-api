@@ -30,7 +30,7 @@ def index():
 @blueprint.route("/works")
 def works():
     filter_params = map_filter_params(request.args.get("filter"))
-    group_by = request.args.get("group-by")
+    group_by = request.args.get("group_by")
     group_by_size = request.args.get("group-by-size", 50, type=int)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per-page", 10, type=int)
