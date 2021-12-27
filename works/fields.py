@@ -5,7 +5,9 @@ fields = [
     Field(param="publication_date", is_date_query=True),
     Field(param="host_venue.id"),
     Field(param="host_venue.issn"),
-    Field(param="host_venue.publisher"),
+    Field(
+        param="host_venue.publisher", custom_es_field="host_venue__publisher__keyword"
+    ),
     Field(param="type"),
     Field(param="is_paratext", is_bool_query=True),
     Field(param="open_access.oa_status"),

@@ -40,7 +40,7 @@ def works():
     paginate = Paginate(page, per_page)
     paginate.validate()
 
-    s = Search(index="works-v2-*,-*invalid-data")
+    s = Search(index="works-v3-*,-*invalid-data")
 
     if group_by:
         s = s.extra(size=0)
