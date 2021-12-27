@@ -57,15 +57,19 @@ def test_filter_range_query(client):
 
 def test_filter_regular_query(client):
     s = Search()
-    filter_args = "venue.issn:2333-3334,venue.publisher:null"
+    filter_args = "host_venue.issn:2333-3334,host_venue.publisher:null"
     filter_params = map_filter_params(filter_args)
     s = filter_records(fields_dict, filter_params, s)
     assert s.to_dict() == {
         "query": {
             "bool": {
                 "filter": [
-                    {"terms": {"venue.issn": ["2333-3334"]}},
-                    {"bool": {"must_not": [{"exists": {"field": "venue.publisher"}}]}},
+                    {"terms": {"host_venue.issn": ["2333-3334"]}},
+                    {
+                        "bool": {
+                            "must_not": [{"exists": {"field": "host_venue.publisher"}}]
+                        }
+                    },
                 ]
             }
         }
@@ -74,8 +78,8 @@ def test_filter_regular_query(client):
 
 def test_sort_query(client):
     s = Search()
-    filter_args = "venue.publisher:wiley,publication_year:>2015"
-    sort_args = "publication_date,cited_by_count:asc,venue.publisher:desc"
+    filter_args = "host_venue.publisher:wiley,publication_year:>2015"
+    sort_args = "publication_date,cited_by_count:asc,host_venue.publisher:desc"
     filter_params = map_filter_params(filter_args)
     sort_params = map_sort_params(sort_args)
 
@@ -88,7 +92,7 @@ def test_sort_query(client):
         "query": {
             "bool": {
                 "filter": [
-                    {"terms": {"venue.publisher": ["wiley"]}},
+                    {"terms": {"host_venue.publisher": ["wiley"]}},
                     {"range": {"publication_year": {"gt": 2015}}},
                 ]
             }
@@ -96,6 +100,6 @@ def test_sort_query(client):
         "sort": [
             "publication_date",
             "cited_by_count",
-            {"venue.publisher.keyword": {"order": "desc"}},
+            {"host_venue.publisher.keyword": {"order": "desc"}},
         ],
     }

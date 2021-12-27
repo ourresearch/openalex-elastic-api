@@ -30,7 +30,7 @@ class Field:
     def es_sort_field(self):
         if self.custom_es_field:
             field = self.custom_es_field.replace("__", ".")
-        elif self.param == "venue.publisher":
+        elif self.param == "host_venue.publisher":
             field = f"{self.param}.keyword"
         else:
             field = self.param.replace("__", ".")

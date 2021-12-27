@@ -51,18 +51,23 @@ class ConceptsSchema(Schema):
         ordered = True
 
 
-class VenueSchema(Schema):
+class HostVenueSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     publisher = fields.Str()
     issn = fields.List(fields.Str())
     issn_l = fields.Str()
+    type = fields.Str()
+    url = fields.Str()
+    is_oa = fields.Bool()
+    version = fields.Str()
+    license = fields.Str()
 
     class Meta:
         ordered = True
 
 
-class AlternateLocationsSchema(Schema):
+class AlternateHostVenuesSchema(Schema):
     is_best = fields.Str()
     is_oa = fields.Bool()
     license = fields.Str()
@@ -71,16 +76,10 @@ class AlternateLocationsSchema(Schema):
     version = fields.Str()
 
 
-class UnpaywallSchema(Schema):
+class OpenAccessSchema(Schema):
+    is_oa = fields.Bool()
     oa_status = fields.Str()
-    is_oa_bool = fields.Bool()
-    journal_is_oa = fields.Bool()
-    has_green = fields.Bool()
-    best_license = fields.Str()
-    best_url = fields.Str()
-    best_host_type = fields.Str()
-    best_version = fields.Str()
-    genre = fields.Str()
+    oa_url = fields.Str()
 
     class Meta:
         ordered = True
@@ -89,8 +88,9 @@ class UnpaywallSchema(Schema):
 
 class IDsSchema(Schema):
     doi = fields.Str()
-    pmid = fields.Str()
+    mag = fields.Str()
     openalex = fields.Str()
+    pmid = fields.Str()
 
     class Meta:
         ordered = True
@@ -102,20 +102,18 @@ class WorksSchema(Schema):
     display_name = fields.Str()
     publication_date = fields.Str()
     relevance_score = fields.Float(attribute="meta.score")
-    venue = fields.Nested(VenueSchema)
+    host_venue = fields.Nested(HostVenueSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
     concepts = fields.Nested(ConceptsSchema, many=True)
-    alternate_locations = fields.Nested(AlternateLocationsSchema)
+    alternate_host_venues = fields.Nested(AlternateHostVenuesSchema)
+    open_access = fields.Nested(OpenAccessSchema)
     cited_by_count = fields.Int()
     ids = fields.Nested(IDsSchema)
     publication_year = fields.Int()
     cited_by_api_url = fields.List(fields.Str())
     doi = fields.Str()
-    genre = fields.Str()
-    is_oa = fields.Bool()
+    type = fields.Str()
     is_paratext = fields.Bool()
-    oa_status = fields.Str()
-    oa_url = fields.Str()
     references_count = fields.Int()
     related_works = fields.List(fields.Str())
     url = fields.Str()
