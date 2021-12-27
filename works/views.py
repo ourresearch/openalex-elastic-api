@@ -9,7 +9,7 @@ from core.group_by import group_by_records
 from core.paginate import Paginate
 from core.search import search_records
 from core.sort import sort_records
-from core.utils import map_filter_params, map_sort_params
+from core.utils import get_field, map_filter_params, map_sort_params
 from works.fields import fields_dict
 from works.schemas import MessageSchema
 
@@ -30,7 +30,7 @@ def index():
 @blueprint.route("/works")
 def works():
     filter_params = map_filter_params(request.args.get("filter"))
-    group_by = request.args.get("group_by")
+    group_by = request.args.get("group-by")
     group_by_size = request.args.get("group-by-size", 50, type=int)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per-page", 10, type=int)
@@ -71,7 +71,7 @@ def works():
 
     # group by
     if group_by:
-        field = fields_dict[group_by]
+        field = get_field(fields_dict, group_by)
         if field.is_date_query:
             raise APIQueryParamsError("Cannot group by date fields.")
         s = group_by_records(field, group_by_size, s)

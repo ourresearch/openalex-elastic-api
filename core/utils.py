@@ -1,6 +1,17 @@
 from core.exceptions import APIQueryParamsError
 
 
+def get_field(fields_dict, key):
+    try:
+        field = fields_dict[key]
+        return field
+    except KeyError:
+        valid_fields = sorted(list(fields_dict.keys()))
+        raise APIQueryParamsError(
+            f"{key} is not a valid field. Valid fields are: {valid_fields}"
+        )
+
+
 def map_filter_params(param):
     if param:
         try:
