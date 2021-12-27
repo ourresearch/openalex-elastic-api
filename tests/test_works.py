@@ -67,7 +67,7 @@ def test_filter_regular_query(client):
                     {"terms": {"host_venue.issn": ["2333-3334"]}},
                     {
                         "bool": {
-                            "must_not": [{"exists": {"field": "host_venue.publisher"}}]
+                            "must_not": [{"exists": {"field": "host_venue.publisher.keyword"}}]
                         }
                     },
                 ]
@@ -92,7 +92,7 @@ def test_sort_query(client):
         "query": {
             "bool": {
                 "filter": [
-                    {"terms": {"host_venue.publisher": ["wiley"]}},
+                    {"terms": {"host_venue.publisher.keyword": ["wiley"]}},
                     {"range": {"publication_year": {"gt": 2015}}},
                 ]
             }
