@@ -84,7 +84,7 @@ def works():
     result = OrderedDict()
     result["meta"] = {
         "count": s.count(),
-        "response_time": response.took,
+        "db_response_time_ms": response.took,
         "page": page,
         "per_page": per_page,
     }

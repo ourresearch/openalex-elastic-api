@@ -67,7 +67,9 @@ def test_filter_regular_query(client):
                     {"terms": {"host_venue.issn": ["2333-3334"]}},
                     {
                         "bool": {
-                            "must_not": [{"exists": {"field": "host_venue.publisher.keyword"}}]
+                            "must_not": [
+                                {"exists": {"field": "host_venue.publisher.keyword"}}
+                            ]
                         }
                     },
                 ]
