@@ -2,6 +2,9 @@ format:
 	black .
 	isort .
 
+test:
+	pytest
+
 load-test:
 	locust \
     --locustfile loadtest/locustfile.py \
