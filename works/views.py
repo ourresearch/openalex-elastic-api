@@ -32,7 +32,7 @@ def works():
     group_by = request.args.get("group_by")
     group_by_size = request.args.get("group-by-size", 50, type=int)
     page = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per-page", 10, type=int)
+    per_page = request.args.get("per-page", 25, type=int)
     sort_params = map_sort_params(request.args.get("sort"))
 
     paginate = Paginate(page, per_page)

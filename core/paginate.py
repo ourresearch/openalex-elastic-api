@@ -3,7 +3,7 @@ from core.exceptions import APIPaginationError, APIQueryParamsError
 
 class Paginate:
     def __init__(self, page, per_page):
-        self.max_per_page = 25
+        self.max_per_page = 50
         self.max_result_size = 10000
         self.page = page
         self.per_page = per_page
