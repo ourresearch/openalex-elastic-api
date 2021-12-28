@@ -60,7 +60,7 @@ def works():
 
     # sort
     if sort_params and not is_search_query:
-        s = sort_records(fields_dict, sort_params, s)
+        s = sort_records(fields_dict, group_by, sort_params, s)
     elif is_search_query and not sort_params:
         s = s.sort("_score")
     elif not group_by:
@@ -75,7 +75,7 @@ def works():
             and field.param != "publication_year"
         ):
             raise APIQueryParamsError("Cannot group by date or number fields.")
-        s = group_by_records(field, group_by_size, s)
+        s = group_by_records(field, group_by_size, s, sort_params)
 
     if not group_by:
         response = s[paginate.start : paginate.end].execute()

@@ -88,7 +88,7 @@ def test_sort_query(client):
     s = filter_records(fields_dict, filter_params, s)
 
     # sort
-    s = sort_records(fields_dict, sort_params, s)
+    s = sort_records(fields_dict, None, sort_params, s)
 
     assert s.to_dict() == {
         "query": {

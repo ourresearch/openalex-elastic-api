@@ -2,9 +2,23 @@ from core.exceptions import APIQueryParamsError
 from core.utils import get_field
 
 
-def sort_records(fields_dict, sort_params, s):
+def sort_records(fields_dict, group_by, sort_params, s):
     sort_fields = []
     for key, value in sort_params.items():
+        # group by
+        if (
+            group_by
+            and (key == "key" and (value == "desc" or value == "asc"))
+            or group_by
+            and (key == "count" and (value == "desc" or value == "asc"))
+        ):
+            return s
+        elif group_by:
+            raise APIQueryParamsError(
+                "Valid sort params with group by are: key or count"
+            )
+
+        # relevance key
         if key == "relevance_score" and value == "asc":
             sort_fields.append("_score")
             continue
@@ -13,6 +27,7 @@ def sort_records(fields_dict, sort_params, s):
                 "Sorting relevance score descending is not allowed."
             )
 
+        # all others
         field = get_field(fields_dict, key)
         if value == "asc":
             sort_fields.append(field.es_sort_field())
