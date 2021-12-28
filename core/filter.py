@@ -45,6 +45,10 @@ def execute_regular_query(field, s):
         query = field.value.upper()
         kwargs = {field.es_field(): query}
         s = s.filter("term", **kwargs)
+    elif field.value.startswith("!"):
+        query = field.value[1:]
+        kwargs = {field.es_field(): query}
+        s = s.exclude("term", **kwargs)
     else:
         query = field.value.lower().split(" ")
         kwargs = {field.es_field(): query}
