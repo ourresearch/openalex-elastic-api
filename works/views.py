@@ -93,7 +93,7 @@ def works():
         "count": s.count(),
         "db_response_time_ms": response.took,
         "page": page,
-        "per_page": per_page,
+        "per_page": group_by_size if group_by else per_page,
     }
 
     result["results"] = []
