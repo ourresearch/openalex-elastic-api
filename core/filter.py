@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from core.exceptions import APIQueryParamsError
+from core.search import search_records
 from core.utils import get_field
 
 
@@ -9,7 +10,10 @@ def filter_records(fields_dict, filter_params, s):
         field = get_field(fields_dict, key)
         field.value = value
         field.validate()
-        s = filter_field(field, s)
+        if field.is_search_query:
+            s = search_records(field.value, s)
+        else:
+            s = filter_field(field, s)
     return s
 
 

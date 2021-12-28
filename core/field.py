@@ -10,12 +10,14 @@ class Field:
         is_bool_query=False,
         is_date_query=False,
         is_range_query=False,
+        is_search_query=False,
     ):
         self.param = param
         self.custom_es_field = custom_es_field
         self.is_bool_query = is_bool_query
         self.is_date_query = is_date_query
         self.is_range_query = is_range_query
+        self.is_search_query = is_search_query
         self.value = None
 
     def es_field(self) -> str:

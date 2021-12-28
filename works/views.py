@@ -7,7 +7,6 @@ from core.exceptions import APIError, APIQueryParamsError
 from core.filter import filter_records
 from core.group_by import group_by_records
 from core.paginate import Paginate
-from core.search import search_records
 from core.sort import sort_records
 from core.utils import get_field, map_filter_params, map_sort_params
 from works.fields import fields_dict
@@ -34,7 +33,6 @@ def works():
     group_by_size = request.args.get("group-by-size", 50, type=int)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per-page", 10, type=int)
-    search = request.args.get("search")
     sort_params = map_sort_params(request.args.get("sort"))
 
     paginate = Paginate(page, per_page)
@@ -47,23 +45,28 @@ def works():
     else:
         s = s.extra(size=per_page)
 
-    # search
-    s = search_records(search, s)
-
     # filter
     if filter_params:
         s = filter_records(fields_dict, filter_params, s)
 
+    if (
+        "title.search" in filter_params.keys()
+        or "display_name.search" in filter_params.keys()
+    ):
+        is_search_query = True
+    else:
+        is_search_query = False
+
     # sort
     # if search and sort_params:
     #     s = sort_records(sort_params, s)
-    if sort_params and not search:
+    if sort_params and not is_search_query:
         s = sort_records(fields_dict, sort_params, s)
-    elif search and not sort_params:
+    elif is_search_query and not sort_params:
         s = s.sort("_score")
     elif (
         not group_by
-        and search
+        and is_search_query
         or filter_params
         and not ("publication_year" in filter_params and len(filter_params) == 1)
     ):
