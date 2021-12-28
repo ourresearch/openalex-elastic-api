@@ -52,24 +52,18 @@ def works():
     if filter_params and (
         "title.search" in filter_params.keys()
         or "display_name.search" in filter_params.keys()
+        or "display_name" in filter_params.keys()
     ):
         is_search_query = True
     else:
         is_search_query = False
 
     # sort
-    # if search and sort_params:
-    #     s = sort_records(sort_params, s)
     if sort_params and not is_search_query:
         s = sort_records(fields_dict, sort_params, s)
     elif is_search_query and not sort_params:
         s = s.sort("_score")
-    elif (
-        not group_by
-        and is_search_query
-        or filter_params
-        and not ("publication_year" in filter_params and len(filter_params) == 1)
-    ):
+    elif not group_by:
         s = s.sort("-publication_date")
 
     # group by
