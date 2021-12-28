@@ -49,7 +49,7 @@ def works():
     if filter_params:
         s = filter_records(fields_dict, filter_params, s)
 
-    if (
+    if filter_params and (
         "title.search" in filter_params.keys()
         or "display_name.search" in filter_params.keys()
     ):
