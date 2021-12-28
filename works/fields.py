@@ -29,6 +29,7 @@ fields = [
     Field(param="alternate_host_venues.version"),
     Field(param="alternate_host_venues.venue_id"),
     Field(param="referenced_works"),
+    Field(param="display_name", is_search_exact_query=True),
     Field(param="display_name.search", is_search_query=True),
     Field(param="title.search", is_search_query=True),
 ]
