@@ -72,8 +72,12 @@ def works():
     # group by
     if group_by:
         field = get_field(fields_dict, group_by)
-        if field.is_date_query:
-            raise APIQueryParamsError("Cannot group by date fields.")
+        if (
+            field.is_date_query
+            or field.is_range_query
+            and field.param != "publication_year"
+        ):
+            raise APIQueryParamsError("Cannot group by date or number fields.")
         s = group_by_records(field, group_by_size, s)
 
     if not group_by:
