@@ -68,6 +68,7 @@ class HostVenueSchema(Schema):
 
 
 class AlternateHostVenuesSchema(Schema):
+    display_name = fields.Str()
     is_best = fields.Str()
     is_oa = fields.Bool()
     license = fields.Str()
@@ -117,8 +118,8 @@ class WorksSchema(Schema):
     references_count = fields.Int()
     related_works = fields.List(fields.Str())
     url = fields.Str()
-    bibio = fields.Function(
-        lambda obj: obj.bibio.to_dict() if "bibio" in obj and obj.bibio else None
+    biblio = fields.Function(
+        lambda obj: obj.biblio.to_dict() if "biblio" in obj and obj.biblio else None
     )
     abstract_inverted_index = fields.Function(
         lambda obj: obj.abstract_inverted_index.to_dict()
