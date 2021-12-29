@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields
+from marshmallow import INCLUDE, Schema, fields
 
 
 class MetaSchema(Schema):
@@ -17,3 +17,21 @@ class GroupBySchema(Schema):
 
     class Meta:
         ordered = True
+
+
+class CountsByYearSchema(Schema):
+    year = fields.Int()
+    works_count = fields.Int()
+    cited_by_count = fields.Int()
+
+    class Meta:
+        ordered = True
+        unknown = INCLUDE
+
+
+class XConceptsSchema(Schema):
+    id = fields.Str()
+    wikidata = fields.Str()
+    display_name = fields.Str()
+    level = fields.Int()
+    score = fields.Float()

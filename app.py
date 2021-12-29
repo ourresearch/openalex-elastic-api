@@ -7,6 +7,7 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 
 import authors
 import settings
+import venues
 import works
 
 
@@ -22,6 +23,7 @@ def register_blueprints(app):
     """Register Flask blueprints."""
     app.register_blueprint(authors.views.blueprint)
     app.register_blueprint(works.views.blueprint)
+    app.register_blueprint(venues.views.blueprint)
     return None
 
 
