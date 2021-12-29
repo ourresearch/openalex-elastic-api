@@ -5,6 +5,7 @@ from elasticsearch_dsl import connections
 from flask import Flask
 from sentry_sdk.integrations.flask import FlaskIntegration
 
+import authors
 import settings
 import works
 
@@ -19,6 +20,7 @@ def create_app(config_object="settings"):
 
 def register_blueprints(app):
     """Register Flask blueprints."""
+    app.register_blueprint(authors.views.blueprint)
     app.register_blueprint(works.views.blueprint)
     return None
 

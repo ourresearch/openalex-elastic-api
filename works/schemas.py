@@ -1,14 +1,6 @@
 from marshmallow import INCLUDE, Schema, fields
 
-
-class MetaSchema(Schema):
-    count = fields.Int()
-    db_response_time_ms = fields.Int()
-    page = fields.Int()
-    per_page = fields.Int()
-
-    class Meta:
-        ordered = True
+from core.schemas import GroupBySchema, MetaSchema
 
 
 class AuthorSchema(Schema):
@@ -126,14 +118,6 @@ class WorksSchema(Schema):
         if "abstract_inverted_index" in obj and obj.abstract_inverted_index
         else None
     )
-
-    class Meta:
-        ordered = True
-
-
-class GroupBySchema(Schema):
-    key = fields.Str()
-    count = fields.Int(attribute="doc_count")
 
     class Meta:
         ordered = True
