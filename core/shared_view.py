@@ -8,15 +8,18 @@ from core.group_by import group_by_records
 from core.paginate import Paginate
 from core.sort import sort_records
 from core.utils import get_field, map_filter_params, map_sort_params
+from core.validate import validate_params
 
 
 def shared_view(request, fields_dict, index_name, default_sort):
+    validate_params(request)
     filter_params = map_filter_params(request.args.get("filter"))
     group_by = request.args.get("group_by")
     group_by_size = request.args.get("group-by-size", 50, type=int)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per-page", 25, type=int)
     sort_params = map_sort_params(request.args.get("sort"))
+
     paginate = Paginate(page, per_page)
     paginate.validate()
 

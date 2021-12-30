@@ -10,7 +10,7 @@ def get_field(fields_dict, key):
     except KeyError:
         valid_fields = sorted(list(fields_dict.keys()))
         raise APIQueryParamsError(
-            f"{key} is not a valid field. Valid fields are: {valid_fields}"
+            f"{key} is not a valid field. Valid fields are: {', '.join(valid_fields)}"
         )
 
 
