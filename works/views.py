@@ -1,7 +1,6 @@
 from elasticsearch_dsl import Search
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, jsonify, request
 
-from core.exceptions import APIError
 from core.shared_view import shared_view
 from works.fields import fields_dict
 from works.schemas import MessageSchema

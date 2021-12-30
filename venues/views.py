@@ -1,6 +1,5 @@
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, request
 
-from core.exceptions import APIError
 from core.shared_view import shared_view
 from venues.fields import fields_dict
 from venues.schemas import MessageSchema
