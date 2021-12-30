@@ -41,7 +41,7 @@ def execute_regular_query(field, s):
         field_name = field.es_field()
         field_name = field_name.replace("__", ".")
         s = s.exclude("exists", field=field_name)
-    elif field.param == "institutions.country_code":
+    elif field.param.endswith("country_code"):
         query = field.value.upper()
         kwargs = {field.es_field(): query}
         s = s.filter("term", **kwargs)
@@ -58,9 +58,8 @@ def execute_regular_query(field, s):
             kwargs = {field.es_field(): query}
             s = s.filter("term", **kwargs)
     else:
-        query = field.value.lower().split(" ")
-        kwargs = {field.es_field(): query}
-        s = s.filter("terms", **kwargs)
+        kwargs = {field.es_field(): field.value}
+        s = s.filter("match_phrase", **kwargs)
     return s
 
 
