@@ -1,5 +1,6 @@
 from flask import Blueprint, current_app, jsonify, request
 
+from authors.fields import fields_dict
 from authors.schemas import MessageSchema
 from core.exceptions import APIError
 from core.shared_view import shared_view
@@ -11,7 +12,7 @@ blueprint = Blueprint("authors", __name__)
 def authors():
     index_name = "authors-v1"
     default_sort = "-works_count"
-    result = shared_view(request, index_name, default_sort)
+    result = shared_view(request, fields_dict, index_name, default_sort)
     message_schema = MessageSchema()
     return message_schema.dump(result)
 

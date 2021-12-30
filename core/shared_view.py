@@ -8,10 +8,9 @@ from core.group_by import group_by_records
 from core.paginate import Paginate
 from core.sort import sort_records
 from core.utils import get_field, map_filter_params, map_sort_params
-from venues.fields import fields_dict
 
 
-def shared_view(request, index_name, default_sort):
+def shared_view(request, fields_dict, index_name, default_sort):
     filter_params = map_filter_params(request.args.get("filter"))
     group_by = request.args.get("group_by")
     group_by_size = request.args.get("group-by-size", 50, type=int)
