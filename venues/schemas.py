@@ -6,7 +6,7 @@ from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
 
 class IDsSchema(Schema):
     openalex = fields.Str()
-    issn = fields.Str()
+    issn = fields.List(fields.Str())
     issn_l = fields.Str()
     mag = fields.Str()
 
