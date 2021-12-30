@@ -104,7 +104,7 @@ def works():
 @blueprint.route("/complete")
 def complete():
     q = request.args.get("q")
-    s = Search(index="works-v2-*,-*invalid-data")
+    s = Search(index="works-v4-*,-*invalid-data")
     s = s.suggest("title_suggestion", q, completion={"field": "display_name.complete"})
     response = s.execute()
     title_results = [r.text for r in response.suggest.title_suggestion[0].options]
