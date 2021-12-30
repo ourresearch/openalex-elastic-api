@@ -53,6 +53,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
             field.is_date_query
             or field.is_range_query
             and field.param != "publication_year"
+            and field.param != "level"
         ):
             raise APIQueryParamsError("Cannot group by date or number fields.")
         s = group_by_records(field, group_by_size, s, sort_params)
