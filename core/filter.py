@@ -76,7 +76,7 @@ def execute_date_query(field, s):
     if "<" in field.value:
         query = field.value[1:]
         validate_date_param(field, query)
-        kwargs = {field.es_field(): {"lte": query}}
+        kwargs = {field.es_field(): {"lt": query}}
         s = s.filter("range", **kwargs)
     elif ">" in field.value:
         query = field.value[1:]
@@ -96,7 +96,7 @@ def execute_range_query(field, s):
     if "<" in field.value:
         query = field.value[1:]
         validate_range_param(field, query)
-        kwargs = {field.es_field(): {"lte": int(query)}}
+        kwargs = {field.es_field(): {"lt": int(query)}}
         s = s.filter("range", **kwargs)
     elif ">" in field.value:
         query = field.value[1:]
