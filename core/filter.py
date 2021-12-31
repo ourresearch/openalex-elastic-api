@@ -52,7 +52,7 @@ def execute_regular_query(field, s):
     elif field.value.startswith("!"):
         query = field.value[1:]
         kwargs = {field.es_field(): query}
-        s = s.exclude("term", **kwargs)
+        s = s.exclude("match_phrase", **kwargs)
     elif field.param.endswith(".id"):
         if "https://openalex.org/" in field.value:
             kwargs = {field.es_field(): field.value}
