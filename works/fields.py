@@ -48,6 +48,7 @@ fields = [
         custom_es_field="alternate_host_venues__venue_id__lower",
     ),
     Field(param="referenced_works", custom_es_field="referenced_works__lower"),
+    Field(param="cites", custom_es_field="referenced_works__lower"),
     Field(param="display_name", is_search_exact_query=True),
     Field(param="display_name.search", is_search_query=True),
     Field(param="title.search", is_search_query=True),
