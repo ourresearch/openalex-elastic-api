@@ -21,7 +21,7 @@ def index():
 
 @blueprint.route("/works")
 def works():
-    index_name = "works-v4-*,-*invalid-data"
+    index_name = "works-v5-*,-*invalid-data"
     default_sort = "-publication_date"
     result = shared_view(request, fields_dict, index_name, default_sort)
     message_schema = MessageSchema()
