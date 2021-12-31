@@ -98,7 +98,7 @@ class WorksSchema(Schema):
     host_venue = fields.Nested(HostVenueSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
     concepts = fields.Nested(ConceptsSchema, many=True)
-    alternate_host_venues = fields.Nested(AlternateHostVenuesSchema)
+    alternate_host_venues = fields.List(fields.Nested(AlternateHostVenuesSchema))
     open_access = fields.Nested(OpenAccessSchema)
     cited_by_count = fields.Int()
     ids = fields.Nested(IDsSchema)

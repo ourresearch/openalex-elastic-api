@@ -41,6 +41,10 @@ def execute_regular_query(field, s):
         field_name = field.es_field()
         field_name = field_name.replace("__", ".")
         s = s.exclude("exists", field=field_name)
+    elif field.value == "!null":
+        field_name = field.es_field()
+        field_name = field_name.replace("__", ".")
+        s = s.filter("exists", field=field_name)
     elif field.param.endswith("country_code"):
         query = field.value.upper()
         kwargs = {field.es_field(): query}
@@ -66,6 +70,8 @@ def execute_regular_query(field, s):
 def execute_boolean_query(field, s):
     if field.value == "null":
         s = s.exclude("exists", field=field.es_field())
+    elif field.value == "!null":
+        s = s.filter("exists", field=field.es_field())
     else:
         kwargs = {field.es_field(): field.value.lower()}
         s = s.filter("term", **kwargs)
