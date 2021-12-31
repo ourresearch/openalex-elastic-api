@@ -9,7 +9,7 @@ blueprint = Blueprint("authors", __name__)
 
 @blueprint.route("/authors")
 def authors():
-    index_name = "authors-v1"
+    index_name = "authors-v2"
     default_sort = "-works_count"
     result = shared_view(request, fields_dict, index_name, default_sort)
     message_schema = MessageSchema()
