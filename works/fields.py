@@ -13,9 +13,18 @@ fields = [
     Field(
         param="open_access.oa_status", custom_es_field="open_access__oa_status__lower"
     ),
+    Field(param="oa_status", custom_es_field="open_access__oa_status__lower"),
     Field(param="open_access.is_oa", is_bool_query=True),
+    Field(param="is_oa", custom_es_field="open_access__is_oa", is_bool_query=True),
     Field(param="author.id", custom_es_field="authorships__author__id__lower"),
     Field(param="author.orcid", custom_es_field="authorships__author__orcid__lower"),
+    Field(
+        param="authorships.author.id", custom_es_field="authorships__author__id__lower"
+    ),
+    Field(
+        param="authorships.author.orcid",
+        custom_es_field="authorships__author__orcid__lower",
+    ),
     Field(
         param="institutions.id", custom_es_field="authorships__institutions__id__lower"
     ),
@@ -29,6 +38,22 @@ fields = [
     ),
     Field(
         param="institutions.type",
+        custom_es_field="authorships__institutions__type__lower",
+    ),
+    Field(
+        param="authorships.institutions.id",
+        custom_es_field="authorships__institutions__id__lower",
+    ),
+    Field(
+        param="authorships.institutions.ror",
+        custom_es_field="authorships__institutions__ror__lower",
+    ),
+    Field(
+        param="authorships.institutions.country_code",
+        custom_es_field="authorships__institutions__country_code__lower",
+    ),
+    Field(
+        param="authorships.institutions.type",
         custom_es_field="authorships__institutions__type__lower",
     ),
     Field(param="cited_by_count", is_range_query=True),
