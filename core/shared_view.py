@@ -35,7 +35,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         s = filter_records(fields_dict, filter_params, s)
     if filter_params and (
         "display_name.search" in filter_params.keys()
-        or "display_name" in filter_params.keys()
+        or "title.search" in filter_params.keys()
     ):
         is_search_query = True
     else:
@@ -80,4 +80,5 @@ def shared_view(request, fields_dict, index_name, default_sort):
     else:
         result["group_by"] = []
         result["results"] = response
+    print(s.to_dict())
     return result
