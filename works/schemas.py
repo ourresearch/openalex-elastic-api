@@ -109,6 +109,7 @@ class WorksSchema(Schema):
     is_paratext = fields.Bool()
     is_retracted = fields.Bool()
     references_count = fields.Int()
+    referenced_works = fields.List(fields.Str())
     related_works = fields.List(fields.Str())
     url = fields.Str()
     biblio = fields.Function(
