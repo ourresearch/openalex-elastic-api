@@ -107,6 +107,7 @@ class WorksSchema(Schema):
     doi = fields.Str()
     type = fields.Str()
     is_paratext = fields.Bool()
+    is_retracted = fields.Bool()
     references_count = fields.Int()
     related_works = fields.List(fields.Str())
     url = fields.Str()
