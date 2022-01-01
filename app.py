@@ -6,6 +6,7 @@ from flask import Flask, jsonify
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 import authors
+import complete
 import concepts
 import institutions
 import settings
@@ -26,6 +27,7 @@ def create_app(config_object="settings"):
 def register_blueprints(app):
     """Register Flask blueprints."""
     app.register_blueprint(authors.views.blueprint)
+    app.register_blueprint(complete.views.blueprint)
     app.register_blueprint(concepts.views.blueprint)
     app.register_blueprint(institutions.views.blueprint)
     app.register_blueprint(works.views.blueprint)
