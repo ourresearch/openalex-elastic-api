@@ -12,7 +12,7 @@ blueprint = Blueprint("complete", __name__)
 def autocomplete():
     q = request.args.get("q")
     s = Search(
-        index="authors-v2,concepts-v1,institutions-v1,venues-v2,works-v5-*,-*invalid-data"
+        index="authors-v3,concepts-v1,institutions-v1,venues-v2,works-v5-*,-*invalid-data"
     )
     s = s.query("match_phrase_prefix", display_name=q)
     s = s.sort("-cited_by_count")
