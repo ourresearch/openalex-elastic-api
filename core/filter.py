@@ -53,7 +53,11 @@ def execute_regular_query(field, s):
         query = field.value[1:]
         kwargs = {field.es_field(): query}
         s = s.exclude("match_phrase", **kwargs)
-    elif field.param.endswith(".id"):
+    elif (
+        field.param.endswith(".id")
+        or field.param == "cites"
+        or field.param == "referenced_works"
+    ):
         if "https://openalex.org/" in field.value:
             kwargs = {field.es_field(): field.value}
             s = s.filter("term", **kwargs)
