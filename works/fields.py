@@ -4,6 +4,7 @@ fields = [
     Field(param="publication_year", is_range_query=True),
     Field(param="publication_date", is_date_query=True),
     Field(param="host_venue.id", custom_es_field="host_venue__id__lower"),
+    Field(param="journal.id", custom_es_field="host_venue__id__lower"),
     Field(param="host_venue.issn", custom_es_field="host_venue__issn__lower"),
     Field(
         param="host_venue.publisher", custom_es_field="host_venue__publisher__keyword"
@@ -27,6 +28,9 @@ fields = [
     ),
     Field(
         param="institutions.id", custom_es_field="authorships__institutions__id__lower"
+    ),
+    Field(
+        param="institution.id", custom_es_field="authorships__institutions__id__lower"
     ),
     Field(
         param="institutions.ror",
@@ -59,6 +63,7 @@ fields = [
     Field(param="cited_by_count", is_range_query=True),
     Field(param="is_retracted", is_bool_query=True),
     Field(param="concepts.id", custom_es_field="concepts__id__lower"),
+    Field(param="concept.id", custom_es_field="concepts__id__lower"),
     Field(param="concepts.wikidata", custom_es_field="concepts__wikidata__lower"),
     Field(
         param="alternate_host_venues.license",
