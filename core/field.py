@@ -1,3 +1,6 @@
+from core.exceptions import APIQueryParamsError
+
+
 class Field:
     """
     Defines a field that can be filtered, grouped, and sorted.
@@ -44,8 +47,14 @@ class Field:
         if self.is_range_query and "<" in self.value or ">" in self.value:
             num = self.value[1:]
             try:
-                n = int(num)
+                int(num)
             except ValueError:
-                print("not a number")
-        elif self.is_range_query:
-            pass
+                raise APIQueryParamsError(
+                    f"Range filter for {self.param} must be a number."
+                )
+        elif self.is_bool_query:
+            self.value = self.value.lower().strip()
+            if self.value != "true" and self.value != "false":
+                raise APIQueryParamsError(
+                    f"Boolean value for {self.param} must be true or false, not {self.value}"
+                )
