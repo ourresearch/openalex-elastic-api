@@ -12,7 +12,7 @@ blueprint = Blueprint("complete", __name__)
 @blueprint.route("/autocomplete")
 def autocomplete():
     entities_to_indeces = {
-        "author": "authors-v3",
+        "author": "authors-v4",
         "concept": "concepts-v1",
         "institution": "institutions-v1",
         "venue": "venues-v2",
