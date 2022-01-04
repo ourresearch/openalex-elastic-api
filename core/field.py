@@ -44,7 +44,9 @@ class Field:
         return field
 
     def validate(self):
-        if self.is_range_query and "<" in self.value or ">" in self.value:
+        if (self.is_range_query and "<" in self.value) or (
+            self.is_range_query and ">" in self.value
+        ):
             num = self.value[1:]
             try:
                 int(num)
