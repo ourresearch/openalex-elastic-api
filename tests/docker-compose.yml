@@ -1,0 +1,32 @@
+version: '2.2'
+services:
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.16.1
+    container_name: es_openalex_test
+    environment:
+      - discovery.type=single-node
+    volumes:
+      - data01:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - openalex_elastic
+
+  kib01:
+    image: docker.elastic.co/kibana/kibana:7.16.2
+    container_name: kb_openalex_test
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_URL: http://es01:9200
+      ELASTICSEARCH_HOSTS: '["http://es01:9200"]'
+    networks:
+      - openalex_elastic
+
+volumes:
+  data01:
+    driver: local
+
+networks:
+  openalex_elastic:
+    driver: bridge
