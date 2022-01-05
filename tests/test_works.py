@@ -1,107 +1,118 @@
-from elasticsearch_dsl import Search
+class TestWorksPublicationYearFilter:
+    def test_works_publication_year(self, client):
+        res = client.get("/works?filter=publication_year:2020")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 27
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2894716986"
+        assert json_data["results"][0]["cited_by_count"] == 4
+        assert res.status_code == 200
 
-from core.filter import filter_records
-from core.search import search_records
-from core.sort import sort_records
-from core.utils import map_filter_params, map_sort_params
-from works.fields import fields_dict
+    def test_works_publication_year_greater_than(self, client):
+        res = client.get("/works?filter=publication_year:>2020")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 7
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2893359707"
+        assert json_data["results"][0]["cited_by_count"] == 0
+        assert res.status_code == 200
 
+    def test_works_publication_year_less_than(self, client):
+        res = client.get("/works?filter=publication_year:<2020")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9966
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2893871524"
+        assert json_data["results"][0]["cited_by_count"] == 0
+        assert res.status_code == 200
 
-def test_index(client):
-    res = client.get("/")
-    json_data = res.get_json()
-    assert json_data["msg"] == "Don't panic"
-    assert res.status_code == 200
-
-
-def test_search(client):
-    s = Search()
-    search = "covid-19"
-    s = search_records(search, s)
-    assert s.to_dict() == {
-        "query": {
-            "bool": {
-                "should": [
-                    {
-                        "match": {
-                            "display_name": {"query": "covid-19", "operator": "and"}
-                        }
-                    },
-                    {
-                        "match_phrase": {
-                            "display_name": {"query": "covid-19", "boost": 2}
-                        }
-                    },
-                ]
-            }
-        }
-    }
+    def test_works_publication_year_error(self, client):
+        res = client.get("/works?filter=publication_year:ff")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"] == "Value for param publication_year must be a number."
+        )
 
 
-def test_filter_range_query(client):
-    s = Search()
-    filter_args = "publication_year:>2015,cited_by_count:<10"
-    filter_params = map_filter_params(filter_args)
-    s = filter_records(fields_dict, filter_params, s)
-    assert s.to_dict() == {
-        "query": {
-            "bool": {
-                "filter": [
-                    {"range": {"publication_year": {"gt": 2015}}},
-                    {"range": {"cited_by_count": {"lte": 10}}},
-                ]
-            }
-        }
-    }
+class TestWorksPublicationDateFilter:
+    def test_works_publication_date(self, client):
+        res = client.get("/works?filter=publication_date:2020-01-01")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 4
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2895362161"
+        assert json_data["results"][0]["cited_by_count"] == 7
+        assert res.status_code == 200
+
+    def test_works_publication_date_greater_than(self, client):
+        res = client.get("/works?filter=publication_date:>2020-01-01")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 30
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2893359707"
+        assert json_data["results"][0]["cited_by_count"] == 0
+        assert res.status_code == 200
+
+    def test_works_publication_date_less_than(self, client):
+        res = client.get("/works?filter=publication_date:<2020-01-01")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9966
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2893871524"
+        assert json_data["results"][0]["cited_by_count"] == 0
+        assert res.status_code == 200
+
+    def test_works_publication_date_error(self, client):
+        res = client.get("/works?filter=publication_date:2020-01-555")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"]
+            == "Value for param publication_date must be a date in format 2020-05-17."
+        )
 
 
-def test_filter_regular_query(client):
-    s = Search()
-    filter_args = "host_venue.issn:2333-3334,host_venue.publisher:null"
-    filter_params = map_filter_params(filter_args)
-    s = filter_records(fields_dict, filter_params, s)
-    assert s.to_dict() == {
-        "query": {
-            "bool": {
-                "filter": [
-                    {"terms": {"host_venue.issn": ["2333-3334"]}},
-                    {
-                        "bool": {
-                            "must_not": [
-                                {"exists": {"field": "host_venue.publisher.keyword"}}
-                            ]
-                        }
-                    },
-                ]
-            }
-        }
-    }
+class TestWorksHostVenueFilter:
+    def test_works_host_venue_issn(self, client):
+        res = client.get("/works?filter=host_venue.issn:2332-7790")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        for result in json_data["results"]:
+            assert "2332-7790" in result["host_venue"]["issn"]
+
+    def test_works_host_venue_publisher(self, client):
+        res = client.get("/works?filter=host_venue.publisher:ElseVier Bv")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 36
+        for result in json_data["results"]:
+            assert result["host_venue"]["publisher"] == "Elsevier BV"
+
+    def test_works_host_venue_id_short(self, client):
+        res = client.get("/works?filter=host_venue.id:v2898264183")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["publication_date"] == "2019-09-01"
+        assert (
+            json_data["results"][0]["host_venue"]["display_name"]
+            == "Health Professions Education"
+        )
+        assert json_data["results"][0]["host_venue"]["publisher"] == "Elsevier BV"
+        assert res.status_code == 200
+
+    def test_works_host_venue_id_long(self, client):
+        res = client.get("/works?filter=host_venue.id:https://openalex.org/v2898264183")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["publication_date"] == "2019-09-01"
+        assert (
+            json_data["results"][0]["host_venue"]["display_name"]
+            == "Health Professions Education"
+        )
+        assert json_data["results"][0]["host_venue"]["publisher"] == "Elsevier BV"
+        assert res.status_code == 200
 
 
-def test_sort_query(client):
-    s = Search()
-    filter_args = "host_venue.publisher:wiley,publication_year:>2015"
-    sort_args = "publication_date,cited_by_count:asc,host_venue.publisher:desc"
-    filter_params = map_filter_params(filter_args)
-    sort_params = map_sort_params(sort_args)
-
-    s = filter_records(fields_dict, filter_params, s)
-
-    # sort
-    s = sort_records(fields_dict, None, sort_params, s)
-
-    assert s.to_dict() == {
-        "query": {
-            "bool": {
-                "filter": [
-                    {"terms": {"host_venue.publisher.keyword": ["wiley"]}},
-                    {"range": {"publication_year": {"gt": 2015}}},
-                ]
-            }
-        },
-        "sort": [
-            "publication_date",
-            "cited_by_count",
-            {"host_venue.publisher.keyword": {"order": "desc"}},
-        ],
-    }
+class TestWorksTypeFilter:
+    def test_works_type(self, client):
+        res = client.get("/works?filter=type:journAl-arTicle")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2884
+        for result in json_data["results"][:25]:
+            assert result["type"] == "journal-article"
