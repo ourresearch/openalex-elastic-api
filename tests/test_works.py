@@ -1,3 +1,28 @@
+import pytest
+
+
+class TestWorksSearch:
+    def test_works_search(self, client):
+        res = client.get("/works?filter=display_name.search:factor%20analysis")
+        json_data = res.get_json()
+        for result in json_data["results"][:25]:
+            assert "factor analysis" in result["display_name"].lower()
+
+    def test_works_search_alias(self, client):
+        res = client.get("/works?filter=title.search:factor%20analysis")
+        json_data = res.get_json()
+        for result in json_data["results"][:25]:
+            assert "factor analysis" in result["display_name"].lower()
+
+    @pytest.mark.skip
+    def test_works_search_exact(self, client):
+        """Exact search filter needs to be implemented."""
+        res = client.get("/works?filter=display_name:safety")
+        json_data = res.get_json()
+        for result in json_data["results"][:25]:
+            assert result["display_name"].lower() == "safety"
+
+
 class TestWorksPublicationYearFilter:
     def test_works_publication_year_equal(self, client):
         res = client.get("/works?filter=publication_year:2020")
@@ -284,6 +309,20 @@ class TestWorksConcepts:
 
 
 class TestWorksAlternateHostVenues:
+    def test_works_alternate_host_venues_id_short(self, client):
+        """Needs to be made case insensitive."""
+        res = client.get("/works?filter=alternate_host_venues.id:V173526857")
+        json_data = res.get_json()
+        for result in json_data["results"][:25]:
+            assert result["alternate_host_venues"][0]["id"] == "https://openalex.org/V173526857"
+
+    def test_works_alternate_host_venues_id_long(self, client):
+        """Needs to be made case insensitive."""
+        res = client.get("/works?filter=alternate_host_venues.id:https://openalex.org/V173526857")
+        json_data = res.get_json()
+        for result in json_data["results"][:25]:
+            assert result["alternate_host_venues"][0]["id"] == "https://openalex.org/V173526857"
+
     def test_works_alternate_host_venues_license(self, client):
         res = client.get("/works?filter=alternate_host_venues.license:CC-by-nc")
         json_data = res.get_json()
