@@ -1,8 +1,15 @@
 class TestPagination:
-    def test_pagination_page_valid(self, client):
+    def test_pagination_page_1(self, client):
+        res = client.get("/works?page=1")
+        json_data = res.get_json()
+        assert json_data["meta"]["page"] == 1
+        assert len(json_data["results"]) == 25
+
+    def test_pagination_page_2(self, client):
         res = client.get("/works?page=2")
         json_data = res.get_json()
         assert json_data["meta"]["page"] == 2
+        assert len(json_data["results"]) == 25
 
     def test_pagination_page_less_than_1(self, client):
         res = client.get("/works?page=0")
