@@ -20,8 +20,13 @@ class Paginate:
         return self.per_page * self.page
 
     def validate(self):
+        self.validate_page()
         self.validate_per_page()
         self.validate_result_size()
+
+    def validate_page(self):
+        if self.page < 1:
+            raise APIPaginationError(f"Page parameter must be greater than 0.")
 
     def validate_per_page(self):
         if self.per_page and self.per_page > self.max_per_page or self.per_page < 1:
