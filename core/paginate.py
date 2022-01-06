@@ -1,4 +1,4 @@
-from core.exceptions import APIPaginationError, APIQueryParamsError
+from core.exceptions import APIPaginationError
 
 
 class Paginate:
@@ -13,7 +13,7 @@ class Paginate:
         if self.page == 1:
             return 0
         else:
-            return (self.per_page * self.page) - self.per_page + 1
+            return (self.per_page * self.page) - self.per_page
 
     @property
     def end(self):
