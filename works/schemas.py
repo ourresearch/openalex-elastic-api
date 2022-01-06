@@ -60,13 +60,16 @@ class HostVenueSchema(Schema):
 
 
 class AlternateHostVenuesSchema(Schema):
+    id = fields.Str()
     display_name = fields.Str()
     is_best = fields.Str()
     is_oa = fields.Bool()
     license = fields.Str()
     url = fields.Str()
-    venue_id = fields.Str()
     version = fields.Str()
+
+    class Meta:
+        ordered = True
 
 
 class OpenAccessSchema(Schema):

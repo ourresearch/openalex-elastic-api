@@ -70,6 +70,10 @@ fields = [
         custom_es_field="alternate_host_venues__license__lower",
     ),
     Field(
+        param="alternate_host_venues.id",
+        custom_es_field="alternate_host_venues__id",
+    ),
+    Field(
         param="alternate_host_venues.version",
         custom_es_field="alternate_host_venues__version__lower",
     ),
