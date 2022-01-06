@@ -314,14 +314,22 @@ class TestWorksAlternateHostVenues:
         res = client.get("/works?filter=alternate_host_venues.id:V173526857")
         json_data = res.get_json()
         for result in json_data["results"][:25]:
-            assert result["alternate_host_venues"][0]["id"] == "https://openalex.org/V173526857"
+            assert (
+                result["alternate_host_venues"][0]["id"]
+                == "https://openalex.org/V173526857"
+            )
 
     def test_works_alternate_host_venues_id_long(self, client):
         """Needs to be made case insensitive."""
-        res = client.get("/works?filter=alternate_host_venues.id:https://openalex.org/V173526857")
+        res = client.get(
+            "/works?filter=alternate_host_venues.id:https://openalex.org/V173526857"
+        )
         json_data = res.get_json()
         for result in json_data["results"][:25]:
-            assert result["alternate_host_venues"][0]["id"] == "https://openalex.org/V173526857"
+            assert (
+                result["alternate_host_venues"][0]["id"]
+                == "https://openalex.org/V173526857"
+            )
 
     def test_works_alternate_host_venues_license(self, client):
         res = client.get("/works?filter=alternate_host_venues.license:CC-by-nc")
