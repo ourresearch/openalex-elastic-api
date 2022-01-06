@@ -1,5 +1,5 @@
 class TestWorksPublicationYearFilter:
-    def test_works_publication_year(self, client):
+    def test_works_publication_year_equal(self, client):
         res = client.get("/works?filter=publication_year:2020")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 27
@@ -34,7 +34,7 @@ class TestWorksPublicationYearFilter:
 
 
 class TestWorksPublicationDateFilter:
-    def test_works_publication_date(self, client):
+    def test_works_publication_date_equal(self, client):
         res = client.get("/works?filter=publication_date:2020-01-01")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 4
@@ -69,7 +69,7 @@ class TestWorksPublicationDateFilter:
         )
 
 
-class TestWorksHostVenueFilter:
+class TestWorksHostVenueFilters:
     def test_works_host_venue_issn(self, client):
         res = client.get("/works?filter=host_venue.issn:2332-7790")
         json_data = res.get_json()
@@ -116,3 +116,258 @@ class TestWorksTypeFilter:
         assert json_data["meta"]["count"] == 2884
         for result in json_data["results"][:25]:
             assert result["type"] == "journal-article"
+
+
+class TestWorksBooleanFilters:
+    def test_works_is_paratext(self, client):
+        res = client.get("/works?filter=is_paratext:False")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 3332
+        for result in json_data["results"][:25]:
+            assert result["is_paratext"] == False
+
+    def test_works_is_oa(self, client):
+        res = client.get("/works?filter=is_oa:tRue")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 7709
+        for result in json_data["results"][:25]:
+            assert result["open_access"]["is_oa"] == True
+
+    def test_works_is_retracted(self, client):
+        res = client.get("/works?filter=is_retracted:false")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 10000
+        for result in json_data["results"][:25]:
+            assert result["is_retracted"] == False
+
+    def test_works_boolean_error(self, client):
+        res = client.get("/works?filter=is_retracted:falsee")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"]
+            == "Boolean value for is_retracted must be true or false, not falsee"
+        )
+
+
+class TestWorksAuthorFilters:
+    author_name = "Leonardo Ferreira Almada"
+
+    def test_works_author_id_short(self, client):
+        res = client.get("/works?filter=author.id:A2698836828")
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["authorships"][0]["author"]["display_name"]
+            == self.author_name
+        )
+
+    def test_works_author_id_long(self, client):
+        res = client.get("/works?filter=author.id:https://openalex.org/a2698836828")
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["authorships"][0]["author"]["display_name"]
+            == self.author_name
+        )
+
+    def test_works_author_orcid(self, client):
+        res = client.get(
+            "/works?filter=author.orcid:https://orcid.org/0000-0002-9777-5667"
+        )
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["authorships"][0]["author"]["display_name"]
+            == self.author_name
+        )
+
+
+class TestWorksInstitutionsFilters:
+    institution_name = "University of Connecticut"
+
+    def test_works_institutions_id_short(self, client):
+        res = client.get("/works?filter=institutions.id:I140172145")
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["authorships"][0]["institutions"][0]["display_name"]
+            == self.institution_name
+        )
+
+    def test_works_institutions_id_long(self, client):
+        res = client.get(
+            "/works?filter=institutions.id:https://openalex.org/I140172145"
+        )
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["authorships"][0]["institutions"][0]["display_name"]
+            == self.institution_name
+        )
+
+    def test_works_institutions_ror(self, client):
+        res = client.get("/works?filter=institutions.ror:https://ror.org/02der9h97")
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["authorships"][0]["institutions"][0]["display_name"]
+            == self.institution_name
+        )
+
+    def test_works_institutions_country_code(self, client):
+        res = client.get("/works?filter=institutions.country_code:de")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 198
+        assert (
+            json_data["results"][0]["authorships"][0]["institutions"][0]["country_code"]
+            == "DE"
+        )
+
+    def test_works_institutions_type(self, client):
+        res = client.get("/works?filter=institutions.type:Education")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2030
+        assert (
+            json_data["results"][0]["authorships"][0]["institutions"][0]["type"]
+            == "education"
+        )
+
+
+class TestWorksCitedByCountFilter:
+    def test_works_cited_by_count_equal(self, client):
+        res = client.get("/works?filter=cited_by_count:20")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 25
+        for result in json_data["results"][:25]:
+            assert result["cited_by_count"] == 20
+
+    def test_works_cited_by_count_greater_than(self, client):
+        res = client.get("/works?filter=cited_by_count:>20")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 432
+        for result in json_data["results"][:25]:
+            assert result["cited_by_count"] > 20
+
+    def test_works_cited_by_count_less_than(self, client):
+        res = client.get("/works?filter=cited_by_count:<20")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9543
+        for result in json_data["results"][:25]:
+            assert result["cited_by_count"] < 20
+
+    def test_works_range_error(self, client):
+        res = client.get("/works?filter=cited_by_count:>ff")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"] == "Range filter for cited_by_count must be a number."
+        )
+
+
+class TestWorksConcepts:
+    concept_name = "Computer science"
+
+    def test_works_institutions_id_short(self, client):
+        res = client.get("/works?filter=concepts.id:c41008148")
+        json_data = res.get_json()
+        concept_found = False
+        for concept in json_data["results"][0]["concepts"]:
+            if concept["display_name"] == self.concept_name:
+                concept_found = True
+        assert concept_found == True
+
+    def test_works_institutions_id_long(self, client):
+        res = client.get("/works?filter=concepts.id:https://openalex.org/C41008148")
+        concept_found = False
+        json_data = res.get_json()
+        for concept in json_data["results"][0]["concepts"]:
+            if concept["display_name"] == self.concept_name:
+                concept_found = True
+        assert concept_found == True
+
+
+class TestWorksAlternateHostVenues:
+    def test_works_alternate_host_venues_license(self, client):
+        res = client.get("/works?filter=alternate_host_venues.license:CC-by-nc")
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["alternate_host_venues"][0]["license"] == "cc-by-nc"
+        )
+
+    def test_works_alternate_host_venues_version(self, client):
+        res = client.get("/works?filter=alternate_host_venues.version:publishedversion")
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["alternate_host_venues"][0]["version"]
+            == "publishedVersion"
+        )
+
+
+class TestWorksReferencedWorks:
+    def test_works_referenced_works_short(self, client):
+        res = client.get("/works?filter=referenced_works:W2516086211")
+        json_data = res.get_json()
+        assert (
+            "https://openalex.org/W2516086211"
+            in json_data["results"][0]["referenced_works"]
+        )
+
+    def test_works_referenced_works_long(self, client):
+        res = client.get(
+            "/works?filter=referenced_works:https://openalex.org/W2516086211"
+        )
+        json_data = res.get_json()
+        assert (
+            "https://openalex.org/W2516086211"
+            in json_data["results"][0]["referenced_works"]
+        )
+
+    def test_works_cites_short(self, client):
+        res = client.get("/works?filter=cites:W2516086211")
+        json_data = res.get_json()
+        assert (
+            "https://openalex.org/W2516086211"
+            in json_data["results"][0]["referenced_works"]
+        )
+
+    def test_works_cites_long(self, client):
+        res = client.get("/works?filter=cites:https://openalex.org/W2516086211")
+        json_data = res.get_json()
+        assert (
+            "https://openalex.org/W2516086211"
+            in json_data["results"][0]["referenced_works"]
+        )
+
+
+class TestWorksOAStatus:
+    def test_works_oa_status(self, client):
+        res = client.get("/works?filter=oa_status:Closed")
+        json_data = res.get_json()
+        for result in json_data["results"][:25]:
+            assert result["open_access"]["oa_status"] == "closed"
+
+    def test_works_oa_status_alias(self, client):
+        res = client.get("/works?filter=open_access.oa_status:open")
+        json_data = res.get_json()
+        for result in json_data["results"][:25]:
+            assert result["open_access"]["oa_status"] == "open"
+
+
+class TestWorksNullNotNull:
+    def test_works_oa_status_null(self, client):
+        res = client.get("/works?filter=oa_status:null")
+        json_data = res.get_json()
+        for result in json_data["results"][:25]:
+            assert result["open_access"]["oa_status"] == None
+
+    def test_works_oa_status_not_null(self, client):
+        res = client.get("/works?filter=oa_status:!null")
+        json_data = res.get_json()
+        for result in json_data["results"][:25]:
+            assert result["open_access"]["oa_status"] != None
+
+
+class TestWorksNotFilter:
+    def test_works_oa_status_null(self, client):
+        res = client.get("/works?filter=oa_status:!closed")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 7709
+        for result in json_data["results"][:50]:
+            assert result["open_access"]["oa_status"] != "closed"
