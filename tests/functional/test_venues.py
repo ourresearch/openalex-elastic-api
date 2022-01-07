@@ -91,6 +91,7 @@ class TestVenuesXConceptsIDFilter:
     def test_venues_x_concepts_id_long(self, client):
         res = client.get("/venues?filter=x_concepts.id:https://openalex.org/c185592680")
         json_data = res.get_json()
+        concept_found = False
         for concept in json_data["results"][0]["x_concepts"]:
             if concept["id"] == "https://openalex.org/C185592680":
                 concept_found = True
