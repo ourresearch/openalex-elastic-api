@@ -55,3 +55,18 @@ def convert_group_by(response, field):
         result, key=lambda i: i["doc_count"], reverse=True
     )  # sort by count
     return result_sorted
+
+
+def set_number_param(request, param, default):
+    """
+    Tries to get a number param with hyphen or underscore. Returns an error if not a number.
+    """
+    result = request.args.get(param) or request.args.get(param.replace("-", "_"))
+    if result:
+        try:
+            result = int(result)
+        except ValueError:
+            raise APIQueryParamsError(f"Param {param} must be a number.")
+    else:
+        result = default
+    return result

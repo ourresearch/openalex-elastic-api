@@ -23,6 +23,17 @@ class TestPagination:
         json_data = res.get_json()
         assert json_data["meta"]["per_page"] == 50
 
+    def test_pagination_per_page_valid_underscore(self, client):
+        res = client.get("/works?per_page=50")
+        json_data = res.get_json()
+        assert json_data["meta"]["per_page"] == 50
+
+    def test_pagination_per_page_error(self, client):
+        res = client.get("/works?per-page=ff")
+        json_data = res.get_json()
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"] == "Param per-page must be a number."
+
     def test_pagination_max_per_page_exceeded(self, client):
         res = client.get("/works?per-page=100")
         json_data = res.get_json()
