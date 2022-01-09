@@ -10,15 +10,23 @@ def get_field(fields_dict, key):
     except KeyError:
         valid_fields = sorted(list(fields_dict.keys()))
         raise APIQueryParamsError(
-            f"{key} is not a valid field. Valid fields are: {', '.join(valid_fields)}"
+            f"{key} is not a valid field. Valid fields are underscore or hyphenated versions of: {', '.join(valid_fields)}"
         )
 
 
 def map_filter_params(param):
+    """
+    Split filter params by comma, then map to a dictionary based on key:value.
+    Use a regex to ensure we do not split URLs on the colon.
+    """
     if param:
         try:
+            result = {}
             params = param.split(",")
-            result = {k: v for k, v in (re.split(":(?!\/\/)", x) for x in params)}
+            for param in params:
+                key, value = re.split(":(?!//)", param)  # split by colon
+                key = key.replace("-", "_")  # convert key to underscore
+                result[key] = value
         except ValueError:
             raise APIQueryParamsError(f"Invalid query parameter in {param}.")
     else:
@@ -27,14 +35,19 @@ def map_filter_params(param):
 
 
 def map_sort_params(param):
+    """
+    Split sort params by comma, then map to a dictionary based on key:value.
+    Assign default value of "asc" if no value specificed after the colon.
+    """
     if param:
         try:
+            result = {}
             params = param.split(",")
-            # parse params and set desc as default
-            result = {
-                k: v
-                for k, v in (x.split(":") if ":" in x else (x, "asc") for x in params)
-            }
+            # parse params and set asc as default
+            for param in params:
+                key, value = param.split(":") if ":" in param else (param, "asc")
+                key = key.replace("-", "_")
+                result[key] = value
         except ValueError:
             raise APIQueryParamsError(f"Invalid query parameter in {param}.")
     else:

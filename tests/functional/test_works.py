@@ -276,6 +276,13 @@ class TestWorksCitedByCountFilter:
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] < 20
 
+    def test_works_cited_by_count_less_than_hyphen(self, client):
+        res = client.get("/works?filter=cited-by-count:<20")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9543
+        for result in json_data["results"][:25]:
+            assert result["cited_by_count"] < 20
+
     def test_works_range_error(self, client):
         res = client.get("/works?filter=cited_by_count:>ff")
         json_data = res.get_json()
@@ -390,6 +397,12 @@ class TestWorksOAStatus:
         for result in json_data["results"][:25]:
             assert result["open_access"]["oa_status"] == "closed"
 
+    def test_works_oa_status_hyphen_filter(self, client):
+        res = client.get("/works?filter=oa-status:Closed")
+        json_data = res.get_json()
+        for result in json_data["results"][:25]:
+            assert result["open_access"]["oa_status"] == "closed"
+
     def test_works_oa_status_alias(self, client):
         res = client.get("/works?filter=open_access.oa_status:open")
         json_data = res.get_json()
@@ -418,3 +431,24 @@ class TestWorksNotFilter:
         assert json_data["meta"]["count"] == 7709
         for result in json_data["results"][:50]:
             assert result["open_access"]["oa_status"] != "closed"
+
+
+class TestWorksMultipleFilter:
+    def test_works_multiple(self, client):
+        res = client.get("/works?filter=publication-year:2020,oa-status:closed")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 10
+        for result in json_data["results"][:25]:
+            assert result["publication_year"] == 2020
+            assert result["open_access"]["oa_status"] == "closed"
+
+
+class TestWorksInvalidFields:
+    def test_works_invalid_publication_year(self, client):
+        res = client.get("/works?filter=publication-yearrr:2020")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"].startswith(
+            "publication_yearrr is not a valid field. Valid fields are underscore or hyphenated versions of:"
+        )
