@@ -49,6 +49,52 @@ def test_search(client):
     }
 
 
+def test_search_with_display_name_sort(client):
+    s = Search()
+    search = "covid-19"
+    sort_args = "display_name"
+    sort_params = map_sort_params(sort_args)
+    s = search_records(search, s)
+    s = sort_records(fields_dict, None, sort_params, s)
+    assert s.to_dict() == {
+        "query": {
+            "function_score": {
+                "functions": [
+                    {
+                        "field_value_factor": {
+                            "field": "cited_by_count",
+                            "factor": 1,
+                            "modifier": "sqrt",
+                            "missing": 1,
+                        }
+                    }
+                ],
+                "query": {
+                    "bool": {
+                        "should": [
+                            {
+                                "match": {
+                                    "display_name": {
+                                        "query": "covid-19",
+                                        "operator": "and",
+                                    }
+                                }
+                            },
+                            {
+                                "match_phrase": {
+                                    "display_name": {"query": "covid-19", "boost": 2}
+                                }
+                            },
+                        ]
+                    }
+                },
+                "boost_mode": "sum",
+            }
+        },
+        "sort": ["display_name.keyword"],
+    }
+
+
 def test_filter_range_query(client):
     s = Search()
     filter_args = "publication_year:>2015,cited_by_count:<10"

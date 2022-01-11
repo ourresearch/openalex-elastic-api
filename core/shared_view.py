@@ -43,7 +43,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         is_search_query = False
 
     # sort
-    if sort_params and not is_search_query:
+    if sort_params:
         s = sort_records(fields_dict, group_by, sort_params, s)
     elif is_search_query and not sort_params:
         s = s.sort("_score")

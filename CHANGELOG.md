@@ -1,5 +1,6 @@
 # Changelog
 
+* Fix: Ensure sort params work properly when searching. [2021-01-11] 
 * Boosted search results for every entity using cited by count. Documents with higher cited by count are more
 likely to be shown first. [2021-01-11]
 * Any query parameter or field can be written as hyphenated or underscore. 
