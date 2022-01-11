@@ -13,19 +13,37 @@ def test_search(client):
     s = search_records(search, s)
     assert s.to_dict() == {
         "query": {
-            "bool": {
-                "should": [
+            "function_score": {
+                "functions": [
                     {
-                        "match": {
-                            "display_name": {"query": "covid-19", "operator": "and"}
+                        "field_value_factor": {
+                            "field": "cited_by_count",
+                            "factor": 1,
+                            "modifier": "sqrt",
+                            "missing": 1,
                         }
-                    },
-                    {
-                        "match_phrase": {
-                            "display_name": {"query": "covid-19", "boost": 2}
-                        }
-                    },
-                ]
+                    }
+                ],
+                "query": {
+                    "bool": {
+                        "should": [
+                            {
+                                "match": {
+                                    "display_name": {
+                                        "query": "covid-19",
+                                        "operator": "and",
+                                    }
+                                }
+                            },
+                            {
+                                "match_phrase": {
+                                    "display_name": {"query": "covid-19", "boost": 2}
+                                }
+                            },
+                        ]
+                    }
+                },
+                "boost_mode": "sum",
             }
         }
     }
