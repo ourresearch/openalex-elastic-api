@@ -48,7 +48,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
     elif is_search_query and not sort_params:
         s = s.sort("_score")
     elif not group_by:
-        s = s.sort(default_sort)
+        s = s.sort(*default_sort)
 
     # group by
     if group_by:

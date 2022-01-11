@@ -10,7 +10,7 @@ blueprint = Blueprint("concepts", __name__)
 @blueprint.route("/concepts")
 def venues():
     index_name = "concepts-v1"
-    default_sort = "-works_count"
+    default_sort = ["-works_count", "id"]
     result = shared_view(request, fields_dict, index_name, default_sort)
     message_schema = MessageSchema()
     return message_schema.dump(result)
