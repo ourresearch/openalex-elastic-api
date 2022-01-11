@@ -18,3 +18,15 @@ test-stop:
 
 test:
 	pytest
+
+test-dump-elasticsearch:
+	multielasticdump \
+	  --direction dump \
+	  --input=http://localhost:9200 \
+	  --output=/tmp/es_backup
+
+test-ingest-elasticsearch:
+	multielasticdump \
+	  --direction=load \
+	  --input=/tmp/es_backup \
+	  --output=http://localhost:9200
