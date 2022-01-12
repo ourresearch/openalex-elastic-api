@@ -102,12 +102,22 @@ class TestWorksHostVenueFilters:
         for result in json_data["results"]:
             assert "2332-7790" in result["host_venue"]["issn"]
 
-    def test_works_host_venue_publisher(self, client):
+    def test_works_host_venue_publisher_single(self, client):
         res = client.get("/works?filter=host_venue.publisher:ElseVier Bv")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 36
         for result in json_data["results"]:
             assert result["host_venue"]["publisher"] == "Elsevier BV"
+
+    def test_works_host_venue_publisher_multiple(self, client):
+        res = client.get("/works?filter=host_venue.publisher:[wiley,springer]")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 51
+        for result in json_data["results"][:25]:
+            assert (
+                result["host_venue"]["publisher"].lower() == "wiley"
+                or result["host_venue"]["publisher"].lower() == "springer"
+            )
 
     def test_works_host_venue_id_short(self, client):
         res = client.get("/works?filter=host_venue.id:v2898264183")
@@ -312,7 +322,7 @@ class TestWorksCitedByCountFilter:
 class TestWorksConcepts:
     concept_name = "Computer science"
 
-    def test_works_institutions_id_short(self, client):
+    def test_works_concepts_id_short(self, client):
         res = client.get("/works?filter=concepts.id:c41008148")
         json_data = res.get_json()
         concept_found = False
@@ -321,7 +331,7 @@ class TestWorksConcepts:
                 concept_found = True
         assert concept_found == True
 
-    def test_works_institutions_id_long(self, client):
+    def test_works_concepts_id_long(self, client):
         res = client.get("/works?filter=concepts.id:https://openalex.org/C41008148")
         concept_found = False
         json_data = res.get_json()
@@ -329,6 +339,29 @@ class TestWorksConcepts:
             if concept["display_name"] == self.concept_name:
                 concept_found = True
         assert concept_found == True
+
+    def test_works_concepts_single_in_brackets(self, client):
+        res = client.get("/works?filter=concepts.id:[C41008148]")
+        concept_found = False
+        json_data = res.get_json()
+        for concept in json_data["results"][0]["concepts"]:
+            if concept["display_name"] == self.concept_name:
+                concept_found = True
+        assert concept_found == True
+
+    def test_works_concepts_multiple_in_brackets(self, client):
+        res = client.get("/works?filter=concepts.id:[C15708023, C41008148]")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2300
+        concept_found = False
+        for result in json_data["results"][:25]:
+            for concept in result["concepts"]:
+                if (
+                    concept["id"] == "https://openalex.org/C15708023"
+                    or concept["id"] == "https://openalex.org/C41008148"
+                ):
+                    concept_found = True
+        assert concept_found
 
 
 class TestWorksAlternateHostVenues:

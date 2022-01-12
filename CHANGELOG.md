@@ -1,6 +1,7 @@
 # Changelog
 
-* Add support for numeric range filters, such as cited_by_count:100-150.
+* Add support for multiple terms OR filters, like `concepts.id:[C15708023, C41008148]`. [2021-01-12]
+* Add support for numeric range filters, such as `cited_by_count:100-150`. [2021-01-12]
 * Fix: Ensure sort params work properly when searching. [2021-01-11] 
 * Boosted search results for every entity using cited by count. Documents with higher cited by count are more
 likely to be shown first. [2021-01-11]

@@ -121,7 +121,7 @@ def test_filter_regular_query(client):
         "query": {
             "bool": {
                 "filter": [
-                    {"match_phrase": {"host_venue.issn.lower": "2333-3334"}},
+                    {"term": {"host_venue.issn.lower": "2333-3334"}},
                     {
                         "bool": {
                             "must_not": [

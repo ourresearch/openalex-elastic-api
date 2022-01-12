@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from elasticsearch_dsl import Q
+
 from core.exceptions import APIQueryParamsError
 from core.search import search_records
 from core.utils import get_field
@@ -45,14 +47,24 @@ def execute_regular_query(field, s):
         field_name = field.es_field()
         field_name = field_name.replace("__", ".")
         s = s.filter("exists", field=field_name)
-    elif field.param.endswith("country_code"):
-        query = field.value.upper()
-        kwargs = {field.es_field(): query}
-        s = s.filter("term", **kwargs)
     elif field.value.startswith("!"):
         query = field.value[1:]
         kwargs = {field.es_field(): query}
         s = s.exclude("match_phrase", **kwargs)
+    elif (
+        field.param.endswith(".id")
+        or field.param == "cites"
+        or field.param == "referenced_works"
+    ) and (field.value.startswith("[") and field.value.endswith("]")):
+        terms_to_filter = []
+        values = field.value[1:-1].split(",")
+        for value in values:
+            if "https://openalex.org/" in field.value:
+                terms_to_filter.append(value.strip())
+            else:
+                terms_to_filter.append(f"https://openalex.org/{value.strip().upper()}")
+        kwargs = {field.es_field(): terms_to_filter}
+        s = s.filter("terms", **kwargs)
     elif (
         field.param.endswith(".id")
         or field.param == "cites"
@@ -65,9 +77,27 @@ def execute_regular_query(field, s):
             query = f"https://openalex.org/{field.value.upper()}"
             kwargs = {field.es_field(): query}
             s = s.filter("term", **kwargs)
+    elif "publisher" in field.param:
+        if field.value.startswith("[") and field.value.endswith("]"):
+            phrases_to_filter = field.value[1:-1].split(",")
+            queries = []
+            for phrase in phrases_to_filter:
+                kwargs = {field.es_field(): phrase}
+                queries.append(Q("match_phrase", **kwargs))
+            q = Q("bool", should=queries, minimum_should_match=1)
+            s = s.query(q)
+        else:
+            kwargs = {field.es_field(): field.value}
+            s = s.filter("match_phrase", **kwargs)
     else:
-        kwargs = {field.es_field(): field.value}
-        s = s.filter("match_phrase", **kwargs)
+        if field.value.startswith("[") and field.value.endswith("]"):
+            terms_to_filter = field.value[1:-1].split(",")
+            terms_to_filter_stripped = [term.strip() for term in terms_to_filter]
+            kwargs = {field.es_field(): terms_to_filter_stripped}
+            s = s.filter("terms", **kwargs)
+        else:
+            kwargs = {field.es_field(): field.value}
+            s = s.filter("term", **kwargs)
     return s
 
 

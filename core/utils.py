@@ -14,17 +14,20 @@ def get_field(fields_dict, key):
         )
 
 
-def map_filter_params(param):
+def map_filter_params(filter_params):
     """
     Split filter params by comma, then map to a dictionary based on key:value.
-    Use a regex to ensure we do not split URLs on the colon.
     """
-    if param:
+    if filter_params:
         try:
             result = {}
-            params = param.split(",")
+            params = re.split(
+                ",(?=[^,]+?:)", filter_params
+            )  # split by comma but ignore within []
             for param in params:
-                key, value = re.split(":(?!//)", param)  # split by colon
+                key, value = re.split(
+                    ":(?!//)", param
+                )  # split by colon but ignore colon within URL
                 key = key.replace("-", "_")  # convert key to underscore
                 result[key] = value
         except ValueError:

@@ -30,6 +30,21 @@ class TestFilterParamMapping:
             "cited_by_count": ">200",
         }
 
+    def test_filter_mapping_with_brackets_single_with_space(self, client):
+        filter_params = "concepts.id:[ab437, cd778]"
+        parsed_params = map_filter_params(filter_params)
+        assert parsed_params == {"concepts.id": "[ab437, cd778]"}
+
+    def test_filter_mapping_with_brackets_multiple(self, client):
+        filter_params = "publication-year:2020,display-name.search:covid-19 deaths,concepts.id:[ab437,cd778],cited-by_count:>200"
+        parsed_params = map_filter_params(filter_params)
+        assert parsed_params == {
+            "publication_year": "2020",
+            "display_name.search": "covid-19 deaths",
+            "concepts.id": "[ab437,cd778]",
+            "cited_by_count": ">200",
+        }
+
 
 class TestSortParamMapping:
     def test_sort_mapping_basic(self, client):
