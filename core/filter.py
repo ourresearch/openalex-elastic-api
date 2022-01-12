@@ -113,6 +113,14 @@ def execute_range_query(field, s):
         validate_range_param(field, query)
         kwargs = {field.es_field(): {"gt": int(query)}}
         s = s.filter("range", **kwargs)
+    elif "-" in field.value:
+        values = field.value.strip().split("-")
+        left_value = values[0]
+        right_value = values[1]
+        validate_range_param(field, left_value)
+        validate_range_param(field, right_value)
+        kwargs = {field.es_field(): {"gt": int(left_value), "lt": int(right_value)}}
+        s = s.filter("range", **kwargs)
     elif field.value == "null":
         s = s.exclude("exists", field=field.es_field())
     else:

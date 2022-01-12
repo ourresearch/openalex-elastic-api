@@ -68,6 +68,13 @@ class TestVenuesCitedByCountFilter:
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] < 20
 
+    def test_venues_cited_by_count_range(self, client):
+        res = client.get("/venues?filter=cited_by_count:20-22")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 7
+        for result in json_data["results"][:25]:
+            assert result["cited_by_count"] == 21
+
     def test_venues_cited_by_count_error(self, client):
         res = client.get("/venues?filter=cited_by_count:>ff")
         json_data = res.get_json()

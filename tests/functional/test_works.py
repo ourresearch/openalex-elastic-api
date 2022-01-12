@@ -283,6 +283,22 @@ class TestWorksCitedByCountFilter:
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] < 20
 
+    def test_works_cited_by_count_range(self, client):
+        res = client.get("/works?filter=cited-by-count:20-22")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 26
+        for result in json_data["results"][:25]:
+            assert result["cited_by_count"] == 21
+
+    def test_works_cited_by_count_range_error(self, client):
+        res = client.get("/works?filter=cited-by-count:20-ff")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"] == "Value for param cited_by_count must be a number."
+        )
+
     def test_works_range_error(self, client):
         res = client.get("/works?filter=cited_by_count:>ff")
         json_data = res.get_json()

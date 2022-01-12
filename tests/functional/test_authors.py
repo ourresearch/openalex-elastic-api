@@ -38,6 +38,13 @@ class TestAuthorWorksCountFilter:
         for result in json_data["results"][:25]:
             assert result["works_count"] < 200
 
+    def test_authors_works_count_range(self, client):
+        res = client.get("/authors?filter=works_count:200-202")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        for result in json_data["results"][:25]:
+            assert result["works_count"] == 201
+
     def test_authors_works_count_error(self, client):
         res = client.get("/authors?filter=works_count:>ff")
         json_data = res.get_json()
