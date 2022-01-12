@@ -40,6 +40,15 @@ class TestWorksPublicationYearFilter:
         assert json_data["results"][0]["cited_by_count"] == 0
         assert res.status_code == 200
 
+    def test_works_publication_year_multiple(self, client):
+        res = client.get("/works?filter=publication_year:[1960,1961]")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 27
+        for result in json_data["results"][:25]:
+            assert (
+                result["publication_year"] == 1960 or result["publication_year"] == 1961
+            )
+
     def test_works_publication_year_less_than(self, client):
         res = client.get("/works?filter=publication_year:<2020")
         json_data = res.get_json()

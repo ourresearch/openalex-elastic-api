@@ -151,6 +151,15 @@ def execute_range_query(field, s):
         validate_range_param(field, right_value)
         kwargs = {field.es_field(): {"gt": int(left_value), "lt": int(right_value)}}
         s = s.filter("range", **kwargs)
+    elif field.value.startswith("[") and field.value.endswith("]"):
+        terms_to_filter = field.value[1:-1].split(",")
+        queries = []
+        for term in terms_to_filter:
+            validate_range_param(field, term)
+            kwargs = {field.es_field(): term}
+            queries.append(Q("term", **kwargs))
+        q = Q("bool", should=queries, minimum_should_match=1)
+        s = s.query(q)
     elif field.value == "null":
         s = s.exclude("exists", field=field.es_field())
     else:
