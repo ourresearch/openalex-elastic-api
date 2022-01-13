@@ -92,6 +92,36 @@ class TestWorksPublicationDateFilter:
         assert json_data["results"][0]["cited_by_count"] == 0
         assert res.status_code == 200
 
+    def test_works_from_to_publication_date(self, client):
+        res = client.get(
+            "/works?filter=from_publication_date:2020-01-01,to_publication_date:2020-01-02"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] > 0
+        for result in json_data["results"][:25]:
+            assert (
+                result["publication_date"] == "2020-01-01"
+                or result["publication_date"] == "2020-01-02"
+            )
+
+    def test_works_from_publication_date_error(self, client):
+        res = client.get("/works?filter=from_publication_date:2020-01-40")
+        json_data = res.get_json()
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"]
+            == "Value for param from_publication_date must be a date in format 2020-05-17."
+        )
+
+    def test_works_to_publication_date_error(self, client):
+        res = client.get("/works?filter=to_publication_date:2020-01-40")
+        json_data = res.get_json()
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"]
+            == "Value for param to_publication_date must be a date in format 2020-05-17."
+        )
+
     def test_works_publication_date_error(self, client):
         res = client.get("/works?filter=publication_date:2020-01-555")
         json_data = res.get_json()

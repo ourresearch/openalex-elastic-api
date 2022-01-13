@@ -1,5 +1,8 @@
 # Changelog
 
+* Add `from_publication_date` and `to_publication_date` filter to works endpoint. Of note, `from_publication_date:2020-05-07` 
+is greater than or equal to that date, while the filter `publication_date:>2020-05-07` is only greater than that date. The 
+same differences applies for `to_publication_date` and `publication_date:<` filter. These new fields can be hyphenated. [2021-01-13]
 * Add support for multiple terms OR filters, like `concepts.id:[C15708023, C41008148]`. [2021-01-12]
 * Add support for numeric range filters, such as `cited_by_count:100-150`. [2021-01-12]
 * Fix: Ensure sort params work properly when searching. [2021-01-11] 

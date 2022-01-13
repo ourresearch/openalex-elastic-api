@@ -123,6 +123,14 @@ def execute_date_query(field, s):
         validate_date_param(field, query)
         kwargs = {field.es_field(): {"gt": query}}
         s = s.filter("range", **kwargs)
+    elif field.param == "to_publication_date":
+        validate_date_param(field, field.value)
+        kwargs = {field.es_field(): {"lte": field.value}}
+        s = s.filter("range", **kwargs)
+    elif field.param == "from_publication_date":
+        validate_date_param(field, field.value)
+        kwargs = {field.es_field(): {"gte": field.value}}
+        s = s.filter("range", **kwargs)
     elif field.value == "null":
         s = s.exclude("exists", field=field.es_field())
     else:

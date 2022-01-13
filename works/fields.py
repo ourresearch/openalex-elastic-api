@@ -3,6 +3,16 @@ from core.field import Field
 fields = [
     Field(param="publication_year", is_range_query=True),
     Field(param="publication_date", is_date_query=True),
+    Field(
+        param="from_publication_date",
+        is_date_query=True,
+        custom_es_field="publication_date",
+    ),
+    Field(
+        param="to_publication_date",
+        is_date_query=True,
+        custom_es_field="publication_date",
+    ),
     Field(param="host_venue.id", custom_es_field="host_venue__id__lower"),
     Field(param="journal.id", custom_es_field="host_venue__id__lower"),
     Field(param="host_venue.issn", custom_es_field="host_venue__issn__lower"),
