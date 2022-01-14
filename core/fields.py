@@ -137,9 +137,17 @@ class OpenAlexIDField(Field):
 class PhraseField(Field):
     def execute_query(self, s):
         if self.value == "null":
-            s = s.exclude("exists", field=self.es_field())
+            field_name = self.es_field()
+            field_name = field_name.replace("__", ".")
+            s = s.exclude("exists", field=field_name)
         elif self.value == "!null":
-            s = s.filter("exists", field=self.es_field())
+            field_name = self.es_field()
+            field_name = field_name.replace("__", ".")
+            s = s.filter("exists", field=field_name)
+        elif self.value.startswith("!"):
+            query = self.value[1:]
+            kwargs = {self.es_field(): query}
+            s = s.exclude("match_phrase", **kwargs)
         elif self.value.startswith("[") and self.value.endswith("]"):
             phrases_to_filter = self.value[1:-1].split(",")
             queries = []
