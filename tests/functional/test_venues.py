@@ -43,7 +43,7 @@ class TestVenuesWorksCountFilter:
         json_data = res.get_json()
         assert res.status_code == 403
         assert json_data["error"] == "Invalid query parameters error."
-        assert json_data["message"] == "Range filter for works_count must be a number."
+        assert json_data["message"] == "Value for param works_count must be a number."
 
 
 class TestVenuesCitedByCountFilter:
@@ -81,7 +81,7 @@ class TestVenuesCitedByCountFilter:
         assert res.status_code == 403
         assert json_data["error"] == "Invalid query parameters error."
         assert (
-            json_data["message"] == "Range filter for cited_by_count must be a number."
+            json_data["message"] == "Value for param cited_by_count must be a number."
         )
 
 

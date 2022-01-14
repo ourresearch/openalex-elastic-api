@@ -221,7 +221,7 @@ class TestWorksBooleanFilters:
         assert json_data["error"] == "Invalid query parameters error."
         assert (
             json_data["message"]
-            == "Boolean value for is_retracted must be true or false, not falsee"
+            == "Value for is_retracted must be true, false null, or !null: not falsee"
         )
 
 
@@ -354,7 +354,7 @@ class TestWorksCitedByCountFilter:
         assert res.status_code == 403
         assert json_data["error"] == "Invalid query parameters error."
         assert (
-            json_data["message"] == "Range filter for cited_by_count must be a number."
+            json_data["message"] == "Value for param cited_by_count must be a number."
         )
 
 

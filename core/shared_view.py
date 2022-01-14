@@ -54,8 +54,8 @@ def shared_view(request, fields_dict, index_name, default_sort):
     if group_by:
         field = get_field(fields_dict, group_by)
         if (
-            field.is_date_query
-            or field.is_range_query
+            type(field).__name__ == "DateField"
+            or type(field).__name__ == "RangeField"
             and field.param != "publication_year"
             and field.param != "level"
         ):

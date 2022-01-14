@@ -1,27 +1,27 @@
-from core.field import Field
+from core.fields import OpenAlexIDField, RangeField, SearchField, TermField
 
 fields = [
-    Field(param="display_name", is_search_exact_query=True),
-    Field(param="display_name.search", is_search_query=True),
-    Field(param="cited_by_count", is_range_query=True),
-    Field(
+    TermField(param="display_name"),
+    SearchField(param="display_name.search"),
+    RangeField(param="cited_by_count"),
+    TermField(
         param="last_known_institution.country_code",
         custom_es_field="last_known_institution__country_code__lower",
     ),
-    Field(
+    OpenAlexIDField(
         param="last_known_institution.id",
         custom_es_field="last_known_institution__id__lower",
     ),
-    Field(
+    TermField(
         param="last_known_institution.ror",
         custom_es_field="last_known_institution__ror__lower",
     ),
-    Field(
+    TermField(
         param="last_known_institution.type",
         custom_es_field="last_known_institution__type__lower",
     ),
-    Field(param="works_count", is_range_query=True),
-    Field(param="x_concepts.id", custom_es_field="x_concepts__id__lower"),
+    RangeField(param="works_count"),
+    OpenAlexIDField(param="x_concepts.id", custom_es_field="x_concepts__id__lower"),
 ]
 
 fields_dict = {f.param: f for f in fields}

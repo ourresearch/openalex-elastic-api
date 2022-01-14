@@ -1,12 +1,12 @@
-from core.field import Field
+from core.fields import OpenAlexIDField, RangeField, SearchField, TermField
 
 fields = [
-    Field(param="display_name", is_search_exact_query=True),
-    Field(param="display_name.search", is_search_query=True),
-    Field(param="ancestors.id", custom_es_field="ancestors__id__lower"),
-    Field(param="cited_by_count", is_range_query=True),
-    Field(param="level", is_range_query=True),
-    Field(param="works_count", is_range_query=True),
+    TermField(param="display_name"),
+    SearchField(param="display_name.search"),
+    OpenAlexIDField(param="ancestors.id", custom_es_field="ancestors__id__lower"),
+    RangeField(param="cited_by_count"),
+    RangeField(param="level"),
+    RangeField(param="works_count"),
 ]
 
 fields_dict = {f.param: f for f in fields}
