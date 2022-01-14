@@ -7,10 +7,10 @@ fields = [
     RangeField(param="cited_by_count"),
     BooleanField(param="is_in_doaj"),
     BooleanField(param="is_oa"),
-    TermField(param="issn", custom_es_field="issn__lower"),
-    PhraseField(param="publisher", custom_es_field="publisher__lower"),
+    TermField(param="issn"),
+    PhraseField(param="publisher"),
     RangeField(param="works_count"),
-    OpenAlexIDField(param="x_concepts.id", custom_es_field="x_concepts__id__lower"),
+    OpenAlexIDField(param="x_concepts.id"),
 ]
 
 fields_dict = {f.param: f for f in fields}

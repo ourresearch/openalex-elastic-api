@@ -5,45 +5,16 @@ fields = [
     TermField(param="display_name"),
     SearchField(param="display_name.search"),
     SearchField(param="title.search"),
-    OpenAlexIDField(
-        param="alternate_host_venues.id",
-        custom_es_field="alternate_host_venues__id",
-    ),
-    OpenAlexIDField(
-        param="alternate_host_venues.venue_id",
-        custom_es_field="alternate_host_venues__venue_id__lower",
-    ),
-    TermField(
-        param="alternate_host_venues.license",
-        custom_es_field="alternate_host_venues__license__lower",
-    ),
-    TermField(
-        param="alternate_host_venues.version",
-        custom_es_field="alternate_host_venues__version__lower",
-    ),
-    OpenAlexIDField(
-        param="authorships.author.id", custom_es_field="authorships__author__id__lower"
-    ),
-    TermField(
-        param="authorships.author.orcid",
-        custom_es_field="authorships__author__orcid__lower",
-    ),
-    OpenAlexIDField(
-        param="authorships.institutions.id",
-        custom_es_field="authorships__institutions__id__lower",
-    ),
-    TermField(
-        param="authorships.institutions.ror",
-        custom_es_field="authorships__institutions__ror__lower",
-    ),
-    TermField(
-        param="authorships.institutions.country_code",
-        custom_es_field="authorships__institutions__country_code__lower",
-    ),
-    TermField(
-        param="authorships.institutions.type",
-        custom_es_field="authorships__institutions__type__lower",
-    ),
+    OpenAlexIDField(param="alternate_host_venues.id"),
+    OpenAlexIDField(param="alternate_host_venues.venue_id"),
+    TermField(param="alternate_host_venues.license"),
+    TermField(param="alternate_host_venues.version"),
+    OpenAlexIDField(param="authorships.author.id"),
+    TermField(param="authorships.author.orcid"),
+    OpenAlexIDField(param="authorships.institutions.id"),
+    TermField(param="authorships.institutions.ror"),
+    TermField(param="authorships.institutions.country_code"),
+    TermField(param="authorships.institutions.type"),
     OpenAlexIDField(
         param="author.id", custom_es_field="authorships__author__id__lower"
     ),
@@ -52,16 +23,16 @@ fields = [
     ),
     RangeField(param="cited_by_count"),
     OpenAlexIDField(param="cites", custom_es_field="referenced_works__lower"),
-    OpenAlexIDField(param="concepts.id", custom_es_field="concepts__id__lower"),
+    OpenAlexIDField(param="concepts.id"),
     OpenAlexIDField(param="concept.id", custom_es_field="concepts__id__lower"),
-    TermField(param="concepts.wikidata", custom_es_field="concepts__wikidata__lower"),
+    TermField(param="concepts.wikidata"),
     DateField(
         param="from_publication_date",
         custom_es_field="publication_date",
     ),
     BooleanField(param="is_retracted"),
-    OpenAlexIDField(param="host_venue.id", custom_es_field="host_venue__id__lower"),
-    TermField(param="host_venue.issn", custom_es_field="host_venue__issn__lower"),
+    OpenAlexIDField(param="host_venue.id"),
+    TermField(param="host_venue.issn"),
     PhraseField(
         param="host_venue.publisher", custom_es_field="host_venue__publisher__keyword"
     ),
@@ -87,20 +58,16 @@ fields = [
     BooleanField(param="is_paratext"),
     OpenAlexIDField(param="journal.id", custom_es_field="host_venue__id__lower"),
     BooleanField(param="open_access.is_oa"),
-    TermField(
-        param="open_access.oa_status", custom_es_field="open_access__oa_status__lower"
-    ),
+    TermField(param="open_access.oa_status"),
     TermField(param="oa_status", custom_es_field="open_access__oa_status__lower"),
     DateField(param="publication_date"),
     RangeField(param="publication_year"),
-    OpenAlexIDField(
-        param="referenced_works", custom_es_field="referenced_works__lower"
-    ),
+    OpenAlexIDField(param="referenced_works"),
     DateField(
         param="to_publication_date",
         custom_es_field="publication_date",
     ),
-    TermField(param="type", custom_es_field="type__lower"),
+    TermField(param="type"),
 ]
 
 fields_dict = {f.param: f for f in fields}

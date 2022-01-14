@@ -133,6 +133,15 @@ class OpenAlexIDField(Field):
                 s = s.filter("term", **kwargs)
         return s
 
+    def es_field(self) -> str:
+        if self.custom_es_field:
+            field = self.custom_es_field
+        elif "." in self.param:
+            field = self.param.replace(".", "__") + "__lower"
+        else:
+            field = self.param + "__lower"
+        return field
+
 
 class PhraseField(Field):
     def execute_query(self, s):
@@ -160,6 +169,15 @@ class PhraseField(Field):
             kwargs = {self.es_field(): self.value}
             s = s.filter("match_phrase", **kwargs)
         return s
+
+    def es_field(self) -> str:
+        if self.custom_es_field:
+            field = self.custom_es_field
+        elif "." in self.param:
+            field = self.param.replace(".", "__") + "__lower"
+        else:
+            field = self.param + "__lower"
+        return field
 
 
 class RangeField(Field):
@@ -229,6 +247,15 @@ class TermField(Field):
             kwargs = {self.es_field(): self.value}
             s = s.filter("term", **kwargs)
         return s
+
+    def es_field(self) -> str:
+        if self.custom_es_field:
+            field = self.custom_es_field
+        elif "." in self.param:
+            field = self.param.replace(".", "__") + "__lower"
+        else:
+            field = self.param + "__lower"
+        return field
 
 
 class SearchField(Field):
