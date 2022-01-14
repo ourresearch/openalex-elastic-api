@@ -33,9 +33,7 @@ fields = [
     BooleanField(param="is_retracted"),
     OpenAlexIDField(param="host_venue.id"),
     TermField(param="host_venue.issn"),
-    PhraseField(
-        param="host_venue.publisher", custom_es_field="host_venue__publisher__keyword"
-    ),
+    PhraseField(param="host_venue.publisher"),
     TermField(
         param="institutions.country_code",
         custom_es_field="authorships__institutions__country_code__lower",

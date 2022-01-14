@@ -125,7 +125,7 @@ def test_filter_regular_query(client):
                     {
                         "bool": {
                             "must_not": [
-                                {"exists": {"field": "host_venue.publisher.keyword"}}
+                                {"exists": {"field": "host_venue.publisher.lower"}}
                             ]
                         }
                     },
@@ -151,7 +151,7 @@ def test_sort_query(client):
         "query": {
             "bool": {
                 "filter": [
-                    {"match_phrase": {"host_venue.publisher.keyword": "wiley"}},
+                    {"match_phrase": {"host_venue.publisher.lower": "wiley"}},
                     {"range": {"publication_year": {"gt": 2015}}},
                 ]
             }

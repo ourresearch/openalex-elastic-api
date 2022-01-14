@@ -32,7 +32,7 @@ class Field(ABC):
     def es_sort_field(self):
         if self.custom_es_field:
             field = self.custom_es_field.replace("__", ".")
-        elif self.param == "host_venue.publisher" or self.param == "display_name":
+        elif "publisher" in self.param or self.param == "display_name":
             field = f"{self.param}.keyword"
         else:
             field = self.param.replace("__", ".")
