@@ -14,7 +14,7 @@ class Field(ABC):
         self.value = None
 
     @abstractmethod
-    def execute_query(self, s):
+    def build_query(self, s):
         return s
 
     def validate(self, query):
@@ -40,7 +40,7 @@ class Field(ABC):
 
 
 class BooleanField(Field):
-    def execute_query(self, s):
+    def build_query(self, s):
         self.validate(self.value)
         if self.value == "null":
             s = s.exclude("exists", field=self.es_field())
@@ -61,7 +61,7 @@ class BooleanField(Field):
 
 
 class DateField(Field):
-    def execute_query(self, s):
+    def build_query(self, s):
         if "<" in self.value:
             query = self.value[1:]
             self.validate(query)
@@ -98,7 +98,7 @@ class DateField(Field):
 
 
 class OpenAlexIDField(Field):
-    def execute_query(self, s):
+    def build_query(self, s):
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
@@ -144,7 +144,7 @@ class OpenAlexIDField(Field):
 
 
 class PhraseField(Field):
-    def execute_query(self, s):
+    def build_query(self, s):
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
@@ -181,7 +181,7 @@ class PhraseField(Field):
 
 
 class RangeField(Field):
-    def execute_query(self, s):
+    def build_query(self, s):
         if "<" in self.value:
             query = self.value[1:]
             self.validate(query)
@@ -225,7 +225,7 @@ class RangeField(Field):
 
 
 class TermField(Field):
-    def execute_query(self, s):
+    def build_query(self, s):
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
@@ -259,6 +259,6 @@ class TermField(Field):
 
 
 class SearchField(Field):
-    def execute_query(self, s):
+    def build_query(self, s):
         s = search_records(self.value, s)
         return s
