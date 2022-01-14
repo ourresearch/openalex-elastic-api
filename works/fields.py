@@ -5,8 +5,9 @@ fields = [
     TermField(param="display_name"),
     SearchField(param="display_name.search"),
     SearchField(param="title.search"),
-    OpenAlexIDField(param="alternate_host_venues.id"),
-    OpenAlexIDField(param="alternate_host_venues.venue_id"),
+    OpenAlexIDField(
+        param="alternate_host_venues.id", custom_es_field="alternate_host_venues__id"
+    ),  # needs lower field
     TermField(param="alternate_host_venues.license"),
     TermField(param="alternate_host_venues.version"),
     OpenAlexIDField(param="authorships.author.id"),
