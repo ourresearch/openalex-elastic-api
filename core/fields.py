@@ -1,10 +1,8 @@
 import datetime
 from abc import ABC, abstractmethod
 
-from elasticsearch_dsl import Q
-
 from core.exceptions import APIQueryParamsError
-from core.search import search_records
+from core.search import search_records_full, search_records_phrase
 
 
 class Field(ABC):
@@ -194,6 +192,15 @@ class RangeField(Field):
             raise APIQueryParamsError(f"Value for param {self.param} must be a number.")
 
 
+class SearchField(Field):
+    def build_query(self, s):
+        if self.value.startswith('"') and self.value.endswith('"'):
+            s = search_records_phrase(self.value, s)
+        else:
+            s = search_records_full(self.value, s)
+        return s
+
+
 class TermField(Field):
     def build_query(self, s):
         if self.value == "null":
@@ -221,9 +228,3 @@ class TermField(Field):
         else:
             field = self.param + "__lower"
         return field
-
-
-class SearchField(Field):
-    def build_query(self, s):
-        s = search_records(self.value, s)
-        return s

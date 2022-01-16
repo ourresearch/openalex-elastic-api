@@ -1,5 +1,8 @@
 # Changelog
 
+* Add support for phrase search with quotes: `works?filter=title.search:"type 1 diabetes control"` which ensures words 
+follow each other in the exact order of the query.
+* Remove support for bracketed or queries, like `concepts.id:[C15708023, C41008148]`. [2021-01-16] 
 * Add `from_publication_date` and `to_publication_date` filter to works endpoint. Of note, `from_publication_date:2020-05-07` 
 is greater than or equal to that date, while the filter `publication_date:>2020-05-07` is only greater than that date. The 
 same differences applies for `to_publication_date` and `publication_date:<` filter. These new fields can be hyphenated. [2021-01-13]

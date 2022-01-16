@@ -1,16 +1,16 @@
 from elasticsearch_dsl import Search
 
 from core.filter import filter_records
-from core.search import search_records
+from core.search import search_records_full, search_records_phrase
 from core.sort import sort_records
 from core.utils import map_filter_params, map_sort_params
 from works.fields import fields_dict
 
 
-def test_search(client):
+def test_search_full(client):
     s = Search()
     search = "covid-19"
-    s = search_records(search, s)
+    s = search_records_full(search, s)
     assert s.to_dict() == {
         "query": {
             "function_score": {
@@ -49,12 +49,36 @@ def test_search(client):
     }
 
 
+def test_search_phrase(client):
+    s = Search()
+    search = "covid-19"
+    s = search_records_phrase(search, s)
+    assert s.to_dict() == {
+        "query": {
+            "function_score": {
+                "functions": [
+                    {
+                        "field_value_factor": {
+                            "field": "cited_by_count",
+                            "factor": 1,
+                            "modifier": "sqrt",
+                            "missing": 1,
+                        }
+                    }
+                ],
+                "query": {"match_phrase": {"display_name": {"query": "covid-19"}}},
+                "boost_mode": "sum",
+            }
+        }
+    }
+
+
 def test_search_with_display_name_sort(client):
     s = Search()
     search = "covid-19"
     sort_args = "display_name"
     sort_params = map_sort_params(sort_args)
-    s = search_records(search, s)
+    s = search_records_full(search, s)
     s = sort_records(fields_dict, None, sort_params, s)
     assert s.to_dict() == {
         "query": {
