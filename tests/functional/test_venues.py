@@ -128,13 +128,3 @@ class TestVenuesPublisher:
         assert json_data["meta"]["count"] == 1074
         for result in json_data["results"]:
             assert result["publisher"] == "Elsevier"
-
-    def test_venues_publisher_multiple(self, client):
-        res = client.get("/venues?filter=publisher:[wiley,elsevier]")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1797
-        for result in json_data["results"][:25]:
-            assert (
-                result["publisher"].lower() == "wiley"
-                or result["publisher"].lower() == "elsevier"
-            )

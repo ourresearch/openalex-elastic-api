@@ -40,15 +40,6 @@ class TestWorksPublicationYearFilter:
         assert json_data["results"][0]["cited_by_count"] == 0
         assert res.status_code == 200
 
-    def test_works_publication_year_multiple(self, client):
-        res = client.get("/works?filter=publication_year:[1960,1961]")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 27
-        for result in json_data["results"][:25]:
-            assert (
-                result["publication_year"] == 1960 or result["publication_year"] == 1961
-            )
-
     def test_works_publication_year_less_than(self, client):
         res = client.get("/works?filter=publication_year:<2020")
         json_data = res.get_json()
@@ -147,16 +138,6 @@ class TestWorksHostVenueFilters:
         assert json_data["meta"]["count"] == 36
         for result in json_data["results"]:
             assert result["host_venue"]["publisher"] == "Elsevier BV"
-
-    def test_works_host_venue_publisher_multiple(self, client):
-        res = client.get("/works?filter=host_venue.publisher:[wiley,springer]")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 51
-        for result in json_data["results"][:25]:
-            assert (
-                result["host_venue"]["publisher"].lower() == "wiley"
-                or result["host_venue"]["publisher"].lower() == "springer"
-            )
 
     def test_works_host_venue_id_short(self, client):
         res = client.get("/works?filter=host_venue.id:v2898264183")
@@ -378,29 +359,6 @@ class TestWorksConcepts:
             if concept["display_name"] == self.concept_name:
                 concept_found = True
         assert concept_found == True
-
-    def test_works_concepts_single_in_brackets(self, client):
-        res = client.get("/works?filter=concepts.id:[C41008148]")
-        concept_found = False
-        json_data = res.get_json()
-        for concept in json_data["results"][0]["concepts"]:
-            if concept["display_name"] == self.concept_name:
-                concept_found = True
-        assert concept_found == True
-
-    def test_works_concepts_multiple_in_brackets(self, client):
-        res = client.get("/works?filter=concepts.id:[C15708023, C41008148]")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 2300
-        concept_found = False
-        for result in json_data["results"][:25]:
-            for concept in result["concepts"]:
-                if (
-                    concept["id"] == "https://openalex.org/C15708023"
-                    or concept["id"] == "https://openalex.org/C41008148"
-                ):
-                    concept_found = True
-        assert concept_found
 
 
 class TestWorksAlternateHostVenues:

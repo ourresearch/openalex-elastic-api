@@ -21,9 +21,7 @@ def map_filter_params(filter_params):
     if filter_params:
         try:
             result = {}
-            params = re.split(
-                ",(?=[^,]+?:)", filter_params
-            )  # split by comma but ignore within []
+            params = filter_params.split(",")
             for param in params:
                 key, value = re.split(
                     ":(?!//)", param

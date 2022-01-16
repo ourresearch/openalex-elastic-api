@@ -125,16 +125,6 @@ class TestAuthorsLastKnownInstitution:
         for result in json_data["results"][:25]:
             assert result["last_known_institution"]["country_code"] == "US"
 
-    def test_authors_last_known_institution_country_code_multiple(self, client):
-        res = client.get("/authors?filter=last_known_institution.country_code:[us,ca]")
-        json_data = res.get_json()
-        assert len(json_data["results"]) > 0
-        for result in json_data["results"][:25]:
-            assert (
-                result["last_known_institution"]["country_code"] == "US"
-                or result["last_known_institution"]["country_code"] == "CA"
-            )
-
     def test_authors_last_known_institution_type(self, client):
         res = client.get("/authors?filter=last_known_institution.type:EducAtion")
         json_data = res.get_json()

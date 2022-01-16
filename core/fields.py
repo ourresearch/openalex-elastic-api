@@ -111,26 +111,13 @@ class OpenAlexIDField(Field):
             query = self.value[1:]
             kwargs = {self.es_field(): query}
             s = s.exclude("term", **kwargs)
-        elif self.value.startswith("[") and self.value.endswith("]"):
-            terms_to_filter = []
-            values = self.value[1:-1].split(",")
-            for value in values:
-                if "https://openalex.org/" in self.value:
-                    terms_to_filter.append(value.strip())
-                else:
-                    terms_to_filter.append(
-                        f"https://openalex.org/{value.strip().upper()}"
-                    )
-            kwargs = {self.es_field(): terms_to_filter}
-            s = s.filter("terms", **kwargs)
+        elif "https://openalex.org/" in self.value:
+            kwargs = {self.es_field(): self.value}
+            s = s.filter("term", **kwargs)
         else:
-            if "https://openalex.org/" in self.value:
-                kwargs = {self.es_field(): self.value}
-                s = s.filter("term", **kwargs)
-            else:
-                query = f"https://openalex.org/{self.value.upper()}"
-                kwargs = {self.es_field(): query}
-                s = s.filter("term", **kwargs)
+            query = f"https://openalex.org/{self.value.upper()}"
+            kwargs = {self.es_field(): query}
+            s = s.filter("term", **kwargs)
         return s
 
     def es_field(self) -> str:
@@ -157,14 +144,6 @@ class PhraseField(Field):
             query = self.value[1:]
             kwargs = {self.es_field(): query}
             s = s.exclude("match_phrase", **kwargs)
-        elif self.value.startswith("[") and self.value.endswith("]"):
-            phrases_to_filter = self.value[1:-1].split(",")
-            queries = []
-            for phrase in phrases_to_filter:
-                kwargs = {self.es_field(): phrase}
-                queries.append(Q("match_phrase", **kwargs))
-            q = Q("bool", should=queries, minimum_should_match=1)
-            s = s.query(q)
         else:
             kwargs = {self.es_field(): self.value}
             s = s.filter("match_phrase", **kwargs)
@@ -200,15 +179,6 @@ class RangeField(Field):
             self.validate(right_value)
             kwargs = {self.es_field(): {"gt": int(left_value), "lt": int(right_value)}}
             s = s.filter("range", **kwargs)
-        elif self.value.startswith("[") and self.value.endswith("]"):
-            terms_to_filter = self.value[1:-1].split(",")
-            queries = []
-            for term in terms_to_filter:
-                self.validate(term)
-                kwargs = {self.es_field(): term}
-                queries.append(Q("term", **kwargs))
-            q = Q("bool", should=queries, minimum_should_match=1)
-            s = s.query(q)
         elif self.value == "null":
             s = s.exclude("exists", field=self.es_field())
         else:
@@ -238,11 +208,6 @@ class TermField(Field):
             query = self.value[1:]
             kwargs = {self.es_field(): query}
             s = s.exclude("term", **kwargs)
-        elif self.value.startswith("[") and self.value.endswith("]"):
-            terms_to_filter = self.value[1:-1].split(",")
-            terms_to_filter_stripped = [term.strip() for term in terms_to_filter]
-            kwargs = {self.es_field(): terms_to_filter_stripped}
-            s = s.filter("terms", **kwargs)
         else:
             kwargs = {self.es_field(): self.value}
             s = s.filter("term", **kwargs)
