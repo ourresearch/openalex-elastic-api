@@ -23,9 +23,7 @@ def map_filter_params(filter_params):
             result = {}
             params = filter_params.split(",")
             for param in params:
-                key, value = re.split(
-                    ":(?!//)", param
-                )  # split by colon but ignore colon within URL
+                key, value = param.split(":", 1)
                 key = key.replace("-", "_")  # convert key to underscore
                 result[key] = value
         except ValueError:

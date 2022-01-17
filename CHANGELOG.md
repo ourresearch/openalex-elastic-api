@@ -1,5 +1,6 @@
 # Changelog
 
+* Allow search queries to contain colons within the search string. [2021-01-16]
 * Add support for phrase search with quotes: `works?filter=title.search:"type 1 diabetes control"` which ensures words 
 follow each other in the exact order of the query.
 * Remove support for bracketed or queries, like `concepts.id:[C15708023, C41008148]`. [2021-01-16] 

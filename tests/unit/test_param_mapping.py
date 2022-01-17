@@ -38,6 +38,14 @@ class TestFilterParamMapping:
             "title.search": '"covid-19 deaths"',
         }
 
+    def test_filter_mapping_with_multiple_colons(self, client):
+        filter_params = "publication-year:2020,title.search:book 1: how to win friends"
+        parsed_params = map_filter_params(filter_params)
+        assert parsed_params == {
+            "publication_year": "2020",
+            "title.search": "book 1: how to win friends",
+        }
+
 
 class TestSortParamMapping:
     def test_sort_mapping_basic(self, client):
