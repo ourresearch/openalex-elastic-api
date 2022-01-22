@@ -1,5 +1,6 @@
 # Changelog
 
+* Update works endpoint to display new abstract inverted index data. [2021-01-22]
 * Allow search queries to contain colons within the search string. [2021-01-16]
 * Add support for phrase search with quotes: `works?filter=title.search:"type 1 diabetes control"` which ensures words 
 follow each other in the exact order of the query.

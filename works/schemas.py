@@ -1,3 +1,5 @@
+import json
+
 from marshmallow import INCLUDE, Schema, fields
 
 from core.schemas import GroupBySchema, MetaSchema
@@ -119,7 +121,7 @@ class WorksSchema(Schema):
         lambda obj: obj.biblio.to_dict() if "biblio" in obj and obj.biblio else None
     )
     abstract_inverted_index = fields.Function(
-        lambda obj: obj.abstract_inverted_index.to_dict()
+        lambda obj: json.loads(obj.abstract_inverted_index).get("InvertedIndex")
         if "abstract_inverted_index" in obj and obj.abstract_inverted_index
         else None
     )

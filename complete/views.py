@@ -16,7 +16,7 @@ def autocomplete():
         "concept": "concepts-v1",
         "institution": "institutions-v1",
         "venue": "venues-v2",
-        "work": "works-v5-*,-*invalid-data",
+        "work": "works-v6-*,-*invalid-data",
     }
 
     q = request.args.get("q")
