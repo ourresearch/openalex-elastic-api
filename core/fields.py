@@ -175,7 +175,9 @@ class RangeField(Field):
             right_value = values[1]
             self.validate(left_value)
             self.validate(right_value)
-            kwargs = {self.es_field(): {"gt": int(left_value), "lt": int(right_value)}}
+            kwargs = {
+                self.es_field(): {"gte": int(left_value), "lte": int(right_value)}
+            }
             s = s.filter("range", **kwargs)
         elif self.value == "null":
             s = s.exclude("exists", field=self.es_field())

@@ -1,5 +1,6 @@
 # Changelog
 
+* Fix range queries such as `publication_year:1981-1982` so it is `greater than or equal` to `less than or equal`. [2021-01-25]
 * Update works endpoint to display new abstract inverted index data. [2021-01-22]
 * Allow search queries to contain colons within the search string. [2021-01-16]
 * Add support for phrase search with quotes: `works?filter=title.search:"type 1 diabetes control"` which ensures words 
