@@ -19,12 +19,12 @@ def sort_records(fields_dict, group_by, sort_params, s):
             )
 
         # relevance key
-        if key == "relevance_score" and value == "asc":
+        if key == "relevance_score" and value == "desc":
             sort_fields.append("_score")
             continue
-        elif key == "relevance_score" and value == "desc":
+        elif key == "relevance_score" and value == "asc":
             raise APIQueryParamsError(
-                "Sorting relevance score descending is not allowed."
+                "Sorting relevance score ascending is not allowed."
             )
 
         # all others

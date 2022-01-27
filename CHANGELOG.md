@@ -1,5 +1,6 @@
 # Changelog
 
+* Resolve relevance_score sort bug. [2021-01-27]
 * Improve works performance by storing documents in order of publication_date. [2021-01-27]
 * Add `raw_affiliation_string` to authorships object. Change `cited_by_url` to a string rather than a list. [2021-01-27]
 * Fix range queries such as `publication_year:1981-1982` so it is `greater than or equal` to `less than or equal`. [2021-01-25]
