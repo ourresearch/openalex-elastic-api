@@ -29,6 +29,7 @@ class AuthorshipsSchema(Schema):
     author = fields.Nested(AuthorSchema)
     institutions = fields.Nested(InstitutionsSchema, many=True)
     author_position = fields.Str()
+    raw_affiliation_string = fields.Str()
 
     class Meta:
         ordered = True
@@ -108,7 +109,7 @@ class WorksSchema(Schema):
     cited_by_count = fields.Int()
     ids = fields.Nested(IDsSchema)
     publication_year = fields.Int()
-    cited_by_api_url = fields.List(fields.Str())
+    cited_by_api_url = fields.Str()
     doi = fields.Str()
     type = fields.Str()
     is_paratext = fields.Bool()
