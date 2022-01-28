@@ -1,5 +1,6 @@
 # Changelog
 
+* Improve search algorithm so that cited_by_count has a bigger impact on results. [2021-01-28]
 * Resolve relevance_score sort bug. [2021-01-27]
 * Improve works performance by storing documents in order of publication_date. [2021-01-27]
 * Add `raw_affiliation_string` to authorships object. Change `cited_by_url` to a string rather than a list. [2021-01-27]

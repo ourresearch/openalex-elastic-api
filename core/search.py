@@ -24,7 +24,7 @@ def search_records_full(search, s):
                 }
             },
             query=basic_query,
-            boost_mode="sum",
+            boost_mode="multiply",
         )
         s = s.query(function_query)
     return s
@@ -42,12 +42,12 @@ def search_records_phrase(search, s):
                 "field_value_factor": {
                     "field": "cited_by_count",
                     "factor": 1,
-                    "modifier": "sqrt",
+                    "modifier": "log1p",
                     "missing": 1,
                 }
             },
             query=basic_query,
-            boost_mode="sum",
+            boost_mode="multiply",
         )
         s = s.query(function_query)
     return s
