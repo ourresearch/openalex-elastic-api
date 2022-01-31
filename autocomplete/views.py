@@ -117,18 +117,20 @@ def autocomplete_institutions_country():
 
     found_countries = []
     for country, details in iso3166.countries_by_name.items():
-        if q.upper() in country and country_sums.get(details.alpha2.lower()):
-            found_countries.append(
-                OrderedDict(
-                    {
-                        "id": details.alpha2.upper(),
-                        "display_name": details.name,
-                        "cited_by_count": country_sums[details.alpha2.lower()],
-                        "entity_type": "institution",
-                        "external_id": None,
-                    }
+        country_words = country.split()
+        for word in country_words:
+            if word.startswith(q.upper()) and country_sums.get(details.alpha2.lower()):
+                found_countries.append(
+                    OrderedDict(
+                        {
+                            "id": details.alpha2.upper(),
+                            "display_name": details.name,
+                            "cited_by_count": country_sums[details.alpha2.lower()],
+                            "entity_type": "institution",
+                            "external_id": None,
+                        }
+                    )
                 )
-            )
 
     found_countries_sorted = sorted(
         found_countries, key=lambda item: item["cited_by_count"], reverse=True
