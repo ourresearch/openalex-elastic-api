@@ -45,3 +45,23 @@ class MessageSchema(Schema):
 
     class Meta:
         ordered = True
+
+
+class AutoCompleteCountrySchema(Schema):
+    id = fields.Str()
+    display_name = fields.Str()
+    cited_by_count = fields.Int()
+    entity_type = fields.Str()
+    external_id = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
+class MessageCountrySchema(Schema):
+    meta = fields.Nested(MetaSchema)
+    results = fields.Nested(AutoCompleteCountrySchema, many=True)
+    group_by = fields.Nested(GroupBySchema, many=True)
+
+    class Meta:
+        ordered = True
