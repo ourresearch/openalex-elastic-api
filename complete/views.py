@@ -13,9 +13,9 @@ blueprint = Blueprint("complete", __name__)
 def autocomplete():
     entities_to_indeces = {
         "author": "authors-v5",
-        "concept": "concepts-v1",
-        "institution": "institutions-v1",
-        "venue": "venues-v2",
+        "concept": "concepts-v2",
+        "institution": "institutions-v2",
+        "venue": "venues-v3",
         "work": "works-v7-*,-*invalid-data",
     }
 
@@ -38,7 +38,7 @@ def autocomplete():
         index = ",".join(entities_to_indeces.values())
 
     s = Search(index=index)
-    s = s.query("match_phrase_prefix", display_name=q)
+    s = s.query("match_phrase_prefix", display_name__autocomplete=q)
     s = s.sort("-cited_by_count")
     response = s.execute()
 

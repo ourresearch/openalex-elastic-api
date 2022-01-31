@@ -8,8 +8,8 @@ blueprint = Blueprint("institutions", __name__)
 
 
 @blueprint.route("/institutions")
-def venues():
-    index_name = "institutions-v1"
+def institutions():
+    index_name = "institutions-v2"
     default_sort = ["-works_count", "id"]
     result = shared_view(request, fields_dict, index_name, default_sort)
     message_schema = MessageSchema()
