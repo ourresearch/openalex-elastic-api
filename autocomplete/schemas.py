@@ -3,7 +3,7 @@ from marshmallow import Schema, fields
 from core.schemas import GroupBySchema, MetaSchema
 
 
-class CompleteSchema(Schema):
+class AutoCompleteSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     cited_by_count = fields.Int()
@@ -40,7 +40,7 @@ class CompleteSchema(Schema):
 
 class MessageSchema(Schema):
     meta = fields.Nested(MetaSchema)
-    results = fields.Nested(CompleteSchema, many=True)
+    results = fields.Nested(AutoCompleteSchema, many=True)
     group_by = fields.Nested(GroupBySchema, many=True)
 
     class Meta:

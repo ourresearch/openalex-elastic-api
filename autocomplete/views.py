@@ -3,14 +3,15 @@ from collections import OrderedDict
 from elasticsearch_dsl import Search
 from flask import Blueprint, request
 
-from complete.schemas import MessageSchema
+from autocomplete.schemas import MessageSchema
+from autocomplete.shared import single_entity_autocomplete
 from core.exceptions import APIQueryParamsError
 
 blueprint = Blueprint("complete", __name__)
 
 
 @blueprint.route("/autocomplete")
-def autocomplete():
+def autocomplete_full():
     entities_to_indeces = {
         "author": "authors-v5",
         "concept": "concepts-v2",
@@ -50,5 +51,45 @@ def autocomplete():
         "per_page": 10,
     }
     result["results"] = response
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/authors")
+def autocomplete_authors():
+    index_name = "authors-v5"
+    result = single_entity_autocomplete(index_name, request)
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/concepts")
+def autocomplete_concepts():
+    index_name = "concepts-v2"
+    result = single_entity_autocomplete(index_name, request)
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/institutions")
+def autocomplete_institutions():
+    index_name = "institutions-v2"
+    result = single_entity_autocomplete(index_name, request)
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/venues")
+def autocomplete_venues():
+    index_name = "venues-v3"
+    result = single_entity_autocomplete(index_name, request)
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/works")
+def autocomplete_works():
+    index_name = "works-v7-*,-*invalid-data"
+    result = single_entity_autocomplete(index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
