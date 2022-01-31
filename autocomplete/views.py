@@ -26,6 +26,11 @@ def autocomplete_full():
     q = strip_punctuation(q) if q else None
     entity_type = request.args.get("entity_type")
 
+    if not q:
+        raise APIQueryParamsError(
+            f"Must enter a 'q' parameter in order to use autocomplete. Example: {request.url_rule}?q=my search"
+        )
+
     if entity_type and not q:
         raise APIQueryParamsError(
             f"Must provide a 'q' parameter when filtering by an entity type."
