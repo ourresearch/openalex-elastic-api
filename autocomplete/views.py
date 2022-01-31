@@ -119,6 +119,7 @@ def autocomplete_institutions_country():
     for country, details in iso3166.countries_by_name.items():
         country_words = country.split()
         for word in country_words:
+            # word in the country starts with our query, and the country is in the transform index
             if word.startswith(q.upper()) and country_sums.get(details.alpha2.lower()):
                 found_countries.append(
                     OrderedDict(
