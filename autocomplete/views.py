@@ -6,6 +6,7 @@ from flask import Blueprint, request
 
 from autocomplete.schemas import MessageCountrySchema, MessageSchema
 from autocomplete.shared import single_entity_autocomplete
+from autocomplete.utils import strip_punctuation
 from core.exceptions import APIQueryParamsError
 
 blueprint = Blueprint("complete", __name__)
@@ -22,6 +23,7 @@ def autocomplete_full():
     }
 
     q = request.args.get("q")
+    q = strip_punctuation(q) if q else None
     entity_type = request.args.get("entity_type")
 
     if entity_type and not q:
@@ -99,6 +101,7 @@ def autocomplete_works():
 @blueprint.route("/autocomplete/institutions/country")
 def autocomplete_institutions_country():
     q = request.args.get("q")
+    q = strip_punctuation(q) if q else None
     if not q:
         raise APIQueryParamsError(
             f"Must enter a 'q' parameter in order to use autocomplete. Example: {request.url_rule}?q=my search"
