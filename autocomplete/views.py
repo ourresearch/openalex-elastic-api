@@ -168,7 +168,9 @@ def autocomplete_venues_publisher():
         )
 
     s = Search(index="venues-publisher-transform-v2")
-    s = s.query("match_phrase_prefix", publisher__transform=q)
+    s = s.query(
+        "match_phrase_prefix", publisher__transform={"query": q, "max_expansions": 100}
+    )
     s = s.sort("-cited_by_count.sum")
     response = s.execute()
 
