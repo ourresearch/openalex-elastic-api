@@ -4,7 +4,7 @@ import iso3166
 from elasticsearch_dsl import Search
 from flask import Blueprint, request
 
-from autocomplete.schemas import MessageCountrySchema, MessageSchema
+from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
 from autocomplete.shared import single_entity_autocomplete
 from autocomplete.utils import strip_punctuation
 from core.exceptions import APIQueryParamsError
@@ -153,5 +153,46 @@ def autocomplete_institutions_country():
         "per_page": 10,
     }
     result["results"] = found_countries_sorted[:10]
-    message_schema = MessageCountrySchema()
+    message_schema = MessageAutocompleteCustomSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/venues/publisher")
+def autocomplete_venues_publisher():
+    q = request.args.get("q")
+    q = strip_punctuation(q) if q else None
+    q = q.lower() if q else None
+    if not q:
+        raise APIQueryParamsError(
+            f"Must enter a 'q' parameter in order to use autocomplete. Example: {request.url_rule}?q=my search"
+        )
+
+    s = Search(index="venues-publisher-transform-v2")
+    s = s.query("match_phrase_prefix", publisher__transform=q)
+    s = s.sort("-cited_by_count.sum")
+    response = s.execute()
+
+    hits = []
+    for item in response:
+        hits.append(
+            OrderedDict(
+                {
+                    "id": None,
+                    "display_name": item.publisher.transform,
+                    "cited_by_count": item.cited_by_count.sum,
+                    "entity_type": "venue",
+                    "external_id": None,
+                }
+            )
+        )
+
+    result = OrderedDict()
+    result["meta"] = {
+        "count": s.count(),
+        "db_response_time_ms": response.took,
+        "page": 1,
+        "per_page": 10,
+    }
+    result["results"] = hits
+    message_schema = MessageAutocompleteCustomSchema()
     return message_schema.dump(result)

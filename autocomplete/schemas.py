@@ -47,7 +47,7 @@ class MessageSchema(Schema):
         ordered = True
 
 
-class AutoCompleteCountrySchema(Schema):
+class AutoCompleteCustomSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     cited_by_count = fields.Int()
@@ -58,9 +58,9 @@ class AutoCompleteCountrySchema(Schema):
         ordered = True
 
 
-class MessageCountrySchema(Schema):
+class MessageAutocompleteCustomSchema(Schema):
     meta = fields.Nested(MetaSchema)
-    results = fields.Nested(AutoCompleteCountrySchema, many=True)
+    results = fields.Nested(AutoCompleteCustomSchema, many=True)
     group_by = fields.Nested(GroupBySchema, many=True)
 
     class Meta:
