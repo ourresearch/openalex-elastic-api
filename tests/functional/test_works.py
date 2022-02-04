@@ -37,8 +37,8 @@ class TestWorksPublicationYearFilter:
         res = client.get("/works?filter=publication_year:2020")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 27
-        assert json_data["results"][0]["id"] == "https://openalex.org/W2894716986"
-        assert json_data["results"][0]["cited_by_count"] == 4
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2893840989"
+        assert json_data["results"][0]["cited_by_count"] == 2
         assert res.status_code == 200
 
     def test_works_publication_year_greater_than(self, client):
@@ -72,8 +72,8 @@ class TestWorksPublicationDateFilter:
         res = client.get("/works?filter=publication_date:2020-01-01")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 4
-        assert json_data["results"][0]["id"] == "https://openalex.org/W2895362161"
-        assert json_data["results"][0]["cited_by_count"] == 7
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2893038645"
+        assert json_data["results"][0]["cited_by_count"] == 1
         assert res.status_code == 200
 
     def test_works_publication_date_greater_than(self, client):
@@ -323,11 +323,11 @@ class TestWorksCitedByCountFilter:
             assert result["cited_by_count"] < 20
 
     def test_works_cited_by_count_range(self, client):
-        res = client.get("/works?filter=cited-by-count:20-22")
+        res = client.get("/works?filter=cited-by-count:20-21")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 26
+        assert json_data["meta"]["count"] == 51
         for result in json_data["results"][:25]:
-            assert result["cited_by_count"] == 21
+            assert result["cited_by_count"] == 20 or result["cited_by_count"] == 21
 
     def test_works_cited_by_count_range_error(self, client):
         res = client.get("/works?filter=cited-by-count:20-ff")

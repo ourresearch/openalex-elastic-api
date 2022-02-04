@@ -43,7 +43,7 @@ def test_search_full(client):
                         ]
                     }
                 },
-                "boost_mode": "sum",
+                "boost_mode": "multiply",
             }
         }
     }
@@ -67,7 +67,7 @@ def test_search_phrase(client):
                     }
                 ],
                 "query": {"match_phrase": {"display_name": {"query": "covid-19"}}},
-                "boost_mode": "sum",
+                "boost_mode": "multiply",
             }
         }
     }
@@ -112,7 +112,7 @@ def test_search_with_display_name_sort(client):
                         ]
                     }
                 },
-                "boost_mode": "sum",
+                "boost_mode": "multiply",
             }
         },
         "sort": ["display_name.keyword"],

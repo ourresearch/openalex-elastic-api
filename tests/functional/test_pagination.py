@@ -35,11 +35,11 @@ class TestPagination:
         assert json_data["message"] == "Param per-page must be a number."
 
     def test_pagination_max_per_page_exceeded(self, client):
-        res = client.get("/works?per-page=100")
+        res = client.get("/works?per-page=201")
         json_data = res.get_json()
         assert res.status_code == 403
         assert json_data["error"] == "Pagination error."
-        assert json_data["message"] == "per-page parameter must be between 1 and 50"
+        assert json_data["message"] == "per-page parameter must be between 1 and 200"
 
     def test_pagination_max_results(self, client):
         res = client.get("/works?page=999&per-page=50")
