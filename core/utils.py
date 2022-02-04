@@ -20,17 +20,17 @@ def map_filter_params(filter_params):
     """
     if filter_params:
         try:
-            result = {}
+            results = []
             params = filter_params.split(",")
             for param in params:
                 key, value = param.split(":", 1)
                 key = key.replace("-", "_")  # convert key to underscore
-                result[key] = value
+                results.append({key: value})
         except ValueError:
             raise APIQueryParamsError(f"Invalid query parameter in {param}.")
     else:
-        result = None
-    return result
+        results = None
+    return results
 
 
 def map_sort_params(param):

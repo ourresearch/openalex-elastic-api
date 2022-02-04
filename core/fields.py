@@ -1,6 +1,8 @@
 import datetime
 from abc import ABC, abstractmethod
 
+from elasticsearch_dsl import Q
+
 from core.exceptions import APIQueryParamsError
 from core.search import search_records_full, search_records_phrase
 
@@ -12,8 +14,8 @@ class Field(ABC):
         self.value = None
 
     @abstractmethod
-    def build_query(self, s):
-        return s
+    def build_query(self):
+        pass
 
     def validate(self, query):
         pass
@@ -38,16 +40,16 @@ class Field(ABC):
 
 
 class BooleanField(Field):
-    def build_query(self, s):
+    def build_query(self):
         self.validate(self.value)
         if self.value == "null":
-            s = s.exclude("exists", field=self.es_field())
+            q = ~Q("exists", field=self.es_field())
         elif self.value == "!null":
-            s = s.filter("exists", field=self.es_field())
+            q = Q("exists", field=self.es_field())
         else:
             kwargs = {self.es_field(): self.value.lower()}
-            s = s.filter("term", **kwargs)
-        return s
+            q = Q("term", **kwargs)
+        return q
 
     def validate(self, query):
         valid_values = ["null", "!null", "true", "false"]
@@ -59,32 +61,32 @@ class BooleanField(Field):
 
 
 class DateField(Field):
-    def build_query(self, s):
+    def build_query(self):
         if "<" in self.value:
             query = self.value[1:]
             self.validate(query)
             kwargs = {self.es_field(): {"lt": query}}
-            s = s.filter("range", **kwargs)
+            q = Q("range", **kwargs)
         elif ">" in self.value:
             query = self.value[1:]
             self.validate(query)
             kwargs = {self.es_field(): {"gt": query}}
-            s = s.filter("range", **kwargs)
+            q = Q("range", **kwargs)
         elif self.param == "to_publication_date":
             self.validate(self.value)
             kwargs = {self.es_field(): {"lte": self.value}}
-            s = s.filter("range", **kwargs)
+            q = Q("range", **kwargs)
         elif self.param == "from_publication_date":
             self.validate(self.value)
             kwargs = {self.es_field(): {"gte": self.value}}
-            s = s.filter("range", **kwargs)
+            q = Q("range", **kwargs)
         elif self.value == "null":
-            s = s.exclude("exists", field=self.es_field())
+            q = Q("exists", field=self.es_field())
         else:
             self.validate(self.value)
             kwargs = {self.es_field(): self.value}
-            s = s.filter("term", **kwargs)
-        return s
+            q = Q("term", **kwargs)
+        return q
 
     def validate(self, query):
         try:
@@ -96,27 +98,27 @@ class DateField(Field):
 
 
 class OpenAlexIDField(Field):
-    def build_query(self, s):
+    def build_query(self):
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
-            s = s.exclude("exists", field=field_name)
+            q = ~Q("exists", field=field_name)
         elif self.value == "!null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
-            s = s.filter("exists", field=field_name)
+            q = Q("exists", field=field_name)
         elif self.value.startswith("!"):
             query = self.value[1:]
             kwargs = {self.es_field(): query}
-            s = s.exclude("term", **kwargs)
+            q = Q("term", **kwargs)
         elif "https://openalex.org/" in self.value:
             kwargs = {self.es_field(): self.value}
-            s = s.filter("term", **kwargs)
+            q = Q("term", **kwargs)
         else:
             query = f"https://openalex.org/{self.value.upper()}"
             kwargs = {self.es_field(): query}
-            s = s.filter("term", **kwargs)
-        return s
+            q = Q("term", **kwargs)
+        return q
 
     def es_field(self) -> str:
         if self.custom_es_field:
@@ -129,23 +131,23 @@ class OpenAlexIDField(Field):
 
 
 class PhraseField(Field):
-    def build_query(self, s):
+    def build_query(self):
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
-            s = s.exclude("exists", field=field_name)
+            q = ~Q("exists", field=field_name)
         elif self.value == "!null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
-            s = s.filter("exists", field=field_name)
+            q = Q("exists", field=field_name)
         elif self.value.startswith("!"):
             query = self.value[1:]
             kwargs = {self.es_field(): query}
-            s = s.exclude("match_phrase", **kwargs)
+            q = Q("match_phrase", **kwargs)
         else:
             kwargs = {self.es_field(): self.value}
-            s = s.filter("match_phrase", **kwargs)
-        return s
+            q = Q("match_phrase", **kwargs)
+        return q
 
     def es_field(self) -> str:
         if self.custom_es_field:
@@ -158,17 +160,17 @@ class PhraseField(Field):
 
 
 class RangeField(Field):
-    def build_query(self, s):
+    def build_query(self):
         if "<" in self.value:
             query = self.value[1:]
             self.validate(query)
             kwargs = {self.es_field(): {"lt": int(query)}}
-            s = s.filter("range", **kwargs)
+            q = Q("range", **kwargs)
         elif ">" in self.value:
             query = self.value[1:]
             self.validate(query)
             kwargs = {self.es_field(): {"gt": int(query)}}
-            s = s.filter("range", **kwargs)
+            q = Q("range", **kwargs)
         elif "-" in self.value:
             values = self.value.strip().split("-")
             left_value = values[0]
@@ -178,14 +180,14 @@ class RangeField(Field):
             kwargs = {
                 self.es_field(): {"gte": int(left_value), "lte": int(right_value)}
             }
-            s = s.filter("range", **kwargs)
+            q = Q("range", **kwargs)
         elif self.value == "null":
-            s = s.exclude("exists", field=self.es_field())
+            q = ~Q("exists", field=self.es_field())
         else:
             self.validate(self.value)
             kwargs = {self.es_field(): self.value}
-            s = s.filter("term", **kwargs)
-        return s
+            q = Q("term", **kwargs)
+        return q
 
     def validate(self, query):
         try:
@@ -195,32 +197,32 @@ class RangeField(Field):
 
 
 class SearchField(Field):
-    def build_query(self, s):
+    def build_query(self):
         if self.value.startswith('"') and self.value.endswith('"'):
-            s = search_records_phrase(self.value, s)
+            q = search_records_phrase(self.value)
         else:
-            s = search_records_full(self.value, s)
-        return s
+            q = search_records_full(self.value)
+        return q
 
 
 class TermField(Field):
-    def build_query(self, s):
+    def build_query(self):
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
-            s = s.exclude("exists", field=field_name)
+            q = ~Q("exists", field=field_name)
         elif self.value == "!null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
-            s = s.filter("exists", field=field_name)
+            q = Q("exists", field=field_name)
         elif self.value.startswith("!"):
             query = self.value[1:]
             kwargs = {self.es_field(): query}
-            s = s.exclude("term", **kwargs)
+            q = ~Q("term", **kwargs)
         else:
             kwargs = {self.es_field(): self.value}
-            s = s.filter("term", **kwargs)
-        return s
+            q = Q("term", **kwargs)
+        return q
 
     def es_field(self) -> str:
         if self.custom_es_field:

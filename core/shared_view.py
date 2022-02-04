@@ -34,13 +34,17 @@ def shared_view(request, fields_dict, index_name, default_sort):
     # filter
     if filter_params:
         s = filter_records(fields_dict, filter_params, s)
-    if filter_params and (
-        "display_name.search" in filter_params.keys()
-        or "title.search" in filter_params.keys()
-    ):
-        is_search_query = True
-    else:
-        is_search_query = False
+
+    is_search_query = False
+
+    if filter_params:
+        for filter in filter_params:
+            if (
+                "display_name.search" in filter.keys()
+                or "title.search" in filter.keys()
+            ):
+                is_search_query = True
+                break
 
     # sort
     if sort_params:

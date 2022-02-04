@@ -10,7 +10,8 @@ from works.fields import fields_dict
 def test_search_full(client):
     s = Search()
     search = "covid-19"
-    s = search_records_full(search, s)
+    q = search_records_full(search)
+    s = s.query(q)
     assert s.to_dict() == {
         "query": {
             "function_score": {
@@ -52,7 +53,8 @@ def test_search_full(client):
 def test_search_phrase(client):
     s = Search()
     search = "covid-19"
-    s = search_records_phrase(search, s)
+    q = search_records_phrase(search)
+    s = s.query(q)
     assert s.to_dict() == {
         "query": {
             "function_score": {
@@ -78,7 +80,8 @@ def test_search_with_display_name_sort(client):
     search = "covid-19"
     sort_args = "display_name"
     sort_params = map_sort_params(sort_args)
-    s = search_records_full(search, s)
+    q = search_records_full(search)
+    s = s.query(q)
     s = sort_records(fields_dict, None, sort_params, s)
     assert s.to_dict() == {
         "query": {
@@ -127,7 +130,7 @@ def test_filter_range_query(client):
     assert s.to_dict() == {
         "query": {
             "bool": {
-                "filter": [
+                "must": [
                     {"range": {"publication_year": {"gt": 2015}}},
                     {"range": {"cited_by_count": {"lt": 10}}},
                 ]
@@ -144,7 +147,7 @@ def test_filter_regular_query(client):
     assert s.to_dict() == {
         "query": {
             "bool": {
-                "filter": [
+                "must": [
                     {"term": {"host_venue.issn.lower": "2333-3334"}},
                     {
                         "bool": {
@@ -174,7 +177,7 @@ def test_sort_query(client):
     assert s.to_dict() == {
         "query": {
             "bool": {
-                "filter": [
+                "must": [
                     {"match_phrase": {"host_venue.publisher.lower": "wiley"}},
                     {"range": {"publication_year": {"gt": 2015}}},
                 ]
