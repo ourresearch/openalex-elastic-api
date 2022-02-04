@@ -42,7 +42,7 @@ def search_records_phrase(search, s):
                 "field_value_factor": {
                     "field": "cited_by_count",
                     "factor": 1,
-                    "modifier": "log1p",
+                    "modifier": "sqrt",
                     "missing": 1,
                 }
             },
