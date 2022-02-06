@@ -24,6 +24,8 @@ class Field(ABC):
     def es_field(self) -> str:
         if self.custom_es_field:
             field = self.custom_es_field
+        elif self.alias:
+            field = self.alias.replace(".", "__")
         elif "." in self.param:
             field = self.param.replace(".", "__")
         else:
@@ -124,6 +126,8 @@ class OpenAlexIDField(Field):
     def es_field(self) -> str:
         if self.custom_es_field:
             field = self.custom_es_field
+        elif self.alias:
+            field = self.alias.replace(".", "__") + "__lower"
         elif "." in self.param:
             field = self.param.replace(".", "__") + "__lower"
         else:
@@ -153,6 +157,8 @@ class PhraseField(Field):
     def es_field(self) -> str:
         if self.custom_es_field:
             field = self.custom_es_field
+        elif self.alias:
+            field = self.alias.replace(".", "__") + "__lower"
         elif "." in self.param:
             field = self.param.replace(".", "__") + "__lower"
         else:
@@ -228,6 +234,8 @@ class TermField(Field):
     def es_field(self) -> str:
         if self.custom_es_field:
             field = self.custom_es_field
+        elif self.alias:
+            field = self.alias.replace(".", "__") + "__lower"
         elif "." in self.param:
             field = self.param.replace(".", "__") + "__lower"
         else:
