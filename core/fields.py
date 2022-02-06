@@ -8,8 +8,9 @@ from core.search import search_records_full, search_records_phrase
 
 
 class Field(ABC):
-    def __init__(self, param, custom_es_field=None):
+    def __init__(self, param, alias=None, custom_es_field=None):
         self.param = param
+        self.alias = alias
         self.custom_es_field = custom_es_field
         self.value = None
 

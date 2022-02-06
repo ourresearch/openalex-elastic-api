@@ -17,15 +17,25 @@ fields = [
     TermField(param="authorships.institutions.country_code"),
     TermField(param="authorships.institutions.type"),
     OpenAlexIDField(
-        param="author.id", custom_es_field="authorships__author__id__lower"
+        param="author.id",
+        alias="authorships.author.id",
+        custom_es_field="authorships__author__id__lower",
     ),
     TermField(
-        param="author.orcid", custom_es_field="authorships__author__orcid__lower"
+        param="author.orcid",
+        alias="authorships.author.orcid",
+        custom_es_field="authorships__author__orcid__lower",
     ),
     RangeField(param="cited_by_count"),
-    OpenAlexIDField(param="cites", custom_es_field="referenced_works__lower"),
+    OpenAlexIDField(
+        param="cites",
+        alias="referenced_works",
+        custom_es_field="referenced_works__lower",
+    ),
     OpenAlexIDField(param="concepts.id"),
-    OpenAlexIDField(param="concept.id", custom_es_field="concepts__id__lower"),
+    OpenAlexIDField(
+        param="concept.id", alias="concepts.id", custom_es_field="concepts__id__lower"
+    ),
     TermField(param="concepts.wikidata"),
     DateField(
         param="from_publication_date",
@@ -37,28 +47,45 @@ fields = [
     PhraseField(param="host_venue.publisher"),
     TermField(
         param="institutions.country_code",
+        alias="authors.institutions.country_code",
         custom_es_field="authorships__institutions__country_code__lower",
     ),
     OpenAlexIDField(
-        param="institution.id", custom_es_field="authorships__institutions__id__lower"
+        param="institution.id",
+        alias="authorships.institutions.id",
+        custom_es_field="authorships__institutions__id__lower",
     ),
     OpenAlexIDField(
-        param="institutions.id", custom_es_field="authorships__institutions__id__lower"
+        param="institutions.id",
+        alias="authorships.institutions.id",
+        custom_es_field="authorships__institutions__id__lower",
     ),
     TermField(
         param="institutions.ror",
+        alias="authorships.institutions.ror",
         custom_es_field="authorships__institutions__ror__lower",
     ),
     TermField(
         param="institutions.type",
+        alias="authorships.institutions.type",
         custom_es_field="authorships__institutions__type__lower",
     ),
-    BooleanField(param="is_oa", custom_es_field="open_access__is_oa"),
+    BooleanField(
+        param="is_oa", alias="open_access.is_oa", custom_es_field="open_access__is_oa"
+    ),
     BooleanField(param="is_paratext"),
-    OpenAlexIDField(param="journal.id", custom_es_field="host_venue__id__lower"),
+    OpenAlexIDField(
+        param="journal.id",
+        alias="host_venue.id",
+        custom_es_field="host_venue__id__lower",
+    ),
     BooleanField(param="open_access.is_oa"),
     TermField(param="open_access.oa_status"),
-    TermField(param="oa_status", custom_es_field="open_access__oa_status__lower"),
+    TermField(
+        param="oa_status",
+        alias="open_access.oa_status",
+        custom_es_field="open_access__oa_status__lower",
+    ),
     DateField(param="publication_date"),
     RangeField(param="publication_year"),
     OpenAlexIDField(param="referenced_works"),
