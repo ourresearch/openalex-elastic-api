@@ -6,13 +6,14 @@ from core.utils import get_field
 
 
 def filter_records(fields_dict, filter_params, s):
-    duplicate_keys = find_duplicate_keys(filter_params)
+    duplicate_keys = find_duplicate_keys(fields_dict, filter_params)
     and_queries = []
     or_queries = []
 
     for filter in filter_params:
         for key, value in filter.items():
             field = get_field(fields_dict, key)
+            key = field.alias if field.alias else key
             field.value = value
             q = field.build_query()
             if key in duplicate_keys:
@@ -27,13 +28,17 @@ def filter_records(fields_dict, filter_params, s):
     return s
 
 
-def find_duplicate_keys(filter_params):
+def find_duplicate_keys(fields_dict, filter_params):
     """
     Returns a list of keys, where the key is in the params more than once.
     """
     keys = []
     for filter in filter_params:
         for key in filter:
-            keys.append(key)
+            field = get_field(fields_dict, key)
+            if field.alias:
+                keys.append(field.alias)
+            else:
+                keys.append(key)
     duplicates = [k for k, v in Counter(keys).items() if v > 1]
     return duplicates
