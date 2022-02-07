@@ -453,12 +453,12 @@ class TestWorksOAStatus:
             assert result["open_access"]["oa_status"] == "closed"
 
     def test_works_oa_status_or_query(self, client):
-        res = client.get("/works?filter=oa_status:closed,oa_status:open")
+        res = client.get("/works?filter=oa_status:gold,oa_status:green")
         json_data = res.get_json()
         for result in json_data["results"][:25]:
             assert (
-                result["open_access"]["oa_status"] == "closed"
-                or result["open_access"]["oa_status"] == "open"
+                result["open_access"]["oa_status"] == "gold"
+                or result["open_access"]["oa_status"] == "green"
             )
 
     def test_works_oa_status_or_query_with_alias(self, client):
