@@ -470,6 +470,17 @@ class TestWorksOAStatus:
                 or result["open_access"]["oa_status"] == "green"
             )
 
+    def test_works_oa_status_multiple_or_queries(self, client):
+        res = client.get(
+            "/works?filter=publication_year:2020,publication_year:2021,oa_status:gold,oa_status:green&sort=open_access.oa_status"
+        )
+        json_data = res.get_json()
+        for result in json_data["results"][:25]:
+            assert (
+                result["open_access"]["oa_status"] == "gold"
+                or result["open_access"]["oa_status"] == "green"
+            )
+
     def test_works_oa_status_hyphen_filter(self, client):
         res = client.get("/works?filter=oa-status:Closed")
         json_data = res.get_json()

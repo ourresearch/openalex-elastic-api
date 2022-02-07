@@ -26,7 +26,7 @@ def filter_records(fields_dict, filter_params, s):
     combined_and_query = Q("bool", must=and_queries)
     s = s.query(combined_and_query)
 
-    for key, values in or_queries.items():
+    for values in or_queries.values():
         # each set of params with the same name needs its own query, with a minimum_should_match of 1
         combined_or_query = Q("bool", should=values, minimum_should_match=1)
         s = s.query(combined_or_query)
