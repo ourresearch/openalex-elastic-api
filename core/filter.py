@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, defaultdict
 
 from elasticsearch_dsl import Q
 
@@ -8,7 +8,7 @@ from core.utils import get_field
 def filter_records(fields_dict, filter_params, s):
     duplicate_keys = find_duplicate_keys(fields_dict, filter_params)
     and_queries = []
-    or_queries = []
+    or_queries = defaultdict(list)
 
     for filter in filter_params:
         for key, value in filter.items():
@@ -17,14 +17,19 @@ def filter_records(fields_dict, filter_params, s):
             field.value = value
             q = field.build_query()
             if key in duplicate_keys:
-                or_queries.append(q)  # keys that appear multiple times are "OR" query
+                or_queries[key].append(
+                    q
+                )  # keys that appear multiple times are "OR" query
             else:
                 and_queries.append(q)  # everything else is "AND" query
 
     combined_and_query = Q("bool", must=and_queries)
     s = s.query(combined_and_query)
-    combined_or_query = Q("bool", should=or_queries, minimum_should_match=1)
-    s = s.query(combined_or_query)
+
+    for key, values in or_queries.items():
+        # each set of params with the same name needs its own query, with a minimum_should_match of 1
+        combined_or_query = Q("bool", should=values, minimum_should_match=1)
+        s = s.query(combined_or_query)
     return s
 
 
