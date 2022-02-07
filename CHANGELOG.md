@@ -1,6 +1,7 @@
 # Changelog
 
-* Implement "OR" query by entering param name twice, such as `filter=publication_year:1981,publication_year:1982`. [2022-02-04]
+* Support OR query with alias. Resolve bug that occurred when different pairs of keys are used with an OR query. [2022-02-07]
+* Implement OR query by entering param name twice, such as `filter=publication_year:1981,publication_year:1982`. [2022-02-04]
 * Increase per-page limit to 200. [2022-02-04]
 * Improve search algorithm so that cited_by_count has a bigger impact on results. [2022-01-28]
 * Resolve relevance_score sort bug. [2022-01-27]
