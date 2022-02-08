@@ -19,7 +19,7 @@ def autocomplete_full():
         "concept": "concepts-v2",
         "institution": "institutions-v2",
         "venue": "venues-v3",
-        "work": "works-v7-*,-*invalid-data",
+        "work": "works-v8-*,-*invalid-data",
     }
 
     q = request.args.get("q")
@@ -97,7 +97,7 @@ def autocomplete_venues():
 
 @blueprint.route("/autocomplete/works")
 def autocomplete_works():
-    index_name = "works-v7-*,-*invalid-data"
+    index_name = "works-v8-*,-*invalid-data"
     result = single_entity_autocomplete(index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
