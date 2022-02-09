@@ -9,7 +9,7 @@ blueprint = Blueprint("concepts", __name__)
 
 @blueprint.route("/concepts")
 def concepts():
-    index_name = "concepts-v2"
+    index_name = "concepts-v3"
     default_sort = ["-works_count", "id"]
     result = shared_view(request, fields_dict, index_name, default_sort)
     message_schema = MessageSchema()

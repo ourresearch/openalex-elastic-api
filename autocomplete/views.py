@@ -16,9 +16,9 @@ blueprint = Blueprint("complete", __name__)
 def autocomplete_full():
     entities_to_indeces = {
         "author": "authors-v6",
-        "concept": "concepts-v2",
-        "institution": "institutions-v2",
-        "venue": "venues-v3",
+        "concept": "concepts-v3",
+        "institution": "institutions-v3",
+        "venue": "venues-v4",
         "work": "works-v8-*,-*invalid-data",
     }
 
@@ -73,7 +73,7 @@ def autocomplete_authors():
 
 @blueprint.route("/autocomplete/concepts")
 def autocomplete_concepts():
-    index_name = "concepts-v2"
+    index_name = "concepts-v3"
     result = single_entity_autocomplete(index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
@@ -81,7 +81,7 @@ def autocomplete_concepts():
 
 @blueprint.route("/autocomplete/institutions")
 def autocomplete_institutions():
-    index_name = "institutions-v2"
+    index_name = "institutions-v3"
     result = single_entity_autocomplete(index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
@@ -89,7 +89,7 @@ def autocomplete_institutions():
 
 @blueprint.route("/autocomplete/venues")
 def autocomplete_venues():
-    index_name = "venues-v3"
+    index_name = "venues-v4"
     result = single_entity_autocomplete(index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)

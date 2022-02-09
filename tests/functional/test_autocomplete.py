@@ -13,7 +13,7 @@ class TestFullAutoComplete:
             assert "sci" in result["display_name"].lower()
 
 
-class TestAuthorsAutoComplete:
+class TestEntitiesAutoComplete:
     def test_authors_autocomplete(self, client):
         res = client.get("/autocomplete/authors?q=jas")
         json_data = res.get_json()
@@ -21,8 +21,27 @@ class TestAuthorsAutoComplete:
         for result in json_data["results"][:25]:
             assert "jas" in result["display_name"].lower()
 
+    def test_concepts_autocomplete(self, client):
+        res = client.get("/autocomplete/concepts?q=sci")
+        json_data = res.get_json()
+        assert "sci" in json_data["results"][0]["display_name"].lower()
+        for result in json_data["results"][:25]:
+            assert "sci" in result["display_name"].lower()
 
-class TestWorksAutoComplete:
+    def test_institutions_autocomplete(self, client):
+        res = client.get("/autocomplete/institutions?q=uni")
+        json_data = res.get_json()
+        assert "uni" in json_data["results"][0]["display_name"].lower()
+        for result in json_data["results"][:25]:
+            assert "uni" in result["display_name"].lower()
+
+    def test_venues_autocomplete(self, client):
+        res = client.get("/autocomplete/venues?q=nat")
+        json_data = res.get_json()
+        assert "nat" in json_data["results"][0]["display_name"].lower()
+        for result in json_data["results"][:25]:
+            assert "nat" in result["display_name"].lower()
+
     def test_works_autocomplete(self, client):
         res = client.get("/autocomplete/works?q=list")
         json_data = res.get_json()
