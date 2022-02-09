@@ -15,7 +15,7 @@ blueprint = Blueprint("complete", __name__)
 @blueprint.route("/autocomplete")
 def autocomplete_full():
     entities_to_indeces = {
-        "author": "authors-v5",
+        "author": "authors-v6",
         "concept": "concepts-v2",
         "institution": "institutions-v2",
         "venue": "venues-v3",
@@ -65,7 +65,7 @@ def autocomplete_full():
 
 @blueprint.route("/autocomplete/authors")
 def autocomplete_authors():
-    index_name = "authors-v5"
+    index_name = "authors-v6"
     result = single_entity_autocomplete(index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
