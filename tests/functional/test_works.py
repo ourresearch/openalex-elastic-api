@@ -510,11 +510,47 @@ class TestWorksNullNotNull:
 
 class TestWorksNotFilter:
     def test_works_oa_status_not_term(self, client):
+        """Tests ! filter for term field."""
         res = client.get("/works?filter=oa_status:!closed")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 7709
         for result in json_data["results"][:50]:
             assert result["open_access"]["oa_status"] != "closed"
+
+    def test_works_concepts_not_term_short(self, client):
+        """Tests ! filter for OpenAlexID field (short version)."""
+        res_1 = client.get("/works?filter=concepts.id:!c41008148")
+        json_data_1 = res_1.get_json()
+        for result in json_data_1["results"][:50]:
+            for concept in result["concepts"]:
+                assert concept["id"] != "https://openalex.org/C41008148"
+
+        res_2 = client.get("/works?filter=concepts.id:c41008148")
+        json_data_2 = res_2.get_json()
+        assert json_data_1["meta"]["count"] + json_data_2["meta"]["count"] == 10000
+
+    def test_works_concepts_not_term_full(self, client):
+        """Tests ! filter for OpenAlexID field (long version)."""
+        res_1 = client.get("/works?filter=concepts.id:!https://openalex.org/C41008148")
+        json_data_1 = res_1.get_json()
+        for result in json_data_1["results"][:50]:
+            for concept in result["concepts"]:
+                assert concept["id"] != "https://openalex.org/C41008148"
+
+        res_2 = client.get("/works?filter=concepts.id:c41008148")
+        json_data_2 = res_2.get_json()
+        assert json_data_1["meta"]["count"] + json_data_2["meta"]["count"] == 10000
+
+    def test_works_publisher_not_term(self, client):
+        """Tests ! filter for phrase field."""
+        res_1 = client.get("/works?filter=host_venue.publisher:!elsevier")
+        json_data_1 = res_1.get_json()
+        for result in json_data_1["results"][:50]:
+            assert result["host_venue"]["publisher"] != "elsevier"
+
+        res_2 = client.get("/works?filter=host_venue.publisher:elsevier")
+        json_data_2 = res_2.get_json()
+        assert json_data_1["meta"]["count"] + json_data_2["meta"]["count"] == 10000
 
 
 class TestWorksMultipleFilter:

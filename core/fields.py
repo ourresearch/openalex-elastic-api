@@ -84,7 +84,7 @@ class DateField(Field):
             kwargs = {self.es_field(): {"gte": self.value}}
             q = Q("range", **kwargs)
         elif self.value == "null":
-            q = Q("exists", field=self.es_field())
+            q = ~Q("exists", field=self.es_field())
         else:
             self.validate(self.value)
             kwargs = {self.es_field(): self.value}
@@ -110,10 +110,15 @@ class OpenAlexIDField(Field):
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
             q = Q("exists", field=field_name)
-        elif self.value.startswith("!"):
+        elif self.value.startswith("!") and "https://openalex.org/" in self.value:
             query = self.value[1:]
             kwargs = {self.es_field(): query}
-            q = Q("term", **kwargs)
+            q = ~Q("term", **kwargs)
+        elif self.value.startswith("!"):
+            query = self.value[1:].upper()
+            query_with_url = f"https://openalex.org/{query}"
+            kwargs = {self.es_field(): query_with_url}
+            q = ~Q("term", **kwargs)
         elif "https://openalex.org/" in self.value:
             kwargs = {self.es_field(): self.value}
             q = Q("term", **kwargs)
@@ -148,7 +153,7 @@ class PhraseField(Field):
         elif self.value.startswith("!"):
             query = self.value[1:]
             kwargs = {self.es_field(): query}
-            q = Q("match_phrase", **kwargs)
+            q = ~Q("match_phrase", **kwargs)
         else:
             kwargs = {self.es_field(): self.value}
             q = Q("match_phrase", **kwargs)
