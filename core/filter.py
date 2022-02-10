@@ -26,7 +26,7 @@ def handle_or_query(field, s, value):
     for or_value in value.split("|"):
         if or_value.startswith("!"):
             raise APIQueryParamsError(
-                "The ! operator is not allowed within an OR query."
+                f"The ! operator is not allowed within an OR query. Problem value: {or_value}"
             )
         field.value = or_value
         q = field.build_query()

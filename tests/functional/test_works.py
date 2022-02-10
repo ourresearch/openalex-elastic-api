@@ -602,5 +602,5 @@ class TestWorksAuthorOrQuery:
         assert res.status_code == 403
         assert json_data["error"] == "Invalid query parameters error."
         assert json_data["message"].startswith(
-            "The ! operator is not allowed within an OR query."
+            "The ! operator is not allowed within an OR query. Problem value: !A277790681"
         )
