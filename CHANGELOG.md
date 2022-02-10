@@ -1,5 +1,7 @@
 # Changelog
 
+* Refactor OR queries to use | separator, like `/works?filter=author.id:A2565156079|A2564890435`. [2022-02-10]
+* Duplicate filter keys now work as AND queries. [2022-02-10]
 * Support OR query with alias. Resolve bug that occurred when different pairs of keys are used with an OR query. [2022-02-07]
 * Implement OR query by entering param name twice, such as `filter=publication_year:1981,publication_year:1982`. [2022-02-04]
 * Increase per-page limit to 200. [2022-02-04]
