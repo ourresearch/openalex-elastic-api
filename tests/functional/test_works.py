@@ -565,3 +565,42 @@ class TestWorksInvalidFields:
         assert json_data["message"].startswith(
             "publication_yearrr is not a valid field. Valid fields are underscore or hyphenated versions of:"
         )
+
+
+class TestWorksAuthorOrQuery:
+    def test_works_author_and_query(self, client):
+        res = client.get("/works?filter=author.id:a2698836828,author.id:A2761130472")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["authorships"][0]["author"]["id"]
+            == "https://openalex.org/A2698836828"
+        )
+        assert (
+            json_data["results"][0]["authorships"][1]["author"]["id"]
+            == "https://openalex.org/A2761130472"
+        )
+
+    def test_works_author_or_query(self, client):
+        res = client.get(
+            "/works?filter=author.id:https://openalex.org/a2698836828|A2565156079|A277790681"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 3
+
+    def test_works_author_or_query_with_and(self, client):
+        """The and query takes precedence, so 1 result is returned."""
+        res = client.get(
+            "/works?filter=author.id:https://openalex.org/a2698836828|A2565156079|A277790681,author.id:A2761130472"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+
+    def test_works_author_or_query_not_error(self, client):
+        res = client.get("/works?filter=author.id:A2565156079|!A277790681")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"].startswith(
+            "The ! operator is not allowed within an OR query."
+        )
