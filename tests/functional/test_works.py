@@ -453,16 +453,7 @@ class TestWorksOAStatus:
             assert result["open_access"]["oa_status"] == "closed"
 
     def test_works_oa_status_or_query(self, client):
-        res = client.get("/works?filter=oa_status:gold,oa_status:green")
-        json_data = res.get_json()
-        for result in json_data["results"][:25]:
-            assert (
-                result["open_access"]["oa_status"] == "gold"
-                or result["open_access"]["oa_status"] == "green"
-            )
-
-    def test_works_oa_status_or_query_with_alias(self, client):
-        res = client.get("/works?filter=oa_status:gold,open_access.oa_status:green")
+        res = client.get("/works?filter=oa_status:gold|green")
         json_data = res.get_json()
         for result in json_data["results"][:25]:
             assert (
@@ -472,7 +463,7 @@ class TestWorksOAStatus:
 
     def test_works_oa_status_multiple_or_queries(self, client):
         res = client.get(
-            "/works?filter=publication_year:2020,publication_year:2021,oa_status:gold,oa_status:green&sort=open_access.oa_status"
+            "/works?filter=publication_year:2020|2021,oa_status:gold|green&sort=open_access.oa_status"
         )
         json_data = res.get_json()
         for result in json_data["results"][:25]:
@@ -555,9 +546,7 @@ class TestWorksNotFilter:
 
 class TestWorksMultipleFilter:
     def test_works_multiple(self, client):
-        res = client.get(
-            "/works?filter=publication-year:2020,publication-year:2021,oa-status:closed"
-        )
+        res = client.get("/works?filter=publication-year:2020|2021,oa-status:closed")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 13
         for result in json_data["results"][:25]:

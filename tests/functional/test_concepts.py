@@ -87,7 +87,7 @@ class TestConceptsLevelFilter:
             assert result["level"] == 2
 
     def test_concepts_level_or_query(self, client):
-        res = client.get("/concepts?filter=level:1,level:2")
+        res = client.get("/concepts?filter=level:1|2")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 3142
         for result in json_data["results"][:25]:

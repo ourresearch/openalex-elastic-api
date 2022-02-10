@@ -141,22 +141,41 @@ def test_filter_range_query(client):
 
 def test_filter_regular_query(client):
     s = Search()
-    filter_args = "host_venue.issn:2333-3334,host_venue.publisher:null"
+    filter_args = (
+        "host_venue.issn:2333-3334,host_venue.publisher:null,publication_year:2020"
+    )
     filter_params = map_filter_params(filter_args)
     s = filter_records(fields_dict, filter_params, s)
     assert s.to_dict() == {
         "query": {
             "bool": {
+                "must_not": [{"exists": {"field": "host_venue.publisher.lower"}}],
                 "must": [
                     {"term": {"host_venue.issn.lower": "2333-3334"}},
-                    {
-                        "bool": {
-                            "must_not": [
-                                {"exists": {"field": "host_venue.publisher.lower"}}
-                            ]
-                        }
-                    },
-                ]
+                    {"term": {"publication_year": "2020"}},
+                ],
+            }
+        }
+    }
+
+
+def test_filter_or_query(client):
+    s = Search()
+    filter_args = "host_venue.issn:2333-3334|5555-7777,publication_year:2020,publication_year:2021"
+    filter_params = map_filter_params(filter_args)
+    s = filter_records(fields_dict, filter_params, s)
+    assert s.to_dict() == {
+        "query": {
+            "bool": {
+                "should": [
+                    {"term": {"host_venue.issn.lower": "2333-3334"}},
+                    {"term": {"host_venue.issn.lower": "5555-7777"}},
+                ],
+                "minimum_should_match": 1,
+                "must": [
+                    {"term": {"publication_year": "2020"}},
+                    {"term": {"publication_year": "2021"}},
+                ],
             }
         }
     }
