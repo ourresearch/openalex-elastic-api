@@ -23,14 +23,25 @@ def filter_records(fields_dict, filter_params, s):
 
 def handle_or_query(field, s, value):
     or_queries = []
-    for or_value in value.split("|"):
-        if or_value.startswith("!"):
-            raise APIQueryParamsError(
-                f"The ! operator is not allowed within an OR query. Problem value: {or_value}"
-            )
-        field.value = or_value
-        q = field.build_query()
-        or_queries.append(q)
-    combined_or_query = Q("bool", should=or_queries, minimum_should_match=1)
-    s = s.query(combined_or_query)
+
+    if value.startswith("!"):
+        # negate everything in values after !, like: NOT (42 or 43)
+        for or_value in value.split("|"):
+            or_value = or_value.replace("!", "")
+            field.value = or_value
+            q = field.build_query()
+            not_query = ~Q("bool", must=q)
+            s = s.query(not_query)
+    else:
+        # standard OR query, like: 42 or 43
+        for or_value in value.split("|"):
+            if or_value.startswith("!"):
+                raise APIQueryParamsError(
+                    f"The ! operator is not allowed within an OR query. Problem value: {or_value}"
+                )
+            field.value = or_value
+            q = field.build_query()
+            or_queries.append(q)
+        combined_or_query = Q("bool", should=or_queries, minimum_should_match=1)
+        s = s.query(combined_or_query)
     return s

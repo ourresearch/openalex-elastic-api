@@ -587,6 +587,16 @@ class TestWorksAuthorOrQuery:
         )
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 3
+        for result in json_data["results"]:
+            found = False
+            for author in result["authorships"]:
+                if (
+                    author["author"]["id"] == "https://openalex.org/A2698836828"
+                    or author["author"]["id"] == "https://openalex.org/A2565156079"
+                    or author["author"]["id"] == "https://openalex.org/A277790681"
+                ):
+                    found = True
+            assert found is True
 
     def test_works_author_or_query_with_and(self, client):
         """The and query takes precedence, so 1 result is returned."""
@@ -595,6 +605,19 @@ class TestWorksAuthorOrQuery:
         )
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
+
+    def test_works_author_or_query_negate_all(self, client):
+        """Numbers together should equal 10,000."""
+
+        # in the dataset
+        res1 = client.get("/works?filter=author.id:a2698836828|A2565156079")
+        json_data1 = res1.get_json()
+        assert json_data1["meta"]["count"] == 2
+
+        # not in the dataset
+        res2 = client.get("/works?filter=author.id:!a2698836828|A2565156079")
+        json_data2 = res2.get_json()
+        assert json_data2["meta"]["count"] == 9998
 
     def test_works_author_or_query_not_error(self, client):
         res = client.get("/works?filter=author.id:A2565156079|!A277790681")
