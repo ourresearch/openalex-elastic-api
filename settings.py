@@ -7,4 +7,8 @@ JSON_SORT_KEYS = False
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # indexes
+AUTHORS_INDEX = "authors-v6"
+CONCEPTS_INDEX = "concepts-v3"
+INSTITUTIONS_INDEX = "institutions-v3"
+VENUES_INDEX = "venues-v4"
 WORKS_INDEX = "works-v8-*,-*invalid-data"

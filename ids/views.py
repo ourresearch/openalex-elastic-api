@@ -3,11 +3,16 @@ import random
 from elasticsearch_dsl import Q, Search
 from flask import Blueprint, redirect, request, url_for
 
+from authors.schemas import AuthorsSchema
+from concepts.schemas import ConceptsSchema
 from ids.utils import (is_author_openalex_id, is_concept_openalex_id,
                        is_institution_openalex_id, is_openalex_id,
                        is_venue_openalex_id, is_work_openalex_id,
                        normalize_doi, normalize_openalex_id)
-from settings import WORKS_INDEX
+from institutions.schemas import InstitutionsSchema
+from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
+                      VENUES_INDEX, WORKS_INDEX)
+from venues.schemas import VenuesSchema
 from works.schemas import WorksSchema
 
 blueprint = Blueprint("ids", __name__)
@@ -80,11 +85,22 @@ def works_id_get(id):
 @blueprint.route("/authors/RANDOM")
 @blueprint.route("/authors/random")
 def authors_random_get():
-    query = models.Author.query.order_by(func.random())
-    if "new" in request.args:
-        query = query.filter(models.Author.author_id >= MAX_MAG_ID)
-    obj = query.first()
-    return jsonify_fast_no_sort(obj.to_dict())
+    s = Search(index=AUTHORS_INDEX)
+
+    # divide queries into year groups to limit how much work the random function_score has to do
+    cited_by_groups = [
+        Q("term", cited_by_count=0),
+        Q("range", cited_by_count={"gt": 1}),
+    ]
+    random_query = Q(
+        "function_score",
+        functions={"random_score": {}},
+        query=random.choice(cited_by_groups),
+    )
+    s = s.query(random_query).extra(size=1)
+    response = s.execute()
+    authors_schema = AuthorsSchema()
+    return authors_schema.dump(response[0])
 
 
 @blueprint.route("/authors/<path:id>")
@@ -117,11 +133,13 @@ def authors_id_get(id):
 @blueprint.route("/institutions/RANDOM")
 @blueprint.route("/institutions/random")
 def institutions_random_get():
-    query = models.Institution.query.order_by(func.random())
-    if "new" in request.args:
-        query = query.filter(models.Institution.affiliation_id >= MAX_MAG_ID)
-    obj = query.first()
-    return jsonify_fast_no_sort(obj.to_dict())
+    s = Search(index=INSTITUTIONS_INDEX)
+
+    random_query = Q("function_score", functions={"random_score": {}})
+    s = s.query(random_query).extra(size=1)
+    response = s.execute()
+    institutions_schema = InstitutionsSchema()
+    return institutions_schema.dump(response[0])
 
 
 @blueprint.route("/institutions/<path:id>")
@@ -158,14 +176,13 @@ def institutions_id_get(id):
 @blueprint.route("/venues/RANDOM")
 @blueprint.route("/venues/random")
 def venues_random_get():
-    query = models.Venue.query.order_by(func.random())
-    if "new" in request.args:
-        query = query.filter(models.Venue.journal_id >= MAX_MAG_ID)
-    obj = query.first()
-    if not obj:
-        raise NoResultFound
-    response = obj.to_dict()
-    return jsonify_fast_no_sort(response)
+    s = Search(index=VENUES_INDEX)
+
+    random_query = Q("function_score", functions={"random_score": {}})
+    s = s.query(random_query).extra(size=1)
+    response = s.execute()
+    venues_schema = VenuesSchema()
+    return venues_schema.dump(response[0])
 
 
 @blueprint.route("/venues/<path:id>")
@@ -200,11 +217,13 @@ def venues_id_get(id):
 @blueprint.route("/concepts/RANDOM")
 @blueprint.route("/concepts/random")
 def concepts_random_get():
-    query = models.Concept.query.order_by(func.random())
-    if "new" in request.args:
-        query = query.filter(models.Concept.field_of_study_id >= MAX_MAG_ID)
-    obj = query.first()
-    return jsonify_fast_no_sort(obj.to_dict())
+    s = Search(index=CONCEPTS_INDEX)
+
+    random_query = Q("function_score", functions={"random_score": {}})
+    s = s.query(random_query).extra(size=1)
+    response = s.execute()
+    concepts_schema = ConceptsSchema()
+    return concepts_schema.dump(response[0])
 
 
 @blueprint.route("/concepts/<path:id>")
