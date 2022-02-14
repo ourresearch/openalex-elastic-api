@@ -272,7 +272,7 @@ def concepts_id_get(id):
         s = s.query(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
-        clean_id = f"V{clean_id}"
+        clean_id = f"C{clean_id}"
         return redirect(url_for("ids.concepts_id_get", id=clean_id, **request.args))
     elif id.startswith("wikidata:") or ("wikidata" in id):
         clean_wikidata = normalize_wikidata(id)
@@ -328,21 +328,3 @@ def universal_get(openalex_id):
     elif is_concept_openalex_id(openalex_id):
         return redirect(url_for("ids.concepts_id_get", id=openalex_id, **request.args))
     return {"message": "OpenAlex ID format not recognized"}, 404
-
-
-# @blueprint.route('/RANDOM')
-# @blueprint.route('/random')
-# def records_random_get():
-#     from models import Record
-#     obj = db.session.query(Record).order_by(func.random()).first()
-#     if not obj:
-#         abort(404)
-#     return jsonify_fast_no_sort({"n": len(obj.siblings), "siblings": obj.siblings})
-#
-#
-#
-# @blueprint.route('/records/<id>')
-# def records_id_get(id):
-#     from models import Record
-#     obj = Record.query.get(id)
-#     return jsonify_fast_no_sort({"n": len(obj.siblings), "siblings": obj.siblings})
