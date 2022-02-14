@@ -58,6 +58,25 @@ class TestWorksIDGet:
         assert json_data["id"] == self.id_result
         assert json_data["display_name"] == self.name_result
 
+    def test_works_pmid_get_short(self, client):
+        res = client.get("/works/pmid:30295140", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data["id"] == "https://openalex.org/W2894716986"
+        assert json_data["ids"]["pmid"] == "https://pubmed.ncbi.nlm.nih.gov/30295140"
+
+    def test_works_pmid_get_long(self, client):
+        res = client.get(
+            "/works/pmid:https://pubmed.ncbi.nlm.nih.gov/30295140",
+            follow_redirects=True,
+        )
+        json_data = res.get_json()
+        assert json_data["id"] == "https://openalex.org/W2894716986"
+        assert json_data["ids"]["pmid"] == "https://pubmed.ncbi.nlm.nih.gov/30295140"
+
+    def test_works_pmid_get_bad_data(self, client):
+        res = client.get("/works/pmid:7777777777", follow_redirects=True)
+        assert res.status_code == 404
+
     def test_works_id_get_bad_data(self, client):
         res = client.get("/works/2894744280", follow_redirects=True)
         assert res.status_code == 404

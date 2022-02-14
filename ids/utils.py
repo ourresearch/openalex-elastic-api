@@ -1,6 +1,19 @@
 import re
 
 
+def is_openalex_id(openalex_id):
+    if not openalex_id:
+        return False
+    openalex_id = openalex_id.lower()
+    if re.findall(r"http[s]://openalex.org/([waicv]\d{2,})", openalex_id):
+        return True
+    if re.findall(r"^([waicv]\d{2,})", openalex_id):
+        return True
+    if re.findall(r"(openalex:[waicv]\d{2,})", openalex_id):
+        return True
+    return False
+
+
 def normalize_openalex_id(openalex_id):
     if not openalex_id:
         return None
@@ -79,19 +92,6 @@ def normalize_doi(doi, return_none_if_error=False):
     return doi.replace("\0", "")
 
 
-def is_openalex_id(openalex_id):
-    if not openalex_id:
-        return False
-    openalex_id = openalex_id.lower()
-    if re.findall(r"http[s]://openalex.org/([waicv]\d{2,})", openalex_id):
-        return True
-    if re.findall(r"^([waicv]\d{2,})", openalex_id):
-        return True
-    if re.findall(r"(openalex:[waicv]\d{2,})", openalex_id):
-        return True
-    return False
-
-
 def to_unicode_or_bust(obj, encoding="utf-8"):
     if isinstance(obj, str):
         if not isinstance(obj, str):
@@ -153,3 +153,16 @@ def normalize_wikidata(wikidata):
     wikidata = matches[0]
     wikidata = wikidata.replace("\0", "")
     return wikidata
+
+
+def normalize_pmid(pmid):
+    if not pmid:
+        return None
+    pmid = pmid.strip().lower()
+    p = re.compile("(\d+)")
+    matches = re.findall(p, pmid)
+    if len(matches) == 0:
+        return None
+    pmid = matches[0]
+    pmid = pmid.replace("\0", "")
+    return pmid

@@ -9,7 +9,8 @@ from ids.utils import (is_author_openalex_id, is_concept_openalex_id,
                        is_institution_openalex_id, is_openalex_id,
                        is_venue_openalex_id, is_work_openalex_id,
                        normalize_doi, normalize_issn, normalize_openalex_id,
-                       normalize_orcid, normalize_ror, normalize_wikidata)
+                       normalize_orcid, normalize_pmid, normalize_ror,
+                       normalize_wikidata)
 from institutions.schemas import InstitutionsSchema
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
                       VENUES_INDEX, WORKS_INDEX)
@@ -69,6 +70,12 @@ def works_id_get(id):
         clean_id = id.replace("mag:", "")
         clean_id = f"W{clean_id}"
         return redirect(url_for("ids.works_id_get", id=clean_id, **request.args))
+    elif id.startswith("pmid:"):
+        id = id.replace("pmid:", "")
+        clean_pmid = normalize_pmid(id)
+        clean_full_pmid = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}"
+        query = Q("term", ids__pmid=clean_full_pmid)
+        s = s.query(query)
     elif id.startswith("doi:") or ("doi" in id):
         clean_doi = normalize_doi(id, return_none_if_error=True)
         if not clean_doi:
@@ -79,6 +86,8 @@ def works_id_get(id):
     else:
         abort(404)
     response = s.execute()
+    if not response:
+        abort(404)
     works_schema = WorksSchema()
     return works_schema.dump(response[0])
 
@@ -133,6 +142,8 @@ def authors_id_get(id):
     else:
         abort(404)
     response = s.execute()
+    if not response:
+        abort(404)
     authors_schema = AuthorsSchema()
     return authors_schema.dump(response[0])
 
@@ -168,7 +179,7 @@ def institutions_id_get(id):
         s = s.query(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
-        clean_id = f"V{clean_id}"
+        clean_id = f"I{clean_id}"
         return redirect(url_for("ids.institutions_id_get", id=clean_id, **request.args))
     elif id.startswith("ror:") or ("ror.org" in id):
         clean_ror = normalize_ror(id)
@@ -180,6 +191,8 @@ def institutions_id_get(id):
     else:
         abort(404)
     response = s.execute()
+    if not response:
+        abort(404)
     institutions_schema = InstitutionsSchema()
     return institutions_schema.dump(response[0])
 
@@ -224,6 +237,8 @@ def venues_id_get(id):
     else:
         abort(404)
     response = s.execute()
+    if not response:
+        abort(404)
     venues_schema = VenuesSchema()
     return venues_schema.dump(response[0])
 
@@ -269,6 +284,8 @@ def concepts_id_get(id):
     else:
         abort(404)
     response = s.execute()
+    if not response:
+        abort(404)
     concepts_schema = ConceptsSchema()
     return concepts_schema.dump(response[0])
 
