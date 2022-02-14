@@ -150,7 +150,6 @@ class TestInstitutionsIDGet:
 class TestVenuesIDGet:
     id_result = "https://openalex.org/V41354064"
     name_result = "ChemInform"
-    # 1431-5890
 
     def test_venues_openalex_get(self, client):
         res = client.get("/venues/V41354064")
@@ -170,4 +169,37 @@ class TestVenuesIDGet:
 
     def test_venues_id_get_bad_data(self, client):
         res = client.get("/venues/289744280", follow_redirects=True)
+        assert res.status_code == 404
+
+
+class TestConceptsIDGet:
+    id_result = "https://openalex.org/C86803240"
+    name_result = "Biology"
+
+    def test_concepts_openalex_get(self, client):
+        res = client.get("/concepts/C86803240")
+        json_data = res.get_json()
+        assert json_data["id"] == self.id_result
+        assert json_data["display_name"] == self.name_result
+
+    def test_concepts_wikidata_get(self, client):
+        res = client.get("/concepts/wikidata:Q420", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data["id"] == self.id_result
+        assert json_data["display_name"] == self.name_result
+
+    def test_concepts_wikidata_get_key(self, client):
+        res = client.get(
+            "/concepts/https://www.wikidata.org/wiki/Q420", follow_redirects=True
+        )
+        json_data = res.get_json()
+        assert json_data["id"] == self.id_result
+        assert json_data["display_name"] == self.name_result
+
+    def test_concepts_id_bad_issn(self, client):
+        res = client.get("/concepts/wikidata:8899", follow_redirects=True)
+        assert res.status_code == 404
+
+    def test_concepts_bad_data(self, client):
+        res = client.get("/concepts/289744280", follow_redirects=True)
         assert res.status_code == 404

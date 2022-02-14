@@ -140,3 +140,16 @@ def normalize_issn(issn):
     issn = matches[0]
     issn = issn.replace("\0", "")
     return issn
+
+
+def normalize_wikidata(wikidata):
+    if not wikidata:
+        return None
+    wikidata = wikidata.strip().upper()
+    p = re.compile("Q\d*")
+    matches = re.findall(p, wikidata)
+    if len(matches) == 0:
+        return None
+    wikidata = matches[0]
+    wikidata = wikidata.replace("\0", "")
+    return wikidata

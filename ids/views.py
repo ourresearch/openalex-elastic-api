@@ -9,7 +9,7 @@ from ids.utils import (is_author_openalex_id, is_concept_openalex_id,
                        is_institution_openalex_id, is_openalex_id,
                        is_venue_openalex_id, is_work_openalex_id,
                        normalize_doi, normalize_issn, normalize_openalex_id,
-                       normalize_orcid, normalize_ror)
+                       normalize_orcid, normalize_ror, normalize_wikidata)
 from institutions.schemas import InstitutionsSchema
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
                       VENUES_INDEX, WORKS_INDEX)
@@ -245,28 +245,32 @@ def concepts_random_get():
 
 @blueprint.route("/concepts/<path:id>")
 def concepts_id_get(id):
-    from util import normalize_wikidata
+    s = Search(index=CONCEPTS_INDEX)
 
-    obj = None
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
         if clean_id != id:
-            return redirect(url_for("concepts_id_get", id=clean_id, **request.args))
+            return redirect(url_for("ids.concepts_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
-        obj = models.concept_from_id(clean_id)
+        clean_openalex_id = f"https://openalex.org/C{clean_id}"
+        query = Q("term", ids__openalex=clean_openalex_id)
+        s = s.query(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"V{clean_id}"
-        return redirect(url_for("concepts_id_get", id=clean_id, **request.args))
+        return redirect(url_for("ids.concepts_id_get", id=clean_id, **request.args))
     elif id.startswith("wikidata:") or ("wikidata" in id):
         clean_wikidata = normalize_wikidata(id)
-        openalex_id = models.openalex_id_from_wikidata(clean_wikidata)
-        if openalex_id:
-            return redirect(url_for("concepts_id_get", id=openalex_id, **request.args))
-    if not obj:
+        if not clean_wikidata:
+            abort(404)
+        clean_wikidata = f"https://www.wikidata.org/wiki/{clean_wikidata}"
+        query = Q("term", wikidata=clean_wikidata)
+        s = s.query(query)
+    else:
         abort(404)
-    response = obj.to_dict()
-    return jsonify_fast_no_sort(response)
+    response = s.execute()
+    concepts_schema = ConceptsSchema()
+    return concepts_schema.dump(response[0])
 
 
 @blueprint.route("/concepts/name/<string:name>")
