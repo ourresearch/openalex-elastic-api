@@ -8,7 +8,7 @@ from concepts.schemas import ConceptsSchema
 from ids.utils import (is_author_openalex_id, is_concept_openalex_id,
                        is_institution_openalex_id, is_openalex_id,
                        is_venue_openalex_id, is_work_openalex_id,
-                       normalize_doi, normalize_openalex_id)
+                       normalize_doi, normalize_openalex_id, normalize_orcid)
 from institutions.schemas import InstitutionsSchema
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
                       VENUES_INDEX, WORKS_INDEX)
@@ -108,26 +108,30 @@ def authors_random_get():
 
 @blueprint.route("/authors/<path:id>")
 def authors_id_get(id):
-    obj = None
+    s = Search(index=AUTHORS_INDEX)
+
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
         if clean_id != id:
-            return redirect(url_for("authors_id_get", id=clean_id, **request.args))
+            return redirect(url_for("ids.authors_id_get", id=clean_id, **request.args))
         author_id = int(clean_id[1:])
-        obj = models.author_from_id(author_id)
+        clean_author_id = f"https://openalex.org/A{author_id}"
+        query = Q("term", ids__openalex=clean_author_id)
+        s = s.query(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"A{clean_id}"
-        return redirect(url_for("authors_id_get", id=clean_id, **request.args))
+        return redirect(url_for("ids.authors_id_get", id=clean_id, **request.args))
     elif id.startswith("orcid:") or id.startswith("https://orcid.org"):
         clean_orcid = normalize_orcid(id)
-        openalex_id = models.openalex_id_from_orcid(clean_orcid)
-        if openalex_id:
-            return redirect(url_for("authors_id_get", id=openalex_id, **request.args))
-    if not obj:
+        clean_orcid = f"https://orcid.org/{clean_orcid}"
+        query = Q("term", ids__orcid=clean_orcid)
+        s = s.query(query)
+    else:
         abort(404)
-    response = obj.to_dict()
-    return jsonify_fast_no_sort(response)
+    response = s.execute()
+    authors_schema = AuthorsSchema()
+    return authors_schema.dump(response[0])
 
 
 # Institution

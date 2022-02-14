@@ -101,3 +101,16 @@ def to_unicode_or_bust(obj, encoding="utf-8"):
 
 class NoDoiException(Exception):
     pass
+
+
+def normalize_orcid(orcid):
+    if not orcid:
+        return None
+    orcid = orcid.strip().upper()
+    p = re.compile(r"(\d{4}-\d{4}-\d{4}-\d{3}[\dX])")
+    matches = re.findall(p, orcid)
+    if len(matches) == 0:
+        return None
+    orcid = matches[0]
+    orcid = orcid.replace("\0", "")
+    return orcid
