@@ -51,7 +51,7 @@ class InstitutionsSchema(Schema):
     relevance_score = fields.Float(attribute="meta.score")
     country_code = fields.Str()
     type = fields.Str()
-    home_page_url = fields.Str()
+    homepage_url = fields.Str()
     image_url = fields.Str()
     image_thumbnail_url = fields.Str()
     display_name_acronyms = fields.List(fields.Str())
