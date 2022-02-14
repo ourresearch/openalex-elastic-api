@@ -275,10 +275,15 @@ def concepts_id_get(id):
 
 @blueprint.route("/concepts/name/<string:name>")
 def concepts_name_get(name):
-    obj = models.concept_from_name(name)
-    if not obj:
+    s = Search(index=CONCEPTS_INDEX)
+
+    query = Q("match_phrase_prefix", display_name=name)
+    s = s.query(query)
+    response = s.execute()
+    if not response:
         abort(404)
-    return jsonify_fast_no_sort(obj.to_dict())
+    concepts_schema = ConceptsSchema()
+    return concepts_schema.dump(response[0])
 
 
 # Universal

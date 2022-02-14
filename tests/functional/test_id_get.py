@@ -203,3 +203,11 @@ class TestConceptsIDGet:
     def test_concepts_bad_data(self, client):
         res = client.get("/concepts/289744280", follow_redirects=True)
         assert res.status_code == 404
+
+
+class TestConceptsNameGet:
+    def test_concepts_name_get(self, client):
+        res = client.get("/concepts/name/biology")
+        json_data = res.get_json()
+        assert json_data["id"] == "https://openalex.org/C86803240"
+        assert json_data["display_name"] == "Biology"
