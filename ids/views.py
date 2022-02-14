@@ -1,7 +1,7 @@
 import random
 
 from elasticsearch_dsl import Q, Search
-from flask import Blueprint, redirect, request, url_for
+from flask import Blueprint, abort, redirect, request, url_for
 
 from authors.schemas import AuthorsSchema
 from concepts.schemas import ConceptsSchema
@@ -54,29 +54,32 @@ def works_random_get():
 
 @blueprint.route("/works/<path:id>")
 def works_id_get(id):
+    s = Search(index=WORKS_INDEX)
 
-    obj = None
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
         if clean_id != id:
-            return redirect(url_for("works_id_get", id=clean_id, **request.args))
+            return redirect(url_for("ids.works_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
-        obj = models.work_from_id(clean_id)
+        clean_id = f"https://openalex.org/W{clean_id}"
+        query = Q("term", ids__openalex=clean_id)
+        s = s.query(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
-        clean_id = f"V{clean_id}"
-        return redirect(url_for("works_id_get", id=clean_id, **request.args))
+        clean_id = f"W{clean_id}"
+        return redirect(url_for("ids.works_id_get", id=clean_id, **request.args))
     elif id.startswith("doi:") or ("doi" in id):
         clean_doi = normalize_doi(id, return_none_if_error=True)
         if not clean_doi:
             abort(404)
-        openalex_id = models.openalex_id_from_doi(clean_doi)
-        if openalex_id:
-            return redirect(url_for("works_id_get", id=openalex_id, **request.args))
-    if not obj:
+        clean_doi = f"https://doi.org/{clean_doi}"
+        query = Q("term", ids__doi=clean_doi)
+        s = s.query(query)
+    else:
         abort(404)
-    response = obj.to_dict()
-    return jsonify_fast_no_sort(response)
+    response = s.execute()
+    works_schema = WorksSchema()
+    return works_schema.dump(response[0])
 
 
 # Author

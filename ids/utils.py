@@ -90,3 +90,14 @@ def is_openalex_id(openalex_id):
     if re.findall(r"(openalex:[waicv]\d{2,})", openalex_id):
         return True
     return False
+
+
+def to_unicode_or_bust(obj, encoding="utf-8"):
+    if isinstance(obj, str):
+        if not isinstance(obj, str):
+            obj = str(obj, encoding)
+    return obj
+
+
+class NoDoiException(Exception):
+    pass
