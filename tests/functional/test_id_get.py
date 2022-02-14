@@ -145,3 +145,29 @@ class TestInstitutionsIDGet:
     def test_institutions_id_get_bad_data(self, client):
         res = client.get("/institutions/289744280", follow_redirects=True)
         assert res.status_code == 404
+
+
+class TestVenuesIDGet:
+    id_result = "https://openalex.org/V41354064"
+    name_result = "ChemInform"
+    # 1431-5890
+
+    def test_venues_openalex_get(self, client):
+        res = client.get("/venues/V41354064")
+        json_data = res.get_json()
+        assert json_data["id"] == self.id_result
+        assert json_data["display_name"] == self.name_result
+
+    def test_venues_issn_get_key(self, client):
+        res = client.get("/venues/issn:1431-5890", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data["id"] == self.id_result
+        assert json_data["display_name"] == self.name_result
+
+    def test_venues_id_bad_issn(self, client):
+        res = client.get("/venues/issn:778-333", follow_redirects=True)
+        assert res.status_code == 404
+
+    def test_venues_id_get_bad_data(self, client):
+        res = client.get("/venues/289744280", follow_redirects=True)
+        assert res.status_code == 404

@@ -8,8 +8,8 @@ from concepts.schemas import ConceptsSchema
 from ids.utils import (is_author_openalex_id, is_concept_openalex_id,
                        is_institution_openalex_id, is_openalex_id,
                        is_venue_openalex_id, is_work_openalex_id,
-                       normalize_doi, normalize_openalex_id, normalize_orcid,
-                       normalize_ror)
+                       normalize_doi, normalize_issn, normalize_openalex_id,
+                       normalize_orcid, normalize_ror)
 from institutions.schemas import InstitutionsSchema
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
                       VENUES_INDEX, WORKS_INDEX)
@@ -125,6 +125,8 @@ def authors_id_get(id):
         return redirect(url_for("ids.authors_id_get", id=clean_id, **request.args))
     elif id.startswith("orcid:") or id.startswith("https://orcid.org"):
         clean_orcid = normalize_orcid(id)
+        if not clean_orcid:
+            return abort(404)
         clean_orcid = f"https://orcid.org/{clean_orcid}"
         query = Q("term", ids__orcid=clean_orcid)
         s = s.query(query)
@@ -170,6 +172,8 @@ def institutions_id_get(id):
         return redirect(url_for("ids.institutions_id_get", id=clean_id, **request.args))
     elif id.startswith("ror:") or ("ror.org" in id):
         clean_ror = normalize_ror(id)
+        if not clean_ror:
+            abort(404)
         clean_ror = f"https://ror.org/{clean_ror}"
         query = Q("term", ror=clean_ror)
         s = s.query(query)
@@ -197,28 +201,31 @@ def venues_random_get():
 
 @blueprint.route("/venues/<path:id>")
 def venues_id_get(id):
-    from util import normalize_issn
+    s = Search(index=VENUES_INDEX)
 
-    obj = None
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
         if clean_id != id:
-            return redirect(url_for("venues_id_get", id=clean_id, **request.args))
+            return redirect(url_for("ids.venues_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
-        obj = models.journal_from_id(clean_id)
+        clean_openalex_id = f"https://openalex.org/V{clean_id}"
+        query = Q("term", ids__openalex=clean_openalex_id)
+        s = s.query(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"V{clean_id}"
-        return redirect(url_for("venues_id_get", id=clean_id, **request.args))
+        return redirect(url_for("ids.venues_id_get", id=clean_id, **request.args))
     elif id.startswith("issn:"):
         clean_issn = normalize_issn(id)
-        openalex_id = models.openalex_id_from_issn(clean_issn)
-        if openalex_id:
-            return redirect(url_for("venues_id_get", id=openalex_id, **request.args))
-    if not obj:
+        if not clean_issn:
+            abort(404)
+        query = Q("term", issn=clean_issn)
+        s = s.query(query)
+    else:
         abort(404)
-    response = obj.to_dict()
-    return jsonify_fast_no_sort(response)
+    response = s.execute()
+    venues_schema = VenuesSchema()
+    return venues_schema.dump(response[0])
 
 
 # Concept

@@ -127,3 +127,16 @@ def normalize_ror(ror):
     ror = matches[0]
     ror = ror.replace("\0", "")
     return ror
+
+
+def normalize_issn(issn):
+    if not issn:
+        return None
+    issn = issn.strip().lower()
+    p = re.compile("[\dx]{4}-[\dx]{4}")
+    matches = re.findall(p, issn)
+    if len(matches) == 0:
+        return None
+    issn = matches[0]
+    issn = issn.replace("\0", "")
+    return issn
