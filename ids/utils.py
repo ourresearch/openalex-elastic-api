@@ -114,3 +114,16 @@ def normalize_orcid(orcid):
     orcid = matches[0]
     orcid = orcid.replace("\0", "")
     return orcid
+
+
+def normalize_ror(ror):
+    if not ror:
+        return None
+    ror = ror.strip().lower()
+    p = re.compile(r"([a-z\d]*$)")
+    matches = re.findall(p, ror)
+    if len(matches) == 0:
+        return None
+    ror = matches[0]
+    ror = ror.replace("\0", "")
+    return ror
