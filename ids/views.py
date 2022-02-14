@@ -299,15 +299,17 @@ def universal_get(openalex_id):
 
     openalex_id = normalize_openalex_id(openalex_id)
     if is_work_openalex_id(openalex_id):
-        return redirect(url_for("works_id_get", id=openalex_id, **request.args))
+        return redirect(url_for("ids.works_id_get", id=openalex_id, **request.args))
     elif is_author_openalex_id(openalex_id):
-        return redirect(url_for("authors_id_get", id=openalex_id, **request.args))
+        return redirect(url_for("ids.authors_id_get", id=openalex_id, **request.args))
     elif is_venue_openalex_id(openalex_id):
-        return redirect(url_for("venues_id_get", id=openalex_id, **request.args))
+        return redirect(url_for("ids.venues_id_get", id=openalex_id, **request.args))
     elif is_institution_openalex_id(openalex_id):
-        return redirect(url_for("institutions_id_get", id=openalex_id, **request.args))
+        return redirect(
+            url_for("ids.institutions_id_get", id=openalex_id, **request.args)
+        )
     elif is_concept_openalex_id(openalex_id):
-        return redirect(url_for("concepts_id_get", id=openalex_id, **request.args))
+        return redirect(url_for("ids.concepts_id_get", id=openalex_id, **request.args))
     return {"message": "OpenAlex ID format not recognized"}, 404
 
 

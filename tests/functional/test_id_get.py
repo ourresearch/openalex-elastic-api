@@ -211,3 +211,38 @@ class TestConceptsNameGet:
         json_data = res.get_json()
         assert json_data["id"] == "https://openalex.org/C86803240"
         assert json_data["display_name"] == "Biology"
+
+
+class TestUniversalIDGet:
+    def test_works_openalex_get(self, client):
+        res = client.get("/W2894744280", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data["id"] == "https://openalex.org/W2894744280"
+        assert (
+            json_data["display_name"]
+            == "Fusing Location Data for Depression Prediction"
+        )
+
+    def test_authors_openalex_get(self, client):
+        res = client.get("/A2609699", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data["id"] == "https://openalex.org/A2609699"
+        assert json_data["display_name"] == "Peter Vandenabeele"
+
+    def test_institutions_openalex_get(self, client):
+        res = client.get("/I19820366", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data["id"] == "https://openalex.org/I19820366"
+        assert json_data["display_name"] == "Chinese Academy of Sciences"
+
+    def test_venues_openalex_get(self, client):
+        res = client.get("/V41354064", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data["id"] == "https://openalex.org/V41354064"
+        assert json_data["display_name"] == "ChemInform"
+
+    def test_concepts_openalex_get(self, client):
+        res = client.get("/C86803240", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data["id"] == "https://openalex.org/C86803240"
+        assert json_data["display_name"] == "Biology"
