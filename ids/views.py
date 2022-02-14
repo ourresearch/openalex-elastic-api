@@ -63,8 +63,8 @@ def works_id_get(id):
         if clean_id != id:
             return redirect(url_for("ids.works_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
-        clean_id = f"https://openalex.org/W{clean_id}"
-        query = Q("term", ids__openalex=clean_id)
+        full_openalex_id = f"https://openalex.org/W{clean_id}"
+        query = Q("term", ids__openalex=full_openalex_id)
         s = s.query(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
@@ -73,15 +73,15 @@ def works_id_get(id):
     elif id.startswith("pmid:"):
         id = id.replace("pmid:", "")
         clean_pmid = normalize_pmid(id)
-        clean_full_pmid = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}"
-        query = Q("term", ids__pmid=clean_full_pmid)
+        full_pmid = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}"
+        query = Q("term", ids__pmid=full_pmid)
         s = s.query(query)
     elif id.startswith("doi:") or ("doi" in id):
         clean_doi = normalize_doi(id, return_none_if_error=True)
         if not clean_doi:
             abort(404)
-        clean_doi = f"https://doi.org/{clean_doi}"
-        query = Q("term", ids__doi=clean_doi)
+        full_doi = f"https://doi.org/{clean_doi}"
+        query = Q("term", ids__doi=full_doi)
         s = s.query(query)
     else:
         abort(404)
@@ -125,8 +125,8 @@ def authors_id_get(id):
         if clean_id != id:
             return redirect(url_for("ids.authors_id_get", id=clean_id, **request.args))
         author_id = int(clean_id[1:])
-        clean_author_id = f"https://openalex.org/A{author_id}"
-        query = Q("term", ids__openalex=clean_author_id)
+        full_author_id = f"https://openalex.org/A{author_id}"
+        query = Q("term", ids__openalex=full_author_id)
         s = s.query(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
@@ -136,8 +136,8 @@ def authors_id_get(id):
         clean_orcid = normalize_orcid(id)
         if not clean_orcid:
             return abort(404)
-        clean_orcid = f"https://orcid.org/{clean_orcid}"
-        query = Q("term", ids__orcid=clean_orcid)
+        full_orcid = f"https://orcid.org/{clean_orcid}"
+        query = Q("term", ids__orcid=full_orcid)
         s = s.query(query)
     else:
         abort(404)
@@ -174,8 +174,8 @@ def institutions_id_get(id):
                 url_for("ids.institutions_id_get", id=clean_id, **request.args)
             )
         clean_id = int(clean_id[1:])
-        clean_openalex_id = f"https://openalex.org/I{clean_id}"
-        query = Q("term", ids__openalex=clean_openalex_id)
+        full_openalex_id = f"https://openalex.org/I{clean_id}"
+        query = Q("term", ids__openalex=full_openalex_id)
         s = s.query(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
@@ -185,8 +185,8 @@ def institutions_id_get(id):
         clean_ror = normalize_ror(id)
         if not clean_ror:
             abort(404)
-        clean_ror = f"https://ror.org/{clean_ror}"
-        query = Q("term", ror=clean_ror)
+        full_ror = f"https://ror.org/{clean_ror}"
+        query = Q("term", ror=full_ror)
         s = s.query(query)
     else:
         abort(404)
@@ -221,8 +221,8 @@ def venues_id_get(id):
         if clean_id != id:
             return redirect(url_for("ids.venues_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
-        clean_openalex_id = f"https://openalex.org/V{clean_id}"
-        query = Q("term", ids__openalex=clean_openalex_id)
+        full_openalex_id = f"https://openalex.org/V{clean_id}"
+        query = Q("term", ids__openalex=full_openalex_id)
         s = s.query(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
@@ -267,8 +267,8 @@ def concepts_id_get(id):
         if clean_id != id:
             return redirect(url_for("ids.concepts_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
-        clean_openalex_id = f"https://openalex.org/C{clean_id}"
-        query = Q("term", ids__openalex=clean_openalex_id)
+        full_openalex_id = f"https://openalex.org/C{clean_id}"
+        query = Q("term", ids__openalex=full_openalex_id)
         s = s.query(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
@@ -278,8 +278,8 @@ def concepts_id_get(id):
         clean_wikidata = normalize_wikidata(id)
         if not clean_wikidata:
             abort(404)
-        clean_wikidata = f"https://www.wikidata.org/wiki/{clean_wikidata}"
-        query = Q("term", wikidata=clean_wikidata)
+        full_wikidata = f"https://www.wikidata.org/wiki/{clean_wikidata}"
+        query = Q("term", wikidata=full_wikidata)
         s = s.query(query)
     else:
         abort(404)
