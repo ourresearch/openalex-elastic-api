@@ -1,4 +1,5 @@
 from elasticsearch_dsl import A
+from iso3166 import countries
 
 from core.exceptions import APIQueryParamsError
 from core.utils import get_display_names
@@ -51,6 +52,16 @@ def get_group_by_results(group_by, response):
                 {
                     "key": b.key,
                     "key_display_name": ids_to_display_names.get(b.key),
+                    "doc_count": b.doc_count,
+                }
+            )
+    elif group_by.endswith("country_code"):
+        for b in buckets:
+            country = countries.get(b.key.lower())
+            group_by_results.append(
+                {
+                    "key": b.key,
+                    "key_display_name": country.name if country else None,
                     "doc_count": b.doc_count,
                 }
             )
