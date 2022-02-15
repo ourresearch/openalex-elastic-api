@@ -4,11 +4,11 @@ from elasticsearch_dsl import Search
 
 from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
-from core.group_by import group_by_records
+from core.group_by import get_group_by_results, group_by_records
 from core.paginate import Paginate
 from core.sort import sort_records
-from core.utils import (get_display_names, get_field, map_filter_params,
-                        map_sort_params, set_number_param)
+from core.utils import (get_field, map_filter_params, map_sort_params,
+                        set_number_param)
 from core.validate import validate_params
 
 
@@ -81,25 +81,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
     result["results"] = []
 
     if group_by:
-        group_by_results = []
-        buckets = response.aggregations.groupby.buckets
-        if group_by.endswith(".id"):
-            keys = [b.key for b in buckets]
-            ids_to_display_names = get_display_names(keys)
-            for b in buckets:
-                group_by_results.append(
-                    {
-                        "key": b.key,
-                        "key_display_name": ids_to_display_names.get(b.key),
-                        "doc_count": b.doc_count,
-                    }
-                )
-        else:
-            for b in buckets:
-                group_by_results.append(
-                    {"key": b.key, "key_display_name": b.key, "doc_count": b.doc_count}
-                )
-        result["group_by"] = group_by_results
+        result["group_by"] = get_group_by_results(group_by, response)
     else:
         result["group_by"] = []
         result["results"] = response
