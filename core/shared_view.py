@@ -85,5 +85,5 @@ def shared_view(request, fields_dict, index_name, default_sort):
     else:
         result["group_by"] = []
         result["results"] = response
-    print(s.to_dict())
+    # print(s.to_dict())
     return result
