@@ -38,3 +38,13 @@ class TestGroupBySizeParam:
         assert (
             json_data["message"] == "Group by size must be a number between 1 and 200"
         )
+
+
+class TestGroupByNameKey:
+    def test_group_by_name_key(self, client):
+        res = client.get("/works?group-by=host_venue.id")
+        json_data = res.get_json()
+        result = json_data["group_by"][3]
+        assert result["key"] == "https://openalex.org/V25293849"
+        assert result["key_display_name"] == "The FASEB Journal"
+        assert result["count"] == 18
