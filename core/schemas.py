@@ -13,6 +13,7 @@ class MetaSchema(Schema):
 
 class GroupBySchema(Schema):
     key = fields.Str()
+    key_display_name = fields.Str()
     count = fields.Int(attribute="doc_count")
 
     class Meta:

@@ -1,5 +1,7 @@
 import re
 
+from core.utils import normalize_openalex_id
+
 
 def is_openalex_id(openalex_id):
     if not openalex_id:
@@ -12,19 +14,6 @@ def is_openalex_id(openalex_id):
     if re.findall(r"(openalex:[waicv]\d{2,})", openalex_id):
         return True
     return False
-
-
-def normalize_openalex_id(openalex_id):
-    if not openalex_id:
-        return None
-    openalex_id = openalex_id.strip().upper()
-    p = re.compile("([WAICV]\d{2,})")
-    matches = re.findall(p, openalex_id)
-    if len(matches) == 0:
-        return None
-    clean_openalex_id = matches[0]
-    clean_openalex_id = clean_openalex_id.replace("\0", "")
-    return clean_openalex_id
 
 
 def is_work_openalex_id(id):

@@ -5,19 +5,20 @@ from core.exceptions import APIQueryParamsError
 
 def group_by_records(field, group_by_size, s, sort_params):
     group_by_size = validate_group_by_size(group_by_size)
+    group_by_field = field.alias if field.alias else field.es_sort_field()
     if sort_params:
         for key, order in sort_params.items():
             if key == "count":
                 a = A(
                     "terms",
-                    field=field.es_sort_field(),
+                    field=group_by_field,
                     order={"_count": order},
                     size=group_by_size,
                 )
             elif key == "key":
                 a = A(
                     "terms",
-                    field=field.es_sort_field(),
+                    field=group_by_field,
                     order={"_key": order},
                     size=group_by_size,
                 )
@@ -25,7 +26,7 @@ def group_by_records(field, group_by_size, s, sort_params):
     else:
         a = A(
             "terms",
-            field=field.es_sort_field(),
+            field=group_by_field,
             size=group_by_size,
         )
         s.aggs.bucket("groupby", a)

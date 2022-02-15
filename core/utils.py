@@ -1,6 +1,10 @@
 import re
 
+from elasticsearch_dsl import Q, Search
+
 from core.exceptions import APIQueryParamsError
+from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
+                      VENUES_INDEX, WORKS_INDEX)
 
 
 def get_field(fields_dict, key):
@@ -82,3 +86,55 @@ def set_number_param(request, param, default):
     else:
         result = default
     return result
+
+
+def get_display_names(ids):
+    """Takes a list of ids and returns a dict with id[display_name]"""
+    if not ids:
+        return None
+
+    index_name = get_index_name_by_id(ids[0])
+    s = Search(index=index_name)
+    s = s.extra(size=200)
+
+    results = {}
+    or_queries = []
+    for openalex_id in ids:
+        or_queries.append(Q("term", id=openalex_id))
+    combined_or_query = Q("bool", should=or_queries, minimum_should_match=1)
+    s = s.query(combined_or_query)
+    response = s.execute()
+
+    for item in response:
+        results[item.id] = item.display_name
+    return results
+
+
+def get_index_name_by_id(openalex_id):
+    """Takes an openalex ID and returns an appropriate index."""
+    clean_id = normalize_openalex_id(openalex_id)
+    index_name = None
+    if clean_id.startswith("A"):
+        index_name = AUTHORS_INDEX
+    elif clean_id.startswith("C"):
+        index_name = CONCEPTS_INDEX
+    elif clean_id.startswith("I"):
+        index_name = INSTITUTIONS_INDEX
+    elif clean_id.startswith("V"):
+        index_name = VENUES_INDEX
+    elif clean_id.starswith("W"):
+        index_name = WORKS_INDEX
+    return index_name
+
+
+def normalize_openalex_id(openalex_id):
+    if not openalex_id:
+        return None
+    openalex_id = openalex_id.strip().upper()
+    p = re.compile("([WAICV]\d{2,})")
+    matches = re.findall(p, openalex_id)
+    if len(matches) == 0:
+        return None
+    clean_openalex_id = matches[0]
+    clean_openalex_id = clean_openalex_id.replace("\0", "")
+    return clean_openalex_id
