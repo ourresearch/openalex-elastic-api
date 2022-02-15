@@ -1,5 +1,6 @@
 # Changelog
 
+* Add key_display_name to group by queries. [2022-02-15]
 * Refactor OR queries to use | separator, like `/works?filter=author.id:A2565156079|A2564890435`. [2022-02-10]
 * Duplicate filter keys now work as AND queries. [2022-02-10]
 * Support OR query with alias. Resolve bug that occurred when different pairs of keys are used with an OR query. [2022-02-07]
