@@ -1,5 +1,8 @@
 import os
 
+CACHE_TYPE = "RedisCache"
+CACHE_DEFAULT_TIMEOUT = 300
+CACHE_REDIS_URL = os.environ.get("REDIS_URL")
 ENV = os.environ.get("FLASK_ENV", "production")
 ES_URL = os.environ.get("ES_URL_PROD", "http://127.0.0.1:9200")
 DEBUG = ENV == "development"

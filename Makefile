@@ -1,3 +1,9 @@
+cache-up:
+	docker run -d --name open-alex-api-cache -p 6379:6379 redis
+
+cache-stop:
+	docker stop open-alex-api-cache
+
 format:
 	black .
 	isort .
