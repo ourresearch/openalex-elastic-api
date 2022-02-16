@@ -2,7 +2,7 @@ import json
 
 from marshmallow import INCLUDE, Schema, fields
 
-from core.schemas import GroupBySchema, MetaSchema
+from core.schemas import CountsByYearSchema, GroupBySchema, MetaSchema
 
 
 class AuthorSchema(Schema):
@@ -86,10 +86,10 @@ class OpenAccessSchema(Schema):
 
 
 class IDsSchema(Schema):
-    doi = fields.Str()
-    mag = fields.Str()
+    doi = fields.Str(default=None)
+    mag = fields.Str(default=None)
     openalex = fields.Str()
-    pmid = fields.Str()
+    pmid = fields.Str(default=None)
 
     class Meta:
         ordered = True
@@ -99,6 +99,7 @@ class IDsSchema(Schema):
 class WorksSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
+    title = fields.Str()
     publication_date = fields.Str()
     relevance_score = fields.Float(attribute="meta.score")
     host_venue = fields.Nested(HostVenueSchema)
@@ -126,6 +127,10 @@ class WorksSchema(Schema):
         if "abstract_inverted_index" in obj and obj.abstract_inverted_index
         else None
     )
+    counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
+    mesh = fields.List(fields.Str())
+    updated_date = fields.Str()
+    created_date = fields.Str(default=None)
 
     class Meta:
         ordered = True
