@@ -26,11 +26,13 @@ class VenuesSchema(Schema):
     cited_by_count = fields.Int()
     is_oa = fields.Bool()
     is_in_doaj = fields.Bool()
-    home_page_url = fields.Str()
+    homepage_url = fields.Str()
     ids = fields.Nested(IDsSchema)
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     x_concepts = fields.List(fields.Nested(XConceptsSchema))
     works_api_url = fields.Str()
+    updated_date = fields.Str()
+    created_date = fields.Str(default=None)
 
     class Meta:
         ordered = True

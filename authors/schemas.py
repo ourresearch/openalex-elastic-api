@@ -42,6 +42,8 @@ class AuthorsSchema(Schema):
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     x_concepts = fields.List(fields.Nested(XConceptsSchema))
     works_api_url = fields.Str()
+    updated_date = fields.Str()
+    created_date = fields.Str(default=None)
 
     class Meta:
         ordered = True

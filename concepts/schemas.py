@@ -52,6 +52,8 @@ class ConceptsSchema(Schema):
     related_concepts = fields.List(fields.Nested(RelatedConceptsSchema))
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     works_api_url = fields.Str()
+    updated_date = fields.Str()
+    created_date = fields.Str(default=None)
 
     class Meta:
         ordered = True
