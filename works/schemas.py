@@ -96,6 +96,17 @@ class IDsSchema(Schema):
         unknown = INCLUDE
 
 
+class MeshSchema(Schema):
+    is_major_topic = fields.Boolean()
+    descriptor_ui = fields.Str()
+    descriptor_name = fields.Str()
+    qualifier_ui = fields.Str()
+    qualifier_name = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class WorksSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
@@ -128,7 +139,7 @@ class WorksSchema(Schema):
         else None
     )
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
-    mesh = fields.List(fields.Str())
+    mesh = fields.List(fields.Nested(MeshSchema))
     updated_date = fields.Str()
     created_date = fields.Str(default=None)
 
