@@ -182,6 +182,12 @@ class TestVenuesIDGet:
         assert json_data["id"] == self.id_result
         assert json_data["display_name"] == self.name_result
 
+    def test_venues_issn_l_get_key(self, client):
+        res = client.get("/venues/issn_l:1057-610X", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data["id"] == "https://openalex.org/V41746314"
+        assert json_data["display_name"] == "Studies in Conflict & Terrorism"
+
     def test_venues_id_bad_issn(self, client):
         res = client.get("/venues/issn:778-333", follow_redirects=True)
         assert res.status_code == 404

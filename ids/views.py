@@ -232,7 +232,13 @@ def venues_id_get(id):
         clean_issn = normalize_issn(id)
         if not clean_issn:
             abort(404)
-        query = Q("term", issn=clean_issn)
+        query = Q("term", ids__issn__lower=clean_issn)
+        s = s.query(query)
+    elif id.startswith("issn_l:"):
+        clean_issn = normalize_issn(id)
+        if not clean_issn:
+            abort(404)
+        query = Q("term", ids__issn_l__lower=clean_issn)
         s = s.query(query)
     else:
         abort(404)
