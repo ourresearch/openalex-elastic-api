@@ -237,7 +237,8 @@ def venues_id_get(id):
         response = s.execute()
         if response:
             record_id = response[0].id
-            return redirect(url_for("ids.venues_id_get", id=record_id, **request.args))
+            clean_id = normalize_openalex_id(record_id)
+            return redirect(url_for("ids.venues_id_get", id=clean_id, **request.args))
         else:
             abort(404)
     elif id.startswith("issn_l:"):
@@ -249,7 +250,8 @@ def venues_id_get(id):
         response = s.execute()
         if response:
             record_id = response[0].id
-            return redirect(url_for("ids.venues_id_get", id=record_id, **request.args))
+            clean_id = normalize_openalex_id(record_id)
+            return redirect(url_for("ids.venues_id_get", id=clean_id, **request.args))
         else:
             abort(404)
     else:
