@@ -138,3 +138,18 @@ def normalize_openalex_id(openalex_id):
     clean_openalex_id = matches[0]
     clean_openalex_id = clean_openalex_id.replace("\0", "")
     return clean_openalex_id
+
+
+def is_cached(request):
+    cached = False
+    if len(request.args) == 1 and (
+        request.args.get("group_by") or request.args.get("group-by")
+    ):
+        cached = True
+    elif (
+        len(request.args) == 2
+        and (request.args.get("group_by") or request.args.get("group-by"))
+        and (request.args.get("group_by_size") or request.args.get("group-by-size"))
+    ):
+        cached = True
+    return cached

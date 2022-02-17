@@ -14,6 +14,7 @@ import settings
 import venues
 import works
 from core.exceptions import APIError
+from extensions import cache
 
 
 def create_app(config_object="settings"):
@@ -44,6 +45,7 @@ def register_extensions(app):
         traces_sample_rate=0.05,
     )
     connections.create_connection(hosts=[settings.ES_URL], timeout=30)
+    cache.init_app(app)
 
 
 def register_errorhandlers(app):

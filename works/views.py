@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify, request
 
 from core.shared_view import shared_view
+from core.utils import is_cached
+from extensions import cache
 from works.fields import fields_dict
 from works.schemas import MessageSchema
 
@@ -19,6 +21,9 @@ def index():
 
 
 @blueprint.route("/works")
+@cache.cached(
+    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
+)
 def works():
     index_name = "works-v8-*,-*invalid-data"
     default_sort = ["-publication_date"]

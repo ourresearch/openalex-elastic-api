@@ -3,11 +3,16 @@ from flask import Blueprint, request
 from authors.fields import fields_dict
 from authors.schemas import MessageSchema
 from core.shared_view import shared_view
+from core.utils import is_cached
+from extensions import cache
 
 blueprint = Blueprint("authors", __name__)
 
 
 @blueprint.route("/authors")
+@cache.cached(
+    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
+)
 def authors():
     index_name = "authors-v6"
     default_sort = ["-works_count"]
