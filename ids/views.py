@@ -234,12 +234,24 @@ def venues_id_get(id):
             abort(404)
         query = Q("term", ids__issn__lower=clean_issn)
         s = s.query(query)
+        response = s.execute()
+        if response:
+            record_id = response[0].id
+            return redirect(url_for("ids.venues_id_get", id=record_id, **request.args))
+        else:
+            abort(404)
     elif id.startswith("issn_l:"):
         clean_issn = normalize_issn(id)
         if not clean_issn:
             abort(404)
         query = Q("term", ids__issn_l__lower=clean_issn)
         s = s.query(query)
+        response = s.execute()
+        if response:
+            record_id = response[0].id
+            return redirect(url_for("ids.venues_id_get", id=record_id, **request.args))
+        else:
+            abort(404)
     else:
         abort(404)
     response = s.execute()
