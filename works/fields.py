@@ -7,6 +7,10 @@ fields = [
     BooleanField(param="is_retracted"),
     BooleanField(param="open_access.is_oa"),
     DateField(
+        param="from_created_date",
+        custom_es_field="created_date",
+    ),
+    DateField(
         param="from_publication_date",
         custom_es_field="publication_date",
     ),

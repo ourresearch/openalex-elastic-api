@@ -1,5 +1,7 @@
 # Changelog
 
+* Add from_created_date filter. [2022-02-17]
+* Cache group by queries without filters for 24 hours. [2022-02-17]
 * Add key_display_name to group by queries. [2022-02-15]
 * Refactor OR queries to use | separator, like `/works?filter=author.id:A2565156079|A2564890435`. [2022-02-10]
 * Duplicate filter keys now work as AND queries. [2022-02-10]
