@@ -1,10 +1,12 @@
 from flask import Blueprint, request
 
-from core.shared_view import shared_view
+from core.schemas import FiltersWrapperSchema
+from core.shared_view import shared_filter_view, shared_view
 from core.utils import is_cached
 from extensions import cache
 from institutions.fields import fields_dict
 from institutions.schemas import MessageSchema
+from settings import INSTITUTIONS_INDEX
 
 blueprint = Blueprint("institutions", __name__)
 
@@ -19,3 +21,11 @@ def institutions():
     result = shared_view(request, fields_dict, index_name, default_sort)
     message_schema = MessageSchema()
     return message_schema.dump(result)
+
+
+@blueprint.route("/institutions/filters/<path:params>")
+def institutions_filters(params):
+    index_name = INSTITUTIONS_INDEX
+    results = shared_filter_view(params, fields_dict, index_name)
+    filters_schema = FiltersWrapperSchema()
+    return filters_schema.dump(results)

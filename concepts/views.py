@@ -2,9 +2,11 @@ from flask import Blueprint, request
 
 from concepts.fields import fields_dict
 from concepts.schemas import MessageSchema
-from core.shared_view import shared_view
+from core.schemas import FiltersWrapperSchema
+from core.shared_view import shared_filter_view, shared_view
 from core.utils import is_cached
 from extensions import cache
+from settings import CONCEPTS_INDEX
 
 blueprint = Blueprint("concepts", __name__)
 
@@ -19,3 +21,11 @@ def concepts():
     result = shared_view(request, fields_dict, index_name, default_sort)
     message_schema = MessageSchema()
     return message_schema.dump(result)
+
+
+@blueprint.route("/concepts/filters/<path:params>")
+def concepts_filters(params):
+    index_name = CONCEPTS_INDEX
+    results = shared_filter_view(params, fields_dict, index_name)
+    filters_schema = FiltersWrapperSchema()
+    return filters_schema.dump(results)
