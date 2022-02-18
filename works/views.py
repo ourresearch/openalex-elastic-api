@@ -34,9 +34,9 @@ def works():
     return message_schema.dump(result)
 
 
-@blueprint.route("/works/filters")
-def works_filters():
+@blueprint.route("/works/filters/<path:params>")
+def works_filters(params):
     index_name = WORKS_INDEX
-    results = shared_filter_view(request, fields_dict, index_name)
+    results = shared_filter_view(params, fields_dict, index_name)
     filters_schema = FiltersWrapperSchema()
     return filters_schema.dump(results)

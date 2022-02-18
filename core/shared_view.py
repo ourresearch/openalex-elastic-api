@@ -89,9 +89,8 @@ def shared_view(request, fields_dict, index_name, default_sort):
     return result
 
 
-def shared_filter_view(request, fields_dict, index_name):
-    validate_params(request)
-    filter_params = map_filter_params(request.args.get("filter"))
+def shared_filter_view(params, fields_dict, index_name):
+    filter_params = map_filter_params(params)
 
     ms = MultiSearch(index=index_name)
 
