@@ -36,3 +36,30 @@ class XConceptsSchema(Schema):
     display_name = fields.Str()
     level = fields.Int()
     score = fields.Float()
+
+
+class ValuesSchema(Schema):
+    value = fields.Str()
+    display_name = fields.Str()
+    count = fields.Int()
+    db_response_time_ms = fields.Int()
+
+    class Meta:
+        ordered = True
+
+
+class FilterSchema(Schema):
+    key = fields.Str()
+    is_negated = fields.Boolean()
+    type = fields.Str()
+    values = fields.List(fields.Nested(ValuesSchema))
+
+    class Meta:
+        ordered = True
+
+
+class FiltersWrapperSchema(Schema):
+    filters = fields.Nested(FilterSchema, many=True)
+
+    class Meta:
+        ordered = True

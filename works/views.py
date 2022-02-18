@@ -1,8 +1,10 @@
 from flask import Blueprint, jsonify, request
 
-from core.shared_view import shared_view
+from core.schemas import FiltersWrapperSchema
+from core.shared_view import shared_filter_view, shared_view
 from core.utils import is_cached
 from extensions import cache
+from settings import WORKS_INDEX
 from works.fields import fields_dict
 from works.schemas import MessageSchema
 
@@ -30,3 +32,11 @@ def works():
     result = shared_view(request, fields_dict, index_name, default_sort)
     message_schema = MessageSchema()
     return message_schema.dump(result)
+
+
+@blueprint.route("/works/filters")
+def works_filters():
+    index_name = WORKS_INDEX
+    results = shared_filter_view(request, fields_dict, index_name)
+    filters_schema = FiltersWrapperSchema()
+    return filters_schema.dump(results)
