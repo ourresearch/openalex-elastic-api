@@ -104,9 +104,9 @@ def filter_records_filters_view(fields_dict, filter_params, ms):
                 else:
                     field.value = value
                     field_meta["is_negated"] = False
-                    field_meta["values"].append(
-                        {"value": value, "display_name": set_display_name(value, field)}
-                    )
+                field_meta["values"].append(
+                    {"value": value, "display_name": set_display_name(value, field)}
+                )
                 q = field.build_query()
                 s = Search()
                 s = s.extra(track_total_hits=True, size=0)
