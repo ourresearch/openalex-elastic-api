@@ -69,10 +69,9 @@ def filter_records_filters_view(fields_dict, filter_params, ms):
                             {"value": or_value, "display_name": or_value}
                         )
                         q = field.build_query()
-                        not_query = ~Q("bool", must=q)
                         s = Search()
                         s = s.extra(track_total_hits=True, size=0)
-                        ms = ms.add(s.query(not_query))
+                        ms = ms.add(s.query(q))
                 else:
                     field_meta["is_negated"] = False
                     # standard OR query, like: 42 or 43
@@ -92,13 +91,14 @@ def filter_records_filters_view(fields_dict, filter_params, ms):
                         s = s.extra(track_total_hits=True, size=0)
                         ms = ms.add(s.query(q))
             else:
-                field.value = value
                 if value.startswith("!"):
+                    field.value = value[1:]  # pass value without negation
                     field_meta["is_negated"] = True
                     field_meta["values"].append(
                         {"value": value[1:], "display_name": value[1:]}
                     )
                 else:
+                    field.value = value
                     field_meta["is_negated"] = False
                     field_meta["values"].append({"value": value, "display_name": value})
                 q = field.build_query()
