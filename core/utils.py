@@ -1,6 +1,7 @@
 import re
 
 from elasticsearch_dsl import Q, Search
+from iso3166 import countries
 
 from core.exceptions import APIQueryParamsError
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
@@ -110,6 +111,26 @@ def get_display_names(ids):
     return results
 
 
+def get_display_name(openalex_id):
+    """Takes an openalex id and returns a single display name."""
+    if not openalex_id:
+        return None
+
+    if "https://openalex.org" not in openalex_id:
+        openalex_id = f"https://openalex.org/{openalex_id}"
+
+    index_name = get_index_name_by_id(openalex_id)
+    s = Search(index=index_name)
+    s = s.filter("term", ids__openalex__lower=openalex_id)
+    response = s.execute()
+
+    if response:
+        display_name = response[0].display_name
+    else:
+        display_name = None
+    return display_name
+
+
 def get_index_name_by_id(openalex_id):
     """Takes an openalex ID and returns an appropriate index."""
     clean_id = normalize_openalex_id(openalex_id)
@@ -153,3 +174,11 @@ def is_cached(request):
     ):
         cached = True
     return cached
+
+
+def get_country_name(country_id):
+    try:
+        country = countries.get(country_id.lower())
+    except KeyError:
+        country = None
+    return country.name if country else country_id

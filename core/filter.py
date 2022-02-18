@@ -1,7 +1,7 @@
 from elasticsearch_dsl import Q, Search
 
 from core.exceptions import APIQueryParamsError
-from core.utils import get_field
+from core.utils import get_country_name, get_display_name, get_field
 
 
 def filter_records(fields_dict, filter_params, s):
@@ -66,7 +66,10 @@ def filter_records_filters_view(fields_dict, filter_params, ms):
                         or_value = or_value.replace("!", "")
                         field.value = or_value
                         field_meta["values"].append(
-                            {"value": or_value, "display_name": or_value}
+                            {
+                                "value": or_value,
+                                "display_name": set_display_name(or_value, field),
+                            }
                         )
                         q = field.build_query()
                         s = Search()
@@ -84,7 +87,10 @@ def filter_records_filters_view(fields_dict, filter_params, ms):
                             )
                         field.value = or_value
                         field_meta["values"].append(
-                            {"value": or_value, "display_name": or_value}
+                            {
+                                "value": or_value,
+                                "display_name": set_display_name(or_value, field),
+                            }
                         )
                         q = field.build_query()
                         s = Search()
@@ -92,18 +98,28 @@ def filter_records_filters_view(fields_dict, filter_params, ms):
                         ms = ms.add(s.query(q))
             else:
                 if value.startswith("!"):
-                    field.value = value[1:]  # pass value without negation
+                    value = value[1:]
+                    field.value = value  # pass value without negation
                     field_meta["is_negated"] = True
-                    field_meta["values"].append(
-                        {"value": value[1:], "display_name": value[1:]}
-                    )
                 else:
                     field.value = value
                     field_meta["is_negated"] = False
-                    field_meta["values"].append({"value": value, "display_name": value})
+                    field_meta["values"].append(
+                        {"value": value, "display_name": set_display_name(value, field)}
+                    )
                 q = field.build_query()
                 s = Search()
                 s = s.extra(track_total_hits=True, size=0)
                 ms = ms.add(s.query(q))
             meta_results.append(field_meta)
     return ms, meta_results
+
+
+def set_display_name(value, field):
+    if type(field).__name__ == "OpenAlexIDField":
+        display_name = get_display_name(value)
+    elif field.param.endswith("country_code") or field.param.endswith("country-code"):
+        display_name = get_country_name(value.lower())
+    else:
+        display_name = value
+    return display_name
