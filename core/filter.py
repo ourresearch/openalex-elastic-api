@@ -51,6 +51,15 @@ def handle_or_query(field, s, value):
 
 def filter_records_filters_view(fields_dict, filter_params, ms):
     meta_results = []
+    search_param = get_search_param(filter_params)
+    search_query = None
+    if search_param:
+        # build search query
+        for key, value in search_param.items():
+            field = get_field(fields_dict, key)
+            field.value = value
+            search_query = field.build_query()
+
     for filter in filter_params:
         for key, value in filter.items():
             field = get_field(fields_dict, key)
@@ -74,7 +83,11 @@ def filter_records_filters_view(fields_dict, filter_params, ms):
                         q = field.build_query()
                         s = Search()
                         s = s.extra(track_total_hits=True, size=0)
-                        ms = ms.add(s.query(q))
+                        if search_query:
+                            combined_query = Q("bool", must=[q, search_query])
+                            ms = ms.add(s.query(combined_query))
+                        else:
+                            ms = ms.add(s.query(q))
                 else:
                     field_meta["is_negated"] = False
                     # standard OR query, like: 42 or 43
@@ -95,7 +108,11 @@ def filter_records_filters_view(fields_dict, filter_params, ms):
                         q = field.build_query()
                         s = Search()
                         s = s.extra(track_total_hits=True, size=0)
-                        ms = ms.add(s.query(q))
+                        if search_query:
+                            combined_query = Q("bool", must=[q, search_query])
+                            ms = ms.add(s.query(combined_query))
+                        else:
+                            ms = ms.add(s.query(q))
             else:
                 if value.startswith("!"):
                     value = value[1:]
@@ -110,9 +127,22 @@ def filter_records_filters_view(fields_dict, filter_params, ms):
                 q = field.build_query()
                 s = Search()
                 s = s.extra(track_total_hits=True, size=0)
-                ms = ms.add(s.query(q))
+                if search_query:
+                    combined_query = Q("bool", must=[q, search_query])
+                    ms = ms.add(s.query(combined_query))
+                else:
+                    ms = ms.add(s.query(q))
             meta_results.append(field_meta)
     return ms, meta_results
+
+
+def get_search_param(filter_params):
+    search_param = None
+    for filter in filter_params:
+        for key, value in filter.items():
+            if key == "display_name.search" or key == "title.search":
+                search_param = {key: value}
+    return search_param
 
 
 def set_display_name(value, field):
