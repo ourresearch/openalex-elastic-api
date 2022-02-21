@@ -64,6 +64,10 @@ def shared_view(request, fields_dict, index_name, default_sort):
             and field.param != "level"
         ):
             raise APIQueryParamsError("Cannot group by date or number fields.")
+        elif field.param == "referenced_works":
+            raise APIQueryParamsError(
+                "Group by referenced_works is not supported at this time."
+            )
         s = group_by_records(field, group_by_size, s, sort_params)
 
     if not group_by:
