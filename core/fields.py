@@ -1,4 +1,5 @@
 import datetime
+import re
 from abc import ABC, abstractmethod
 
 from elasticsearch_dsl import Q
@@ -93,12 +94,14 @@ class DateField(Field):
         return q
 
     def validate(self, query):
+        date = re.search("\d{4}-\d{2}-\d{2}", query)
+        invalid_date_message = f"Value for param {self.param} is an invalid date. Format is yyyy-mm-dd (e.g. 2020-05-17)."
+        if not date:
+            raise APIQueryParamsError(invalid_date_message)
         try:
             datetime.datetime.strptime(query, "%Y-%m-%d")
         except ValueError:
-            raise APIQueryParamsError(
-                f"Value for param {self.param} must be a date in format 2020-05-17."
-            )
+            raise APIQueryParamsError(invalid_date_message)
 
 
 class OpenAlexIDField(Field):

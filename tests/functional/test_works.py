@@ -110,7 +110,7 @@ class TestWorksPublicationDateFilter:
         assert json_data["error"] == "Invalid query parameters error."
         assert (
             json_data["message"]
-            == "Value for param from_publication_date must be a date in format 2020-05-17."
+            == "Value for param from_publication_date is an invalid date. Format is yyyy-mm-dd (e.g. 2020-05-17)."
         )
 
     def test_works_to_publication_date_error(self, client):
@@ -119,17 +119,17 @@ class TestWorksPublicationDateFilter:
         assert json_data["error"] == "Invalid query parameters error."
         assert (
             json_data["message"]
-            == "Value for param to_publication_date must be a date in format 2020-05-17."
+            == "Value for param to_publication_date is an invalid date. Format is yyyy-mm-dd (e.g. 2020-05-17)."
         )
 
     def test_works_publication_date_error(self, client):
-        res = client.get("/works?filter=publication_date:2020-01-555")
+        res = client.get("/works?filter=publication_date:2020-1-17")
         json_data = res.get_json()
         assert res.status_code == 403
         assert json_data["error"] == "Invalid query parameters error."
         assert (
             json_data["message"]
-            == "Value for param publication_date must be a date in format 2020-05-17."
+            == "Value for param publication_date is an invalid date. Format is yyyy-mm-dd (e.g. 2020-05-17)."
         )
 
 
