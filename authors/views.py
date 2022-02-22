@@ -2,8 +2,9 @@ from flask import Blueprint, request
 
 from authors.fields import fields_dict
 from authors.schemas import MessageSchema
+from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
-from core.shared_view import shared_filter_view, shared_view
+from core.shared_view import shared_view
 from core.utils import is_cached
 from extensions import cache
 from settings import AUTHORS_INDEX

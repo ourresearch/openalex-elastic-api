@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
-from elasticsearch_dsl import MultiSearch, Search
+from elasticsearch_dsl import Search
 
 from core.exceptions import APIQueryParamsError
-from core.filter import filter_records, filter_records_filters_view
+from core.filter import filter_records
 from core.group_by import get_group_by_results, group_by_records
 from core.paginate import Paginate
 from core.sort import sort_records
@@ -91,30 +91,3 @@ def shared_view(request, fields_dict, index_name, default_sort):
         result["results"] = response
     # print(s.to_dict())
     return result
-
-
-def shared_filter_view(params, fields_dict, index_name):
-    filter_params = map_filter_params(params)
-
-    ms = MultiSearch(index=index_name)
-
-    # filter
-    if filter_params:
-        ms, meta_results = filter_records_filters_view(fields_dict, filter_params, ms)
-    else:
-        raise APIQueryParamsError(
-            "Must include filter values in order to use this endpoint. Example: /works/filters?filter=oa_status:gold"
-        )
-
-    responses = ms.execute()
-
-    results = {"filters": []}
-
-    idx = 0
-    for meta in meta_results:
-        for value in meta["values"]:
-            value["count"] = responses[idx].hits.total.value
-            value["db_response_time_ms"] = responses[idx].took
-            idx = idx + 1
-        results["filters"].append(meta)
-    return results
