@@ -64,3 +64,28 @@ class TestFiltersView:
         assert filter_2["values"][0]["count"] == 9
         assert filter_2["values"][1]["value"] == "C73283319"
         assert filter_2["values"][1]["count"] == 4
+
+    def test_filter_url_single(self, client):
+        res = client.get("/works/filters/concepts.id:C73283319")
+        json_data = res.get_json()
+        filter_1 = json_data["filters"][0]
+        assert (
+            filter_1["values"][0]["url"]
+            == "http://localhost/works?filter=concepts.id:C73283319"
+        )
+
+    def test_filter_url_with_search(self, client):
+        res = client.get(
+            "/works/filters/display_name.search:the,concepts.id:!C556758197"
+        )
+        json_data = res.get_json()
+        filter_1 = json_data["filters"][0]
+        assert (
+            filter_1["values"][0]["url"]
+            == "http://localhost/works?filter=display_name.search:the"
+        )
+        filter_2 = json_data["filters"][1]
+        assert (
+            filter_2["values"][0]["url"]
+            == "http://localhost/works?filter=display_name.search:the,concepts.id:C556758197"
+        )
