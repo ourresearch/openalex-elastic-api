@@ -42,6 +42,7 @@ class ValuesSchema(Schema):
     value = fields.Str()
     display_name = fields.Str()
     count = fields.Int()
+    url = fields.Str()
     db_response_time_ms = fields.Int()
 
     class Meta:

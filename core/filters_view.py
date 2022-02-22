@@ -1,4 +1,7 @@
+from urllib.parse import unquote
+
 from elasticsearch_dsl import MultiSearch, Q, Search
+from flask import url_for
 
 from core.exceptions import APIQueryParamsError
 from core.utils import (get_country_name, get_display_name, get_field,
@@ -13,7 +16,9 @@ def shared_filter_view(params, fields_dict, index_name):
 
     # filter
     if filter_params:
-        ms, meta_results = filter_records_filters_view(fields_dict, filter_params, ms)
+        ms, meta_results = filter_records_filters_view(
+            fields_dict, filter_params, ms, index_name
+        )
     else:
         raise APIQueryParamsError(
             "Must include filter values in order to use this endpoint. Example: /works/filters?filter=oa_status:gold"
@@ -34,7 +39,7 @@ def shared_filter_view(params, fields_dict, index_name):
     return results
 
 
-def filter_records_filters_view(fields_dict, filter_params, ms):
+def filter_records_filters_view(fields_dict, filter_params, ms, index_name):
     meta_results = []
     search_param = get_search_param(filter_params)
     search_query = None
@@ -66,6 +71,7 @@ def filter_records_filters_view(fields_dict, filter_params, ms):
                         {
                             "value": or_value,
                             "display_name": set_display_name(or_value, field),
+                            "url": set_url(search_param, key, or_value, index_name),
                         }
                     )
                     ms = execute_ms_search(field, ms, search_query)
@@ -78,7 +84,11 @@ def filter_records_filters_view(fields_dict, filter_params, ms):
                     field.value = value
                     field_meta["is_negated"] = False
                 field_meta["values"].append(
-                    {"value": value, "display_name": set_display_name(value, field)}
+                    {
+                        "value": value,
+                        "display_name": set_display_name(value, field),
+                        "url": set_url(search_param, key, value, index_name),
+                    }
                 )
                 ms = execute_ms_search(field, ms, search_query)
             meta_results.append(field_meta)
@@ -115,6 +125,35 @@ def get_search_param(filter_params):
             if key == "display_name.search" or key == "title.search":
                 search_param = {key: value}
     return search_param
+
+
+def set_url(search_param, key, value, index_name):
+    search_string = None
+    s_key = None
+
+    if search_param:
+        for s_key, s_value in search_param.items():
+            search_string = f"{s_key}:{s_value}"
+
+    if search_string and s_key == key:
+        params = f"{search_string}"
+    else:
+        params = f"{search_string},{key}:{value}" if search_string else f"{key}:{value}"
+
+    if index_name.startswith("authors"):
+        url = url_for("authors.authors", filter=params, _external=True)
+    elif index_name.startswith("concepts"):
+        url = url_for("concepts.concepts", filter=params, _external=True)
+    elif index_name.startswith("institutions"):
+        url = url_for("institutions.institutions", filter=params, _external=True)
+    elif index_name.startswith("venues"):
+        url = url_for("venues.venues", filter=params, _external=True)
+    elif index_name.startswith("works"):
+        url = url_for("works.works", filter=params, _external=True)
+    else:
+        url = None
+    url = unquote(url)
+    return url
 
 
 def set_display_name(value, field):
