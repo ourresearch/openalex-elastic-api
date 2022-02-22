@@ -153,6 +153,9 @@ def set_url(search_param, key, value, index_name):
     else:
         url = None
     url = unquote(url)
+
+    # correct api endpoint:
+    url = url.replace("elastic.api.openalex.org", "api.openalex.org")
     return url
 
 
