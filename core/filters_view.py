@@ -32,16 +32,7 @@ def shared_filter_view(params, fields_dict, index_name):
     idx = 0
     for meta in meta_results:
         for value in meta["values"]:
-            # increment count if it is an OR query
-            if len(meta["values"]) > 1 and meta["is_negated"]:
-                idx = idx + 1
-                value["count"] = 0
-            elif len(meta["values"]) > 1:
-                idx = idx + 1
-                value["count"] = responses[idx].hits.total.value
-            else:
-                value["count"] = responses[idx].hits.total.value
-
+            value["count"] = responses[idx].hits.total.value
             value["db_response_time_ms"] = responses[idx].took
         results["filters"].append(meta)
     return results
@@ -51,70 +42,72 @@ def filter_records_filters_view(fields_dict, filter_params, ms, index_name):
     meta_results = []
     s = Search()
     s = s.extra(track_total_hits=True, size=0)
-    regular_queries = []
 
     # first pass with no OR queries
     for filter in filter_params:
         for key, value in filter.items():
-            if "|" in value:
-                continue
-
             field = get_field(fields_dict, key)
             field_meta = {"key": key, "type": type(field).__name__, "values": []}
 
-            if value.startswith("!"):
-                value = value[1:]
-                field.value = value  # pass value without negation
-                field_meta["is_negated"] = True
-            else:
-                field.value = value
-                field_meta["is_negated"] = False
-            q = field.build_query()
-            field_meta["values"].append(
-                {
-                    "value": value,
-                    "display_name": set_display_name(value, field),
-                    # "url": set_url(search_param, key, value, index_name),
-                }
-            )
-            regular_queries.append(q)
-            meta_results.append(field_meta)
-    combined_query = Q("bool", must=regular_queries)
-    ms = ms.add(s.query(combined_query))
-
-    # second pass for OR queries
-    for filter in filter_params:
-        for key, value in filter.items():
             # OR queries have | in the param values
             if "|" in value:
-                field = get_field(fields_dict, key)
-                field_meta = {"key": key, "type": type(field).__name__, "values": []}
+                or_queries = []
 
                 if value.startswith("!"):
                     field_meta["is_negated"] = True
-                    value = value.replace("!", "")
+                    # negate everything in values after !, like: NOT (42 or 43)
+                    for or_value in value.split("|"):
+                        or_value = or_value.replace("!", "")
+                        field_meta["values"].append(
+                            {
+                                "value": or_value,
+                                "display_name": set_display_name(or_value, field),
+                                # "url": set_url(search_param, key, or_value, index_name),
+                            }
+                        )
+                        field.value = or_value
+                        q = field.build_query()
+                        not_query = ~Q("bool", must=q)
+                        s = s.query(not_query)
                 else:
                     field_meta["is_negated"] = False
-
-                for or_value in value.split("|"):
-                    validate_or_value(or_value)
-                    field.value = or_value
-                    q = field.build_query()
-
-                    s = Search()
-                    s = s.extra(track_total_hits=True, size=0)
-                    s = s.query(combined_query)
-                    s = s.query(q)
-                    ms = ms.add(s)
-
-                    field_meta["values"].append(
-                        {
-                            "value": or_value,
-                            "display_name": set_display_name(or_value, field),
-                            # "url": set_url(search_param, key, or_value, index_name),
-                        }
+                    # standard OR query, like: 42 or 43
+                    for or_value in value.split("|"):
+                        if or_value.startswith("!"):
+                            raise APIQueryParamsError(
+                                f"The ! operator can only be used at the beginning of an OR query, "
+                                f"like /works?filter=concepts.id:!C144133560|C15744967, meaning NOT (C144133560 or C15744967). Problem "
+                                f"value: {or_value}"
+                            )
+                        field_meta["values"].append(
+                            {
+                                "value": or_value,
+                                "display_name": set_display_name(or_value, field),
+                                # "url": set_url(search_param, key, or_value, index_name),
+                            }
+                        )
+                        field.value = or_value
+                        q = field.build_query()
+                        or_queries.append(q)
+                    combined_or_query = Q(
+                        "bool", should=or_queries, minimum_should_match=1
                     )
-                meta_results.append(field_meta)
+                    s = s.query(combined_or_query)
+
+            # everything else is an AND query
+            else:
+                field.value = value
+                field_meta["values"].append(
+                    {
+                        "value": value,
+                        "display_name": set_display_name(value, field),
+                        # "url": set_url(search_param, key, or_value, index_name),
+                    }
+                )
+                q = field.build_query()
+                s = s.query(q)
+            meta_results.append(field_meta)
+    ms = ms.add(s)
     return ms, meta_results
 
 
