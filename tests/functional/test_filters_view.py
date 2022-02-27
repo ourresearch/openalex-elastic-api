@@ -1,3 +1,6 @@
+import pytest
+
+
 class TestFiltersView:
     def test_basic_filters(self, client):
         res = client.get("/works/filters/is_oa:true")
@@ -15,7 +18,7 @@ class TestFiltersView:
         assert filter_1["key"] == "display_name.search"
         assert filter_1["is_negated"] == False
         assert filter_1["values"][0]["display_name"] == "science"
-        assert filter_1["values"][0]["count"] == 36
+        assert filter_1["values"][0]["count"] == 25
         filter_2 = json_data["filters"][1]
         assert filter_2["key"] == "is_oa"
         assert filter_2["is_negated"] == False
@@ -29,7 +32,7 @@ class TestFiltersView:
         assert filter_1["key"] == "display_name.search"
         assert filter_1["is_negated"] == False
         assert filter_1["values"][0]["display_name"] == "science"
-        assert filter_1["values"][0]["count"] == 36
+        assert filter_1["values"][0]["count"] == 25
         filter_2 = json_data["filters"][1]
         assert filter_2["key"] == "is_oa"
         assert filter_2["is_negated"] == True
@@ -54,6 +57,20 @@ class TestFiltersView:
 
     def test_filter_multiple(self, client):
         res = client.get(
+            "/works/filters/display_name.search:the,concepts.id:C556758197%7CC73283319"
+        )
+        json_data = res.get_json()
+        filter_1 = json_data["filters"][0]
+        assert filter_1["values"][0]["count"] == 2039
+        filter_2 = json_data["filters"][1]
+        assert filter_2["key"] == "concepts.id"
+        assert filter_2["values"][0]["value"] == "C556758197"
+        assert filter_2["values"][0]["count"] == 9
+        assert filter_2["values"][1]["value"] == "C73283319"
+        assert filter_2["values"][1]["count"] == 4
+
+    def test_filter_multiple_negated(self, client):
+        res = client.get(
             "/works/filters/display_name.search:the,concepts.id:!C556758197%7CC73283319"
         )
         json_data = res.get_json()
@@ -61,10 +78,11 @@ class TestFiltersView:
         assert filter_2["key"] == "concepts.id"
         assert filter_2["is_negated"] == True
         assert filter_2["values"][0]["value"] == "C556758197"
-        assert filter_2["values"][0]["count"] == 9
+        assert filter_2["values"][0]["count"] == 0
         assert filter_2["values"][1]["value"] == "C73283319"
-        assert filter_2["values"][1]["count"] == 4
+        assert filter_2["values"][1]["count"] == 0
 
+    @pytest.mark.skip
     def test_filter_url_single(self, client):
         res = client.get("/works/filters/concepts.id:C73283319")
         json_data = res.get_json()
@@ -74,6 +92,7 @@ class TestFiltersView:
             == "http://localhost/works?filter=concepts.id:C73283319"
         )
 
+    @pytest.mark.skip
     def test_filter_url_with_search(self, client):
         res = client.get(
             "/works/filters/display_name.search:the,concepts.id:!C556758197"
