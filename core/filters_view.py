@@ -32,9 +32,14 @@ def shared_filter_view(params, fields_dict, index_name):
     idx = 0
     for meta in meta_results:
         for value in meta["values"]:
-            if len(meta["values"]) > 1:
+            if len(meta["values"]) > 1 and meta["is_negated"]:
                 idx = idx + 1
-            value["count"] = responses[idx].hits.total.value
+                value["count"] = 0
+            elif len(meta["values"]) > 1 and meta["is_negated"] == False:
+                idx = idx + 1
+                value["count"] = responses[idx].hits.total.value
+            else:
+                value["count"] = responses[idx].hits.total.value
             value["db_response_time_ms"] = responses[idx].took
         results["filters"].append(meta)
     return results
@@ -45,6 +50,7 @@ def filter_records_filters_view(fields_dict, filter_params, ms, index_name):
     s = Search()
     s = s.extra(track_total_hits=True, size=0)
 
+    # first pass apply entire query, but do not add OR values to meta response
     for filter in filter_params:
         for key, value in filter.items():
             field = get_field(fields_dict, key)
@@ -94,6 +100,7 @@ def filter_records_filters_view(fields_dict, filter_params, ms, index_name):
                 meta_results.append(field_meta)
     ms = ms.add(s)
 
+    # second pass, process each OR value as an AND query and add to meta response
     i = 0
     or_s = {}
     for filter in filter_params:
