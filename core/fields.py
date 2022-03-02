@@ -52,7 +52,7 @@ class BooleanField(Field):
         elif self.value == "!null":
             q = Q("exists", field=self.es_field())
         else:
-            kwargs = {self.es_field(): self.value.lower()}
+            kwargs = {self.es_field(): self.value.lower().strip()}
             q = Q("term", **kwargs)
         return q
 
