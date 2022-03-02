@@ -8,6 +8,8 @@ from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
 from autocomplete.shared import single_entity_autocomplete
 from autocomplete.utils import strip_punctuation
 from core.exceptions import APIQueryParamsError
+from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
+                      VENUES_INDEX, WORKS_INDEX)
 
 blueprint = Blueprint("complete", __name__)
 
@@ -15,11 +17,11 @@ blueprint = Blueprint("complete", __name__)
 @blueprint.route("/autocomplete")
 def autocomplete_full():
     entities_to_indeces = {
-        "author": "authors-v6",
-        "concept": "concepts-v3",
-        "institution": "institutions-v3",
-        "venue": "venues-v4",
-        "work": "works-v8-*,-*invalid-data",
+        "author": AUTHORS_INDEX,
+        "concept": CONCEPTS_INDEX,
+        "institution": INSTITUTIONS_INDEX,
+        "venue": VENUES_INDEX,
+        "work": WORKS_INDEX,
     }
 
     q = request.args.get("q")
@@ -65,7 +67,7 @@ def autocomplete_full():
 
 @blueprint.route("/autocomplete/authors")
 def autocomplete_authors():
-    index_name = "authors-v6"
+    index_name = AUTHORS_INDEX
     result = single_entity_autocomplete(index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
@@ -73,7 +75,7 @@ def autocomplete_authors():
 
 @blueprint.route("/autocomplete/concepts")
 def autocomplete_concepts():
-    index_name = "concepts-v3"
+    index_name = CONCEPTS_INDEX
     result = single_entity_autocomplete(index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
@@ -81,7 +83,7 @@ def autocomplete_concepts():
 
 @blueprint.route("/autocomplete/institutions")
 def autocomplete_institutions():
-    index_name = "institutions-v3"
+    index_name = INSTITUTIONS_INDEX
     result = single_entity_autocomplete(index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
@@ -89,7 +91,7 @@ def autocomplete_institutions():
 
 @blueprint.route("/autocomplete/venues")
 def autocomplete_venues():
-    index_name = "venues-v4"
+    index_name = VENUES_INDEX
     result = single_entity_autocomplete(index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
@@ -97,7 +99,7 @@ def autocomplete_venues():
 
 @blueprint.route("/autocomplete/works")
 def autocomplete_works():
-    index_name = "works-v8-*,-*invalid-data"
+    index_name = WORKS_INDEX
     result = single_entity_autocomplete(index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
