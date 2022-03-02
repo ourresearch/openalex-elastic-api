@@ -28,7 +28,7 @@ def index():
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
 def works():
-    index_name = "works-v8-*,-*invalid-data"
+    index_name = WORKS_INDEX
     default_sort = ["-publication_date"]
     result = shared_view(request, fields_dict, index_name, default_sort)
     message_schema = MessageSchema()

@@ -17,7 +17,7 @@ blueprint = Blueprint("authors", __name__)
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
 def authors():
-    index_name = "authors-v6"
+    index_name = AUTHORS_INDEX
     default_sort = ["-works_count"]
     result = shared_view(request, fields_dict, index_name, default_sort)
     message_schema = MessageSchema()

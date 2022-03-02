@@ -17,7 +17,7 @@ blueprint = Blueprint("institutions", __name__)
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
 def institutions():
-    index_name = "institutions-v3"
+    index_name = INSTITUTIONS_INDEX
     default_sort = ["-works_count", "id"]
     result = shared_view(request, fields_dict, index_name, default_sort)
     message_schema = MessageSchema()
