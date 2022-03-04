@@ -72,12 +72,14 @@ def shared_view(request, fields_dict, index_name, default_sort):
 
     if not group_by:
         response = s[paginate.start : paginate.end].execute()
+        count = s.count()
     else:
         response = s.execute()
+        count = len(response.aggregations.groupby.buckets)
 
     result = OrderedDict()
     result["meta"] = {
-        "count": s.count(),
+        "count": count,
         "db_response_time_ms": response.took,
         "page": page,
         "per_page": group_by_size if group_by else per_page,
