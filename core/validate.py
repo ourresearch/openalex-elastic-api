@@ -3,6 +3,7 @@ from core.exceptions import APIQueryParamsError
 
 def validate_params(request):
     valid_params = [
+        "cursor",
         "filter",
         "group_by",
         "group-by",

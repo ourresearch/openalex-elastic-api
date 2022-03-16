@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from elasticsearch_dsl import Search
 
+from core.cursor_pagination import decode_cursor, encode_cursor, get_cursor
 from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
 from core.group_by import get_group_by_results, group_by_records
@@ -14,6 +15,7 @@ from core.validate import validate_params
 
 def shared_view(request, fields_dict, index_name, default_sort):
     validate_params(request)
+    cursor = request.args.get("cursor")
     filter_params = map_filter_params(request.args.get("filter"))
     group_by = request.args.get("group_by") or request.args.get("group-by")
     group_by_size = set_number_param(request, "group-by-size", 50)
@@ -30,6 +32,10 @@ def shared_view(request, fields_dict, index_name, default_sort):
         s = s.extra(size=0)
     else:
         s = s.extra(size=per_page)
+
+    if cursor and cursor != "*":
+        decoded_cursor = decode_cursor(cursor)
+        s = s.extra(search_after=decoded_cursor)
 
     # filter
     if filter_params:
@@ -49,8 +55,10 @@ def shared_view(request, fields_dict, index_name, default_sort):
     # sort
     if sort_params:
         s = sort_records(fields_dict, group_by, sort_params, s)
+    elif is_search_query and not sort_params and index_name.startswith("works"):
+        s = s.sort("_score", "publication_date")
     elif is_search_query and not sort_params:
-        s = s.sort("_score")
+        s = s.sort("_score", "-works_count")
     elif not group_by:
         s = s.sort(*default_sort)
 
@@ -81,10 +89,15 @@ def shared_view(request, fields_dict, index_name, default_sort):
     result["meta"] = {
         "count": count,
         "db_response_time_ms": response.took,
-        "page": page,
+        "page": page if not cursor else None,
         "per_page": group_by_size if group_by else per_page,
     }
     result["results"] = []
+
+    if cursor:
+        elastic_cursor = get_cursor(response)
+        next_cursor = encode_cursor(elastic_cursor) if elastic_cursor else None
+        result["meta"]["next_cursor"] = next_cursor
 
     if group_by:
         result["group_by"] = get_group_by_results(group_by, response)

@@ -6,6 +6,7 @@ class MetaSchema(Schema):
     db_response_time_ms = fields.Int()
     page = fields.Int()
     per_page = fields.Int()
+    next_cursor = fields.Str()
 
     class Meta:
         ordered = True
