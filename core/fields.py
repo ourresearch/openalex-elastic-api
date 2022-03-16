@@ -81,7 +81,11 @@ class DateField(Field):
             self.validate(self.value)
             kwargs = {self.es_field(): {"lte": self.value}}
             q = Q("range", **kwargs)
-        elif self.param == "from_publication_date" or self.param == "from_created_date":
+        elif (
+            self.param == "from_publication_date"
+            or self.param == "from_created_date"
+            or self.param == "from_updated_date"
+        ):
             self.validate(self.value)
             kwargs = {self.es_field(): {"gte": self.value}}
             q = Q("range", **kwargs)

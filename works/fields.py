@@ -14,6 +14,10 @@ fields = [
         param="from_publication_date",
         custom_es_field="publication_date",
     ),
+    DateField(
+        param="from_updated_date",
+        custom_es_field="updated_date",
+    ),
     DateField(param="publication_date"),
     DateField(
         param="to_publication_date",

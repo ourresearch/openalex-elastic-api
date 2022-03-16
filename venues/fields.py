@@ -8,6 +8,10 @@ fields = [
         param="from_created_date",
         custom_es_field="created_date",
     ),
+    DateField(
+        param="from_updated_date",
+        custom_es_field="updated_date",
+    ),
     OpenAlexIDField(param="x_concepts.id"),
     PhraseField(param="publisher"),
     RangeField(param="cited_by_count"),
