@@ -1,13 +1,13 @@
 -r prod.txt
 
 # Testing
-pytest==6.2.5
+pytest==7.1.1
 
 # Lint and code style
-black==21.11b1
+black==22.1.0
 isort==5.10.1
 
 # Load testing
-locust==2.5.0
+locust==2.8.4
 names==0.3.0
-requests==2.26.0
+requests==2.27.1
