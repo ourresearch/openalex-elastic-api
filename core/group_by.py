@@ -77,8 +77,10 @@ def get_group_by_results(group_by, response):
         for b in buckets:
             if b.key == -111:
                 key = "unknown"
-            else:
+            elif "key_as_string" in b:
                 key = b.key_as_string
+            else:
+                key = b.key
             group_by_results.append(
                 {"key": key, "key_display_name": key, "doc_count": b.doc_count}
             )
