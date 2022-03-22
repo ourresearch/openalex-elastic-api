@@ -19,10 +19,14 @@ def shared_view(request, fields_dict, index_name, default_sort):
     filter_params = map_filter_params(request.args.get("filter"))
     group_by = request.args.get("group_by") or request.args.get("group-by")
     page = set_number_param(request, "page", 1)
-    per_page = set_number_param(request, "per-page", 25)
+    per_page = (
+        set_number_param(request, "per-page", 25)
+        if not group_by
+        else set_number_param(request, "per-page", 200)
+    )
     sort_params = map_sort_params(request.args.get("sort"))
 
-    paginate = Paginate(page, per_page)
+    paginate = Paginate(group_by, page, per_page)
     paginate.validate()
 
     s = Search(index=index_name)
