@@ -18,7 +18,6 @@ def shared_view(request, fields_dict, index_name, default_sort):
     cursor = request.args.get("cursor")
     filter_params = map_filter_params(request.args.get("filter"))
     group_by = request.args.get("group_by") or request.args.get("group-by")
-    group_by_size = set_number_param(request, "group-by-size", 50)
     page = set_number_param(request, "page", 1)
     per_page = set_number_param(request, "per-page", 25)
     sort_params = map_sort_params(request.args.get("sort"))
@@ -76,7 +75,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
             raise APIQueryParamsError(
                 "Group by referenced_works is not supported at this time."
             )
-        s = group_by_records(field, group_by_size, s, sort_params)
+        s = group_by_records(field, s, sort_params)
 
     if not group_by:
         response = s[paginate.start : paginate.end].execute()
@@ -90,7 +89,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         "count": count,
         "db_response_time_ms": response.took,
         "page": page if not cursor else None,
-        "per_page": group_by_size if group_by else per_page,
+        "per_page": 200 if group_by else per_page,
     }
     result["results"] = []
 
