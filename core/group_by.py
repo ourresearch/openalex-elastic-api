@@ -1,44 +1,44 @@
 from elasticsearch_dsl import A
 from iso3166 import countries
 
-from core.exceptions import APIQueryParamsError
 from core.utils import get_display_names
 
 
-def group_by_records(field, group_by_size, s, sort_params):
-    group_by_size = validate_group_by_size(group_by_size)
+def group_by_records(field, s, sort_params):
     group_by_field = field.alias if field.alias else field.es_sort_field()
+    if type(field).__name__ == "RangeField" or type(field).__name__ == "BooleanField":
+        missing = -111
+    else:
+        missing = "unknown"
+
     if sort_params:
         for key, order in sort_params.items():
             if key == "count":
                 a = A(
                     "terms",
                     field=group_by_field,
+                    missing=missing,
                     order={"_count": order},
-                    size=group_by_size,
+                    size=200,
                 )
             elif key == "key":
                 a = A(
                     "terms",
                     field=group_by_field,
+                    missing=missing,
                     order={"_key": order},
-                    size=group_by_size,
+                    size=200,
                 )
             s.aggs.bucket("groupby", a)
     else:
         a = A(
             "terms",
             field=group_by_field,
-            size=group_by_size,
+            missing=missing,
+            size=200,
         )
         s.aggs.bucket("groupby", a)
     return s
-
-
-def validate_group_by_size(group_by_size):
-    if group_by_size < 1 or group_by_size > 200:
-        raise APIQueryParamsError("Group by size must be a number between 1 and 200")
-    return group_by_size
 
 
 def get_group_by_results(group_by, response):
@@ -48,26 +48,38 @@ def get_group_by_results(group_by, response):
         keys = [b.key for b in buckets]
         ids_to_display_names = get_display_names(keys)
         for b in buckets:
+            if b.key == "unknown":
+                key_display_name = "unknown"
+            else:
+                key_display_name = ids_to_display_names.get(b.key)
             group_by_results.append(
                 {
                     "key": b.key,
-                    "key_display_name": ids_to_display_names.get(b.key),
+                    "key_display_name": key_display_name,
                     "doc_count": b.doc_count,
                 }
             )
     elif group_by.endswith("country_code"):
         for b in buckets:
-            country = countries.get(b.key.lower())
+            if b.key == "unknown":
+                key_display_name = "unknown"
+            else:
+                country = countries.get(b.key.lower())
+                key_display_name = country.name if country else None
             group_by_results.append(
                 {
                     "key": b.key,
-                    "key_display_name": country.name if country else None,
+                    "key_display_name": key_display_name,
                     "doc_count": b.doc_count,
                 }
             )
     else:
         for b in buckets:
+            if b.key == -111:
+                key = "unknown"
+            else:
+                key = b.key_as_string
             group_by_results.append(
-                {"key": b.key, "key_display_name": b.key, "doc_count": b.doc_count}
+                {"key": key, "key_display_name": key, "doc_count": b.doc_count}
             )
     return group_by_results

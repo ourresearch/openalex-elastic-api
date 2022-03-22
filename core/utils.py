@@ -91,10 +91,13 @@ def set_number_param(request, param, default):
 
 def get_display_names(ids):
     """Takes a list of ids and returns a dict with id[display_name]"""
-    if not ids:
+    if not ids or (ids[0] == "unknown" and len(ids) == 1):
         return None
 
-    index_name = get_index_name_by_id(ids[0])
+    if ids[0] == "unknown" and len(ids) > 1:
+        index_name = get_index_name_by_id(ids[1])
+    else:
+        index_name = get_index_name_by_id(ids[0])
     s = Search(index=index_name)
     s = s.extra(size=200)
 
