@@ -146,7 +146,7 @@ def get_index_name_by_id(openalex_id):
         index_name = INSTITUTIONS_INDEX
     elif clean_id.startswith("V"):
         index_name = VENUES_INDEX
-    elif clean_id.starswith("W"):
+    elif clean_id.startswith("W"):
         index_name = WORKS_INDEX
     return index_name
 
