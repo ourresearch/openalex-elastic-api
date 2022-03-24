@@ -139,6 +139,8 @@ def get_display_name(openalex_id):
 def get_index_name_by_id(openalex_id):
     """Takes an openalex ID and returns an appropriate index."""
     clean_id = normalize_openalex_id(openalex_id)
+    if not clean_id:
+        raise APIQueryParamsError(f"{openalex_id} is not a valid OpenAlex ID.")
     index_name = None
     if clean_id.startswith("A"):
         index_name = AUTHORS_INDEX

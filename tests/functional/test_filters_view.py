@@ -85,6 +85,15 @@ class TestFiltersView:
         assert filter_2["values"][1]["value"] == "C73283319"
         assert filter_2["values"][1]["count"] == 0
 
+    def test_filter_invalid_id(self, client):
+        res = client.get("/works/filters/concepts.id:fff")
+        json_data = res.get_json()
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"]
+            == "https://openalex.org/fff is not a valid OpenAlex ID."
+        )
+
     @pytest.mark.skip
     def test_filter_url_single(self, client):
         res = client.get("/works/filters/concepts.id:C73283319")
