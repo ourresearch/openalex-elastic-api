@@ -118,6 +118,8 @@ def get_display_name(openalex_id):
     """Takes an openalex id and returns a single display name."""
     if not openalex_id:
         return None
+    elif openalex_id == "null":
+        return "unknown"
 
     if "https://openalex.org" not in openalex_id:
         openalex_id = f"https://openalex.org/{openalex_id}"
