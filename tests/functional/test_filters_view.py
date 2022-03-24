@@ -7,7 +7,9 @@ class TestFiltersView:
         json_data = res.get_json()
         filter_1 = json_data["filters"][0]
         assert filter_1["key"] == "is_oa"
+        assert filter_1["type"] == "BooleanField"
         assert filter_1["is_negated"] == False
+        assert filter_1["values"][0]["value"] == "true"
         assert filter_1["values"][0]["display_name"] == "true"
         assert filter_1["values"][0]["count"] == 7709
 
@@ -16,28 +18,29 @@ class TestFiltersView:
         json_data = res.get_json()
         filter_1 = json_data["filters"][0]
         assert filter_1["key"] == "display_name.search"
-        assert filter_1["is_negated"] == False
+        assert filter_1["type"] == "SearchField"
+        assert filter_1["values"][0]["value"] == "science"
         assert filter_1["values"][0]["display_name"] == "science"
         assert filter_1["values"][0]["count"] == 25
         filter_2 = json_data["filters"][1]
         assert filter_2["key"] == "is_oa"
-        assert filter_2["is_negated"] == False
+        assert filter_2["type"] == "BooleanField"
         assert filter_2["values"][0]["display_name"] == "true"
         assert filter_2["values"][0]["count"] == 25
 
     def test_filter_with_search_negation(self, client):
-        res = client.get("/works/filters/display_name.search:science,is_oa:!true")
+        res = client.get("/works/filters/display_name.search:science,oa_status:!gold")
         json_data = res.get_json()
         filter_1 = json_data["filters"][0]
         assert filter_1["key"] == "display_name.search"
         assert filter_1["is_negated"] == False
         assert filter_1["values"][0]["display_name"] == "science"
-        assert filter_1["values"][0]["count"] == 25
+        assert filter_1["values"][0]["count"] == 1
         filter_2 = json_data["filters"][1]
-        assert filter_2["key"] == "is_oa"
+        assert filter_2["key"] == "oa_status"
         assert filter_2["is_negated"] == True
-        assert filter_2["values"][0]["display_name"] == "true"
-        assert filter_2["values"][0]["count"] == 25
+        assert filter_2["values"][0]["display_name"] == "gold"
+        assert filter_2["values"][0]["count"] == 1
 
     def test_filter_convert_id(self, client):
         res = client.get("/works/filters/host_venue.id:V90590500")
@@ -61,7 +64,7 @@ class TestFiltersView:
         )
         json_data = res.get_json()
         filter_1 = json_data["filters"][0]
-        assert filter_1["values"][0]["count"] == 2039
+        assert filter_1["values"][0]["count"] == 12
         filter_2 = json_data["filters"][1]
         assert filter_2["key"] == "concepts.id"
         assert filter_2["values"][0]["value"] == "C556758197"

@@ -88,10 +88,15 @@ def filter_records_filters_view(fields_dict, filter_params, ms, index_name):
             else:
                 field_meta = {"key": key, "type": type(field).__name__, "values": []}
                 field.value = value
+                if field.value.startswith("!"):
+                    field_meta["is_negated"] = True
+                    field.value = field.value.replace("!", "")
+                else:
+                    field_meta["is_negated"] = False
                 field_meta["values"].append(
                     {
-                        "value": value,
-                        "display_name": set_display_name(value, field),
+                        "value": field.value,
+                        "display_name": set_display_name(field.value, field),
                         # "url": set_url(search_param, key, or_value, index_name),
                     }
                 )
