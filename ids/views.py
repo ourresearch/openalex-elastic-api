@@ -88,7 +88,7 @@ def works_id_get(id):
     response = s.execute()
     if not response:
         abort(404)
-    works_schema = WorksSchema()
+    works_schema = WorksSchema(context={"display_relevance": False})
     return works_schema.dump(response[0])
 
 
@@ -144,7 +144,7 @@ def authors_id_get(id):
     response = s.execute()
     if not response:
         abort(404)
-    authors_schema = AuthorsSchema()
+    authors_schema = AuthorsSchema(context={"display_relevance": False})
     return authors_schema.dump(response[0])
 
 
@@ -193,7 +193,7 @@ def institutions_id_get(id):
     response = s.execute()
     if not response:
         abort(404)
-    institutions_schema = InstitutionsSchema()
+    institutions_schema = InstitutionsSchema(context={"display_relevance": False})
     return institutions_schema.dump(response[0])
 
 
@@ -259,7 +259,7 @@ def venues_id_get(id):
     response = s.execute()
     if not response:
         abort(404)
-    venues_schema = VenuesSchema()
+    venues_schema = VenuesSchema(context={"display_relevance": False})
     return venues_schema.dump(response[0])
 
 
@@ -306,7 +306,7 @@ def concepts_id_get(id):
     response = s.execute()
     if not response:
         abort(404)
-    concepts_schema = ConceptsSchema()
+    concepts_schema = ConceptsSchema(context={"display_relevance": False})
     return concepts_schema.dump(response[0])
 
 

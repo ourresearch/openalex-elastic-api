@@ -147,6 +147,7 @@ class WorksSchema(Schema):
     def remove_relevance_score(self, data, many, **kwargs):
         if (
             not data["relevance_score"]
+            and data["relevance_score"] != 0
             or "display_relevance" in self.context
             and self.context["display_relevance"] is False
         ):
@@ -154,8 +155,7 @@ class WorksSchema(Schema):
         return data
 
     def get_relevance_score(self, obj):
-        if obj.meta.score and obj.meta != 0.0:
-            return obj.meta.score
+        return obj.meta.score
 
     class Meta:
         ordered = True

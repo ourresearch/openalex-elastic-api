@@ -76,6 +76,7 @@ class InstitutionsSchema(Schema):
     def remove_relevance_score(self, data, many, **kwargs):
         if (
             not data["relevance_score"]
+            and data["relevance_score"] != 0
             or "display_relevance" in self.context
             and self.context["display_relevance"] is False
         ):
