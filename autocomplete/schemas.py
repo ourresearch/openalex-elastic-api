@@ -52,16 +52,24 @@ class AutoCompleteSchema(Schema):
 
     @staticmethod
     def build_author_string(obj):
-        i = 0
-        author_names = []
-        for author in obj.authorships:
-            if i > 2:
-                author_names.append("et al.")
-                break
+        authors_unknown = "authors unknown"
+
+        if "authorships" in obj:
+            i = 0
+            author_names = []
+            for author in obj.authorships:
+                if i > 2:
+                    author_names.append("et al.")
+                    break
+                else:
+                    author_names.append(author.author.display_name)
+                    i = i + 1
+            if author_names:
+                return ", ".join(author_names)
             else:
-                author_names.append(author.author.display_name)
-                i = i + 1
-        return ", ".join(author_names)
+                return authors_unknown
+        else:
+            return authors_unknown
 
     def get_entity_type(self, obj):
         entities = {
