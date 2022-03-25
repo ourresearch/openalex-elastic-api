@@ -45,7 +45,8 @@ class AutoCompleteSchema(Schema):
             country_code = obj.geo.country_code if "country_code" in obj.geo else None
             country = obj.geo.country if "country" in obj.geo else None
             if city and country_code:
-                return f"{city}, {country_code}"
+                c = countries.get(country_code.lower())
+                return f"{city}, {c.alpha3}"
             elif not city and not country and country_code:
                 c = countries.get(country_code.lower())
                 return c.name
