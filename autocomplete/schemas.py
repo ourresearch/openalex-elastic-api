@@ -1,4 +1,5 @@
 from elasticsearch_dsl import Search
+from iso3166 import countries
 from marshmallow import Schema, fields
 
 from core.schemas import GroupBySchema, MetaSchema
@@ -45,7 +46,10 @@ class AutoCompleteSchema(Schema):
             country = obj.geo.country if "country" in obj.geo else None
             if city and country_code:
                 return f"{city}, {country_code}"
-            elif not city:
+            elif not city and not country and country_code:
+                c = countries.get(country_code.lower())
+                return c.name
+            elif country:
                 return f"{country}"
         else:
             return None
