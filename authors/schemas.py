@@ -1,4 +1,4 @@
-from marshmallow import INCLUDE, Schema, fields
+from marshmallow import INCLUDE, Schema, fields, post_dump
 
 from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
                           XConceptsSchema)
@@ -33,7 +33,7 @@ class AuthorsSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     display_name_alternatives = fields.List(fields.Str())
-    relevance_score = fields.Float(attribute="meta.score")
+    relevance_score = fields.Method("get_relevance_score")
     orcid = fields.Str()
     works_count = fields.Int()
     cited_by_count = fields.Int()
@@ -44,6 +44,20 @@ class AuthorsSchema(Schema):
     works_api_url = fields.Str()
     updated_date = fields.Str()
     created_date = fields.Str(default=None)
+
+    @post_dump
+    def remove_relevance_score(self, data, many, **kwargs):
+        if (
+            not data["relevance_score"]
+            or "display_relevance" in self.context
+            and self.context["display_relevance"] is False
+        ):
+            del data["relevance_score"]
+        return data
+
+    def get_relevance_score(self, obj):
+        if obj.meta.score and obj.meta != 0.0:
+            return obj.meta.score
 
     class Meta:
         ordered = True

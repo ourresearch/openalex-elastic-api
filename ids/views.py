@@ -50,7 +50,7 @@ def works_random_get():
     )
     s = s.query(random_query).extra(size=1)
     response = s.execute()
-    works_schema = WorksSchema()
+    works_schema = WorksSchema(context={"display_relevance": False})
     return works_schema.dump(response[0])
 
 
@@ -65,7 +65,7 @@ def works_id_get(id):
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/W{clean_id}"
         query = Q("term", ids__openalex=full_openalex_id)
-        s = s.query(query)
+        s = s.filter(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"W{clean_id}"
@@ -75,14 +75,14 @@ def works_id_get(id):
         clean_pmid = normalize_pmid(id)
         full_pmid = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}"
         query = Q("term", ids__pmid=full_pmid)
-        s = s.query(query)
+        s = s.filter(query)
     elif id.startswith("doi:") or ("doi" in id):
         clean_doi = normalize_doi(id, return_none_if_error=True)
         if not clean_doi:
             abort(404)
         full_doi = f"https://doi.org/{clean_doi}"
         query = Q("term", ids__doi=full_doi)
-        s = s.query(query)
+        s = s.filter(query)
     else:
         abort(404)
     response = s.execute()
@@ -112,7 +112,7 @@ def authors_random_get():
     )
     s = s.query(random_query).extra(size=1)
     response = s.execute()
-    authors_schema = AuthorsSchema()
+    authors_schema = AuthorsSchema(context={"display_relevance": False})
     return authors_schema.dump(response[0])
 
 
@@ -127,7 +127,7 @@ def authors_id_get(id):
         author_id = int(clean_id[1:])
         full_author_id = f"https://openalex.org/A{author_id}"
         query = Q("term", ids__openalex=full_author_id)
-        s = s.query(query)
+        s = s.filter(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"A{clean_id}"
@@ -138,7 +138,7 @@ def authors_id_get(id):
             return abort(404)
         full_orcid = f"https://orcid.org/{clean_orcid}"
         query = Q("term", ids__orcid=full_orcid)
-        s = s.query(query)
+        s = s.filter(query)
     else:
         abort(404)
     response = s.execute()
@@ -159,7 +159,7 @@ def institutions_random_get():
     random_query = Q("function_score", functions={"random_score": {}})
     s = s.query(random_query).extra(size=1)
     response = s.execute()
-    institutions_schema = InstitutionsSchema()
+    institutions_schema = InstitutionsSchema(context={"display_relevance": False})
     return institutions_schema.dump(response[0])
 
 
@@ -176,7 +176,7 @@ def institutions_id_get(id):
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/I{clean_id}"
         query = Q("term", ids__openalex=full_openalex_id)
-        s = s.query(query)
+        s = s.filter(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"I{clean_id}"
@@ -187,7 +187,7 @@ def institutions_id_get(id):
             abort(404)
         full_ror = f"https://ror.org/{clean_ror}"
         query = Q("term", ror=full_ror)
-        s = s.query(query)
+        s = s.filter(query)
     else:
         abort(404)
     response = s.execute()
@@ -208,7 +208,7 @@ def venues_random_get():
     random_query = Q("function_score", functions={"random_score": {}})
     s = s.query(random_query).extra(size=1)
     response = s.execute()
-    venues_schema = VenuesSchema()
+    venues_schema = VenuesSchema(context={"display_relevance": False})
     return venues_schema.dump(response[0])
 
 
@@ -223,7 +223,7 @@ def venues_id_get(id):
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/V{clean_id}"
         query = Q("term", ids__openalex=full_openalex_id)
-        s = s.query(query)
+        s = s.filter(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"V{clean_id}"
@@ -233,7 +233,7 @@ def venues_id_get(id):
         if not clean_issn:
             abort(404)
         query = Q("term", ids__issn__lower=clean_issn)
-        s = s.query(query)
+        s = s.filter(query)
         response = s.execute()
         if response:
             record_id = response[0].id
@@ -246,7 +246,7 @@ def venues_id_get(id):
         if not clean_issn:
             abort(404)
         query = Q("term", ids__issn_l__lower=clean_issn)
-        s = s.query(query)
+        s = s.filter(query)
         response = s.execute()
         if response:
             record_id = response[0].id
@@ -274,7 +274,7 @@ def concepts_random_get():
     random_query = Q("function_score", functions={"random_score": {}})
     s = s.query(random_query).extra(size=1)
     response = s.execute()
-    concepts_schema = ConceptsSchema()
+    concepts_schema = ConceptsSchema(context={"display_relevance": False})
     return concepts_schema.dump(response[0])
 
 
@@ -289,7 +289,7 @@ def concepts_id_get(id):
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/C{clean_id}"
         query = Q("term", ids__openalex=full_openalex_id)
-        s = s.query(query)
+        s = s.filter(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"C{clean_id}"
@@ -300,7 +300,7 @@ def concepts_id_get(id):
             abort(404)
         full_wikidata = f"https://www.wikidata.org/wiki/{clean_wikidata}"
         query = Q("term", wikidata=full_wikidata)
-        s = s.query(query)
+        s = s.filter(query)
     else:
         abort(404)
     response = s.execute()
@@ -319,7 +319,7 @@ def concepts_name_get(name):
     response = s.execute()
     if not response:
         abort(404)
-    concepts_schema = ConceptsSchema()
+    concepts_schema = ConceptsSchema(context={"display_relevance": False})
     return concepts_schema.dump(response[0])
 
 

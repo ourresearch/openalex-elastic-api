@@ -1,6 +1,6 @@
 import json
 
-from marshmallow import INCLUDE, Schema, fields
+from marshmallow import INCLUDE, Schema, fields, post_dump
 
 from core.schemas import CountsByYearSchema, GroupBySchema, MetaSchema
 
@@ -112,7 +112,7 @@ class WorksSchema(Schema):
     display_name = fields.Str()
     title = fields.Str()
     publication_date = fields.Str()
-    relevance_score = fields.Float(attribute="meta.score")
+    relevance_score = fields.Method("get_relevance_score")
     host_venue = fields.Nested(HostVenueSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
     concepts = fields.Nested(ConceptsSchema, many=True)
@@ -142,6 +142,20 @@ class WorksSchema(Schema):
     mesh = fields.List(fields.Nested(MeshSchema))
     updated_date = fields.Str()
     created_date = fields.Str(default=None)
+
+    @post_dump
+    def remove_relevance_score(self, data, many, **kwargs):
+        if (
+            not data["relevance_score"]
+            or "display_relevance" in self.context
+            and self.context["display_relevance"] is False
+        ):
+            del data["relevance_score"]
+        return data
+
+    def get_relevance_score(self, obj):
+        if obj.meta.score and obj.meta != 0.0:
+            return obj.meta.score
 
     class Meta:
         ordered = True
