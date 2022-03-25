@@ -2,7 +2,12 @@ class TestSort:
     def test_sort_empty_search_query(self, client):
         res = client.get("/works?filter=display_name.search:&sort=relevance_score:desc")
         json_data = res.get_json()
-        assert json_data["results"][0]["publication_date"] == "2021-07-17"
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"]
+            == "Must include a search query (such as filter=display_name.search:example) in order to sort by relevance_score."
+        )
 
     def test_sort_search_query(self, client):
         res1 = client.get(
