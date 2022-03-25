@@ -50,12 +50,23 @@ def shared_view(request, fields_dict, index_name, default_sort):
         for filter in filter_params:
             if (
                 "display_name.search" in filter.keys()
+                and filter["display_name.search"] != ""
                 or "title.search" in filter.keys()
+                and filter["title.search"] != ""
             ):
                 is_search_query = True
                 break
 
     # sort
+    # do not allow sorting by relevance score without search query
+    if (
+        not is_search_query
+        and sort_params
+        and "relevance_score" in sort_params
+        and sort_params["relevance_score"] == "desc"
+    ):
+        del sort_params["relevance_score"]
+
     if sort_params:
         s = sort_records(fields_dict, group_by, sort_params, s)
     elif is_search_query and not sort_params and index_name.startswith("works"):
