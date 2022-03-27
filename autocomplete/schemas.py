@@ -34,6 +34,7 @@ class AutoCompleteSchema(Schema):
         s = Search(index=WORKS_INDEX)
         s = s.filter("term", authorships__author__id=author_id)
         s = s.sort("-publication_date")
+        s = s.extra(size=1)
         response = s.execute()
         for h in response:
             return f"{h.title} ({h.publication_year})"
