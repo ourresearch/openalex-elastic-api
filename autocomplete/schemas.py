@@ -38,22 +38,32 @@ class AutoCompleteSchema(Schema):
         for h in response:
             return f"{h.title} ({h.publication_year})"
 
-    @staticmethod
-    def get_location(obj):
+    def get_location(self, obj):
         if "geo" in obj:
             city = obj.geo.city if "city" in obj.geo else None
             country_code = obj.geo.country_code if "country_code" in obj.geo else None
-            country = obj.geo.country if "country" in obj.geo else None
-            if city and country_code:
-                c = countries.get(country_code.lower())
-                return f"{city}, {c.alpha3}"
-            elif not city and not country and country_code:
-                c = countries.get(country_code.lower())
-                return c.name
-            elif country:
-                return f"{country}"
+            country_name = self.get_country_name(country_code) if country_code else None
+
+            if city and country_name:
+                location = f"{city}, {country_name}"
+            elif not city and country_name:
+                location = country_name
+            else:
+                location = None
         else:
-            return None
+            location = None
+        return location
+
+    @staticmethod
+    def get_country_name(country_code):
+        if country_code.lower() == "us":
+            country_name = "USA"
+        elif country_code.lower() == "gb":
+            country_name = "UK"
+        else:
+            c = countries.get(country_code.lower())
+            country_name = c.name
+        return country_name
 
     @staticmethod
     def build_author_string(obj):
