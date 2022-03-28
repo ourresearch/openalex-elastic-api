@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 import iso3166
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import A, Search
 from flask import Blueprint, request
 
 from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
@@ -193,6 +193,55 @@ def autocomplete_venues_publisher():
     result = OrderedDict()
     result["meta"] = {
         "count": s.count(),
+        "db_response_time_ms": response.took,
+        "page": 1,
+        "per_page": 10,
+    }
+    result["results"] = hits
+    message_schema = MessageAutocompleteCustomSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/institutions/type")
+def autocomplete_institutions_type():
+    q = request.args.get("q")
+    q = strip_punctuation(q) if q else None
+    q = q.lower() if q else None
+    if not q:
+        raise APIQueryParamsError(
+            f"Must enter a 'q' parameter in order to use autocomplete. Example: {request.url_rule}?q=my search"
+        )
+
+    s = Search(index=INSTITUTIONS_INDEX)
+    a = A(
+        "terms",
+        field="type",
+        missing="unknown",
+        size=200,
+    )
+    a.metric("cited_by_sum", "sum", field="cited_by_count")
+    s.aggs.bucket("groupby", a)
+    response = s.execute()
+    buckets = response.aggregations.groupby.buckets
+
+    hits = []
+    for b in buckets:
+        if b.key.startswith(q):
+            hits.append(
+                OrderedDict(
+                    {
+                        "id": None,
+                        "display_name": b.key,
+                        "cited_by_count": b.cited_by_sum.value,
+                        "entity_type": "institution",
+                        "external_id": None,
+                    }
+                )
+            )
+
+    result = OrderedDict()
+    result["meta"] = {
+        "count": len(hits),
         "db_response_time_ms": response.took,
         "page": 1,
         "per_page": 10,

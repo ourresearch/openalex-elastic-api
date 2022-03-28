@@ -57,3 +57,11 @@ class TestEntitiesAutoComplete:
 
         for result in json_data["results"][:25]:
             assert "list" in result["display_name"].lower()
+
+
+class TestCustomAutocomplete:
+    def test_institutions_type_autocomplete(self, client):
+        res = client.get("/autocomplete/institutions/type?q=co")
+        json_data = res.get_json()
+        assert json_data["results"][0]["display_name"] == "company"
+        assert json_data["results"][0]["cited_by_count"] == 39283175
