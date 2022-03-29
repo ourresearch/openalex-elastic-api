@@ -2,11 +2,13 @@ import datetime
 import re
 from abc import ABC, abstractmethod
 
-from elasticsearch_dsl import Q
+from elasticsearch_dsl import Q, Search
 
 from core.exceptions import APIQueryParamsError
 from core.search import (search_records_experiment, search_records_full,
                          search_records_phrase)
+from core.utils import get_full_openalex_id
+from settings import WORKS_INDEX
 
 
 class Field(ABC):
@@ -127,6 +129,14 @@ class OpenAlexIDField(Field):
             query_with_url = f"https://openalex.org/{query}"
             kwargs = {self.es_field(): query_with_url}
             q = ~Q("term", **kwargs)
+        elif self.param == "cited_by":
+            openalex_ids = self.get_ids(self.value, "referenced_works")
+            q = Q("terms", id=openalex_ids)
+            return q
+        elif self.param == "related_to":
+            openalex_ids = self.get_ids(self.value, "related_works")
+            q = Q("terms", id=openalex_ids)
+            return q
         elif "https://openalex.org/" in self.value:
             kwargs = {self.es_field(): self.value}
             q = Q("term", **kwargs)
@@ -146,6 +156,22 @@ class OpenAlexIDField(Field):
         else:
             field = self.param + "__lower"
         return field
+
+    @staticmethod
+    def get_ids(openalex_id, category):
+        full_openalex_id = get_full_openalex_id(openalex_id)
+        if not full_openalex_id:
+            raise APIQueryParamsError(
+                "Invalid OpenAlex ID in cited_by or related_to filter."
+            )
+        openalex_ids = []
+        s = Search(index=WORKS_INDEX).extra(size=1)
+        s = s.filter("term", id=full_openalex_id)
+        response = s.execute()
+        if response:
+            for h in response:
+                openalex_ids = [id for id in h[category]]
+        return openalex_ids
 
 
 class PhraseField(Field):

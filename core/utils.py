@@ -168,6 +168,15 @@ def normalize_openalex_id(openalex_id):
     return clean_openalex_id
 
 
+def get_full_openalex_id(openalex_id):
+    short_openalex_id = normalize_openalex_id(openalex_id)
+    if short_openalex_id:
+        full_openalex_id = f"https://openalex.org/{short_openalex_id}"
+    else:
+        full_openalex_id = None
+    return full_openalex_id
+
+
 def is_cached(request):
     cached = False
     if len(request.args) == 1 and (
