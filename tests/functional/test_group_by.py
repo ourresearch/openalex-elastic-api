@@ -66,3 +66,65 @@ class TestGroupByNameKey:
         assert result["key"] == "https://openalex.org/V25293849"
         assert result["key_display_name"] == "The FASEB Journal"
         assert result["count"] == 18
+
+
+class TestGroupByExternalIds:
+    def test_group_by_has_orcid(self, client):
+        res = client.get("/authors?group-by=has_orcid")
+        json_data = res.get_json()
+        result1 = json_data["group_by"][0]
+        result2 = json_data["group_by"][1]
+        assert result1["key"] == "true"
+        assert result1["key_display_name"] == "true"
+        assert result1["count"] == 819
+        assert result2["key"] == "false"
+        assert result2["key_display_name"] == "false"
+        assert result2["count"] == 9181
+
+    def test_group_by_has_wikidata(self, client):
+        res = client.get("/concepts?group-by=has_wikidata")
+        json_data = res.get_json()
+        result1 = json_data["group_by"][0]
+        result2 = json_data["group_by"][1]
+        assert result1["key"] == "true"
+        assert result1["key_display_name"] == "true"
+        assert result1["count"] == 9996
+        assert result2["key"] == "false"
+        assert result2["key_display_name"] == "false"
+        assert result2["count"] == 4
+
+    def test_group_by_has_ror(self, client):
+        res = client.get("/institutions?group-by=has_ror")
+        json_data = res.get_json()
+        result1 = json_data["group_by"][0]
+        result2 = json_data["group_by"][1]
+        assert result1["key"] == "true"
+        assert result1["key_display_name"] == "true"
+        assert result1["count"] == 7220
+        assert result2["key"] == "false"
+        assert result2["key_display_name"] == "false"
+        assert result2["count"] == 2780
+
+    def test_group_by_has_issn(self, client):
+        res = client.get("/venues?group-by=has_issn")
+        json_data = res.get_json()
+        result1 = json_data["group_by"][0]
+        result2 = json_data["group_by"][1]
+        assert result1["key"] == "true"
+        assert result1["key_display_name"] == "true"
+        assert result1["count"] == 8823
+        assert result2["key"] == "false"
+        assert result2["key_display_name"] == "false"
+        assert result2["count"] == 1177
+
+    def test_group_by_has_doi(self, client):
+        res = client.get("/works?group-by=has_doi")
+        json_data = res.get_json()
+        result1 = json_data["group_by"][0]
+        result2 = json_data["group_by"][1]
+        assert result1["key"] == "true"
+        assert result1["key_display_name"] == "true"
+        assert result1["count"] == 3627
+        assert result2["key"] == "false"
+        assert result2["key_display_name"] == "false"
+        assert result2["count"] == 6373

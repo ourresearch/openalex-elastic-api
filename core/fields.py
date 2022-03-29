@@ -4,11 +4,12 @@ from abc import ABC, abstractmethod
 
 from elasticsearch_dsl import Q, Search
 
+import settings
 from core.exceptions import APIQueryParamsError
 from core.search import (search_records_experiment, search_records_full,
                          search_records_phrase)
 from core.utils import get_full_openalex_id
-from settings import WORKS_INDEX
+from settings import EXTERNAL_ID_FIELDS, WORKS_INDEX
 
 
 class Field(ABC):
@@ -48,7 +49,11 @@ class Field(ABC):
 
 class BooleanField(Field):
     def build_query(self):
-        self.validate(self.value)
+        if self.param in settings.EXTERNAL_ID_FIELDS:
+            self.validate_true_false()
+            self.handle_external_id_fields()
+        else:
+            self.validate(self.value)
         if self.value == "null":
             q = ~Q("exists", field=self.es_field())
         elif self.value == "!null":
@@ -63,7 +68,21 @@ class BooleanField(Field):
         query = query.lower().strip()
         if query not in valid_values:
             raise APIQueryParamsError(
-                f"Value for {self.param} must be true, false null, or !null: not {query}"
+                f"Value for {self.param} must be true, false null, or !null: not {query}."
+            )
+
+    def handle_external_id_fields(self):
+        if self.value.lower().strip() == "true":
+            self.value = "!null"
+        elif self.value.lower().strip() == "false":
+            self.value = "null"
+
+    def validate_true_false(self):
+        valid_values = ["true", "false"]
+        query = self.value.lower().strip()
+        if query not in valid_values:
+            raise APIQueryParamsError(
+                f"Value for {self.param} must be true or false, not {query}."
             )
 
 

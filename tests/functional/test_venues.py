@@ -128,3 +128,27 @@ class TestVenuesPublisher:
         assert json_data["meta"]["count"] == 1074
         for result in json_data["results"]:
             assert result["publisher"] == "Elsevier"
+
+
+class TestVenuesExternalIDs:
+    def test_venues_has_issn_true(self, client):
+        res = client.get("/venues?filter=has_issn:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 8823
+        for result in json_data["results"][:25]:
+            assert result["ids"]["issn"] is not None
+
+    def test_venues_has_issn_false(self, client):
+        res = client.get("/venues?filter=has_issn:false")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1177
+        for result in json_data["results"][:25]:
+            assert result["ids"]["issn"] is None
+
+    def test_venues_has_issn_error(self, client):
+        res = client.get("/venues?filter=has_issn:stt")
+        json_data = res.get_json()
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"] == "Value for has_issn must be true or false, not stt."
+        )

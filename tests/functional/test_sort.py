@@ -20,3 +20,12 @@ class TestSort:
             json_data1["results"][0]["display_name"]
             == json_data2["results"][0]["display_name"]
         )
+
+    def test_sort_external_id_group_by(self, client):
+        res = client.get("/works?group-by=has_doi&sort=key:desc")
+        json_data = res.get_json()
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"]
+            == "Cannot sort when grouping by external ID boolean field."
+        )

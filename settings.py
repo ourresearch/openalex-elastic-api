@@ -15,3 +15,11 @@ CONCEPTS_INDEX = "concepts-v4"
 INSTITUTIONS_INDEX = "institutions-v4"
 VENUES_INDEX = "venues-v5"
 WORKS_INDEX = "works-v9-*,-*invalid-data"
+
+EXTERNAL_ID_FIELDS = [
+    "has_doi",
+    "has_issn",
+    "has_orcid",
+    "has_ror",
+    "has_wikidata",
+]

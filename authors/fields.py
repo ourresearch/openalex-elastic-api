@@ -1,7 +1,8 @@
-from core.fields import (DateField, OpenAlexIDField, RangeField, SearchField,
-                         TermField)
+from core.fields import (BooleanField, DateField, OpenAlexIDField, RangeField,
+                         SearchField, TermField)
 
 fields = [
+    BooleanField(param="has_orcid", custom_es_field="ids.orcid"),
     DateField(
         param="from_created_date",
         custom_es_field="created_date",

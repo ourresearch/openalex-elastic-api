@@ -2,10 +2,12 @@ from collections import OrderedDict
 
 from elasticsearch_dsl import Search
 
+import settings
 from core.cursor_pagination import decode_cursor, encode_cursor, get_cursor
 from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
-from core.group_by import get_group_by_results, group_by_records
+from core.group_by import (get_group_by_results,
+                           get_group_by_results_external_ids, group_by_records)
 from core.paginate import Paginate
 from core.sort import sort_records
 from core.utils import (get_field, map_filter_params, map_sort_params,
@@ -96,7 +98,10 @@ def shared_view(request, fields_dict, index_name, default_sort):
         count = s.count()
     else:
         response = s.execute()
-        count = len(response.aggregations.groupby.buckets)
+        if group_by in settings.EXTERNAL_ID_FIELDS:
+            count = 2
+        else:
+            count = len(response.aggregations.groupby.buckets)
 
     result = OrderedDict()
     result["meta"] = {
@@ -113,7 +118,10 @@ def shared_view(request, fields_dict, index_name, default_sort):
         result["meta"]["next_cursor"] = next_cursor
 
     if group_by:
-        result["group_by"] = get_group_by_results(group_by, response)
+        if group_by in settings.EXTERNAL_ID_FIELDS:
+            result["group_by"] = get_group_by_results_external_ids(response)
+        else:
+            result["group_by"] = get_group_by_results(group_by, response)
     else:
         result["group_by"] = []
         result["results"] = response

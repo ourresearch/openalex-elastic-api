@@ -116,3 +116,27 @@ class TestInstitutionsTypeFilter:
         assert json_data["results"][0]["type"].lower() == "education"
         for result in json_data["results"][:25]:
             assert result["type"].lower() == "education"
+
+
+class TestInstitutionsExternalIDs:
+    def test_institutions_has_ror_true(self, client):
+        res = client.get("/institutions?filter=has_ror:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 7220
+        for result in json_data["results"][:25]:
+            assert result["ids"]["ror"] is not None
+
+    def test_institutions_has_ror_false(self, client):
+        res = client.get("/institutions?filter=has_ror:false")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2780
+        for result in json_data["results"][:25]:
+            assert result["ids"]["ror"] is None
+
+    def test_institutions_has_ror_error(self, client):
+        res = client.get("/institutions?filter=has_ror:stt")
+        json_data = res.get_json()
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"] == "Value for has_ror must be true or false, not stt."
+        )

@@ -1,3 +1,4 @@
+import settings
 from core.exceptions import APIQueryParamsError
 from core.utils import get_field
 
@@ -6,7 +7,11 @@ def sort_records(fields_dict, group_by, sort_params, s):
     sort_fields = []
     for key, value in sort_params.items():
         # group by
-        if (
+        if group_by in settings.EXTERNAL_ID_FIELDS:
+            raise APIQueryParamsError(
+                "Cannot sort when grouping by external ID boolean field."
+            )
+        elif (
             group_by
             and (key == "key" and (value == "desc" or value == "asc"))
             or group_by

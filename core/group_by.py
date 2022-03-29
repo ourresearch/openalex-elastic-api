@@ -1,6 +1,7 @@
-from elasticsearch_dsl import A
+from elasticsearch_dsl import A, Q
 from iso3166 import countries
 
+import settings
 from core.utils import get_display_names
 
 
@@ -30,6 +31,11 @@ def group_by_records(field, s, sort_params):
                     size=200,
                 )
             s.aggs.bucket("groupby", a)
+    elif field.param in settings.EXTERNAL_ID_FIELDS:
+        exists = A("filter", Q("exists", field=group_by_field))
+        not_exists = A("missing", field=group_by_field)
+        s.aggs.bucket("exists", exists)
+        s.aggs.bucket("not_exists", not_exists)
     else:
         a = A(
             "terms",
@@ -84,4 +90,23 @@ def get_group_by_results(group_by, response):
             group_by_results.append(
                 {"key": key, "key_display_name": key, "doc_count": b.doc_count}
             )
+    return group_by_results
+
+
+def get_group_by_results_external_ids(response):
+    exists_count = response.aggregations.exists.doc_count
+    not_exists_count = response.aggregations.not_exists.doc_count
+
+    group_by_results = [
+        {
+            "key": "true",
+            "key_display_name": "true",
+            "doc_count": exists_count,
+        },
+        {
+            "key": "false",
+            "key_display_name": "false",
+            "doc_count": not_exists_count,
+        },
+    ]
     return group_by_results

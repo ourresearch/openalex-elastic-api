@@ -211,7 +211,7 @@ class TestWorksBooleanFilters:
         assert json_data["error"] == "Invalid query parameters error."
         assert (
             json_data["message"]
-            == "Value for is_retracted must be true, false null, or !null: not falsee"
+            == "Value for is_retracted must be true, false null, or !null: not falsee."
         )
 
 
@@ -628,4 +628,28 @@ class TestWorksAuthorOrQuery:
             "The ! operator can only be used at the beginning of an OR query, "
             "like /works?filter=concepts.id:!C144133560|C15744967, meaning NOT (C144133560 or C15744967). Problem "
             "value: !A277790681"
+        )
+
+
+class TestWorksExternalIDs:
+    def test_works_has_doi_true(self, client):
+        res = client.get("/works?filter=has_doi:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 3627
+        for result in json_data["results"][:25]:
+            assert result["ids"]["doi"] is not None
+
+    def test_works_has_doi_false(self, client):
+        res = client.get("/works?filter=has_doi:false")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 6373
+        for result in json_data["results"][:25]:
+            assert result["ids"]["doi"] is None
+
+    def test_venues_has_doi_error(self, client):
+        res = client.get("/works?filter=has_doi:stt")
+        json_data = res.get_json()
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"] == "Value for has_doi must be true or false, not stt."
         )

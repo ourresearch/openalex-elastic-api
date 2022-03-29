@@ -2,6 +2,7 @@ from core.fields import (BooleanField, DateField, OpenAlexIDField, PhraseField,
                          RangeField, SearchField, TermField)
 
 fields = [
+    BooleanField(param="has_issn", custom_es_field="ids.issn_l"),
     BooleanField(param="is_in_doaj"),
     BooleanField(param="is_oa"),
     DateField(

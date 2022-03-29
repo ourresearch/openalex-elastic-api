@@ -135,3 +135,28 @@ class TestConceptsAncestorsIDFilter:
             if ancestor["id"] == "https://openalex.org/C142362112":
                 ancestor_id_found = True
         assert ancestor_id_found == True
+
+
+class TestConceptsExternalIDs:
+    def test_concepts_has_wikidata_true(self, client):
+        res = client.get("/concepts?filter=has_wikidata:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9996
+        for result in json_data["results"][:25]:
+            assert result["ids"]["wikidata"] is not None
+
+    def test_concepts_has_wikidata_false(self, client):
+        res = client.get("/concepts?filter=has_wikidata:false")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 4
+        for result in json_data["results"][:25]:
+            assert "ids" not in result or result["ids"]["wikidata"] is None
+
+    def test_concepts_has_wikidata_error(self, client):
+        res = client.get("/concepts?filter=has_wikidata:stt")
+        json_data = res.get_json()
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"]
+            == "Value for has_wikidata must be true or false, not stt."
+        )

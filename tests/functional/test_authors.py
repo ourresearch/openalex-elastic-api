@@ -153,3 +153,28 @@ class TestAuthorsXConceptsID:
             if concept["id"] == "https://openalex.org/C185592680":
                 concept_found = True
         assert concept_found == True
+
+
+class TestAuthorsExternalIDs:
+    def test_authors_has_orcid_true(self, client):
+        res = client.get("/authors?filter=has_orcid:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 819
+        for result in json_data["results"][:25]:
+            assert result["ids"]["orcid"] is not None
+
+    def test_authors_has_orcid_false(self, client):
+        res = client.get("/authors?filter=has_orcid:false")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9181
+        for result in json_data["results"][:25]:
+            assert result["ids"]["orcid"] is None
+
+    def test_authors_has_orcid_error(self, client):
+        res = client.get("/authors?filter=has_orcid:stt")
+        json_data = res.get_json()
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"]
+            == "Value for has_orcid must be true or false, not stt."
+        )
