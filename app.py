@@ -42,7 +42,7 @@ def register_extensions(app):
     sentry_sdk.init(
         dsn=os.environ.get("SENTRY_DSN"),
         integrations=[FlaskIntegration()],
-        traces_sample_rate=0.05,
+        traces_sample_rate=0.01,
     )
     connections.create_connection(hosts=[settings.ES_URL], timeout=30)
     cache.init_app(app)
