@@ -14,7 +14,7 @@ AUTHORS_INDEX = "authors-v7"
 CONCEPTS_INDEX = "concepts-v4"
 INSTITUTIONS_INDEX = "institutions-v4"
 VENUES_INDEX = "venues-v5"
-WORKS_INDEX = "works-v9-*,-*invalid-data"
+WORKS_INDEX = "works-v10-*,-*invalid-data"
 
 EXTERNAL_ID_FIELDS = [
     "has_doi",
