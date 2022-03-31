@@ -3,8 +3,20 @@ import pytest
 
 class TestConceptsSearch:
     def test_concepts_search(self, client):
+        res = client.get("/concepts?search=science")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 117
+        assert "science" in json_data["results"][0]["display_name"].lower()
+        for result in json_data["results"][:25]:
+            assert (
+                "science" in result["display_name"].lower()
+                or "science" in result["description"]
+            )
+
+    def test_concepts_search_display_name(self, client):
         res = client.get("/concepts?filter=display_name.search:science")
         json_data = res.get_json()
+        assert json_data["meta"]["count"] == 37
         assert "science" in json_data["results"][0]["display_name"].lower()
         for result in json_data["results"][:25]:
             assert "science" in result["display_name"].lower()
@@ -152,7 +164,7 @@ class TestConceptsExternalIDs:
         for result in json_data["results"][:25]:
             assert "ids" not in result or result["ids"]["wikidata"] is None
 
-    def test_concepts_has_wikidata_error(self, client):
+    def test_concepts_haes_wikidata_error(self, client):
         res = client.get("/concepts?filter=has_wikidata:stt")
         json_data = res.get_json()
         assert json_data["error"] == "Invalid query parameters error."

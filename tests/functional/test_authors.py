@@ -3,6 +3,13 @@ import pytest
 
 class TestAuthorsSearch:
     def test_authors_search(self, client):
+        res = client.get("/authors?search=jones")
+        json_data = res.get_json()
+        assert "jones" in json_data["results"][0]["display_name"].lower()
+        for result in json_data["results"][:25]:
+            assert "jones" in result["display_name"].lower()
+
+    def test_authors_search_display_name(self, client):
         res = client.get("/authors?filter=display_name.search:jones")
         json_data = res.get_json()
         assert "jones" in json_data["results"][0]["display_name"].lower()

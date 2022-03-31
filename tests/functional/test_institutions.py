@@ -3,6 +3,13 @@ import pytest
 
 class TestInstitutionsSearch:
     def test_institutions_search(self, client):
+        res = client.get("/institutions?search=university")
+        json_data = res.get_json()
+        assert "university" in json_data["results"][0]["display_name"].lower()
+        for result in json_data["results"][:25]:
+            assert "university" in result["display_name"].lower()
+
+    def test_institutions_search_display_name(self, client):
         res = client.get("/institutions?filter=display_name.search:university")
         json_data = res.get_json()
         assert "university" in json_data["results"][0]["display_name"].lower()

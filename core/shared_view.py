@@ -44,8 +44,8 @@ def shared_view(request, fields_dict, index_name, default_sort):
         decoded_cursor = decode_cursor(cursor)
         s = s.extra(search_after=decoded_cursor)
 
-    if search and search != "":
-        search_oa = SearchOpenAlex(search_terms=search, index=index_name)
+    if search and search != '""':
+        search_oa = SearchOpenAlex(search_terms=search, index_full_search=index_name)
         search_query = search_oa.build_query()
         s = s.query(search_query)
 
@@ -58,15 +58,15 @@ def shared_view(request, fields_dict, index_name, default_sort):
     if filter_params:
         for filter in filter_params:
             if (
-                search
-                and search != ""
-                or "display_name.search" in filter.keys()
+                "display_name.search" in filter.keys()
                 and filter["display_name.search"] != ""
                 or "title.search" in filter.keys()
                 and filter["title.search"] != ""
             ):
                 is_search_query = True
                 break
+    if search and search != '""':
+        is_search_query = True
 
     # sort
     # do not allow sorting by relevance score without search query
