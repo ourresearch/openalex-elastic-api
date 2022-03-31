@@ -9,6 +9,7 @@ from core.filter import filter_records
 from core.group_by import (get_group_by_results,
                            get_group_by_results_external_ids, group_by_records)
 from core.paginate import Paginate
+from core.search import SearchOpenAlex
 from core.sort import sort_records
 from core.utils import (get_field, map_filter_params, map_sort_params,
                         set_number_param)
@@ -26,6 +27,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         if not group_by
         else set_number_param(request, "per-page", 200)
     )
+    search = request.args.get("search")
     sort_params = map_sort_params(request.args.get("sort"))
 
     paginate = Paginate(group_by, page, per_page)
@@ -42,6 +44,11 @@ def shared_view(request, fields_dict, index_name, default_sort):
         decoded_cursor = decode_cursor(cursor)
         s = s.extra(search_after=decoded_cursor)
 
+    if search and search != "":
+        search_oa = SearchOpenAlex(search_terms=search, index=index_name)
+        search_query = search_oa.build_query()
+        s = s.query(search_query)
+
     # filter
     if filter_params:
         s = filter_records(fields_dict, filter_params, s)
@@ -51,7 +58,9 @@ def shared_view(request, fields_dict, index_name, default_sort):
     if filter_params:
         for filter in filter_params:
             if (
-                "display_name.search" in filter.keys()
+                search
+                and search != ""
+                or "display_name.search" in filter.keys()
                 and filter["display_name.search"] != ""
                 or "title.search" in filter.keys()
                 and filter["title.search"] != ""

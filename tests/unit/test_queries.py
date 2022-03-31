@@ -1,7 +1,7 @@
 from elasticsearch_dsl import Search
 
 from core.filter import filter_records
-from core.search import search_records_full, search_records_phrase
+from core.search import SearchOpenAlex
 from core.sort import sort_records
 from core.utils import map_filter_params, map_sort_params
 from works.fields import fields_dict
@@ -9,8 +9,9 @@ from works.fields import fields_dict
 
 def test_search_full(client):
     s = Search()
-    search = "covid-19"
-    q = search_records_full(search)
+    search_terms = "covid-19"
+    search_oa = SearchOpenAlex(search_terms=search_terms)
+    q = search_oa.build_query()
     s = s.query(q)
     assert s.to_dict() == {
         "query": {
@@ -52,8 +53,9 @@ def test_search_full(client):
 
 def test_search_phrase(client):
     s = Search()
-    search = "covid-19"
-    q = search_records_phrase(search)
+    search_terms = '"covid-19"'
+    search_oa = SearchOpenAlex(search_terms=search_terms)
+    q = search_oa.build_query()
     s = s.query(q)
     assert s.to_dict() == {
         "query": {
@@ -68,7 +70,7 @@ def test_search_phrase(client):
                         }
                     }
                 ],
-                "query": {"match_phrase": {"display_name": {"query": "covid-19"}}},
+                "query": {"match_phrase": {"display_name": {"query": '"covid-19"'}}},
                 "boost_mode": "multiply",
             }
         }
@@ -77,10 +79,11 @@ def test_search_phrase(client):
 
 def test_search_with_display_name_sort(client):
     s = Search()
-    search = "covid-19"
+    search_terms = "covid-19"
     sort_args = "display_name"
     sort_params = map_sort_params(sort_args)
-    q = search_records_full(search)
+    search_oa = SearchOpenAlex(search_terms=search_terms)
+    q = search_oa.build_query()
     s = s.query(q)
     s = sort_records(fields_dict, None, sort_params, s)
     assert s.to_dict() == {

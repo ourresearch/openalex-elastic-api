@@ -13,6 +13,7 @@ def validate_params(request):
         "page",
         "per_page",
         "per-page",
+        "search",
         "sort",
     ]
     for arg in request.args:

@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from elasticsearch_dsl import Q, Search
 
 from core.exceptions import APIQueryParamsError
-from core.search import search_records_full, search_records_phrase
+from core.search import SearchOpenAlex
 from core.utils import get_full_openalex_id
 from settings import EXTERNAL_ID_FIELDS, WORKS_INDEX
 
@@ -261,10 +261,8 @@ class RangeField(Field):
 
 class SearchField(Field):
     def build_query(self):
-        if self.value.startswith('"') and self.value.endswith('"'):
-            q = search_records_phrase(self.value)
-        else:
-            q = search_records_full(self.value)
+        search_oa = SearchOpenAlex(search_terms=self.value)
+        q = search_oa.build_query()
         return q
 
 
