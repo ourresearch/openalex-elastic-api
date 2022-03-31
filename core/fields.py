@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 
 from elasticsearch_dsl import Q, Search
 
-import settings
 from core.exceptions import APIQueryParamsError
 from core.search import (search_records_experiment, search_records_full,
                          search_records_phrase)
@@ -49,7 +48,7 @@ class Field(ABC):
 
 class BooleanField(Field):
     def build_query(self):
-        if self.param in settings.EXTERNAL_ID_FIELDS:
+        if self.param in EXTERNAL_ID_FIELDS:
             self.validate_true_false()
             self.handle_external_id_fields()
         else:
