@@ -5,8 +5,7 @@ from abc import ABC, abstractmethod
 from elasticsearch_dsl import Q, Search
 
 from core.exceptions import APIQueryParamsError
-from core.search import (search_records_experiment, search_records_full,
-                         search_records_phrase)
+from core.search import search_records_full, search_records_phrase
 from core.utils import get_full_openalex_id
 from settings import EXTERNAL_ID_FIELDS, WORKS_INDEX
 
@@ -264,8 +263,6 @@ class SearchField(Field):
     def build_query(self):
         if self.value.startswith('"') and self.value.endswith('"'):
             q = search_records_phrase(self.value)
-        elif self.value.startswith("[") and self.value.endswith("]"):
-            q = search_records_experiment(self.value)
         else:
             q = search_records_full(self.value)
         return q
