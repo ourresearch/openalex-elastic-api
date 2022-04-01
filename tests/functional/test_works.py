@@ -10,6 +10,11 @@ class TestWorksSearch:
         for result in json_data["results"][:25]:
             assert "analysis" in result["display_name"].lower()
 
+    def test_works_search_blank(self, client):
+        res = client.get('/works?search=""')
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 10000
+
     def test_works_search_display_name(self, client):
         res = client.get("/works?filter=display_name.search:analysis")
         json_data = res.get_json()
