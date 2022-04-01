@@ -77,7 +77,7 @@ class AutoCompleteSchema(Schema):
                 if i > 2:
                     author_names.append("et al.")
                     break
-                else:
+                elif author and author.author.display_name:
                     author_names.append(author.author.display_name)
                     i = i + 1
             if author_names:
