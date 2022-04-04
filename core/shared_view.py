@@ -72,7 +72,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
     # do not allow sorting by relevance score without search query
     if not is_search_query and sort_params and "relevance_score" in sort_params:
         raise APIQueryParamsError(
-            "Must include a search query (such as filter=display_name.search:example) in order to sort by relevance_score."
+            "Must include a search query (such as ?search=example or /filter=display_name.search:example) in order to sort by relevance_score."
         )
 
     if sort_params:

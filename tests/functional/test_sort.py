@@ -6,7 +6,7 @@ class TestSort:
         assert json_data["error"] == "Invalid query parameters error."
         assert (
             json_data["message"]
-            == "Must include a search query (such as filter=display_name.search:example) in order to sort by relevance_score."
+            == "Must include a search query (such as ?search=example or /filter=display_name.search:example) in order to sort by relevance_score."
         )
 
     def test_sort_search_query(self, client):
