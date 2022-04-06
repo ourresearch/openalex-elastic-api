@@ -5,7 +5,7 @@ class TestConceptsSearch:
     def test_concepts_search(self, client):
         res = client.get("/concepts?search=science")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 117
+        assert json_data["meta"]["count"] == 125
         assert "science" in json_data["results"][0]["display_name"].lower()
         for result in json_data["results"][:25]:
             assert (
