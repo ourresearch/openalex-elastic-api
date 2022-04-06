@@ -26,9 +26,11 @@ class TestWorksSearch:
     def test_works_search_alias(self, client):
         res = client.get("/works?filter=title.search:factor%20analysis")
         json_data = res.get_json()
-        assert "factor analysis" in json_data["results"][0]["display_name"].lower()
         for result in json_data["results"][:25]:
-            assert "factor analysis" in result["display_name"].lower()
+            display_name = result["display_name"].lower()
+            assert (
+                "factor" in display_name or "factors" in display_name
+            ) and "analysis" in display_name
 
     def test_works_search_phrase(self, client):
         res = client.get('/works?filter=title.search:"factor%20analysis"')

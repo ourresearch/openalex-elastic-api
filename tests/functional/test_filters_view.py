@@ -21,12 +21,12 @@ class TestFiltersView:
         assert filter_1["type"] == "SearchField"
         assert filter_1["values"][0]["value"] == "science"
         assert filter_1["values"][0]["display_name"] == "science"
-        assert filter_1["values"][0]["count"] == 25
+        assert filter_1["values"][0]["count"] == 32
         filter_2 = json_data["filters"][1]
         assert filter_2["key"] == "is_oa"
         assert filter_2["type"] == "BooleanField"
         assert filter_2["values"][0]["display_name"] == "true"
-        assert filter_2["values"][0]["count"] == 25
+        assert filter_2["values"][0]["count"] == 32
 
     def test_filter_with_search_negation(self, client):
         res = client.get("/works/filters/display_name.search:science,oa_status:!gold")
@@ -35,12 +35,12 @@ class TestFiltersView:
         assert filter_1["key"] == "display_name.search"
         assert filter_1["is_negated"] == False
         assert filter_1["values"][0]["display_name"] == "science"
-        assert filter_1["values"][0]["count"] == 1
+        assert filter_1["values"][0]["count"] == 2
         filter_2 = json_data["filters"][1]
         assert filter_2["key"] == "oa_status"
         assert filter_2["is_negated"] == True
         assert filter_2["values"][0]["display_name"] == "gold"
-        assert filter_2["values"][0]["count"] == 1
+        assert filter_2["values"][0]["count"] == 2
 
     def test_filter_convert_id(self, client):
         res = client.get("/works/filters/host_venue.id:V90590500")
@@ -60,17 +60,17 @@ class TestFiltersView:
 
     def test_filter_multiple(self, client):
         res = client.get(
-            "/works/filters/display_name.search:the,concepts.id:C556758197%7CC73283319"
+            "/works/filters/display_name.search:" ",concepts.id:C556758197%7CC73283319"
         )
         json_data = res.get_json()
         filter_1 = json_data["filters"][0]
-        assert filter_1["values"][0]["count"] == 12
+        assert filter_1["values"][0]["count"] == 33
         filter_2 = json_data["filters"][1]
         assert filter_2["key"] == "concepts.id"
         assert filter_2["values"][0]["value"] == "C556758197"
-        assert filter_2["values"][0]["count"] == 9
+        assert filter_2["values"][0]["count"] == 24
         assert filter_2["values"][1]["value"] == "C73283319"
-        assert filter_2["values"][1]["count"] == 4
+        assert filter_2["values"][1]["count"] == 12
 
     def test_filter_multiple_negated(self, client):
         res = client.get(
