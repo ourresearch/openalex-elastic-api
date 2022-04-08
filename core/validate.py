@@ -7,8 +7,6 @@ def validate_params(request):
         "filter",
         "group_by",
         "group-by",
-        "group_by_size",
-        "group-by-size",
         "mailto",
         "page",
         "per_page",
