@@ -7,7 +7,9 @@ from core.cursor_pagination import decode_cursor, encode_cursor, get_cursor
 from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
 from core.group_by import (get_group_by_results,
-                           get_group_by_results_external_ids, group_by_records)
+                           get_group_by_results_external_ids,
+                           get_group_by_results_transform, group_by_records,
+                           group_by_records_transform, is_transform)
 from core.paginate import Paginate
 from core.search import SearchOpenAlex
 from core.sort import sort_records
@@ -85,8 +87,10 @@ def shared_view(request, fields_dict, index_name, default_sort):
         s = s.sort(*default_sort)
 
     # group by
+    transform = False
     if group_by:
         field = get_field(fields_dict, group_by)
+        transform = is_transform(field, index_name, filter_params)
         if (
             type(field).__name__ == "DateField"
             or type(field).__name__ == "RangeField"
@@ -100,7 +104,10 @@ def shared_view(request, fields_dict, index_name, default_sort):
             )
         elif field.param == "cited_by" or field.param == "related_to":
             raise APIQueryParamsError("Cannot group cited_by or related_to filters.")
-        s = group_by_records(field, s, sort_params)
+        if transform:
+            s = group_by_records_transform(field, index_name, sort_params)
+        else:
+            s = group_by_records(field, s, sort_params)
 
     if not group_by:
         response = s[paginate.start : paginate.end].execute()
@@ -109,6 +116,8 @@ def shared_view(request, fields_dict, index_name, default_sort):
         response = s.execute()
         if group_by in settings.EXTERNAL_ID_FIELDS:
             count = 2
+        elif transform:
+            count = len(response)
         else:
             count = len(response.aggregations.groupby.buckets)
 
@@ -129,6 +138,8 @@ def shared_view(request, fields_dict, index_name, default_sort):
     if group_by:
         if group_by in settings.EXTERNAL_ID_FIELDS:
             result["group_by"] = get_group_by_results_external_ids(response)
+        elif transform:
+            result["group_by"] = get_group_by_results_transform(group_by, response)
         else:
             result["group_by"] = get_group_by_results(group_by, response)
     else:

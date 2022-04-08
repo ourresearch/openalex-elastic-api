@@ -1,4 +1,4 @@
-from elasticsearch_dsl import A, Q
+from elasticsearch_dsl import A, Q, Search
 from iso3166 import countries
 
 import settings
@@ -110,3 +110,78 @@ def get_group_by_results_external_ids(response):
         },
     ]
     return group_by_results
+
+
+def group_by_records_transform(field, parent_index, sort_params):
+    index_name = get_transform_index(field, parent_index)
+    s = Search(index=index_name)
+    s = s.query("match_all").extra(size=200)
+
+    if sort_params:
+        for key, order in sort_params.items():
+            if key == "count" and order == "desc":
+                s = s.sort("-doc_count")
+            elif key == "count" and order == "asc":
+                s = s.sort("doc_count")
+            elif key == "key" and order == "desc":
+                s = s.sort("-key")
+            elif key == "key" and order == "asc":
+                s = s.sort("key")
+    else:
+        s = s.sort("-doc_count")
+    return s
+
+
+def get_group_by_results_transform(group_by, response):
+    group_by_results = []
+    if group_by.endswith(".id"):
+        keys = []
+        for b in response:
+            if b.key:
+                keys.append(b.key)
+        ids_to_display_names = get_display_names(keys)
+        for b in response:
+            if b.key:
+                key = b.key
+                key_display_name = ids_to_display_names.get(b.key)
+            else:
+                key = "unknown"
+                key_display_name = "unknown"
+            group_by_results.append(
+                {
+                    "key": key,
+                    "key_display_name": key_display_name,
+                    "doc_count": b.doc_count,
+                }
+            )
+    else:
+        for b in response:
+            if b.key == -111:
+                key = "unknown"
+            elif "key_as_string" in b:
+                key = b.key_as_string
+            else:
+                key = b.key
+            group_by_results.append(
+                {"key": key, "key_display_name": key, "doc_count": b.doc_count}
+            )
+    return group_by_results
+
+
+def is_transform(field, parent_index, filter_params):
+    if filter_params:
+        return False
+
+    for transform in settings.TRANSFORMS:
+        if field.param == transform["field"] and parent_index.startswith(
+            transform["parent_index"]
+        ):
+            return True
+
+
+def get_transform_index(field, parent_index):
+    for transform in settings.TRANSFORMS:
+        if field.param == transform["field"] and parent_index.startswith(
+            transform["parent_index"]
+        ):
+            return transform["index_name"]

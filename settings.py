@@ -23,3 +23,11 @@ EXTERNAL_ID_FIELDS = [
     "has_ror",
     "has_wikidata",
 ]
+
+TRANSFORMS = [
+    {
+        "field": "x_concepts.id",
+        "index_name": "authors-transform-x-concepts-id",
+        "parent_index": "authors",
+    }
+]
