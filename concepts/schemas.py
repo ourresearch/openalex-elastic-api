@@ -6,10 +6,10 @@ from core.schemas import CountsByYearSchema, GroupBySchema, MetaSchema
 class IDsSchema(Schema):
     openalex = fields.Str()
     wikidata = fields.Str()
+    mag = fields.Str()
     wikipedia = fields.Str()
     umls_aui = fields.List(fields.Str())
     umls_cui = fields.List(fields.Str())
-    mag = fields.Str()
 
     class Meta:
         ordered = True
@@ -22,6 +22,9 @@ class AncestorsSchema(Schema):
     display_name = fields.Str()
     level = fields.Int()
 
+    class Meta:
+        ordered = True
+
 
 class RelatedConceptsSchema(Schema):
     id = fields.Str()
@@ -30,11 +33,14 @@ class RelatedConceptsSchema(Schema):
     level = fields.Int()
     score = fields.Float()
 
+    class Meta:
+        ordered = True
+
 
 class ConceptsSchema(Schema):
     id = fields.Str()
-    display_name = fields.Str()
     wikidata = fields.Str()
+    display_name = fields.Str()
     relevance_score = fields.Method("get_relevance_score")
     level = fields.Int()
     description = fields.Str()

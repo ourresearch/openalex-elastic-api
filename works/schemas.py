@@ -26,9 +26,9 @@ class InstitutionsSchema(Schema):
 
 
 class AuthorshipsSchema(Schema):
+    author_position = fields.Str()
     author = fields.Nested(AuthorSchema)
     institutions = fields.Nested(InstitutionsSchema, many=True)
-    author_position = fields.Str()
     raw_affiliation_string = fields.Str()
 
     class Meta:
@@ -37,10 +37,10 @@ class AuthorshipsSchema(Schema):
 
 class ConceptsSchema(Schema):
     id = fields.Str()
-    display_name = fields.Str()
-    score = fields.Decimal()
-    level = fields.Int()
     wikidata = fields.Str()
+    display_name = fields.Str()
+    level = fields.Int()
+    score = fields.Decimal()
 
     class Meta:
         ordered = True
@@ -48,10 +48,10 @@ class ConceptsSchema(Schema):
 
 class HostVenueSchema(Schema):
     id = fields.Str()
+    issn_l = fields.Str()
+    issn = fields.List(fields.Str())
     display_name = fields.Str()
     publisher = fields.Str()
-    issn = fields.List(fields.Str())
-    issn_l = fields.Str()
     type = fields.Str()
     url = fields.Str()
     is_oa = fields.Bool()
@@ -65,11 +65,12 @@ class HostVenueSchema(Schema):
 class AlternateHostVenuesSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
-    is_best = fields.Str()
-    is_oa = fields.Bool()
-    license = fields.Str()
+    type = fields.Str()
     url = fields.Str()
+    is_oa = fields.Bool()
+    is_best = fields.Str()
     version = fields.Str()
+    license = fields.Str()
 
     class Meta:
         ordered = True
@@ -86,10 +87,11 @@ class OpenAccessSchema(Schema):
 
 
 class IDsSchema(Schema):
-    doi = fields.Str(default=None)
-    mag = fields.Str(default=None)
     openalex = fields.Str()
-    pmid = fields.Str(default=None)
+    doi = fields.Str()
+    mag = fields.Str()
+    pmid = fields.Str()
+    pmcid = fields.Str()
 
     class Meta:
         ordered = True
@@ -97,11 +99,11 @@ class IDsSchema(Schema):
 
 
 class MeshSchema(Schema):
-    is_major_topic = fields.Boolean()
     descriptor_ui = fields.Str()
     descriptor_name = fields.Str()
     qualifier_ui = fields.Str()
     qualifier_name = fields.Str()
+    is_major_topic = fields.Boolean()
 
     class Meta:
         ordered = True
@@ -112,10 +114,10 @@ class WorksSchema(Schema):
     doi = fields.Str()
     title = fields.Str()
     display_name = fields.Str()
+    relevance_score = fields.Method("get_relevance_score")
     publication_year = fields.Int()
     publication_date = fields.Str()
     ids = fields.Nested(IDsSchema)
-    relevance_score = fields.Method("get_relevance_score")
     host_venue = fields.Nested(HostVenueSchema)
     type = fields.Str()
     open_access = fields.Nested(OpenAccessSchema)

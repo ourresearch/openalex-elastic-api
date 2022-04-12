@@ -7,10 +7,10 @@ from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
 class IDsSchema(Schema):
     openalex = fields.Str()
     orcid = fields.Str()
-    scopus = fields.Str()
+    mag = fields.Str()
     twitter = fields.Str()
     wikipedia = fields.Str()
-    mag = fields.Str()
+    scopus = fields.Str()
 
     class Meta:
         ordered = True
@@ -31,16 +31,16 @@ class LastKnownInstitutionSchema(Schema):
 
 class AuthorsSchema(Schema):
     id = fields.Str()
+    orcid = fields.Str()
     display_name = fields.Str()
     display_name_alternatives = fields.List(fields.Str())
     relevance_score = fields.Method("get_relevance_score")
-    orcid = fields.Str()
     works_count = fields.Int()
     cited_by_count = fields.Int()
     ids = fields.Nested(IDsSchema)
     last_known_institution = fields.Nested(LastKnownInstitutionSchema)
-    counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     x_concepts = fields.List(fields.Nested(XConceptsSchema))
+    counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     works_api_url = fields.Str()
     updated_date = fields.Str()
     created_date = fields.Str(default=None)

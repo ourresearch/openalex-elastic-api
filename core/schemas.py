@@ -38,6 +38,9 @@ class XConceptsSchema(Schema):
     level = fields.Int()
     score = fields.Float()
 
+    class Meta:
+        ordered = True
+
 
 class ValuesSchema(Schema):
     value = fields.Str()

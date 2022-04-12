@@ -7,10 +7,10 @@ from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
 class IDsSchema(Schema):
     openalex = fields.Str()
     ror = fields.Str()
+    mag = fields.Str()
     grid = fields.Str()
     wikipedia = fields.Str()
     wikidata = fields.Str()
-    mag = fields.Str()
 
     class Meta:
         ordered = True
@@ -46,8 +46,8 @@ class AssociatedInstitutionsSchema(Schema):
 
 class InstitutionsSchema(Schema):
     id = fields.Str()
-    display_name = fields.Str()
     ror = fields.Str()
+    display_name = fields.Str()
     relevance_score = fields.Method("get_relevance_score")
     country_code = fields.Str()
     type = fields.Str()

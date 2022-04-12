@@ -6,9 +6,9 @@ from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
 
 class IDsSchema(Schema):
     openalex = fields.Str()
-    issn = fields.List(fields.Str())
     issn_l = fields.Str()
     mag = fields.Str()
+    issn = fields.List(fields.Str())
 
     class Meta:
         ordered = True
@@ -17,10 +17,10 @@ class IDsSchema(Schema):
 
 class VenuesSchema(Schema):
     id = fields.Str()
-    display_name = fields.Str()
-    publisher = fields.Str()
     issn_l = fields.Str()
     issn = fields.List(fields.Str())
+    display_name = fields.Str()
+    publisher = fields.Str()
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()
     cited_by_count = fields.Int()
@@ -28,8 +28,8 @@ class VenuesSchema(Schema):
     is_in_doaj = fields.Bool()
     homepage_url = fields.Str()
     ids = fields.Nested(IDsSchema)
-    counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     x_concepts = fields.List(fields.Nested(XConceptsSchema))
+    counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     works_api_url = fields.Str()
     updated_date = fields.Str()
     created_date = fields.Str(default=None)
