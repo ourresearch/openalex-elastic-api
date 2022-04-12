@@ -35,6 +35,16 @@ class AuthorshipsSchema(Schema):
         ordered = True
 
 
+class BiblioSchema(Schema):
+    volume = fields.Str()
+    issue = fields.Str()
+    first_page = fields.Str()
+    last_page = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class ConceptsSchema(Schema):
     id = fields.Str()
     wikidata = fields.Str()
@@ -123,9 +133,7 @@ class WorksSchema(Schema):
     open_access = fields.Nested(OpenAccessSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
     cited_by_count = fields.Int()
-    biblio = fields.Function(
-        lambda obj: obj.biblio.to_dict() if "biblio" in obj and obj.biblio else None
-    )
+    biblio = fields.Nested(BiblioSchema)
     is_retracted = fields.Bool()
     is_paratext = fields.Bool()
     concepts = fields.Nested(ConceptsSchema, many=True)
