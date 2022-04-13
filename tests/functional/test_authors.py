@@ -185,3 +185,62 @@ class TestAuthorsExternalIDs:
             json_data["message"]
             == "Value for has_orcid must be true or false, not stt."
         )
+
+
+class TestAuthorsMultipleIDs:
+    def test_authors_openalex_single_long(self, client):
+        res = client.get("/authors?filter=openalex_id:https://openalex.org/A2609699")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["id"] == "https://openalex.org/A2609699"
+
+    def test_authors_openalex_multiple_long(self, client):
+        res = client.get(
+            "/authors?filter=openalex_id:https://openalex.org/A2609699|https://openalex.org/A1389213"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert json_data["results"][0]["id"] == "https://openalex.org/A2609699"
+        assert json_data["results"][1]["id"] == "https://openalex.org/A1389213"
+
+    def test_authors_openalex_single_short(self, client):
+        res = client.get("/authors?filter=openalex_id:a2609699")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["id"] == "https://openalex.org/A2609699"
+
+    def test_authors_openalex_multiple_short(self, client):
+        res = client.get("/authors?filter=openalex_id:A2609699|A1389213")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert json_data["results"][0]["id"] == "https://openalex.org/A2609699"
+        assert json_data["results"][1]["id"] == "https://openalex.org/A1389213"
+
+    def test_authors_orcid_single_long(self, client):
+        res = client.get("/authors?filter=orcid:https://orcid.org/0000-0001-5285-9835")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["orcid"] == "https://orcid.org/0000-0001-5285-9835"
+        )
+
+    def test_authors_orcid_single_short(self, client):
+        res = client.get("/authors?filter=orcid:0000-0001-5285-9835")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["orcid"] == "https://orcid.org/0000-0001-5285-9835"
+        )
+
+    def test_authors_orcid_multiple(self, client):
+        res = client.get(
+            "/authors?filter=orcid:https://orcid.org/0000-0001-5285-9835|https://orcid.org/0000-0002-6276-3951"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert (
+            json_data["results"][0]["orcid"] == "https://orcid.org/0000-0001-5285-9835"
+        )
+        assert (
+            json_data["results"][1]["orcid"] == "https://orcid.org/0000-0002-6276-3951"
+        )

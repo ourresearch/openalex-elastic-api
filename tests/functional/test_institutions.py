@@ -147,3 +147,35 @@ class TestInstitutionsExternalIDs:
         assert (
             json_data["message"] == "Value for has_ror must be true or false, not stt."
         )
+
+
+class TestInstitutionsMultipleIDs:
+    def test_Institutions_openalex_multiple_long(self, client):
+        res = client.get(
+            "/institutions?filter=openalex_id:https://openalex.org/I19820366|https://openalex.org/I136199984"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert json_data["results"][0]["id"] == "https://openalex.org/I19820366"
+        assert json_data["results"][1]["id"] == "https://openalex.org/I136199984"
+
+    def test_institutions_ror_single_long(self, client):
+        res = client.get("/institutions?filter=ror:https://ror.org/034t30j35")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["ror"] == "https://ror.org/034t30j35"
+
+    def test_institutions_ror_single_short(self, client):
+        res = client.get("/institutions?filter=ror:034t30j35")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["ror"] == "https://ror.org/034t30j35"
+
+    def test_institutions_ror_multiple(self, client):
+        res = client.get(
+            "/institutions?filter=ror:https://ror.org/034t30j35|https://ror.org/03vek6s52"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert json_data["results"][0]["ror"] == "https://ror.org/034t30j35"
+        assert json_data["results"][1]["ror"] == "https://ror.org/03vek6s52"

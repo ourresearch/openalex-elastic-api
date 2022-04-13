@@ -159,3 +159,27 @@ class TestVenuesExternalIDs:
         assert (
             json_data["message"] == "Value for has_issn must be true or false, not stt."
         )
+
+
+class TestVenuesMultipleIDs:
+    def test_venues_openalex_multiple_long(self, client):
+        res = client.get(
+            "/venues?filter=openalex_id:https://openalex.org/V41354064|https://openalex.org/V49861241"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert json_data["results"][0]["id"] == "https://openalex.org/V41354064"
+        assert json_data["results"][1]["id"] == "https://openalex.org/V49861241"
+
+    def test_venues_issn_single(self, client):
+        res = client.get("/venues?filter=issn:1431-5890")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert "1431-5890" in json_data["results"][0]["issn"]
+
+    def test_concepts_wikidata_multiple(self, client):
+        res = client.get("/venues?filter=issn:1431-5890|0140-6736")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert "1431-5890" in json_data["results"][0]["issn"]
+        assert "0140-6736" in json_data["results"][1]["issn"]

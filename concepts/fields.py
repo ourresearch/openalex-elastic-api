@@ -17,6 +17,8 @@ fields = [
     RangeField(param="works_count"),
     SearchField(param="display_name.search"),
     TermField(param="display_name"),
+    TermField(param="openalex_id", alias="ids.openalex"),
+    TermField(param="wikidata_id", alias="ids.wikidata"),
 ]
 
 fields_dict = {f.param: f for f in fields}

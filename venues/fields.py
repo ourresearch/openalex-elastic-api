@@ -20,6 +20,7 @@ fields = [
     SearchField(param="display_name.search"),
     TermField(param="display_name"),
     TermField(param="issn"),
+    TermField(param="openalex_id", alias="ids.openalex"),
 ]
 
 fields_dict = {f.param: f for f in fields}

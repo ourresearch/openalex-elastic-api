@@ -268,6 +268,8 @@ class SearchField(Field):
 
 class TermField(Field):
     def build_query(self):
+        id_params = ["doi", "issn", "orcid", "openalex_id", "ror", "wikidata_id"]
+
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
@@ -276,6 +278,12 @@ class TermField(Field):
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
             q = Q("exists", field=field_name)
+        elif self.param in id_params:
+            ids = self.value.split("|")
+            formatted_ids = self.formatted_ids(ids)
+            kwargs = {self.es_field(): formatted_ids}
+            q = Q("terms", **kwargs)
+            return q
         elif self.value.startswith("!"):
             query = self.value[1:]
             kwargs = {self.es_field(): query}
@@ -295,3 +303,39 @@ class TermField(Field):
         else:
             field = self.param + "__lower"
         return field
+
+    def formatted_ids(self, ids):
+        formatted_ids = []
+        if self.param == "doi":
+            for doi in ids:
+                if "doi.org" not in doi:
+                    formatted_ids.append(f"https://doi.org/{doi}")
+                else:
+                    formatted_ids.append(doi)
+        elif self.param == "orcid":
+            for orcid_id in ids:
+                if "orcid.org" not in orcid_id:
+                    formatted_ids.append(f"https://orcid.org/{orcid_id}")
+                else:
+                    formatted_ids.append(orcid_id)
+        elif self.param == "openalex_id":
+            raw_ids = [get_full_openalex_id(openalex_id) for openalex_id in ids]
+            ids = [
+                openalex_id for openalex_id in raw_ids if openalex_id is not None
+            ]  # strip None values
+            formatted_ids = ids
+        elif self.param == "ror":
+            for ror_id in ids:
+                if "ror.org" not in ror_id:
+                    formatted_ids.append(f"https://ror.org/{ror_id}")
+                else:
+                    formatted_ids.append(ror_id)
+        elif self.param == "wikidata_id":
+            for wikidata_id in ids:
+                if "wikidata.org" not in wikidata_id:
+                    formatted_ids.append(f"https://www.wikidata.org/wiki/{wikidata_id}")
+                else:
+                    formatted_ids.append(wikidata_id)
+        else:
+            formatted_ids = ids
+        return formatted_ids

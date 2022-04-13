@@ -20,6 +20,8 @@ fields = [
     TermField(param="last_known_institution.country_code"),
     TermField(param="last_known_institution.ror"),
     TermField(param="last_known_institution.type"),
+    TermField(param="openalex_id", alias="ids.openalex"),
+    TermField(param="orcid", alias="ids.orcid"),
 ]
 
 fields_dict = {f.param: f for f in fields}

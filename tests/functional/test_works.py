@@ -669,3 +669,63 @@ class TestWorksExternalIDs:
         assert (
             json_data["message"] == "Value for has_doi must be true or false, not stt."
         )
+
+
+class TestWorksMultipleIDs:
+    def test_works_openalex_single_long(self, client):
+        res = client.get("/works?filter=openalex_id:https://openalex.org/W2893359707")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2893359707"
+
+    def test_works_openalex_multiple_long(self, client):
+        res = client.get(
+            "/works?filter=openalex_id:https://openalex.org/W2893359707|https://openalex.org/W2893173145"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2893359707"
+        assert json_data["results"][1]["id"] == "https://openalex.org/W2893173145"
+
+    def test_works_openalex_single_short(self, client):
+        res = client.get("/works?filter=openalex_id:w2893359707")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2893359707"
+
+    def test_works_openalex_multiple_short(self, client):
+        res = client.get("/works?filter=openalex_id:W2893359707|W2893173145")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2893359707"
+        assert json_data["results"][1]["id"] == "https://openalex.org/W2893173145"
+
+    def test_works_doi_single_long(self, client):
+        res = client.get("/works?filter=doi:https://doi.org/10.23845/kgt.v14i3.277")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["doi"] == "https://doi.org/10.23845/kgt.v14i3.277"
+        )
+
+    def test_works_doi_single_short(self, client):
+        res = client.get("/works?filter=doi:10.23845/kgt.v14i3.277")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["doi"] == "https://doi.org/10.23845/kgt.v14i3.277"
+        )
+
+    def test_works_doi_multiple(self, client):
+        res = client.get(
+            "/works?filter=doi:https://doi.org/10.23845/kgt.v14i3.277|https://doi.org/10.1109/tbdata.2018.2872569"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert (
+            json_data["results"][0]["doi"] == "https://doi.org/10.23845/kgt.v14i3.277"
+        )
+        assert (
+            json_data["results"][1]["doi"]
+            == "https://doi.org/10.1109/tbdata.2018.2872569"
+        )

@@ -17,6 +17,8 @@ fields = [
     SearchField(param="display_name.search"),
     TermField(param="country_code"),
     TermField(param="display_name"),
+    TermField(param="openalex_id", alias="ids.openalex"),
+    TermField(param="ror", alias="ror"),
     TermField(param="type"),
 ]
 

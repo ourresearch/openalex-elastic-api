@@ -52,6 +52,7 @@ fields = [
     TermField(param="authorships.institutions.type"),
     TermField(param="concepts.wikidata"),
     TermField(param="display_name"),
+    TermField(param="doi", alias="ids.doi"),
     TermField(param="host_venue.issn"),
     TermField(
         param="institutions.country_code", alias="authorships.institutions.country_code"
@@ -60,6 +61,7 @@ fields = [
     TermField(param="institutions.type", alias="authorships.institutions.type"),
     TermField(param="oa_status", alias="open_access.oa_status"),
     TermField(param="open_access.oa_status"),
+    TermField(param="openalex_id", alias="ids.openalex"),
     TermField(param="type"),
 ]
 

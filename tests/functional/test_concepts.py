@@ -172,3 +172,46 @@ class TestConceptsExternalIDs:
             json_data["message"]
             == "Value for has_wikidata must be true or false, not stt."
         )
+
+
+class TestConceptsMultipleIDs:
+    def test_authors_openalex_multiple_long(self, client):
+        res = client.get(
+            "/concepts?filter=openalex_id:https://openalex.org/C86803240|https://openalex.org/C41008148"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert json_data["results"][0]["id"] == "https://openalex.org/C86803240"
+        assert json_data["results"][1]["id"] == "https://openalex.org/C41008148"
+
+    def test_concepts_wikidata_single_long(self, client):
+        res = client.get(
+            "/concepts?filter=wikidata_id:https://www.wikidata.org/wiki/Q420"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["wikidata"] == "https://www.wikidata.org/wiki/Q420"
+        )
+
+    def test_concepts_wikidata_single_short(self, client):
+        res = client.get("/concepts?filter=wikidata_id:Q420")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["wikidata"] == "https://www.wikidata.org/wiki/Q420"
+        )
+
+    def test_concepts_wikidata_multiple(self, client):
+        res = client.get(
+            "/concepts?filter=wikidata_id:https://www.wikidata.org/wiki/Q420|https://www.wikidata.org/wiki/Q21198"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert (
+            json_data["results"][0]["wikidata"] == "https://www.wikidata.org/wiki/Q420"
+        )
+        assert (
+            json_data["results"][1]["wikidata"]
+            == "https://www.wikidata.org/wiki/Q21198"
+        )
