@@ -24,6 +24,13 @@ def filter_records(fields_dict, filter_params, s):
 def handle_or_query(field, s, value):
     or_queries = []
 
+    if len(value.split("|")) > 50:
+        raise APIQueryParamsError(
+            f"Maximum number of values exceeded for {field.param}. Decrease values to 50 or "
+            f"below, or consider downloading the full dataset at "
+            f"https://docs.openalex.org/download-snapshot"
+        )
+
     if value.startswith("!"):
         # negate everything in values after !, like: NOT (42 or 43)
         for or_value in value.split("|"):
