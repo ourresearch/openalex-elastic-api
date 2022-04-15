@@ -287,6 +287,9 @@ class TermField(Field):
             query = self.value[1:]
             kwargs = {self.es_field(): query}
             q = ~Q("term", **kwargs)
+        elif self.param == "display_name":
+            kwargs = {self.es_field(): self.value}
+            q = Q("match", **kwargs)
         else:
             kwargs = {self.es_field(): self.value}
             q = Q("term", **kwargs)

@@ -1,6 +1,3 @@
-import pytest
-
-
 class TestAuthorsSearch:
     def test_authors_search(self, client):
         res = client.get("/authors?search=jones")
@@ -16,11 +13,11 @@ class TestAuthorsSearch:
         for result in json_data["results"][:25]:
             assert "jones" in result["display_name"].lower()
 
-    @pytest.mark.skip
     def test_authors_search_exact(self, client):
-        res = client.get("/authors?filter=display_name:stephens")
+        res = client.get("/authors?filter=display_name:Peter Vandenabeele")
         json_data = res.get_json()
-        assert json_data["results"][0]["display_name"].lower() == "stephens"
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["display_name"] == "Peter Vandenabeele"
 
 
 class TestAuthorWorksCountFilter:

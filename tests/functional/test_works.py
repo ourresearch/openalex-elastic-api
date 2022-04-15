@@ -1,6 +1,3 @@
-import pytest
-
-
 class TestWorksSearch:
     def test_works_search(self, client):
         res = client.get("/works?search=analysis")
@@ -39,13 +36,16 @@ class TestWorksSearch:
         for result in json_data["results"][:25]:
             assert "factor analysis" in result["display_name"].lower()
 
-    @pytest.mark.skip
     def test_works_search_exact(self, client):
-        """Exact search filter needs to be implemented."""
-        res = client.get("/works?filter=display_name:safety")
+        res = client.get(
+            "/works?filter=display_name:Fusing Location Data for Depression Prediction"
+        )
         json_data = res.get_json()
         for result in json_data["results"][:25]:
-            assert result["display_name"].lower() == "safety"
+            assert (
+                result["display_name"]
+                == "Fusing Location Data for Depression Prediction"
+            )
 
 
 class TestWorksPublicationYearFilter:

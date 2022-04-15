@@ -16,7 +16,7 @@ fields = [
     RangeField(param="works_count"),
     SearchField(param="display_name.search"),
     TermField(param="country_code"),
-    TermField(param="display_name"),
+    TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="openalex_id", alias="ids.openalex"),
     TermField(param="ror", alias="ror"),
     TermField(param="type"),

@@ -1,6 +1,3 @@
-import pytest
-
-
 class TestInstitutionsSearch:
     def test_institutions_search(self, client):
         res = client.get("/institutions?search=university")
@@ -16,11 +13,12 @@ class TestInstitutionsSearch:
         for result in json_data["results"][:25]:
             assert "university" in result["display_name"].lower()
 
-    @pytest.mark.skip
     def test_institutions_search_exact(self, client):
-        res = client.get("/institutions?filter=display_name:university of")
+        res = client.get(
+            "/institutions?filter=display_name:Chinese Academy of Sciences"
+        )
         json_data = res.get_json()
-        assert json_data["results"][0]["display_name"].lower() == "university of"
+        assert json_data["results"][0]["display_name"] == "Chinese Academy of Sciences"
 
 
 class TestInstitutionsWorksCountFilter:

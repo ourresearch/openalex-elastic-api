@@ -51,7 +51,7 @@ fields = [
     TermField(param="authorships.institutions.ror"),
     TermField(param="authorships.institutions.type"),
     TermField(param="concepts.wikidata"),
-    TermField(param="display_name"),
+    TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="doi", alias="ids.doi"),
     TermField(param="host_venue.issn"),
     TermField(

@@ -1,6 +1,3 @@
-import pytest
-
-
 class TestConceptsSearch:
     def test_concepts_search(self, client):
         res = client.get("/concepts?search=science")
@@ -21,11 +18,10 @@ class TestConceptsSearch:
         for result in json_data["results"][:25]:
             assert "science" in result["display_name"].lower()
 
-    @pytest.mark.skip
     def test_concepts_search_exact(self, client):
-        res = client.get("/concepts?filter=display_name:science")
+        res = client.get("/concepts?filter=display_name:Biology")
         json_data = res.get_json()
-        assert json_data["results"][0]["display_name"].lower() == "science"
+        assert json_data["results"][0]["display_name"] == "Biology"
 
 
 class TestConceptsWorksCountFilter:
