@@ -11,7 +11,7 @@ def encode_cursor(cursor):
 
 
 def decode_cursor(encoded_cursor):
-    if encoded_cursor == "null":
+    if encoded_cursor == "null" or encoded_cursor.lower() == "none":
         raise APIPaginationError("Cursor is null. Likely reached end of results.")
     try:
         decoded_cursor = base64.b64decode(encoded_cursor)
