@@ -122,7 +122,7 @@ def normalize_issn(issn):
     if not issn:
         return None
     issn = issn.strip().lower()
-    p = re.compile("[\dx]{4}-[\dx]{4}")
+    p = re.compile(r"[\dx]{4}-[\dx]{4}")
     matches = re.findall(p, issn)
     if len(matches) == 0:
         return None
@@ -135,7 +135,7 @@ def normalize_wikidata(wikidata):
     if not wikidata:
         return None
     wikidata = wikidata.strip().upper()
-    p = re.compile("Q\d*")
+    p = re.compile(r"Q\d*")
     matches = re.findall(p, wikidata)
     if len(matches) == 0:
         return None
@@ -148,7 +148,7 @@ def normalize_pmid(pmid):
     if not pmid:
         return None
     pmid = pmid.strip().lower()
-    p = re.compile("(\d+)")
+    p = re.compile(r"(\d+)")
     matches = re.findall(p, pmid)
     if len(matches) == 0:
         return None

@@ -43,7 +43,7 @@ class AuthorsSchema(Schema):
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     works_api_url = fields.Str()
     updated_date = fields.Str()
-    created_date = fields.Str(default=None)
+    created_date = fields.Str(dump_default=None)
 
     @post_dump
     def remove_relevance_score(self, data, many, **kwargs):
