@@ -5,4 +5,4 @@ gunicorn==20.1.0
 iso3166==2.0.2
 marshmallow==3.15.0
 redis==4.1.4
-sentry-sdk[flask]==1.5.8
+sentry-sdk[flask]==1.5.10
