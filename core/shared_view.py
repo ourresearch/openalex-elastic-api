@@ -3,7 +3,7 @@ from collections import OrderedDict
 from elasticsearch_dsl import Search
 
 import settings
-from core.cursor_pagination import decode_cursor, encode_cursor, get_cursor
+from core.cursor import decode_cursor, encode_cursor, get_cursor
 from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
 from core.group_by import (get_group_by_results,
