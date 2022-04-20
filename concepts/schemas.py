@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from marshmallow import INCLUDE, Schema, fields, post_dump
 
 from core.schemas import CountsByYearSchema, GroupBySchema, MetaSchema
@@ -49,11 +51,7 @@ class ConceptsSchema(Schema):
     ids = fields.Nested(IDsSchema)
     image_url = fields.Str()
     image_thumbnail_url = fields.Str()
-    international = fields.Function(
-        lambda obj: obj.international.to_dict()
-        if "international" in obj and obj.international
-        else None
-    )
+    international = fields.Method("get_international")
     ancestors = fields.List(fields.Nested(AncestorsSchema))
     related_concepts = fields.List(fields.Nested(RelatedConceptsSchema))
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
@@ -75,6 +73,15 @@ class ConceptsSchema(Schema):
     def get_relevance_score(self, obj):
         if obj.meta.score and obj.meta != 0.0:
             return obj.meta.score
+
+    def get_international(self, obj):
+        """Returns international field sorted as display_name, description."""
+        sorted_dict = OrderedDict()
+        if obj and "international" in obj:
+            international = obj.international.to_dict()
+            sorted_dict["display_name"] = international.get("display_name")
+            sorted_dict["description"] = international.get("description")
+        return sorted_dict
 
     class Meta:
         ordered = True
