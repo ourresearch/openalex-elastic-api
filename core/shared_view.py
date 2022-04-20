@@ -80,9 +80,9 @@ def shared_view(request, fields_dict, index_name, default_sort):
     if sort_params:
         s = sort_records(fields_dict, group_by, sort_params, s)
     elif is_search_query and not sort_params and index_name.startswith("works"):
-        s = s.sort("_score", "publication_date")
+        s = s.sort("_score", "publication_date", "id")
     elif is_search_query and not sort_params:
-        s = s.sort("_score", "-works_count")
+        s = s.sort("_score", "-works_count", "id")
     elif not group_by:
         s = s.sort(*default_sort)
 
@@ -145,5 +145,5 @@ def shared_view(request, fields_dict, index_name, default_sort):
     else:
         result["group_by"] = []
         result["results"] = response
-    # print(s.to_dict())
+    print(s.to_dict())
     return result
