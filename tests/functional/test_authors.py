@@ -241,3 +241,64 @@ class TestAuthorsMultipleIDs:
         assert (
             json_data["results"][1]["orcid"] == "https://orcid.org/0000-0002-6276-3951"
         )
+
+
+class TestAuthorsOrder:
+    def test_authors_primary_key_count(self, client):
+        res = client.get("/authors")
+        json_data = res.get_json()
+        result = json_data["results"][0]
+        assert len(result.keys()) == 13
+
+    def test_authors_order_of_primary_keys(self, client):
+        res = client.get("/authors")
+        json_data = res.get_json()
+        result = json_data["results"][0]
+        expected_keys = [
+            "id",
+            "orcid",
+            "display_name",
+            "display_name_alternatives",
+            "works_count",
+            "cited_by_count",
+            "ids",
+            "last_known_institution",
+            "x_concepts",
+            "counts_by_year",
+            "works_api_url",
+            "updated_date",
+            "created_date",
+        ]
+        actual_keys = result.keys()
+        for expected_key, actual_key in zip(expected_keys, actual_keys):
+            assert expected_key == actual_key
+
+    def test_authors_last_known_institution_key_count(self, client):
+        res = client.get("/authors")
+        json_data = res.get_json()
+        result = json_data["results"][0]["last_known_institution"]
+        assert len(result.keys()) == 5
+
+    def test_authors_order_of_last_known_institution_keys(self, client):
+        res = client.get("/authors")
+        json_data = res.get_json()
+        result = json_data["results"][0]["last_known_institution"]
+        expected_keys = ["id", "ror", "display_name", "country_code", "type"]
+        actual_keys = result.keys()
+        for expected_key, actual_key in zip(expected_keys, actual_keys):
+            assert expected_key == actual_key
+
+    def test_authors_x_concepts_key_count(self, client):
+        res = client.get("/authors")
+        json_data = res.get_json()
+        result = json_data["results"][0]["x_concepts"][0]
+        assert len(result.keys()) == 5
+
+    def test_authors_order_of_x_concepts_keys(self, client):
+        res = client.get("/authors")
+        json_data = res.get_json()
+        result = json_data["results"][0]["x_concepts"][0]
+        expected_keys = ["id", "wikidata", "display_name", "level", "score"]
+        actual_keys = result.keys()
+        for expected_key, actual_key in zip(expected_keys, actual_keys):
+            assert expected_key == actual_key

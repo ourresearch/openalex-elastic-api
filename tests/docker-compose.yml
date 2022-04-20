@@ -5,6 +5,8 @@ services:
     container_name: es_openalex_test
     environment:
       - discovery.type=single-node
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=testpass
     volumes:
       - data01:/usr/share/elasticsearch/data
     ports:
@@ -18,8 +20,8 @@ services:
     ports:
       - 5601:5601
     environment:
-      ELASTICSEARCH_URL: http://es01:9200
-      ELASTICSEARCH_HOSTS: '["http://es01:9200"]'
+      ELASTICSEARCH_URL: http://elastic:testpass@es01:9200
+      ELASTICSEARCH_HOSTS: '["http://elastic:testpass@es01:9200"]'
     networks:
       - openalex_elastic
 
