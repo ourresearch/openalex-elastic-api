@@ -79,8 +79,14 @@ class ConceptsSchema(Schema):
         sorted_dict = OrderedDict()
         if obj and "international" in obj:
             international = obj.international.to_dict()
-            sorted_dict["display_name"] = international.get("display_name")
-            sorted_dict["description"] = international.get("description")
+            display_names = international.get("display_name")
+            descriptions = international.get("description")
+            sorted_dict["display_name"] = (
+                dict(sorted(display_names.items())) if display_names else None
+            )
+            sorted_dict["description"] = (
+                dict(sorted(descriptions.items())) if descriptions else None
+            )
         return sorted_dict
 
     class Meta:

@@ -60,11 +60,7 @@ class InstitutionsSchema(Schema):
     cited_by_count = fields.Int()
     ids = fields.Nested(IDsSchema)
     geo = fields.Nested(GeoSchema)
-    international = fields.Function(
-        lambda obj: obj.international.to_dict()
-        if "international" in obj and obj.international
-        else None
-    )
+    international = fields.Method("get_international")
     associated_institutions = fields.List(fields.Nested(AssociatedInstitutionsSchema))
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     x_concepts = fields.List(fields.Nested(XConceptsSchema))
@@ -86,6 +82,16 @@ class InstitutionsSchema(Schema):
     def get_relevance_score(self, obj):
         if obj.meta.score and obj.meta != 0.0:
             return obj.meta.score
+
+    def get_international(self, obj):
+        sorted_dict = {}
+        if obj and "international" in obj:
+            international = obj.international.to_dict()
+            display_names = international.get("display_name")
+            sorted_dict["display_name"] = (
+                dict(sorted(display_names.items())) if display_names else None
+            )
+        return sorted_dict
 
     class Meta:
         ordered = True
