@@ -1,10 +1,12 @@
 from collections import OrderedDict
 
+from elasticsearch.exceptions import RequestError
 from elasticsearch_dsl import Search
 
 import settings
 from core.cursor import decode_cursor, encode_cursor, get_cursor
-from core.exceptions import APIQueryParamsError
+from core.exceptions import (APIPaginationError, APIQueryParamsError,
+                             APISearchError)
 from core.filter import filter_records
 from core.group_by import (get_group_by_results,
                            get_group_by_results_external_ids,
@@ -110,7 +112,13 @@ def shared_view(request, fields_dict, index_name, default_sort):
             s = group_by_records(field, s, sort_params)
 
     if not group_by:
-        response = s[paginate.start : paginate.end].execute()
+        try:
+            response = s[paginate.start : paginate.end].execute()
+        except RequestError as e:
+            if "search_after has" in str(e) and "but sort has" in str(e):
+                raise APIPaginationError("Cursor value is invalid.")
+            else:
+                raise APISearchError("Something went wrong.")
         count = s.count()
     else:
         response = s.execute()

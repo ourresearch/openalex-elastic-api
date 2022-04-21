@@ -19,3 +19,9 @@ class TestCursorPagination:
         res2 = client.get(f"/concepts?cursor={cursor}")
         json_data2 = res2.get_json()
         assert json_data2["results"][0]["id"] == "https://openalex.org/C1862650"
+
+    def test_invalid_cursor_different_sort_size(self, client):
+        res1 = client.get("/concepts?cursor=IlswLjAsIDFdIg==&sort=display_name")
+        json_data = res1.get_json()
+        assert json_data["error"] == "Pagination error."
+        assert json_data["message"] == "Cursor value is invalid."
