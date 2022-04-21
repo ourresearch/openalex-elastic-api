@@ -1,5 +1,4 @@
 import base64
-import binascii
 import json
 
 from core.exceptions import APIPaginationError
@@ -18,7 +17,7 @@ def decode_cursor(encoded_cursor):
         cursor_utf8 = decoded_cursor.decode("utf8")
         cursor_str = cursor_utf8.replace('"', "").replace("'", '"')
         cursor_json = json.loads(cursor_str)
-    except (binascii.Error, json.decoder.JSONDecodeError):
+    except (json.decoder.JSONDecodeError, ValueError):
         raise APIPaginationError("Invalid cursor value")
     return list(cursor_json)
 
