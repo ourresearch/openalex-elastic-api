@@ -261,8 +261,14 @@ class RangeField(Field):
 
 class SearchField(Field):
     def build_query(self):
-        search_oa = SearchOpenAlex(search_terms=self.value)
-        q = search_oa.build_query()
+        if self.param == "raw_affiliation_string.search":
+            search_oa = SearchOpenAlex(
+                search_terms=self.value, primary_field=self.es_field()
+            )
+            q = search_oa.build_query()
+        else:
+            search_oa = SearchOpenAlex(search_terms=self.value)
+            q = search_oa.build_query()
         return q
 
 

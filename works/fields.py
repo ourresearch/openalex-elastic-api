@@ -42,6 +42,10 @@ fields = [
     RangeField(param="cited_by_count"),
     RangeField(param="publication_year"),
     SearchField(param="display_name.search"),
+    SearchField(
+        param="raw_affiliation_string.search",
+        custom_es_field="authorships.raw_affiliation_string",
+    ),
     SearchField(param="title.search"),
     TermField(param="alternate_host_venues.license"),
     TermField(param="alternate_host_venues.version"),

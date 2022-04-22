@@ -49,7 +49,16 @@ def shared_view(request, fields_dict, index_name, default_sort):
         s = s.extra(search_after=decoded_cursor)
 
     if search and search != '""':
-        search_oa = SearchOpenAlex(search_terms=search, index_full_search=index_name)
+        if index_name.lower().startswith("concepts"):
+            search_oa = SearchOpenAlex(
+                search_terms=search, secondary_field="description"
+            )
+        elif index_name.lower().startswith("works"):
+            search_oa = SearchOpenAlex(
+                search_terms=search, secondary_field="abstract_inverted_index"
+            )
+        else:
+            search_oa = SearchOpenAlex(search_terms=search)
         search_query = search_oa.build_query()
         s = s.query(search_query)
 
@@ -66,6 +75,8 @@ def shared_view(request, fields_dict, index_name, default_sort):
                 and filter["display_name.search"] != ""
                 or "title.search" in filter.keys()
                 and filter["title.search"] != ""
+                or "raw_affiliation_string.search" in filter.keys()
+                and filter["raw_affiliation_string.search"] != ""
             ):
                 is_search_query = True
                 break
@@ -153,5 +164,6 @@ def shared_view(request, fields_dict, index_name, default_sort):
     else:
         result["group_by"] = []
         result["results"] = response
-    # print(s.to_dict())
+    if settings.DEBUG:
+        print(s.to_dict())
     return result
