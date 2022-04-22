@@ -121,7 +121,7 @@ def test_search_with_display_name_sort(client):
                 "boost_mode": "multiply",
             }
         },
-        "sort": ["display_name.keyword"],
+        "sort": ["display_name.lower"],
     }
 
 
