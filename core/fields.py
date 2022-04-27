@@ -286,6 +286,10 @@ class TermField(Field):
             q = Q("exists", field=field_name)
         elif self.param in id_params:
             formatted_id = self.format_id()
+            if formatted_id is None:
+                raise APIQueryParamsError(
+                    f"{self.value} is not a valid ID for {self.param}"
+                )
             kwargs = {self.es_field(): formatted_id}
             q = Q("term", **kwargs)
             return q
