@@ -13,7 +13,7 @@ from core.group_by import (get_group_by_results,
                            get_group_by_results_transform, group_by_records,
                            group_by_records_transform, is_transform)
 from core.paginate import Paginate
-from core.search import SearchOpenAlex
+from core.search import full_search
 from core.sort import sort_records
 from core.utils import (get_field, map_filter_params, map_sort_params,
                         set_number_param)
@@ -49,18 +49,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         s = s.extra(search_after=decoded_cursor)
 
     if search and search != '""':
-        if index_name.lower().startswith("concepts"):
-            search_oa = SearchOpenAlex(
-                search_terms=search, secondary_field="description"
-            )
-        elif index_name.lower().startswith("works"):
-            search_oa = SearchOpenAlex(
-                search_terms=search, secondary_field="abstract_inverted_index"
-            )
-        else:
-            search_oa = SearchOpenAlex(search_terms=search)
-        search_query = search_oa.build_query()
-        s = s.query(search_query)
+        s = full_search(index_name, s, search)
 
     # filter
     if filter_params:

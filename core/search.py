@@ -86,3 +86,15 @@ class SearchOpenAlex:
 
     def is_phrase(self):
         return self.search_terms.startswith('"') and self.search_terms.endswith('"')
+
+
+def full_search(index_name, s, search):
+    if index_name.lower().startswith("concepts"):
+        search_oa = SearchOpenAlex(search_terms=search, secondary_field="description")
+    elif index_name.lower().startswith("works"):
+        search_oa = SearchOpenAlex(search_terms=search, secondary_field="abstract")
+    else:
+        search_oa = SearchOpenAlex(search_terms=search)
+    search_query = search_oa.build_query()
+    s = s.query(search_query)
+    return s
