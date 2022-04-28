@@ -25,3 +25,9 @@ class TestCursorPagination:
         json_data = res1.get_json()
         assert json_data["error"] == "Pagination error."
         assert json_data["message"] == "Cursor value is invalid."
+
+    def test_cursor_with_page(self, client):
+        res1 = client.get("/concepts?cursor=IlswLjAsIDFdIg==&page=2")
+        json_data = res1.get_json()
+        assert json_data["error"] == "Pagination error."
+        assert json_data["message"] == "Cannot use page parameter with cursor."

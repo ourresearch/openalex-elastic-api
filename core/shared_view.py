@@ -48,6 +48,9 @@ def shared_view(request, fields_dict, index_name, default_sort):
     else:
         s = s.extra(size=per_page)
 
+    if cursor and page != 1:
+        raise APIPaginationError("Cannot use page parameter with cursor.")
+
     if cursor and cursor != "*":
         decoded_cursor = decode_cursor(cursor)
         s = s.extra(search_after=decoded_cursor)
