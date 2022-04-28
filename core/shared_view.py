@@ -4,7 +4,7 @@ from elasticsearch.exceptions import RequestError
 from elasticsearch_dsl import Search
 
 import settings
-from core.cursor import decode_cursor, encode_cursor, get_cursor
+from core.cursor import decode_cursor, get_next_cursor
 from core.exceptions import (APIPaginationError, APIQueryParamsError,
                              APISearchError)
 from core.filter import filter_records
@@ -13,7 +13,7 @@ from core.group_by import (get_group_by_results,
                            get_group_by_results_transform, group_by_records,
                            group_by_records_transform, is_transform)
 from core.paginate import Paginate
-from core.search import full_search
+from core.search import check_is_search_query, full_search
 from core.sort import sort_records
 from core.utils import (get_field, map_filter_params, map_sort_params,
                         set_number_param)
@@ -21,6 +21,9 @@ from core.validate import validate_params
 
 
 def shared_view(request, fields_dict, index_name, default_sort):
+    """Primary function used to search, filter, and aggregate across all five entities."""
+
+    # params
     validate_params(request)
     cursor = request.args.get("cursor")
     filter_params = map_filter_params(request.args.get("filter"))
@@ -34,10 +37,11 @@ def shared_view(request, fields_dict, index_name, default_sort):
     search = request.args.get("search")
     sort_params = map_sort_params(request.args.get("sort"))
 
+    s = Search(index=index_name)
+
+    # pagination
     paginate = Paginate(group_by, page, per_page)
     paginate.validate()
-
-    s = Search(index=index_name)
 
     if group_by:
         s = s.extra(size=0)
@@ -48,6 +52,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         decoded_cursor = decode_cursor(cursor)
         s = s.extra(search_after=decoded_cursor)
 
+    # search
     if search and search != '""':
         s = full_search(index_name, s, search)
 
@@ -55,24 +60,8 @@ def shared_view(request, fields_dict, index_name, default_sort):
     if filter_params:
         s = filter_records(fields_dict, filter_params, s)
 
-    is_search_query = False
-
-    if filter_params:
-        for filter in filter_params:
-            if (
-                "display_name.search" in filter.keys()
-                and filter["display_name.search"] != ""
-                or "title.search" in filter.keys()
-                and filter["title.search"] != ""
-                or "raw_affiliation_string.search" in filter.keys()
-                and filter["raw_affiliation_string.search"] != ""
-            ):
-                is_search_query = True
-                break
-    if search and search != '""':
-        is_search_query = True
-
     # sort
+    is_search_query = check_is_search_query(filter_params, search)
     # do not allow sorting by relevance score without search query
     if not is_search_query and sort_params and "relevance_score" in sort_params:
         raise APIQueryParamsError(
@@ -139,9 +128,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
     result["results"] = []
 
     if cursor:
-        elastic_cursor = get_cursor(response)
-        next_cursor = encode_cursor(elastic_cursor) if elastic_cursor else None
-        result["meta"]["next_cursor"] = next_cursor
+        result["meta"]["next_cursor"] = get_next_cursor(response)
 
     if group_by:
         if group_by in settings.EXTERNAL_ID_FIELDS:

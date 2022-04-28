@@ -29,3 +29,9 @@ def get_cursor(response):
     if last_record and "sort" in last_record:
         next_cursor = last_record["sort"]
     return next_cursor
+
+
+def get_next_cursor(response):
+    elastic_cursor = get_cursor(response)
+    next_cursor = encode_cursor(elastic_cursor) if elastic_cursor else None
+    return next_cursor

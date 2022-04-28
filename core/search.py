@@ -98,3 +98,22 @@ def full_search(index_name, s, search):
     search_query = search_oa.build_query()
     s = s.query(search_query)
     return s
+
+
+def check_is_search_query(filter_params, search):
+    is_search_query = False
+    if filter_params:
+        for filter in filter_params:
+            if (
+                "display_name.search" in filter.keys()
+                and filter["display_name.search"] != ""
+                or "title.search" in filter.keys()
+                and filter["title.search"] != ""
+                or "raw_affiliation_string.search" in filter.keys()
+                and filter["raw_affiliation_string.search"] != ""
+            ):
+                is_search_query = True
+                break
+    if search and search != '""':
+        is_search_query = True
+    return is_search_query
