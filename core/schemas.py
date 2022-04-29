@@ -68,3 +68,19 @@ class FiltersWrapperSchema(Schema):
 
     class Meta:
         ordered = True
+
+
+def hide_relevance(data, context):
+    if (
+        not data["relevance_score"]
+        and data["relevance_score"] != 0
+        or "display_relevance" in context
+        and context["display_relevance"] is False
+    ):
+        del data["relevance_score"]
+    return data
+
+
+def relevance_score(obj):
+    if obj.meta.score and obj.meta != 0.0:
+        return obj.meta.score

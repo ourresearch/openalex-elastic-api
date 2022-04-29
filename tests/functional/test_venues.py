@@ -179,3 +179,24 @@ class TestVenuesMultipleIDs:
         assert json_data["meta"]["count"] == 2
         assert "1431-5890" in json_data["results"][0]["issn"]
         assert "0140-6736" in json_data["results"][1]["issn"]
+
+
+class TestRelevanceScore:
+    def test_relevance_hidden(self, client):
+        res = client.get("/venues")
+        json_data = res.get_json()
+        result = json_data["results"][0]
+        assert "relevance_score" not in result
+
+    def test_relevance_displayed_filter_search(self, client):
+        res = client.get("/venues?filter=display_name.search:nature")
+        json_data = res.get_json()
+        result = json_data["results"][0]
+        assert "relevance_score" in result
+        assert result["relevance_score"] > 0.0
+
+    def test_relevance_displayed_regular_search(self, client):
+        res = client.get("/venues?search=nature")
+        json_data = res.get_json()
+        result = json_data["results"][0]
+        assert "relevance_score" in result

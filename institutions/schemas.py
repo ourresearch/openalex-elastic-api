@@ -1,7 +1,7 @@
 from marshmallow import INCLUDE, Schema, fields, post_dump
 
 from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
-                          XConceptsSchema)
+                          XConceptsSchema, hide_relevance, relevance_score)
 
 
 class IDsSchema(Schema):
@@ -70,18 +70,11 @@ class InstitutionsSchema(Schema):
 
     @post_dump
     def remove_relevance_score(self, data, many, **kwargs):
-        if (
-            not data["relevance_score"]
-            and data["relevance_score"] != 0
-            or "display_relevance" in self.context
-            and self.context["display_relevance"] is False
-        ):
-            del data["relevance_score"]
-        return data
+        return hide_relevance(data, self.context)
 
-    def get_relevance_score(self, obj):
-        if obj.meta.score and obj.meta != 0.0:
-            return obj.meta.score
+    @staticmethod
+    def get_relevance_score(obj):
+        return relevance_score(obj)
 
     def get_international(self, obj):
         sorted_dict = {}
