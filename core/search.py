@@ -65,6 +65,15 @@ class SearchOpenAlex:
                     }
                 }
             )
+            | Q(
+                "match_phrase",
+                **{
+                    self.secondary_field: {
+                        "query": self.search_terms,
+                        "boost": 0.15,
+                    }
+                }
+            )
         )
 
     @staticmethod
