@@ -27,6 +27,6 @@ def authors():
 @blueprint.route("/authors/filters/<path:params>")
 def authors_filters(params):
     index_name = AUTHORS_INDEX
-    results = shared_filter_view(params, fields_dict, index_name)
+    results = shared_filter_view(request, params, fields_dict, index_name)
     filters_schema = FiltersWrapperSchema()
     return filters_schema.dump(results)

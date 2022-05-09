@@ -28,6 +28,21 @@ class TestFiltersView:
         assert filter_2["values"][0]["display_name"] == "true"
         assert filter_2["values"][0]["count"] == 32
 
+    def test_filter_with_full_search(self, client):
+        res = client.get("/works/filters/is_oa:true?search=science")
+        json_data = res.get_json()
+        filter_1 = json_data["filters"][0]
+        assert filter_1["key"] == "is_oa"
+        assert filter_1["type"] == "BooleanField"
+        assert filter_1["values"][0]["display_name"] == "true"
+        assert filter_1["values"][0]["count"] == 32
+        filter_2 = json_data["filters"][1]
+        assert filter_2["key"] == "search"
+        assert filter_2["type"] == "FullSearchField"
+        assert filter_2["values"][0]["value"] == "science"
+        assert filter_2["values"][0]["display_name"] == "science"
+        assert filter_2["values"][0]["count"] == 32
+
     def test_filter_with_search_negation(self, client):
         res = client.get("/works/filters/display_name.search:science,oa_status:!gold")
         json_data = res.get_json()

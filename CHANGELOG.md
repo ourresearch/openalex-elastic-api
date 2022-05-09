@@ -1,5 +1,6 @@
 # Changelog
 
+* Add search param to filters view. [2022-05-9]
 * Add from_created_date filter. [2022-02-17]
 * Cache group by queries without filters for 24 hours. [2022-02-17]
 * Add key_display_name to group by queries. [2022-02-15]

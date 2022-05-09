@@ -4,13 +4,17 @@ from elasticsearch_dsl import MultiSearch, Q, Search
 from flask import url_for
 
 from core.exceptions import APIQueryParamsError
+from core.search import full_search
 from core.utils import (get_country_name, get_display_name, get_field,
                         map_filter_params)
 
 
-def shared_filter_view(params, fields_dict, index_name):
+def shared_filter_view(request, params, fields_dict, index_name):
     """View used for filters view such as /works/filters/display_name.search:hello"""
     filter_params = map_filter_params(params)
+    search = request.args.get("search")
+    if search and search != '""':
+        filter_params.append({"search": search})
 
     ms = MultiSearch(index=index_name)
 
@@ -53,6 +57,20 @@ def filter_records_filters_view(fields_dict, filter_params, ms, index_name):
     # first pass apply entire query, but do not add OR values to meta response
     for filter in filter_params:
         for key, value in filter.items():
+            # handle full search differently
+            if key == "search":
+                s = full_search(index_name, s, value)
+                field_meta = {"key": key, "type": "FullSearchField", "values": []}
+                field_meta["values"].append(
+                    {
+                        "value": value,
+                        "display_name": value,
+                        # "url": set_url(search_param, key, or_value, index_name),
+                    }
+                )
+                meta_results.append(field_meta)
+                break
+
             field = get_field(fields_dict, key)
 
             # OR queries have | in the param values

@@ -27,6 +27,6 @@ def institutions():
 @blueprint.route("/institutions/filters/<path:params>")
 def institutions_filters(params):
     index_name = INSTITUTIONS_INDEX
-    results = shared_filter_view(params, fields_dict, index_name)
+    results = shared_filter_view(request, params, fields_dict, index_name)
     filters_schema = FiltersWrapperSchema()
     return filters_schema.dump(results)
