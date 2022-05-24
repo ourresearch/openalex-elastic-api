@@ -1,5 +1,7 @@
 import re
 
+from elasticsearch_dsl import Q, Search
+
 from core.utils import normalize_openalex_id
 
 
@@ -155,3 +157,14 @@ def normalize_pmid(pmid):
     pmid = matches[0]
     pmid = pmid.replace("\0", "")
     return pmid
+
+
+def get_merged_id(index_name, full_openalex_id):
+    merged_id = None
+    s = Search(index=index_name)
+    s = s.filter(Q("term", id__keyword=full_openalex_id))
+    response = s.execute()
+    for item in response:
+        if "merge_into_id" in item:
+            merged_id = item.merge_into_id
+    return merged_id

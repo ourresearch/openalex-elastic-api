@@ -5,12 +5,12 @@ from flask import Blueprint, abort, redirect, request, url_for
 
 from authors.schemas import AuthorsSchema
 from concepts.schemas import ConceptsSchema
-from ids.utils import (is_author_openalex_id, is_concept_openalex_id,
-                       is_institution_openalex_id, is_openalex_id,
-                       is_venue_openalex_id, is_work_openalex_id,
-                       normalize_doi, normalize_issn, normalize_openalex_id,
-                       normalize_orcid, normalize_pmid, normalize_ror,
-                       normalize_wikidata)
+from ids.utils import (get_merged_id, is_author_openalex_id,
+                       is_concept_openalex_id, is_institution_openalex_id,
+                       is_openalex_id, is_venue_openalex_id,
+                       is_work_openalex_id, normalize_doi, normalize_issn,
+                       normalize_openalex_id, normalize_orcid, normalize_pmid,
+                       normalize_ror, normalize_wikidata)
 from institutions.schemas import InstitutionsSchema
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
                       VENUES_INDEX, WORKS_INDEX)
@@ -66,6 +66,13 @@ def works_id_get(id):
         full_openalex_id = f"https://openalex.org/W{clean_id}"
         query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
+        if s.count() == 0:
+            # check if document is merged
+            merged_id = get_merged_id("merge-works", full_openalex_id)
+            if merged_id:
+                return redirect(
+                    url_for("ids.works_id_get", id=merged_id, **request.args), code=301
+                )
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"W{clean_id}"
@@ -128,6 +135,14 @@ def authors_id_get(id):
         full_author_id = f"https://openalex.org/A{author_id}"
         query = Q("term", ids__openalex=full_author_id)
         s = s.filter(query)
+        if s.count() == 0:
+            # check if document is merged
+            merged_id = get_merged_id("merge-authors", full_author_id)
+            if merged_id:
+                return redirect(
+                    url_for("ids.authors_id_get", id=merged_id, **request.args),
+                    code=301,
+                )
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"A{clean_id}"
@@ -177,6 +192,14 @@ def institutions_id_get(id):
         full_openalex_id = f"https://openalex.org/I{clean_id}"
         query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
+        if s.count() == 0:
+            # check if document is merged
+            merged_id = get_merged_id("merge-institutions", full_openalex_id)
+            if merged_id:
+                return redirect(
+                    url_for("ids.institutions_id_get", id=merged_id, **request.args),
+                    code=301,
+                )
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"I{clean_id}"
@@ -224,6 +247,14 @@ def venues_id_get(id):
         full_openalex_id = f"https://openalex.org/V{clean_id}"
         query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
+        if s.count() == 0:
+            # check if document is merged
+            merged_id = get_merged_id("merge-venues", full_openalex_id)
+            if merged_id:
+                return redirect(
+                    url_for("ids.venues_id_get", id=merged_id, **request.args), code=301
+                )
+
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"V{clean_id}"
@@ -290,6 +321,14 @@ def concepts_id_get(id):
         full_openalex_id = f"https://openalex.org/C{clean_id}"
         query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
+        if s.count() == 0:
+            # check if document is merged
+            merged_id = get_merged_id("merge-concepts", full_openalex_id)
+            if merged_id:
+                return redirect(
+                    url_for("ids.concepts_id_get", id=merged_id, **request.args),
+                    code=301,
+                )
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"C{clean_id}"
