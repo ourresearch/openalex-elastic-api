@@ -167,4 +167,5 @@ def get_merged_id(index_name, full_openalex_id):
     for item in response:
         if "merge_into_id" in item:
             merged_id = item.merge_into_id
+            merged_id = normalize_openalex_id(merged_id)
     return merged_id
