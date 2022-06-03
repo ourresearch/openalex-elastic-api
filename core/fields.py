@@ -50,13 +50,45 @@ class BooleanField(Field):
         if self.param in EXTERNAL_ID_FIELDS:
             self.validate_true_false()
             self.handle_external_id_fields()
-        else:
-            self.validate(self.value)
+
         if self.value == "null":
             q = ~Q("exists", field=self.es_field())
         elif self.value == "!null":
             q = Q("exists", field=self.es_field())
+        elif self.param == "has_oa_accepted_or_published_version":
+            self.validate_true_false()
+            query = (
+                Q("term", host_venue__is_oa="true")
+                | Q("term", alternate_host_venues__is_oa="true")
+            ) & (
+                Q("terms", host_venue__version=["acceptedVersion", "publishedVersion"])
+                | Q(
+                    "terms",
+                    alternate_host_venues__version=[
+                        "acceptedVersion",
+                        "publishedVersion",
+                    ],
+                )
+            )
+            if self.value.lower().strip() == "true":
+                q = query
+            elif self.value.lower().strip() == "false":
+                q = ~query
+        elif self.param == "has_oa_submitted_version":
+            self.validate_true_false()
+            query = (
+                Q("term", host_venue__is_oa="true")
+                | Q("term", alternate_host_venues__is_oa="true")
+            ) & (
+                Q("term", host_venue__version="submittedVersion")
+                | Q("term", alternate_host_venues__version="submittedVersion")
+            )
+            if self.value.lower().strip() == "true":
+                q = query
+            elif self.value.lower().strip() == "false":
+                q = ~query
         else:
+            self.validate(self.value)
             kwargs = {self.es_field(): self.value.lower().strip()}
             q = Q("term", **kwargs)
         return q

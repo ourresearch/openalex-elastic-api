@@ -3,6 +3,8 @@ from core.fields import (BooleanField, DateField, OpenAlexIDField, PhraseField,
 
 fields = [
     BooleanField(param="has_doi", custom_es_field="ids.doi"),
+    BooleanField(param="has_oa_accepted_or_published_version"),
+    BooleanField(param="has_oa_submitted_version"),
     BooleanField(param="is_oa", alias="open_access.is_oa"),
     BooleanField(param="is_paratext"),
     BooleanField(param="is_retracted"),

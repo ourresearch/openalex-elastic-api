@@ -729,3 +729,25 @@ class TestWorksMultipleIDs:
             json_data["results"][1]["doi"]
             == "https://doi.org/10.1109/tbdata.2018.2872569"
         )
+
+
+class TestWorksUniqueOAFilters:
+    def test_works_has_oa_accepted_or_published_version_true(self, client):
+        res = client.get("/works?filter=has_oa_accepted_or_published_version:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 656
+
+    def test_works_has_oa_accepted_or_published_version_false(self, client):
+        res = client.get("/works?filter=has_oa_accepted_or_published_version:false")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9344
+
+    def test_works_has_oa_submitted_version_true(self, client):
+        res = client.get("/works?filter=has_oa_submitted_version:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 179
+
+    def test_works_has_oa_submitted_version_false(self, client):
+        res = client.get("/works?filter=has_oa_submitted_version:false")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9821
