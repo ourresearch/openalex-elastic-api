@@ -51,11 +51,7 @@ class BooleanField(Field):
             self.validate_true_false()
             self.handle_external_id_fields()
 
-        if self.value == "null":
-            q = ~Q("exists", field=self.es_field())
-        elif self.value == "!null":
-            q = Q("exists", field=self.es_field())
-        elif self.param == "has_oa_accepted_or_published_version":
+        if self.param == "has_oa_accepted_or_published_version":
             self.validate_true_false()
             query = (
                 Q("term", host_venue__is_oa="true")
@@ -87,6 +83,10 @@ class BooleanField(Field):
                 q = query
             elif self.value.lower().strip() == "false":
                 q = ~query
+        elif self.value == "null":
+            q = ~Q("exists", field=self.es_field())
+        elif self.value == "!null":
+            q = Q("exists", field=self.es_field())
         else:
             self.validate(self.value)
             kwargs = {self.es_field(): self.value.lower().strip()}
