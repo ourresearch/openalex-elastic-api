@@ -109,7 +109,7 @@ class AutoCompleteSchema(Schema):
         }
         for key, value in entities.items():
             if key in obj.meta.index:
-                return getattr(obj, value)
+                return getattr(obj, value, None)
 
     class Meta:
         ordered = True
