@@ -200,3 +200,15 @@ class TestRelevanceScore:
         json_data = res.get_json()
         result = json_data["results"][0]
         assert "relevance_score" in result
+
+
+class TestRaiseError:
+    def test_error_or_query_between_filters(self, client):
+        res = client.get("/venues?filter=has_issn:false|works_count:>100")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"]
+            == "It looks like you're trying to do an OR query between filters and it's not supported. \nYou can do this: institutions.country_code:fr|en, but not this: institutions.country_code:gb|host_venue.issn:0957-1558. \nProblem value: false|works_count:>100"
+        )

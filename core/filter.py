@@ -1,3 +1,5 @@
+import re
+
 from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
@@ -11,7 +13,7 @@ def filter_records(fields_dict, filter_params, s):
 
             # OR queries have | in the param values
             if "|" in value:
-                s = handle_or_query(field, s, value)
+                s = handle_or_query(field, fields_dict, s, value)
 
             # everything else is an AND query
             else:
@@ -21,7 +23,7 @@ def filter_records(fields_dict, filter_params, s):
     return s
 
 
-def handle_or_query(field, s, value):
+def handle_or_query(field, fields_dict, s, value):
     or_queries = []
 
     if len(value.split("|")) > 50:
@@ -29,6 +31,15 @@ def handle_or_query(field, s, value):
             f"Maximum number of values exceeded for {field.param}. Decrease values to 50 or "
             f"below, or consider downloading the full dataset at "
             f"https://docs.openalex.org/download-snapshot"
+        )
+
+    # raise error if trying to use | between filters like filter=institutions.country_code:fr|host_venue.issn:0957-1558
+    fields = fields_dict.keys()
+    if any(field in value for field in fields) and re.search(r":(?!//)", value):
+        raise APIQueryParamsError(
+            f"It looks like you're trying to do an OR query between filters and it's not supported. \n"
+            f"You can do this: institutions.country_code:fr|en, but not this: institutions.country_code:gb|host_venue.issn:0957-1558. \n"
+            f"Problem value: {value}"
         )
 
     if value.startswith("!"):
