@@ -16,6 +16,18 @@ INSTITUTIONS_INDEX = "institutions-v4"
 VENUES_INDEX = "venues-v5"
 WORKS_INDEX = "works-v13-*,-*invalid-data"
 
+DO_NOT_GROUP_BY = [
+    "cited_by",
+    "doi",
+    "ids.mag",
+    "ids.pmid",
+    "ids.pmcid",
+    "mag",
+    "pmid",
+    "pmcid",
+    "related_to",
+]
+
 EXTERNAL_ID_FIELDS = [
     "has_doi",
     "has_issn",

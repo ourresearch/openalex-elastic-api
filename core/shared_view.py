@@ -96,8 +96,8 @@ def shared_view(request, fields_dict, index_name, default_sort):
             raise APIQueryParamsError(
                 "Group by referenced_works is not supported at this time."
             )
-        elif field.param == "cited_by" or field.param == "related_to":
-            raise APIQueryParamsError("Cannot group cited_by or related_to filters.")
+        elif field.param in settings.DO_NOT_GROUP_BY:
+            raise APIQueryParamsError(f"Cannot group by {field.param}.")
         if transform:
             s = group_by_records_transform(field, index_name, sort_params)
         else:
