@@ -743,6 +743,13 @@ class TestWorksMultipleIDs:
         assert json_data["results"][0]["ids"]["mag"] == "116536"
         assert json_data["results"][1]["ids"]["mag"] == "71948"
 
+    def test_works_mag_multiple_alias(self, client):
+        res = client.get("/works?filter=ids.mag:116536|71948")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert json_data["results"][0]["ids"]["mag"] == "116536"
+        assert json_data["results"][1]["ids"]["mag"] == "71948"
+
     def test_works_pmid_single_short(self, client):
         res = client.get("/works?filter=pmid:14419794")
         json_data = res.get_json()
@@ -754,6 +761,19 @@ class TestWorksMultipleIDs:
 
     def test_works_pmid_multiple_short(self, client):
         res = client.get("/works?filter=pmid:14419794|13729179")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert (
+            json_data["results"][0]["ids"]["pmid"]
+            == "https://pubmed.ncbi.nlm.nih.gov/13729179"
+        )
+        assert (
+            json_data["results"][1]["ids"]["pmid"]
+            == "https://pubmed.ncbi.nlm.nih.gov/14419794"
+        )
+
+    def test_works_pmid_multiple_short_alias(self, client):
+        res = client.get("/works?filter=ids.pmid:14419794|13729179")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 2
         assert (
@@ -782,6 +802,15 @@ class TestWorksMultipleIDs:
 
     def test_works_pmcid_single_short(self, client):
         res = client.get("/works?filter=pmcid:1561523")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["ids"]["pmcid"]
+            == "https://www.ncbi.nlm.nih.gov/pmc/articles/1561523"
+        )
+
+    def test_works_pmcid_single_short_alias(self, client):
+        res = client.get("/works?filter=ids.pmcid:1561523")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
         assert (

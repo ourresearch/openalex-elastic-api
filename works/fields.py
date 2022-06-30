@@ -59,18 +59,21 @@ fields = [
     TermField(param="concepts.wikidata"),
     TermField(param="display_name", custom_es_field="display_name.lower"),
     TermField(param="doi", alias="ids.doi"),
-    TermField(param="mag", custom_es_field="ids.mag"),
-    TermField(param="pmid", custom_es_field="ids.pmid"),
-    TermField(param="pmcid", custom_es_field="ids.pmcid"),
+    TermField(param="ids.mag", custom_es_field="ids.mag"),
+    TermField(param="ids.pmid", custom_es_field="ids.pmid"),
+    TermField(param="ids.pmcid", custom_es_field="ids.pmcid"),
     TermField(param="host_venue.issn"),
     TermField(
         param="institutions.country_code", alias="authorships.institutions.country_code"
     ),
     TermField(param="institutions.ror", alias="authorships.institutions.ror"),
     TermField(param="institutions.type", alias="authorships.institutions.type"),
+    TermField(param="mag", custom_es_field="ids.mag"),
     TermField(param="oa_status", alias="open_access.oa_status"),
     TermField(param="open_access.oa_status"),
     TermField(param="openalex_id", alias="ids.openalex"),
+    TermField(param="pmid", custom_es_field="ids.pmid"),
+    TermField(param="pmcid", custom_es_field="ids.pmcid"),
     TermField(param="type"),
 ]
 
