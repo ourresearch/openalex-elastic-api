@@ -59,6 +59,9 @@ fields = [
     TermField(param="concepts.wikidata"),
     TermField(param="display_name", custom_es_field="display_name.lower"),
     TermField(param="doi", alias="ids.doi"),
+    TermField(param="mag", custom_es_field="ids.mag"),
+    TermField(param="pmid", custom_es_field="ids.pmid"),
+    TermField(param="pmcid", custom_es_field="ids.pmcid"),
     TermField(param="host_venue.issn"),
     TermField(
         param="institutions.country_code", alias="authorships.institutions.country_code"

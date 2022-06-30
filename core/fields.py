@@ -306,7 +306,16 @@ class SearchField(Field):
 
 class TermField(Field):
     def build_query(self):
-        id_params = ["doi", "issn", "orcid", "openalex_id", "ror", "wikidata_id"]
+        id_params = [
+            "doi",
+            "issn",
+            "orcid",
+            "openalex_id",
+            "pmid",
+            "pmcid",
+            "ror",
+            "wikidata_id",
+        ]
 
         if self.value == "null":
             field_name = self.es_field()
@@ -351,6 +360,12 @@ class TermField(Field):
     def format_id(self):
         if self.param == "doi" and "doi.org" not in self.value:
             formatted = f"https://doi.org/{self.value}"
+        elif self.param == "pmid" and "pubmed.ncbi.nlm.nih.gov" not in self.value:
+            formatted = f"https://pubmed.ncbi.nlm.nih.gov/{self.value}"
+        elif (
+            self.param == "pmcid" and "ncbi.nlm.nih.gov/pmc/articles" not in self.value
+        ):
+            formatted = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{self.value}"
         elif self.param == "orcid" and "orcid.org" not in self.value:
             formatted = f"https://orcid.org/{self.value}"
         elif self.param == "openalex_id":
