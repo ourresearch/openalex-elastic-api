@@ -3,7 +3,7 @@ from core.exceptions import APIQueryParamsError
 from core.utils import get_field
 
 
-def sort_records(fields_dict, group_by, sort_params, s):
+def get_sort_fields(fields_dict, group_by, sort_params):
     sort_fields = []
     for key, value in sort_params.items():
         # group by
@@ -17,7 +17,7 @@ def sort_records(fields_dict, group_by, sort_params, s):
             or group_by
             and (key == "count" and (value == "desc" or value == "asc"))
         ):
-            return s
+            return sort_fields
         elif group_by:
             raise APIQueryParamsError(
                 "Valid sort params with group by are: key or count"
@@ -38,5 +38,4 @@ def sort_records(fields_dict, group_by, sort_params, s):
             sort_fields.append(field.es_sort_field())
         elif value == "desc":
             sort_fields.append(f"-{field.es_sort_field()}")
-    s = s.sort(*sort_fields)
-    return s
+    return sort_fields

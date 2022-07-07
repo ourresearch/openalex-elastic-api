@@ -14,7 +14,7 @@ from core.group_by import (get_group_by_results,
                            group_by_records_transform, is_transform)
 from core.paginate import Paginate
 from core.search import check_is_search_query, full_search
-from core.sort import sort_records
+from core.sort import get_sort_fields
 from core.utils import (get_field, map_filter_params, map_sort_params,
                         set_number_param)
 from core.validate import validate_params
@@ -71,8 +71,15 @@ def shared_view(request, fields_dict, index_name, default_sort):
             "Must include a search query (such as ?search=example or /filter=display_name.search:example) in order to sort by relevance_score."
         )
 
-    if sort_params:
-        s = sort_records(fields_dict, group_by, sort_params, s)
+    if sort_params and cursor:
+        # add default sort if paginating with a cursor
+        sort_fields = get_sort_fields(fields_dict, group_by, sort_params)
+        sort_fields_with_default = sort_fields + default_sort
+        print(sort_fields_with_default)
+        s = s.sort(*sort_fields_with_default)
+    elif sort_params:
+        sort_fields = get_sort_fields(fields_dict, group_by, sort_params)
+        s = s.sort(*sort_fields)
     elif is_search_query and not sort_params and index_name.startswith("works"):
         s = s.sort("_score", "publication_date", "id")
     elif is_search_query and not sort_params:

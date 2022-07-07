@@ -2,7 +2,7 @@ from elasticsearch_dsl import Search
 
 from core.filter import filter_records
 from core.search import SearchOpenAlex
-from core.sort import sort_records
+from core.sort import get_sort_fields
 from core.utils import map_filter_params, map_sort_params
 from works.fields import fields_dict
 
@@ -85,7 +85,8 @@ def test_search_with_display_name_sort(client):
     search_oa = SearchOpenAlex(search_terms=search_terms)
     q = search_oa.build_query()
     s = s.query(q)
-    s = sort_records(fields_dict, None, sort_params, s)
+    sort_fields = get_sort_fields(fields_dict, None, sort_params)
+    s = s.sort(*sort_fields)
     assert s.to_dict() == {
         "query": {
             "function_score": {
@@ -194,7 +195,8 @@ def test_sort_query(client):
     s = filter_records(fields_dict, filter_params, s)
 
     # sort
-    s = sort_records(fields_dict, None, sort_params, s)
+    sort_fields = get_sort_fields(fields_dict, None, sort_params)
+    s = s.sort(*sort_fields)
 
     assert s.to_dict() == {
         "query": {
