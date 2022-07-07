@@ -4,6 +4,7 @@ from settings import ES_URL, WORKS_INDEX
 
 
 def remove_duplicates():
+    """Find and remove duplicates from works index."""
     count = 0
     # initial run
     s = Search(index="duplicated-ids-full")
