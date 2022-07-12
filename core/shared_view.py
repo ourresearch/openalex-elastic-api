@@ -1,3 +1,4 @@
+import hashlib
 from collections import OrderedDict
 
 from elasticsearch.exceptions import RequestError
@@ -58,10 +59,24 @@ def shared_view(request, fields_dict, index_name, default_sort):
     # search
     if search and search != '""':
         s = full_search(index_name, s, search)
+        s = s.params(preference=search)
 
     # filter
     if filter_params:
         s = filter_records(fields_dict, filter_params, s)
+
+        # set preference key if search param present. ensures
+        preference = None
+        for filter_param in filter_params:
+            for key in filter_param:
+                if key in [
+                    "display_name.search",
+                    "title.search",
+                    "raw_affiliation_string.search",
+                ]:
+                    preference = filter_param[key]
+        if preference:
+            s = s.params(preference=preference)
 
     # sort
     is_search_query = check_is_search_query(filter_params, search)

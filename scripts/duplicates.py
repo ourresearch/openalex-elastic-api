@@ -7,9 +7,8 @@ def remove_duplicates():
     """Find and remove duplicates from works index."""
     count = 0
     # initial run
-    s = Search(index="duplicated-ids-full")
+    s = Search(index="duplicate-id-full-v2")
     s = s.extra(size=200)
-    s = s.extra(search_after=["https://openalex.org/W3199998869"])
     s = s.sort("id")
     kwargs = {"ids.openalex.value_count": {"gt": 1}}
     q = Q("range", **kwargs)
@@ -22,7 +21,7 @@ def remove_duplicates():
     search_after = id
 
     while search_after:
-        s = Search(index="duplicated-ids-full")
+        s = Search(index="duplicate-id-full-v2")
         s = s.extra(size=200)
         s = s.extra(search_after=[search_after])
         s = s.sort("id")
