@@ -293,7 +293,10 @@ class RangeField(Field):
 
 class SearchField(Field):
     def build_query(self):
-        if self.param == "raw_affiliation_string.search":
+        if (
+            self.param == "raw_affiliation_string.search"
+            or self.param == "abstract.search"
+        ):
             search_oa = SearchOpenAlex(
                 search_terms=self.value, primary_field=self.es_field()
             )

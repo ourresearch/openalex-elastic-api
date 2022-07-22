@@ -1,4 +1,3 @@
-import hashlib
 from collections import OrderedDict
 
 from elasticsearch.exceptions import RequestError
@@ -70,6 +69,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         for filter_param in filter_params:
             for key in filter_param:
                 if key in [
+                    "abstract.search",
                     "display_name.search",
                     "title.search",
                     "raw_affiliation_string.search",
