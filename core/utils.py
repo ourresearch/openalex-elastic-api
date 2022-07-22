@@ -193,7 +193,9 @@ def is_cached(request):
         and (request.args.get("group_by") or request.args.get("group-by"))
         and (
             filters
+            and "abstract.search" not in filters
             and "display_name.search" not in filters
+            and "raw_affiliation_string.search" not in filters
             and "title.search" not in filters
         )
     ):

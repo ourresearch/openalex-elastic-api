@@ -43,6 +43,7 @@ fields = [
     PhraseField(param="host_venue.publisher"),
     RangeField(param="cited_by_count"),
     RangeField(param="publication_year"),
+    SearchField(param="abstract.search", custom_es_field="abstract"),
     SearchField(param="display_name.search"),
     SearchField(
         param="raw_affiliation_string.search",

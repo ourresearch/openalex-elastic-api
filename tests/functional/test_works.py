@@ -47,6 +47,10 @@ class TestWorksSearch:
                 == "Fusing Location Data for Depression Prediction"
             )
 
+    def test_works_search_abstract(self, client):
+        res = client.get("/works?filter=abstract.search:zoo keeper")
+        assert res.status_code == 200
+
 
 class TestWorksPublicationYearFilter:
     def test_works_publication_year_equal(self, client):

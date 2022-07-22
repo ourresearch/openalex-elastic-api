@@ -114,7 +114,9 @@ def check_is_search_query(filter_params, search):
     if filter_params:
         for filter in filter_params:
             if (
-                "display_name.search" in filter.keys()
+                "abstract.search" in filter.keys()
+                and filter["abstract.search"] != ""
+                or "display_name.search" in filter.keys()
                 and filter["display_name.search"] != ""
                 or "title.search" in filter.keys()
                 and filter["title.search"] != ""
