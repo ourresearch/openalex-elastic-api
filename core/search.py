@@ -10,6 +10,12 @@ class SearchOpenAlex:
     def build_query(self):
         if not self.search_terms:
             query = self.match_all()
+        elif (
+            self.primary_field == "authorships.raw_affiliation_string"
+            and len(self.search_terms.strip()) > 3
+        ):
+            query_string_query = self.query_string_query()
+            query = self.citation_boost_query(query_string_query)
         elif self.is_phrase():
             phrase_query = self.primary_phrase_query()
             query = self.citation_boost_query(phrase_query)
@@ -24,6 +30,16 @@ class SearchOpenAlex:
     @staticmethod
     def match_all():
         return Q("match_all")
+
+    def query_string_query(self):
+        return Q(
+            "query_string",
+            query=f"*{self.search_terms}*",
+            default_field=self.primary_field,
+        ) | Q(
+            "match",
+            **{self.primary_field: {"query": self.search_terms, "boost": 2}},
+        )
 
     def primary_match_query(self):
         """Searches with 'and' and phrase queries, with phrase boosted by 2."""
