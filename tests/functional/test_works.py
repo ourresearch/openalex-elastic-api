@@ -754,6 +754,51 @@ class TestWorksMultipleIDs:
         assert json_data["results"][0]["ids"]["mag"] == "116536"
         assert json_data["results"][1]["ids"]["mag"] == "71948"
 
+    def test_works_openalex_id_single_short(self, client):
+        res = client.get("/works?filter=ids.openalex:W2893359707")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["ids"]["openalex"]
+            == "https://openalex.org/W2893359707"
+        )
+
+    def test_works_openalex_id_alias_single_short(self, client):
+        res = client.get("/works?filter=openalex:W2893359707")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["ids"]["openalex"]
+            == "https://openalex.org/W2893359707"
+        )
+
+    def test_works_openalex_id_single_long(self, client):
+        res = client.get("/works?filter=ids.openalex:https://openalex.org/W2893359707")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["ids"]["openalex"]
+            == "https://openalex.org/W2893359707"
+        )
+
+    def test_works_openalex_id_alias_single_long(self, client):
+        res = client.get("/works?filter=openalex:https://openalex.org/W2893359707")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["ids"]["openalex"]
+            == "https://openalex.org/W2893359707"
+        )
+
+    def test_works_pmid_single_short(self, client):
+        res = client.get("/works?filter=pmid:14419794")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["ids"]["pmid"]
+            == "https://pubmed.ncbi.nlm.nih.gov/14419794"
+        )
+
     def test_works_pmid_single_short(self, client):
         res = client.get("/works?filter=pmid:14419794")
         json_data = res.get_json()
