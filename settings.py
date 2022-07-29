@@ -18,6 +18,7 @@ WORKS_INDEX = "works-v13-*,-*invalid-data"
 
 DO_NOT_GROUP_BY = [
     "cited_by",
+    "display_name",
     "doi",
     "ids.mag",
     "ids.pmid",
