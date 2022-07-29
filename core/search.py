@@ -138,6 +138,8 @@ def check_is_search_query(filter_params, search):
                 and filter["title.search"] != ""
                 or "raw_affiliation_string.search" in filter.keys()
                 and filter["raw_affiliation_string.search"] != ""
+                or "fulltext.search" in filter.keys()
+                and filter["fulltext.search"] != ""
             ):
                 is_search_query = True
                 break

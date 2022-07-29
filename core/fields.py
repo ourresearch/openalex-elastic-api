@@ -296,6 +296,7 @@ class SearchField(Field):
         if (
             self.param == "raw_affiliation_string.search"
             or self.param == "abstract.search"
+            or self.param == "fulltext.search"
         ):
             search_oa = SearchOpenAlex(
                 search_terms=self.value, primary_field=self.es_field()

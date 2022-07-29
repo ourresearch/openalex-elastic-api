@@ -47,6 +47,7 @@ fields = [
     RangeField(param="publication_year"),
     SearchField(param="abstract.search", custom_es_field="abstract"),
     SearchField(param="display_name.search"),
+    SearchField(param="fulltext.search", custom_es_field="fulltext"),
     SearchField(
         param="raw_affiliation_string.search",
         custom_es_field="authorships.raw_affiliation_string",
