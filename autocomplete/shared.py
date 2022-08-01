@@ -2,13 +2,11 @@ from collections import OrderedDict
 
 from elasticsearch_dsl import Search
 
-from autocomplete.utils import strip_punctuation
 from core.exceptions import APIQueryParamsError
 
 
 def single_entity_autocomplete(index_name, request):
     q = request.args.get("q")
-    q = strip_punctuation(q) if q else None
     if not q:
         raise APIQueryParamsError(
             f"Must enter a 'q' parameter in order to use autocomplete. Example: {request.url_rule}?q=my search"
