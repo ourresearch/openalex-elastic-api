@@ -83,6 +83,12 @@ class BooleanField(Field):
                 q = query
             elif self.value.lower().strip() == "false":
                 q = ~query
+        elif self.param == "has_fulltext":
+            self.validate_true_false()
+            if self.value.lower().strip() == "true":
+                q = Q("exists", field=self.es_field())
+            elif self.value.lower().strip() == "false":
+                q = ~Q("exists", field=self.es_field())
         elif self.value == "null":
             q = ~Q("exists", field=self.es_field())
         elif self.value == "!null":
