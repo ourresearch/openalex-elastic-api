@@ -2,6 +2,7 @@ from core.fields import (BooleanField, DateField, OpenAlexIDField, PhraseField,
                          RangeField, SearchField, TermField)
 
 fields = [
+    BooleanField(param="has_abstract", custom_es_field="abstract"),
     BooleanField(param="has_doi", custom_es_field="ids.doi"),
     BooleanField(param="has_fulltext", custom_es_field="fulltext"),
     BooleanField(param="has_oa_accepted_or_published_version"),
