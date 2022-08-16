@@ -16,7 +16,7 @@ class AutoCompleteSchema(Schema):
 
     def get_hint(self, obj):
         if "authors" in obj.meta.index:
-            return self.get_latest_work(obj.id)
+            return self.get_most_cited_work(obj.id)
         elif "concepts" in obj.meta.index:
             return obj.description if "description" in obj else None
         elif "institutions" in obj.meta.index:
@@ -30,10 +30,10 @@ class AutoCompleteSchema(Schema):
             return self.build_author_string(obj)
 
     @staticmethod
-    def get_latest_work(author_id):
+    def get_most_cited_work(author_id):
         s = Search(index=WORKS_INDEX)
         s = s.filter("term", authorships__author__id=author_id)
-        s = s.sort("-publication_date")
+        s = s.sort("-cited_by_count")
         s = s.extra(size=1)
         response = s.execute()
         for h in response:
