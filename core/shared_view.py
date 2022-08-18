@@ -39,7 +39,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
 
     s = Search(index=index_name)
     if index_name.startswith("works"):
-       s = s.source(excludes=["abstract", "fulltext"])
+        s = s.source(excludes=["abstract", "fulltext"])
 
     # pagination
     paginate = Paginate(group_by, page, per_page)
@@ -111,9 +111,11 @@ def shared_view(request, fields_dict, index_name, default_sort):
         transform = is_transform(field, index_name, filter_params)
         if (
             type(field).__name__ == "DateField"
-            or (type(field).__name__ == "RangeField"
-            and field.param != "publication_year"
-            and field.param != "level")
+            or (
+                type(field).__name__ == "RangeField"
+                and field.param != "publication_year"
+                and field.param != "level"
+            )
             or type(field).__name__ == "SearchField"
         ):
             raise APIQueryParamsError("Cannot group by date, number, or search fields.")

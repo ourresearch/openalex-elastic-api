@@ -2,10 +2,17 @@ from elasticsearch_dsl import Q
 
 
 class SearchOpenAlex:
-    def __init__(self, search_terms, primary_field=None, secondary_field=None):
+    def __init__(
+        self,
+        search_terms,
+        primary_field=None,
+        secondary_field=None,
+        tertiary_field=None,
+    ):
         self.search_terms = search_terms
         self.primary_field = primary_field if primary_field else "display_name"
         self.secondary_field = secondary_field
+        self.tertiary_field = tertiary_field
 
     def build_query(self):
         if not self.search_terms:
@@ -19,6 +26,9 @@ class SearchOpenAlex:
         elif self.is_phrase():
             phrase_query = self.primary_phrase_query()
             query = self.citation_boost_query(phrase_query)
+        elif self.primary_field and self.secondary_field and self.tertiary_field:
+            basic_query = self.primary_secondary_tertiary_match_query()
+            query = self.citation_boost_query(basic_query)
         elif self.primary_field and self.secondary_field:
             basic_query = self.primary_secondary_match_query()
             query = self.citation_boost_query(basic_query)
@@ -45,10 +55,10 @@ class SearchOpenAlex:
         """Searches with 'and' and phrase queries, with phrase boosted by 2."""
         return Q(
             "match",
-            **{self.primary_field: {"query": self.search_terms, "operator": "and"}}
+            **{self.primary_field: {"query": self.search_terms, "operator": "and"}},
         ) | Q(
             "match_phrase",
-            **{self.primary_field: {"query": self.search_terms, "boost": 2}}
+            **{self.primary_field: {"query": self.search_terms, "boost": 2}},
         )
 
     def primary_phrase_query(self):
@@ -65,11 +75,11 @@ class SearchOpenAlex:
                         "operator": "and",
                         "boost": 1,
                     }
-                }
+                },
             )
             | Q(
                 "match_phrase",
-                **{self.primary_field: {"query": self.search_terms, "boost": 2}}
+                **{self.primary_field: {"query": self.search_terms, "boost": 2}},
             )
             | Q(
                 "match",
@@ -79,7 +89,7 @@ class SearchOpenAlex:
                         "operator": "and",
                         "boost": 0.10,
                     }
-                }
+                },
             )
             | Q(
                 "match_phrase",
@@ -88,7 +98,64 @@ class SearchOpenAlex:
                         "query": self.search_terms,
                         "boost": 0.15,
                     }
-                }
+                },
+            )
+        )
+
+    def primary_secondary_tertiary_match_query(self):
+        """Searches primary, secondary, tertiary fields (used with works search param)."""
+        return (
+            Q(
+                "match",
+                **{
+                    self.primary_field: {
+                        "query": self.search_terms,
+                        "operator": "and",
+                        "boost": 1.5,
+                    }
+                },
+            )
+            | Q(
+                "match_phrase",
+                **{self.primary_field: {"query": self.search_terms, "boost": 3}},
+            )
+            | Q(
+                "match",
+                **{
+                    self.secondary_field: {
+                        "query": self.search_terms,
+                        "operator": "and",
+                        "boost": 0.5,
+                    }
+                },
+            )
+            | Q(
+                "match_phrase",
+                **{
+                    self.secondary_field: {
+                        "query": self.search_terms,
+                        "boost": 0.3,
+                    }
+                },
+            )
+            | Q(
+                "match",
+                **{
+                    self.tertiary_field: {
+                        "query": self.search_terms,
+                        "operator": "and",
+                        "boost": 0.05,
+                    }
+                },
+            )
+            | Q(
+                "match_phrase",
+                **{
+                    self.tertiary_field: {
+                        "query": self.search_terms,
+                        "boost": 0.1,
+                    }
+                },
             )
         )
 
@@ -117,7 +184,9 @@ def full_search(index_name, s, search):
     if index_name.lower().startswith("concepts"):
         search_oa = SearchOpenAlex(search_terms=search, secondary_field="description")
     elif index_name.lower().startswith("works"):
-        search_oa = SearchOpenAlex(search_terms=search, secondary_field="abstract")
+        search_oa = SearchOpenAlex(
+            search_terms=search, secondary_field="abstract", tertiary_field="fulltext"
+        )
     else:
         search_oa = SearchOpenAlex(search_terms=search)
     search_query = search_oa.build_query()
