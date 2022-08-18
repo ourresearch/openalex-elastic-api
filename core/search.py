@@ -125,7 +125,7 @@ class SearchOpenAlex:
                     self.secondary_field: {
                         "query": self.search_terms,
                         "operator": "and",
-                        "boost": 0.5,
+                        "boost": 0.3,
                     }
                 },
             )
@@ -134,7 +134,7 @@ class SearchOpenAlex:
                 **{
                     self.secondary_field: {
                         "query": self.search_terms,
-                        "boost": 0.3,
+                        "boost": 0.5,
                     }
                 },
             )
