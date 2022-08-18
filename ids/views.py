@@ -104,6 +104,7 @@ def works_id_get(id):
 
 @blueprint.route("/authors/RANDOM")
 @blueprint.route("/authors/random")
+@blueprint.route("/people/random")
 def authors_random_get():
     s = Search(index=AUTHORS_INDEX)
 
@@ -124,6 +125,7 @@ def authors_random_get():
 
 
 @blueprint.route("/authors/<path:id>")
+@blueprint.route("/people/<path:id>")
 def authors_id_get(id):
     s = Search(index=AUTHORS_INDEX)
 
@@ -225,6 +227,7 @@ def institutions_id_get(id):
 
 @blueprint.route("/venues/RANDOM")
 @blueprint.route("/venues/random")
+@blueprint.route("/journals/random")
 def venues_random_get():
     s = Search(index=VENUES_INDEX)
 
@@ -236,6 +239,7 @@ def venues_random_get():
 
 
 @blueprint.route("/venues/<path:id>")
+@blueprint.route("/journals/<path:id>")
 def venues_id_get(id):
     s = Search(index=VENUES_INDEX)
 

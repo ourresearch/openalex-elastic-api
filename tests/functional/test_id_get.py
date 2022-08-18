@@ -136,6 +136,12 @@ class TestAuthorsIDGet:
         res = client.get("/authors/289744280", follow_redirects=True)
         assert res.status_code == 404
 
+    def test_people_openalex_get(self, client):
+        res = client.get("/people/A2609699")
+        json_data = res.get_json()
+        assert json_data["id"] == self.id_result
+        assert json_data["display_name"] == self.name_result
+
 
 class TestInstitutionsIDGet:
     id_result = "https://openalex.org/I19820366"
@@ -195,6 +201,12 @@ class TestVenuesIDGet:
     def test_venues_id_get_bad_data(self, client):
         res = client.get("/venues/289744280", follow_redirects=True)
         assert res.status_code == 404
+
+    def test_journals_openalex_get(self, client):
+        res = client.get("/journals/V41354064")
+        json_data = res.get_json()
+        assert json_data["id"] == self.id_result
+        assert json_data["display_name"] == self.name_result
 
 
 class TestConceptsIDGet:
