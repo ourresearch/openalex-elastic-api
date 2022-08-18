@@ -302,3 +302,10 @@ class TestAuthorsOrder:
         actual_keys = result.keys()
         for expected_key, actual_key in zip(expected_keys, actual_keys):
             assert expected_key == actual_key
+
+
+class TestPeopleAlias:
+    def test_people_alias(self, client):
+        res = client.get("/people")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 10000

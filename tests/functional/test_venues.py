@@ -212,3 +212,10 @@ class TestRaiseError:
             json_data["message"]
             == "It looks like you're trying to do an OR query between filters and it's not supported. \nYou can do this: institutions.country_code:fr|en, but not this: institutions.country_code:gb|host_venue.issn:0957-1558. \nProblem value: false|works_count:>100"
         )
+
+
+class TestJournalsAlias:
+    def test_journals_alias(self, client):
+        res = client.get("/journals")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 10000

@@ -13,6 +13,7 @@ blueprint = Blueprint("venues", __name__)
 
 
 @blueprint.route("/venues")
+@blueprint.route("/journals")
 @cache.cached(
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
@@ -25,6 +26,7 @@ def venues():
 
 
 @blueprint.route("/venues/filters/<path:params>")
+@blueprint.route("/journals/filters/<path:params>")
 def venues_filters(params):
     index_name = VENUES_INDEX
     results = shared_filter_view(request, params, fields_dict, index_name)
