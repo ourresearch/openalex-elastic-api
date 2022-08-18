@@ -178,28 +178,11 @@ def get_full_openalex_id(openalex_id):
 
 
 def is_cached(request):
-    cached = False
-    filters = request.args.get("filter")
-
-    # cache urls with group-by and no other params
-    if len(request.args) == 1 and (
-        request.args.get("group_by") or request.args.get("group-by")
-    ):
+    # cache urls with group-by
+    if request.args.get("group_by") or request.args.get("group-by"):
         cached = True
-
-    # cache urls with group-by and filter pararms that are not search related
-    elif (
-        len(request.args) == 2
-        and (request.args.get("group_by") or request.args.get("group-by"))
-        and (
-            filters
-            and "abstract.search" not in filters
-            and "display_name.search" not in filters
-            and "raw_affiliation_string.search" not in filters
-            and "title.search" not in filters
-        )
-    ):
-        cached = True
+    else:
+        cached = False
     return cached
 
 
