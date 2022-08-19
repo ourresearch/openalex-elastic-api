@@ -142,6 +142,7 @@ class WorksSchema(Schema):
     alternate_host_venues = fields.List(fields.Nested(AlternateHostVenuesSchema))
     referenced_works = fields.List(fields.Str())
     related_works = fields.List(fields.Str())
+    ngrams_url = fields.Method("get_ngrams_url")
     abstract_inverted_index = fields.Function(
         lambda obj: json.loads(obj.abstract_inverted_index).get("InvertedIndex")
         if "abstract_inverted_index" in obj and obj.abstract_inverted_index
@@ -159,6 +160,12 @@ class WorksSchema(Schema):
     @staticmethod
     def get_relevance_score(obj):
         return relevance_score(obj)
+
+    @staticmethod
+    def get_ngrams_url(obj):
+        short_id = obj.id.replace("https://openalex.org/", "")
+        ngrams_url = f"https://api.openalex.org/works/{short_id}/ngrams"
+        return ngrams_url
 
     class Meta:
         ordered = True

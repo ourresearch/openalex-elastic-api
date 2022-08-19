@@ -888,3 +888,12 @@ class TestWorksUniqueOAFilters:
         res = client.get("/works?filter=has_oa_submitted_version:false")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 9821
+
+
+class TestWorksNgramsURL:
+    def test_works_ngrams_url(self, client):
+        res = client.get("/works")
+        record = res.get_json()["results"][0]
+        short_id = record["id"].replace("https://openalex.org/", "")
+        ngrams_url = f"https://api.openalex.org/works/{short_id}/ngrams"
+        assert record["ngrams_url"] == ngrams_url
