@@ -14,7 +14,7 @@ AUTHORS_INDEX = "authors-v7"
 CONCEPTS_INDEX = "concepts-v6"
 INSTITUTIONS_INDEX = "institutions-v4"
 VENUES_INDEX = "venues-v5"
-WORKS_INDEX = "works-v13-*,-*invalid-data"
+WORKS_INDEX = "works-v14-*,-*invalid-data"
 
 DO_NOT_GROUP_BY = [
     "cited_by",
