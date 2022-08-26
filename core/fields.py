@@ -346,6 +346,16 @@ class TermField(Field):
             kwargs = {self.es_field(): formatted_id}
             q = Q("term", **kwargs)
             return q
+        elif self.param == "doi_starts_with":
+            if "https://doi.org" in self.value:
+                raise APIQueryParamsError("Enter DOI in short format such as 10.12")
+            if len(self.value) < 3:
+                raise APIQueryParamsError(
+                    "Enter more than 3 characters to use this filter. Such as 10.12"
+                )
+            query = f"https://doi.org/{self.value}"
+            kwargs = {self.es_field(): query}
+            q = Q("prefix", **kwargs)
         elif self.value.startswith("!"):
             query = self.value[1:]
             kwargs = {self.es_field(): query}

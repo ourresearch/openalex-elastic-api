@@ -65,6 +65,7 @@ fields = [
     TermField(param="concepts.wikidata"),
     TermField(param="display_name", custom_es_field="display_name.lower"),
     TermField(param="doi", alias="ids.doi"),
+    TermField(param="doi_starts_with", custom_es_field="ids.doi"),
     TermField(param="ids.mag", custom_es_field="ids.mag"),
     TermField(param="ids.pmid", custom_es_field="ids.pmid"),
     TermField(param="ids.pmcid", custom_es_field="ids.pmcid"),
