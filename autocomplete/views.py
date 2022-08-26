@@ -57,6 +57,21 @@ def autocomplete_full():
     s = Search(index=index)
     s = s.query("match_phrase_prefix", display_name__autocomplete=q)
     s = s.sort("-cited_by_count")
+    s = s.source(
+        [
+            "id",
+            "display_name",
+            "authorships",
+            "doi",
+            "description",
+            "geo",
+            "issn_l",
+            "orcid",
+            "publisher",
+            "ror",
+            "wikidata",
+        ]
+    )
     response = s.execute()
 
     result = OrderedDict()

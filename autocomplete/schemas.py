@@ -35,6 +35,7 @@ class AutoCompleteSchema(Schema):
         s = s.filter("term", authorships__author__id=author_id)
         s = s.sort("-cited_by_count")
         s = s.extra(size=1)
+        s = s.source(["title", "publication_year"])
         response = s.execute()
         for h in response:
             return f"{h.title} ({h.publication_year})"
