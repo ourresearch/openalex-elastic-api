@@ -6,8 +6,9 @@ from flask import Blueprint, request
 
 from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
 from autocomplete.shared import single_entity_autocomplete
-from autocomplete.utils import strip_punctuation
+from autocomplete.utils import is_cached_autocomplete, strip_punctuation
 from core.exceptions import APIQueryParamsError
+from extensions import cache
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
                       VENUES_INDEX, WORKS_INDEX)
 
@@ -15,6 +16,11 @@ blueprint = Blueprint("complete", __name__)
 
 
 @blueprint.route("/autocomplete")
+@cache.cached(
+    timeout=24 * 60 * 60 * 7,
+    query_string=True,
+    unless=lambda: not is_cached_autocomplete(request),
+)
 def autocomplete_full():
     entities_to_indeces = {
         "author": AUTHORS_INDEX,
@@ -66,6 +72,11 @@ def autocomplete_full():
 
 
 @blueprint.route("/autocomplete/authors")
+@cache.cached(
+    timeout=24 * 60 * 60 * 7,
+    query_string=True,
+    unless=lambda: not is_cached_autocomplete(request),
+)
 def autocomplete_authors():
     index_name = AUTHORS_INDEX
     result = single_entity_autocomplete(index_name, request)
@@ -98,6 +109,11 @@ def autocomplete_venues():
 
 
 @blueprint.route("/autocomplete/works")
+@cache.cached(
+    timeout=24 * 60 * 60 * 7,
+    query_string=True,
+    unless=lambda: not is_cached_autocomplete(request),
+)
 def autocomplete_works():
     index_name = WORKS_INDEX
     result = single_entity_autocomplete(index_name, request)
