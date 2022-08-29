@@ -1,6 +1,6 @@
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import MultiSearch, Search
 from iso3166 import countries
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, pre_dump
 
 from core.schemas import GroupBySchema, MetaSchema
 from settings import WORKS_INDEX
@@ -16,7 +16,7 @@ class AutoCompleteSchema(Schema):
 
     def get_hint(self, obj):
         if "authors" in obj.meta.index:
-            return self.get_most_cited_work(obj.id)
+            return obj.hint if "hint" in obj else None
         elif "concepts" in obj.meta.index:
             return obj.description if "description" in obj else None
         elif "institutions" in obj.meta.index:
@@ -29,16 +29,26 @@ class AutoCompleteSchema(Schema):
         elif "works" in obj.meta.index:
             return self.build_author_string(obj)
 
-    @staticmethod
-    def get_most_cited_work(author_id):
-        s = Search(index=WORKS_INDEX)
-        s = s.filter("term", authorships__author__id=author_id)
-        s = s.sort("-cited_by_count")
-        s = s.extra(size=1)
-        s = s.source(["title", "publication_year"])
-        response = s.execute()
-        for h in response:
-            return f"{h.title} ({h.publication_year})"
+    @pre_dump(pass_many=True)
+    def author_hint_prep(self, data, many, **kwargs):
+        ms = MultiSearch(index=WORKS_INDEX)
+        # first pass, build search
+        for d in data:
+            if "authors" in d.meta.index:
+                s = Search()
+                s = s.filter("term", authorships__author__id=d.id)
+                s = s.sort("-cited_by_count")
+                s = s.extra(size=1)
+                ms = ms.add(s)
+        responses = ms.execute()
+
+        # second pass, map hints to objects
+        for d, response in zip(data, responses):
+            print(response.took)
+            for h in response:
+                d.hint = f"{h.title} ({h.publication_year})"
+                print(f"{h.title} ({h.publication_year})")
+        return data
 
     def get_location(self, obj):
         if "geo" in obj:
