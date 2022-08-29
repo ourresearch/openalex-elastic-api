@@ -43,6 +43,7 @@ class AutoCompleteSchema(Schema):
                 s = s.sort("-cited_by_count")
                 s = s.extra(size=1)
                 s = s.source(["title", "publication_year"])
+                s = s.params(preference=d.id)
                 ms = ms.add(s)
 
         # second pass, map hints to objects

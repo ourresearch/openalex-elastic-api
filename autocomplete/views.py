@@ -72,6 +72,7 @@ def autocomplete_full():
             "wikidata",
         ]
     )
+    s = s.params(preference=q)
     response = s.execute()
 
     result = OrderedDict()
