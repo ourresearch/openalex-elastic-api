@@ -31,23 +31,26 @@ class AutoCompleteSchema(Schema):
 
     @pre_dump(pass_many=True)
     def author_hint_prep(self, data, many, **kwargs):
+        """This function maps a work title and publication year to an author result as a hint."""
         ms = MultiSearch(index=WORKS_INDEX)
-        # first pass, build search
+        has_hints = False
+        # first pass, build search hints with multisearch
         for d in data:
             if "authors" in d.meta.index:
+                has_hints = True
                 s = Search()
                 s = s.filter("term", authorships__author__id=d.id)
                 s = s.sort("-cited_by_count")
                 s = s.extra(size=1)
+                s = s.source(["title", "publication_year"])
                 ms = ms.add(s)
-        responses = ms.execute()
 
         # second pass, map hints to objects
-        for d, response in zip(data, responses):
-            print(response.took)
-            for h in response:
-                d.hint = f"{h.title} ({h.publication_year})"
-                print(f"{h.title} ({h.publication_year})")
+        if has_hints:
+            responses = ms.execute()
+            for d, response in zip(data, responses):
+                for h in response:
+                    d.hint = f"{h.title} ({h.publication_year})"
         return data
 
     def get_location(self, obj):
