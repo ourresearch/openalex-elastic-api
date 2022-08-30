@@ -20,6 +20,7 @@ def single_entity_autocomplete(index_name, request):
             "id",
             "display_name",
             "authorships",
+            "cited_by_count",
             "doi",
             "description",
             "geo",
