@@ -57,25 +57,22 @@ class TestWorksPublicationYearFilter:
         res = client.get("/works?filter=publication_year:2020")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 27
-        assert json_data["results"][0]["id"] == "https://openalex.org/W2893840989"
-        assert json_data["results"][0]["cited_by_count"] == 2
-        assert res.status_code == 200
+        for result in json_data["results"][:25]:
+            assert result["publication_year"] == 2020
 
     def test_works_publication_year_greater_than(self, client):
         res = client.get("/works?filter=publication_year:>2020")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 7
-        assert json_data["results"][0]["id"] == "https://openalex.org/W2893359707"
-        assert json_data["results"][0]["cited_by_count"] == 0
-        assert res.status_code == 200
+        for result in json_data["results"][:25]:
+            assert result["publication_year"] > 2020
 
     def test_works_publication_year_less_than(self, client):
         res = client.get("/works?filter=publication_year:<2020")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 9966
-        assert json_data["results"][0]["id"] == "https://openalex.org/W2893871524"
-        assert json_data["results"][0]["cited_by_count"] == 0
-        assert res.status_code == 200
+        for result in json_data["results"][:25]:
+            assert result["publication_year"] < 2020
 
     def test_works_publication_year_error(self, client):
         res = client.get("/works?filter=publication_year:ff")
@@ -92,24 +89,23 @@ class TestWorksPublicationDateFilter:
         res = client.get("/works?filter=publication_date:2020-01-01")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 4
-        assert json_data["results"][0]["id"] == "https://openalex.org/W2893038645"
-        assert json_data["results"][0]["cited_by_count"] == 1
-        assert res.status_code == 200
+        for result in json_data["results"][:25]:
+            assert result["publication_date"] == "2020-01-01"
 
     def test_works_publication_date_greater_than(self, client):
         res = client.get("/works?filter=publication_date:>2020-01-01")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 30
-        assert json_data["results"][0]["id"] == "https://openalex.org/W2893359707"
-        assert json_data["results"][0]["cited_by_count"] == 0
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2894709482"
+        assert json_data["results"][0]["cited_by_count"] == 26
         assert res.status_code == 200
 
     def test_works_publication_date_less_than(self, client):
         res = client.get("/works?filter=publication_date:<2020-01-01")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 9966
-        assert json_data["results"][0]["id"] == "https://openalex.org/W2893871524"
-        assert json_data["results"][0]["cited_by_count"] == 0
+        assert json_data["results"][0]["id"] == "https://openalex.org/W127786"
+        assert json_data["results"][0]["cited_by_count"] == 1864
         assert res.status_code == 200
 
     def test_works_from_to_publication_date(self, client):
@@ -271,28 +267,39 @@ class TestWorksInstitutionsFilters:
     def test_works_institutions_id_short(self, client):
         res = client.get("/works?filter=institutions.id:I140172145")
         json_data = res.get_json()
-        assert (
-            json_data["results"][0]["authorships"][0]["institutions"][0]["display_name"]
-            == self.institution_name
-        )
+
+        for result in json_data["results"][:25]:
+            found = False
+            for author in result["authorships"]:
+                for institution in author["institutions"]:
+                    if self.institution_name in institution["display_name"]:
+                        found = True
+            assert found == True
 
     def test_works_institutions_id_long(self, client):
         res = client.get(
             "/works?filter=institutions.id:https://openalex.org/I140172145"
         )
         json_data = res.get_json()
-        assert (
-            json_data["results"][0]["authorships"][0]["institutions"][0]["display_name"]
-            == self.institution_name
-        )
+        for result in json_data["results"][:25]:
+            found = False
+            for author in result["authorships"]:
+                for institution in author["institutions"]:
+                    if self.institution_name in institution["display_name"]:
+                        found = True
+            assert found == True
 
     def test_works_institutions_ror(self, client):
         res = client.get("/works?filter=institutions.ror:https://ror.org/02der9h97")
         json_data = res.get_json()
-        assert (
-            json_data["results"][0]["authorships"][0]["institutions"][0]["display_name"]
-            == self.institution_name
-        )
+
+        for result in json_data["results"][:25]:
+            found = False
+            for author in result["authorships"]:
+                for institution in author["institutions"]:
+                    if self.institution_name in institution["display_name"]:
+                        found = True
+            assert found == True
 
     def test_works_institutions_country_code(self, client):
         res = client.get("/works?filter=institutions.country_code:de")
@@ -688,8 +695,8 @@ class TestWorksMultipleIDs:
         )
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 2
-        assert json_data["results"][0]["id"] == "https://openalex.org/W2893359707"
-        assert json_data["results"][1]["id"] == "https://openalex.org/W2893173145"
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2893173145"
+        assert json_data["results"][1]["id"] == "https://openalex.org/W2893359707"
 
     def test_works_openalex_single_short(self, client):
         res = client.get("/works?filter=openalex_id:w2893359707")
@@ -701,8 +708,8 @@ class TestWorksMultipleIDs:
         res = client.get("/works?filter=openalex_id:W2893359707|W2893173145")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 2
-        assert json_data["results"][0]["id"] == "https://openalex.org/W2893359707"
-        assert json_data["results"][1]["id"] == "https://openalex.org/W2893173145"
+        assert json_data["results"][0]["id"] == "https://openalex.org/W2893173145"
+        assert json_data["results"][1]["id"] == "https://openalex.org/W2893359707"
 
     def test_works_doi_single_long(self, client):
         res = client.get("/works?filter=doi:https://doi.org/10.23845/kgt.v14i3.277")
@@ -727,11 +734,11 @@ class TestWorksMultipleIDs:
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 2
         assert (
-            json_data["results"][0]["doi"] == "https://doi.org/10.23845/kgt.v14i3.277"
+            json_data["results"][0]["doi"]
+            == "https://doi.org/10.1109/tbdata.2018.2872569"
         )
         assert (
-            json_data["results"][1]["doi"]
-            == "https://doi.org/10.1109/tbdata.2018.2872569"
+            json_data["results"][1]["doi"] == "https://doi.org/10.23845/kgt.v14i3.277"
         )
 
     def test_works_mag_single(self, client):
@@ -814,11 +821,11 @@ class TestWorksMultipleIDs:
         assert json_data["meta"]["count"] == 2
         assert (
             json_data["results"][0]["ids"]["pmid"]
-            == "https://pubmed.ncbi.nlm.nih.gov/13729179"
+            == "https://pubmed.ncbi.nlm.nih.gov/14419794"
         )
         assert (
             json_data["results"][1]["ids"]["pmid"]
-            == "https://pubmed.ncbi.nlm.nih.gov/14419794"
+            == "https://pubmed.ncbi.nlm.nih.gov/13729179"
         )
 
     def test_works_pmid_multiple_short_alias(self, client):
@@ -827,11 +834,11 @@ class TestWorksMultipleIDs:
         assert json_data["meta"]["count"] == 2
         assert (
             json_data["results"][0]["ids"]["pmid"]
-            == "https://pubmed.ncbi.nlm.nih.gov/13729179"
+            == "https://pubmed.ncbi.nlm.nih.gov/14419794"
         )
         assert (
             json_data["results"][1]["ids"]["pmid"]
-            == "https://pubmed.ncbi.nlm.nih.gov/14419794"
+            == "https://pubmed.ncbi.nlm.nih.gov/13729179"
         )
 
     def test_works_pmid_multiple_long(self, client):
@@ -842,11 +849,11 @@ class TestWorksMultipleIDs:
         assert json_data["meta"]["count"] == 2
         assert (
             json_data["results"][0]["ids"]["pmid"]
-            == "https://pubmed.ncbi.nlm.nih.gov/13729179"
+            == "https://pubmed.ncbi.nlm.nih.gov/14419794"
         )
         assert (
             json_data["results"][1]["ids"]["pmid"]
-            == "https://pubmed.ncbi.nlm.nih.gov/14419794"
+            == "https://pubmed.ncbi.nlm.nih.gov/13729179"
         )
 
     def test_works_pmcid_single_short(self, client):
