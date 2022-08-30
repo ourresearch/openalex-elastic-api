@@ -46,5 +46,5 @@ class Paginate:
     def validate_result_size(self):
         if self.page * self.per_page > self.max_result_size:
             raise APIPaginationError(
-                f"Maximum results size of {self.max_result_size:,} records is exceeded. Cursor pagination is required for records beyond {self.max_result_size:,} and is coming soon."
+                f"Maximum results size of {self.max_result_size:,} records is exceeded. Cursor pagination is required for records beyond {self.max_result_size:,}. See: https://docs.openalex.org/api#cursor-paging"
             )
