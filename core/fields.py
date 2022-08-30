@@ -6,7 +6,7 @@ from elasticsearch_dsl import Q, Search
 
 from core.exceptions import APIQueryParamsError
 from core.search import SearchOpenAlex
-from core.utils import get_full_openalex_id
+from core.utils import get_full_openalex_id, normalize_openalex_id
 from settings import EXTERNAL_ID_FIELDS, WORKS_INDEX
 
 
@@ -167,6 +167,9 @@ class DateField(Field):
 
 class OpenAlexIDField(Field):
     def build_query(self):
+        if not normalize_openalex_id(self.value):
+            error_id = f"'{self.value.replace('https://openalex.org/', '')}'"
+            raise APIQueryParamsError(f"{error_id} is not a valid OpenAlex ID.")
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
