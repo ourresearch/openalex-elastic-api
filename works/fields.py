@@ -69,6 +69,9 @@ fields = [
     TermField(param="ids.mag", custom_es_field="ids.mag"),
     TermField(param="ids.pmid", custom_es_field="ids.pmid"),
     TermField(param="ids.pmcid", custom_es_field="ids.pmcid"),
+    TermField(
+        param="host_venue.display_name", custom_es_field="host_venue.display_name"
+    ),
     TermField(param="host_venue.issn"),
     TermField(
         param="institutions.country_code", alias="authorships.institutions.country_code"
