@@ -44,10 +44,11 @@ class SearchOpenAlex:
     def query_string_query(self):
         return Q(
             "query_string",
-            query=f"*{self.search_terms}*",
+            query=f"{self.search_terms}",
+            default_operator="AND",
             default_field=self.primary_field,
         ) | Q(
-            "match",
+            "match_phrase",
             **{self.primary_field: {"query": self.search_terms, "boost": 2}},
         )
 
