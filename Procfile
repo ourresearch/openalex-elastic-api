@@ -1,1 +1,1 @@
-web: gunicorn "app:create_app()" -w 3
+web: gunicorn "app:create_app()" -w $WEB_WORKERS_PER_DYNO
