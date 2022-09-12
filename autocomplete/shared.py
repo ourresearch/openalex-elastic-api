@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from elasticsearch_dsl import Search
 
+from autocomplete.utils import AUTOCOMPLETE_SOURCE, get_preference
 from core.exceptions import APIQueryParamsError
 
 
@@ -15,23 +16,9 @@ def single_entity_autocomplete(index_name, request):
     s = Search(index=index_name)
     s = s.query("match_phrase_prefix", display_name__autocomplete=q)
     s = s.sort("-cited_by_count")
-    s = s.source(
-        [
-            "id",
-            "display_name",
-            "authorships",
-            "cited_by_count",
-            "doi",
-            "description",
-            "geo",
-            "issn_l",
-            "orcid",
-            "publisher",
-            "ror",
-            "wikidata",
-        ]
-    )
-    s = s.params(preference=q)
+    s = s.source(AUTOCOMPLETE_SOURCE)
+    preference = get_preference(q)
+    s = s.params(preference=preference)
     response = s.execute()
 
     result = OrderedDict()

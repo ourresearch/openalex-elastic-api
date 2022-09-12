@@ -6,7 +6,8 @@ from flask import Blueprint, request
 
 from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
 from autocomplete.shared import single_entity_autocomplete
-from autocomplete.utils import is_cached_autocomplete, strip_punctuation
+from autocomplete.utils import (AUTOCOMPLETE_SOURCE, get_preference,
+                                is_cached_autocomplete, strip_punctuation)
 from core.exceptions import APIQueryParamsError
 from extensions import cache
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
@@ -57,23 +58,9 @@ def autocomplete_full():
     s = Search(index=index)
     s = s.query("match_phrase_prefix", display_name__autocomplete=q)
     s = s.sort("-cited_by_count")
-    s = s.source(
-        [
-            "id",
-            "display_name",
-            "authorships",
-            "cited_by_count",
-            "doi",
-            "description",
-            "geo",
-            "issn_l",
-            "orcid",
-            "publisher",
-            "ror",
-            "wikidata",
-        ]
-    )
-    s = s.params(preference=q)
+    s = s.source(AUTOCOMPLETE_SOURCE)
+    preference = get_preference(q)
+    s = s.params(preference=preference)
     response = s.execute()
 
     result = OrderedDict()
