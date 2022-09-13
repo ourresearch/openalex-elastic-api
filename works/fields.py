@@ -5,6 +5,7 @@ fields = [
     BooleanField(param="has_abstract", custom_es_field="abstract"),
     BooleanField(param="has_doi", custom_es_field="ids.doi"),
     BooleanField(param="has_fulltext", custom_es_field="fulltext"),
+    BooleanField(param="has_ngrams", custom_es_field="fulltext"),
     BooleanField(param="has_oa_accepted_or_published_version"),
     BooleanField(param="has_oa_submitted_version"),
     BooleanField(param="is_oa", alias="open_access.is_oa"),
