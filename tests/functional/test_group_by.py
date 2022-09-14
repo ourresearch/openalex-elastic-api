@@ -43,6 +43,13 @@ class TestGroupByNameKey:
         assert result["key_display_name"] == "unknown"
         assert result["count"] == 7300
 
+    def test_group_by_known_filter(self, client):
+        res = client.get("/works?group-by=host_venue.id:known")
+        json_data = res.get_json()
+        results = json_data["group_by"]
+        for result in results:
+            assert result["key"] != "unknown"
+
     def test_group_by_boolean(self, client):
         res = client.get("/venues?group_by=is_oa")
         json_data = res.get_json()

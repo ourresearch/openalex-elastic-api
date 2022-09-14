@@ -92,7 +92,6 @@ def shared_view(request, fields_dict, index_name, default_sort):
         # add default sort if paginating with a cursor
         sort_fields = get_sort_fields(fields_dict, group_by, sort_params)
         sort_fields_with_default = sort_fields + default_sort
-        print(sort_fields_with_default)
         s = s.sort(*sort_fields_with_default)
     elif sort_params:
         sort_fields = get_sort_fields(fields_dict, group_by, sort_params)
@@ -107,6 +106,17 @@ def shared_view(request, fields_dict, index_name, default_sort):
     # group by
     transform = False
     if group_by:
+        # handle known filter
+        known = False
+        if ":" in group_by:
+            group_by_split = group_by.split(":")
+            if len(group_by_split) == 2 and group_by_split[1].lower() == "known":
+                group_by = group_by_split[0]
+                known = True
+            elif len(group_by_split) == 2 and group_by_split[1].lower() != "known":
+                raise APIQueryParamsError(
+                    "The only valid filter for a group_by param is 'known', which hides the unknown group from results."
+                )
         field = get_field(fields_dict, group_by)
         transform = is_transform(field, index_name, filter_params)
         if (
@@ -128,7 +138,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         if transform:
             s = group_by_records_transform(field, index_name, sort_params)
         else:
-            s = group_by_records(field, s, sort_params)
+            s = group_by_records(field, s, sort_params, known)
 
     if not group_by:
         try:
