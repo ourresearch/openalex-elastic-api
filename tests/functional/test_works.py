@@ -1,3 +1,6 @@
+import pytest
+
+
 class TestWorksSearch:
     def test_works_search(self, client):
         res = client.get("/works?search=analysis")
@@ -419,6 +422,15 @@ class TestWorksAlternateHostVenues:
                 result["alternate_host_venues"][0]["id"]
                 == "https://openalex.org/V173526857"
             )
+
+    @pytest.mark.skip
+    def test_works_host_venues_license(self, client):
+        """Implement once local elastic data is updated."""
+        res = client.get("/works?filter=host_venues.license:CC-by-nc")
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["host_venues"][0]["license"] == "cc-by-nc"
+        )
 
     def test_works_alternate_host_venues_license(self, client):
         res = client.get("/works?filter=alternate_host_venues.license:CC-by-nc")
