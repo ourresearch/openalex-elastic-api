@@ -370,6 +370,9 @@ class TermField(Field):
         elif self.param == "display_name":
             kwargs = {self.es_field(): self.value}
             q = Q("match", **kwargs)
+        elif self.param == "host_venue.license":
+            kwargs = {self.es_field(): self.value.lower()}
+            q = Q("term", **kwargs)
         else:
             kwargs = {self.es_field(): self.value}
             q = Q("term", **kwargs)
