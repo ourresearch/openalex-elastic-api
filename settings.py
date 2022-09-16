@@ -37,6 +37,8 @@ EXTERNAL_ID_FIELDS = [
     "has_wikidata",
 ]
 
+BOOLEAN_TEXT_FIELDS = ["has_abstract", "has_ngrams"]
+
 TRANSFORMS = [
     {
         "field": "x_concepts.id",

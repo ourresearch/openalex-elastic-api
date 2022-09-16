@@ -151,7 +151,10 @@ def shared_view(request, fields_dict, index_name, default_sort):
         count = s.count()
     else:
         response = s.execute()
-        if group_by in settings.EXTERNAL_ID_FIELDS:
+        if (
+            group_by in settings.EXTERNAL_ID_FIELDS
+            or group_by in settings.BOOLEAN_TEXT_FIELDS
+        ):
             count = 2
         elif transform:
             count = len(response)
@@ -171,7 +174,10 @@ def shared_view(request, fields_dict, index_name, default_sort):
         result["meta"]["next_cursor"] = get_next_cursor(response)
 
     if group_by:
-        if group_by in settings.EXTERNAL_ID_FIELDS:
+        if (
+            group_by in settings.EXTERNAL_ID_FIELDS
+            or group_by in settings.BOOLEAN_TEXT_FIELDS
+        ):
             result["group_by"] = get_group_by_results_external_ids(response)
         elif transform:
             result["group_by"] = get_group_by_results_transform(group_by, response)

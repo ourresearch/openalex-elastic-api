@@ -7,7 +7,10 @@ def get_sort_fields(fields_dict, group_by, sort_params):
     sort_fields = []
     for key, value in sort_params.items():
         # group by
-        if group_by in settings.EXTERNAL_ID_FIELDS:
+        if (
+            group_by in settings.EXTERNAL_ID_FIELDS
+            or group_by in settings.BOOLEAN_TEXT_FIELDS
+        ):
             raise APIQueryParamsError(
                 "Cannot sort when grouping by external ID boolean field."
             )

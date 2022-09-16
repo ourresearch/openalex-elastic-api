@@ -45,9 +45,12 @@ def group_by_records(field, s, sort_params, known):
                     size=200,
                 )
             s.aggs.bucket("groupby", a)
-    elif field.param in settings.EXTERNAL_ID_FIELDS:
+    elif (
+        field.param in settings.EXTERNAL_ID_FIELDS
+        or field.param in settings.BOOLEAN_TEXT_FIELDS
+    ):
         exists = A("filter", Q("exists", field=group_by_field))
-        not_exists = A("missing", field=group_by_field)
+        not_exists = A("filter", ~Q("exists", field=group_by_field))
         s.aggs.bucket("exists", exists)
         s.aggs.bucket("not_exists", not_exists)
     elif known:
