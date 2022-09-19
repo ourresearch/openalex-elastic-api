@@ -87,6 +87,7 @@ class BooleanField(Field):
             self.param == "has_abstract"
             or self.param == "has_fulltext"
             or self.param == "has_ngrams"
+            or self.param == "has_references"
         ):
             self.validate_true_false()
             if self.value.lower().strip() == "true":

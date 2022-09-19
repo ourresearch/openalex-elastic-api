@@ -913,3 +913,20 @@ class TestWorksNgramsURL:
         short_id = record["id"].replace("https://openalex.org/", "")
         ngrams_url = f"https://api.openalex.org/works/{short_id}/ngrams"
         assert record["ngrams_url"] == ngrams_url
+
+
+class TestWorksHasFilters:
+    def test_works_has_references(self, client):
+        res = client.get("/works?filter=has_references:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2690
+
+    def test_works_has_references_error(self, client):
+        res = client.get("/works?filter=has_references:null")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"]
+            == "Value for has_references must be true or false, not null."
+        )
