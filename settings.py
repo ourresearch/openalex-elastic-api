@@ -37,7 +37,7 @@ EXTERNAL_ID_FIELDS = [
     "has_wikidata",
 ]
 
-BOOLEAN_TEXT_FIELDS = ["has_abstract", "has_ngrams"]
+BOOLEAN_TEXT_FIELDS = ["has_abstract", "has_ngrams", "has_references"]
 
 TRANSFORMS = [
     {
