@@ -99,7 +99,6 @@ def search_canonical_id_single(index_name, s, q):
 
 def search_canonical_id_full(s, q):
     canonical_id_found = False
-    print(q)
     if id_utils.is_openalex_id(q):
         s = filter_openalex_id(q, s)
         canonical_id_found = True
@@ -120,7 +119,7 @@ def search_canonical_id_full(s, q):
         canonical_id_found = True
     elif id_utils.is_issn(q):
         normalized_id = id_utils.normalize_issn(q)
-        s = s.filter("term", issn=normalized_id)
+        s = s.filter("term", issn=normalized_id.upper())
         canonical_id_found = True
     elif id_utils.is_doi(q):
         normalized_id = id_utils.normalize_doi(q)
