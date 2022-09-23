@@ -4,14 +4,20 @@ import iso3166
 from elasticsearch_dsl import A, Search
 from flask import Blueprint, request
 
+from authors.fields import fields_dict as authors_fields_dict
 from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
 from autocomplete.shared import single_entity_autocomplete
 from autocomplete.utils import (AUTOCOMPLETE_SOURCE, get_preference,
                                 is_cached_autocomplete, strip_punctuation)
+from autocomplete.validate import validate_full_autocomplete_params
+from concepts.fields import fields_dict as concepts_fields_dict
 from core.exceptions import APIQueryParamsError
 from extensions import cache
+from institutions.fields import fields_dict as institutions_fields_dict
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
                       VENUES_INDEX, WORKS_INDEX)
+from venues.fields import fields_dict as venues_fields_dict
+from works.fields import fields_dict as works_fields_dict
 
 blueprint = Blueprint("complete", __name__)
 
@@ -30,7 +36,7 @@ def autocomplete_full():
         "venue": VENUES_INDEX,
         "work": WORKS_INDEX,
     }
-
+    validate_full_autocomplete_params(request)
     q = request.args.get("q")
     q = strip_punctuation(q) if q else None
     entity_type = request.args.get("entity_type")
@@ -83,7 +89,7 @@ def autocomplete_full():
 )
 def autocomplete_authors():
     index_name = AUTHORS_INDEX
-    result = single_entity_autocomplete(index_name, request)
+    result = single_entity_autocomplete(authors_fields_dict, index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
 
@@ -91,7 +97,7 @@ def autocomplete_authors():
 @blueprint.route("/autocomplete/concepts")
 def autocomplete_concepts():
     index_name = CONCEPTS_INDEX
-    result = single_entity_autocomplete(index_name, request)
+    result = single_entity_autocomplete(concepts_fields_dict, index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
 
@@ -99,7 +105,7 @@ def autocomplete_concepts():
 @blueprint.route("/autocomplete/institutions")
 def autocomplete_institutions():
     index_name = INSTITUTIONS_INDEX
-    result = single_entity_autocomplete(index_name, request)
+    result = single_entity_autocomplete(institutions_fields_dict, index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
 
@@ -107,7 +113,7 @@ def autocomplete_institutions():
 @blueprint.route("/autocomplete/venues")
 def autocomplete_venues():
     index_name = VENUES_INDEX
-    result = single_entity_autocomplete(index_name, request)
+    result = single_entity_autocomplete(venues_fields_dict, index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
 
@@ -120,7 +126,7 @@ def autocomplete_venues():
 )
 def autocomplete_works():
     index_name = WORKS_INDEX
-    result = single_entity_autocomplete(index_name, request)
+    result = single_entity_autocomplete(works_fields_dict, index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
 

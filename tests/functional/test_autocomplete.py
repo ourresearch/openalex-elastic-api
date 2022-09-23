@@ -65,3 +65,57 @@ class TestCustomAutocomplete:
         json_data = res.get_json()
         assert json_data["results"][0]["display_name"] == "company"
         assert json_data["results"][0]["cited_by_count"] == 39283175
+
+
+class TestFiltersInAutocomplete:
+    def test_authors_filters_autocomplete(self, client):
+        res = client.get(
+            "/autocomplete/authors?filter=last_known_institution.country_code:be&q=pet"
+        )
+        json_data = res.get_json()
+        assert "peter vandenabeele" in json_data["results"][0]["display_name"].lower()
+
+    def test_concepts_filters_autocomplete(self, client):
+        res = client.get("/autocomplete/concepts?filter=level:3&q=ele")
+        json_data = res.get_json()
+        assert "electrochemistry" in json_data["results"][0]["display_name"].lower()
+
+    def test_institutions_filters_autocomplete(self, client):
+        res = client.get("/autocomplete/institutions?filter=country_code:ge&q=sho")
+        json_data = res.get_json()
+        assert "shota rustaveli" in json_data["results"][0]["display_name"].lower()
+
+    def test_venues_filters_autocomplete(self, client):
+        res = client.get("/autocomplete/venues?filter=publisher:wiley&q=chem")
+        json_data = res.get_json()
+        for result in json_data["results"][:25]:
+            assert "wiley" in result["hint"].lower()
+
+    def test_works_filters_autocomplete(self, client):
+        res = client.get(
+            "/autocomplete/works?filter=is_oa:true,publication_year:2019&q=tra"
+        )
+        json_data = res.get_json()
+        assert (
+            "impacts of automated vehicles"
+            in json_data["results"][0]["display_name"].lower()
+        )
+
+    def test_works_filters_autocomplete_error(self, client):
+        res = client.get(
+            "/autocomplete/works?filter=is_oaa:true,publication_year:2019&q=tra"
+        )
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert "is_oaa is not a valid field" in json_data["message"]
+
+    def test_full_autocomplete_filter_error(self, client):
+        res = client.get("/autocomplete?filter=is_oaa:true,publication_year:2019&q=tra")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            "filter is not a valid parameter for the full autocomplete endpoint"
+            in json_data["message"]
+        )
