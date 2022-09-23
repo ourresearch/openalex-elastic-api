@@ -6,7 +6,8 @@ from flask import Blueprint, request
 
 from authors.fields import fields_dict as authors_fields_dict
 from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
-from autocomplete.shared import single_entity_autocomplete
+from autocomplete.shared import (search_canonical_id_full,
+                                 single_entity_autocomplete)
 from autocomplete.utils import (AUTOCOMPLETE_SOURCE, get_preference,
                                 is_cached_autocomplete, strip_punctuation)
 from autocomplete.validate import validate_full_autocomplete_params
@@ -38,7 +39,6 @@ def autocomplete_full():
     }
     validate_full_autocomplete_params(request)
     q = request.args.get("q")
-    q = strip_punctuation(q) if q else None
     entity_type = request.args.get("entity_type")
 
     if not q:
@@ -62,11 +62,16 @@ def autocomplete_full():
         index = ",".join(entities_to_indeces.values())
 
     s = Search(index=index)
-    s = s.query("match_phrase_prefix", display_name__autocomplete=q)
-    s = s.sort("-cited_by_count")
-    s = s.source(AUTOCOMPLETE_SOURCE)
-    preference = get_preference(q)
-    s = s.params(preference=preference)
+
+    # canonical id match
+    s, canonical_id_found = search_canonical_id_full(s, q)
+
+    if not canonical_id_found:
+        s = s.query("match_phrase_prefix", display_name__autocomplete=q)
+        s = s.sort("-cited_by_count")
+        s = s.source(AUTOCOMPLETE_SOURCE)
+        preference = get_preference(q)
+        s = s.params(preference=preference)
     response = s.execute()
 
     result = OrderedDict()

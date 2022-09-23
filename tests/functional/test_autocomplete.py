@@ -119,3 +119,146 @@ class TestFiltersInAutocomplete:
             "filter is not a valid parameter for the full autocomplete endpoint"
             in json_data["message"]
         )
+
+
+class TestAutocompleteIdDetection:
+    def test_author_openalex_id(self, client):
+        res = client.get("/autocomplete/authors?q=a2609699")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert "peter vandenabeele" in json_data["results"][0]["display_name"].lower()
+
+    def test_author_orcid(self, client):
+        res = client.get(
+            "/autocomplete/authors?q=https://orcid.org/0000-0001-5285-9835"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert "peter vandenabeele" in json_data["results"][0]["display_name"].lower()
+
+    def test_author_orcid_urn(self, client):
+        res = client.get("/autocomplete/authors?q=orcid:0000-0001-5285-9835")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert "peter vandenabeele" in json_data["results"][0]["display_name"].lower()
+
+    def test_concepts_openalex(self, client):
+        res = client.get("/autocomplete/concepts?q=C86803240")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["display_name"] == "Biology"
+
+    def test_concepts_wikidata(self, client):
+        res = client.get("/autocomplete/concepts?q=https://www.wikidata.org/wiki/Q420")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["display_name"] == "Biology"
+
+    def test_concepts_wikidata_urn(self, client):
+        res = client.get("/autocomplete/concepts?q=wikidata:Q420")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["display_name"] == "Biology"
+
+    def test_institutions_openalex(self, client):
+        res = client.get("/autocomplete/institutions?q=https://openalex.org/I19820366")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["display_name"] == "Chinese Academy of Sciences"
+
+    def test_institutions_ror(self, client):
+        res = client.get("/autocomplete/institutions?q=https://ror.org/034t30j35")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["display_name"] == "Chinese Academy of Sciences"
+
+    def test_institutions_ror_urn(self, client):
+        res = client.get("/autocomplete/institutions?q=ror:034t30j35")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["display_name"] == "Chinese Academy of Sciences"
+
+    def test_venues_openalex(self, client):
+        res = client.get("/autocomplete/venues?q=V41354064")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["display_name"] == "ChemInform"
+
+    def test_venues_issn(self, client):
+        res = client.get(
+            "/autocomplete/venues?q=https://portal.issn.org/resource/issn/0931-7597"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["display_name"] == "ChemInform"
+
+    def test_venues_issn_urn(self, client):
+        res = client.get("/autocomplete/venues?q=issn:0931-7597")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["display_name"] == "ChemInform"
+
+    def test_works_openalex(self, client):
+        res = client.get("/autocomplete/works?q=W37005")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["display_name"]
+            == "Parkinson's disease. First of two parts."
+        )
+
+    def test_works_doi(self, client):
+        res = client.get(
+            "/autocomplete/works?q=https://doi.org/10.1056/nejm199810083391506"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["display_name"]
+            == "Parkinson's disease. First of two parts."
+        )
+
+    def test_works_doi_urn(self, client):
+        res = client.get("/autocomplete/works?q=doi:10.1056/nejm199810083391506")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["display_name"]
+            == "Parkinson's disease. First of two parts."
+        )
+
+    def test_full_autocomplete_wikidata(self, client):
+        res = client.get("/autocomplete?q=https://www.wikidata.org/wiki/Q420")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["display_name"] == "Biology"
+
+    def test_full_autocomplete_ror(self, client):
+        res = client.get("/autocomplete?q=https://ror.org/034t30j35")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["display_name"] == "Chinese Academy of Sciences"
+
+    def test_full_autocomplete_issn_urn(self, client):
+        res = client.get("/autocomplete?q=issn:0931-7597")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["display_name"] == "ChemInform"
+
+    def test_full_autocomplete_openalex(self, client):
+        res = client.get("/autocomplete?q=W37005")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["display_name"]
+            == "Parkinson's disease. First of two parts."
+        )
+
+    def test_full_autocomplete_doi(self, client):
+        res = client.get("/autocomplete?q=https://doi.org/10.1056/nejm199810083391506")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert (
+            json_data["results"][0]["display_name"]
+            == "Parkinson's disease. First of two parts."
+        )

@@ -22,6 +22,8 @@ def is_work_openalex_id(id):
     if isinstance(id, int):
         return False
     clean_id = normalize_openalex_id(id)
+    if not clean_id:
+        return False
     return clean_id.startswith("W")
 
 
@@ -29,6 +31,8 @@ def is_author_openalex_id(id):
     if isinstance(id, int):
         return False
     clean_id = normalize_openalex_id(id)
+    if not clean_id:
+        return False
     return clean_id.startswith("A")
 
 
@@ -36,6 +40,8 @@ def is_venue_openalex_id(id):
     if isinstance(id, int):
         return False
     clean_id = normalize_openalex_id(id)
+    if not clean_id:
+        return False
     return clean_id.startswith("V")
 
 
@@ -43,6 +49,8 @@ def is_institution_openalex_id(id):
     if isinstance(id, int):
         return False
     clean_id = normalize_openalex_id(id)
+    if not clean_id:
+        return False
     return clean_id.startswith("I")
 
 
@@ -50,7 +58,16 @@ def is_concept_openalex_id(id):
     if isinstance(id, int):
         return False
     clean_id = normalize_openalex_id(id)
+    if not clean_id:
+        return False
     return clean_id.startswith("C")
+
+
+def is_doi(doi):
+    if re.search(r"doi:10\.\d+/[^\s]+", doi.strip()) or re.search(
+        r"doi.org/10\.\d+/[^\s]+", doi.strip()
+    ):
+        return True
 
 
 def normalize_doi(doi, return_none_if_error=False):
@@ -94,6 +111,13 @@ class NoDoiException(Exception):
     pass
 
 
+def is_orcid(orcid):
+    if re.search(
+        r"orcid:\d{4}-\d{4}-\d{4}-\d{3}[\dX]", orcid.lower().strip()
+    ) or re.search(r"orcid.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]", orcid.lower().strip()):
+        return True
+
+
 def normalize_orcid(orcid):
     if not orcid:
         return None
@@ -105,6 +129,13 @@ def normalize_orcid(orcid):
     orcid = matches[0]
     orcid = orcid.replace("\0", "")
     return orcid
+
+
+def is_ror(ror):
+    if re.search(r"(ror:[a-z\d]*$)", ror.lower().strip()) or re.search(
+        r"(ror.org/[a-z\d]*$)", ror.lower().strip()
+    ):
+        return True
 
 
 def normalize_ror(ror):
@@ -120,6 +151,14 @@ def normalize_ror(ror):
     return ror
 
 
+def is_issn(issn):
+    issn = issn.strip().lower()
+    if re.search(r"issn:[\dx]{4}-[\dx]{4}", issn) or re.search(
+        r"portal.issn.org/resource/issn/[\dx]{4}-[\dx]{4}", issn
+    ):
+        return True
+
+
 def normalize_issn(issn):
     if not issn:
         return None
@@ -131,6 +170,13 @@ def normalize_issn(issn):
     issn = matches[0]
     issn = issn.replace("\0", "")
     return issn
+
+
+def is_wikidata(wikidata):
+    if re.search(r"wikidata:q\d*", wikidata.lower().strip()) or re.search(
+        r"wikidata.org/wiki/q\d*", wikidata.lower().strip()
+    ):
+        return True
 
 
 def normalize_wikidata(wikidata):
