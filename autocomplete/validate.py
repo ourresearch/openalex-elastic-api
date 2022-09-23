@@ -17,6 +17,7 @@ def validate_entity_autocomplete_params(request):
 
 def validate_full_autocomplete_params(request):
     valid_params = [
+        "entity_type",
         "q",
         "mailto",
     ]
