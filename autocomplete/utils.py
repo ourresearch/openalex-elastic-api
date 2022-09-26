@@ -11,6 +11,7 @@ AUTOCOMPLETE_SOURCE = [
     "publisher",
     "ror",
     "wikidata",
+    "works_count",
 ]
 
 

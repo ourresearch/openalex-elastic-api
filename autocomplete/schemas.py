@@ -11,6 +11,7 @@ class AutoCompleteSchema(Schema):
     display_name = fields.Str()
     hint = fields.Method("get_hint", dump_default=None)
     cited_by_count = fields.Int()
+    works_count = fields.Int(default=None)
     entity_type = fields.Method("get_entity_type", dump_default=None)
     external_id = fields.Method("get_external_id", dump_default=None)
 
@@ -143,6 +144,7 @@ class AutoCompleteCustomSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     cited_by_count = fields.Int()
+    works_count = fields.Int(default=None)
     entity_type = fields.Str()
     external_id = fields.Str()
 
