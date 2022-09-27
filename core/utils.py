@@ -14,6 +14,7 @@ def get_field(fields_dict, key):
         return field
     except KeyError:
         valid_fields = sorted(list(fields_dict.keys()))
+        valid_fields.remove("from_updated_date")
         raise APIQueryParamsError(
             f"{key} is not a valid field. Valid fields are underscore or hyphenated versions of: {', '.join(valid_fields)}"
         )
