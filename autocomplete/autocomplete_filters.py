@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import A, Search
 
 from autocomplete.utils import AUTOCOMPLETE_SOURCE, get_preference
 from autocomplete.validate import validate_entity_autocomplete_params
@@ -34,27 +34,42 @@ def autocomplete_filter(fields_dict, index_name, request):
     s = Search(index=full_index)
 
     # # search
-    if search and search != '""':
-        s = full_search(index_name, s, search)
-
-    # filters
-    if filter_params:
-        s = filter_records(fields_dict, filter_params, s)
+    # if search and search != '""':
+    #     s = full_search(index_name, s, search)
+    #
+    # # filters
+    # if filter_params:
+    #     s = filter_records(fields_dict, filter_params, s)
 
     # autocomplete
     s = s.query("match_phrase_prefix", display_name__autocomplete=q)
-    s = s.sort("-cited_by_count")
+    s = s.sort("-works_count")
     s = s.source(AUTOCOMPLETE_SOURCE)
     preference = get_preference(q)
     s = s.params(preference=preference)
 
     response = s.execute()
 
+    # oa_status
+    oa_status = {}
+    s = Search(index=WORKS_INDEX)
+    oa_group = A("terms", field="open_access.oa_status")
+    s.aggs.bucket("oa_status", oa_group)
+    response_group = s.execute()
+    for status in response_group.aggregations.oa_status.buckets:
+        oa_status[status.key] = status.doc_count
+
+    oa_match = None
+    for key in oa_status.keys():
+        if key.startswith(q.lower()):
+            oa_match = key
+
     results = []
     authors = {"key": "author.id", "values": []}
     concepts = {"key": "concepts.id", "values": []}
     institutions = {"key": "institution.id", "values": []}
     venues = {"key": "host_venue.id", "values": []}
+    oa = {"key": "open_access.oa_status", "values": []}
     order = []
     order_key = {
         "author": authors,
@@ -101,6 +116,15 @@ def autocomplete_filter(fields_dict, index_name, request):
             )
             order.append("venue")
 
+    if oa_match:
+        oa["values"].append(
+            {
+                "value": oa_match,
+                "display_value": oa_match,
+                "cited_by_count": oa_status[oa_match],
+            }
+        )
+    results.append(oa)
     # order
     new_order = []
     for item in order:
