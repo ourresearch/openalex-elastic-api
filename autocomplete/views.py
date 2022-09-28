@@ -5,7 +5,10 @@ from elasticsearch_dsl import A, Search
 from flask import Blueprint, request
 
 from authors.fields import fields_dict as authors_fields_dict
-from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
+from autocomplete.autocomplete_filters import autocomplete_filter
+from autocomplete.schemas import (MessageAutocompleteCustomSchema,
+                                  MessageAutocompleteFilterSchema,
+                                  MessageSchema)
 from autocomplete.shared import (search_canonical_id_full,
                                  single_entity_autocomplete)
 from autocomplete.utils import (AUTOCOMPLETE_SOURCE, get_preference,
@@ -279,4 +282,12 @@ def autocomplete_institutions_type():
     }
     result["results"] = hits
     message_schema = MessageAutocompleteCustomSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/works/filters")
+def autocomplete_filters_works():
+    index_name = WORKS_INDEX
+    result = autocomplete_filter(works_fields_dict, index_name, request)
+    message_schema = MessageAutocompleteFilterSchema()
     return message_schema.dump(result)

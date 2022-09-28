@@ -159,3 +159,29 @@ class MessageAutocompleteCustomSchema(Schema):
 
     class Meta:
         ordered = True
+
+
+class AutoCompleteFilterValuesSchema(Schema):
+    value = fields.Str()
+    display_value = fields.Str()
+    cited_by_count = fields.Int()
+
+    class Meta:
+        ordered = True
+
+
+class AutoCompleteFilterSchema(Schema):
+    key = fields.Str()
+    values = fields.Nested(AutoCompleteFilterValuesSchema, many=True)
+
+    class Meta:
+        ordered = True
+
+
+class MessageAutocompleteFilterSchema(Schema):
+    meta = fields.Nested(MetaSchema)
+    filters = fields.Nested(AutoCompleteFilterSchema, many=True)
+    group_by = fields.Nested(GroupBySchema, many=True)
+
+    class Meta:
+        ordered = True
