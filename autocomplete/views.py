@@ -285,9 +285,9 @@ def autocomplete_institutions_type():
     return message_schema.dump(result)
 
 
-@blueprint.route("/autocomplete/works/filters")
-def autocomplete_filters_works():
+@blueprint.route("/autocomplete/works/filters/<view_filter>")
+def autocomplete_filters_works(view_filter):
     index_name = WORKS_INDEX
-    result = autocomplete_filter(works_fields_dict, index_name, request)
+    result = autocomplete_filter(view_filter, works_fields_dict, index_name, request)
     message_schema = MessageAutocompleteFilterSchema()
     return message_schema.dump(result)

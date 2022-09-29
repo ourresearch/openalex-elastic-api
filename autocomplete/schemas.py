@@ -3,7 +3,7 @@ from iso3166 import countries
 from marshmallow import Schema, fields, pre_dump
 
 from core.schemas import GroupBySchema, MetaSchema
-from settings import WORKS_INDEX
+from settings import INSTITUTIONS_INDEX, WORKS_INDEX
 
 
 class AutoCompleteSchema(Schema):
@@ -162,25 +162,43 @@ class MessageAutocompleteCustomSchema(Schema):
 
 
 class AutoCompleteFilterValuesSchema(Schema):
-    value = fields.Str()
+    value = fields.Method("get_id_value", dump_default=None)
     display_value = fields.Str()
-    cited_by_count = fields.Int()
+    works_count = fields.Int()
 
     class Meta:
         ordered = True
 
+    @pre_dump(pass_many=True)
+    def id_prep(self, data, many, **kwargs):
+        """This function maps a work title and publication year to an author result as a hint."""
+        ms = MultiSearch(index=INSTITUTIONS_INDEX)
+        # first pass, build display names with multisearch
+        for d in data:
+            s = Search()
+            s = s.filter("term", display_name__keyword=d["display_value"])
+            s = s.extra(size=1)
+            s = s.source(["id"])
+            s = s.params(preference=d["display_value"])
+            ms = ms.add(s)
 
-class AutoCompleteFilterSchema(Schema):
-    key = fields.Str()
-    values = fields.Nested(AutoCompleteFilterValuesSchema, many=True)
+        # second pass, map display names to objects
+        responses = ms.execute()
+        new = []
+        for d, response in zip(data, responses):
+            if response:
+                for h in response:
+                    d["id"] = h.id
+                    new.append(d)
+        return new
 
-    class Meta:
-        ordered = True
+    def get_id_value(self, obj):
+        return obj["id"]
 
 
 class MessageAutocompleteFilterSchema(Schema):
     meta = fields.Nested(MetaSchema)
-    filters = fields.Nested(AutoCompleteFilterSchema, many=True)
+    filters = fields.Nested(AutoCompleteFilterValuesSchema, many=True)
     group_by = fields.Nested(GroupBySchema, many=True)
 
     class Meta:
