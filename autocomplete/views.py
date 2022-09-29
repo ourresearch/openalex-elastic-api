@@ -289,5 +289,5 @@ def autocomplete_institutions_type():
 def autocomplete_filters_works(view_filter):
     index_name = WORKS_INDEX
     result = autocomplete_filter(view_filter, works_fields_dict, index_name, request)
-    message_schema = MessageAutocompleteFilterSchema()
+    message_schema = MessageAutocompleteFilterSchema(context={"view_filter": view_filter})
     return message_schema.dump(result)

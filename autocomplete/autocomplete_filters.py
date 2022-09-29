@@ -13,10 +13,16 @@ from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
 
 
 def autocomplete_filter(view_filter, fields_dict, index_name, request):
+    filter_dict = {
+        "authorships.institutions.id": "authorships.institutions.display_name",
+        "institution.id": "authorships.institutions.display_name",
+        "author.id": "authorships.author.display_name"
+    }
     # params
     validate_entity_autocomplete_params(request)
     filter_params = map_filter_params(request.args.get("filter"))
     q = request.args.get("q")
+    unfiltered = request.args.get("unfiltered")
     search = request.args.get("search")
     if not q:
         raise APIQueryParamsError(
@@ -25,7 +31,7 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
 
     s = Search(index=WORKS_INDEX)
     s = s.source(AUTOCOMPLETE_SOURCE)
-    s = s.params(preference="institution_group_by")
+    s = s.params(preference="autocomplete_group_by")
 
     # search
     if search and search != '""':
@@ -35,16 +41,19 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     if filter_params:
         s = filter_records(fields_dict, filter_params, s)
 
-    # institution
-    s = s.query("prefix", authorships__institutions__display_name=q.title().replace("Of", "of"))
-    institution_group = A(
-        "terms", field="authorships.institutions.display_name", size=50
+    # query
+    field_underscore = filter_dict[view_filter].replace(".", "__")
+    s = s.query("prefix", **{field_underscore: q.title().replace("Of", "of")})
+
+    # group
+    group = A(
+        "terms", field=filter_dict[view_filter], size=50
     )
-    s.aggs.bucket("institution", institution_group)
+    s.aggs.bucket("autocomplete_group", group)
     response = s.execute()
     results = []
-    for i in response.aggregations.institution.buckets:
-        if q.lower() in i.key.lower():
+    for i in response.aggregations.autocomplete_group.buckets:
+        if unfiltered:
             results.append(
                 {
                     "id": None,
@@ -52,6 +61,15 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
                     "works_count": i.doc_count,
                 }
             )
+        else:
+            if q.lower() in i.key.lower():
+                results.append(
+                    {
+                        "id": None,
+                        "display_value": i.key,
+                        "works_count": i.doc_count,
+                    }
+                )
 
     result = OrderedDict()
     result["meta"] = {

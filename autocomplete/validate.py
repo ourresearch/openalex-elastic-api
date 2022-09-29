@@ -7,6 +7,7 @@ def validate_entity_autocomplete_params(request):
         "filter",
         "mailto",
         "search",
+        "unfiltered"
     ]
     for arg in request.args:
         if arg not in valid_params:

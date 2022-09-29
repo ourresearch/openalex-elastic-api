@@ -3,7 +3,7 @@ from iso3166 import countries
 from marshmallow import Schema, fields, pre_dump
 
 from core.schemas import GroupBySchema, MetaSchema
-from settings import INSTITUTIONS_INDEX, WORKS_INDEX
+from settings import AUTHORS_INDEX, INSTITUTIONS_INDEX, WORKS_INDEX
 
 
 class AutoCompleteSchema(Schema):
@@ -171,9 +171,14 @@ class AutoCompleteFilterValuesSchema(Schema):
 
     @pre_dump(pass_many=True)
     def id_prep(self, data, many, **kwargs):
-        """This function maps a work title and publication year to an author result as a hint."""
-        ms = MultiSearch(index=INSTITUTIONS_INDEX)
+        if self.context["view_filter"] == "authorships.institutions.id" or self.context["view_filter"] == "institution.id":
+            index = INSTITUTIONS_INDEX
+        elif self.context["view_filter"] == "author.id":
+            index = AUTHORS_INDEX
+        ms = MultiSearch(index=index)
         # first pass, build display names with multisearch
+        if not data:
+            return []
         for d in data:
             s = Search()
             s = s.filter("term", display_name__keyword=d["display_value"])
