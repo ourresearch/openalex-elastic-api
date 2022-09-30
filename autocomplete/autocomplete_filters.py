@@ -52,9 +52,15 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     q = request.args.get("q")
     search = request.args.get("search")
     if not q:
-        raise APIQueryParamsError(
-            f"Must enter a 'q' parameter in order to use autocomplete. Example: {request.url_rule}?q=my search"
-        )
+        result = OrderedDict()
+        result["meta"] = {
+            "count": 0,
+            "db_response_time_ms": 1,
+            "page": 1,
+            "per_page": 10,
+        }
+        result["filters"] = []
+        return result
 
     s = Search(index=WORKS_INDEX)
     s = s.source(AUTOCOMPLETE_SOURCE)
