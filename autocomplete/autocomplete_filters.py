@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+import iso3166
 from elasticsearch_dsl import A, Search
 
 from autocomplete.utils import AUTOCOMPLETE_SOURCE
@@ -12,13 +13,16 @@ from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
                       VENUES_INDEX, WORKS_INDEX)
 
 AUTOCOMPLETE_FILTER_DICT = {
+    "authorships.institutions.country_code": "authorships.institutions.country_code",
     "authorships.author.id": "authorships.author.display_name",
     "authorships.institutions.id": "authorships.institutions.display_name",
     "authorships.institutions.type": "authorships.institutions.type",
     "host_venue.display_name": "host_venue.display_name",
+    "host_venue.license": "host_venue.license",
     "host_venue.publisher": "host_venue.publisher.lower",
     "host_venue.type": "host_venue.type",
     "open_access.oa_status": "open_access.oa_status",
+    "type": "type",
 }
 
 
@@ -68,9 +72,17 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     field_underscore = AUTOCOMPLETE_FILTER_DICT[view_filter].replace(".", "__")
     if view_filter in sentence_case_fields:
         q = q.title().replace("Of", "of").strip()
+    elif view_filter == "authorships.institutions.country_code":
+        q = q.upper().strip()
     else:
         q = q.lower().strip()
-    s = s.query("prefix", **{field_underscore: q})
+
+    if view_filter == "authorships.institutions.country_code":
+        country_codes = country_search(q)
+        print(country_codes)
+        s = s.query("terms", **{field_underscore: country_codes})
+    else:
+        s = s.query("prefix", **{field_underscore: q})
 
     # group
     group = A("terms", field=AUTOCOMPLETE_FILTER_DICT[view_filter], size=50)
@@ -82,11 +94,23 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
             id_key = None
         else:
             id_key = i.key
-        if q.lower() in i.key.lower():
+
+        if view_filter == "authorships.institutions.country_code":
+            display_value = get_country_name(i.key)
+        else:
+            display_value = i.key
+
+        check_field = (
+            i.key.lower()
+            if view_filter != "authorships.institutions.country_code"
+            else display_value.lower()
+        )
+
+        if check_field.startswith(q.lower()):
             results.append(
                 {
                     "id": id_key,
-                    "display_value": i.key,
+                    "display_value": display_value,
                     "works_count": i.doc_count,
                 }
             )
@@ -100,3 +124,19 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     }
     result["filters"] = results[:10]
     return result
+
+
+def country_search(q):
+    country_names = [n for n in iso3166.countries_by_name.keys()]
+    matching_country_codes = []
+    for country_name in country_names:
+        if country_name.startswith(q.upper()):
+            matching_country_codes.append(
+                iso3166.countries_by_name[country_name].alpha2
+            )
+    return matching_country_codes
+
+
+def get_country_name(country_code):
+    country = iso3166.countries.get(country_code)
+    return country.name
