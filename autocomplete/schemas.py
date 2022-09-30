@@ -3,7 +3,8 @@ from iso3166 import countries
 from marshmallow import Schema, fields, pre_dump
 
 from core.schemas import GroupBySchema, MetaSchema
-from settings import AUTHORS_INDEX, INSTITUTIONS_INDEX, WORKS_INDEX
+from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
+                      VENUES_INDEX, WORKS_INDEX)
 
 
 class AutoCompleteSchema(Schema):
@@ -171,10 +172,14 @@ class AutoCompleteFilterValuesSchema(Schema):
 
     @pre_dump(pass_many=True)
     def id_prep(self, data, many, **kwargs):
-        if self.context["view_filter"] == "authorships.institutions.id" or self.context["view_filter"] == "institution.id":
+        if self.context["view_filter"] == "authorships.institutions.id":
             index = INSTITUTIONS_INDEX
-        elif self.context["view_filter"] == "author.id":
+        elif self.context["view_filter"] == "authorships.author.id":
             index = AUTHORS_INDEX
+        elif self.context["view_filter"] == "host_venue.display_name":
+            index = VENUES_INDEX
+        else:
+            return data
         ms = MultiSearch(index=index)
         # first pass, build display names with multisearch
         if not data:

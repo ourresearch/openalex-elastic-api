@@ -11,18 +11,41 @@ from core.utils import map_filter_params
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
                       VENUES_INDEX, WORKS_INDEX)
 
+AUTOCOMPLETE_FILTER_DICT = {
+    "authorships.author.id": "authorships.author.display_name",
+    "authorships.institutions.id": "authorships.institutions.display_name",
+    "authorships.institutions.type": "authorships.institutions.type",
+    "host_venue.display_name": "host_venue.display_name",
+    "host_venue.publisher": "host_venue.publisher.lower",
+    "host_venue.type": "host_venue.type",
+    "open_access.oa_status": "open_access.oa_status",
+}
+
 
 def autocomplete_filter(view_filter, fields_dict, index_name, request):
-    filter_dict = {
-        "authorships.institutions.id": "authorships.institutions.display_name",
-        "institution.id": "authorships.institutions.display_name",
-        "author.id": "authorships.author.display_name"
-    }
+    valid_filters = AUTOCOMPLETE_FILTER_DICT.keys()
+    if view_filter not in valid_filters:
+        raise APIQueryParamsError(
+            f"The filter {view_filter} is not a valid filter. Current filters are: {', '.join(valid_filters)}"
+        )
+
+    # requires ID lookup through schema
+    id_lookup_fields = [
+        "authorships.institutions.id",
+        "authorships.author.id",
+        "host_venue.display_name",
+    ]
+    # requires sentence case
+    sentence_case_fields = [
+        "authorships.institutions.id",
+        "authorships.author.id",
+        "host_venue.display_name",
+    ]
+
     # params
     validate_entity_autocomplete_params(request)
     filter_params = map_filter_params(request.args.get("filter"))
     q = request.args.get("q")
-    unfiltered = request.args.get("unfiltered")
     search = request.args.get("search")
     if not q:
         raise APIQueryParamsError(
@@ -42,34 +65,31 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
         s = filter_records(fields_dict, filter_params, s)
 
     # query
-    field_underscore = filter_dict[view_filter].replace(".", "__")
-    s = s.query("prefix", **{field_underscore: q.title().replace("Of", "of")})
+    field_underscore = AUTOCOMPLETE_FILTER_DICT[view_filter].replace(".", "__")
+    if view_filter in sentence_case_fields:
+        q = q.title().replace("Of", "of").strip()
+    else:
+        q = q.lower().strip()
+    s = s.query("prefix", **{field_underscore: q})
 
     # group
-    group = A(
-        "terms", field=filter_dict[view_filter], size=50
-    )
+    group = A("terms", field=AUTOCOMPLETE_FILTER_DICT[view_filter], size=50)
     s.aggs.bucket("autocomplete_group", group)
     response = s.execute()
     results = []
     for i in response.aggregations.autocomplete_group.buckets:
-        if unfiltered:
+        if view_filter in id_lookup_fields:
+            id_key = None
+        else:
+            id_key = i.key
+        if q.lower() in i.key.lower():
             results.append(
                 {
-                    "id": None,
+                    "id": id_key,
                     "display_value": i.key,
                     "works_count": i.doc_count,
                 }
             )
-        else:
-            if q.lower() in i.key.lower():
-                results.append(
-                    {
-                        "id": None,
-                        "display_value": i.key,
-                        "works_count": i.doc_count,
-                    }
-                )
 
     result = OrderedDict()
     result["meta"] = {
