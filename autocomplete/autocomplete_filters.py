@@ -22,6 +22,7 @@ AUTOCOMPLETE_FILTER_DICT = {
     "host_venue.publisher": "host_venue.publisher.lower",
     "host_venue.type": "host_venue.type",
     "open_access.oa_status": "open_access.oa_status",
+    "publication_year": "publication_year",
     "type": "type",
 }
 
@@ -85,8 +86,27 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
 
     if view_filter == "authorships.institutions.country_code":
         country_codes = country_search(q)
-        print(country_codes)
         s = s.query("terms", **{field_underscore: country_codes})
+    elif view_filter == "publication_year":
+        min_year = 1000
+        max_year = 3000
+        if str(q).startswith("1") and len(q) == 1:
+            min_year = 1000
+            max_year = 1999
+        elif str(q).startswith("2") and len(q) == 1:
+            min_year = 2000
+            max_year = 2999
+        elif len(q) == 2:
+            min_year = int(q) * 100
+            max_year = int(q) * 100 + 99
+        elif len(q) == 3:
+            min_year = int(q) * 10
+            max_year = int(q) * 10 + 9
+        elif len(q) == 4:
+            min_year = int(q)
+            max_year = int(q)
+        kwargs = {field_underscore: {"gte": min_year, "lte": max_year}}
+        s = s.query("range", **kwargs)
     else:
         s = s.query("prefix", **{field_underscore: q})
 
@@ -104,10 +124,10 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
         if view_filter == "authorships.institutions.country_code":
             display_value = get_country_name(i.key)
         else:
-            display_value = i.key
+            display_value = str(i.key)
 
         check_field = (
-            i.key.lower()
+            str(i.key).lower()
             if view_filter != "authorships.institutions.country_code"
             else display_value.lower()
         )
