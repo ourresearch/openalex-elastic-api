@@ -52,16 +52,8 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     filter_params = map_filter_params(request.args.get("filter"))
     q = request.args.get("q")
     search = request.args.get("search")
-    if not q:
-        result = OrderedDict()
-        result["meta"] = {
-            "count": 0,
-            "db_response_time_ms": 1,
-            "page": 1,
-            "per_page": 10,
-        }
-        result["filters"] = []
-        return result
+    group_size = 200
+    page_size = 200
 
     s = Search(index=WORKS_INDEX)
     s = s.source(AUTOCOMPLETE_SOURCE)
@@ -84,34 +76,37 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     else:
         q = q.lower().strip()
 
-    if view_filter == "authorships.institutions.country_code":
-        country_codes = country_search(q)
-        s = s.query("terms", **{field_underscore: country_codes})
-    elif view_filter == "publication_year":
-        min_year = 1000
-        max_year = 3000
-        if str(q).startswith("1") and len(q) == 1:
+    if q:
+        group_size = 50
+        page_size = 10
+        if view_filter == "authorships.institutions.country_code":
+            country_codes = country_search(q)
+            s = s.query("terms", **{field_underscore: country_codes})
+        elif view_filter == "publication_year":
             min_year = 1000
-            max_year = 1999
-        elif str(q).startswith("2") and len(q) == 1:
-            min_year = 2000
-            max_year = 2999
-        elif len(q) == 2:
-            min_year = int(q) * 100
-            max_year = int(q) * 100 + 99
-        elif len(q) == 3:
-            min_year = int(q) * 10
-            max_year = int(q) * 10 + 9
-        elif len(q) == 4:
-            min_year = int(q)
-            max_year = int(q)
-        kwargs = {field_underscore: {"gte": min_year, "lte": max_year}}
-        s = s.query("range", **kwargs)
-    else:
-        s = s.query("prefix", **{field_underscore: q})
+            max_year = 3000
+            if str(q).startswith("1") and len(q) == 1:
+                min_year = 1000
+                max_year = 1999
+            elif str(q).startswith("2") and len(q) == 1:
+                min_year = 2000
+                max_year = 2999
+            elif len(q) == 2:
+                min_year = int(q) * 100
+                max_year = int(q) * 100 + 99
+            elif len(q) == 3:
+                min_year = int(q) * 10
+                max_year = int(q) * 10 + 9
+            elif len(q) == 4:
+                min_year = int(q)
+                max_year = int(q)
+            kwargs = {field_underscore: {"gte": min_year, "lte": max_year}}
+            s = s.query("range", **kwargs)
+        else:
+            s = s.query("prefix", **{field_underscore: q})
 
     # group
-    group = A("terms", field=AUTOCOMPLETE_FILTER_DICT[view_filter], size=50)
+    group = A("terms", field=AUTOCOMPLETE_FILTER_DICT[view_filter], size=group_size)
     s.aggs.bucket("autocomplete_group", group)
     response = s.execute()
     results = []
@@ -146,9 +141,9 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
         "count": s.count(),
         "db_response_time_ms": response.took,
         "page": 1,
-        "per_page": 10,
+        "per_page": page_size,
     }
-    result["filters"] = results[:10]
+    result["filters"] = results[:page_size]
     return result
 
 
