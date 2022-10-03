@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 import iso3166
-from elasticsearch_dsl import A, Search
+from elasticsearch_dsl import A, Q, Search
 
 from autocomplete.utils import AUTOCOMPLETE_SOURCE
 from autocomplete.validate import validate_entity_autocomplete_params
@@ -17,6 +17,12 @@ AUTOCOMPLETE_FILTER_DICT = {
     "authorships.author.id": "authorships.author.display_name",
     "authorships.institutions.id": "authorships.institutions.display_name",
     "authorships.institutions.type": "authorships.institutions.type",
+    "has_abstract": "abstract",
+    "has_doi": "ids.doi",
+    "has_ngrams": "fulltext",
+    "is_paratext": "is_paratext",
+    "is_retracted": "is_retracted",
+    "open_access.is_oa": "open_access.is_oa",
     "host_venue.display_name": "host_venue.display_name",
     "host_venue.license": "host_venue.license",
     "host_venue.publisher": "host_venue.publisher.lower",
@@ -25,6 +31,10 @@ AUTOCOMPLETE_FILTER_DICT = {
     "publication_year": "publication_year",
     "type": "type",
 }
+
+HAS_FILTERS = ["has_abstract", "has_doi", "has_ngrams"]
+
+BOOLEAN_FILTERS = ["is_paratext", "is_retracted", "open_access.is_oa"]
 
 
 def autocomplete_filter(view_filter, fields_dict, index_name, request):
@@ -67,74 +77,96 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     if filter_params:
         s = filter_records(fields_dict, filter_params, s)
 
+    combined_boolean_filters = BOOLEAN_FILTERS + HAS_FILTERS
+
+    if view_filter.lower() in combined_boolean_filters and q:
+        raise APIQueryParamsError("Cannot use q parameter with boolean filters.")
+    elif view_filter.lower() not in combined_boolean_filters and not q:
+        raise APIQueryParamsError(
+            "q parameter is required for this autocomplete query."
+        )
+
     # query
     field_underscore = AUTOCOMPLETE_FILTER_DICT[view_filter].replace(".", "__")
-    if view_filter in sentence_case_fields:
-        q = q.title().replace("Of", "of").strip()
-    elif view_filter == "authorships.institutions.country_code":
-        q = q.upper().strip()
-    else:
-        q = q.lower().strip()
+    if BOOLEAN_FILTERS:
+        q = ""
 
     if q:
+        if view_filter in sentence_case_fields:
+            q = q.title().replace("Of", "of").strip()
+        elif view_filter == "authorships.institutions.country_code":
+            q = q.upper().strip()
+        else:
+            q = q.lower().strip()
+
         group_size = 50
         page_size = 10
         if view_filter == "authorships.institutions.country_code":
             country_codes = country_search(q)
             s = s.query("terms", **{field_underscore: country_codes})
         elif view_filter == "publication_year":
-            min_year = 1000
-            max_year = 3000
-            if str(q).startswith("1") and len(q) == 1:
-                min_year = 1000
-                max_year = 1999
-            elif str(q).startswith("2") and len(q) == 1:
-                min_year = 2000
-                max_year = 2999
-            elif len(q) == 2:
-                min_year = int(q) * 100
-                max_year = int(q) * 100 + 99
-            elif len(q) == 3:
-                min_year = int(q) * 10
-                max_year = int(q) * 10 + 9
-            elif len(q) == 4:
-                min_year = int(q)
-                max_year = int(q)
+            min_year, max_year = set_year_min_max(q)
             kwargs = {field_underscore: {"gte": min_year, "lte": max_year}}
             s = s.query("range", **kwargs)
         else:
             s = s.query("prefix", **{field_underscore: q})
 
     # group
-    group = A("terms", field=AUTOCOMPLETE_FILTER_DICT[view_filter], size=group_size)
-    s.aggs.bucket("autocomplete_group", group)
-    response = s.execute()
     results = []
-    for i in response.aggregations.autocomplete_group.buckets:
-        if view_filter in id_lookup_fields:
-            id_key = None
-        else:
-            id_key = i.key
-
-        if view_filter == "authorships.institutions.country_code":
-            display_value = get_country_name(i.key)
-        else:
-            display_value = str(i.key)
-
-        check_field = (
-            str(i.key).lower()
-            if view_filter != "authorships.institutions.country_code"
-            else display_value.lower()
+    if view_filter.lower() in HAS_FILTERS:
+        exists = A("filter", Q("exists", field=AUTOCOMPLETE_FILTER_DICT[view_filter]))
+        not_exists = A(
+            "filter", ~Q("exists", field=AUTOCOMPLETE_FILTER_DICT[view_filter])
         )
+        s.aggs.bucket("exists", exists)
+        s.aggs.bucket("not_exists", not_exists)
+        response = s.execute()
+        exists_count = response.aggregations.exists.doc_count
+        not_exists_count = response.aggregations.not_exists.doc_count
 
-        if check_field.startswith(q.lower()):
-            results.append(
-                {
-                    "id": id_key,
-                    "display_value": display_value,
-                    "works_count": i.doc_count,
-                }
+        results.append(
+            {
+                "id": "true",
+                "display_value": "true",
+                "works_count": exists_count,
+            }
+        )
+        results.append(
+            {
+                "id": "false",
+                "display_value": "false",
+                "works_count": not_exists_count,
+            }
+        )
+    else:
+        group = A("terms", field=AUTOCOMPLETE_FILTER_DICT[view_filter], size=group_size)
+        s.aggs.bucket("autocomplete_group", group)
+        response = s.execute()
+        for i in response.aggregations.autocomplete_group.buckets:
+            if view_filter in id_lookup_fields:
+                id_key = None
+            else:
+                id_key = set_key(i)
+
+            if view_filter == "authorships.institutions.country_code":
+                display_value = get_country_name(i.key)
+            else:
+                display_value = set_key(i)
+
+            check_field = (
+                str(i.key).lower()
+                if view_filter != "authorships.institutions.country_code"
+                else display_value.lower()
             )
+
+            if check_field.startswith(q.lower()):
+                results.append(
+                    {
+                        "id": id_key,
+                        "display_value": display_value,
+                        "works_count": i.doc_count,
+                    }
+                )
 
     result = OrderedDict()
     result["meta"] = {
@@ -161,3 +193,33 @@ def country_search(q):
 def get_country_name(country_code):
     country = iso3166.countries.get(country_code)
     return country.name
+
+
+def set_year_min_max(q):
+    min_year = 1000
+    max_year = 3000
+    if str(q).startswith("1") and len(q) == 1:
+        min_year = 1000
+        max_year = 1999
+    elif str(q).startswith("2") and len(q) == 1:
+        min_year = 2000
+        max_year = 2999
+    elif len(q) == 2:
+        min_year = int(q) * 100
+        max_year = int(q) * 100 + 99
+    elif len(q) == 3:
+        min_year = int(q) * 10
+        max_year = int(q) * 10 + 9
+    elif len(q) == 4:
+        min_year = int(q)
+        max_year = int(q)
+    return min_year, max_year
+
+
+def set_key(i):
+    value = i.key
+    if i.key == 1:
+        value = "true"
+    elif i.key == 0:
+        value = "false"
+    return value
