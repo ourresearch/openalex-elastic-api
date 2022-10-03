@@ -12,6 +12,8 @@ fields = [
         custom_es_field="updated_date",
     ),
     OpenAlexIDField(param="last_known_institution.id"),
+    OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
+    OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(param="x_concepts.id"),
     RangeField(param="cited_by_count"),
     RangeField(param="works_count"),
@@ -20,7 +22,6 @@ fields = [
     TermField(param="last_known_institution.country_code"),
     TermField(param="last_known_institution.ror"),
     TermField(param="last_known_institution.type"),
-    TermField(param="openalex_id", alias="ids.openalex"),
     TermField(param="orcid", alias="ids.orcid"),
 ]
 

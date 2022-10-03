@@ -12,12 +12,13 @@ fields = [
         custom_es_field="updated_date",
     ),
     OpenAlexIDField(param="ancestors.id"),
+    OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
+    OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     RangeField(param="cited_by_count"),
     RangeField(param="level"),
     RangeField(param="works_count"),
     SearchField(param="display_name.search"),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
-    TermField(param="openalex_id", alias="ids.openalex"),
     TermField(param="wikidata_id", alias="ids.wikidata"),
 ]
 

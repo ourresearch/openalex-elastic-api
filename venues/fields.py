@@ -13,6 +13,8 @@ fields = [
         param="from_updated_date",
         custom_es_field="updated_date",
     ),
+    OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
+    OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(param="x_concepts.id"),
     PhraseField(param="publisher"),
     RangeField(param="cited_by_count"),
@@ -20,7 +22,6 @@ fields = [
     SearchField(param="display_name.search"),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="issn"),
-    TermField(param="openalex_id", alias="ids.openalex"),
 ]
 
 fields_dict = {f.param: f for f in fields}
