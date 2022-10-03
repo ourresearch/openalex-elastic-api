@@ -81,14 +81,10 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
 
     if view_filter.lower() in combined_boolean_filters and q:
         raise APIQueryParamsError("Cannot use q parameter with boolean filters.")
-    elif view_filter.lower() not in combined_boolean_filters and not q:
-        raise APIQueryParamsError(
-            "q parameter is required for this autocomplete query."
-        )
 
     # query
     field_underscore = AUTOCOMPLETE_FILTER_DICT[view_filter].replace(".", "__")
-    if BOOLEAN_FILTERS:
+    if view_filter in BOOLEAN_FILTERS:
         q = ""
 
     if q:
