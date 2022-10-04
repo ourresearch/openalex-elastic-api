@@ -163,47 +163,12 @@ class MessageAutocompleteCustomSchema(Schema):
 
 
 class AutoCompleteFilterValuesSchema(Schema):
-    value = fields.Method("get_id_value", dump_default=None)
+    value = fields.Str()
     display_value = fields.Str()
     works_count = fields.Int()
 
     class Meta:
         ordered = True
-
-    @pre_dump(pass_many=True)
-    def id_prep(self, data, many, **kwargs):
-        if self.context["view_filter"] == "authorships.institutions.id":
-            index = INSTITUTIONS_INDEX
-        elif self.context["view_filter"] == "authorships.author.id":
-            index = AUTHORS_INDEX
-        elif self.context["view_filter"] == "host_venue.display_name":
-            index = VENUES_INDEX
-        else:
-            return data
-        ms = MultiSearch(index=index)
-        # first pass, build display names with multisearch
-        if not data:
-            return []
-        for d in data:
-            s = Search()
-            s = s.filter("term", display_name__keyword=d["display_value"])
-            s = s.extra(size=1)
-            s = s.source(["id"])
-            s = s.params(preference=d["display_value"])
-            ms = ms.add(s)
-
-        # second pass, map display names to objects
-        responses = ms.execute()
-        new = []
-        for d, response in zip(data, responses):
-            if response:
-                for h in response:
-                    d["id"] = h.id
-                    new.append(d)
-        return new
-
-    def get_id_value(self, obj):
-        return obj["id"]
 
 
 class MessageAutocompleteFilterSchema(Schema):
