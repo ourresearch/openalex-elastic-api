@@ -125,6 +125,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
                 type(field).__name__ == "RangeField"
                 and field.param != "publication_year"
                 and field.param != "level"
+                and field.param != "cited_by_count"
             )
             or type(field).__name__ == "SearchField"
         ):
