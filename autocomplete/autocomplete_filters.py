@@ -42,10 +42,16 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     # params
     validate_entity_autocomplete_params(request)
     filter_params = map_filter_params(request.args.get("filter"))
+    hide_zero = request.args.get("hide_zero")
     q = request.args.get("q")
     search = request.args.get("search")
     group_size = 200
     page_size = 200
+
+    if hide_zero and hide_zero.lower() == "true":
+        hide_zero = True
+    else:
+        hide_zero = False
 
     # error checking
     valid_filters = AUTOCOMPLETE_FILTER_DICT.keys()
@@ -125,7 +131,7 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     # group
     results = []
     if view_filter.lower() in HAS_FILTERS:
-        response, results = group_has_filter(results, s, view_filter)
+        response, results = group_has_filter(results, s, view_filter, hide_zero)
     else:
         group = A(
             "terms", field=AUTOCOMPLETE_FILTER_DICT[view_filter], size=group_size
@@ -161,6 +167,68 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
                 )
 
     # add "zero" records
+    if not hide_zero:
+        zero_values = get_zero_values(filter_params, q, view_filter)
+
+        if (
+            view_filter.lower() == "authorships.author.id"
+            or view_filter.lower() == "authorships.institutions.id"
+            or view_filter.lower() == "host_venue.display_name"
+            or view_filter.lower() == "authorships.institutions.country_code"
+            or view_filter.lower() == "host_venue.publisher"
+            or view_filter.lower() == "authorships.institutions.type"
+            or view_filter.lower() == "host_venue.license"
+            or view_filter.lower() == "host_venue.type"
+            or view_filter.lower() == "type"
+            or view_filter.lower() == "open_access.oa_status"
+            or view_filter.lower() == "publication_year"
+        ):
+            result_ids = [r["value"] for r in results]
+            for item in zero_values:
+                if item["id"] not in result_ids:
+                    results.append(
+                        {
+                            "value": item["id"],
+                            "display_value": item["display_name"],
+                            "works_count": 0,
+                        }
+                    )
+
+        if (
+            view_filter.lower() == "is_paratext"
+            or view_filter.lower() == "is_retracted"
+            or view_filter.lower() == "open_access.is_oa"
+        ):
+            result_ids = [r["value"] for r in results]
+            if "true" not in result_ids:
+                results.append(
+                    {
+                        "value": "true",
+                        "display_value": "true",
+                        "works_count": 0,
+                    }
+                )
+            if "false" not in result_ids:
+                results.append(
+                    {
+                        "value": "false",
+                        "display_value": "false",
+                        "works_count": 0,
+                    },
+                )
+
+    result = OrderedDict()
+    result["meta"] = {
+        "count": s.count(),
+        "db_response_time_ms": response.took,
+        "page": 1,
+        "per_page": page_size,
+    }
+    result["filters"] = results[:page_size]
+    return result
+
+
+def get_zero_values(filter_params, q, view_filter):
     zero_values = []
     if view_filter.lower() == "authorships.author.id":
         zero_values = get_top_authors(q)
@@ -184,66 +252,10 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
         zero_values = get_top_works_oa_status(q)
     elif view_filter.lower() == "publication_year":
         zero_values = get_top_years(q)
-
-    if (
-        view_filter.lower() == "authorships.author.id"
-        or view_filter.lower() == "authorships.institutions.id"
-        or view_filter.lower() == "host_venue.display_name"
-        or view_filter.lower() == "authorships.institutions.country_code"
-        or view_filter.lower() == "host_venue.publisher"
-        or view_filter.lower() == "authorships.institutions.type"
-        or view_filter.lower() == "host_venue.license"
-        or view_filter.lower() == "host_venue.type"
-        or view_filter.lower() == "type"
-        or view_filter.lower() == "open_access.oa_status"
-        or view_filter.lower() == "publication_year"
-    ):
-        result_ids = [r["value"] for r in results]
-        for item in zero_values:
-            if item["id"] not in result_ids:
-                results.append(
-                    {
-                        "value": item["id"],
-                        "display_value": item["display_name"],
-                        "works_count": 0,
-                    }
-                )
-
-    if (
-        view_filter.lower() == "is_paratext"
-        or view_filter.lower() == "is_retracted"
-        or view_filter.lower() == "open_access.is_oa"
-    ):
-        result_ids = [r["value"] for r in results]
-        if "true" not in result_ids:
-            results.append(
-                {
-                    "value": "true",
-                    "display_value": "true",
-                    "works_count": 0,
-                }
-            )
-        if "false" not in result_ids:
-            results.append(
-                {
-                    "value": "false",
-                    "display_value": "false",
-                    "works_count": 0,
-                },
-            )
-
-    result = OrderedDict()
-    result["meta"] = {
-        "count": s.count(),
-        "db_response_time_ms": response.took,
-        "page": 1,
-        "per_page": page_size,
-    }
-    result["filters"] = results[:page_size]
-    return result
+    return zero_values
 
 
-def group_has_filter(results, s, view_filter):
+def group_has_filter(results, s, view_filter, hide_zero):
     exists = A("filter", Q("exists", field=AUTOCOMPLETE_FILTER_DICT[view_filter]))
     not_exists = A("filter", ~Q("exists", field=AUTOCOMPLETE_FILTER_DICT[view_filter]))
     s.aggs.bucket("exists", exists)
@@ -259,7 +271,7 @@ def group_has_filter(results, s, view_filter):
                 "works_count": exists_count,
             }
         )
-    else:
+    elif not hide_zero:
         results.append(
             {
                 "value": "true",
@@ -275,7 +287,7 @@ def group_has_filter(results, s, view_filter):
                 "works_count": not_exists_count,
             }
         )
-    else:
+    elif not hide_zero:
         results.append(
             {
                 "value": "false",

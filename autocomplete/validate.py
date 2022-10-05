@@ -2,12 +2,7 @@ from core.exceptions import APIQueryParamsError
 
 
 def validate_entity_autocomplete_params(request):
-    valid_params = [
-        "q",
-        "filter",
-        "mailto",
-        "search",
-    ]
+    valid_params = ["q", "filter", "mailto", "search", "hide_zero"]
     for arg in request.args:
         if arg not in valid_params:
             raise APIQueryParamsError(
