@@ -39,19 +39,6 @@ BOOLEAN_FILTERS = ["is_paratext", "is_retracted", "open_access.is_oa"]
 
 
 def autocomplete_filter(view_filter, fields_dict, index_name, request):
-    valid_filters = AUTOCOMPLETE_FILTER_DICT.keys()
-    if view_filter not in valid_filters:
-        raise APIQueryParamsError(
-            f"The filter {view_filter} is not a valid filter. Current filters are: {', '.join(valid_filters)}"
-        )
-
-    # requires sentence case
-    sentence_case_fields = [
-        "authorships.institutions.id",
-        "authorships.author.id",
-        "host_venue.display_name",
-    ]
-
     # params
     validate_entity_autocomplete_params(request)
     filter_params = map_filter_params(request.args.get("filter"))
@@ -60,22 +47,48 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     group_size = 200
     page_size = 200
 
+    # error checking
+    valid_filters = AUTOCOMPLETE_FILTER_DICT.keys()
+    if view_filter not in valid_filters:
+        raise APIQueryParamsError(
+            f"The filter {view_filter} is not a valid filter. Current filters are: {', '.join(valid_filters)}"
+        )
+    combined_boolean_filters = BOOLEAN_FILTERS + HAS_FILTERS
+
+    if (
+        view_filter.lower() in combined_boolean_filters
+        and q
+        or view_filter.lower() in combined_boolean_filters
+        and q == ""
+    ):
+        raise APIQueryParamsError("Cannot use q parameter with boolean filters.")
+
+    if (
+        view_filter.lower() not in combined_boolean_filters
+        and not q
+        and view_filter.lower() not in combined_boolean_filters
+        and q != ""
+    ):
+        raise APIQueryParamsError("Need q param for this parameter.")
+
+    # requires sentence case
+    sentence_case_fields = [
+        "authorships.institutions.id",
+        "authorships.author.id",
+        "host_venue.display_name",
+    ]
+
+    # search
     s = Search(index=WORKS_INDEX)
     s = s.source(AUTOCOMPLETE_SOURCE)
     s = s.params(preference="autocomplete_group_by")
 
-    # search
     if search and search != '""':
         s = full_search(index_name, s, search)
 
     # filters
     if filter_params:
         s = filter_records(fields_dict, filter_params, s)
-
-    combined_boolean_filters = BOOLEAN_FILTERS + HAS_FILTERS
-
-    if view_filter.lower() in combined_boolean_filters and q:
-        raise APIQueryParamsError("Cannot use q parameter with boolean filters.")
 
     # query
     if view_filter == "authorships.author.id":
