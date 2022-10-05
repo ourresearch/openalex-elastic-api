@@ -240,3 +240,94 @@ class TestAutoCompleteFilters:
             "display_value": "false",
             "works_count": 213,
         }
+
+    def test_autocomplete_filter_has_doi(self, client):
+        res = client.get(
+            "/autocomplete/works/filters/has_doi?filter=publication_year:1919"
+        )
+        json_data = res.get_json()
+        first_result = json_data["filters"][0]
+        second_result = json_data["filters"][1]
+        assert len(json_data["filters"]) == 2
+        assert first_result == {
+            "value": "true",
+            "display_value": "true",
+            "works_count": 0,
+        }
+        assert second_result == {
+            "value": "false",
+            "display_value": "false",
+            "works_count": 1,
+        }
+
+    def test_autocomplete_filter_has_ngrams(self, client):
+        res = client.get(
+            "/autocomplete/works/filters/has_ngrams?filter=publication_year:1917"
+        )
+        json_data = res.get_json()
+        first_result = json_data["filters"][0]
+        second_result = json_data["filters"][1]
+        assert len(json_data["filters"]) == 2
+        assert first_result == {
+            "value": "true",
+            "display_value": "true",
+            "works_count": 0,
+        }
+        assert second_result == {
+            "value": "false",
+            "display_value": "false",
+            "works_count": 2,
+        }
+
+    def test_autocomplete_filter_is_paratext(self, client):
+        res = client.get("/autocomplete/works/filters/is_paratext")
+        json_data = res.get_json()
+        first_result = json_data["filters"][0]
+        second_result = json_data["filters"][1]
+        assert len(json_data["filters"]) == 2
+        assert first_result == {
+            "value": "false",
+            "display_value": "false",
+            "works_count": 3332,
+        }
+        assert second_result == {
+            "value": "true",
+            "display_value": "true",
+            "works_count": 0,
+        }
+
+    def test_autocomplete_filter_is_retracted(self, client):
+        res = client.get("/autocomplete/works/filters/is_retracted")
+        json_data = res.get_json()
+        first_result = json_data["filters"][0]
+        second_result = json_data["filters"][1]
+        assert len(json_data["filters"]) == 2
+        assert first_result == {
+            "value": "false",
+            "display_value": "false",
+            "works_count": 10000,
+        }
+        assert second_result == {
+            "value": "true",
+            "display_value": "true",
+            "works_count": 0,
+        }
+
+    def test_autocomplete_filter_oa_status(self, client):
+        res = client.get(
+            "/autocomplete/works/filters/open_access.is_oa?filter=publication_year:1947"
+        )
+        json_data = res.get_json()
+        first_result = json_data["filters"][0]
+        second_result = json_data["filters"][1]
+        assert len(json_data["filters"]) == 2
+        assert first_result == {
+            "value": "true",
+            "display_value": "true",
+            "works_count": 2,
+        }
+        assert second_result == {
+            "value": "false",
+            "display_value": "false",
+            "works_count": 0,
+        }

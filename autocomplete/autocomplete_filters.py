@@ -196,6 +196,29 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
                     }
                 )
 
+    if (
+        view_filter.lower() == "is_paratext"
+        or view_filter.lower() == "is_retracted"
+        or view_filter.lower() == "open_access.is_oa"
+    ):
+        result_ids = [r["value"] for r in results]
+        if "true" not in result_ids:
+            results.append(
+                {
+                    "value": "true",
+                    "display_value": "true",
+                    "works_count": 0,
+                }
+            )
+        if "false" not in result_ids:
+            results.append(
+                {
+                    "value": "false",
+                    "display_value": "false",
+                    "works_count": 0,
+                },
+            )
+
     result = OrderedDict()
     result["meta"] = {
         "count": s.count(),
