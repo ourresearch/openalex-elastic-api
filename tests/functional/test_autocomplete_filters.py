@@ -339,12 +339,12 @@ class TestAutoCompleteFilters:
         last_result = json_data["filters"][9]
         assert len(json_data["filters"]) == 10
         assert first_result == {
-            "value": "Computer science",
+            "value": "https://openalex.org/C41008148",
             "display_value": "Computer science",
             "works_count": 1411,
         }
         assert last_result == {
-            "value": "Agricultural science",
+            "value": "https://openalex.org/C37621935",
             "display_value": "Agricultural science",
             "works_count": 0,
         }

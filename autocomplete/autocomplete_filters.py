@@ -18,7 +18,7 @@ AUTOCOMPLETE_FILTER_DICT = {
     "authorships.institutions.country_code": "authorships.institutions.country_code",
     "authorships.institutions.id": "authorships.institutions.id",
     "authorships.institutions.type": "authorships.institutions.type",
-    "concepts.id": "concepts.display_name",
+    "concepts.id": "concepts.id",
     "has_abstract": "abstract",
     "has_doi": "ids.doi",
     "has_ngrams": "fulltext",
@@ -112,7 +112,10 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
         else:
             q = q.lower().strip()
 
-        group_size = 50
+        if view_filter == "concepts.id":
+            group_size = 100
+        else:
+            group_size = 50
         page_size = 10
         if view_filter == "authorships.institutions.country_code":
             country_codes = country_search(q)
@@ -137,7 +140,7 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
             "top_hit",
             "top_hits",
             size=1,
-            _source=["authorships", "display_name", "host_venue"],
+            _source=["authorships", "display_name", "host_venue", "concepts"],
         )
         s.aggs.bucket("autocomplete_group", group)
         response = s.execute()
@@ -150,6 +153,8 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
                 display_value = get_author_display_name(i)
             elif view_filter == "authorships.institutions.id":
                 display_value = get_institution_display_name(i)
+            elif view_filter == "concepts.id":
+                display_value = get_concept_display_name(i)
             elif view_filter == "host_venue.display_name":
                 display_value = get_host_venue_display_name(i)
             else:
@@ -544,20 +549,14 @@ def get_top_years(q):
 
 def get_top_concepts(q):
     s = Search(index=CONCEPTS_INDEX)
-    s = s.query("match_phrase_prefix", display_name__autocomplete=q.lower())
-    s = s.params(preference="autocomplete_group_by")
-    group = A("terms", field="display_name.keyword", size=20)
-    s.aggs.bucket("autocomplete_group", group)
+    s = s.extra(size=10)
+    s = s.sort("-works_count")
+    s = s.query("match_phrase_prefix", display_name__autocomplete=q)
     response = s.execute()
-    concepts = []
-    for i in response.aggregations.autocomplete_group.buckets:
-        concepts.append(
-            {
-                "id": i.key,
-                "display_name": i.key,
-            }
-        )
-    return concepts
+    venues = []
+    for r in response:
+        venues.append({"id": r.id, "display_name": r.display_name})
+    return venues
 
 
 def get_author_display_name(i):
@@ -577,3 +576,10 @@ def get_institution_display_name(i):
 
 def get_host_venue_display_name(i):
     return i.top_hit.hits.hits[0]["_source"]["host_venue"]["display_name"]
+
+
+def get_concept_display_name(i):
+    concepts = i.top_hit.hits.hits[0]["_source"]["concepts"]
+    for concept in concepts:
+        if concept["id"] == i.key:
+            return concept["display_name"]
