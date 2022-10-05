@@ -10,14 +10,15 @@ from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
 from core.search import full_search
 from core.utils import map_filter_params
-from settings import (AUTHORS_INDEX, INSTITUTIONS_INDEX, VENUES_INDEX,
-                      WORKS_INDEX)
+from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
+                      VENUES_INDEX, WORKS_INDEX)
 
 AUTOCOMPLETE_FILTER_DICT = {
     "authorships.author.id": "authorships.author.id",
     "authorships.institutions.country_code": "authorships.institutions.country_code",
     "authorships.institutions.id": "authorships.institutions.id",
     "authorships.institutions.type": "authorships.institutions.type",
+    "concepts.id": "concepts.display_name",
     "has_abstract": "abstract",
     "has_doi": "ids.doi",
     "has_ngrams": "fulltext",
@@ -77,13 +78,6 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     ):
         raise APIQueryParamsError("Need q param for this parameter.")
 
-    # requires sentence case
-    sentence_case_fields = [
-        "authorships.institutions.id",
-        "authorships.author.id",
-        "host_venue.display_name",
-    ]
-
     # search
     s = Search(index=WORKS_INDEX)
     s = s.source(AUTOCOMPLETE_SOURCE)
@@ -98,20 +92,22 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
 
     # query
     if view_filter == "authorships.author.id":
-        field_underscore = "authorships__author__display_name"
+        field_underscore = "authorships__author__display_name__autocomplete"
     elif view_filter == "authorships.institutions.id":
-        field_underscore = "authorships__institutions__display_name"
+        field_underscore = "authorships__institutions__display_name__autocomplete"
+    elif view_filter == "concepts.id":
+        field_underscore = "concepts__display_name__autocomplete"
     elif view_filter == "host_venue.display_name":
-        field_underscore = "host_venue__display_name"
+        field_underscore = "host_venue__display_name__autocomplete"
+    elif view_filter == "host_venue.publisher":
+        field_underscore = "host_venue__publisher__autocomplete"
     else:
         field_underscore = AUTOCOMPLETE_FILTER_DICT[view_filter].replace(".", "__")
     if view_filter in BOOLEAN_FILTERS:
         q = ""
 
     if q:
-        if view_filter in sentence_case_fields:
-            q = q.title().replace("Of", "of").strip()
-        elif view_filter == "authorships.institutions.country_code":
+        if view_filter == "authorships.institutions.country_code":
             q = q.upper().strip()
         else:
             q = q.lower().strip()
@@ -125,6 +121,8 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
             min_year, max_year = set_year_min_max(q)
             kwargs = {field_underscore: {"gte": min_year, "lte": max_year}}
             s = s.query("range", **kwargs)
+        elif "autocomplete" in field_underscore:
+            s = s.query("match_phrase_prefix", **{field_underscore: q})
         else:
             s = s.query("prefix", **{field_underscore: q})
 
@@ -157,7 +155,7 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
             else:
                 display_value = id_key
 
-            if str(display_value).lower().startswith(q.lower()):
+            if q.lower() in str(display_value).lower():
                 results.append(
                     {
                         "value": id_key,
@@ -182,6 +180,7 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
             or view_filter.lower() == "type"
             or view_filter.lower() == "open_access.oa_status"
             or view_filter.lower() == "publication_year"
+            or view_filter.lower() == "concepts.id"
         ):
             result_ids = [r["value"] for r in results]
             for item in zero_values:
@@ -252,6 +251,8 @@ def get_zero_values(filter_params, q, view_filter):
         zero_values = get_top_works_oa_status(q)
     elif view_filter.lower() == "publication_year":
         zero_values = get_top_years(q)
+    elif view_filter.lower() == "concepts.id":
+        zero_values = get_top_concepts(q)
     return zero_values
 
 
@@ -538,18 +539,25 @@ def get_top_years(q):
             }
         )
         i = i + 1
-    print(years)
     return years
 
 
-def get_display_name(openalex_id):
-    s = Search(index=AUTHORS_INDEX)
-    s = s.filter("term", ids__openalex__lower=openalex_id)
-    s = s.extra(size=1)
-    s = s.source(["display_name"])
+def get_top_concepts(q):
+    s = Search(index=CONCEPTS_INDEX)
+    s = s.query("match_phrase_prefix", display_name__autocomplete=q.lower())
+    s = s.params(preference="autocomplete_group_by")
+    group = A("terms", field="display_name.keyword", size=20)
+    s.aggs.bucket("autocomplete_group", group)
     response = s.execute()
-    for r in response:
-        return r.display_name
+    concepts = []
+    for i in response.aggregations.autocomplete_group.buckets:
+        concepts.append(
+            {
+                "id": i.key,
+                "display_name": i.key,
+            }
+        )
+    return concepts
 
 
 def get_author_display_name(i):

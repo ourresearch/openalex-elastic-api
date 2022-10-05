@@ -42,14 +42,14 @@ class TestAutoCompleteFilters:
         second_result = json_data["filters"][1]
         assert len(json_data["filters"]) == 10
         assert first_result == {
-            "value": "https://openalex.org/V126771428",
-            "display_value": "Family Medicine",
-            "works_count": 2,
-        }
-        assert second_result == {
             "value": "https://openalex.org/V25293849",
             "display_value": "The FASEB Journal",
-            "works_count": 0,
+            "works_count": 18,
+        }
+        assert second_result == {
+            "value": "https://openalex.org/V72111607",
+            "display_value": "Canadian Family Physician",
+            "works_count": 3,
         }
 
     def test_autocomplete_filter_country_code(self, client):
@@ -76,16 +76,16 @@ class TestAutoCompleteFilters:
         json_data = res.get_json()
         first_result = json_data["filters"][0]
         third_result = json_data["filters"][2]
-        assert len(json_data["filters"]) == 4
+        assert len(json_data["filters"]) == 10
         assert first_result == {
-            "value": "rand corporation",
-            "display_value": "rand corporation",
+            "value": "amsterdam: raap archeologisch adviesbureau",
+            "display_value": "amsterdam: raap archeologisch adviesbureau",
             "works_count": 2,
         }
         assert third_result == {
-            "value": "radiological society of north america",
-            "display_value": "radiological society of north america",
-            "works_count": 0,
+            "value": "weesp: raap archeologisch adviesbureau",
+            "display_value": "weesp: raap archeologisch adviesbureau",
+            "works_count": 2,
         }
 
     def test_autocomplete_filter_institution_types_1_result(self, client):
@@ -329,5 +329,22 @@ class TestAutoCompleteFilters:
         assert second_result == {
             "value": "false",
             "display_value": "false",
+            "works_count": 0,
+        }
+
+    def test_autocomplete_filter_concept_ids(self, client):
+        res = client.get("/autocomplete/works/filters/concepts.id?q=scie")
+        json_data = res.get_json()
+        first_result = json_data["filters"][0]
+        last_result = json_data["filters"][9]
+        assert len(json_data["filters"]) == 10
+        assert first_result == {
+            "value": "Computer science",
+            "display_value": "Computer science",
+            "works_count": 1411,
+        }
+        assert last_result == {
+            "value": "Agricultural science",
+            "display_value": "Agricultural science",
             "works_count": 0,
         }
