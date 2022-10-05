@@ -263,6 +263,14 @@ class TestWorksAuthorFilters:
             == self.author_name
         )
 
+    def test_works_author_orcid_short(self, client):
+        res = client.get("/works?filter=author.orcid:0000-0002-9777-5667")
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["authorships"][0]["author"]["display_name"]
+            == self.author_name
+        )
+
 
 class TestWorksInstitutionsFilters:
     institution_name = "University of Connecticut"
@@ -294,6 +302,18 @@ class TestWorksInstitutionsFilters:
 
     def test_works_institutions_ror(self, client):
         res = client.get("/works?filter=institutions.ror:https://ror.org/02der9h97")
+        json_data = res.get_json()
+
+        for result in json_data["results"][:25]:
+            found = False
+            for author in result["authorships"]:
+                for institution in author["institutions"]:
+                    if self.institution_name in institution["display_name"]:
+                        found = True
+            assert found == True
+
+    def test_works_institutions_ror_short(self, client):
+        res = client.get("/works?filter=institutions.ror:02der9h97")
         json_data = res.get_json()
 
         for result in json_data["results"][:25]:

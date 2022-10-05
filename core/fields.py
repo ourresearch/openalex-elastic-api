@@ -325,9 +325,13 @@ class SearchField(Field):
 class TermField(Field):
     def build_query(self):
         id_params = [
+            "author.orcid",
+            "authorships.author.orcid",
+            "authorships.institutions.ror",
             "doi",
             "ids.pmid",
             "ids.pmcid",
+            "institutions.ror",
             "issn",
             "orcid",
             "openalex_id",
@@ -401,11 +405,17 @@ class TermField(Field):
             self.param == "pmcid" or self.param == "ids.pmcid"
         ) and "ncbi.nlm.nih.gov/pmc/articles" not in self.value:
             formatted = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{self.value}"
-        elif self.param == "orcid" and "orcid.org" not in self.value:
+        elif (
+            self.param in ["author.orcid", "authorships.author.orcid", "orcid"]
+            and "orcid.org" not in self.value
+        ):
             formatted = f"https://orcid.org/{self.value}"
         elif self.param == "openalex_id":
             formatted = get_full_openalex_id(self.value)
-        elif self.param == "ror" and "ror.org" not in self.value:
+        elif (
+            self.param in ["authorships.institutions.ror", "institutions.ror", "ror"]
+            and "ror.org" not in self.value
+        ):
             formatted = f"https://ror.org/{self.value}"
         elif self.param == "wikidata_id" and "wikidata.org" not in self.value:
             formatted = f"https://www.wikidata.org/wiki/{self.value}"
