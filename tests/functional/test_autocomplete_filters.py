@@ -36,7 +36,7 @@ class TestAutoCompleteFilters:
         }
 
     def test_autocomplete_filter_host_venue_display_name(self, client):
-        res = client.get("/autocomplete/works/filters/host_venue.display_name?q=fa")
+        res = client.get("/autocomplete/works/filters/host_venue.id?q=fa")
         json_data = res.get_json()
         first_result = json_data["filters"][0]
         second_result = json_data["filters"][1]

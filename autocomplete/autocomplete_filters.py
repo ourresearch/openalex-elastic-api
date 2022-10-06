@@ -28,7 +28,7 @@ AUTOCOMPLETE_FILTER_DICT = {
     "is_paratext": "is_paratext",
     "is_retracted": "is_retracted",
     "open_access.is_oa": "open_access.is_oa",
-    "host_venue.display_name": "host_venue.id",
+    "host_venue.id": "host_venue.id",
     "host_venue.license": "host_venue.license",
     "host_venue.publisher": "host_venue.publisher.lower",
     "host_venue.type": "host_venue.type",
@@ -100,7 +100,7 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
         field_underscore = "authorships__institutions__display_name__autocomplete"
     elif view_filter == "concepts.id":
         field_underscore = "concepts__display_name__autocomplete"
-    elif view_filter == "host_venue.display_name":
+    elif view_filter == "host_venue.id":
         field_underscore = "host_venue__display_name__autocomplete"
     elif view_filter == "host_venue.publisher":
         field_underscore = "host_venue__publisher__autocomplete"
@@ -170,7 +170,7 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
                 display_value = get_institution_display_name(i)
             elif view_filter == "concepts.id":
                 display_value = get_concept_display_name(i)
-            elif view_filter == "host_venue.display_name":
+            elif view_filter == "host_venue.id":
                 display_value = get_host_venue_display_name(i)
             else:
                 display_value = id_key
@@ -191,7 +191,7 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
         if (
             view_filter.lower() == "authorships.author.id"
             or view_filter.lower() == "authorships.institutions.id"
-            or view_filter.lower() == "host_venue.display_name"
+            or view_filter.lower() == "host_venue.id"
             or view_filter.lower() == "authorships.institutions.country_code"
             or view_filter.lower() == "host_venue.publisher"
             or view_filter.lower() == "authorships.institutions.type"
@@ -257,7 +257,7 @@ def get_zero_values(filter_params, q, view_filter):
     elif view_filter.lower() == "authorships.institutions.id":
         zero_values = get_top_institutions(q)
     elif (
-        view_filter.lower() == "host_venue.display_name"
+        view_filter.lower() == "host_venue.id"
         or view_filter.lower() == "alternate_host_venues.id"
     ):
         zero_values = get_top_venues(q)
