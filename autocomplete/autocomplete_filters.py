@@ -14,6 +14,9 @@ from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
                       VENUES_INDEX, WORKS_INDEX)
 
 AUTOCOMPLETE_FILTER_DICT = {
+    "alternate_host_venues.id": "alternate_host_venues.id",
+    "alternate_host_venues.license": "alternate_host_venues.license",
+    "alternate_host_venues.type": "alternate_host_venues.type",
     "authorships.author.id": "authorships.author.id",
     "authorships.institutions.country_code": "authorships.institutions.country_code",
     "authorships.institutions.id": "authorships.institutions.id",
@@ -101,6 +104,8 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
         field_underscore = "host_venue__display_name__autocomplete"
     elif view_filter == "host_venue.publisher":
         field_underscore = "host_venue__publisher__autocomplete"
+    elif view_filter == "alternate_host_venues.id":
+        field_underscore = "alternate_host_venues__display_name"
     else:
         field_underscore = AUTOCOMPLETE_FILTER_DICT[view_filter].replace(".", "__")
     if view_filter in BOOLEAN_FILTERS:
@@ -109,6 +114,8 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     if q:
         if view_filter == "authorships.institutions.country_code":
             q = q.upper().strip()
+        elif view_filter == "alternate_host_venues.id":
+            q = q.title().replace("Of", "of")
         else:
             q = q.lower().strip()
 
@@ -140,14 +147,22 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
             "top_hit",
             "top_hits",
             size=1,
-            _source=["authorships", "display_name", "host_venue", "concepts"],
+            _source=[
+                "authorships",
+                "display_name",
+                "host_venue",
+                "concepts",
+                "alternate_host_venues",
+            ],
         )
         s.aggs.bucket("autocomplete_group", group)
         response = s.execute()
         for i in response.aggregations.autocomplete_group.buckets:
             id_key = set_key(i)
 
-            if view_filter == "authorships.institutions.country_code":
+            if view_filter == "alternate_host_venues.id":
+                display_value = get_alternate_host_name(i)
+            elif view_filter == "authorships.institutions.country_code":
                 display_value = get_country_name(i.key)
             elif view_filter == "authorships.author.id":
                 display_value = get_author_display_name(i)
@@ -186,6 +201,9 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
             or view_filter.lower() == "open_access.oa_status"
             or view_filter.lower() == "publication_year"
             or view_filter.lower() == "concepts.id"
+            or view_filter.lower() == "alternate_host_venues.id"
+            or view_filter.lower() == "alternate_host_venues.license"
+            or view_filter.lower() == "alternate_host_venues.type"
         ):
             result_ids = [r["value"] for r in results]
             for item in zero_values:
@@ -238,7 +256,10 @@ def get_zero_values(filter_params, q, view_filter):
         zero_values = get_top_authors(q)
     elif view_filter.lower() == "authorships.institutions.id":
         zero_values = get_top_institutions(q)
-    elif view_filter.lower() == "host_venue.display_name":
+    elif (
+        view_filter.lower() == "host_venue.display_name"
+        or view_filter.lower() == "alternate_host_venues.id"
+    ):
         zero_values = get_top_venues(q)
     elif view_filter.lower() == "authorships.institutions.country_code":
         zero_values = get_top_countries(q)
@@ -246,9 +267,15 @@ def get_zero_values(filter_params, q, view_filter):
         zero_values = get_top_publishers(q)
     elif view_filter.lower() == "authorships.institutions.type":
         zero_values = get_top_institution_types(q)
-    elif view_filter.lower() == "host_venue.license" and filter_params:
+    elif (
+        view_filter.lower() in ["host_venue.license", "alternate_host_venues.license"]
+        and filter_params
+    ):
         zero_values = get_top_venue_licenses(q)
-    elif view_filter.lower() == "host_venue.type" and filter_params:
+    elif (
+        view_filter.lower() in ["host_venue.type", "alternate_host_venues.type"]
+        and filter_params
+    ):
         zero_values = get_top_venue_types(q)
     elif view_filter.lower() == "type" and filter_params:
         zero_values = get_top_works_types(q)
@@ -583,3 +610,10 @@ def get_concept_display_name(i):
     for concept in concepts:
         if concept["id"] == i.key:
             return concept["display_name"]
+
+
+def get_alternate_host_name(i):
+    venues = i.top_hit.hits.hits[0]["_source"]["alternate_host_venues"]
+    for venue in venues:
+        if venue["id"] == i.key:
+            return venue["display_name"]

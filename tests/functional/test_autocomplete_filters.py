@@ -348,3 +348,63 @@ class TestAutoCompleteFilters:
             "display_value": "Agricultural science",
             "works_count": 0,
         }
+
+    def test_autocomplete_filter_alternate_host_venue_id(self, client):
+        res = client.get("/autocomplete/works/filters/alternate_host_venues.id?q=natio")
+        json_data = res.get_json()
+        first_result = json_data["filters"][0]
+        second_result = json_data["filters"][1]
+        assert len(json_data["filters"]) == 10
+        assert first_result == {
+            "value": "https://openalex.org/V2764393826",
+            "display_value": "National Journal of Clinical Anatomy",
+            "works_count": 1,
+        }
+        assert second_result == {
+            "value": "https://openalex.org/V66414671",
+            "display_value": "Journal of The National Medical Association",
+            "works_count": 0,
+        }
+
+    def test_autocomplete_filter_host_venue_license(self, client):
+        res = client.get(
+            "/autocomplete/works/filters/host_venue.license?q=cc&filter=publication_year:2020"
+        )
+        json_data = res.get_json()
+        first_result = json_data["filters"][0]
+        third_result = json_data["filters"][2]
+        assert len(json_data["filters"]) == 7
+        assert first_result == {
+            "value": "cc-by",
+            "display_value": "cc-by",
+            "works_count": 2,
+        }
+        assert third_result == {
+            "value": "cc-by-nc-nd",
+            "display_value": "cc-by-nc-nd",
+            "works_count": 0,
+        }
+
+    def test_autocomplete_filter_alternate_host_venue_type_1_result(self, client):
+        res = client.get("/autocomplete/works/filters/alternate_host_venues.type?q=re")
+        json_data = res.get_json()
+        first_result = json_data["filters"][0]
+        assert len(json_data["filters"]) == 1
+        assert first_result == {
+            "value": "repository",
+            "display_value": "repository",
+            "works_count": 324,
+        }
+
+    def test_autocomplete_filter_alternate_host_venue_type_0_result(self, client):
+        res = client.get(
+            "/autocomplete/works/filters/alternate_host_venues.type?q=re&filter=publication_year:1420"
+        )
+        json_data = res.get_json()
+        first_result = json_data["filters"][0]
+        assert len(json_data["filters"]) == 1
+        assert first_result == {
+            "value": "repository",
+            "display_value": "repository",
+            "works_count": 0,
+        }
