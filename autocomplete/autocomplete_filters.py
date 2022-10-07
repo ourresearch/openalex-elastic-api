@@ -131,6 +131,13 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
             min_year, max_year = set_year_min_max(q)
             kwargs = {field_underscore: {"gte": min_year, "lte": max_year}}
             s = s.query("range", **kwargs)
+        elif (
+            "autocomplete" in field_underscore
+            and view_filter == "authorships.author.id"
+        ):
+            s = s.query(
+                "match_phrase_prefix", **{field_underscore: {"query": q, "slop": 1}}
+            )
         elif "autocomplete" in field_underscore:
             s = s.query("match_phrase_prefix", **{field_underscore: q})
         else:
@@ -175,14 +182,24 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
             else:
                 display_value = id_key
 
-            if q.lower() in str(display_value).lower():
-                results.append(
-                    {
-                        "value": id_key,
-                        "display_value": display_value,
-                        "works_count": i.doc_count,
-                    }
-                )
+            if view_filter == "authorships.author.id":
+                if all(x in str(display_value).lower() for x in q.lower().split()):
+                    results.append(
+                        {
+                            "value": id_key,
+                            "display_value": display_value,
+                            "works_count": i.doc_count,
+                        }
+                    )
+            else:
+                if q.lower() in str(display_value).lower():
+                    results.append(
+                        {
+                            "value": id_key,
+                            "display_value": display_value,
+                            "works_count": i.doc_count,
+                        }
+                    )
 
     # add "zero" records
     if not hide_zero:
@@ -381,7 +398,9 @@ def get_top_authors(q):
     s = Search(index=AUTHORS_INDEX)
     s = s.extra(size=10)
     s = s.sort("-works_count")
-    s = s.query("match_phrase_prefix", display_name__autocomplete=q)
+    s = s.query(
+        "match_phrase_prefix", display_name__autocomplete={"query": q, "slop": 1}
+    )
     response = s.execute()
     authors = []
     for r in response:

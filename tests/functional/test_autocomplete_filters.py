@@ -1,19 +1,19 @@
 class TestAutoCompleteFilters:
     def test_autocomplete_filter_author_id(self, client):
-        res = client.get("/autocomplete/works/filters/authorships.author.id?q=carl l")
+        res = client.get("/autocomplete/works/filters/authorships.author.id?q=carl c")
         json_data = res.get_json()
         first_result = json_data["filters"][0]
         second_result = json_data["filters"][1]
         assert len(json_data["filters"]) == 2
         assert first_result == {
-            "value": "https://openalex.org/A1965815977",
-            "display_value": "Carl Ludwig Siegel",
+            "value": "https://openalex.org/A2236313142",
+            "display_value": "Carl E. Cerniglia",
             "works_count": 1,
         }
         assert second_result == {
-            "value": "https://openalex.org/A2997495481",
-            "display_value": "Carl LoFaro",
-            "works_count": 0,
+            "value": "https://openalex.org/A2660293885",
+            "display_value": "Carl T. Chase",
+            "works_count": 1,
         }
 
     def test_autocomplete_filter_institution_id(self, client):
