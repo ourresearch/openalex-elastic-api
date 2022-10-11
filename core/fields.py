@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 
 from elasticsearch_dsl import Q, Search
 
+import settings
 from core.exceptions import APIQueryParamsError
 from core.search import SearchOpenAlex
 from core.utils import get_full_openalex_id, normalize_openalex_id
@@ -94,6 +95,18 @@ class BooleanField(Field):
                 q = Q("exists", field=self.es_field())
             elif self.value.lower().strip() == "false":
                 q = ~Q("exists", field=self.es_field())
+        elif (
+            self.param == "authorships.institutions.country_code.is_global_south"
+            or self.param == "institutions.country_code.is_global_south"
+        ):
+            self.validate_true_false()
+            global_south_country_codes = [
+                c["country_code"] for c in settings.GLOBAL_SOUTH_COUNTRIES
+            ]
+            if self.value.lower().strip() == "true":
+                q = Q("terms", **{self.es_field(): global_south_country_codes})
+            elif self.value.lower().strip() == "false":
+                q = ~Q("terms", **{self.es_field(): global_south_country_codes})
         elif self.value == "null":
             q = ~Q("exists", field=self.es_field())
         elif self.value == "!null":

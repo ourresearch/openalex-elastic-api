@@ -2,6 +2,10 @@ from core.fields import (BooleanField, DateField, OpenAlexIDField, PhraseField,
                          RangeField, SearchField, TermField)
 
 fields = [
+    BooleanField(
+        param="authorships.institutions.country_code.is_global_south",
+        custom_es_field="authorships.institutions.country_code",
+    ),
     BooleanField(param="has_abstract", custom_es_field="abstract"),
     BooleanField(param="has_doi", custom_es_field="ids.doi"),
     BooleanField(param="has_fulltext", custom_es_field="fulltext"),
@@ -9,6 +13,10 @@ fields = [
     BooleanField(param="has_ngrams", custom_es_field="fulltext"),
     BooleanField(param="has_oa_accepted_or_published_version"),
     BooleanField(param="has_oa_submitted_version"),
+    BooleanField(
+        param="institutions.country_code.is_global_south",
+        custom_es_field="authorships.institutions.country_code",
+    ),
     BooleanField(param="is_oa", alias="open_access.is_oa"),
     BooleanField(param="is_paratext"),
     BooleanField(param="is_retracted"),
