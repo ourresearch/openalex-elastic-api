@@ -4,11 +4,11 @@ from abc import ABC, abstractmethod
 
 from elasticsearch_dsl import Q, Search
 
-import settings
+import countries
 from core.exceptions import APIQueryParamsError
 from core.search import SearchOpenAlex
 from core.utils import get_full_openalex_id, normalize_openalex_id
-from settings import EXTERNAL_ID_FIELDS, WORKS_INDEX
+from settings import COUNTRY_PARAMS, EXTERNAL_ID_FIELDS, WORKS_INDEX
 
 
 class Field(ABC):
@@ -95,18 +95,13 @@ class BooleanField(Field):
                 q = Q("exists", field=self.es_field())
             elif self.value.lower().strip() == "false":
                 q = ~Q("exists", field=self.es_field())
-        elif (
-            self.param == "authorships.institutions.country_code.is_global_south"
-            or self.param == "institutions.country_code.is_global_south"
-        ):
+        elif any(country_param in self.param for country_param in COUNTRY_PARAMS):
             self.validate_true_false()
-            global_south_country_codes = [
-                c["country_code"] for c in settings.GLOBAL_SOUTH_COUNTRIES
-            ]
+            country_codes = self.get_country_codes()
             if self.value.lower().strip() == "true":
-                q = Q("terms", **{self.es_field(): global_south_country_codes})
+                q = Q("terms", **{self.es_field(): country_codes})
             elif self.value.lower().strip() == "false":
-                q = ~Q("terms", **{self.es_field(): global_south_country_codes})
+                q = ~Q("terms", **{self.es_field(): country_codes})
         elif self.value == "null":
             q = ~Q("exists", field=self.es_field())
         elif self.value == "!null":
@@ -116,6 +111,46 @@ class BooleanField(Field):
             kwargs = {self.es_field(): self.value.lower().strip()}
             q = Q("term", **kwargs)
         return q
+
+    def get_country_codes(self):
+        if "is_africa" in self.param:
+            country_codes = [
+                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Africa"]
+            ]
+        elif "is_antarctica" in self.param:
+            country_codes = [
+                c["country_code"]
+                for c in countries.COUNTRIES_BY_CONTINENT["Antarctica"]
+            ]
+        elif "is_asia" in self.param:
+            country_codes = [
+                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Asia"]
+            ]
+        elif "is_europe" in self.param:
+            country_codes = [
+                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Europe"]
+            ]
+        elif "is_north_america" in self.param:
+            country_codes = [
+                c["country_code"]
+                for c in countries.COUNTRIES_BY_CONTINENT["North America"]
+            ]
+        elif "is_oceania" in self.param:
+            country_codes = [
+                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Oceania"]
+            ]
+        elif "is_south_america" in self.param:
+            country_codes = [
+                c["country_code"]
+                for c in countries.COUNTRIES_BY_CONTINENT["South America"]
+            ]
+        elif "is_global_south" in self.param:
+            country_codes = [
+                c["country_code"] for c in countries.GLOBAL_SOUTH_COUNTRIES
+            ]
+        else:
+            country_codes = []
+        return country_codes
 
     def validate(self, query):
         valid_values = ["null", "!null", "true", "false"]
@@ -130,6 +165,10 @@ class BooleanField(Field):
             self.value = "!null"
         elif self.value.lower().strip() == "false":
             self.value = "null"
+
+    def handle_country_groups(self, q):
+
+        return q
 
     def validate_true_false(self):
         valid_values = ["true", "false"]

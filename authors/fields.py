@@ -1,3 +1,4 @@
+import settings
 from core.fields import (BooleanField, DateField, OpenAlexIDField, RangeField,
                          SearchField, TermField)
 
@@ -24,5 +25,14 @@ fields = [
     TermField(param="last_known_institution.type"),
     TermField(param="orcid", alias="ids.orcid"),
 ]
+
+# add country group filters
+for param in settings.COUNTRY_PARAMS:
+    fields.append(
+        BooleanField(
+            param=f"last_known_institution.country_code.{param}",
+            custom_es_field="last_known_institution.country_code",
+        )
+    )
 
 fields_dict = {f.param: f for f in fields}
