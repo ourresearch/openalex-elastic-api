@@ -21,6 +21,7 @@ AUTOCOMPLETE_FILTER_DICT = {
     "authorships.institutions.country_code": "authorships.institutions.country_code",
     "authorships.institutions.id": "authorships.institutions.id",
     "authorships.institutions.type": "authorships.institutions.type",
+    "cited_by_count": "cited_by_count",
     "concepts.id": "concepts.id",
     "has_abstract": "abstract",
     "has_doi": "ids.doi",
@@ -40,6 +41,8 @@ AUTOCOMPLETE_FILTER_DICT = {
 HAS_FILTERS = ["has_abstract", "has_doi", "has_ngrams"]
 
 BOOLEAN_FILTERS = ["is_paratext", "is_retracted", "open_access.is_oa"]
+
+CITED_FILTER = ["cited_by_count"]
 
 
 def autocomplete_filter(view_filter, fields_dict, index_name, request):
@@ -63,7 +66,7 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
         raise APIQueryParamsError(
             f"The filter {view_filter} is not a valid filter. Current filters are: {', '.join(valid_filters)}"
         )
-    combined_boolean_filters = BOOLEAN_FILTERS + HAS_FILTERS
+    combined_boolean_filters = BOOLEAN_FILTERS + HAS_FILTERS + CITED_FILTER
 
     if (
         view_filter.lower() in combined_boolean_filters
@@ -71,7 +74,9 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
         or view_filter.lower() in combined_boolean_filters
         and q == ""
     ):
-        raise APIQueryParamsError("Cannot use q parameter with boolean filters.")
+        raise APIQueryParamsError(
+            "Cannot use q parameter with boolean or number filters."
+        )
 
     if (
         view_filter.lower() not in combined_boolean_filters
@@ -165,7 +170,7 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
         s.aggs.bucket("autocomplete_group", group)
         response = s.execute()
         for i in response.aggregations.autocomplete_group.buckets:
-            id_key = set_key(i)
+            id_key = set_key(i, view_filter)
 
             if view_filter == "alternate_host_venues.id":
                 display_value = get_alternate_host_name(i)
@@ -191,7 +196,7 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
                             "works_count": i.doc_count,
                         }
                     )
-            else:
+            elif q:
                 if q.lower() in str(display_value).lower():
                     results.append(
                         {
@@ -200,6 +205,14 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
                             "works_count": i.doc_count,
                         }
                     )
+            else:
+                results.append(
+                    {
+                        "value": id_key,
+                        "display_value": display_value,
+                        "works_count": i.doc_count,
+                    }
+                )
 
     # add "zero" records
     if not hide_zero:
@@ -385,12 +398,13 @@ def set_year_min_max(q):
     return min_year, max_year
 
 
-def set_key(i):
+def set_key(i, view_filter):
     value = i.key
-    if i.key == 1:
-        value = "true"
-    elif i.key == 0:
-        value = "false"
+    if view_filter != "cited_by_count":
+        if i.key == 1:
+            value = "true"
+        elif i.key == 0:
+            value = "false"
     return value
 
 
