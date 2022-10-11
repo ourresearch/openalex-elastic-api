@@ -52,8 +52,8 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     hide_zero = request.args.get("hide_zero")
     q = request.args.get("q")
     search = request.args.get("search")
-    group_size = 200
-    page_size = 200
+    group_size = 10
+    page_size = 10
 
     if hide_zero and hide_zero.lower() == "true":
         hide_zero = True
