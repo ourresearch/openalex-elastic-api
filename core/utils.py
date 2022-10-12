@@ -181,7 +181,11 @@ def get_full_openalex_id(openalex_id):
 
 def is_cached(request):
     # cache urls with group-by
-    if request.args.get("group_by") or request.args.get("group-by"):
+    if (
+        request.args.get("group_by")
+        or request.args.get("group-by")
+        and not request.args.get("format")
+    ):
         cached = True
     else:
         cached = False

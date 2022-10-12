@@ -17,7 +17,7 @@ from core.search import check_is_search_query, full_search
 from core.sort import get_sort_fields
 from core.utils import (get_field, map_filter_params, map_sort_params,
                         set_number_param)
-from core.validate import validate_params
+from core.validate import validate_export_format, validate_params
 
 
 def shared_view(request, fields_dict, index_name, default_sort):
@@ -26,6 +26,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
     # params
     validate_params(request)
     cursor = request.args.get("cursor")
+    validate_export_format(request.args.get("format"))
     filter_params = map_filter_params(request.args.get("filter"))
     group_by = request.args.get("group_by") or request.args.get("group-by")
     page = set_number_param(request, "page", 1)

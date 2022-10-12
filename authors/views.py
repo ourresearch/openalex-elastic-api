@@ -2,6 +2,7 @@ from flask import Blueprint, request
 
 from authors.fields import fields_dict
 from authors.schemas import MessageSchema
+from core.export import generate_group_by_csv, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
 from core.shared_view import shared_view
@@ -21,6 +22,10 @@ def authors():
     index_name = AUTHORS_INDEX
     default_sort = ["-works_count", "id"]
     result = shared_view(request, fields_dict, index_name, default_sort)
+    # export option
+    if is_group_by_export(request):
+        output = generate_group_by_csv(result)
+        return output
     message_schema = MessageSchema()
     return message_schema.dump(result)
 
