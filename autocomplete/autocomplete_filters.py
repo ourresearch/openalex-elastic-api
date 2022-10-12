@@ -1,5 +1,4 @@
 from collections import OrderedDict
-from datetime import date
 
 import iso3166
 from elasticsearch_dsl import A, Q, Search
@@ -49,16 +48,10 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     # params
     validate_entity_autocomplete_params(request)
     filter_params = map_filter_params(request.args.get("filter"))
-    hide_zero = request.args.get("hide_zero")
     q = request.args.get("q")
     search = request.args.get("search")
     group_size = 10
     page_size = 10
-
-    if hide_zero and hide_zero.lower() == "true":
-        hide_zero = True
-    else:
-        hide_zero = False
 
     # error checking
     valid_filters = AUTOCOMPLETE_FILTER_DICT.keys()
@@ -151,7 +144,7 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     # group
     results = []
     if view_filter.lower() in HAS_FILTERS:
-        response, results = group_has_filter(results, s, view_filter, hide_zero)
+        response, results = group_has_filter(results, s, view_filter)
     else:
         group = A(
             "terms", field=AUTOCOMPLETE_FILTER_DICT[view_filter], size=group_size
@@ -214,61 +207,6 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
                     }
                 )
 
-    # add "zero" records
-    if not hide_zero:
-        zero_values = get_zero_values(filter_params, q, view_filter)
-
-        if (
-            view_filter.lower() == "authorships.author.id"
-            or view_filter.lower() == "authorships.institutions.id"
-            or view_filter.lower() == "host_venue.id"
-            or view_filter.lower() == "authorships.institutions.country_code"
-            or view_filter.lower() == "host_venue.publisher"
-            or view_filter.lower() == "authorships.institutions.type"
-            or view_filter.lower() == "host_venue.license"
-            or view_filter.lower() == "host_venue.type"
-            or view_filter.lower() == "type"
-            or view_filter.lower() == "open_access.oa_status"
-            or view_filter.lower() == "publication_year"
-            or view_filter.lower() == "concepts.id"
-            or view_filter.lower() == "alternate_host_venues.id"
-            or view_filter.lower() == "alternate_host_venues.license"
-            or view_filter.lower() == "alternate_host_venues.type"
-        ):
-            result_ids = [r["value"] for r in results]
-            for item in zero_values:
-                if item["id"] not in result_ids:
-                    results.append(
-                        {
-                            "value": item["id"],
-                            "display_value": item["display_name"],
-                            "works_count": 0,
-                        }
-                    )
-
-        if (
-            view_filter.lower() == "is_paratext"
-            or view_filter.lower() == "is_retracted"
-            or view_filter.lower() == "open_access.is_oa"
-        ):
-            result_ids = [r["value"] for r in results]
-            if "true" not in result_ids:
-                results.append(
-                    {
-                        "value": "true",
-                        "display_value": "true",
-                        "works_count": 0,
-                    }
-                )
-            if "false" not in result_ids:
-                results.append(
-                    {
-                        "value": "false",
-                        "display_value": "false",
-                        "works_count": 0,
-                    },
-                )
-
     result = OrderedDict()
     result["meta"] = {
         "count": s.count(),
@@ -280,45 +218,7 @@ def autocomplete_filter(view_filter, fields_dict, index_name, request):
     return result
 
 
-def get_zero_values(filter_params, q, view_filter):
-    zero_values = []
-    if view_filter.lower() == "authorships.author.id":
-        zero_values = get_top_authors(q)
-    elif view_filter.lower() == "authorships.institutions.id":
-        zero_values = get_top_institutions(q)
-    elif (
-        view_filter.lower() == "host_venue.id"
-        or view_filter.lower() == "alternate_host_venues.id"
-    ):
-        zero_values = get_top_venues(q)
-    elif view_filter.lower() == "authorships.institutions.country_code":
-        zero_values = get_top_countries(q)
-    elif view_filter.lower() == "host_venue.publisher":
-        zero_values = get_top_publishers(q)
-    elif view_filter.lower() == "authorships.institutions.type":
-        zero_values = get_top_institution_types(q)
-    elif (
-        view_filter.lower() in ["host_venue.license", "alternate_host_venues.license"]
-        and filter_params
-    ):
-        zero_values = get_top_venue_licenses(q)
-    elif (
-        view_filter.lower() in ["host_venue.type", "alternate_host_venues.type"]
-        and filter_params
-    ):
-        zero_values = get_top_venue_types(q)
-    elif view_filter.lower() == "type" and filter_params:
-        zero_values = get_top_works_types(q)
-    elif view_filter.lower() == "open_access.oa_status" and filter_params:
-        zero_values = get_top_works_oa_status(q)
-    elif view_filter.lower() == "publication_year":
-        zero_values = get_top_years(q)
-    elif view_filter.lower() == "concepts.id":
-        zero_values = get_top_concepts(q)
-    return zero_values
-
-
-def group_has_filter(results, s, view_filter, hide_zero):
+def group_has_filter(results, s, view_filter):
     exists = A("filter", Q("exists", field=AUTOCOMPLETE_FILTER_DICT[view_filter]))
     not_exists = A("filter", ~Q("exists", field=AUTOCOMPLETE_FILTER_DICT[view_filter]))
     s.aggs.bucket("exists", exists)
@@ -334,23 +234,7 @@ def group_has_filter(results, s, view_filter, hide_zero):
                 "works_count": exists_count,
             }
         )
-    elif not hide_zero:
-        results.append(
-            {
-                "value": "true",
-                "display_value": "true",
-                "works_count": 0,
-            }
-        )
     if not_exists_count:
-        results.append(
-            {
-                "value": "false",
-                "display_value": "false",
-                "works_count": not_exists_count,
-            }
-        )
-    elif not hide_zero:
         results.append(
             {
                 "value": "false",
@@ -406,217 +290,6 @@ def set_key(i, view_filter):
         elif i.key == 0:
             value = "false"
     return value
-
-
-def get_top_authors(q):
-    s = Search(index=AUTHORS_INDEX)
-    s = s.extra(size=10)
-    s = s.sort("-works_count")
-    s = s.query(
-        "match_phrase_prefix", display_name__autocomplete={"query": q, "slop": 1}
-    )
-    response = s.execute()
-    authors = []
-    for r in response:
-        authors.append({"id": r.id, "display_name": r.display_name})
-    return authors
-
-
-def get_top_institutions(q):
-    s = Search(index=INSTITUTIONS_INDEX)
-    s = s.extra(size=10)
-    s = s.sort("-works_count")
-    s = s.query("match_phrase_prefix", display_name__autocomplete=q)
-    response = s.execute()
-    institutions = []
-    for r in response:
-        institutions.append({"id": r.id, "display_name": r.display_name})
-    return institutions
-
-
-def get_top_venues(q):
-    s = Search(index=VENUES_INDEX)
-    s = s.extra(size=10)
-    s = s.sort("-works_count")
-    s = s.query("match_phrase_prefix", display_name__autocomplete=q)
-    response = s.execute()
-    venues = []
-    for r in response:
-        venues.append({"id": r.id, "display_name": r.display_name})
-    return venues
-
-
-def get_top_countries(q):
-    country_names = [n for n in iso3166.countries_by_name.keys()]
-    matching_countries = []
-    for country_name in country_names:
-        if country_name.startswith(q.upper()):
-            matching_countries.append(
-                {
-                    "id": iso3166.countries_by_name[country_name].alpha2,
-                    "display_name": iso3166.countries_by_name[country_name].name,
-                }
-            )
-    return matching_countries
-
-
-def get_top_publishers(q):
-    s = Search(index=VENUES_INDEX)
-    s = s.query("prefix", publisher__lower=q.lower())
-    s = s.params(preference="autocomplete_group_by")
-    group = A("terms", field="publisher.lower", size=20)
-    s.aggs.bucket("autocomplete_group", group)
-    response = s.execute()
-    publishers = []
-    for i in response.aggregations.autocomplete_group.buckets:
-        print(i.key)
-        publishers.append(
-            {
-                "id": i.key,
-                "display_name": i.key,
-            }
-        )
-    return publishers
-
-
-def get_top_institution_types(q):
-    s = Search(index=INSTITUTIONS_INDEX)
-    s = s.query("prefix", type=q.lower())
-    s = s.params(preference="autocomplete_group_by")
-    group = A("terms", field="type", size=20)
-    s.aggs.bucket("autocomplete_group", group)
-    response = s.execute()
-    types = []
-    for i in response.aggregations.autocomplete_group.buckets:
-        types.append(
-            {
-                "id": i.key,
-                "display_name": i.key,
-            }
-        )
-    return types
-
-
-def get_top_venue_licenses(q):
-    s = Search(index=WORKS_INDEX)
-    s = s.query("prefix", host_venue__license=q.lower())
-    s = s.params(preference="autocomplete_group_by")
-    group = A("terms", field="host_venue.license", size=20)
-    s.aggs.bucket("autocomplete_group", group)
-    response = s.execute()
-    licenses = []
-    for i in response.aggregations.autocomplete_group.buckets:
-        licenses.append(
-            {
-                "id": i.key,
-                "display_name": i.key,
-            }
-        )
-    return licenses
-
-
-def get_top_venue_types(q):
-    s = Search(index=WORKS_INDEX)
-    s = s.query("prefix", host_venue__type=q.lower())
-    s = s.params(preference="autocomplete_group_by")
-    group = A("terms", field="host_venue.type", size=20)
-    s.aggs.bucket("autocomplete_group", group)
-    response = s.execute()
-    types = []
-    for i in response.aggregations.autocomplete_group.buckets:
-        types.append(
-            {
-                "id": i.key,
-                "display_name": i.key,
-            }
-        )
-    return types
-
-
-def get_top_works_types(q):
-    s = Search(index=WORKS_INDEX)
-    s = s.query("prefix", type=q.lower())
-    s = s.params(preference="autocomplete_group_by")
-    group = A("terms", field="type", size=20)
-    s.aggs.bucket("autocomplete_group", group)
-    response = s.execute()
-    types = []
-    for i in response.aggregations.autocomplete_group.buckets:
-        types.append(
-            {
-                "id": i.key,
-                "display_name": i.key,
-            }
-        )
-    return types
-
-
-def get_top_works_oa_status(q):
-    s = Search(index=WORKS_INDEX)
-    s = s.query("prefix", open_access__oa_status=q.lower())
-    s = s.params(preference="autocomplete_group_by")
-    group = A("terms", field="open_access.oa_status", size=20)
-    s.aggs.bucket("autocomplete_group", group)
-    response = s.execute()
-    statuses = []
-    for i in response.aggregations.autocomplete_group.buckets:
-        statuses.append(
-            {
-                "id": i.key,
-                "display_name": i.key,
-            }
-        )
-    return statuses
-
-
-def get_top_years(q):
-    years = []
-    today = date.today()
-    current_year = today.year
-    min_year = 1000
-    max_year = current_year
-    if str(q).startswith("1") and len(q) == 1:
-        min_year = 1000
-        max_year = 1999
-    elif str(q).startswith("2") and len(q) == 1:
-        min_year = 2000
-        max_year = current_year
-    elif len(q) == 2:
-        min_year = int(q) * 100
-        if current_year < int(q) * 100 + 99:
-            max_year = current_year
-        else:
-            max_year = int(q) * 100 + 99
-    elif len(q) == 3:
-        min_year = int(q) * 10
-        max_year = int(q) * 10 + 9
-    elif len(q) == 4:
-        min_year = int(q)
-        max_year = int(q)
-    i = 0
-    for year in reversed(range(min_year, max_year + 1)):
-        if i > 10:
-            break
-        years.append(
-            {
-                "id": year,
-                "display_name": str(year),
-            }
-        )
-        i = i + 1
-    return years
-
-
-def get_top_concepts(q):
-    s = Search(index=CONCEPTS_INDEX)
-    s = s.extra(size=10)
-    s = s.sort("-works_count")
-    s = s.query("match_phrase_prefix", display_name__autocomplete=q)
-    response = s.execute()
-    venues = []
-    for r in response:
-        venues.append({"id": r.id, "display_name": r.display_name})
-    return venues
 
 
 def get_author_display_name(i):

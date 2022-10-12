@@ -293,7 +293,7 @@ def autocomplete_filters_works_keys():
 
 
 @blueprint.route("/autocomplete/works/filters/<view_filter>")
-@cache.cached(timeout=24 * 60, query_string=True)
+# @cache.cached(timeout=24 * 60, query_string=True)
 def autocomplete_filters_works(view_filter):
     index_name = WORKS_INDEX
     result = autocomplete_filter(view_filter, works_fields_dict, index_name, request)
