@@ -1,3 +1,4 @@
+import iso3166
 from elasticsearch_dsl import A, Q, Search
 from iso3166 import countries
 
@@ -192,6 +193,54 @@ def get_group_by_results_transform(group_by, response):
     return group_by_results
 
 
+def filter_group_by(group_by, q, s):
+    """Reduce records that will be grouped based on q param."""
+    autocomplete_field_mapping = {
+        "alternate_host_venues.id": "alternate_host_venues__display_name",
+        "author.id": "authorships__author__display_name__autocomplete",
+        "authorships.author.id": "authorships__author__display_name__autocomplete",
+        "authorships.institutions.id": "authorships__institutions__display_name__autocomplete",
+        "concepts.id": "concepts__display_name__autocomplete",
+        "host_venue.id": "host_venue__display_name__autocomplete",
+        "host_venue.publisher": "host_venue__publisher__autocomplete",
+        "institution.id": "authorships__institutions__display_name__autocomplete",
+        "institutions.id": "authorships__institutions__display_name__autocomplete",
+    }
+    if group_by == "authorships.author.id" or group_by == "author.id":
+        field = autocomplete_field_mapping[group_by]
+        s = s.query("match_phrase_prefix", **{field: {"query": q, "slop": 1}})
+    elif autocomplete_field_mapping.get(group_by):
+        field = autocomplete_field_mapping[group_by]
+        s = s.query("match_phrase_prefix", **{field: q})
+    elif (
+        group_by == "authorships.institutions.country_code"
+        or group_by == "institutions.country_code"
+    ):
+        country_codes = country_search(q)
+        s = s.query(
+            "terms", **{"authorships__institutions__country_code": country_codes}
+        )
+    elif group_by == "publication_year":
+        min_year, max_year = set_year_min_max(q)
+        kwargs = {"publication_year": {"gte": min_year, "lte": max_year}}
+        s = s.query("range", **kwargs)
+    else:
+        s = s.query("prefix", **{group_by.replace(".", "__"): q.lower()})
+    return s
+
+
+def search_group_by_results(group_by, q, result):
+    filtered_result = []
+    for i, r in enumerate(result):
+        if "author.id" in group_by:
+            if all(x in str(r["key_display_name"]).lower() for x in q.lower().split()):
+                filtered_result.append(r)
+        else:
+            if q.lower() in str(r["key_display_name"]).lower():
+                filtered_result.append(r)
+    return filtered_result
+
+
 def is_transform(field, parent_index, filter_params):
     if filter_params:
         return False
@@ -209,3 +258,35 @@ def get_transform_index(field, parent_index):
             transform["parent_index"]
         ):
             return transform["index_name"]
+
+
+def country_search(q):
+    country_names = [n for n in iso3166.countries_by_name.keys()]
+    matching_country_codes = []
+    for country_name in country_names:
+        if country_name.startswith(q.upper()):
+            matching_country_codes.append(
+                iso3166.countries_by_name[country_name].alpha2
+            )
+    return matching_country_codes
+
+
+def set_year_min_max(q):
+    min_year = 1000
+    max_year = 3000
+    if str(q).startswith("1") and len(q) == 1:
+        min_year = 1000
+        max_year = 1999
+    elif str(q).startswith("2") and len(q) == 1:
+        min_year = 2000
+        max_year = 2999
+    elif len(q) == 2:
+        min_year = int(q) * 100
+        max_year = int(q) * 100 + 99
+    elif len(q) == 3:
+        min_year = int(q) * 10
+        max_year = int(q) * 10 + 9
+    elif len(q) == 4:
+        min_year = int(q)
+        max_year = int(q)
+    return min_year, max_year

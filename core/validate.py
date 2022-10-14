@@ -12,6 +12,7 @@ def validate_params(request):
         "page",
         "per_page",
         "per-page",
+        "q",
         "search",
         "sort",
     ]

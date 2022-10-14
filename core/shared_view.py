@@ -8,10 +8,11 @@ from core.cursor import decode_cursor, get_next_cursor
 from core.exceptions import (APIPaginationError, APIQueryParamsError,
                              APISearchError)
 from core.filter import filter_records
-from core.group_by import (get_group_by_results,
+from core.group_by import (filter_group_by, get_group_by_results,
                            get_group_by_results_external_ids,
                            get_group_by_results_transform, group_by_records,
-                           group_by_records_transform, is_transform)
+                           group_by_records_transform, is_transform,
+                           search_group_by_results)
 from core.paginate import Paginate
 from core.search import check_is_search_query, full_search
 from core.sort import get_sort_fields
@@ -35,6 +36,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         if not group_by
         else set_number_param(request, "per-page", 200)
     )
+    q = request.args.get("q")
     search = request.args.get("search")
     sort_params = map_sort_params(request.args.get("sort"))
 
@@ -107,6 +109,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
     # group by
     transform = False
     if group_by:
+        s = s.params(preference=group_by)
         # handle known filter
         known = False
         if ":" in group_by:
@@ -153,6 +156,8 @@ def shared_view(request, fields_dict, index_name, default_sort):
                 raise APISearchError("Something went wrong.")
         count = s.count()
     else:
+        if group_by and q and q != "''":
+            s = filter_group_by(group_by, q, s)
         response = s.execute()
         if (
             group_by in settings.EXTERNAL_ID_FIELDS
@@ -189,6 +194,9 @@ def shared_view(request, fields_dict, index_name, default_sort):
     else:
         result["group_by"] = []
         result["results"] = response
+
+    if group_by and q and q != "''":
+        result["group_by"] = search_group_by_results(group_by, q, result["group_by"])
     if settings.DEBUG:
         print(s.to_dict())
     return result
