@@ -207,6 +207,7 @@ def filter_group_by(group_by, q, s):
         "author.id": "authorships__author__display_name__autocomplete",
         "authorships.author.id": "authorships__author__display_name__autocomplete",
         "authorships.institutions.id": "authorships__institutions__display_name__autocomplete",
+        "concept.id": "concepts__display_name__autocomplete",
         "concepts.id": "concepts__display_name__autocomplete",
         "host_venue.id": "host_venue__display_name__autocomplete",
         "host_venue.publisher": "host_venue__publisher__autocomplete",
