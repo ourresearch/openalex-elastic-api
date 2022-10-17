@@ -6,13 +6,20 @@ import settings
 from core.utils import get_display_names
 
 
-def group_by_records(field, s, sort_params, known):
+def group_by_records(field, s, sort_params, known, is_empty_q):
     group_by_field = field.alias if field.alias else field.es_sort_field()
     if type(field).__name__ == "RangeField" or type(field).__name__ == "BooleanField":
         missing = -111
     else:
         missing = "unknown"
 
+    if is_empty_q:
+        size = 10
+        known = True
+    else:
+        size = 200
+
+    print("size is ", size)
     if sort_params:
         for key, order in sort_params.items():
             if key == "count" and not known:
@@ -21,14 +28,14 @@ def group_by_records(field, s, sort_params, known):
                     field=group_by_field,
                     missing=missing,
                     order={"_count": order},
-                    size=200,
+                    size=size,
                 )
             elif key == "count" and known:
                 a = A(
                     "terms",
                     field=group_by_field,
                     order={"_count": order},
-                    size=200,
+                    size=size,
                 )
             elif key == "key" and not known:
                 a = A(
@@ -36,14 +43,14 @@ def group_by_records(field, s, sort_params, known):
                     field=group_by_field,
                     missing=missing,
                     order={"_key": order},
-                    size=200,
+                    size=size,
                 )
             elif key == "key" and known:
                 a = A(
                     "terms",
                     field=group_by_field,
                     order={"_key": order},
-                    size=200,
+                    size=size,
                 )
             s.aggs.bucket("groupby", a)
     elif (
@@ -58,7 +65,7 @@ def group_by_records(field, s, sort_params, known):
         a = A(
             "terms",
             field=group_by_field,
-            size=200,
+            size=size,
         )
         s.aggs.bucket("groupby", a)
     else:
@@ -66,7 +73,7 @@ def group_by_records(field, s, sort_params, known):
             "terms",
             field=group_by_field,
             missing=missing,
-            size=200,
+            size=size,
         )
         s.aggs.bucket("groupby", a)
     return s

@@ -3,6 +3,7 @@ import re
 from elasticsearch_dsl import Q, Search
 from iso3166 import countries
 
+import settings
 from core.exceptions import APIQueryParamsError
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
                       VENUES_INDEX, WORKS_INDEX)
@@ -185,6 +186,7 @@ def is_cached(request):
         request.args.get("group_by")
         or request.args.get("group-by")
         and not request.args.get("format")
+        and not settings.DEBUG
     ):
         cached = True
     else:

@@ -108,6 +108,9 @@ def shared_view(request, fields_dict, index_name, default_sort):
 
     # group by
     transform = False
+    is_empty_q = False
+    if "q" in request.args and not q:
+        is_empty_q = True
     if group_by:
         s = s.params(preference=group_by)
         # handle known filter
@@ -144,7 +147,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         if transform:
             s = group_by_records_transform(field, index_name, sort_params)
         else:
-            s = group_by_records(field, s, sort_params, known)
+            s = group_by_records(field, s, sort_params, known, is_empty_q)
 
     if not group_by:
         try:
