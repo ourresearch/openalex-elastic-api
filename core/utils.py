@@ -102,6 +102,7 @@ def get_display_names(ids):
         index_name = get_index_name_by_id(ids[0])
     s = Search(index=index_name)
     s = s.extra(size=200)
+    s = s.source(["id", "display_name"])
 
     results = {}
     or_queries = []
