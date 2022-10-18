@@ -30,7 +30,7 @@ fields = [
 for param in settings.COUNTRY_PARAMS:
     fields.append(
         BooleanField(
-            param=f"last_known_institution.country_code.{param}",
+            param=f"last_known_institution.country.{param}",
             custom_es_field="last_known_institution.country_code",
         )
     )

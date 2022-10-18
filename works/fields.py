@@ -96,13 +96,13 @@ fields = [
 for param in settings.COUNTRY_PARAMS:
     fields.append(
         BooleanField(
-            param=f"authorships.institutions.country_code.{param}",
+            param=f"authorships.institutions.country.{param}",
             custom_es_field="authorships.institutions.country_code",
         )
     )
     fields.append(
         BooleanField(
-            param=f"institutions.country_code.{param}",
+            param=f"institutions.country.{param}",
             custom_es_field="authorships.institutions.country_code",
         )
     )
