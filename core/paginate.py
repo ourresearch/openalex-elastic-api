@@ -34,11 +34,7 @@ class Paginate:
             raise APIPaginationError(f"Page parameter must be greater than 0.")
 
     def validate_per_page(self):
-        if self.group_by and self.per_page != 200:
-            raise APIPaginationError(
-                "Unable to adjust per-page parameter with group-by. The per-page setting is set to display up to 200 results when using group-by and cannot be adjusted."
-            )
-        elif self.per_page and self.per_page > self.max_per_page or self.per_page < 1:
+        if self.per_page and self.per_page > self.max_per_page or self.per_page < 1:
             raise APIPaginationError(
                 f"per-page parameter must be between 1 and {self.max_per_page}"
             )

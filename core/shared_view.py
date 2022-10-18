@@ -144,7 +144,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         if transform:
             s = group_by_records_transform(field, index_name, sort_params)
         else:
-            s = group_by_records(field, s, sort_params, known)
+            s = group_by_records(field, s, sort_params, known, per_page, q)
 
     if not group_by:
         try:
@@ -174,7 +174,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         "count": count,
         "db_response_time_ms": response.took,
         "page": page if not cursor else None,
-        "per_page": 200 if group_by else per_page,
+        "per_page": per_page,
     }
     result["results"] = []
 
@@ -196,7 +196,10 @@ def shared_view(request, fields_dict, index_name, default_sort):
         result["results"] = response
 
     if group_by and q and q != "''":
-        result["group_by"] = search_group_by_results(group_by, q, result["group_by"])
+        result["group_by"] = search_group_by_results(
+            group_by, q, result["group_by"], per_page
+        )
+        result["meta"]["count"] = len(result["group_by"])
     if settings.DEBUG:
         print(s.to_dict())
     return result

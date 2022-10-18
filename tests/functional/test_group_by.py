@@ -24,15 +24,6 @@ class TestGroupByPaginationErrors:
             == "Unable to paginate beyond page 1. Group-by is limited to page 1 with up to 200 results at this time."
         )
 
-    def test_group_by_per_page_error(self, client):
-        res = client.get("/works?group-by=publication_year&per-page=50")
-        json_data = res.get_json()
-        assert json_data["error"] == "Pagination error."
-        assert (
-            json_data["message"]
-            == "Unable to adjust per-page parameter with group-by. The per-page setting is set to display up to 200 results when using group-by and cannot be adjusted."
-        )
-
 
 class TestGroupByNameKey:
     def test_group_by_unknown_regular(self, client):
