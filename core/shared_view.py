@@ -10,9 +10,10 @@ from core.exceptions import (APIPaginationError, APIQueryParamsError,
 from core.filter import filter_records
 from core.group_by import (filter_group_by, get_group_by_results,
                            get_group_by_results_external_ids,
-                           get_group_by_results_transform, group_by_continent,
-                           group_by_records, group_by_records_transform,
-                           is_transform, search_group_by_results)
+                           get_group_by_results_transform,
+                           group_by_global_region, group_by_records,
+                           group_by_records_transform, is_transform,
+                           search_group_by_results)
 from core.paginate import Paginate
 from core.search import check_is_search_query, full_search
 from core.sort import get_sort_fields
@@ -144,10 +145,12 @@ def shared_view(request, fields_dict, index_name, default_sort):
         if transform:
             s = group_by_records_transform(field, index_name, sort_params)
         elif (
-            field.param == "authorships.institutions.continent"
+            field.param == "authorships.institutions.global_region"
+            or field.param == "institutions.global_region"
+            or field.param == "authorships.institutions.continent"
             or field.param == "institutions.continent"
         ):
-            return group_by_continent(
+            return group_by_global_region(
                 field,
                 index_name,
                 search,

@@ -64,6 +64,14 @@ fields = [
     TermField(param="author.orcid", alias="authorships.author.orcid"),
     TermField(param="authorships.author.orcid"),
     TermField(
+        param="institutions.global_region",
+        custom_es_field="authorships.institutions.country_code",
+    ),
+    TermField(
+        param="authorships.institutions.global_region",
+        custom_es_field="authorships.institutions.country_code",
+    ),
+    TermField(
         param="institutions.continent",
         custom_es_field="authorships.institutions.country_code",
     ),
