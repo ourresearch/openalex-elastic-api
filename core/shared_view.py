@@ -144,12 +144,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
             raise APIQueryParamsError(f"Cannot group by {field.param}.")
         if transform:
             s = group_by_records_transform(field, index_name, sort_params)
-        elif (
-            field.param == "authorships.institutions.global_region"
-            or field.param == "institutions.global_region"
-            or field.param == "authorships.institutions.continent"
-            or field.param == "institutions.continent"
-        ):
+        elif field.param in settings.GLOBAL_REGION_FIELDS:
             return group_by_global_region(
                 field,
                 index_name,

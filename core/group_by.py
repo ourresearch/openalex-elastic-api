@@ -117,6 +117,11 @@ def group_by_global_region(
         )
         took = took + response.took
 
+    # sort by count
+    group_by_results = sorted(
+        group_by_results, key=lambda d: d["doc_count"], reverse=True
+    )
+
     result = OrderedDict()
     result["meta"] = {
         "count": len(group_by_results),
