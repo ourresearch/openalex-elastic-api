@@ -21,6 +21,14 @@ fields = [
     SearchField(param="display_name.search"),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="last_known_institution.country_code"),
+    TermField(
+        param="last_known_institution.continent",
+        custom_es_field="last_known_institution.country_code",
+    ),
+    TermField(
+        param="last_known_institution.global_region",
+        custom_es_field="last_known_institution.country_code",
+    ),
     TermField(param="last_known_institution.ror"),
     TermField(param="last_known_institution.type"),
     TermField(param="orcid", alias="ids.orcid"),

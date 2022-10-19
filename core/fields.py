@@ -115,38 +115,37 @@ class BooleanField(Field):
     def get_country_codes(self):
         if "is_africa" in self.param:
             country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Africa"]
+                c["country_code"] for c in countries.COUNTRIES_BY_REGION["Africa"]
             ]
         elif "is_antarctica" in self.param:
             country_codes = [
-                c["country_code"]
-                for c in countries.COUNTRIES_BY_CONTINENT["Antarctica"]
+                c["country_code"] for c in countries.COUNTRIES_BY_REGION["Antarctica"]
             ]
         elif "is_asia" in self.param:
             country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Asia"]
+                c["country_code"] for c in countries.COUNTRIES_BY_REGION["Asia"]
             ]
         elif "is_europe" in self.param:
             country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Europe"]
+                c["country_code"] for c in countries.COUNTRIES_BY_REGION["Europe"]
             ]
         elif "is_north_america" in self.param:
             country_codes = [
                 c["country_code"]
-                for c in countries.COUNTRIES_BY_CONTINENT["North America"]
+                for c in countries.COUNTRIES_BY_REGION["North America"]
             ]
         elif "is_oceania" in self.param:
             country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Oceania"]
+                c["country_code"] for c in countries.COUNTRIES_BY_REGION["Oceania"]
             ]
         elif "is_south_america" in self.param:
             country_codes = [
                 c["country_code"]
-                for c in countries.COUNTRIES_BY_CONTINENT["South America"]
+                for c in countries.COUNTRIES_BY_REGION["South America"]
             ]
         elif "is_global_south" in self.param:
             country_codes = [
-                c["country_code"] for c in countries.GLOBAL_SOUTH_COUNTRIES
+                c["country_code"] for c in countries.COUNTRIES_BY_REGION["Global South"]
             ]
         else:
             country_codes = []

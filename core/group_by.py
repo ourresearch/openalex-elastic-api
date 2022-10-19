@@ -1,9 +1,12 @@
+from collections import OrderedDict
+
 import iso3166
-from elasticsearch_dsl import A, Q, Search
+from elasticsearch_dsl import A, MultiSearch, Q, Search
 from iso3166 import countries
 
 import settings
 from core.utils import get_display_names
+from countries import COUNTRIES_BY_REGION
 
 
 def group_by_records(field, s, sort_params, known, per_page, q):
@@ -73,6 +76,77 @@ def group_by_records(field, s, sort_params, known, per_page, q):
         )
         s.aggs.bucket("groupby", a)
     return s
+
+
+def group_by_global_region(
+    field,
+    index_name,
+    search,
+    full_search,
+    filter_params,
+    filter_records,
+    fields_dict,
+):
+    group_by_results = []
+    took = 0
+    ms = MultiSearch(index=index_name)
+    for region in COUNTRIES_BY_REGION:
+        if "continent" in field.param and region == "Global South":
+            continue
+        s = Search()
+        if search and search != '""':
+            s = full_search(index_name, s, search)
+
+        # filter
+        if filter_params:
+            s = filter_records(fields_dict, filter_params, s)
+        s = s.extra(track_total_hits=True)
+        country_codes = [c["country_code"] for c in COUNTRIES_BY_REGION[region]]
+        s = s.filter("terms", **{field.es_field(): country_codes})
+        ms = ms.add(s)
+
+    responses = ms.execute()
+
+    for region, response in zip(COUNTRIES_BY_REGION.keys(), responses):
+        group_by_results.append(
+            {
+                "key": region,
+                "key_display_name": region,
+                "doc_count": response.hits.total.value,
+            }
+        )
+        took = took + response.took
+
+    # get unknown
+    s = Search(index=index_name)
+    s = s.query(~Q("exists", field=field.es_field()))
+    response = s.execute()
+    unknown_count = s.count()
+    if unknown_count:
+        group_by_results.append(
+            {
+                "key": "unknown",
+                "key_display_name": "unknown",
+                "doc_count": unknown_count,
+            }
+        )
+    took = took + response.took
+
+    # sort by count
+    group_by_results = sorted(
+        group_by_results, key=lambda d: d["doc_count"], reverse=True
+    )
+
+    result = OrderedDict()
+    result["meta"] = {
+        "count": len(group_by_results),
+        "db_response_time_ms": took,
+        "page": 1,
+        "per_page": 10,
+    }
+    result["results"] = []
+    result["group_by"] = group_by_results
+    return result
 
 
 def get_group_by_results(group_by, response):

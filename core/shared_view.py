@@ -10,7 +10,8 @@ from core.exceptions import (APIPaginationError, APIQueryParamsError,
 from core.filter import filter_records
 from core.group_by import (filter_group_by, get_group_by_results,
                            get_group_by_results_external_ids,
-                           get_group_by_results_transform, group_by_records,
+                           get_group_by_results_transform,
+                           group_by_global_region, group_by_records,
                            group_by_records_transform, is_transform,
                            search_group_by_results)
 from core.paginate import Paginate
@@ -143,6 +144,16 @@ def shared_view(request, fields_dict, index_name, default_sort):
             raise APIQueryParamsError(f"Cannot group by {field.param}.")
         if transform:
             s = group_by_records_transform(field, index_name, sort_params)
+        elif field.param in settings.GLOBAL_REGION_FIELDS:
+            return group_by_global_region(
+                field,
+                index_name,
+                search,
+                full_search,
+                filter_params,
+                filter_records,
+                fields_dict,
+            )
         else:
             s = group_by_records(field, s, sort_params, known, per_page, q)
 

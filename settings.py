@@ -37,6 +37,17 @@ EXTERNAL_ID_FIELDS = [
     "has_wikidata",
 ]
 
+GLOBAL_REGION_FIELDS = [
+    "authorships.institutions.global_region",
+    "institutions.global_region",
+    "authorships.institutions.continent",
+    "institutions.continent",
+    "last_known_institution.continent",
+    "last_known_institution.global_region",
+    "continent",
+    "global_region",
+]
+
 BOOLEAN_TEXT_FIELDS = ["has_abstract", "has_ngrams", "has_references"]
 
 TRANSFORMS = [

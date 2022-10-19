@@ -19,6 +19,8 @@ fields = [
     RangeField(param="works_count"),
     SearchField(param="display_name.search"),
     TermField(param="country_code"),
+    TermField(param="continent", custom_es_field="country_code"),
+    TermField(param="global_region", custom_es_field="country_code"),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="ror", alias="ror"),
     TermField(param="type"),
