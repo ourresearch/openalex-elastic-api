@@ -1,9 +1,12 @@
+from collections import OrderedDict
+
 import iso3166
 from elasticsearch_dsl import A, MultiSearch, Q, Search
 from iso3166 import countries
 
 import settings
 from core.utils import get_display_names
+from countries import COUNTRIES_BY_CONTINENT
 
 
 def group_by_records(field, s, sort_params, known, per_page, q):
@@ -75,9 +78,47 @@ def group_by_records(field, s, sort_params, known, per_page, q):
     return s
 
 
-def group_by_continent(index_name):
+def group_by_continent(
+    field, index_name, search, full_search, filter_params, filter_records, fields_dict
+):
+    group_by_results = []
+    took = 0
     ms = MultiSearch(index=index_name)
+    for continent in COUNTRIES_BY_CONTINENT:
+        s = Search()
+        if search and search != '""':
+            s = full_search(index_name, s, search)
 
+        # filter
+        if filter_params:
+            s = filter_records(fields_dict, filter_params, s)
+        s = s.extra(track_total_hits=True)
+        country_codes = [c["country_code"] for c in COUNTRIES_BY_CONTINENT[continent]]
+        s = s.filter("terms", **{field.es_field(): country_codes})
+        ms = ms.add(s)
+
+    responses = ms.execute()
+
+    for continent, response in zip(COUNTRIES_BY_CONTINENT.keys(), responses):
+        group_by_results.append(
+            {
+                "key": continent,
+                "key_display_name": continent,
+                "doc_count": response.hits.total.value,
+            }
+        )
+        took = took + response.took
+
+    result = OrderedDict()
+    result["meta"] = {
+        "count": len(group_by_results),
+        "db_response_time_ms": took,
+        "page": 1,
+        "per_page": 10,
+    }
+    result["results"] = []
+    result["group_by"] = group_by_results
+    return result
 
 
 def get_group_by_results(group_by, response):
