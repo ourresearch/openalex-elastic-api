@@ -195,6 +195,9 @@ def shared_view(request, fields_dict, index_name, default_sort):
         result["group_by"] = []
         result["results"] = response
 
+    if "q" in request.args:
+        result["meta"]["q"] = q
+
     if group_by and q and q != "''":
         result["group_by"] = search_group_by_results(
             group_by, q, result["group_by"], per_page

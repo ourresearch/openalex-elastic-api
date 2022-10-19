@@ -3,6 +3,7 @@ from marshmallow import INCLUDE, Schema, fields
 
 class MetaSchema(Schema):
     count = fields.Int()
+    q = fields.Str()
     db_response_time_ms = fields.Int()
     page = fields.Int()
     per_page = fields.Int()
