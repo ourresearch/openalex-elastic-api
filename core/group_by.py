@@ -1,5 +1,5 @@
 import iso3166
-from elasticsearch_dsl import A, Q, Search
+from elasticsearch_dsl import A, MultiSearch, Q, Search
 from iso3166 import countries
 
 import settings
@@ -73,6 +73,11 @@ def group_by_records(field, s, sort_params, known, per_page, q):
         )
         s.aggs.bucket("groupby", a)
     return s
+
+
+def group_by_continent(index_name):
+    ms = MultiSearch(index=index_name)
+
 
 
 def get_group_by_results(group_by, response):

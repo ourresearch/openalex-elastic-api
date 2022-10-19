@@ -143,6 +143,8 @@ def shared_view(request, fields_dict, index_name, default_sort):
             raise APIQueryParamsError(f"Cannot group by {field.param}.")
         if transform:
             s = group_by_records_transform(field, index_name, sort_params)
+        elif field.param == "authorships.institution.country.continent":
+            s = group_by_continent(index_name)
         else:
             s = group_by_records(field, s, sort_params, known, per_page, q)
 
