@@ -117,6 +117,21 @@ def group_by_global_region(
         )
         took = took + response.took
 
+    # get unknown
+    s = Search(index=index_name)
+    s = s.query(~Q("exists", field=field.es_field()))
+    response = s.execute()
+    unknown_count = s.count()
+    if unknown_count:
+        group_by_results.append(
+            {
+                "key": "unknown",
+                "key_display_name": "unknown",
+                "doc_count": unknown_count,
+            }
+        )
+    took = took + response.took
+
     # sort by count
     group_by_results = sorted(
         group_by_results, key=lambda d: d["doc_count"], reverse=True
