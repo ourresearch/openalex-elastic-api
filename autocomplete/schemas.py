@@ -3,8 +3,7 @@ from iso3166 import countries
 from marshmallow import Schema, fields, pre_dump
 
 from core.schemas import GroupBySchema, MetaSchema
-from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
-                      VENUES_INDEX, WORKS_INDEX)
+from settings import WORKS_INDEX
 
 
 class AutoCompleteSchema(Schema):
@@ -156,24 +155,6 @@ class AutoCompleteCustomSchema(Schema):
 class MessageAutocompleteCustomSchema(Schema):
     meta = fields.Nested(MetaSchema)
     results = fields.Nested(AutoCompleteCustomSchema, many=True)
-    group_by = fields.Nested(GroupBySchema, many=True)
-
-    class Meta:
-        ordered = True
-
-
-class AutoCompleteFilterValuesSchema(Schema):
-    value = fields.Str()
-    display_value = fields.Str()
-    works_count = fields.Int()
-
-    class Meta:
-        ordered = True
-
-
-class MessageAutocompleteFilterSchema(Schema):
-    meta = fields.Nested(MetaSchema)
-    filters = fields.Nested(AutoCompleteFilterValuesSchema, many=True)
     group_by = fields.Nested(GroupBySchema, many=True)
 
     class Meta:

@@ -2,14 +2,10 @@ from collections import OrderedDict
 
 import iso3166
 from elasticsearch_dsl import A, Search
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, request
 
 from authors.fields import fields_dict as authors_fields_dict
-from autocomplete.autocomplete_filters import (AUTOCOMPLETE_FILTER_DICT,
-                                               autocomplete_filter)
-from autocomplete.schemas import (MessageAutocompleteCustomSchema,
-                                  MessageAutocompleteFilterSchema,
-                                  MessageSchema)
+from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
 from autocomplete.shared import (search_canonical_id_full,
                                  single_entity_autocomplete)
 from autocomplete.utils import (AUTOCOMPLETE_SOURCE, get_preference,
@@ -283,21 +279,4 @@ def autocomplete_institutions_type():
     }
     result["results"] = hits
     message_schema = MessageAutocompleteCustomSchema()
-    return message_schema.dump(result)
-
-
-@blueprint.route("/autocomplete/works/filters")
-def autocomplete_filters_works_keys():
-    filters = list(sorted(AUTOCOMPLETE_FILTER_DICT.keys()))
-    return jsonify(filters)
-
-
-@blueprint.route("/autocomplete/works/filters/<view_filter>")
-@cache.cached(timeout=24 * 60, query_string=True)
-def autocomplete_filters_works(view_filter):
-    index_name = WORKS_INDEX
-    result = autocomplete_filter(view_filter, works_fields_dict, index_name, request)
-    message_schema = MessageAutocompleteFilterSchema(
-        context={"view_filter": view_filter}
-    )
     return message_schema.dump(result)
