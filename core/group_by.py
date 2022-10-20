@@ -91,8 +91,6 @@ def group_by_global_region(
     took = 0
     ms = MultiSearch(index=index_name)
     for region in COUNTRIES_BY_REGION:
-        if "continent" in field.param and region == "Global South":
-            continue
         s = Search()
         if search and search != '""':
             s = full_search(index_name, s, search)
@@ -119,6 +117,12 @@ def group_by_global_region(
 
     # get unknown
     s = Search(index=index_name)
+    if search and search != '""':
+        s = full_search(index_name, s, search)
+
+    # filter
+    if filter_params:
+        s = filter_records(fields_dict, filter_params, s)
     s = s.query(~Q("exists", field=field.es_field()))
     response = s.execute()
     unknown_count = s.count()
@@ -136,6 +140,12 @@ def group_by_global_region(
     group_by_results = sorted(
         group_by_results, key=lambda d: d["doc_count"], reverse=True
     )
+
+    # remove global south if param is continent
+    if "continent" in field.param:
+        for i, group in enumerate(group_by_results):
+            if group["key"] == "Global South":
+                del group_by_results[i]
 
     result = OrderedDict()
     result["meta"] = {
