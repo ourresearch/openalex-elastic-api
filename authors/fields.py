@@ -26,7 +26,7 @@ fields = [
         custom_es_field="last_known_institution.country_code",
     ),
     TermField(
-        param="last_known_institution.global_region",
+        param="last_known_institution.geographic_region",
         custom_es_field="last_known_institution.country_code",
     ),
     TermField(param="last_known_institution.ror"),

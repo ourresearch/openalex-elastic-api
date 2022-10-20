@@ -38,14 +38,14 @@ EXTERNAL_ID_FIELDS = [
 ]
 
 GLOBAL_REGION_FIELDS = [
-    "authorships.institutions.global_region",
-    "institutions.global_region",
+    "authorships.institutions.geographic_region",
+    "institutions.geographic_region",
     "authorships.institutions.continent",
     "institutions.continent",
     "last_known_institution.continent",
-    "last_known_institution.global_region",
+    "last_known_institution.geographic_region",
     "continent",
-    "global_region",
+    "geographic_region",
 ]
 
 BOOLEAN_TEXT_FIELDS = ["has_abstract", "has_ngrams", "has_references"]
