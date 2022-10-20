@@ -1,4 +1,4 @@
-# continents source: https://pypi.org/project/pycountry-convert/
+# continents source: https://unstats.un.org/unsd/methodology/m49/
 COUNTRIES_BY_REGION = {
     "Africa": [
         {"name": "Algeria", "country_code": "DZ"},
