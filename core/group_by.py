@@ -302,14 +302,13 @@ def filter_group_by(group_by, q, s):
     elif autocomplete_field_mapping.get(group_by):
         field = autocomplete_field_mapping[group_by]
         s = s.query("match_phrase_prefix", **{field: q})
-    elif (
-        group_by == "authorships.institutions.country_code"
-        or group_by == "institutions.country_code"
-    ):
+    elif "country_code" in group_by:
+        if group_by == "institutions.country_code":
+            field = "authorships__institutions__country_code"
+        else:
+            field = group_by
         country_codes = country_search(q)
-        s = s.query(
-            "terms", **{"authorships__institutions__country_code": country_codes}
-        )
+        s = s.query("terms", **{field: country_codes})
     elif group_by == "publication_year":
         min_year, max_year = set_year_min_max(q)
         kwargs = {"publication_year": {"gte": min_year, "lte": max_year}}
