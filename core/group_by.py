@@ -280,7 +280,7 @@ def get_group_by_results_transform(group_by, response):
     return group_by_results
 
 
-def filter_group_by(group_by, q, s):
+def filter_group_by(field, group_by, q, s):
     """Reduce records that will be grouped based on q param."""
     autocomplete_field_mapping = {
         "alternate_host_venues.id": "alternate_host_venues__display_name",
@@ -303,18 +303,14 @@ def filter_group_by(group_by, q, s):
         field = autocomplete_field_mapping[group_by]
         s = s.query("match_phrase_prefix", **{field: q})
     elif "country_code" in group_by:
-        if group_by == "institutions.country_code":
-            field = "authorships__institutions__country_code"
-        else:
-            field = group_by
         country_codes = country_search(q)
-        s = s.query("terms", **{field: country_codes})
+        s = s.query("terms", **{field.es_field(): country_codes})
     elif group_by == "publication_year":
         min_year, max_year = set_year_min_max(q)
         kwargs = {"publication_year": {"gte": min_year, "lte": max_year}}
         s = s.query("range", **kwargs)
     else:
-        s = s.query("prefix", **{group_by.replace(".", "__"): q.lower()})
+        s = s.query("prefix", **{field.es_field(): q.lower()})
     return s
 
 

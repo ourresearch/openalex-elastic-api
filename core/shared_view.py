@@ -168,7 +168,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         count = s.count()
     else:
         if group_by and q and q != "''":
-            s = filter_group_by(group_by, q, s)
+            s = filter_group_by(field, group_by, q, s)
         response = s.execute()
         if (
             group_by in settings.EXTERNAL_ID_FIELDS
