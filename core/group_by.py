@@ -16,9 +16,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
     else:
         missing = "unknown"
 
-    if q and "author.id" in field.param:
-        per_page = 1000
-    elif q:
+    if q:
         per_page = 200
 
     if sort_params:
