@@ -321,10 +321,15 @@ class PhraseField(Field):
 
 class RangeField(Field):
     def build_query(self):
-        if "<" in self.value or self.value.startswith("-"):
+        if "<" in self.value:
             query = self.value[1:]
             self.validate(query)
             kwargs = {self.es_field(): {"lt": int(query)}}
+            q = Q("range", **kwargs)
+        elif self.value.startswith("-"):
+            query = self.value[1:]
+            self.validate(query)
+            kwargs = {self.es_field(): {"lte": int(query)}}
             q = Q("range", **kwargs)
         elif ">" in self.value:
             query = self.value[1:]
@@ -334,7 +339,7 @@ class RangeField(Field):
         elif self.value.endswith("-"):
             query = self.value[:-1]
             self.validate(query)
-            kwargs = {self.es_field(): {"gt": int(query)}}
+            kwargs = {self.es_field(): {"gte": int(query)}}
             q = Q("range", **kwargs)
         elif "-" in self.value:
             values = self.value.strip().split("-")
