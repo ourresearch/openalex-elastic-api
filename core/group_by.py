@@ -51,7 +51,12 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                     order={"_key": order},
                     size=per_page,
                 )
-            s.aggs.bucket("groupby", a)
+            if field.nested:
+                s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
+                    "groupby", a
+                )
+            else:
+                s.aggs.bucket("groupby", a)
     elif (
         field.param in settings.EXTERNAL_ID_FIELDS
         or field.param in settings.BOOLEAN_TEXT_FIELDS
@@ -66,7 +71,12 @@ def group_by_records(field, s, sort_params, known, per_page, q):
             field=group_by_field,
             size=per_page,
         )
-        s.aggs.bucket("groupby", a)
+        if field.nested:
+            s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
+                "groupby", a
+            )
+        else:
+            s.aggs.bucket("groupby", a)
     else:
         a = A(
             "terms",
@@ -74,7 +84,42 @@ def group_by_records(field, s, sort_params, known, per_page, q):
             missing=missing,
             size=per_page,
         )
-        s.aggs.bucket("groupby", a)
+        if field.nested:
+            if "author.id" in field.param and q:
+                s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
+                    "inner",
+                    "filter",
+                    Q(
+                        "match_phrase_prefix",
+                        **{
+                            "authorships__author__display_name__autocomplete": {
+                                "query": q,
+                                "slop": 1,
+                                "max_expansions": 1000,
+                            }
+                        }
+                    ),
+                ).bucket("groupby", a)
+            elif "institution" in field.param and q:
+                s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
+                    "inner",
+                    "filter",
+                    Q(
+                        "match_phrase_prefix",
+                        **{
+                            "authorships__institutions__display_name__autocomplete": {
+                                "query": q,
+                                "max_expansions": 500,
+                            }
+                        }
+                    ),
+                ).bucket("groupby", a)
+            else:
+                s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
+                    "groupby", a
+                )
+        else:
+            s.aggs.bucket("groupby", a)
     return s
 
 
@@ -100,7 +145,11 @@ def group_by_global_region(
             s = filter_records(fields_dict, filter_params, s)
         s = s.extra(track_total_hits=True)
         country_codes = [c["country_code"] for c in COUNTRIES_BY_REGION[region]]
-        s = s.filter("terms", **{field.es_field(): country_codes})
+        s = s.filter(
+            "nested",
+            path="authorships",
+            query=Q("terms", **{field.es_field(): country_codes}),
+        )
         ms = ms.add(s)
 
     responses = ms.execute()
@@ -161,7 +210,15 @@ def group_by_global_region(
 
 def get_group_by_results(group_by, response):
     group_by_results = []
-    buckets = response.aggregations.groupby.buckets
+    if (
+        "nested_groupby" in response.aggregations
+        and "inner" in response.aggregations.nested_groupby
+    ):
+        buckets = response.aggregations.nested_groupby.inner.groupby.buckets
+    elif "nested_groupby" in response.aggregations:
+        buckets = response.aggregations.nested_groupby.groupby.buckets
+    else:
+        buckets = response.aggregations.groupby.buckets
     if group_by.endswith(".id"):
         keys = [b.key for b in buckets]
         ids_to_display_names = get_display_names(keys)
@@ -284,22 +341,14 @@ def filter_group_by(field, group_by, q, s):
     """Reduce records that will be grouped based on q param."""
     autocomplete_field_mapping = {
         "alternate_host_venues.id": "alternate_host_venues__display_name",
-        "author.id": "authorships__author__display_name__autocomplete",
-        "authorships.author.id": "authorships__author__display_name__autocomplete",
-        "authorships.institutions.id": "authorships__institutions__display_name__autocomplete",
         "concept.id": "concepts__display_name__autocomplete",
         "concepts.id": "concepts__display_name__autocomplete",
         "host_venue.display_name": "host_venue__display_name__autocomplete",
         "host_venue.id": "host_venue__display_name__autocomplete",
         "host_venue.publisher": "host_venue__publisher__autocomplete",
         "journal.id": "host_venue__display_name__autocomplete",
-        "institution.id": "authorships__institutions__display_name__autocomplete",
-        "institutions.id": "authorships__institutions__display_name__autocomplete",
     }
-    if group_by == "authorships.author.id" or group_by == "author.id":
-        field = autocomplete_field_mapping[group_by]
-        s = s.query("match_phrase_prefix", **{field: {"query": q, "slop": 1}})
-    elif autocomplete_field_mapping.get(group_by):
+    if autocomplete_field_mapping.get(group_by):
         field = autocomplete_field_mapping[group_by]
         s = s.query("match_phrase_prefix", **{field: q})
     elif "country_code" in group_by:
@@ -309,6 +358,8 @@ def filter_group_by(field, group_by, q, s):
         min_year, max_year = set_year_min_max(q)
         kwargs = {"publication_year": {"gte": min_year, "lte": max_year}}
         s = s.query("range", **kwargs)
+    elif "author" in group_by or "institution" in group_by:
+        return s
     else:
         s = s.query("prefix", **{field.es_field(): q.lower()})
     return s

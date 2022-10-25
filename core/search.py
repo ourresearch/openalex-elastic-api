@@ -21,7 +21,7 @@ class SearchOpenAlex:
             self.primary_field == "authorships.raw_affiliation_string"
             and len(self.search_terms.strip()) > 3
         ):
-            query_string_query = self.query_string_query()
+            query_string_query = self.author_string_query()
             query = self.citation_boost_query(query_string_query)
         elif self.is_phrase():
             phrase_query = self.primary_phrase_query()
@@ -51,6 +51,10 @@ class SearchOpenAlex:
             "match_phrase",
             **{self.primary_field: {"query": self.search_terms, "boost": 2}},
         )
+
+    def author_string_query(self):
+        q = Q("nested", path="authorships", query=self.query_string_query())
+        return q
 
     def primary_match_query(self):
         """Searches with 'and' and phrase queries, with phrase boosted by 2."""

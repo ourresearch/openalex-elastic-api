@@ -12,11 +12,12 @@ from settings import COUNTRY_PARAMS, EXTERNAL_ID_FIELDS, WORKS_INDEX
 
 
 class Field(ABC):
-    def __init__(self, param, alias=None, custom_es_field=None):
+    def __init__(self, param, alias=None, custom_es_field=None, nested=False):
         self.param = param
         self.alias = alias
         self.custom_es_field = custom_es_field
         self.value = None
+        self.nested = nested
 
     @abstractmethod
     def build_query(self):
@@ -48,6 +49,7 @@ class Field(ABC):
 
 class BooleanField(Field):
     def build_query(self):
+        q = None
         if self.param in EXTERNAL_ID_FIELDS:
             self.validate_true_false()
             self.handle_external_id_fields()
@@ -110,6 +112,8 @@ class BooleanField(Field):
             self.validate(self.value)
             kwargs = {self.es_field(): self.value.lower().strip()}
             q = Q("term", **kwargs)
+        if q and self.nested:
+            q = Q("nested", path="authorships", query=q)
         return q
 
     def get_country_codes(self):
@@ -246,11 +250,9 @@ class OpenAlexIDField(Field):
         elif self.param == "cited_by":
             openalex_ids = self.get_ids(self.value, "referenced_works")
             q = Q("terms", id=openalex_ids)
-            return q
         elif self.param == "related_to":
             openalex_ids = self.get_ids(self.value, "related_works")
             q = Q("terms", id=openalex_ids)
-            return q
         elif "https://openalex.org/" in self.value:
             kwargs = {self.es_field(): self.value}
             q = Q("term", **kwargs)
@@ -258,6 +260,8 @@ class OpenAlexIDField(Field):
             query = f"https://openalex.org/{self.value.upper()}"
             kwargs = {self.es_field(): query}
             q = Q("term", **kwargs)
+        if q and self.nested:
+            q = Q("nested", path="authorships", query=q)
         return q
 
     def es_field(self) -> str:
@@ -418,7 +422,6 @@ class TermField(Field):
                 )
             kwargs = {self.es_field(): formatted_id}
             q = Q("term", **kwargs)
-            return q
         elif self.param == "doi_starts_with":
             if "https://doi.org" in self.value:
                 raise APIQueryParamsError("Enter DOI in short format such as 10.12")
@@ -442,6 +445,8 @@ class TermField(Field):
         else:
             kwargs = {self.es_field(): self.value}
             q = Q("term", **kwargs)
+        if q and self.nested:
+            q = Q("nested", path="authorships", query=q)
         return q
 
     def es_field(self) -> str:

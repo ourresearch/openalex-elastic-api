@@ -178,7 +178,15 @@ def shared_view(request, fields_dict, index_name, default_sort):
         elif transform:
             count = len(response)
         else:
-            count = len(response.aggregations.groupby.buckets)
+            if (
+                "nested_groupby" in response.aggregations
+                and "inner" in response.aggregations.nested_groupby
+            ):
+                count = len(response.aggregations.nested_groupby.inner.groupby.buckets)
+            elif "nested_groupby" in response.aggregations:
+                count = len(response.aggregations.nested_groupby.groupby.buckets)
+            else:
+                count = len(response.aggregations.groupby.buckets)
 
     result = OrderedDict()
     result["meta"] = {

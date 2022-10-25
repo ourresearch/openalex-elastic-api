@@ -18,5 +18,5 @@ class TestGroupBySearch:
         assert first_result == {
             "key": "https://openalex.org/I136199984",
             "key_display_name": "Harvard University",
-            "count": 14,
+            "count": 21,
         }
