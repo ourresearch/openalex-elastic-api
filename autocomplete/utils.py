@@ -15,15 +15,6 @@ AUTOCOMPLETE_SOURCE = [
 ]
 
 
-def get_preference(q):
-    """Elastic throws error if preference is set to _."""
-    if q == "_":
-        preference = "underscore"
-    else:
-        preference = q
-    return preference
-
-
 def is_cached_autocomplete(request):
     """Cache autocomplete with 1 or 2 characters."""
     if request.args.get("q") and len(request.args.get("q")) <= 2:

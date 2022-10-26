@@ -201,3 +201,10 @@ def get_country_name(country_id):
     except KeyError:
         country = None
     return country.name if country else country_id
+
+
+def clean_preference(preference):
+    """Elastic throws error if preference starts with _."""
+    if preference and preference.startswith("_"):
+        preference = preference.replace("_", "underscore", 1)
+    return preference

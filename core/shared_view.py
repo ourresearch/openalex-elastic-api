@@ -17,8 +17,8 @@ from core.group_by import (filter_group_by, get_group_by_results,
 from core.paginate import Paginate
 from core.search import check_is_search_query, full_search
 from core.sort import get_sort_fields
-from core.utils import (get_field, map_filter_params, map_sort_params,
-                        set_number_param)
+from core.utils import (clean_preference, get_field, map_filter_params,
+                        map_sort_params, set_number_param)
 from core.validate import validate_export_format, validate_params
 
 
@@ -64,7 +64,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
     # search
     if search and search != '""':
         s = full_search(index_name, s, search)
-        s = s.params(preference=search)
+        s = s.params(preference=clean_preference(search))
 
     # filter
     if filter_params:
@@ -82,7 +82,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
                 ]:
                     preference = filter_param[key]
         if preference:
-            s = s.params(preference=preference)
+            s = s.params(preference=clean_preference(preference))
 
     # sort
     is_search_query = check_is_search_query(filter_params, search)
@@ -110,7 +110,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
     # group by
     transform = False
     if group_by:
-        s = s.params(preference=group_by)
+        s = s.params(preference=clean_preference(group_by))
         # handle known filter
         known = False
         if ":" in group_by:

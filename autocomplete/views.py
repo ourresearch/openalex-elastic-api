@@ -8,11 +8,12 @@ from authors.fields import fields_dict as authors_fields_dict
 from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
 from autocomplete.shared import (search_canonical_id_full,
                                  single_entity_autocomplete)
-from autocomplete.utils import (AUTOCOMPLETE_SOURCE, get_preference,
-                                is_cached_autocomplete, strip_punctuation)
+from autocomplete.utils import (AUTOCOMPLETE_SOURCE, is_cached_autocomplete,
+                                strip_punctuation)
 from autocomplete.validate import validate_full_autocomplete_params
 from concepts.fields import fields_dict as concepts_fields_dict
 from core.exceptions import APIQueryParamsError
+from core.utils import clean_preference
 from extensions import cache
 from institutions.fields import fields_dict as institutions_fields_dict
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
@@ -70,7 +71,7 @@ def autocomplete_full():
         s = s.query("match_phrase_prefix", display_name__autocomplete=q)
         s = s.sort("-cited_by_count")
         s = s.source(AUTOCOMPLETE_SOURCE)
-        preference = get_preference(q)
+        preference = clean_preference(q)
         s = s.params(preference=preference)
     response = s.execute()
 

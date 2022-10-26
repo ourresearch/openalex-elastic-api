@@ -2,12 +2,12 @@ from collections import OrderedDict
 
 from elasticsearch_dsl import Search
 
-from autocomplete.utils import AUTOCOMPLETE_SOURCE, get_preference
+from autocomplete.utils import AUTOCOMPLETE_SOURCE
 from autocomplete.validate import validate_entity_autocomplete_params
 from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
 from core.search import full_search
-from core.utils import map_filter_params
+from core.utils import clean_preference, map_filter_params
 from ids import utils as id_utils
 
 
@@ -40,7 +40,7 @@ def single_entity_autocomplete(fields_dict, index_name, request):
         s = s.query("match_phrase_prefix", display_name__autocomplete=q)
         s = s.sort("-cited_by_count")
         s = s.source(AUTOCOMPLETE_SOURCE)
-        preference = get_preference(q)
+        preference = clean_preference(q)
         s = s.params(preference=preference)
 
     response = s.execute()
