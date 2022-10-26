@@ -1,4 +1,4 @@
-from elasticsearch_dsl import MultiSearch, Search
+from elasticsearch_dsl import MultiSearch, Q, Search
 from iso3166 import countries
 from marshmallow import Schema, fields, pre_dump
 
@@ -40,7 +40,11 @@ class AutoCompleteSchema(Schema):
             if "authors" in d.meta.index:
                 has_hints = True
                 s = Search()
-                s = s.filter("term", authorships__author__id=d.id)
+                s = s.filter(
+                    "nested",
+                    path="authorships",
+                    query=Q("term", authorships__author__id=d.id),
+                )
                 s = s.sort("-cited_by_count")
                 s = s.extra(size=1)
                 s = s.source(["title", "publication_year"])
@@ -93,7 +97,7 @@ class AutoCompleteSchema(Schema):
                 if i > 2:
                     author_names.append("et al.")
                     break
-                elif author and author.author.display_name:
+                elif author and author.author and author.author.display_name:
                     author_names.append(author.author.display_name)
                     i = i + 1
             if author_names:
