@@ -233,7 +233,13 @@ class OpenAlexIDField(Field):
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
-            q = ~Q("exists", field=field_name)
+            if self.nested:
+                q = ~Q(
+                    "nested", path="authorships", query=Q("exists", field=field_name)
+                )
+            else:
+                q = ~Q("exists", field=field_name)
+            return q
         elif self.value == "!null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
@@ -241,12 +247,19 @@ class OpenAlexIDField(Field):
         elif self.value.startswith("!") and "https://openalex.org/" in self.value:
             query = self.value[1:]
             kwargs = {self.es_field(): query}
-            q = ~Q("term", **kwargs)
+            if self.nested:
+                q = ~Q("nested", path="authorships", query=Q("term", **kwargs))
+            else:
+                q = ~Q("term", **kwargs)
+            return q
         elif self.value.startswith("!"):
             query = self.value[1:].upper()
             query_with_url = f"https://openalex.org/{query}"
             kwargs = {self.es_field(): query_with_url}
-            q = ~Q("term", **kwargs)
+            if self.nested:
+                q = ~Q("nested", path="authorships", query=Q("term", **kwargs))
+            else:
+                q = ~Q("term", **kwargs)
         elif self.param == "cited_by":
             openalex_ids = self.get_ids(self.value, "referenced_works")
             q = Q("terms", id=openalex_ids)
@@ -409,7 +422,13 @@ class TermField(Field):
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
-            q = ~Q("exists", field=field_name)
+            if self.nested:
+                q = ~Q(
+                    "nested", path="authorships", query=Q("exists", field=field_name)
+                )
+            else:
+                q = ~Q("exists", field=field_name)
+            return q
         elif self.value == "!null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
@@ -435,7 +454,11 @@ class TermField(Field):
         elif self.value.startswith("!"):
             query = self.value[1:]
             kwargs = {self.es_field(): query}
-            q = ~Q("term", **kwargs)
+            if self.nested:
+                q = ~Q("nested", path="authorships", query=Q("term", **kwargs))
+            else:
+                q = ~Q("term", **kwargs)
+            return q
         elif self.param == "display_name":
             kwargs = {self.es_field(): self.value}
             q = Q("match", **kwargs)

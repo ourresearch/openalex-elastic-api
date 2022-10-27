@@ -100,7 +100,9 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                         }
                     ),
                 ).bucket("groupby", a)
-            elif "institution" in field.param and q:
+            elif (
+                "institutions.id" in field.param or "insitution.id" in field.param and q
+            ):
                 s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
                     "inner",
                     "filter",
@@ -116,8 +118,15 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                 ).bucket("groupby", a)
             else:
                 s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
-                    "groupby", a
-                )
+                    "groupby",
+                    A(
+                        "terms",
+                        field=group_by_field,
+                        missing=missing,
+                        size=per_page,
+                        order={"inner": "desc"},
+                    ),
+                ).bucket("inner", "reverse_nested")
         else:
             s.aggs.bucket("groupby", a)
     return s
@@ -231,7 +240,7 @@ def get_group_by_results(group_by, response):
                 {
                     "key": b.key,
                     "key_display_name": key_display_name,
-                    "doc_count": b.doc_count,
+                    "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
                 }
             )
     elif group_by.endswith("country_code"):
@@ -245,7 +254,7 @@ def get_group_by_results(group_by, response):
                 {
                     "key": b.key,
                     "key_display_name": key_display_name,
-                    "doc_count": b.doc_count,
+                    "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
                 }
             )
     else:
@@ -257,7 +266,11 @@ def get_group_by_results(group_by, response):
             else:
                 key = b.key
             group_by_results.append(
-                {"key": key, "key_display_name": key, "doc_count": b.doc_count}
+                {
+                    "key": key,
+                    "key_display_name": key,
+                    "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
+                }
             )
     return group_by_results
 
@@ -353,7 +366,15 @@ def filter_group_by(field, group_by, q, s):
         s = s.query("match_phrase_prefix", **{field: q})
     elif "country_code" in group_by:
         country_codes = country_search(q)
-        s = s.query("terms", **{field.es_field(): country_codes})
+        if field.nested:
+            q = Q(
+                "nested",
+                path="authorships",
+                query=Q("terms", **{field.es_field(): country_codes}),
+            )
+            s = s.query(q)
+        else:
+            s = s.query("terms", **{field.es_field(): country_codes})
     elif group_by == "publication_year":
         min_year, max_year = set_year_min_max(q)
         kwargs = {"publication_year": {"gte": min_year, "lte": max_year}}
