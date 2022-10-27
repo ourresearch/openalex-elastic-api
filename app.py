@@ -24,6 +24,12 @@ def create_app(config_object="settings"):
     register_blueprints(app)
     register_extensions(app)
     register_errorhandlers(app)
+
+    @app.after_request
+    def add_header(response):
+        response.cache_control.max_age = 60 * 60 * 1  # 1 hour
+        return response
+
     return app
 
 
