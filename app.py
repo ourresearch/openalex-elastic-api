@@ -12,6 +12,7 @@ import counts
 import ids
 import institutions
 import settings
+import suggest
 import venues
 import works
 from core.exceptions import APIError
@@ -41,6 +42,7 @@ def register_blueprints(app):
     app.register_blueprint(counts.views.blueprint)
     app.register_blueprint(ids.views.blueprint)
     app.register_blueprint(institutions.views.blueprint)
+    app.register_blueprint(suggest.views.blueprint)
     app.register_blueprint(works.views.blueprint)
     app.register_blueprint(venues.views.blueprint)
     return None
