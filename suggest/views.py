@@ -21,13 +21,13 @@ def suggest():
         s = Search(index="suggest-v1")
         s = s.query("match_phrase_prefix", phrase=q)
         s = s.sort("-count")
-        s = s.extra(size=5)
+        s = s.extra(size=10)
         response = s.execute()
         result["meta"] = {
             "count": s.count(),
             "db_response_time_ms": response.took,
             "page": 1,
-            "per_page": 5,
+            "per_page": 10,
         }
         result["results"] = response
     else:
@@ -35,7 +35,7 @@ def suggest():
             "count": 0,
             "db_response_time_ms": 0,
             "page": 1,
-            "per_page": 5,
+            "per_page": 10,
         }
         result["results"] = []
     suggest_schema = SuggestMessageSchema()
