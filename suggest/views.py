@@ -24,7 +24,7 @@ def suggest():
         s = s.extra(size=5)
         response = s.execute()
         result["meta"] = {
-            "count": 5,
+            "count": s.count(),
             "db_response_time_ms": response.took,
             "page": 1,
             "per_page": 5,
