@@ -207,4 +207,6 @@ def clean_preference(preference):
     """Elastic throws error if preference starts with _."""
     if preference and preference.startswith("_"):
         preference = preference.replace("_", "underscore", 1)
+    elif preference and preference.endswith("known") and preference != "known":
+        preference = preference.replace("known", " ")
     return preference

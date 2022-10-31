@@ -18,6 +18,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
 
     if q:
         per_page = 200
+    shard_size = 3000
 
     if sort_params:
         for key, order in sort_params.items():
@@ -28,6 +29,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                     missing=missing,
                     order={"_count": order},
                     size=per_page,
+                    shard_size=shard_size,
                 )
             elif key == "count" and known:
                 a = A(
@@ -35,6 +37,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                     field=group_by_field,
                     order={"_count": order},
                     size=per_page,
+                    shard_size=shard_size,
                 )
             elif key == "key" and not known:
                 a = A(
@@ -43,6 +46,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                     missing=missing,
                     order={"_key": order},
                     size=per_page,
+                    shard_size=shard_size,
                 )
             elif key == "key" and known:
                 a = A(
@@ -50,6 +54,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                     field=group_by_field,
                     order={"_key": order},
                     size=per_page,
+                    shard_size=shard_size,
                 )
             if field.nested:
                 s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
@@ -70,6 +75,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
             "terms",
             field=group_by_field,
             size=per_page,
+            shard_size=shard_size,
         )
         if field.nested:
             s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
@@ -83,6 +89,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
             field=group_by_field,
             missing=missing,
             size=per_page,
+            shard_size=shard_size,
         )
         if field.nested:
             if "author.id" in field.param and q:
@@ -129,6 +136,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                         missing=missing,
                         size=per_page,
                         order={"inner": "desc"},
+                        shard_size=shard_size,
                     ),
                 ).bucket("inner", "reverse_nested")
         else:
