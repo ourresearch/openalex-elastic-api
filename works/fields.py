@@ -3,12 +3,12 @@ from core.fields import (BooleanField, DateField, OpenAlexIDField, PhraseField,
 
 fields = [
     BooleanField(
-        param=f"authorships.institutions.country.is_global_south",
+        param=f"authorships.institutions.is_global_south",
         custom_es_field="authorships.institutions.country_code",
         nested=True,
     ),
     BooleanField(
-        param=f"institutions.country.is_global_south",
+        param=f"institutions.is_global_south",
         custom_es_field="authorships.institutions.country_code",
         nested=True,
     ),
@@ -79,7 +79,7 @@ fields = [
     TermField(param="authorships.author.orcid", nested=True),
     TermField(param="authorships.institutions.country_code", nested=True),
     TermField(
-        param=f"authorships.institutions.country.continent",
+        param=f"authorships.institutions.continent",
         custom_es_field="authorships.institutions.country_code",
         nested=True,
     ),
@@ -104,7 +104,7 @@ fields = [
         nested=True,
     ),
     TermField(
-        param="institutions.country.continent",
+        param="institutions.continent",
         alias="authorships.institutions.country_code",
         nested=True,
     ),

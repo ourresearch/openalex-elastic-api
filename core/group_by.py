@@ -138,7 +138,6 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                 or q
                 and "institution.id" in field.param
             ):
-                print("in institutions")
                 s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
                     "inner",
                     "filter",

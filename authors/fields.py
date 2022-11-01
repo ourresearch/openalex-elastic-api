@@ -4,7 +4,7 @@ from core.fields import (BooleanField, DateField, OpenAlexIDField, RangeField,
 fields = [
     BooleanField(param="has_orcid", custom_es_field="ids.orcid"),
     BooleanField(
-        param=f"last_known_institution.country.is_global_south",
+        param=f"last_known_institution.is_global_south",
         custom_es_field="last_known_institution.country_code",
     ),
     DateField(
@@ -26,7 +26,7 @@ fields = [
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="last_known_institution.country_code"),
     TermField(
-        param="last_known_institution.country.continent",
+        param="last_known_institution.continent",
         custom_es_field="last_known_institution.country_code",
     ),
     TermField(param="last_known_institution.ror"),

@@ -3,7 +3,7 @@ from core.fields import (BooleanField, DateField, OpenAlexIDField, RangeField,
 
 fields = [
     BooleanField(
-        param=f"country.is_global_south",
+        param=f"is_global_south",
         custom_es_field="country_code",
     ),
     BooleanField(param="has_ror", custom_es_field="ids.ror.keyword"),
@@ -24,7 +24,7 @@ fields = [
     SearchField(param="display_name.search"),
     TermField(param="country_code"),
     TermField(
-        param=f"country.continent",
+        param=f"continent",
         custom_es_field="country_code",
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
