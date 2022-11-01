@@ -213,13 +213,14 @@ def clean_preference(preference):
 
 
 def handle_high_author_count(response):
-    """If there are more than 10000 authors in the results, return an error telling user to reduce per-page param."""
+    """If there are more than {limit} authors in the results, return an error telling user to reduce per-page param."""
+    limit = 10000
     total_author_count = 0
     for r in response:
         if "authors_count" in r:
             total_author_count += r.authors_count
-            if total_author_count > 10000:
+            if total_author_count > limit:
                 raise HighAuthorCountError(
-                    "There are more than 10,000 authors in the results, which is too many. "
+                    f"There are more than {limit:,} authors in the results, which is too many. "
                     "Try reducing the per-page parameter to 10 or 5 to continue."
                 )

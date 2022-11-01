@@ -21,4 +21,4 @@ class APISearchError(APIError):
 
 class HighAuthorCountError(APIError):
     code = 403
-    description = "This query produces too many authors. Reduce per-page to less than 10 to continue."
+    description = "High author count limitation."
