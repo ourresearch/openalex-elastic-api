@@ -8,7 +8,7 @@ import countries
 from core.exceptions import APIQueryParamsError
 from core.search import SearchOpenAlex
 from core.utils import get_full_openalex_id, normalize_openalex_id
-from settings import COUNTRY_PARAMS, EXTERNAL_ID_FIELDS, WORKS_INDEX
+from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, WORKS_INDEX
 
 
 class Field(ABC):
@@ -97,13 +97,30 @@ class BooleanField(Field):
                 q = Q("exists", field=self.es_field())
             elif self.value.lower().strip() == "false":
                 q = ~Q("exists", field=self.es_field())
-        elif any(country_param in self.param for country_param in COUNTRY_PARAMS):
+        elif "is_global_south" in self.param:
             self.validate_true_false()
-            country_codes = self.get_country_codes()
+            country_codes = [
+                c["country_code"] for c in countries.GLOBAL_SOUTH_COUNTRIES
+            ]
             if self.value.lower().strip() == "true":
-                q = Q("terms", **{self.es_field(): country_codes})
+                if self.nested:
+                    q = Q(
+                        "nested",
+                        path="authorships",
+                        query=Q("terms", **{self.es_field(): country_codes}),
+                    )
+                else:
+                    q = Q("terms", **{self.es_field(): country_codes})
             elif self.value.lower().strip() == "false":
-                q = ~Q("terms", **{self.es_field(): country_codes})
+                if self.nested:
+                    q = ~Q(
+                        "nested",
+                        path="authorships",
+                        query=Q("terms", **{self.es_field(): country_codes}),
+                    )
+                else:
+                    q = ~Q("terms", **{self.es_field(): country_codes})
+            return q
         elif self.value == "null":
             q = ~Q("exists", field=self.es_field())
         elif self.value == "!null":
@@ -115,45 +132,6 @@ class BooleanField(Field):
         if q and self.nested:
             q = Q("nested", path="authorships", query=q)
         return q
-
-    def get_country_codes(self):
-        if "is_africa" in self.param:
-            country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_REGION["Africa"]
-            ]
-        elif "is_antarctica" in self.param:
-            country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_REGION["Antarctica"]
-            ]
-        elif "is_asia" in self.param:
-            country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_REGION["Asia"]
-            ]
-        elif "is_europe" in self.param:
-            country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_REGION["Europe"]
-            ]
-        elif "is_north_america" in self.param:
-            country_codes = [
-                c["country_code"]
-                for c in countries.COUNTRIES_BY_REGION["North America"]
-            ]
-        elif "is_oceania" in self.param:
-            country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_REGION["Oceania"]
-            ]
-        elif "is_south_america" in self.param:
-            country_codes = [
-                c["country_code"]
-                for c in countries.COUNTRIES_BY_REGION["South America"]
-            ]
-        elif "is_global_south" in self.param:
-            country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_REGION["Global South"]
-            ]
-        else:
-            country_codes = []
-        return country_codes
 
     def validate(self, query):
         valid_values = ["null", "!null", "true", "false"]
@@ -168,10 +146,6 @@ class BooleanField(Field):
             self.value = "!null"
         elif self.value.lower().strip() == "false":
             self.value = "null"
-
-    def handle_country_groups(self, q):
-
-        return q
 
     def validate_true_false(self):
         valid_values = ["true", "false"]
@@ -465,6 +439,10 @@ class TermField(Field):
         elif self.param == "host_venue.license":
             kwargs = {self.es_field(): self.value.lower()}
             q = Q("term", **kwargs)
+        elif "country.continent" in self.param:
+            country_codes = self.get_country_codes()
+            kwargs = {self.es_field(): country_codes}
+            q = Q("terms", **kwargs)
         else:
             kwargs = {self.es_field(): self.value}
             q = Q("term", **kwargs)
@@ -511,3 +489,57 @@ class TermField(Field):
         else:
             formatted = self.value
         return formatted
+
+    def get_country_codes(self):
+        continent = self.value.lower().strip()
+        if (
+            self.value.lower() not in CONTINENT_PARAMS.keys()
+            and self.value.upper() not in CONTINENT_PARAMS.values()
+        ):
+            params = list(CONTINENT_PARAMS.keys()) + list(CONTINENT_PARAMS.values())
+            raise APIQueryParamsError(
+                f"Value for {self.param} must be one of {', '.join(params)}."
+            )
+        if continent == "africa" or continent.upper() == CONTINENT_PARAMS["africa"]:
+            country_codes = [
+                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Africa"]
+            ]
+        elif (
+            continent == "antarctica"
+            or continent.upper() == CONTINENT_PARAMS["antarctica"]
+        ):
+            country_codes = [
+                c["country_code"]
+                for c in countries.COUNTRIES_BY_CONTINENT["Antarctica"]
+            ]
+        elif continent == "asia" or continent.upper() == CONTINENT_PARAMS["asia"]:
+            country_codes = [
+                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Asia"]
+            ]
+        elif continent == "europe" or continent.upper() == CONTINENT_PARAMS["europe"]:
+            country_codes = [
+                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Europe"]
+            ]
+        elif (
+            continent == "north_america"
+            or continent.upper() == CONTINENT_PARAMS["north_america"]
+        ):
+            country_codes = [
+                c["country_code"]
+                for c in countries.COUNTRIES_BY_CONTINENT["North America"]
+            ]
+        elif continent == "oceania" or continent.upper() == CONTINENT_PARAMS["oceania"]:
+            country_codes = [
+                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Oceania"]
+            ]
+        elif (
+            continent == "south_america"
+            or continent.upper() == CONTINENT_PARAMS["south_america"]
+        ):
+            country_codes = [
+                c["country_code"]
+                for c in countries.COUNTRIES_BY_CONTINENT["South America"]
+            ]
+        else:
+            country_codes = []
+        return country_codes

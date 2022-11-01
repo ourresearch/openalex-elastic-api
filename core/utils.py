@@ -4,7 +4,7 @@ from elasticsearch_dsl import Q, Search
 from iso3166 import countries
 
 import settings
-from core.exceptions import APIQueryParamsError
+from core.exceptions import APIQueryParamsError, HighAuthorCountError
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
                       VENUES_INDEX, WORKS_INDEX)
 
@@ -210,3 +210,16 @@ def clean_preference(preference):
     elif preference and preference.endswith("known") and preference != "known":
         preference = preference.replace("known", " ")
     return preference
+
+
+def handle_high_author_count(response):
+    """If there are more than 10000 authors in the results, return an error telling user to reduce per-page param."""
+    total_author_count = 0
+    for r in response:
+        if "authors_count" in r:
+            total_author_count += r.authors_count
+            if total_author_count > 10000:
+                raise HighAuthorCountError(
+                    "There are more than 10,000 authors in the results, which is too many. "
+                    "Try reducing the per-page parameter to 10 or 5 to continue."
+                )

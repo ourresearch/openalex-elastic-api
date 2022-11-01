@@ -1,9 +1,12 @@
-import settings
 from core.fields import (BooleanField, DateField, OpenAlexIDField, RangeField,
                          SearchField, TermField)
 
 fields = [
     BooleanField(param="has_orcid", custom_es_field="ids.orcid"),
+    BooleanField(
+        param=f"last_known_institution.country.is_global_south",
+        custom_es_field="last_known_institution.country_code",
+    ),
     DateField(
         param="from_created_date",
         custom_es_field="created_date",
@@ -23,25 +26,12 @@ fields = [
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="last_known_institution.country_code"),
     TermField(
-        param="last_known_institution.continent",
-        custom_es_field="last_known_institution.country_code",
-    ),
-    TermField(
-        param="last_known_institution.geographic_region",
+        param="last_known_institution.country.continent",
         custom_es_field="last_known_institution.country_code",
     ),
     TermField(param="last_known_institution.ror"),
     TermField(param="last_known_institution.type"),
     TermField(param="orcid", alias="ids.orcid"),
 ]
-
-# add country group filters
-for param in settings.COUNTRY_PARAMS:
-    fields.append(
-        BooleanField(
-            param=f"last_known_institution.country.{param}",
-            custom_es_field="last_known_institution.country_code",
-        )
-    )
 
 fields_dict = {f.param: f for f in fields}

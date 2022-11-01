@@ -1,8 +1,17 @@
-import settings
 from core.fields import (BooleanField, DateField, OpenAlexIDField, PhraseField,
                          RangeField, SearchField, TermField)
 
 fields = [
+    BooleanField(
+        param=f"authorships.institutions.country.is_global_south",
+        custom_es_field="authorships.institutions.country_code",
+        nested=True,
+    ),
+    BooleanField(
+        param=f"institutions.country.is_global_south",
+        custom_es_field="authorships.institutions.country_code",
+        nested=True,
+    ),
     BooleanField(param="has_abstract", custom_es_field="abstract"),
     BooleanField(param="has_doi", custom_es_field="ids.doi"),
     BooleanField(param="has_fulltext", custom_es_field="fulltext"),
@@ -68,27 +77,12 @@ fields = [
     TermField(param="alternate_host_venues.version"),
     TermField(param="author.orcid", alias="authorships.author.orcid", nested=True),
     TermField(param="authorships.author.orcid", nested=True),
-    TermField(
-        param="institutions.geographic_region",
-        custom_es_field="authorships.institutions.country_code",
-        nested=True,
-    ),
-    TermField(
-        param="authorships.institutions.geographic_region",
-        custom_es_field="authorships.institutions.country_code",
-        nested=True,
-    ),
-    TermField(
-        param="institutions.continent",
-        custom_es_field="authorships.institutions.country_code",
-        nested=True,
-    ),
-    TermField(
-        param="authorships.institutions.continent",
-        custom_es_field="authorships.institutions.country_code",
-        nested=True,
-    ),
     TermField(param="authorships.institutions.country_code", nested=True),
+    TermField(
+        param=f"authorships.institutions.country.continent",
+        custom_es_field="authorships.institutions.country_code",
+        nested=True,
+    ),
     TermField(param="authorships.institutions.ror", nested=True),
     TermField(param="authorships.institutions.type", nested=True),
     TermField(param="concepts.wikidata"),
@@ -110,6 +104,11 @@ fields = [
         nested=True,
     ),
     TermField(
+        param="institutions.country.continent",
+        alias="authorships.institutions.country_code",
+        nested=True,
+    ),
+    TermField(
         param="institutions.ror", alias="authorships.institutions.ror", nested=True
     ),
     TermField(
@@ -122,22 +121,5 @@ fields = [
     TermField(param="pmcid", custom_es_field="ids.pmcid"),
     TermField(param="type"),
 ]
-
-# add country group filters
-for param in settings.COUNTRY_PARAMS:
-    fields.append(
-        BooleanField(
-            param=f"authorships.institutions.country.{param}",
-            custom_es_field="authorships.institutions.country_code",
-            nested=True,
-        )
-    )
-    fields.append(
-        BooleanField(
-            param=f"institutions.country.{param}",
-            custom_es_field="authorships.institutions.country_code",
-            nested=True,
-        )
-    )
 
 fields_dict = {f.param: f for f in fields}

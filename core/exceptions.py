@@ -17,3 +17,8 @@ class APIQueryParamsError(APIError):
 class APISearchError(APIError):
     code = 404
     description = "Search execution error."
+
+
+class HighAuthorCountError(APIError):
+    code = 403
+    description = "This query produces too many authors. Reduce per-page to less than 10 to continue."

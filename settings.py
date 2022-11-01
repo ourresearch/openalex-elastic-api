@@ -37,17 +37,6 @@ EXTERNAL_ID_FIELDS = [
     "has_wikidata",
 ]
 
-GLOBAL_REGION_FIELDS = [
-    "authorships.institutions.geographic_region",
-    "institutions.geographic_region",
-    "authorships.institutions.continent",
-    "institutions.continent",
-    "last_known_institution.continent",
-    "last_known_institution.geographic_region",
-    "continent",
-    "geographic_region",
-]
-
 BOOLEAN_TEXT_FIELDS = ["has_abstract", "has_ngrams", "has_references"]
 
 TRANSFORMS = [
@@ -58,13 +47,12 @@ TRANSFORMS = [
     }
 ]
 
-COUNTRY_PARAMS = [
-    "is_africa",
-    "is_antarctica",
-    "is_asia",
-    "is_europe",
-    "is_oceania",
-    "is_north_america",
-    "is_south_america",
-    "is_global_south",
-]
+CONTINENT_PARAMS = {
+    "africa": "Q15",
+    "antarctica": "Q51",
+    "asia": "Q48",
+    "europe": "Q46",
+    "north_america": "Q49",
+    "oceania": "Q55643",
+    "south_america": "Q18",
+}

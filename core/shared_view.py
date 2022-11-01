@@ -10,15 +10,14 @@ from core.exceptions import (APIPaginationError, APIQueryParamsError,
 from core.filter import filter_records
 from core.group_by import (filter_group_by, get_group_by_results,
                            get_group_by_results_external_ids,
-                           get_group_by_results_transform,
-                           group_by_global_region, group_by_records,
-                           group_by_records_transform, is_transform,
-                           search_group_by_results)
+                           get_group_by_results_transform, group_by_continent,
+                           group_by_records, group_by_records_transform,
+                           is_transform, search_group_by_results)
 from core.paginate import Paginate
 from core.search import check_is_search_query, full_search
 from core.sort import get_sort_fields
-from core.utils import (clean_preference, get_field, map_filter_params,
-                        map_sort_params, set_number_param)
+from core.utils import (clean_preference, get_field, handle_high_author_count,
+                        map_filter_params, map_sort_params, set_number_param)
 from core.validate import validate_export_format, validate_params
 
 
@@ -144,8 +143,8 @@ def shared_view(request, fields_dict, index_name, default_sort):
             raise APIQueryParamsError(f"Cannot group by {field.param}.")
         if transform:
             s = group_by_records_transform(field, index_name, sort_params)
-        elif field.param in settings.GLOBAL_REGION_FIELDS:
-            return group_by_global_region(
+        elif "continent" in field.param:
+            return group_by_continent(
                 field,
                 index_name,
                 search,
@@ -173,6 +172,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         if (
             group_by in settings.EXTERNAL_ID_FIELDS
             or group_by in settings.BOOLEAN_TEXT_FIELDS
+            or "is_global_south" in group_by
         ):
             count = 2
         elif transform:
@@ -204,6 +204,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         if (
             group_by in settings.EXTERNAL_ID_FIELDS
             or group_by in settings.BOOLEAN_TEXT_FIELDS
+            or "is_global_south" in group_by
         ):
             result["group_by"] = get_group_by_results_external_ids(response)
         elif transform:
@@ -213,6 +214,9 @@ def shared_view(request, fields_dict, index_name, default_sort):
     else:
         result["group_by"] = []
         result["results"] = response
+
+    if index_name.startswith("works"):
+        handle_high_author_count(response)
 
     if "q" in request.args:
         result["meta"]["q"] = q

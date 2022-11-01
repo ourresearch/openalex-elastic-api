@@ -2,11 +2,10 @@ from collections import OrderedDict
 
 import iso3166
 from elasticsearch_dsl import A, MultiSearch, Q, Search
-from iso3166 import countries
 
 import settings
 from core.utils import get_display_names
-from countries import COUNTRIES_BY_REGION
+from countries import COUNTRIES_BY_CONTINENT, GLOBAL_SOUTH_COUNTRIES
 
 
 def group_by_records(field, s, sort_params, known, per_page, q):
@@ -62,6 +61,32 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                 )
             else:
                 s.aggs.bucket("groupby", a)
+    elif "is_global_south" in field.param:
+        country_codes = [c["country_code"] for c in GLOBAL_SOUTH_COUNTRIES]
+        if field.nested:
+            exists = A(
+                "filter",
+                Q(
+                    "nested",
+                    path="authorships",
+                    query=Q("terms", **{group_by_field: country_codes}),
+                ),
+            )
+            not_exists = A(
+                "filter",
+                Q(
+                    "nested",
+                    path="authorships",
+                    query=~Q("terms", **{group_by_field: country_codes}),
+                ),
+            )
+            s.aggs.bucket("exists", exists)
+            s.aggs.bucket("not_exists", not_exists)
+        else:
+            exists = A("filter", Q("terms", **{group_by_field: country_codes}))
+            not_exists = A("filter", ~Q("terms", **{group_by_field: country_codes}))
+            s.aggs.bucket("exists", exists)
+            s.aggs.bucket("not_exists", not_exists)
     elif (
         field.param in settings.EXTERNAL_ID_FIELDS
         or field.param in settings.BOOLEAN_TEXT_FIELDS
@@ -144,7 +169,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
     return s
 
 
-def group_by_global_region(
+def group_by_continent(
     field,
     index_name,
     search,
@@ -156,7 +181,7 @@ def group_by_global_region(
     group_by_results = []
     took = 0
     ms = MultiSearch(index=index_name)
-    for region in COUNTRIES_BY_REGION:
+    for continent in COUNTRIES_BY_CONTINENT:
         s = Search()
         if search and search != '""':
             s = full_search(index_name, s, search)
@@ -165,21 +190,26 @@ def group_by_global_region(
         if filter_params:
             s = filter_records(fields_dict, filter_params, s)
         s = s.extra(track_total_hits=True)
-        country_codes = [c["country_code"] for c in COUNTRIES_BY_REGION[region]]
-        s = s.filter(
-            "nested",
-            path="authorships",
-            query=Q("terms", **{field.es_field(): country_codes}),
-        )
+        country_codes = [c["country_code"] for c in COUNTRIES_BY_CONTINENT[continent]]
+        if field.nested:
+            s = s.filter(
+                "nested",
+                path="authorships",
+                query=Q("terms", **{field.es_field(): country_codes}),
+            )
+        else:
+            s = s.filter("terms", **{field.es_field(): country_codes})
         ms = ms.add(s)
 
     responses = ms.execute()
 
-    for region, response in zip(COUNTRIES_BY_REGION.keys(), responses):
+    for continent, response in zip(COUNTRIES_BY_CONTINENT.keys(), responses):
         group_by_results.append(
             {
-                "key": region,
-                "key_display_name": region,
+                "key": settings.CONTINENT_PARAMS.get(
+                    continent.lower().replace(" ", "_")
+                ),
+                "key_display_name": continent,
                 "doc_count": response.hits.total.value,
             }
         )
@@ -193,7 +223,16 @@ def group_by_global_region(
     # filter
     if filter_params:
         s = filter_records(fields_dict, filter_params, s)
-    s = s.query(~Q("exists", field=field.es_field()))
+    if field.nested:
+        s = s.query(
+            ~Q(
+                "nested",
+                path="authorships",
+                query=Q("exists", field=field.es_field()),
+            )
+        )
+    else:
+        s = s.query(~Q("exists", field=field.es_field()))
     response = s.execute()
     unknown_count = s.count()
     if unknown_count:
@@ -210,12 +249,6 @@ def group_by_global_region(
     group_by_results = sorted(
         group_by_results, key=lambda d: d["doc_count"], reverse=True
     )
-
-    # remove global south if param is continent
-    if "continent" in field.param:
-        for i, group in enumerate(group_by_results):
-            if group["key"] == "Global South":
-                del group_by_results[i]
 
     result = OrderedDict()
     result["meta"] = {
@@ -260,7 +293,7 @@ def get_group_by_results(group_by, response):
             if b.key == "unknown":
                 key_display_name = "unknown"
             else:
-                country = countries.get(b.key.lower())
+                country = iso3166.countries.get(b.key.lower())
                 key_display_name = country.name if country else None
             group_by_results.append(
                 {
