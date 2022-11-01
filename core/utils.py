@@ -214,7 +214,7 @@ def clean_preference(preference):
 
 def handle_high_author_count(response):
     """If there are more than {limit} authors in the results, return an error telling user to reduce per-page param."""
-    limit = 10000
+    limit = 20000
     total_author_count = 0
     for r in response:
         if "authors_count" in r:
