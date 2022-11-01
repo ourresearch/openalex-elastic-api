@@ -17,8 +17,8 @@ def suggest():
         )
     q = request.args.get("q")
     result = OrderedDict()
-    if q:
-        s = Search(index="suggest-v1")
+    if q and len(q) > 2:
+        s = Search(index="suggest-v3")
         s = s.query("match_phrase_prefix", phrase=q)
         s = s.sort("-count")
         s = s.extra(size=10)
