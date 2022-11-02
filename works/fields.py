@@ -122,6 +122,7 @@ fields = [
     TermField(param="pmid", custom_es_field="ids.pmid"),
     TermField(param="pmcid", custom_es_field="ids.pmcid"),
     TermField(param="type"),
+    TermField(param="version", custom_es_field="host_venue.version"),
 ]
 
 fields_dict = {f.param: f for f in fields}

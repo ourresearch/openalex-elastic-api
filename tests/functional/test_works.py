@@ -978,3 +978,101 @@ class TestWorksHasFilters:
             json_data["message"]
             == "Value for has_references must be true or false, not null."
         )
+
+
+class TestWorksVersionFilters:
+    def test_works_version_accepted_version(self, client):
+        res = client.get("/works?filter=version:acceptedversion")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 18
+        for result in json_data["results"]:
+            found = False
+            if (
+                "version" in result["host_venue"]
+                and result["host_venue"]["version"] == "acceptedVersion"
+            ):
+                found = True
+            for venue in result["alternate_host_venues"]:
+                if "version" in venue and venue["version"] == "acceptedVersion":
+                    found = True
+            assert found is True
+
+    def test_works_version_submitted_version(self, client):
+        res = client.get("/works?filter=version:submittedversion")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 179
+        for result in json_data["results"]:
+            found = False
+            if (
+                "version" in result["host_venue"]
+                and result["host_venue"]["version"] == "submittedVersion"
+            ):
+                found = True
+            for venue in result["alternate_host_venues"]:
+                if "version" in venue and venue["version"] == "submittedVersion":
+                    found = True
+            assert found is True
+
+    def test_works_version_published_version(self, client):
+        res = client.get("/works?filter=version:publishedversion")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 640
+        for result in json_data["results"]:
+            found = False
+            if (
+                "version" in result["host_venue"]
+                and result["host_venue"]["version"] == "publishedVersion"
+            ):
+                found = True
+            for venue in result["alternate_host_venues"]:
+                if "version" in venue and venue["version"] == "publishedVersion":
+                    found = True
+            assert found is True
+
+    def test_works_version_null(self, client):
+        res = client.get("/works?filter=version:null")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9216
+        for result in json_data["results"]:
+            found = False
+            if (
+                "version" in result["host_venue"]
+                and result["host_venue"]["version"] is not None
+            ):
+                found = True
+            for venue in result["alternate_host_venues"]:
+                if "version" in venue and venue["version"] is not None:
+                    found = True
+            assert found is False
+
+    def test_works_version_not_null(self, client):
+        res = client.get("/works?filter=version:!null")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 784
+        for result in json_data["results"]:
+            found = False
+            if (
+                "version" in result["host_venue"]
+                and result["host_venue"]["version"] is not None
+            ):
+                found = True
+            for venue in result["alternate_host_venues"]:
+                if "version" in venue and venue["version"] is not None:
+                    found = True
+            assert found is True
+
+    def test_works_version_not_published_version(self, client):
+        res = client.get("/works?filter=version:!publishedversion")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9360
+        for result in json_data["results"]:
+            found = False
+            if (
+                "version" in result["host_venue"]
+                and result["host_venue"]["version"] == "publishedVersion"
+            ):
+                found = True
+            for venue in result["alternate_host_venues"]:
+                if "version" in venue and venue["version"] == "publishedVersion":
+                    found = True
+            assert found is False

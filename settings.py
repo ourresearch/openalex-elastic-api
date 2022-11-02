@@ -69,3 +69,5 @@ CONTINENT_NAMES = [
     {"display_name": "Oceania", "id": "Q55643", "param": "oceania"},
     {"display_name": "South America", "id": "Q18", "param": "south_america"},
 ]
+
+VERSIONS = ["null", "acceptedVersion", "submittedVersion", "publishedVersion"]

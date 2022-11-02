@@ -12,7 +12,8 @@ from core.group_by import (filter_group_by, get_group_by_results,
                            get_group_by_results_external_ids,
                            get_group_by_results_transform, group_by_continent,
                            group_by_records, group_by_records_transform,
-                           is_transform, search_group_by_results)
+                           group_by_version, is_transform,
+                           search_group_by_results)
 from core.paginate import Paginate
 from core.search import check_is_search_query, full_search
 from core.sort import get_sort_fields
@@ -145,6 +146,16 @@ def shared_view(request, fields_dict, index_name, default_sort):
             s = group_by_records_transform(field, index_name, sort_params)
         elif "continent" in field.param:
             return group_by_continent(
+                field,
+                index_name,
+                search,
+                full_search,
+                filter_params,
+                filter_records,
+                fields_dict,
+            )
+        elif field.param == "version":
+            return group_by_version(
                 field,
                 index_name,
                 search,

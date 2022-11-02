@@ -338,6 +338,67 @@ def get_group_by_results_external_ids(response):
     return group_by_results
 
 
+def group_by_version(
+    field,
+    index_name,
+    search,
+    full_search,
+    filter_params,
+    filter_records,
+    fields_dict,
+):
+    group_by_results = []
+    took = 0
+    ms = MultiSearch(index=index_name)
+    for version in settings.VERSIONS:
+        s = Search()
+        if search and search != '""':
+            s = full_search(index_name, s, search)
+
+        # filter
+        if filter_params:
+            s = filter_records(fields_dict, filter_params, s)
+        s = s.extra(track_total_hits=True)
+        if version == "null":
+            s = s.filter(
+                ~Q("exists", field="host_venue.version")
+                & ~Q("exists", field="alternate_host_venues.version")
+            )
+        else:
+            kwargs1 = {"host_venue.version": version}
+            kwargs2 = {"alternate_host_venues.version": version}
+            s = s.query(Q("term", **kwargs1) | Q("term", **kwargs2))
+        ms = ms.add(s)
+
+    responses = ms.execute()
+
+    for version, response in zip(settings.VERSIONS, responses):
+        group_by_results.append(
+            {
+                "key": version,
+                "key_display_name": version,
+                "doc_count": response.hits.total.value,
+            }
+        )
+        took = took + response.took
+
+    # sort by count
+    group_by_results = sorted(
+        group_by_results, key=lambda d: d["doc_count"], reverse=True
+    )
+
+    result = OrderedDict()
+    result["meta"] = {
+        "count": len(group_by_results),
+        "db_response_time_ms": took,
+        "page": 1,
+        "per_page": 10,
+    }
+    result["results"] = []
+    result["group_by"] = group_by_results
+    return result
+
+
 def group_by_records_transform(field, parent_index, sort_params):
     index_name = get_transform_index(field, parent_index)
     s = Search(index=index_name)

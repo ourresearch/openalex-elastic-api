@@ -8,7 +8,8 @@ import countries
 from core.exceptions import APIQueryParamsError
 from core.search import SearchOpenAlex
 from core.utils import get_full_openalex_id, normalize_openalex_id
-from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, WORKS_INDEX
+from settings import (CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS,
+                      WORKS_INDEX)
 
 
 class Field(ABC):
@@ -400,13 +401,22 @@ class TermField(Field):
                 q = ~Q(
                     "nested", path="authorships", query=Q("exists", field=field_name)
                 )
+            elif self.param == "version":
+                q = ~Q("exists", field="host_venue.version") & ~Q(
+                    "exists", field="alternate_host_venues.version"
+                )
             else:
                 q = ~Q("exists", field=field_name)
             return q
         elif self.value == "!null":
-            field_name = self.es_field()
-            field_name = field_name.replace("__", ".")
-            q = Q("exists", field=field_name)
+            if self.param == "version":
+                q = Q("exists", field="host_venue.version") | Q(
+                    "exists", field="alternate_host_venues.version"
+                )
+            else:
+                field_name = self.es_field()
+                field_name = field_name.replace("__", ".")
+                q = Q("exists", field=field_name)
         elif self.param in id_params:
             formatted_id = self.format_id()
             if formatted_id is None:
@@ -430,6 +440,11 @@ class TermField(Field):
             kwargs = {self.es_field(): query}
             if self.nested:
                 q = ~Q("nested", path="authorships", query=Q("term", **kwargs))
+            elif self.param == "version":
+                version = self.validate_version()
+                kwargs1 = {"host_venue.version": version}
+                kwargs2 = {"alternate_host_venues.version": version}
+                q = ~(Q("term", **kwargs1) | Q("term", **kwargs2))
             else:
                 q = ~Q("term", **kwargs)
             return q
@@ -443,6 +458,11 @@ class TermField(Field):
             country_codes = self.get_country_codes()
             kwargs = {self.es_field(): country_codes}
             q = Q("terms", **kwargs)
+        elif self.param == "version":
+            version = self.validate_version()
+            kwargs1 = {"host_venue.version": version}
+            kwargs2 = {"alternate_host_venues.version": version}
+            q = Q("term", **kwargs1) | Q("term", **kwargs2)
         else:
             kwargs = {self.es_field(): self.value}
             q = Q("term", **kwargs)
@@ -543,3 +563,25 @@ class TermField(Field):
         else:
             country_codes = []
         return country_codes
+
+    def validate_version(self):
+        if self.value.startswith("!"):
+            value = self.value[1:]
+        else:
+            value = self.value
+        lower_case_versions = [v.lower() for v in VERSIONS]
+        if value.lower() not in lower_case_versions:
+            raise APIQueryParamsError(
+                f"Value for {self.param} must be one of {', '.join(VERSIONS)}."
+            )
+        if value.lower() == "null":
+            version = "null"
+        elif value.lower() == "submittedversion":
+            version = "submittedVersion"
+        elif value.lower() == "acceptedversion":
+            version = "acceptedVersion"
+        elif value.lower() == "publishedversion":
+            version = "publishedVersion"
+        else:
+            version = value
+        return version

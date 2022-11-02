@@ -150,3 +150,27 @@ class TestGroupByExternalIds:
         assert result2["key"] == "false"
         assert result2["key_display_name"] == "false"
         assert result2["count"] == 9991
+
+
+class TestGroupByVersion:
+    def test_group_by_version(self, client):
+        res = client.get("/works?group-by=version")
+        json_data = res.get_json()
+        assert json_data["group_by"] == [
+            {"key": "null", "key_display_name": "null", "count": 9216},
+            {
+                "key": "publishedVersion",
+                "key_display_name": "publishedVersion",
+                "count": 640,
+            },
+            {
+                "key": "submittedVersion",
+                "key_display_name": "submittedVersion",
+                "count": 179,
+            },
+            {
+                "key": "acceptedVersion",
+                "key_display_name": "acceptedVersion",
+                "count": 18,
+            },
+        ]
