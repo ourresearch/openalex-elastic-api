@@ -3,6 +3,7 @@ from urllib.parse import unquote
 from elasticsearch_dsl import MultiSearch, Q, Search
 from flask import url_for
 
+import settings
 from core.exceptions import APIQueryParamsError
 from core.search import full_search
 from core.utils import (get_country_name, get_display_name, get_field,
@@ -228,6 +229,15 @@ def set_display_name(value, field):
         display_name = get_display_name(value)
     elif field.param.endswith("country_code") or field.param.endswith("country-code"):
         display_name = get_country_name(value.lower())
+    elif field.param.endswith("continent"):
+        display_name = ""
+        for continent in settings.CONTINENT_NAMES:
+            if (
+                value.lower() == continent["id"].lower()
+                or value.lower() == continent["param"]
+            ):
+                display_name = continent["display_name"]
+                break
     else:
         display_name = value
     return display_name

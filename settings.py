@@ -58,3 +58,14 @@ CONTINENT_PARAMS = {
     "oceania": "Q55643",
     "south_america": "Q18",
 }
+
+
+CONTINENT_NAMES = [
+    {"display_name": "Africa", "id": "Q15", "param": "africa"},
+    {"display_name": "Antarctica", "id": "Q51", "param": "antarctica"},
+    {"display_name": "Asia", "id": "Q48", "param": "asia"},
+    {"display_name": "Europe", "id": "Q46", "param": "europe"},
+    {"display_name": "North America", "id": "Q49", "param": "north_america"},
+    {"display_name": "Oceania", "id": "Q55643", "param": "oceania"},
+    {"display_name": "South America", "id": "Q18", "param": "south_america"},
+]
