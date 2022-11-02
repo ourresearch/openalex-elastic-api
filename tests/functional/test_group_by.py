@@ -126,3 +126,27 @@ class TestGroupByExternalIds:
         assert result2["key"] == "false"
         assert result2["key_display_name"] == "false"
         assert result2["count"] == 6373
+
+    def test_group_by_has_pmid(self, client):
+        res = client.get("/works?group-by=has_pmid")
+        json_data = res.get_json()
+        result1 = json_data["group_by"][0]
+        result2 = json_data["group_by"][1]
+        assert result1["key"] == "true"
+        assert result1["key_display_name"] == "true"
+        assert result1["count"] == 987
+        assert result2["key"] == "false"
+        assert result2["key_display_name"] == "false"
+        assert result2["count"] == 9013
+
+    def test_group_by_has_pmcid(self, client):
+        res = client.get("/works?group-by=has_pmcid")
+        json_data = res.get_json()
+        result1 = json_data["group_by"][0]
+        result2 = json_data["group_by"][1]
+        assert result1["key"] == "true"
+        assert result1["key_display_name"] == "true"
+        assert result1["count"] == 9
+        assert result2["key"] == "false"
+        assert result2["key_display_name"] == "false"
+        assert result2["count"] == 9991

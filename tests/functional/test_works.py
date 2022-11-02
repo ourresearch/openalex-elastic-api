@@ -710,6 +710,34 @@ class TestWorksExternalIDs:
             json_data["message"] == "Value for has_doi must be true or false, not stt."
         )
 
+    def test_works_has_pmid_true(self, client):
+        res = client.get("/works?filter=has_pmid:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 987
+        for result in json_data["results"][:25]:
+            assert result["ids"]["pmid"] is not None
+
+    def test_works_has_pmid_false(self, client):
+        res = client.get("/works?filter=has_pmid:false")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9013
+        for result in json_data["results"][:25]:
+            assert "pmid" not in result["ids"]
+
+    def test_works_has_pmcid_true(self, client):
+        res = client.get("/works?filter=has_pmcid:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9
+        for result in json_data["results"][:25]:
+            assert result["ids"]["pmcid"] is not None
+
+    def test_works_has_pmcid_false(self, client):
+        res = client.get("/works?filter=has_pmcid:false")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9991
+        for result in json_data["results"][:25]:
+            assert "pmcid" not in result["ids"]
+
 
 class TestWorksMultipleIDs:
     def test_works_openalex_single_long(self, client):

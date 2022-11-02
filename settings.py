@@ -32,6 +32,8 @@ DO_NOT_GROUP_BY = [
 EXTERNAL_ID_FIELDS = [
     "has_doi",
     "has_issn",
+    "has_pmid",
+    "has_pmcid",
     "has_orcid",
     "has_ror",
     "has_wikidata",

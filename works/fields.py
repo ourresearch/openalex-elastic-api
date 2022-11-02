@@ -15,6 +15,8 @@ fields = [
     BooleanField(param="has_abstract", custom_es_field="abstract"),
     BooleanField(param="has_doi", custom_es_field="ids.doi"),
     BooleanField(param="has_fulltext", custom_es_field="fulltext"),
+    BooleanField(param="has_pmid", custom_es_field="ids.pmid"),
+    BooleanField(param="has_pmcid", custom_es_field="ids.pmcid"),
     BooleanField(param="has_references", custom_es_field="referenced_works"),
     BooleanField(param="has_ngrams", custom_es_field="fulltext"),
     BooleanField(param="has_oa_accepted_or_published_version"),
