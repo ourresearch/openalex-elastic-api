@@ -221,7 +221,7 @@ def handle_high_author_count(response):
             total_author_count += r.authors_count
             if total_author_count > limit:
                 raise HighAuthorCountError(
-                    f"There are more than {limit:,} authors in the results, which is too many. "
+                    f"There are more than {limit:,} authorships objects in the results, which is too many. "
                     "Try adding or adjusting the per-page parameter with a setting of 10 or 5 to continue, such as "
                     "https://api.openalex.org/works?filter=author.id:A2561034403&per-page=10"
                 )
