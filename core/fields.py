@@ -438,7 +438,17 @@ class TermField(Field):
         elif self.value.startswith("!"):
             query = self.value[1:]
             kwargs = {self.es_field(): query}
-            if self.nested:
+            if "continent" in self.param:
+                country_codes = self.get_country_codes()
+                if self.nested:
+                    q = ~Q(
+                        "nested",
+                        path="authorships",
+                        query=Q("terms", **{self.es_field(): country_codes}),
+                    )
+                else:
+                    q = ~Q("terms", **{self.es_field(): country_codes})
+            elif self.nested:
                 q = ~Q("nested", path="authorships", query=Q("term", **kwargs))
             elif self.param == "version":
                 version = self.validate_version()
@@ -511,10 +521,13 @@ class TermField(Field):
         return formatted
 
     def get_country_codes(self):
-        continent = self.value.lower().strip()
+        if self.value.startswith("!"):
+            continent = self.value[1:].lower().strip()
+        else:
+            continent = self.value.lower().strip()
         if (
-            self.value.lower() not in CONTINENT_PARAMS.keys()
-            and self.value.upper() not in CONTINENT_PARAMS.values()
+            continent not in CONTINENT_PARAMS.keys()
+            and continent.upper() not in CONTINENT_PARAMS.values()
         ):
             params = list(CONTINENT_PARAMS.keys()) + list(CONTINENT_PARAMS.values())
             raise APIQueryParamsError(
