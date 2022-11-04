@@ -13,7 +13,7 @@ from core.group_by import (filter_group_by, get_group_by_results,
                            get_group_by_results_transform, group_by_continent,
                            group_by_records, group_by_records_transform,
                            group_by_version, is_transform,
-                           search_group_by_results)
+                           search_group_by_results, validate_group_by)
 from core.paginate import Paginate
 from core.search import check_is_search_query, full_search
 from core.sort import get_sort_fields
@@ -124,24 +124,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
                 )
         field = get_field(fields_dict, group_by)
         transform = is_transform(field, index_name, filter_params)
-        if (
-            type(field).__name__ == "DateField"
-            or (
-                type(field).__name__ == "RangeField"
-                and field.param != "cited_by_count"
-                and field.param != "level"
-                and field.param != "publication_year"
-                and field.param != "works_count"
-            )
-            or type(field).__name__ == "SearchField"
-        ):
-            raise APIQueryParamsError("Cannot group by date, number, or search fields.")
-        elif field.param == "referenced_works":
-            raise APIQueryParamsError(
-                "Group by referenced_works is not supported at this time."
-            )
-        elif field.param in settings.DO_NOT_GROUP_BY:
-            raise APIQueryParamsError(f"Cannot group by {field.param}.")
+        validate_group_by(field)
         if transform:
             s = group_by_records_transform(field, index_name, sort_params)
         elif "continent" in field.param:

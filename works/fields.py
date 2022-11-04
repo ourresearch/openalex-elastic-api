@@ -61,6 +61,7 @@ fields = [
     OpenAlexIDField(param="journal.id", alias="host_venue.id"),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
+    OpenAlexIDField(param="repository"),
     OpenAlexIDField(param="referenced_works"),
     OpenAlexIDField(param="related_to"),
     PhraseField(param="host_venue.publisher"),

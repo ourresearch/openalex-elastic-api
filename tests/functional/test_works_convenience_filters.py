@@ -185,3 +185,87 @@ class TestWorksVersionFilters:
                 if "version" in venue and venue["version"] == "publishedVersion":
                     found = True
             assert found is False
+
+
+class TestWorksRepositoryFilter:
+    def test_works_repository_short(self, client):
+        res = client.get("/works?filter=repository:V28996644")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        for result in json_data["results"]:
+            found = False
+            if (
+                "id" in result["host_venue"]
+                and result["host_venue"]["id"] == "https://openalex.org/V28996644"
+            ):
+                found = True
+            for venue in result["alternate_host_venues"]:
+                if "id" in venue and venue["id"] == "https://openalex.org/V28996644":
+                    found = True
+            assert found is True
+
+    def test_works_repository_long(self, client):
+        res = client.get("/works?filter=repository:https://openalex.org/V28996644")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        for result in json_data["results"]:
+            found = False
+            if (
+                "id" in result["host_venue"]
+                and result["host_venue"]["id"] == "https://openalex.org/V28996644"
+            ):
+                found = True
+            for venue in result["alternate_host_venues"]:
+                if "id" in venue and venue["id"] == "https://openalex.org/V28996644":
+                    found = True
+            assert found is True
+
+    def test_works_repository_not(self, client):
+        res = client.get("/works?filter=repository:!https://openalex.org/V28996644")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9999
+        for result in json_data["results"]:
+            found = False
+            if (
+                "id" in result["host_venue"]
+                and result["host_venue"]["id"] == "https://openalex.org/V28996644"
+            ):
+                found = True
+            for venue in result["alternate_host_venues"]:
+                if "id" in venue and venue["id"] == "https://openalex.org/V28996644":
+                    found = True
+            assert found is False
+
+    def test_works_repository_null(self, client):
+        res = client.get("/works?filter=repository:null")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"] == "'null' is not a valid OpenAlex ID."
+
+    def test_works_repository_not_null(self, client):
+        res = client.get("/works?filter=repository:!null")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"] == "'!null' is not a valid OpenAlex ID."
+
+    def test_works_repository_group_by(self, client):
+        res = client.get("/works?group_by=repository")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"] == "Cannot group by repository."
+
+    def test_works_repository_filters_view(self, client):
+        res = client.get("/works/filters/repository:V28996644")
+        json_data = res.get_json()
+        assert json_data["filters"][0]["key"] == "repository"
+        assert json_data["filters"][0]["is_negated"] == False
+        assert json_data["filters"][0]["type"] == "OpenAlexIDField"
+        assert json_data["filters"][0]["values"][0]["value"] == "V28996644"
+        assert json_data["filters"][0]["values"][0]["count"] == 1
+        assert (
+            json_data["filters"][0]["values"][0]["display_name"]
+            == "Geographie Physique Et Quaternaire"
+        )

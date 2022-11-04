@@ -219,33 +219,30 @@ class OpenAlexIDField(Field):
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
             q = Q("exists", field=field_name)
-        elif self.value.startswith("!") and "https://openalex.org/" in self.value:
-            query = self.value[1:]
+        elif self.value.startswith("!"):
+            query = get_full_openalex_id(self.value[1:])
             kwargs = {self.es_field(): query}
-            if self.nested:
+            if self.param == "repository":
+                q = ~Q("term", host_venue__id=query) & ~Q(
+                    "term", alternate_host_venues__id=query
+                )
+            elif self.nested:
                 q = ~Q("nested", path="authorships", query=Q("term", **kwargs))
             else:
                 q = ~Q("term", **kwargs)
             return q
-        elif self.value.startswith("!"):
-            query = self.value[1:].upper()
-            query_with_url = f"https://openalex.org/{query}"
-            kwargs = {self.es_field(): query_with_url}
-            if self.nested:
-                q = ~Q("nested", path="authorships", query=Q("term", **kwargs))
-            else:
-                q = ~Q("term", **kwargs)
         elif self.param == "cited_by":
             openalex_ids = self.get_ids(self.value, "referenced_works")
             q = Q("terms", id=openalex_ids)
         elif self.param == "related_to":
             openalex_ids = self.get_ids(self.value, "related_works")
             q = Q("terms", id=openalex_ids)
-        elif "https://openalex.org/" in self.value:
-            kwargs = {self.es_field(): self.value}
-            q = Q("term", **kwargs)
+        elif self.param == "repository":
+            kwargs1 = {"host_venue.id": get_full_openalex_id(self.value)}
+            kwargs2 = {"alternate_host_venues.id": get_full_openalex_id(self.value)}
+            q = Q("term", **kwargs1) | Q("term", **kwargs2)
         else:
-            query = f"https://openalex.org/{self.value.upper()}"
+            query = get_full_openalex_id(self.value)
             kwargs = {self.es_field(): query}
             q = Q("term", **kwargs)
         if q and self.nested:

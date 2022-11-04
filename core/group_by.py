@@ -4,6 +4,7 @@ import iso3166
 from elasticsearch_dsl import A, MultiSearch, Q, Search
 
 import settings
+from core.exceptions import APIQueryParamsError
 from core.utils import get_display_names
 from countries import COUNTRIES_BY_CONTINENT, GLOBAL_SOUTH_COUNTRIES
 
@@ -129,7 +130,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                                 "slop": 1,
                                 "max_expansions": 1000,
                             }
-                        }
+                        },
                     ),
                 ).bucket("groupby", a)
             elif (
@@ -148,7 +149,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                                 "query": q,
                                 "max_expansions": 500,
                             }
-                        }
+                        },
                     ),
                 ).bucket("groupby", a)
             else:
@@ -554,3 +555,24 @@ def set_year_min_max(q):
         min_year = int(q)
         max_year = int(q)
     return min_year, max_year
+
+
+def validate_group_by(field):
+    if (
+        type(field).__name__ == "DateField"
+        or (
+            type(field).__name__ == "RangeField"
+            and field.param != "cited_by_count"
+            and field.param != "level"
+            and field.param != "publication_year"
+            and field.param != "works_count"
+        )
+        or type(field).__name__ == "SearchField"
+    ):
+        raise APIQueryParamsError("Cannot group by date, number, or search fields.")
+    elif field.param == "referenced_works":
+        raise APIQueryParamsError(
+            "Group by referenced_works is not supported at this time."
+        )
+    elif field.param in settings.DO_NOT_GROUP_BY:
+        raise APIQueryParamsError(f"Cannot group by {field.param}.")

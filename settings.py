@@ -27,6 +27,7 @@ DO_NOT_GROUP_BY = [
     "pmid",
     "pmcid",
     "related_to",
+    "repository",
 ]
 
 EXTERNAL_ID_FIELDS = [
