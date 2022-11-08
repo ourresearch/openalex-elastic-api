@@ -138,9 +138,12 @@ class TestAuthorsLastKnownInstitution:
 
 
 class TestAuthorsXConceptsID:
+    count = 3130
+
     def test_authors_x_concepts_id_short(self, client):
         res = client.get("/authors?filter=x_concepts.id:c185592680")
         json_data = res.get_json()
+        assert json_data["meta"]["count"] == self.count
         concept_found = False
         for concept in json_data["results"][0]["x_concepts"]:
             if concept["id"] == "https://openalex.org/C185592680":
@@ -152,6 +155,27 @@ class TestAuthorsXConceptsID:
             "/authors?filter=x_concepts.id:https://openalex.org/c185592680"
         )
         json_data = res.get_json()
+        assert json_data["meta"]["count"] == self.count
+        concept_found = False
+        for concept in json_data["results"][0]["x_concepts"]:
+            if concept["id"] == "https://openalex.org/C185592680":
+                concept_found = True
+        assert concept_found == True
+
+    def test_authors_concepts_id_alias_1(self, client):
+        res = client.get("/authors?filter=concept.id:https://openalex.org/c185592680")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == self.count
+        concept_found = False
+        for concept in json_data["results"][0]["x_concepts"]:
+            if concept["id"] == "https://openalex.org/C185592680":
+                concept_found = True
+        assert concept_found == True
+
+    def test_authors_concepts_id_alias_2(self, client):
+        res = client.get("/authors?filter=concepts.id:https://openalex.org/c185592680")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == self.count
         concept_found = False
         for concept in json_data["results"][0]["x_concepts"]:
             if concept["id"] == "https://openalex.org/C185592680":

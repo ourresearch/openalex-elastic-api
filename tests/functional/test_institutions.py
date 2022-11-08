@@ -84,9 +84,12 @@ class TestInstitutionsCitedByCountFilter:
 
 
 class TestInstitutionsXConceptsIDFilter:
+    count = 6460
+
     def test_institutions_x_concepts_id_short(self, client):
         res = client.get("/institutions?filter=x_concepts.id:c185592680")
         json_data = res.get_json()
+        assert json_data["meta"]["count"] == self.count
         concept_found = False
         for concept in json_data["results"][0]["x_concepts"]:
             if concept["id"] == "https://openalex.org/C185592680":
@@ -98,6 +101,31 @@ class TestInstitutionsXConceptsIDFilter:
             "/institutions?filter=x_concepts.id:https://openalex.org/c185592680"
         )
         json_data = res.get_json()
+        assert json_data["meta"]["count"] == self.count
+        concept_found = False
+        for concept in json_data["results"][0]["x_concepts"]:
+            if concept["id"] == "https://openalex.org/C185592680":
+                concept_found = True
+        assert concept_found == True
+
+    def test_institutions_x_concepts_id_alias_1(self, client):
+        res = client.get(
+            "/institutions?filter=concept.id:https://openalex.org/c185592680"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == self.count
+        concept_found = False
+        for concept in json_data["results"][0]["x_concepts"]:
+            if concept["id"] == "https://openalex.org/C185592680":
+                concept_found = True
+        assert concept_found == True
+
+    def test_institutions_x_concepts_id_alias_2(self, client):
+        res = client.get(
+            "/institutions?filter=concepts.id:https://openalex.org/c185592680"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == self.count
         concept_found = False
         for concept in json_data["results"][0]["x_concepts"]:
             if concept["id"] == "https://openalex.org/C185592680":
