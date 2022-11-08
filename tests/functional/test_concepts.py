@@ -2,7 +2,7 @@ class TestConceptsSearch:
     def test_concepts_search(self, client):
         res = client.get("/concepts?search=science")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 126
+        assert json_data["meta"]["count"] == 124
         assert "science" in json_data["results"][0]["display_name"].lower()
         for result in json_data["results"][:25]:
             assert (
@@ -28,21 +28,21 @@ class TestConceptsWorksCountFilter:
     def test_concepts_works_count_equal(self, client):
         res = client.get("/concepts?filter=works_count:850")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 5
+        assert json_data["meta"]["count"] == 1
         for result in json_data["results"][:25]:
             assert result["works_count"] == 850
 
     def test_concepts_works_count_greater_than(self, client):
         res = client.get("/concepts?filter=works_count:>200")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9982
+        assert json_data["meta"]["count"] == 9922
         for result in json_data["results"][:25]:
             assert result["works_count"] > 200
 
     def test_concepts_works_count_less_than(self, client):
         res = client.get("/concepts?filter=works_count:<200")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 14
+        assert json_data["meta"]["count"] == 74
         for result in json_data["results"][:25]:
             assert result["works_count"] < 200
 
@@ -58,21 +58,21 @@ class TestConceptsCitedByCountFilter:
     def test_concepts_cited_by_count_equal(self, client):
         res = client.get("/concepts?filter=cited_by_count:0")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1
+        assert json_data["meta"]["count"] == 4
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] == 0
 
     def test_concepts_cited_by_count_greater_than(self, client):
         res = client.get("/concepts?filter=cited_by_count:>20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9995
+        assert json_data["meta"]["count"] == 9992
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] > 20
 
     def test_concepts_cited_by_count_less_than(self, client):
         res = client.get("/concepts?filter=cited_by_count:<20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1
+        assert json_data["meta"]["count"] == 4
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] < 20
 
@@ -177,8 +177,8 @@ class TestConceptsMultipleIDs:
         )
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 2
-        assert json_data["results"][0]["id"] == "https://openalex.org/C86803240"
-        assert json_data["results"][1]["id"] == "https://openalex.org/C41008148"
+        assert json_data["results"][0]["id"] == "https://openalex.org/C41008148"
+        assert json_data["results"][1]["id"] == "https://openalex.org/C86803240"
 
     def test_concepts_wikidata_single_long(self, client):
         res = client.get(
@@ -205,9 +205,9 @@ class TestConceptsMultipleIDs:
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 2
         assert (
-            json_data["results"][0]["wikidata"] == "https://www.wikidata.org/wiki/Q420"
+            json_data["results"][0]["wikidata"]
+            == "https://www.wikidata.org/wiki/Q21198"
         )
         assert (
-            json_data["results"][1]["wikidata"]
-            == "https://www.wikidata.org/wiki/Q21198"
+            json_data["results"][1]["wikidata"] == "https://www.wikidata.org/wiki/Q420"
         )

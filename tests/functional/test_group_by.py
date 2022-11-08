@@ -74,10 +74,10 @@ class TestGroupByExternalIds:
         result2 = json_data["group_by"][1]
         assert result1["key"] == "true"
         assert result1["key_display_name"] == "true"
-        assert result1["count"] == 819
+        assert result1["count"] == 826
         assert result2["key"] == "false"
         assert result2["key_display_name"] == "false"
-        assert result2["count"] == 9181
+        assert result2["count"] == 9174
 
     def test_group_by_has_wikidata(self, client):
         res = client.get("/concepts?group-by=has_wikidata")

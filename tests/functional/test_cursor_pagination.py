@@ -13,12 +13,12 @@ class TestCursorPagination:
     def test_working_cursor(self, client):
         res1 = client.get("/concepts?cursor=*")
         json_data1 = res1.get_json()
-        assert json_data1["results"][0]["id"] == "https://openalex.org/C86803240"
+        assert json_data1["results"][0]["id"] == "https://openalex.org/C41008148"
         cursor = json_data1["meta"]["next_cursor"]
 
         res2 = client.get(f"/concepts?cursor={cursor}")
         json_data2 = res2.get_json()
-        assert json_data2["results"][0]["id"] == "https://openalex.org/C1862650"
+        assert json_data2["results"][0]["id"] == "https://openalex.org/C66938386"
 
     def test_invalid_cursor_different_sort_size(self, client):
         res1 = client.get("/concepts?cursor=IlswLjAsIDFdIg==&sort=display_name")

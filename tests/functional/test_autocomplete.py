@@ -5,7 +5,7 @@ class TestFullAutoComplete:
         first_object = json_data["results"][0]
         assert first_object["id"] == "https://openalex.org/C41008148"
         assert first_object["display_name"] == "Computer science"
-        assert first_object["cited_by_count"] == 116620134
+        assert first_object["cited_by_count"] == 389939670
         assert first_object["entity_type"] == "concept"
         assert first_object["external_id"] == "https://www.wikidata.org/wiki/Q21198"
 

@@ -215,29 +215,29 @@ class TestAuthorsContinentFilter:
     def test_authors_continent_europe(self, client):
         res = client.get("/authors?filter=last_known_institution.continent:Europe")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1600
+        assert json_data["meta"]["count"] == 1970
 
     def test_authors_continent_not_europe(self, client):
         res = client.get("/authors?filter=last_known_institution.continent:!Europe")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 8400
+        assert json_data["meta"]["count"] == 8030
 
     def test_authors_continent_europe_code(self, client):
         res = client.get("/authors?filter=last_known_institution.continent:Q46")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1600
+        assert json_data["meta"]["count"] == 1970
 
     def test_authors_continent_not_europe_code(self, client):
         res = client.get("/authors?filter=last_known_institution.continent:!Q46")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 8400
+        assert json_data["meta"]["count"] == 8030
 
     def test_authors_global_south_true(self, client):
         res = client.get("/authors?filter=last_known_institution.is_global_south:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 873
+        assert json_data["meta"]["count"] == 1205
 
     def test_authors_global_south_false(self, client):
         res = client.get("/authors?filter=last_known_institution.is_global_south:false")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9127
+        assert json_data["meta"]["count"] == 8795

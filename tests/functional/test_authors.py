@@ -2,6 +2,7 @@ class TestAuthorsSearch:
     def test_authors_search(self, client):
         res = client.get("/authors?search=jones")
         json_data = res.get_json()
+        assert json_data["meta"]["count"] > 0
         assert "jones" in json_data["results"][0]["display_name"].lower()
         for result in json_data["results"][:25]:
             assert "jones" in result["display_name"].lower()
@@ -9,6 +10,7 @@ class TestAuthorsSearch:
     def test_authors_search_display_name(self, client):
         res = client.get("/authors?filter=display_name.search:jones")
         json_data = res.get_json()
+        assert json_data["meta"]["count"] > 0
         assert "jones" in json_data["results"][0]["display_name"].lower()
         for result in json_data["results"][:25]:
             assert "jones" in result["display_name"].lower()
@@ -22,30 +24,30 @@ class TestAuthorsSearch:
 
 class TestAuthorWorksCountFilter:
     def test_authors_works_count_equal(self, client):
-        res = client.get("/authors?filter=works_count:850")
+        res = client.get("/authors?filter=works_count:50")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1
+        assert json_data["meta"]["count"] == 12
         for result in json_data["results"][:25]:
-            assert result["works_count"] == 850
+            assert result["works_count"] == 50
 
     def test_authors_works_count_greater_than(self, client):
         res = client.get("/authors?filter=works_count:>200")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 98
+        assert json_data["meta"]["count"] == 102
         for result in json_data["results"][:25]:
             assert result["works_count"] > 200
 
     def test_authors_works_count_less_than(self, client):
         res = client.get("/authors?filter=works_count:<200")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9900
+        assert json_data["meta"]["count"] == 9897
         for result in json_data["results"][:25]:
             assert result["works_count"] < 200
 
     def test_authors_works_count_range(self, client):
         res = client.get("/authors?filter=works_count:200-201")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 3
+        assert json_data["meta"]["count"] == 1
         for result in json_data["results"][:25]:
             assert result["works_count"] == 200 or result["works_count"] == 201
 
@@ -61,21 +63,21 @@ class TestAuthorsCitedByCountFilter:
     def test_authors_cited_by_count_equal(self, client):
         res = client.get("/authors?filter=cited_by_count:20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 42
+        assert json_data["meta"]["count"] == 34
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] == 20
 
     def test_authors_cited_by_count_greater_than(self, client):
         res = client.get("/authors?filter=cited_by_count:>20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 3040
+        assert json_data["meta"]["count"] == 3005
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] > 20
 
     def test_authors_cited_by_count_less_than(self, client):
         res = client.get("/authors?filter=cited_by_count:<20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 6918
+        assert json_data["meta"]["count"] == 6961
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] < 20
 
@@ -138,7 +140,7 @@ class TestAuthorsLastKnownInstitution:
 
 
 class TestAuthorsXConceptsID:
-    count = 3130
+    count = 3227
 
     def test_authors_x_concepts_id_short(self, client):
         res = client.get("/authors?filter=x_concepts.id:c185592680")
@@ -187,16 +189,16 @@ class TestAuthorsExternalIDs:
     def test_authors_has_orcid_true(self, client):
         res = client.get("/authors?filter=has_orcid:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 819
+        assert json_data["meta"]["count"] == 826
         for result in json_data["results"][:25]:
             assert result["ids"]["orcid"] is not None
 
     def test_authors_has_orcid_false(self, client):
         res = client.get("/authors?filter=has_orcid:false")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9181
+        assert json_data["meta"]["count"] == 9174
         for result in json_data["results"][:25]:
-            assert result["ids"]["orcid"] is None
+            assert "orcid" not in result["ids"] or result["ids"]["orcid"] is None
 
     def test_authors_has_orcid_error(self, client):
         res = client.get("/authors?filter=has_orcid:stt")
