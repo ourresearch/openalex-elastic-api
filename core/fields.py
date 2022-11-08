@@ -461,6 +461,10 @@ class TermField(Field):
         elif self.param == "host_venue.license":
             kwargs = {self.es_field(): self.value.lower()}
             q = Q("term", **kwargs)
+        elif self.param == "host_venue.version":
+            version = self.validate_version()
+            kwargs = {self.es_field(): version}
+            q = Q("term", **kwargs)
         elif "continent" in self.param:
             country_codes = self.get_country_codes()
             kwargs = {self.es_field(): country_codes}

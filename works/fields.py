@@ -101,6 +101,7 @@ fields = [
     TermField(param="host_venue.issn"),
     TermField(param="host_venue.license", custom_es_field="host_venue.license"),
     TermField(param="host_venue.type", custom_es_field="host_venue.type"),
+    TermField(param="host_venue.version", custom_es_field="host_venue.version"),
     TermField(
         param="institutions.country_code",
         alias="authorships.institutions.country_code",

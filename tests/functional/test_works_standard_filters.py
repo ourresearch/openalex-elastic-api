@@ -134,6 +134,43 @@ class TestWorksHostVenueFilters:
         assert json_data["results"][0]["host_venue"]["publisher"] == "Elsevier BV"
         assert res.status_code == 200
 
+    def test_works_host_venue_version_published(self, client):
+        res = client.get("/works?filter=host_venue.version:publishedversion")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 639
+        for result in json_data["results"]:
+            assert result["host_venue"]["version"] == "publishedVersion"
+
+    def test_works_host_venue_version_submitted(self, client):
+        res = client.get("/works?filter=host_venue.version:submittedversion")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 124
+        for result in json_data["results"]:
+            assert result["host_venue"]["version"] == "submittedVersion"
+
+    def test_works_host_venue_version_accepted(self, client):
+        res = client.get("/works?filter=host_venue.version:acceptedversion")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 15
+        for result in json_data["results"]:
+            assert result["host_venue"]["version"] == "acceptedVersion"
+
+    def test_works_host_venue_version_null(self, client):
+        res = client.get("/works?filter=host_venue.version:null")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9222
+        for result in json_data["results"]:
+            assert result["host_venue"]["version"] is None
+
+    def test_works_host_venue_version_error(self, client):
+        res = client.get("/works?filter=host_venue.version:accepted")
+        json_data = res.get_json()
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"]
+            == "Value for host_venue.version must be one of null, acceptedVersion, submittedVersion, publishedVersion."
+        )
+
 
 class TestWorksTypeFilter:
     def test_works_type(self, client):

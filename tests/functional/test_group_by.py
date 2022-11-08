@@ -174,3 +174,25 @@ class TestGroupByVersion:
                 "count": 18,
             },
         ]
+
+    def test_group_by_host_venue_version(self, client):
+        res = client.get("/works?group-by=host_venue.version")
+        json_data = res.get_json()
+        assert json_data["group_by"] == [
+            {"key": "unknown", "key_display_name": "unknown", "count": 9222},
+            {
+                "key": "publishedVersion",
+                "key_display_name": "publishedVersion",
+                "count": 639,
+            },
+            {
+                "key": "submittedVersion",
+                "key_display_name": "submittedVersion",
+                "count": 124,
+            },
+            {
+                "key": "acceptedVersion",
+                "key_display_name": "acceptedVersion",
+                "count": 15,
+            },
+        ]
