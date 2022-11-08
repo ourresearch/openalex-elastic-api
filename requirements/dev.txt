@@ -1,10 +1,10 @@
 -r prod.txt
 
 # Testing
-pytest==7.1.2
+pytest==7.2.0
 
 # Lint and code style
-black==22.3.0
+black==22.10.0
 isort==5.10.1
 
 # Load testing
