@@ -24,6 +24,7 @@ fields = [
     SearchField(param="display_name.search"),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="issn"),
+    TermField(param="type"),
 ]
 
 fields_dict = {f.param: f for f in fields}
