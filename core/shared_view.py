@@ -209,7 +209,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         result["group_by"] = []
         result["results"] = response
 
-    if index_name.startswith("works"):
+    if index_name.startswith("works") and per_page > 25:
         handle_high_author_count(response)
 
     if "q" in request.args:
