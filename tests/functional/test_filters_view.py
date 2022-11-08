@@ -50,12 +50,12 @@ class TestFiltersView:
         assert filter_1["key"] == "display_name.search"
         assert filter_1["is_negated"] == False
         assert filter_1["values"][0]["display_name"] == "science"
-        assert filter_1["values"][0]["count"] == 2
+        assert filter_1["values"][0]["count"] == 42
         filter_2 = json_data["filters"][1]
         assert filter_2["key"] == "oa_status"
         assert filter_2["is_negated"] == True
         assert filter_2["values"][0]["display_name"] == "gold"
-        assert filter_2["values"][0]["count"] == 2
+        assert filter_2["values"][0]["count"] == 42
 
     def test_filter_convert_id(self, client):
         res = client.get("/works/filters/host_venue.id:V90590500")
