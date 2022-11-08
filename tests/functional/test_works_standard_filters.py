@@ -155,6 +155,13 @@ class TestWorksHostVenueFilters:
         for result in json_data["results"]:
             assert result["host_venue"]["version"] == "acceptedVersion"
 
+    def test_works_host_venue_version_not(self, client):
+        res = client.get("/works?filter=host_venue.version:!publishedversion")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9361
+        for result in json_data["results"]:
+            assert result["host_venue"]["version"] != "publishedVersion"
+
     def test_works_host_venue_version_null(self, client):
         res = client.get("/works?filter=host_venue.version:null")
         json_data = res.get_json()

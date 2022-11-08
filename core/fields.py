@@ -452,6 +452,10 @@ class TermField(Field):
                 kwargs1 = {"host_venue.version": version}
                 kwargs2 = {"alternate_host_venues.version": version}
                 q = ~(Q("term", **kwargs1) | Q("term", **kwargs2))
+            elif self.param == "host_venue.version":
+                version = self.validate_version()
+                kwargs = {"host_venue.version": version}
+                q = ~Q("term", **kwargs)
             else:
                 q = ~Q("term", **kwargs)
             return q
