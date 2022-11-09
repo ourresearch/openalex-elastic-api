@@ -32,7 +32,7 @@ class TestGroupByNameKey:
         result = json_data["group_by"][0]
         assert result["key"] == "unknown"
         assert result["key_display_name"] == "unknown"
-        assert result["count"] == 7300
+        assert result["count"] == 3376
 
     def test_group_by_known_filter(self, client):
         res = client.get("/works?group-by=host_venue.id:known")
@@ -61,9 +61,9 @@ class TestGroupByNameKey:
         res = client.get("/works?group-by=host_venue.id")
         json_data = res.get_json()
         result = json_data["group_by"][4]
-        assert result["key"] == "https://openalex.org/V25293849"
-        assert result["key_display_name"] == "The FASEB Journal"
-        assert result["count"] == 18
+        assert result["key"] == "https://openalex.org/V106296714"
+        assert result["key_display_name"] == None
+        assert result["count"] == 47
 
 
 class TestGroupByExternalIds:
@@ -122,10 +122,10 @@ class TestGroupByExternalIds:
         result2 = json_data["group_by"][1]
         assert result1["key"] == "true"
         assert result1["key_display_name"] == "true"
-        assert result1["count"] == 3627
+        assert result1["count"] == 3718
         assert result2["key"] == "false"
         assert result2["key_display_name"] == "false"
-        assert result2["count"] == 6373
+        assert result2["count"] == 6282
 
     def test_group_by_has_pmid(self, client):
         res = client.get("/works?group-by=has_pmid")
@@ -134,10 +134,10 @@ class TestGroupByExternalIds:
         result2 = json_data["group_by"][1]
         assert result1["key"] == "true"
         assert result1["key_display_name"] == "true"
-        assert result1["count"] == 987
+        assert result1["count"] == 998
         assert result2["key"] == "false"
         assert result2["key_display_name"] == "false"
-        assert result2["count"] == 9013
+        assert result2["count"] == 9002
 
     def test_group_by_has_pmcid(self, client):
         res = client.get("/works?group-by=has_pmcid")
@@ -146,10 +146,10 @@ class TestGroupByExternalIds:
         result2 = json_data["group_by"][1]
         assert result1["key"] == "true"
         assert result1["key_display_name"] == "true"
-        assert result1["count"] == 9
+        assert result1["count"] == 247
         assert result2["key"] == "false"
         assert result2["key_display_name"] == "false"
-        assert result2["count"] == 9991
+        assert result2["count"] == 9753
 
 
 class TestGroupByVersion:
@@ -157,21 +157,21 @@ class TestGroupByVersion:
         res = client.get("/works?group-by=version")
         json_data = res.get_json()
         assert json_data["group_by"] == [
-            {"key": "null", "key_display_name": "null", "count": 9216},
+            {"key": "null", "key_display_name": "null", "count": 8910},
             {
                 "key": "publishedVersion",
                 "key_display_name": "publishedVersion",
-                "count": 640,
+                "count": 881,
             },
             {
                 "key": "submittedVersion",
                 "key_display_name": "submittedVersion",
-                "count": 179,
+                "count": 354,
             },
             {
                 "key": "acceptedVersion",
                 "key_display_name": "acceptedVersion",
-                "count": 18,
+                "count": 61,
             },
         ]
 
@@ -179,20 +179,20 @@ class TestGroupByVersion:
         res = client.get("/works?group-by=host_venue.version")
         json_data = res.get_json()
         assert json_data["group_by"] == [
-            {"key": "unknown", "key_display_name": "unknown", "count": 9222},
+            {"key": "unknown", "key_display_name": "unknown", "count": 8992},
             {
                 "key": "publishedVersion",
                 "key_display_name": "publishedVersion",
-                "count": 639,
+                "count": 866,
             },
             {
                 "key": "submittedVersion",
                 "key_display_name": "submittedVersion",
-                "count": 124,
+                "count": 115,
             },
             {
                 "key": "acceptedVersion",
                 "key_display_name": "acceptedVersion",
-                "count": 15,
+                "count": 27,
             },
         ]

@@ -5,67 +5,67 @@ class TestWorksContinentsFilters:
     def test_works_continent_africa(self, client):
         res = client.get("/works?filter=institutions.continent:africa")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 58
+        assert json_data["meta"]["count"] == 72
 
     def test_works_continent_not_africa(self, client):
         res = client.get("/works?filter=institutions.continent:!africa")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9942
+        assert json_data["meta"]["count"] == 9928
 
     def test_works_continent_africa_code_lower(self, client):
         res = client.get("/works?filter=authorships.institutions.continent:q15")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 58
+        assert json_data["meta"]["count"] == 72
 
     def test_works_continent_not_africa_code(self, client):
         res = client.get("/works?filter=authorships.institutions.continent:!Q15")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9942
+        assert json_data["meta"]["count"] == 9928
 
     def test_works_continent_africa_code_upper(self, client):
         res = client.get("/works?filter=institutions.continent:Q15")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 58
+        assert json_data["meta"]["count"] == 72
 
     def test_works_continent_asia(self, client):
         res = client.get("/works?filter=authorships.institutions.continent:asia")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 567
+        assert json_data["meta"]["count"] == 659
 
     def test_works_continent_asia_alias_1(self, client):
         res = client.get("/works?filter=institutions.continent:asia")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 567
+        assert json_data["meta"]["count"] == 659
 
     def test_works_continent_europe_mixed_case(self, client):
         res = client.get("/works?filter=institutions.continent:EuropE")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 881
+        assert json_data["meta"]["count"] == 1027
 
     def test_works_continent_europe_code(self, client):
         res = client.get("/works?filter=institutions.continent:Q46")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 881
+        assert json_data["meta"]["count"] == 1027
 
     def test_works_continent_north_america(self, client):
         res = client.get("/works?filter=institutions.continent:north_america")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 924
+        assert json_data["meta"]["count"] == 925
 
     def test_works_continent_north_america_code(self, client):
         res = client.get("/works?filter=institutions.continent:Q49")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 924
+        assert json_data["meta"]["count"] == 925
 
     def test_works_continent_oceania(self, client):
         res = client.get("/works?filter=institutions.continent:ocEania")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 79
+        assert json_data["meta"]["count"] == 80
 
     def test_works_continent_oceania_code(self, client):
         res = client.get("/works?filter=institutions.continent:q55643&per-page=50")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 79
+        assert json_data["meta"]["count"] == 80
         # ensure every work has at least one author institution in Oceania
         oceania_country_codes = [
             c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Oceania"]
@@ -82,12 +82,12 @@ class TestWorksContinentsFilters:
     def test_works_continent_south_america(self, client):
         res = client.get("/works?filter=institutions.continent:south_america")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 106
+        assert json_data["meta"]["count"] == 121
 
     def test_works_continent_south_america_code(self, client):
         res = client.get("/works?filter=institutions.continent:Q18")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 106
+        assert json_data["meta"]["count"] == 121
 
 
 class TestWorksGlobalSouthFilter:
@@ -96,7 +96,7 @@ class TestWorksGlobalSouthFilter:
             "/works?filter=authorships.institutions.is_global_south:true&per-page=50"
         )
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 524
+        assert json_data["meta"]["count"] == 632
         # ensure every work has at least one author institution in Oceania
         global_south_country_codes = [
             c["country_code"] for c in countries.GLOBAL_SOUTH_COUNTRIES
@@ -113,12 +113,12 @@ class TestWorksGlobalSouthFilter:
     def test_works_global_south_alias_1(self, client):
         res = client.get("/works?filter=institutions.is_global_south:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 524
+        assert json_data["meta"]["count"] == 632
 
     def test_works_global_south_false(self, client):
         res = client.get("/works?filter=institutions.is_global_south:False")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9476
+        assert json_data["meta"]["count"] == 9368
 
 
 class TestWorksContinentsGroupBy:
@@ -127,9 +127,9 @@ class TestWorksContinentsGroupBy:
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 8
         assert json_data["group_by"][1] == {
-            "key": "Q49",
-            "key_display_name": "North America",
-            "count": 924,
+            "key": "Q46",
+            "key_display_name": "Europe",
+            "count": 1027,
         }
 
     def test_works_continent_group_by_alias_1(self, client):
@@ -137,9 +137,9 @@ class TestWorksContinentsGroupBy:
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 8
         assert json_data["group_by"][1] == {
-            "key": "Q49",
-            "key_display_name": "North America",
-            "count": 924,
+            "key": "Q46",
+            "key_display_name": "Europe",
+            "count": 1027,
         }
 
 
@@ -149,8 +149,8 @@ class TestWorksGlobalSouthGroupBy:
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 2
         assert json_data["group_by"] == [
-            {"key": "true", "key_display_name": "true", "count": 524},
-            {"key": "false", "key_display_name": "false", "count": 9701},
+            {"key": "true", "key_display_name": "true", "count": 632},
+            {"key": "false", "key_display_name": "false", "count": 9615},
         ]
 
     def test_works_global_south_group_by_alias_1(self, client):
@@ -158,8 +158,8 @@ class TestWorksGlobalSouthGroupBy:
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 2
         assert json_data["group_by"] == [
-            {"key": "true", "key_display_name": "true", "count": 524},
-            {"key": "false", "key_display_name": "false", "count": 9701},
+            {"key": "true", "key_display_name": "true", "count": 632},
+            {"key": "false", "key_display_name": "false", "count": 9615},
         ]
 
 

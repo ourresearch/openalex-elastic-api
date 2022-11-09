@@ -2,7 +2,7 @@ class TestWorksHasFilters:
     def test_works_has_references(self, client):
         res = client.get("/works?filter=has_references:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 2690
+        assert json_data["meta"]["count"] == 2770
 
     def test_works_has_references_error(self, client):
         res = client.get("/works?filter=has_references:null")
@@ -19,38 +19,38 @@ class TestWorksUniqueOAFilters:
     def test_works_has_oa_accepted_or_published_version_true(self, client):
         res = client.get("/works?filter=has_oa_accepted_or_published_version:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 656
+        assert json_data["meta"]["count"] == 924
 
     def test_works_has_oa_accepted_or_published_version_false(self, client):
         res = client.get("/works?filter=has_oa_accepted_or_published_version:false")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9344
+        assert json_data["meta"]["count"] == 9076
 
     def test_works_has_oa_submitted_version_true(self, client):
         res = client.get("/works?filter=has_oa_submitted_version:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 179
+        assert json_data["meta"]["count"] == 354
 
     def test_works_has_oa_submitted_version_false(self, client):
         res = client.get("/works?filter=has_oa_submitted_version:false")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9821
+        assert json_data["meta"]["count"] == 9646
 
 
 class TestWorksExternalIDs:
     def test_works_has_doi_true(self, client):
         res = client.get("/works?filter=has_doi:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 3627
+        assert json_data["meta"]["count"] == 3718
         for result in json_data["results"][:25]:
             assert result["ids"]["doi"] is not None
 
     def test_works_has_doi_false(self, client):
         res = client.get("/works?filter=has_doi:false")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 6373
+        assert json_data["meta"]["count"] == 6282
         for result in json_data["results"][:25]:
-            assert result["ids"]["doi"] is None
+            assert "doi" not in result["ids"] or result["ids"]["doi"] is None
 
     def test_venues_has_doi_error(self, client):
         res = client.get("/works?filter=has_doi:stt")
@@ -63,28 +63,28 @@ class TestWorksExternalIDs:
     def test_works_has_pmid_true(self, client):
         res = client.get("/works?filter=has_pmid:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 987
+        assert json_data["meta"]["count"] == 998
         for result in json_data["results"][:25]:
             assert result["ids"]["pmid"] is not None
 
     def test_works_has_pmid_false(self, client):
         res = client.get("/works?filter=has_pmid:false")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9013
+        assert json_data["meta"]["count"] == 9002
         for result in json_data["results"][:25]:
             assert "pmid" not in result["ids"]
 
     def test_works_has_pmcid_true(self, client):
         res = client.get("/works?filter=has_pmcid:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9
+        assert json_data["meta"]["count"] == 247
         for result in json_data["results"][:25]:
             assert result["ids"]["pmcid"] is not None
 
     def test_works_has_pmcid_false(self, client):
         res = client.get("/works?filter=has_pmcid:false")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9991
+        assert json_data["meta"]["count"] == 9753
         for result in json_data["results"][:25]:
             assert "pmcid" not in result["ids"]
 
@@ -93,7 +93,7 @@ class TestWorksVersionFilters:
     def test_works_version_accepted_version(self, client):
         res = client.get("/works?filter=version:acceptedversion")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 18
+        assert json_data["meta"]["count"] == 61
         for result in json_data["results"]:
             found = False
             if (
@@ -109,7 +109,7 @@ class TestWorksVersionFilters:
     def test_works_version_submitted_version(self, client):
         res = client.get("/works?filter=version:submittedversion")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 179
+        assert json_data["meta"]["count"] == 354
         for result in json_data["results"]:
             found = False
             if (
@@ -125,7 +125,7 @@ class TestWorksVersionFilters:
     def test_works_version_published_version(self, client):
         res = client.get("/works?filter=version:publishedversion")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 640
+        assert json_data["meta"]["count"] == 881
         for result in json_data["results"]:
             found = False
             if (
@@ -141,7 +141,7 @@ class TestWorksVersionFilters:
     def test_works_version_null(self, client):
         res = client.get("/works?filter=version:null")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9216
+        assert json_data["meta"]["count"] == 8910
         for result in json_data["results"]:
             found = False
             if (
@@ -157,7 +157,7 @@ class TestWorksVersionFilters:
     def test_works_version_not_null(self, client):
         res = client.get("/works?filter=version:!null")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 784
+        assert json_data["meta"]["count"] == 1090
         for result in json_data["results"]:
             found = False
             if (
@@ -173,7 +173,7 @@ class TestWorksVersionFilters:
     def test_works_version_not_published_version(self, client):
         res = client.get("/works?filter=version:!publishedversion")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9360
+        assert json_data["meta"]["count"] == 9119
         for result in json_data["results"]:
             found = False
             if (

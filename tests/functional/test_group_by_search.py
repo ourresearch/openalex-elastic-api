@@ -14,9 +14,9 @@ class TestGroupBySearch:
         res = client.get("/works?group-by=institutions.id&q=har")
         json_data = res.get_json()
         first_result = json_data["group_by"][0]
-        assert len(json_data["group_by"]) == 3
+        assert len(json_data["group_by"]) == 2
         assert first_result == {
             "key": "https://openalex.org/I136199984",
             "key_display_name": "Harvard University",
-            "count": 21,
+            "count": 15,
         }

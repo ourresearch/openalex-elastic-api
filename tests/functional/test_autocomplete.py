@@ -46,14 +46,17 @@ class TestEntitiesAutoComplete:
         res = client.get("/autocomplete/works?q=list")
         json_data = res.get_json()
         first_object = json_data["results"][0]
-        assert first_object["id"] == "https://openalex.org/W121243"
+        assert first_object["id"] == "https://openalex.org/W49131"
         assert (
             first_object["display_name"]
-            == "Cytoskeletal Mechanics: List of Contributors"
+            == "Comparison of Four Commercial DNA Extraction Kits for PCR Detection of Listeria monocytogenes, Salmonella, Escherichia coli O157:H7, and Staphylococcus aureus in Fresh, Minimally Processed Vegetables"
         )
-        assert first_object["cited_by_count"] == 71
+        assert first_object["cited_by_count"] == 31
         assert first_object["entity_type"] == "work"
-        assert first_object["external_id"] == "https://doi.org/10.1017/cbo9780511607318"
+        assert (
+            first_object["external_id"]
+            == "https://doi.org/10.4315/0362-028x-71.10.2110"
+        )
 
         for result in json_data["results"][:25]:
             assert "list" in result["display_name"].lower()
@@ -202,10 +205,7 @@ class TestAutocompleteIdDetection:
         res = client.get("/autocomplete/works?q=W37005")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
-        assert (
-            json_data["results"][0]["display_name"]
-            == "Parkinson's disease. First of two parts."
-        )
+        assert json_data["results"][0]["display_name"] == "Parkinson's Disease"
 
     def test_works_doi(self, client):
         res = client.get(
@@ -213,19 +213,13 @@ class TestAutocompleteIdDetection:
         )
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
-        assert (
-            json_data["results"][0]["display_name"]
-            == "Parkinson's disease. First of two parts."
-        )
+        assert json_data["results"][0]["display_name"] == "Parkinson's Disease"
 
     def test_works_doi_urn(self, client):
         res = client.get("/autocomplete/works?q=doi:10.1056/nejm199810083391506")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
-        assert (
-            json_data["results"][0]["display_name"]
-            == "Parkinson's disease. First of two parts."
-        )
+        assert json_data["results"][0]["display_name"] == "Parkinson's Disease"
 
     def test_full_autocomplete_wikidata(self, client):
         res = client.get("/autocomplete?q=https://www.wikidata.org/wiki/Q420")
@@ -249,16 +243,10 @@ class TestAutocompleteIdDetection:
         res = client.get("/autocomplete?q=W37005")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
-        assert (
-            json_data["results"][0]["display_name"]
-            == "Parkinson's disease. First of two parts."
-        )
+        assert json_data["results"][0]["display_name"] == "Parkinson's Disease"
 
     def test_full_autocomplete_doi(self, client):
         res = client.get("/autocomplete?q=https://doi.org/10.1056/nejm199810083391506")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
-        assert (
-            json_data["results"][0]["display_name"]
-            == "Parkinson's disease. First of two parts."
-        )
+        assert json_data["results"][0]["display_name"] == "Parkinson's Disease"

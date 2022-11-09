@@ -9,14 +9,14 @@ class TestWorksPublicationYearFilter:
     def test_works_publication_year_greater_than(self, client):
         res = client.get("/works?filter=publication_year:>2020")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 7
+        assert json_data["meta"]["count"] == 12
         for result in json_data["results"][:25]:
             assert result["publication_year"] > 2020
 
     def test_works_publication_year_less_than(self, client):
         res = client.get("/works?filter=publication_year:<2020")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9966
+        assert json_data["meta"]["count"] == 9961
         for result in json_data["results"][:25]:
             assert result["publication_year"] < 2020
 
@@ -41,17 +41,17 @@ class TestWorksPublicationDateFilter:
     def test_works_publication_date_greater_than(self, client):
         res = client.get("/works?filter=publication_date:>2020-01-01")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 30
+        assert json_data["meta"]["count"] == 35
         assert json_data["results"][0]["id"] == "https://openalex.org/W2894709482"
-        assert json_data["results"][0]["cited_by_count"] == 26
+        assert json_data["results"][0]["cited_by_count"] == 27
         assert res.status_code == 200
 
     def test_works_publication_date_less_than(self, client):
         res = client.get("/works?filter=publication_date:<2020-01-01")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9966
-        assert json_data["results"][0]["id"] == "https://openalex.org/W127786"
-        assert json_data["results"][0]["cited_by_count"] == 1864
+        assert json_data["meta"]["count"] == 9961
+        assert json_data["results"][0]["id"] == "https://openalex.org/W37005"
+        assert json_data["results"][0]["cited_by_count"] == 1768
         assert res.status_code == 200
 
     def test_works_from_to_publication_date(self, client):
@@ -104,11 +104,11 @@ class TestWorksHostVenueFilters:
             assert "2332-7790" in result["host_venue"]["issn"]
 
     def test_works_host_venue_publisher_single(self, client):
-        res = client.get("/works?filter=host_venue.publisher:ElseVier Bv")
+        res = client.get("/works?filter=host_venue.publisher:ElseVier")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 36
+        assert json_data["meta"]["count"] == 459
         for result in json_data["results"]:
-            assert result["host_venue"]["publisher"] == "Elsevier BV"
+            assert result["host_venue"]["publisher"] == "Elsevier"
 
     def test_works_host_venue_id_short(self, client):
         res = client.get("/works?filter=host_venue.id:v2898264183")
@@ -119,7 +119,7 @@ class TestWorksHostVenueFilters:
             json_data["results"][0]["host_venue"]["display_name"]
             == "Health Professions Education"
         )
-        assert json_data["results"][0]["host_venue"]["publisher"] == "Elsevier BV"
+        assert json_data["results"][0]["host_venue"]["publisher"] == "Elsevier"
         assert res.status_code == 200
 
     def test_works_host_venue_id_long(self, client):
@@ -131,41 +131,41 @@ class TestWorksHostVenueFilters:
             json_data["results"][0]["host_venue"]["display_name"]
             == "Health Professions Education"
         )
-        assert json_data["results"][0]["host_venue"]["publisher"] == "Elsevier BV"
+        assert json_data["results"][0]["host_venue"]["publisher"] == "Elsevier"
         assert res.status_code == 200
 
     def test_works_host_venue_version_published(self, client):
         res = client.get("/works?filter=host_venue.version:publishedversion")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 639
+        assert json_data["meta"]["count"] == 866
         for result in json_data["results"]:
             assert result["host_venue"]["version"] == "publishedVersion"
 
     def test_works_host_venue_version_submitted(self, client):
         res = client.get("/works?filter=host_venue.version:submittedversion")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 124
+        assert json_data["meta"]["count"] == 115
         for result in json_data["results"]:
             assert result["host_venue"]["version"] == "submittedVersion"
 
     def test_works_host_venue_version_accepted(self, client):
         res = client.get("/works?filter=host_venue.version:acceptedversion")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 15
+        assert json_data["meta"]["count"] == 27
         for result in json_data["results"]:
             assert result["host_venue"]["version"] == "acceptedVersion"
 
     def test_works_host_venue_version_not(self, client):
         res = client.get("/works?filter=host_venue.version:!publishedversion")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9361
+        assert json_data["meta"]["count"] == 9134
         for result in json_data["results"]:
             assert result["host_venue"]["version"] != "publishedVersion"
 
     def test_works_host_venue_version_null(self, client):
         res = client.get("/works?filter=host_venue.version:null")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9222
+        assert json_data["meta"]["count"] == 8992
         for result in json_data["results"]:
             assert result["host_venue"]["version"] is None
 
@@ -183,7 +183,7 @@ class TestWorksTypeFilter:
     def test_works_type(self, client):
         res = client.get("/works?filter=type:journAl-arTicle")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 2884
+        assert json_data["meta"]["count"] == 2931
         for result in json_data["results"][:25]:
             assert result["type"] == "journal-article"
 
@@ -192,14 +192,14 @@ class TestWorksBooleanFilters:
     def test_works_is_paratext(self, client):
         res = client.get("/works?filter=is_paratext:False")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 3332
+        assert json_data["meta"]["count"] == 3489
         for result in json_data["results"][:25]:
             assert result["is_paratext"] == False
 
     def test_works_is_oa(self, client):
         res = client.get("/works?filter=is_oa:tRue")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 7709
+        assert json_data["meta"]["count"] == 1092
         for result in json_data["results"][:25]:
             assert result["open_access"]["is_oa"] == True
 
@@ -314,7 +314,7 @@ class TestWorksInstitutionsFilters:
     def test_works_institutions_country_code(self, client):
         res = client.get("/works?filter=institutions.country_code:de")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 198
+        assert json_data["meta"]["count"] == 231
         assert (
             json_data["results"][0]["authorships"][0]["institutions"][0]["country_code"]
             == "DE"
@@ -323,10 +323,10 @@ class TestWorksInstitutionsFilters:
     def test_works_institutions_type(self, client):
         res = client.get("/works?filter=institutions.type:Education")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 2030
+        assert json_data["meta"]["count"] == 2010
         assert (
             json_data["results"][0]["authorships"][0]["institutions"][0]["type"]
-            == "education"
+            == "healthcare"
         )
 
 
@@ -334,35 +334,35 @@ class TestWorksCitedByCountFilter:
     def test_works_cited_by_count_equal(self, client):
         res = client.get("/works?filter=cited_by_count:20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 25
+        assert json_data["meta"]["count"] == 18
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] == 20
 
     def test_works_cited_by_count_greater_than(self, client):
         res = client.get("/works?filter=cited_by_count:>20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 432
+        assert json_data["meta"]["count"] == 374
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] > 20
 
     def test_works_cited_by_count_less_than(self, client):
         res = client.get("/works?filter=cited_by_count:<20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9543
+        assert json_data["meta"]["count"] == 9608
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] < 20
 
     def test_works_cited_by_count_less_than_hyphen(self, client):
         res = client.get("/works?filter=cited-by-count:<20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9543
+        assert json_data["meta"]["count"] == 9608
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] < 20
 
     def test_works_cited_by_count_range(self, client):
         res = client.get("/works?filter=cited-by-count:20-21")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 51
+        assert json_data["meta"]["count"] == 43
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] == 20 or result["cited_by_count"] == 21
 
@@ -547,7 +547,7 @@ class TestWorksNotFilter:
         """Tests ! filter for term field."""
         res = client.get("/works?filter=oa_status:!closed")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 7709
+        assert json_data["meta"]["count"] == 7605
         for result in json_data["results"][:50]:
             assert result["open_access"]["oa_status"] != "closed"
 
