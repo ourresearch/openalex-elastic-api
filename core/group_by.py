@@ -566,6 +566,8 @@ def validate_group_by(field):
             and field.param != "level"
             and field.param != "publication_year"
             and field.param != "works_count"
+            and field.param != "authors_count"
+            and field.param != "concepts_count"
         )
         or type(field).__name__ == "SearchField"
     ):

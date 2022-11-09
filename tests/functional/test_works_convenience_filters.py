@@ -294,9 +294,14 @@ class TestWorksAuthorsCount:
     def test_works_authors_count_group_by(self, client):
         res = client.get("/works?group_by=authors_count")
         json_data = res.get_json()
-        assert res.status_code == 403
-        assert json_data["error"] == "Invalid query parameters error."
-        assert json_data["message"] == "Cannot group by date, number, or search fields."
+        result1 = json_data["group_by"][0]
+        result2 = json_data["group_by"][1]
+        assert result1["key"] == "1"
+        assert result1["key_display_name"] == "1"
+        assert result1["count"] == 5174
+        assert result2["key"] == "2"
+        assert result2["key_display_name"] == "2"
+        assert result2["count"] == 1763
 
 
 class TestWorksConceptsCount:
@@ -322,6 +327,11 @@ class TestWorksConceptsCount:
     def test_works_concepts_count_group_by(self, client):
         res = client.get("/works?group_by=concepts_count")
         json_data = res.get_json()
-        assert res.status_code == 403
-        assert json_data["error"] == "Invalid query parameters error."
-        assert json_data["message"] == "Cannot group by date, number, or search fields."
+        result1 = json_data["group_by"][0]
+        result2 = json_data["group_by"][1]
+        assert result1["key"] == "1"
+        assert result1["key_display_name"] == "1"
+        assert result1["count"] == 1930
+        assert result2["key"] == "3"
+        assert result2["key_display_name"] == "3"
+        assert result2["count"] == 918
