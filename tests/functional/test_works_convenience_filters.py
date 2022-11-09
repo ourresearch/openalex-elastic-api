@@ -269,3 +269,59 @@ class TestWorksRepositoryFilter:
             json_data["filters"][0]["values"][0]["display_name"]
             == "Geographie Physique Et Quaternaire"
         )
+
+
+class TestWorksAuthorsCount:
+    def test_works_authors_count_exact(self, client):
+        res = client.get("/works?filter=authors_count:1")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 5174
+        for result in json_data["results"]:
+            assert len(result["authorships"]) == 1
+
+    def test_works_authors_count_lt(self, client):
+        res = client.get("/works?filter=authors_count:<5")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 8763
+        for result in json_data["results"]:
+            assert len(result["authorships"]) < 5
+
+    def test_works_authors_count_null(self, client):
+        res = client.get("/works?filter=authors_count:null")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 8
+
+    def test_works_authors_count_group_by(self, client):
+        res = client.get("/works?group_by=authors_count")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"] == "Cannot group by date, number, or search fields."
+
+
+class TestWorksConceptsCount:
+    def test_works_concepts_count_exact(self, client):
+        res = client.get("/works?filter=concepts_count:1")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1930
+        for result in json_data["results"]:
+            assert len(result["concepts"]) == 1
+
+    def test_works_concepts_count_lt(self, client):
+        res = client.get("/works?filter=concepts_count:<5")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 4294
+        for result in json_data["results"]:
+            assert len(result["concepts"]) < 5
+
+    def test_works_concepts_count_null(self, client):
+        res = client.get("/works?filter=concepts_count:null")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 8
+
+    def test_works_concepts_count_group_by(self, client):
+        res = client.get("/works?group_by=concepts_count")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"] == "Cannot group by date, number, or search fields."

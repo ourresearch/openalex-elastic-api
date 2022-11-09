@@ -132,3 +132,9 @@ class TestFiltersView:
             filter_2["values"][0]["url"]
             == "http://localhost/works?filter=display_name.search:the,concepts.id:C556758197"
         )
+
+    def test_filter_url_with_authors_count(self, client):
+        res = client.get("/works/filters/authors_count:1")
+        json_data = res.get_json()
+        filter_1 = json_data["filters"][0]
+        assert filter_1["values"][0]["count"] == 5174
