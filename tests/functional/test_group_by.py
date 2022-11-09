@@ -47,15 +47,15 @@ class TestGroupByNameKey:
         result1 = json_data["group_by"][0]
         assert result1["key"] == "false"
         assert result1["key_display_name"] == "false"
-        assert result1["count"] == 6771
+        assert result1["count"] == 6767
         result2 = json_data["group_by"][1]
         assert result2["key"] == "unknown"
         assert result2["key_display_name"] == "unknown"
-        assert result2["count"] == 1892
+        assert result2["count"] == 1882
         result3 = json_data["group_by"][2]
         assert result3["key"] == "true"
         assert result3["key_display_name"] == "true"
-        assert result3["count"] == 1337
+        assert result3["count"] == 1351
 
     def test_group_by_name_key(self, client):
         res = client.get("/works?group-by=host_venue.id")

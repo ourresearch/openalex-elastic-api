@@ -2,6 +2,7 @@ class TestInstitutionsSearch:
     def test_institutions_search(self, client):
         res = client.get("/institutions?search=university")
         json_data = res.get_json()
+        assert json_data["meta"]["count"] > 0
         assert "university" in json_data["results"][0]["display_name"].lower()
         for result in json_data["results"][:25]:
             assert "university" in result["display_name"].lower()
@@ -9,6 +10,7 @@ class TestInstitutionsSearch:
     def test_institutions_search_display_name(self, client):
         res = client.get("/institutions?filter=display_name.search:university")
         json_data = res.get_json()
+        assert json_data["meta"]["count"] > 0
         assert "university" in json_data["results"][0]["display_name"].lower()
         for result in json_data["results"][:25]:
             assert "university" in result["display_name"].lower()
@@ -25,21 +27,21 @@ class TestInstitutionsWorksCountFilter:
     def test_institutions_works_count_equal(self, client):
         res = client.get("/institutions?filter=works_count:850")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 5
+        assert json_data["meta"]["count"] == 4
         for result in json_data["results"][:25]:
             assert result["works_count"] == 850
 
     def test_institutions_works_count_greater_than(self, client):
         res = client.get("/institutions?filter=works_count:>200")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 6712
+        assert json_data["meta"]["count"] == 7703
         for result in json_data["results"][:25]:
             assert result["works_count"] > 200
 
     def test_institutions_works_count_less_than(self, client):
         res = client.get("/institutions?filter=works_count:<200")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 3279
+        assert json_data["meta"]["count"] == 2291
         for result in json_data["results"][:25]:
             assert result["works_count"] < 200
 
@@ -55,21 +57,21 @@ class TestInstitutionsCitedByCountFilter:
     def test_institutions_cited_by_count_equal(self, client):
         res = client.get("/institutions?filter=cited_by_count:20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 4
+        assert json_data["meta"]["count"] == 1
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] == 20
 
     def test_institutions_cited_by_count_greater_than(self, client):
         res = client.get("/institutions?filter=cited_by_count:>20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9914
+        assert json_data["meta"]["count"] == 9979
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] > 20
 
     def test_institutions_cited_by_count_less_than(self, client):
         res = client.get("/institutions?filter=cited_by_count:<20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 82
+        assert json_data["meta"]["count"] == 20
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] < 20
 
@@ -84,7 +86,7 @@ class TestInstitutionsCitedByCountFilter:
 
 
 class TestInstitutionsXConceptsIDFilter:
-    count = 6460
+    count = 7239
 
     def test_institutions_x_concepts_id_short(self, client):
         res = client.get("/institutions?filter=x_concepts.id:c185592680")
@@ -164,7 +166,7 @@ class TestInstitutionsExternalIDs:
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 2780
         for result in json_data["results"][:25]:
-            assert result["ids"]["ror"] is None
+            assert "ror" not in result["ids"] or result["ids"]["ror"] is None
 
     def test_institutions_has_ror_error(self, client):
         res = client.get("/institutions?filter=has_ror:stt")
@@ -182,8 +184,8 @@ class TestInstitutionsMultipleIDs:
         )
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 2
-        assert json_data["results"][0]["id"] == "https://openalex.org/I19820366"
-        assert json_data["results"][1]["id"] == "https://openalex.org/I136199984"
+        assert json_data["results"][0]["id"] == "https://openalex.org/I136199984"
+        assert json_data["results"][1]["id"] == "https://openalex.org/I19820366"
 
     def test_institutions_ror_single_long(self, client):
         res = client.get("/institutions?filter=ror:https://ror.org/034t30j35")
@@ -203,5 +205,5 @@ class TestInstitutionsMultipleIDs:
         )
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 2
-        assert json_data["results"][0]["ror"] == "https://ror.org/034t30j35"
-        assert json_data["results"][1]["ror"] == "https://ror.org/03vek6s52"
+        assert json_data["results"][0]["ror"] == "https://ror.org/03vek6s52"
+        assert json_data["results"][1]["ror"] == "https://ror.org/034t30j35"

@@ -64,7 +64,7 @@ class TestCustomAutocomplete:
         res = client.get("/autocomplete/institutions/type?q=co")
         json_data = res.get_json()
         assert json_data["results"][0]["display_name"] == "company"
-        assert json_data["results"][0]["cited_by_count"] == 39283175
+        assert json_data["results"][0]["cited_by_count"] == 36270237
 
 
 class TestFiltersInAutocomplete:

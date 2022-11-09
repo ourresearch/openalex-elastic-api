@@ -7,7 +7,7 @@ INDEXES = [
     "authors-v8",
     "concepts-v7",
     "institutions-v4",
-    "venues-v5",
+    "venues-v6",
     "works-v16-*,-*invalid-data",
 ]
 

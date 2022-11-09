@@ -23,21 +23,21 @@ class TestVenuesWorksCountFilter:
     def test_venues_works_count_equal(self, client):
         res = client.get("/venues?filter=works_count:850")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 4
+        assert json_data["meta"]["count"] == 5
         for result in json_data["results"][:25]:
             assert result["works_count"] == 850
 
     def test_venues_works_count_greater_than(self, client):
         res = client.get("/venues?filter=works_count:>200")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 8429
+        assert json_data["meta"]["count"] == 8118
         for result in json_data["results"][:25]:
             assert result["works_count"] > 200
 
     def test_venues_works_count_less_than(self, client):
         res = client.get("/venues?filter=works_count:<200")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1566
+        assert json_data["meta"]["count"] == 1882
         for result in json_data["results"][:25]:
             assert result["works_count"] < 200
 
@@ -53,28 +53,28 @@ class TestVenuesCitedByCountFilter:
     def test_venues_cited_by_count_equal(self, client):
         res = client.get("/venues?filter=cited_by_count:20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 3
+        assert json_data["meta"]["count"] == 8
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] == 20
 
     def test_venues_cited_by_count_greater_than(self, client):
         res = client.get("/venues?filter=cited_by_count:>20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9776
+        assert json_data["meta"]["count"] == 9093
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] > 20
 
     def test_venues_cited_by_count_less_than(self, client):
         res = client.get("/venues?filter=cited_by_count:<20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 221
+        assert json_data["meta"]["count"] == 899
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] < 20
 
     def test_venues_cited_by_count_range(self, client):
         res = client.get("/venues?filter=cited_by_count:20-21")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 10
+        assert json_data["meta"]["count"] == 14
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] == 20 or result["cited_by_count"] == 21
 
@@ -89,7 +89,7 @@ class TestVenuesCitedByCountFilter:
 
 
 class TestVenuesXConceptsIDFilter:
-    count = 4056
+    count = 4061
 
     def test_venues_x_concepts_id_short(self, client):
         res = client.get("/venues?filter=x_concepts.id:c185592680")
@@ -136,14 +136,14 @@ class TestVenuesOAFilters:
     def test_venues_is_oa(self, client):
         res = client.get("/venues?filter=is_oa:TRue")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1337
+        assert json_data["meta"]["count"] == 1351
         for result in json_data["results"][:25]:
             assert result["is_oa"] == True
 
     def test_venues_is_in_doaj(self, client):
         res = client.get("/venues?filter=is_in_doaj:FaLse")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 7322
+        assert json_data["meta"]["count"] == 7323
         for result in json_data["results"][:25]:
             assert result["is_in_doaj"] == False
 
@@ -152,7 +152,7 @@ class TestVenuesPublisher:
     def test_venues_publisher_single(self, client):
         res = client.get("/venues?filter=publisher:ElseVier")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1074
+        assert json_data["meta"]["count"] == 1071
         for result in json_data["results"]:
             assert result["publisher"] == "Elsevier"
 
@@ -170,7 +170,7 @@ class TestVenuesExternalIDs:
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1177
         for result in json_data["results"][:25]:
-            assert result["ids"]["issn"] is None
+            assert "issn" not in result["ids"] or result["ids"]["issn"] is None
 
     def test_venues_has_issn_error(self, client):
         res = client.get("/venues?filter=has_issn:stt")
@@ -203,6 +203,34 @@ class TestVenuesMultipleIDs:
         assert json_data["meta"]["count"] == 2
         assert "1431-5890" in json_data["results"][0]["issn"]
         assert "0140-6736" in json_data["results"][1]["issn"]
+
+
+class TestVenuesType:
+    def test_venues_type_single(self, client):
+        res = client.get("/venues?filter=type:joUrnal")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9972
+        for result in json_data["results"]:
+            assert result["type"] == "journal"
+
+    def test_venues_type_not(self, client):
+        res = client.get("/venues?filter=type:!journal")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 28
+        for result in json_data["results"]:
+            assert "type" not in result or result["type"] != "journal"
+
+    def test_venues_type_group_by(self, client):
+        res = client.get("/venues?group-by=type")
+        json_data = res.get_json()
+        assert json_data["group_by"] == [
+            {"key": "journal", "key_display_name": "journal", "count": 9972},
+            {
+                "key": "unknown",
+                "key_display_name": "unknown",
+                "count": 28,
+            },
+        ]
 
 
 class TestRelevanceScore:

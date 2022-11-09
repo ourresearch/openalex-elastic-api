@@ -167,27 +167,27 @@ class TestInstitutionsContinentsFilters:
     def test_institutions_continent_africa(self, client):
         res = client.get("/institutions?filter=continent:africa")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 314
+        assert json_data["meta"]["count"] == 316
 
     def test_institutions_continent_not_africa(self, client):
         res = client.get("/institutions?filter=continent:!africa")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9686
+        assert json_data["meta"]["count"] == 9684
 
     def test_institutions_continent_africa_code(self, client):
         res = client.get("/institutions?filter=continent:Q15")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 314
+        assert json_data["meta"]["count"] == 316
 
     def test_institutions_continent_not_africa_code(self, client):
         res = client.get("/institutions?filter=continent:!Q15")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9686
+        assert json_data["meta"]["count"] == 9684
 
     def test_institutions_global_south(self, client):
         res = client.get("/institutions?filter=is_global_south:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 2746
+        assert json_data["meta"]["count"] == 2770
 
 
 class TestInstitutionsContinentsGroupBy:
@@ -198,7 +198,7 @@ class TestInstitutionsContinentsGroupBy:
         assert json_data["group_by"][1] == {
             "key": "Q49",
             "key_display_name": "North America",
-            "count": 3196,
+            "count": 3164,
         }
 
     def test_institutions_global_south_group_by(self, client):
@@ -206,8 +206,8 @@ class TestInstitutionsContinentsGroupBy:
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 2
         assert json_data["group_by"] == [
-            {"key": "true", "key_display_name": "true", "count": 2746},
-            {"key": "false", "key_display_name": "false", "count": 7254},
+            {"key": "true", "key_display_name": "true", "count": 2770},
+            {"key": "false", "key_display_name": "false", "count": 7230},
         ]
 
 
