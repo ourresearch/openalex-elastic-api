@@ -138,3 +138,15 @@ class TestFiltersView:
         json_data = res.get_json()
         filter_1 = json_data["filters"][0]
         assert filter_1["values"][0]["count"] == 5174
+
+    def test_filter_has_orcid_true(self, client):
+        res = client.get("/works/filters/has_orcid:true")
+        json_data = res.get_json()
+        filter_1 = json_data["filters"][0]
+        assert filter_1["values"][0]["count"] == 2229
+
+    def test_filter_has_orcid_false(self, client):
+        res = client.get("/works/filters/has_orcid:false")
+        json_data = res.get_json()
+        filter_1 = json_data["filters"][0]
+        assert filter_1["values"][0]["count"] == 7771

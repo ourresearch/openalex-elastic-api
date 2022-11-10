@@ -92,8 +92,26 @@ def group_by_records(field, s, sort_params, known, per_page, q):
         field.param in settings.EXTERNAL_ID_FIELDS
         or field.param in settings.BOOLEAN_TEXT_FIELDS
     ):
-        exists = A("filter", Q("exists", field=group_by_field))
-        not_exists = A("filter", ~Q("exists", field=group_by_field))
+        if field.nested:
+            exists = A(
+                "filter",
+                Q(
+                    "nested",
+                    path="authorships",
+                    query=Q("exists", field=group_by_field),
+                ),
+            )
+            not_exists = A(
+                "filter",
+                ~Q(
+                    "nested",
+                    path="authorships",
+                    query=Q("exists", field=group_by_field),
+                ),
+            )
+        else:
+            exists = A("filter", Q("exists", field=group_by_field))
+            not_exists = A("filter", ~Q("exists", field=group_by_field))
         s.aggs.bucket("exists", exists)
         s.aggs.bucket("not_exists", not_exists)
     elif known:

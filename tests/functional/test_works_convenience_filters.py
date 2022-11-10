@@ -335,3 +335,39 @@ class TestWorksConceptsCount:
         assert result2["key"] == "3"
         assert result2["key_display_name"] == "3"
         assert result2["count"] == 918
+
+
+class TestHasOrcid:
+    def test_has_orcid_true(self, client):
+        res = client.get("/works?filter=has_orcid:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2229
+        for result in json_data["results"]:
+            found = False
+            for authorship in result["authorships"]:
+                if "orcid" in authorship["author"] and authorship["author"]["orcid"]:
+                    found = True
+            assert found is True
+
+    def test_has_orcid_false(self, client):
+        res = client.get("/works?filter=has_orcid:false")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 7771
+        for result in json_data["results"]:
+            found = False
+            for authorship in result["authorships"]:
+                if "orcid" in authorship["author"] and authorship["author"]["orcid"]:
+                    found = True
+            assert found is False
+
+    def test_has_orcid_group_by(self, client):
+        res = client.get("/works?group_by=has_orcid")
+        json_data = res.get_json()
+        result1 = json_data["group_by"][0]
+        result2 = json_data["group_by"][1]
+        assert result1["key"] == "true"
+        assert result1["key_display_name"] == "true"
+        assert result1["count"] == 2229
+        assert result2["key"] == "false"
+        assert result2["key_display_name"] == "false"
+        assert result2["count"] == 7771

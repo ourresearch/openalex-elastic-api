@@ -123,7 +123,15 @@ class BooleanField(Field):
                     q = ~Q("terms", **{self.es_field(): country_codes})
             return q
         elif self.value == "null":
-            q = ~Q("exists", field=self.es_field())
+            if self.nested:
+                q = ~Q(
+                    "nested",
+                    path="authorships",
+                    query=Q("exists", field=self.es_field()),
+                )
+                return q
+            else:
+                q = ~Q("exists", field=self.es_field())
         elif self.value == "!null":
             q = Q("exists", field=self.es_field())
         else:
