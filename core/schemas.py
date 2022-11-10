@@ -22,6 +22,24 @@ class GroupBySchema(Schema):
         ordered = True
 
 
+class HistogramSchema(Schema):
+    min = fields.Integer()
+    key = fields.Integer()
+    max = fields.Integer()
+    count = fields.Int(attribute="doc_count")
+
+    class Meta:
+        ordered = True
+
+
+class HistogramWrapperSchema(Schema):
+    meta = fields.Nested(MetaSchema)
+    results = fields.Nested(HistogramSchema, many=True)
+
+    class Meta:
+        ordered = True
+
+
 class CountsByYearSchema(Schema):
     year = fields.Int()
     works_count = fields.Int()

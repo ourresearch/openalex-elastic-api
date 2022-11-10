@@ -2,7 +2,8 @@ from flask import Blueprint, request
 
 from core.export import generate_group_by_csv, is_group_by_export
 from core.filters_view import shared_filter_view
-from core.schemas import FiltersWrapperSchema
+from core.histogram import shared_histogram_view
+from core.schemas import FiltersWrapperSchema, HistogramWrapperSchema
 from core.shared_view import shared_view
 from core.utils import is_cached
 from extensions import cache
@@ -35,3 +36,11 @@ def institutions_filters(params):
     results = shared_filter_view(request, params, fields_dict, index_name)
     filters_schema = FiltersWrapperSchema()
     return filters_schema.dump(results)
+
+
+@blueprint.route("/institutions/histogram/<string:param>")
+def institutions_histograms(param):
+    index_name = INSTITUTIONS_INDEX
+    result = shared_histogram_view(request, param, fields_dict, index_name)
+    histogram_schema = HistogramWrapperSchema()
+    return histogram_schema.dump(result)
