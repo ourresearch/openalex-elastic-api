@@ -100,6 +100,60 @@ class TestConceptsGroupBySearch:
         }
 
 
+class TestInstitutionsGroupBySearch:
+    def test_institutions_group_by_search_country_code(self, client):
+        res = client.get("/institutions?group-by=country_code&q=uni")
+        json_data = res.get_json()
+        first_result = json_data["group_by"][0]
+        second_result = json_data["group_by"][1]
+        assert len(json_data["group_by"]) == 3
+        assert first_result == {
+            "key": "US",
+            "key_display_name": "United States of America",
+            "count": 2786,
+        }
+        assert second_result == {
+            "key": "GB",
+            "key_display_name": "United Kingdom of Great Britain and Northern Ireland",
+            "count": 528,
+        }
+
+    def test_institutions_group_by_search_type(self, client):
+        res = client.get("/institutions?group-by=type&q=edu")
+        json_data = res.get_json()
+        first_result = json_data["group_by"][0]
+        assert len(json_data["group_by"]) == 1
+        assert first_result == {
+            "key": "education",
+            "key_display_name": "education",
+            "count": 5312,
+        }
+
+
+class TestVenuesGroupBySearch:
+    def test_venues_group_by_search_publisher(self, client):
+        res = client.get("/venues?group-by=publisher&q=els")
+        json_data = res.get_json()
+        first_result = json_data["group_by"][0]
+        assert len(json_data["group_by"]) == 1
+        assert first_result == {
+            "key": "Elsevier",
+            "key_display_name": "Elsevier",
+            "count": 1071,
+        }
+
+    def test_venues_group_by_search_type(self, client):
+        res = client.get("/venues?group-by=type&q=journ")
+        json_data = res.get_json()
+        first_result = json_data["group_by"][0]
+        assert len(json_data["group_by"]) == 1
+        assert first_result == {
+            "key": "journal",
+            "key_display_name": "journal",
+            "count": 9972,
+        }
+
+
 class TestWorksGroupBySearch:
     @pytest.mark.skip(
         reason="This test is failing because we need to reindex alternate_host_venues.display_name as fulltext."

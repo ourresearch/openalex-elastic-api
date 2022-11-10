@@ -13,7 +13,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 AUTHORS_INDEX = "authors-v8"
 CONCEPTS_INDEX = "concepts-v8"
 INSTITUTIONS_INDEX = "institutions-v4"
-VENUES_INDEX = "venues-v6"
+VENUES_INDEX = "venues-v7"
 WORKS_INDEX = "works-v16-*,-*invalid-data"
 
 DO_NOT_GROUP_BY = [
