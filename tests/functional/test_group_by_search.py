@@ -57,22 +57,21 @@ class TestAuthorsGroupBySearch:
             "count": 184,
         }
 
-    @pytest.mark.skip(reason="Not implemented.")
     def test_group_by_search_last_known_institution_id(self, client):
         res = client.get("/authors?group-by=last_known_institution.id&q=tr")
         json_data = res.get_json()
         first_result = json_data["group_by"][0]
         second_result = json_data["group_by"][1]
-        assert len(json_data["group_by"]) == 3
+        assert len(json_data["group_by"]) == 4
         assert first_result == {
-            "key": "https://ror.org/05yrm5c26",
-            "key_display_name": "University of California, San Francisco",
-            "count": 1048,
+            "key": "https://openalex.org/I70931966",
+            "key_display_name": "University of Montreal",
+            "count": 8,
         }
         assert second_result == {
-            "key": "https://ror.org/01ggx4157",
-            "key_display_name": "University of Cambridge",
-            "count": 184,
+            "key": "https://openalex.org/I107639228",
+            "key_display_name": "University of Notre Dame",
+            "count": 5,
         }
 
     def test_group_by_search_last_known_institution_type(self, client):

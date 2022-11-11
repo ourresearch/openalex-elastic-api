@@ -485,6 +485,7 @@ def filter_group_by(field, group_by, q, s):
         "host_venue.id": "host_venue__display_name__autocomplete",
         "host_venue.publisher": "host_venue__publisher__autocomplete",
         "journal.id": "host_venue__display_name__autocomplete",
+        "last_known_instution.id": "last_known_instution__display_name__autocomplete",
         "publisher": "publisher__autocomplete",
     }
     if autocomplete_field_mapping.get(group_by):
