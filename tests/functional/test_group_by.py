@@ -157,7 +157,7 @@ class TestGroupByVersion:
         res = client.get("/works?group-by=version")
         json_data = res.get_json()
         assert json_data["group_by"] == [
-            {"key": "null", "key_display_name": "null", "count": 8910},
+            {"key": "unknown", "key_display_name": "unknown", "count": 8910},
             {
                 "key": "publishedVersion",
                 "key_display_name": "publishedVersion",

@@ -327,13 +327,13 @@ class TestWorksGroupBySearch:
         for result in json_data["group_by"]:
             assert result["key"].startswith("201")
 
-    @pytest.mark.skip(reason="Failing due to code refactor required.")
     def test_works_group_by_search_version(self, client):
         res = client.get("/works?group-by=version&q=puBl")
         json_data = res.get_json()
+        assert len(json_data["group_by"]) == 1
         first_result = json_data["group_by"][0]
         assert first_result == {
             "key": "publishedVersion",
             "key_display_name": "publishedVersion",
-            "count": 866,
+            "count": 881,
         }

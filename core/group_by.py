@@ -367,6 +367,7 @@ def group_by_version(
     filter_params,
     filter_records,
     fields_dict,
+    q,
 ):
     group_by_results = []
     took = 0
@@ -394,13 +395,16 @@ def group_by_version(
     responses = ms.execute()
 
     for version, response in zip(settings.VERSIONS, responses):
-        group_by_results.append(
-            {
-                "key": version,
-                "key_display_name": version,
-                "doc_count": response.hits.total.value,
-            }
-        )
+        version = "unknown" if version == "null" else version
+        key_display_name = "unknown" if version == "null" else version
+        if not q or q and q.lower() in version.lower():
+            group_by_results.append(
+                {
+                    "key": version,
+                    "key_display_name": key_display_name,
+                    "doc_count": response.hits.total.value,
+                }
+            )
         took = took + response.took
 
     # sort by count

@@ -147,6 +147,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
                 filter_params,
                 filter_records,
                 fields_dict,
+                q,
             )
         else:
             s = group_by_records(field, s, sort_params, known, per_page, q)
