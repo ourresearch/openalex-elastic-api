@@ -39,22 +39,15 @@ class TestAuthorsGroupBySearch:
             "count": 184,
         }
 
-    @pytest.mark.skip(reason="Not implemented.")
     def test_group_by_search_last_known_institution_continent(self, client):
         res = client.get("/authors?group-by=last_known_institution.continent&q=afr")
         json_data = res.get_json()
         first_result = json_data["group_by"][0]
-        second_result = json_data["group_by"][1]
-        assert len(json_data["group_by"]) == 6
+        assert len(json_data["group_by"]) == 1
         assert first_result == {
-            "key": "NA",
-            "key_display_name": "North America",
-            "count": 1048,
-        }
-        assert second_result == {
-            "key": "EU",
-            "key_display_name": "Europe",
-            "count": 184,
+            "key": "Q15",
+            "key_display_name": "Africa",
+            "count": 104,
         }
 
     def test_group_by_search_last_known_institution_id(self, client):
@@ -100,6 +93,17 @@ class TestConceptsGroupBySearch:
 
 
 class TestInstitutionsGroupBySearch:
+    def test_institutions_group_by_search_continent(self, client):
+        res = client.get("/institutions?group-by=continent&q=North Am")
+        json_data = res.get_json()
+        first_result = json_data["group_by"][0]
+        assert len(json_data["group_by"]) == 1
+        assert first_result == {
+            "key": "Q49",
+            "key_display_name": "North America",
+            "count": 3164,
+        }
+
     def test_institutions_group_by_search_country_code(self, client):
         res = client.get("/institutions?group-by=country_code&q=uni")
         json_data = res.get_json()
@@ -268,22 +272,15 @@ class TestWorksGroupBySearch:
             "count": 15,
         }
 
-    @pytest.mark.skip(reason="Failing due to code refactor required.")
     def test_works_group_by_search_institutions_continent(self, client):
-        res = client.get("/works?group-by=institutions.continent&q=afr")
+        res = client.get("/works?group-by=institutions.continent&q=eur")
         json_data = res.get_json()
         first_result = json_data["group_by"][0]
-        second_result = json_data["group_by"][1]
-        assert len(json_data["group_by"]) == 8
+        assert len(json_data["group_by"]) == 1
         assert first_result == {
-            "key": "US",
-            "key_display_name": "United States of America",
-            "count": 804,
-        }
-        assert second_result == {
-            "key": "GB",
-            "key_display_name": "United Kingdom of Great Britain and Northern Ireland",
-            "count": 159,
+            "key": "Q46",
+            "key_display_name": "Europe",
+            "count": 1027,
         }
 
     def test_works_group_by_search_institutions_country_code(self, client):

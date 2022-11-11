@@ -195,6 +195,7 @@ def group_by_continent(
     filter_params,
     filter_records,
     fields_dict,
+    q,
 ):
     group_by_results = []
     took = 0
@@ -222,15 +223,16 @@ def group_by_continent(
     responses = ms.execute()
 
     for continent, response in zip(COUNTRIES_BY_CONTINENT.keys(), responses):
-        group_by_results.append(
-            {
-                "key": settings.CONTINENT_PARAMS.get(
-                    continent.lower().replace(" ", "_")
-                ),
-                "key_display_name": continent,
-                "doc_count": response.hits.total.value,
-            }
-        )
+        if not q or q and q.lower() in continent.lower():
+            group_by_results.append(
+                {
+                    "key": settings.CONTINENT_PARAMS.get(
+                        continent.lower().replace(" ", "_")
+                    ),
+                    "key_display_name": continent,
+                    "doc_count": response.hits.total.value,
+                }
+            )
         took = took + response.took
 
     # get unknown
@@ -253,7 +255,7 @@ def group_by_continent(
         s = s.query(~Q("exists", field=field.es_field()))
     response = s.execute()
     unknown_count = s.count()
-    if unknown_count:
+    if (unknown_count and not q) or (unknown_count and q and q.lower() in "unknown"):
         group_by_results.append(
             {
                 "key": "unknown",

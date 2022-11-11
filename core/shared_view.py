@@ -136,6 +136,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
                 filter_params,
                 filter_records,
                 fields_dict,
+                q,
             )
         elif field.param == "version":
             return group_by_version(
