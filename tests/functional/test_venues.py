@@ -53,14 +53,14 @@ class TestVenuesCitedByCountFilter:
     def test_venues_cited_by_count_equal(self, client):
         res = client.get("/venues?filter=cited_by_count:20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 8
+        assert json_data["meta"]["count"] == 9
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] == 20
 
     def test_venues_cited_by_count_greater_than(self, client):
         res = client.get("/venues?filter=cited_by_count:>20")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9093
+        assert json_data["meta"]["count"] == 9092
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] > 20
 
@@ -74,7 +74,7 @@ class TestVenuesCitedByCountFilter:
     def test_venues_cited_by_count_range(self, client):
         res = client.get("/venues?filter=cited_by_count:20-21")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 14
+        assert json_data["meta"]["count"] == 16
         for result in json_data["results"][:25]:
             assert result["cited_by_count"] == 20 or result["cited_by_count"] == 21
 
@@ -89,7 +89,7 @@ class TestVenuesCitedByCountFilter:
 
 
 class TestVenuesXConceptsIDFilter:
-    count = 4061
+    count = 4057
 
     def test_venues_x_concepts_id_short(self, client):
         res = client.get("/venues?filter=x_concepts.id:c185592680")
