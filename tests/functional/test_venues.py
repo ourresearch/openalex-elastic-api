@@ -6,6 +6,15 @@ class TestVenuesSearch:
         for result in json_data["results"][:25]:
             assert "university" in result["display_name"].lower()
 
+    def test_venues_search_additional_fields(self, client):
+        """Search across display_name, alternate_titles, and abbreviated_title."""
+        res = client.get("/venues?search=jasa")
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["display_name"]
+            == "Journal of the Acoustical Society of America"
+        )
+
     def test_venues_search_display_name(self, client):
         res = client.get("/venues?filter=display_name.search:university")
         json_data = res.get_json()

@@ -188,6 +188,12 @@ class SearchOpenAlex:
 def full_search(index_name, s, search):
     if index_name.lower().startswith("concepts"):
         search_oa = SearchOpenAlex(search_terms=search, secondary_field="description")
+    elif index_name.lower().startswith("venues"):
+        search_oa = SearchOpenAlex(
+            search_terms=search,
+            secondary_field="alternate_titles",
+            tertiary_field="abbreviated_title",
+        )
     elif index_name.lower().startswith("works"):
         search_oa = SearchOpenAlex(
             search_terms=search, secondary_field="abstract", tertiary_field="fulltext"
