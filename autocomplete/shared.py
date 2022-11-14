@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import Q, Search
 
 from autocomplete.utils import AUTOCOMPLETE_SOURCE
 from autocomplete.validate import validate_entity_autocomplete_params
@@ -37,7 +37,14 @@ def single_entity_autocomplete(fields_dict, index_name, request):
             s = filter_records(fields_dict, filter_params, s)
 
         # autocomplete
-        s = s.query("match_phrase_prefix", display_name__autocomplete=q)
+        if index_name.startswith("venue"):
+            s = s.query(
+                Q("match_phrase_prefix", display_name__autocomplete=q)
+                | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
+                | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
+            )
+        else:
+            s = s.query("match_phrase_prefix", display_name__autocomplete=q)
         s = s.sort("-cited_by_count")
         s = s.source(AUTOCOMPLETE_SOURCE)
         preference = clean_preference(q)

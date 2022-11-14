@@ -12,6 +12,14 @@ class TestFullAutoComplete:
         for result in json_data["results"][:25]:
             assert "sci" in result["display_name"].lower()
 
+    def test_autocomplete_full_venues_additional_fields(self, client):
+        res = client.get("/autocomplete?q=jasa")
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["display_name"]
+            == "Journal of the Acoustical Society of America"
+        )
+
 
 class TestEntitiesAutoComplete:
     def test_authors_autocomplete(self, client):
@@ -41,6 +49,15 @@ class TestEntitiesAutoComplete:
         assert "nat" in json_data["results"][0]["display_name"].lower()
         for result in json_data["results"][:25]:
             assert "nat" in result["display_name"].lower()
+
+    def test_venues_autocomplete_additional_fields(self, client):
+        """Search across display_name, alternate_titles, and abbreviated_title."""
+        res = client.get("/autocomplete/venues?q=jas")
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["display_name"]
+            == "Journal of the Acoustical Society of America"
+        )
 
     def test_works_autocomplete(self, client):
         res = client.get("/autocomplete/works?q=list")

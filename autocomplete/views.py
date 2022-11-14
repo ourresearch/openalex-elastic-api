@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 import iso3166
-from elasticsearch_dsl import A, Search
+from elasticsearch_dsl import A, Q, Search
 from flask import Blueprint, request
 
 from authors.fields import fields_dict as authors_fields_dict
@@ -68,7 +68,11 @@ def autocomplete_full():
     s, canonical_id_found = search_canonical_id_full(s, q)
 
     if not canonical_id_found:
-        s = s.query("match_phrase_prefix", display_name__autocomplete=q)
+        s = s.query(
+            Q("match_phrase_prefix", display_name__autocomplete=q)
+            | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
+            | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
+        )
         s = s.sort("-cited_by_count")
         s = s.source(AUTOCOMPLETE_SOURCE)
         preference = clean_preference(q)
