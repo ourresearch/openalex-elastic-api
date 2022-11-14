@@ -242,6 +242,36 @@ class TestVenuesType:
         ]
 
 
+class TestVenuesCountryCode:
+    def test_venues_country_code_single(self, client):
+        res = client.get("/venues?filter=country_code:uS")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2726
+        for result in json_data["results"]:
+            assert result["country_code"] == "US"
+
+    def test_venues_country_code_not(self, client):
+        res = client.get("/venues?filter=country_code:!us")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 7274
+        for result in json_data["results"]:
+            assert "country_code" not in result or result["country_code"] != "US"
+
+    def test_venues_country_code_group_by(self, client):
+        res = client.get("/venues?group-by=country_code")
+        json_data = res.get_json()
+        assert json_data["group_by"][0] == {
+            "key": "US",
+            "key_display_name": "United States of America",
+            "count": 2726,
+        }
+        assert json_data["group_by"][1] == {
+            "key": "GB",
+            "key_display_name": "United Kingdom of Great Britain and Northern Ireland",
+            "count": 2408,
+        }
+
+
 class TestRelevanceScore:
     def test_relevance_hidden(self, client):
         res = client.get("/venues")

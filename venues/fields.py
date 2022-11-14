@@ -22,6 +22,7 @@ fields = [
     RangeField(param="cited_by_count"),
     RangeField(param="works_count"),
     SearchField(param="display_name.search"),
+    TermField(param="country_code"),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="issn"),
     TermField(param="type"),

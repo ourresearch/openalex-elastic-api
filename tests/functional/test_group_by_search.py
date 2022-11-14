@@ -156,6 +156,17 @@ class TestVenuesGroupBySearch:
             "count": 9972,
         }
 
+    def test_venues_group_by_search_country_code(self, client):
+        res = client.get("/venues?group-by=country_code&q=unit")
+        json_data = res.get_json()
+        first_result = json_data["group_by"][0]
+        assert len(json_data["group_by"]) == 3
+        assert first_result == {
+            "key": "US",
+            "key_display_name": "United States of America",
+            "count": 2726,
+        }
+
 
 class TestWorksGroupBySearch:
     @pytest.mark.skip(
