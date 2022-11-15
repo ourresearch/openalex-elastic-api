@@ -1,6 +1,6 @@
 import json
 
-from marshmallow import INCLUDE, Schema, fields, post_dump
+from marshmallow import INCLUDE, Schema, fields, post_dump, pre_dump
 
 from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
                           hide_relevance, relevance_score)
@@ -153,6 +153,15 @@ class WorksSchema(Schema):
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     updated_date = fields.Str()
     created_date = fields.Str(dump_default=None)
+
+    @pre_dump
+    def pre_dump(self, data, **kwargs):
+        """If single record, display authorships_full rather than truncated list."""
+        if "single_record" in self.context and self.context["single_record"]:
+            if "authorships_full" in data:
+                data.authorships = data.authorships_full
+                del data.authorships_truncated
+        return data
 
     @post_dump
     def remove_relevance_score(self, data, many, **kwargs):

@@ -95,7 +95,9 @@ def works_id_get(id):
     response = s.execute()
     if not response:
         abort(404)
-    works_schema = WorksSchema(context={"display_relevance": False})
+    works_schema = WorksSchema(
+        context={"display_relevance": False, "single_record": True}
+    )
     return works_schema.dump(response[0])
 
 
