@@ -43,7 +43,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
 
     s = Search(index=index_name)
     if index_name.startswith("works"):
-        s = s.source(excludes=["abstract", "fulltext"])
+        s = s.source(excludes=["abstract", "fulltext", "authorships_full"])
 
     # pagination
     paginate = Paginate(group_by, page, per_page)

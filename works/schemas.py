@@ -133,6 +133,7 @@ class WorksSchema(Schema):
     type = fields.Str()
     open_access = fields.Nested(OpenAccessSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
+    is_authors_truncated = fields.Bool(attribute="authorships_truncated")
     cited_by_count = fields.Int()
     biblio = fields.Nested(BiblioSchema)
     is_retracted = fields.Bool()
