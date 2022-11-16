@@ -31,6 +31,6 @@ def validate_params(request):
 
 
 def validate_export_format(export_format):
-    valid_formats = ["csv", "json"]
+    valid_formats = ["csv", "json", "xlsx"]
     if export_format and export_format.lower() not in valid_formats:
         raise APIQueryParamsError(f"Valid formats are {', '.join(valid_formats)}")

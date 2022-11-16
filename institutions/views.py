@@ -1,6 +1,6 @@
 from flask import Blueprint, request
 
-from core.export import generate_group_by_csv, is_group_by_export
+from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.histogram import shared_histogram_view
 from core.schemas import FiltersWrapperSchema, HistogramWrapperSchema
@@ -24,8 +24,7 @@ def institutions():
     result = shared_view(request, fields_dict, index_name, default_sort)
     # export option
     if is_group_by_export(request):
-        output = generate_group_by_csv(result, request)
-        return output
+        return export_group_by(result, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
 
