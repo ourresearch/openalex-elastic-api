@@ -7,6 +7,7 @@ import settings
 from core.cursor import decode_cursor, get_next_cursor
 from core.exceptions import (APIPaginationError, APIQueryParamsError,
                              APISearchError)
+from core.export import is_group_by_export
 from core.filter import filter_records
 from core.group_by import (filter_group_by, get_group_by_results,
                            get_group_by_results_external_ids,
@@ -32,11 +33,13 @@ def shared_view(request, fields_dict, index_name, default_sort):
     filter_params = map_filter_params(request.args.get("filter"))
     group_by = request.args.get("group_by") or request.args.get("group-by")
     page = set_number_param(request, "page", 1)
-    per_page = (
-        set_number_param(request, "per-page", 25)
-        if not group_by
-        else set_number_param(request, "per-page", 200)
-    )
+    # set per_page
+    if is_group_by_export(request):
+        per_page = 200
+    elif not group_by:
+        per_page = set_number_param(request, "per-page", 25)
+    else:
+        per_page = set_number_param(request, "per-page", 200)
     q = request.args.get("q")
     search = request.args.get("search")
     sort_params = map_sort_params(request.args.get("sort"))

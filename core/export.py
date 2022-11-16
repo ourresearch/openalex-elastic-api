@@ -3,7 +3,6 @@ import datetime
 import io
 
 from flask import make_response
-from werkzeug.wrappers import Response
 
 
 def is_group_by_export(request):
@@ -30,8 +29,9 @@ def generate_group_by_csv(result):
     # output
     timestamp = get_timestamp()
     filename = f"openalex-group-by-{timestamp}.csv"
-    output = Response(string_io.getvalue(), mimetype="text/csv")
-    output.headers.set("Content-Disposition", "attachment", filename=f"{filename}")
+    output = make_response(string_io.getvalue())
+    output.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    output.headers["Content-type"] = "text/csv"
     return output
 
 
