@@ -24,7 +24,7 @@ def authors():
     result = shared_view(request, fields_dict, index_name, default_sort)
     # export option
     if is_group_by_export(request):
-        output = generate_group_by_csv(result)
+        output = generate_group_by_csv(result, request)
         return output
     message_schema = MessageSchema()
     return message_schema.dump(result)

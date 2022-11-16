@@ -14,7 +14,7 @@ def is_group_by_export(request):
         return False
 
 
-def generate_group_by_csv(result):
+def generate_group_by_csv(result, request):
     # rename doc_count to count
     group_by_csv_results = get_group_by_results(result)
 
@@ -28,7 +28,8 @@ def generate_group_by_csv(result):
 
     # output
     timestamp = get_timestamp()
-    filename = f"openalex-group-by-{timestamp}.csv"
+    group_by_param = request.args.get("group_by") or request.args.get("group-by")
+    filename = f"openalex-group-by-{group_by_param}-{timestamp}.csv"
     output = make_response(string_io.getvalue())
     output.headers["Content-Disposition"] = f"attachment; filename={filename}"
     output.headers["Content-type"] = "text/csv"
