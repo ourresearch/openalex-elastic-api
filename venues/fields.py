@@ -5,6 +5,10 @@ fields = [
     BooleanField(param="has_issn", custom_es_field="ids.issn_l"),
     BooleanField(param="is_in_doaj"),
     BooleanField(param="is_oa"),
+    BooleanField(
+        param=f"is_global_south",
+        custom_es_field="country_code",
+    ),
     DateField(
         param="from_created_date",
         custom_es_field="created_date",
@@ -22,6 +26,10 @@ fields = [
     RangeField(param="cited_by_count"),
     RangeField(param="works_count"),
     SearchField(param="display_name.search"),
+    TermField(
+        param=f"continent",
+        custom_es_field="country_code",
+    ),
     TermField(param="country_code"),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="issn"),

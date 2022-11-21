@@ -241,3 +241,51 @@ class TestAuthorsContinentFilter:
         res = client.get("/authors?filter=last_known_institution.is_global_south:false")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 8795
+
+
+class TestVenuesContinentsFilters:
+    def test_venues_continent_africa(self, client):
+        res = client.get("/venues?filter=continent:africa")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 90
+
+    def test_venues_continent_not_africa(self, client):
+        res = client.get("/venues?filter=continent:!africa")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9910
+
+    def test_venues_continent_africa_code(self, client):
+        res = client.get("/venues?filter=continent:Q15")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 90
+
+    def test_venues_continent_not_africa_code(self, client):
+        res = client.get("/venues?filter=continent:!Q15")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 9910
+
+    def test_venues_global_south(self, client):
+        res = client.get("/venues?filter=is_global_south:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 608
+
+
+class TestVenuesContinentsGroupBy:
+    def test_venues_continent_group_by(self, client):
+        res = client.get("/venues?group_by=continent")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 8
+        assert json_data["group_by"][1] == {
+            "key": "Q49",
+            "key_display_name": "North America",
+            "count": 2844,
+        }
+
+    def test_venues_global_south_group_by(self, client):
+        res = client.get("/venues?group_by=is_global_south")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 2
+        assert json_data["group_by"] == [
+            {"key": "true", "key_display_name": "true", "count": 608},
+            {"key": "false", "key_display_name": "false", "count": 9392},
+        ]
