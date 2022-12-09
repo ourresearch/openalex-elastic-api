@@ -35,12 +35,14 @@ def handle_or_query(field, fields_dict, s, value):
 
     # raise error if trying to use | between filters like filter=institutions.country_code:fr|host_venue.issn:0957-1558
     fields = fields_dict.keys()
-    if any(field in value for field in fields) and re.search(r":(?!//)", value):
-        raise APIQueryParamsError(
-            f"It looks like you're trying to do an OR query between filters and it's not supported. \n"
-            f"You can do this: institutions.country_code:fr|en, but not this: institutions.country_code:gb|host_venue.issn:0957-1558. \n"
-            f"Problem value: {value}"
-        )
+    for filter_field in fields:
+        if filter_field in value:
+            if filter_field and re.search(rf"{filter_field}:", value):
+                raise APIQueryParamsError(
+                    f"It looks like you're trying to do an OR query between filters and it's not supported. \n"
+                    f"You can do this: institutions.country_code:fr|en, but not this: institutions.country_code:gb|host_venue.issn:0957-1558. \n"
+                    f"Problem value: {value}"
+                )
 
     if value.startswith("!"):
         # negate everything in values after !, like: NOT (42 or 43)
