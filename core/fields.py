@@ -210,10 +210,7 @@ class DateField(Field):
 
 class OpenAlexIDField(Field):
     def build_query(self):
-        if not normalize_openalex_id(self.value):
-            error_id = f"'{self.value.replace('https://openalex.org/', '')}'"
-            raise APIQueryParamsError(f"{error_id} is not a valid OpenAlex ID.")
-        if self.value == "null":
+        if self.value == "null" and self.param != "repository":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
             if self.nested:
@@ -223,11 +220,16 @@ class OpenAlexIDField(Field):
             else:
                 q = ~Q("exists", field=field_name)
             return q
-        elif self.value == "!null":
+        elif self.value == "!null" and self.param != "repository":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
-            q = Q("exists", field=field_name)
-        elif self.value.startswith("!"):
+            if self.nested:
+                q = Q("nested", path="authorships", query=Q("exists", field=field_name))
+            else:
+                q = Q("exists", field=field_name)
+            return q
+        elif self.value.startswith("!") and self.value != "!null":
+            self.validate(self.value[1:])
             query = get_full_openalex_id(self.value[1:])
             kwargs = {self.es_field(): query}
             if self.param == "repository":
@@ -246,10 +248,21 @@ class OpenAlexIDField(Field):
             openalex_ids = self.get_ids(self.value, "related_works")
             q = Q("terms", id=openalex_ids)
         elif self.param == "repository":
-            kwargs1 = {"host_venue.id": get_full_openalex_id(self.value)}
-            kwargs2 = {"alternate_host_venues.id": get_full_openalex_id(self.value)}
-            q = Q("term", **kwargs1) | Q("term", **kwargs2)
+            if self.value == "null":
+                q = ~Q("exists", field="host_venue.id") & ~Q(
+                    "exists", field="alternate_host_venues.id"
+                )
+            elif self.value == "!null":
+                q = Q("exists", field="host_venue.id") | Q(
+                    "exists", field="alternate_host_venues.id"
+                )
+            else:
+                kwargs1 = {"host_venue.id": get_full_openalex_id(self.value)}
+                kwargs2 = {"alternate_host_venues.id": get_full_openalex_id(self.value)}
+                self.validate(self.value)
+                q = Q("term", **kwargs1) | Q("term", **kwargs2)
         else:
+            self.validate(self.value)
             query = get_full_openalex_id(self.value)
             kwargs = {self.es_field(): query}
             q = Q("term", **kwargs)
@@ -267,6 +280,11 @@ class OpenAlexIDField(Field):
         else:
             field = self.param + "__lower"
         return field
+
+    def validate(self, query):
+        if not normalize_openalex_id(query):
+            error_id = f"'{self.value.replace('https://openalex.org/', '')}'"
+            raise APIQueryParamsError(f"{error_id} is not a valid OpenAlex ID.")
 
     @staticmethod
     def get_ids(openalex_id, category):

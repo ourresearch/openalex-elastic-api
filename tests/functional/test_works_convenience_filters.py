@@ -239,16 +239,12 @@ class TestWorksRepositoryFilter:
     def test_works_repository_null(self, client):
         res = client.get("/works?filter=repository:null")
         json_data = res.get_json()
-        assert res.status_code == 403
-        assert json_data["error"] == "Invalid query parameters error."
-        assert json_data["message"] == "'null' is not a valid OpenAlex ID."
+        assert json_data["meta"]["count"] == 3324
 
     def test_works_repository_not_null(self, client):
         res = client.get("/works?filter=repository:!null")
         json_data = res.get_json()
-        assert res.status_code == 403
-        assert json_data["error"] == "Invalid query parameters error."
-        assert json_data["message"] == "'!null' is not a valid OpenAlex ID."
+        assert json_data["meta"]["count"] == 6676
 
     def test_works_repository_group_by(self, client):
         res = client.get("/works?group_by=repository")
