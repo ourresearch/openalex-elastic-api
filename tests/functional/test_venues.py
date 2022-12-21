@@ -310,3 +310,19 @@ class TestJournalsAlias:
         res = client.get("/journals")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 10000
+
+
+class TestVenuesMagId:
+    def test_venues_mag_id_single(self, client):
+        res = client.get("/venues?filter=ids.mag:49861241")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["id"] == "https://openalex.org/V49861241"
+
+
+class TestOpenAlexId:
+    def test_venues_openalex_id_single(self, client):
+        res = client.get("/venues?filter=ids.openalex:V49861241")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 1
+        assert json_data["results"][0]["id"] == "https://openalex.org/V49861241"

@@ -19,6 +19,7 @@ fields = [
     ),
     OpenAlexIDField(param="concept.id", custom_es_field="x_concepts.id"),
     OpenAlexIDField(param="concepts.id", custom_es_field="x_concepts.id"),
+    OpenAlexIDField(param="ids.openalex"),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(param="x_concepts.id"),
@@ -32,6 +33,7 @@ fields = [
     ),
     TermField(param="country_code"),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
+    TermField(param="ids.mag", custom_es_field="ids.mag"),
     TermField(param="issn"),
     TermField(param="type"),
 ]
