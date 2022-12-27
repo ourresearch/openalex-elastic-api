@@ -13,12 +13,15 @@ from settings import (CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS,
 
 
 class Field(ABC):
-    def __init__(self, param, alias=None, custom_es_field=None, nested=False):
+    def __init__(
+        self, param, alias=None, custom_es_field=None, nested=False, unique_id=None
+    ):
         self.param = param
         self.alias = alias
         self.custom_es_field = custom_es_field
         self.value = None
         self.nested = nested
+        self.unique_id = unique_id
 
     @abstractmethod
     def build_query(self):
@@ -390,6 +393,12 @@ class SearchField(Field):
         ):
             search_oa = SearchOpenAlex(
                 search_terms=self.value, primary_field=self.es_field()
+            )
+            q = search_oa.build_query()
+        elif self.param == "display_name.search" and self.unique_id == "author_search":
+            search_oa = SearchOpenAlex(
+                search_terms=self.value,
+                is_author_name_query=True,
             )
             q = search_oa.build_query()
         else:

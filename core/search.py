@@ -8,11 +8,13 @@ class SearchOpenAlex:
         primary_field=None,
         secondary_field=None,
         tertiary_field=None,
+        is_author_name_query=False,
     ):
         self.search_terms = search_terms
         self.primary_field = primary_field if primary_field else "display_name"
         self.secondary_field = secondary_field
         self.tertiary_field = tertiary_field
+        self.is_author_name_query = is_author_name_query
 
     def build_query(self):
         if not self.search_terms:
@@ -21,11 +23,14 @@ class SearchOpenAlex:
             self.primary_field == "authorships.raw_affiliation_string"
             and len(self.search_terms.strip()) > 3
         ):
-            query_string_query = self.author_string_query()
+            query_string_query = self.raw_affiliation_string_query()
             query = self.citation_boost_query(query_string_query)
         elif self.is_phrase():
             phrase_query = self.primary_phrase_query()
             query = self.citation_boost_query(phrase_query)
+        elif self.is_author_name_query:
+            author_name_query = self.author_name_query()
+            query = self.citation_boost_query(author_name_query)
         elif self.primary_field and self.secondary_field and self.tertiary_field:
             basic_query = self.primary_secondary_tertiary_match_query()
             query = self.citation_boost_query(basic_query)
@@ -52,7 +57,7 @@ class SearchOpenAlex:
             **{self.primary_field: {"query": self.search_terms, "boost": 2}},
         )
 
-    def author_string_query(self):
+    def raw_affiliation_string_query(self):
         q = Q("nested", path="authorships", query=self.query_string_query())
         return q
 
@@ -164,6 +169,26 @@ class SearchOpenAlex:
             )
         )
 
+    def author_name_query(self):
+        """Search display_name and display_name.folded in order to ignore diacritics."""
+        return Q(
+            "multi_match",
+            **{
+                "query": self.search_terms,
+                "fields": [self.primary_field, self.primary_field + ".folded"],
+                "operator": "and",
+                "type": "most_fields",
+            },
+        ) | Q(
+            "multi_match",
+            **{
+                "query": self.search_terms,
+                "fields": [self.primary_field, self.primary_field + ".folded"],
+                "type": "phrase",
+                "boost": 2,
+            },
+        )
+
     @staticmethod
     def citation_boost_query(query):
         """Uses cited_by_count to boost query results."""
@@ -186,7 +211,9 @@ class SearchOpenAlex:
 
 
 def full_search(index_name, s, search):
-    if index_name.lower().startswith("concepts"):
+    if index_name.lower().startswith("authors"):
+        search_oa = SearchOpenAlex(search_terms=search, is_author_name_query=True)
+    elif index_name.lower().startswith("concepts"):
         search_oa = SearchOpenAlex(search_terms=search, secondary_field="description")
     elif index_name.lower().startswith("venues"):
         search_oa = SearchOpenAlex(
