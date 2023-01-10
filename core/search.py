@@ -215,6 +215,12 @@ def full_search(index_name, s, search):
         search_oa = SearchOpenAlex(search_terms=search, is_author_name_query=True)
     elif index_name.lower().startswith("concepts"):
         search_oa = SearchOpenAlex(search_terms=search, secondary_field="description")
+    elif index_name.lower().startswith("institutions"):
+        search_oa = SearchOpenAlex(
+            search_terms=search,
+            secondary_field="display_name_alternatives",
+            tertiary_field="display_name_acronyms",
+        )
     elif index_name.lower().startswith("venues"):
         search_oa = SearchOpenAlex(
             search_terms=search,
