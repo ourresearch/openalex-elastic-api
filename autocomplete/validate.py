@@ -30,5 +30,5 @@ def validate_author_hint(request):
     author_hint = request.args.get("author_hint")
     if author_hint and author_hint not in ["highly_cited_work", "institution"]:
         raise APIQueryParamsError(
-            f"author_hint must be either 'highly_cited_work' or 'affiliation'. You entered {author_hint}."
+            f"author_hint must be either 'highly_cited_work' or 'institution'. You entered {author_hint}."
         )
