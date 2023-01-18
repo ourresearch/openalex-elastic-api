@@ -7,6 +7,7 @@ AUTOCOMPLETE_SOURCE = [
     "description",
     "geo",
     "issn_l",
+    "last_known_institution",
     "orcid",
     "publisher",
     "ror",
