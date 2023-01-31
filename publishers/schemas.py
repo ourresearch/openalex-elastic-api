@@ -19,6 +19,7 @@ class PublishersSchema(Schema):
     display_name = fields.Str()
     alternate_titles = fields.List(fields.Str())
     hierarchy_level = fields.Int()
+    parent_publisher = fields.Str()
     relevance_score = fields.Method("get_relevance_score")
     country_codes = fields.List(fields.Str())
     works_count = fields.Int()

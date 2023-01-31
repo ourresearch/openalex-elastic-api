@@ -167,3 +167,25 @@ class TestPublisherGroupBy:
         assert json_data["group_by"][2]["key"] == "2"
         assert json_data["group_by"][2]["key_display_name"] == "2"
         assert json_data["group_by"][2]["count"] == 30
+
+
+class TestPublisherParentPublisher:
+    def test_parent_publisher_short(self, client):
+        res = client.get("/publishers?filter=parent_publisher:P4310320990")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 4
+        assert (
+            json_data["results"][0]["parent_publisher"]
+            == "https://openalex.org/P4310320990"
+        )
+
+    def test_parent_publisher_long(self, client):
+        res = client.get(
+            "/publishers?filter=parent_publisher:https://openalex.org/P4310320990"
+        )
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 4
+        assert (
+            json_data["results"][0]["parent_publisher"]
+            == "https://openalex.org/P4310320990"
+        )
