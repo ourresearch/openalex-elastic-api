@@ -250,6 +250,31 @@ class TestConceptsNameGet:
         assert json_data["display_name"] == "Biology"
 
 
+class TestPublishersIDGet:
+    id_result = "https://openalex.org/P4310320006"
+    name_result = "American Chemical Society"
+
+    def test_publishers_openalex_get(self, client):
+        res = client.get("/publishers/P4310320006")
+        json_data = res.get_json()
+        assert json_data["id"] == self.id_result
+        assert json_data["display_name"] == self.name_result
+
+    def test_publishers_openalex_get_case_insensitive(self, client):
+        res = client.get("/publishers/p4310320006", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data["id"] == self.id_result
+        assert json_data["display_name"] == self.name_result
+
+    def test_publishers_openalex_get_url(self, client):
+        res = client.get(
+            "/publishers/https://openalex.org/P4310320006", follow_redirects=True
+        )
+        json_data = res.get_json()
+        assert json_data["id"] == self.id_result
+        assert json_data["display_name"] == self.name_result
+
+
 class TestUniversalIDGet:
     def test_works_openalex_get(self, client):
         res = client.get("/W2894744280", follow_redirects=True)
@@ -283,3 +308,9 @@ class TestUniversalIDGet:
         json_data = res.get_json()
         assert json_data["id"] == "https://openalex.org/C86803240"
         assert json_data["display_name"] == "Biology"
+
+    def test_publishers_openalex_get(self, client):
+        res = client.get("/P4310320006", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data["id"] == "https://openalex.org/P4310320006"
+        assert json_data["display_name"] == "American Chemical Society"

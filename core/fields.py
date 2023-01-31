@@ -555,7 +555,10 @@ class TermField(Field):
         ):
             formatted = f"https://ror.org/{self.value}"
         elif self.param == "wikidata_id" and "wikidata.org" not in self.value:
-            formatted = f"https://www.wikidata.org/wiki/{self.value}"
+            if self.unique_id and self.unique_id == "wikidata_entity":
+                formatted = f"https://www.wikidata.org/entity/{self.value}"
+            else:
+                formatted = f"https://www.wikidata.org/wiki/{self.value}"
         else:
             formatted = self.value
         return formatted

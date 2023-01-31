@@ -221,6 +221,11 @@ def full_search(index_name, s, search):
             secondary_field="display_name_alternatives",
             tertiary_field="display_name_acronyms",
         )
+    elif index_name.lower().startswith("publishers"):
+        search_oa = SearchOpenAlex(
+            search_terms=search,
+            secondary_field="alternate_titles",
+        )
     elif index_name.lower().startswith("venues"):
         search_oa = SearchOpenAlex(
             search_terms=search,

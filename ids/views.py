@@ -7,13 +7,15 @@ from authors.schemas import AuthorsSchema
 from concepts.schemas import ConceptsSchema
 from ids.utils import (get_merged_id, is_author_openalex_id,
                        is_concept_openalex_id, is_institution_openalex_id,
-                       is_openalex_id, is_venue_openalex_id,
-                       is_work_openalex_id, normalize_doi, normalize_issn,
-                       normalize_openalex_id, normalize_orcid, normalize_pmid,
-                       normalize_ror, normalize_wikidata)
+                       is_openalex_id, is_publisher_openalex_id,
+                       is_venue_openalex_id, is_work_openalex_id,
+                       normalize_doi, normalize_issn, normalize_openalex_id,
+                       normalize_orcid, normalize_pmid, normalize_ror,
+                       normalize_wikidata)
 from institutions.schemas import InstitutionsSchema
+from publishers.schemas import PublishersSchema
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
-                      VENUES_INDEX, WORKS_INDEX)
+                      PUBLISHERS_INDEX, VENUES_INDEX, WORKS_INDEX)
 from venues.schemas import VenuesSchema
 from works.schemas import WorksSchema
 
@@ -368,6 +370,52 @@ def concepts_name_get(name):
     return concepts_schema.dump(response[0])
 
 
+# Publisher
+
+
+@blueprint.route("/publishers/<path:id>")
+def publishers_id_get(id):
+    s = Search(index=PUBLISHERS_INDEX)
+
+    if is_openalex_id(id):
+        clean_id = normalize_openalex_id(id)
+        if clean_id != id:
+            return redirect(
+                url_for("ids.publishers_id_get", id=clean_id, **request.args)
+            )
+        clean_id = int(clean_id[1:])
+        full_openalex_id = f"https://openalex.org/P{clean_id}"
+        query = Q("term", ids__openalex=full_openalex_id)
+        s = s.filter(query)
+        if s.count() == 0:
+            # check if document is merged
+            merged_id = get_merged_id("merge-publishers", full_openalex_id)
+            if merged_id:
+                return redirect(
+                    url_for("ids.publishers_id_get", id=merged_id, **request.args),
+                    code=301,
+                )
+    else:
+        abort(404)
+    response = s.execute()
+    if not response:
+        abort(404)
+    publishers_schema = PublishersSchema(context={"display_relevance": False})
+    return publishers_schema.dump(response[0])
+
+
+@blueprint.route("/publishers/RANDOM")
+@blueprint.route("/publishers/random")
+def publishers_random_get():
+    s = Search(index=PUBLISHERS_INDEX)
+
+    random_query = Q("function_score", functions={"random_score": {}})
+    s = s.query(random_query).extra(size=1)
+    response = s.execute()
+    publishers_schema = PublishersSchema(context={"display_relevance": False})
+    return publishers_schema.dump(response[0])
+
+
 # Universal
 
 
@@ -392,4 +440,8 @@ def universal_get(openalex_id):
         )
     elif is_concept_openalex_id(openalex_id):
         return redirect(url_for("ids.concepts_id_get", id=openalex_id, **request.args))
+    elif is_publisher_openalex_id(openalex_id):
+        return redirect(
+            url_for("ids.publishers_id_get", id=openalex_id, **request.args)
+        )
     return {"message": "OpenAlex ID format not recognized"}, 404

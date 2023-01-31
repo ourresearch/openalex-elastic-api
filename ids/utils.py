@@ -9,11 +9,11 @@ def is_openalex_id(openalex_id):
     if not openalex_id:
         return False
     openalex_id = openalex_id.lower()
-    if re.findall(r"http[s]://openalex.org/([waicv]\d{2,})", openalex_id):
+    if re.findall(r"http[s]://openalex.org/([waicvp]\d{2,})", openalex_id):
         return True
-    if re.findall(r"^([waicv]\d{2,})", openalex_id):
+    if re.findall(r"^([waicvp]\d{2,})", openalex_id):
         return True
-    if re.findall(r"(openalex:[waicv]\d{2,})", openalex_id):
+    if re.findall(r"(openalex:[waicvp]\d{2,})", openalex_id):
         return True
     return False
 
@@ -61,6 +61,15 @@ def is_concept_openalex_id(id):
     if not clean_id:
         return False
     return clean_id.startswith("C")
+
+
+def is_publisher_openalex_id(id):
+    if isinstance(id, int):
+        return False
+    clean_id = normalize_openalex_id(id)
+    if not clean_id:
+        return False
+    return clean_id.startswith("P")
 
 
 def is_doi(doi):
