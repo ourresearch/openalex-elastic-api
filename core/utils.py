@@ -6,7 +6,8 @@ from iso3166 import countries
 import settings
 from core.exceptions import APIQueryParamsError, HighAuthorCountError
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
-                      PUBLISHERS_INDEX, VENUES_INDEX, WORKS_INDEX)
+                      PUBLISHERS_INDEX, SOURCES_INDEX, VENUES_INDEX,
+                      WORKS_INDEX)
 
 
 def get_field(fields_dict, key):
@@ -154,6 +155,8 @@ def get_index_name_by_id(openalex_id):
         index_name = INSTITUTIONS_INDEX
     elif clean_id.startswith("P"):
         index_name = PUBLISHERS_INDEX
+    elif clean_id.startswith("S"):
+        index_name = SOURCES_INDEX
     elif clean_id.startswith("V"):
         index_name = VENUES_INDEX
     elif clean_id.startswith("W"):
@@ -165,7 +168,7 @@ def normalize_openalex_id(openalex_id):
     if not openalex_id:
         return None
     openalex_id = openalex_id.strip().upper()
-    p = re.compile("([WAICVP]\d{2,})")
+    p = re.compile("([WAICVPS]\d{2,})")
     matches = re.findall(p, openalex_id)
     if len(matches) == 0:
         return None

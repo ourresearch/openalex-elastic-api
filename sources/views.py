@@ -1,0 +1,38 @@
+from flask import Blueprint, request
+
+from core.export import export_group_by, is_group_by_export
+from core.filters_view import shared_filter_view
+from core.schemas import FiltersWrapperSchema
+from core.shared_view import shared_view
+from core.utils import is_cached
+from extensions import cache
+from settings import SOURCES_INDEX
+from sources.fields import fields_dict
+from sources.schemas import MessageSchema
+
+blueprint = Blueprint("sources", __name__)
+
+
+@blueprint.route("/sources")
+# @blueprint.route("/journals")
+@cache.cached(
+    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
+)
+def sources():
+    index_name = SOURCES_INDEX
+    default_sort = ["-works_count", "id"]
+    result = shared_view(request, fields_dict, index_name, default_sort)
+    # export option
+    if is_group_by_export(request):
+        return export_group_by(result, request)
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/sources/filters/<path:params>")
+# @blueprint.route("/journals/filters/<path:params>")
+def sources_filters(params):
+    index_name = SOURCES_INDEX
+    results = shared_filter_view(request, params, fields_dict, index_name)
+    filters_schema = FiltersWrapperSchema()
+    return filters_schema.dump(results)

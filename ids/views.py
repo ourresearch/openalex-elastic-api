@@ -8,14 +8,16 @@ from concepts.schemas import ConceptsSchema
 from ids.utils import (get_merged_id, is_author_openalex_id,
                        is_concept_openalex_id, is_institution_openalex_id,
                        is_openalex_id, is_publisher_openalex_id,
-                       is_venue_openalex_id, is_work_openalex_id,
-                       normalize_doi, normalize_issn, normalize_openalex_id,
-                       normalize_orcid, normalize_pmid, normalize_ror,
-                       normalize_wikidata)
+                       is_source_openalex_id, is_venue_openalex_id,
+                       is_work_openalex_id, normalize_doi, normalize_issn,
+                       normalize_openalex_id, normalize_orcid, normalize_pmid,
+                       normalize_ror, normalize_wikidata)
 from institutions.schemas import InstitutionsSchema
 from publishers.schemas import PublishersSchema
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
-                      PUBLISHERS_INDEX, VENUES_INDEX, WORKS_INDEX)
+                      PUBLISHERS_INDEX, SOURCES_INDEX, VENUES_INDEX,
+                      WORKS_INDEX)
+from sources.schemas import SourcesSchema
 from venues.schemas import VenuesSchema
 from works.schemas import WorksSchema
 
@@ -416,6 +418,83 @@ def publishers_random_get():
     return publishers_schema.dump(response[0])
 
 
+# Source
+
+
+@blueprint.route("/sources/RANDOM")
+@blueprint.route("/sources/random")
+# @blueprint.route("/journals/random")
+def sources_random_get():
+    s = Search(index=SOURCES_INDEX)
+
+    random_query = Q("function_score", functions={"random_score": {}})
+    s = s.query(random_query).extra(size=1)
+    response = s.execute()
+    sources_schema = SourcesSchema(context={"display_relevance": False})
+    return sources_schema.dump(response[0])
+
+
+@blueprint.route("/sources/<path:id>")
+# @blueprint.route("/journals/<path:id>")
+def sources_id_get(id):
+    s = Search(index=SOURCES_INDEX)
+
+    if is_openalex_id(id):
+        clean_id = normalize_openalex_id(id)
+        if clean_id != id:
+            return redirect(url_for("ids.sources_id_get", id=clean_id, **request.args))
+        clean_id = int(clean_id[1:])
+        full_openalex_id = f"https://openalex.org/S{clean_id}"
+        query = Q("term", ids__openalex=full_openalex_id)
+        s = s.filter(query)
+        if s.count() == 0:
+            # check if document is merged
+            merged_id = get_merged_id("merge-sources", full_openalex_id)
+            if merged_id:
+                return redirect(
+                    url_for("ids.sources_id_get", id=merged_id, **request.args),
+                    code=301,
+                )
+
+    elif id.startswith("mag:"):
+        clean_id = id.replace("mag:", "")
+        clean_id = f"S{clean_id}"
+        return redirect(url_for("ids.sources_id_get", id=clean_id, **request.args))
+    elif id.startswith("issn:"):
+        clean_issn = normalize_issn(id)
+        if not clean_issn:
+            abort(404)
+        query = Q("term", ids__issn__lower=clean_issn)
+        s = s.filter(query)
+        response = s.execute()
+        if response:
+            record_id = response[0].id
+            clean_id = normalize_openalex_id(record_id)
+            return redirect(url_for("ids.sources_id_get", id=clean_id, **request.args))
+        else:
+            abort(404)
+    elif id.startswith("issn_l:"):
+        clean_issn = normalize_issn(id)
+        if not clean_issn:
+            abort(404)
+        query = Q("term", ids__issn_l__lower=clean_issn)
+        s = s.filter(query)
+        response = s.execute()
+        if response:
+            record_id = response[0].id
+            clean_id = normalize_openalex_id(record_id)
+            return redirect(url_for("ids.sources_id_get", id=clean_id, **request.args))
+        else:
+            abort(404)
+    else:
+        abort(404)
+    response = s.execute()
+    if not response:
+        abort(404)
+    sources_schema = SourcesSchema(context={"display_relevance": False})
+    return sources_schema.dump(response[0])
+
+
 # Universal
 
 
@@ -444,4 +523,6 @@ def universal_get(openalex_id):
         return redirect(
             url_for("ids.publishers_id_get", id=openalex_id, **request.args)
         )
+    elif is_source_openalex_id(openalex_id):
+        return redirect(url_for("ids.sources_id_get", id=openalex_id, **request.args))
     return {"message": "OpenAlex ID format not recognized"}, 404

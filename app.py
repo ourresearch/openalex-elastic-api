@@ -13,6 +13,7 @@ import ids
 import institutions
 import publishers
 import settings
+import sources
 import suggest
 import venues
 import works
@@ -44,6 +45,7 @@ def register_blueprints(app):
     app.register_blueprint(ids.views.blueprint)
     app.register_blueprint(institutions.views.blueprint)
     app.register_blueprint(publishers.views.blueprint)
+    app.register_blueprint(sources.views.blueprint)
     app.register_blueprint(suggest.views.blueprint)
     app.register_blueprint(works.views.blueprint)
     app.register_blueprint(venues.views.blueprint)
