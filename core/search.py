@@ -226,7 +226,9 @@ def full_search(index_name, s, search):
             search_terms=search,
             secondary_field="alternate_titles",
         )
-    elif index_name.lower().startswith("venues"):
+    elif index_name.lower().startswith("venues") or index_name.lower().startswith(
+        "sources"
+    ):
         search_oa = SearchOpenAlex(
             search_terms=search,
             secondary_field="alternate_titles",
