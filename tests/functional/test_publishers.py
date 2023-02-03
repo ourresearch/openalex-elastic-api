@@ -107,7 +107,7 @@ class TestPublishersIDs:
         assert json_data["results"][0]["ids"]["ror"] == "https://ror.org/0117jxy09"
 
     def test_publisher_id_wikidata_short(self, client):
-        res = client.get("/publishers?filter=wikidata_id:Q21096327")
+        res = client.get("/publishers?filter=ids.wikidata:Q21096327")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
         assert (
@@ -117,7 +117,7 @@ class TestPublishersIDs:
 
     def test_publisher_id_wikidata_long(self, client):
         res = client.get(
-            "/publishers?filter=wikidata_id:https://www.wikidata.org/entity/q21096327"
+            "/publishers?filter=wikidata:https://www.wikidata.org/entity/q21096327"
         )
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
@@ -129,7 +129,7 @@ class TestPublishersIDs:
 
 class TestPublishersCountryCode:
     def test_publisher_country_code(self, client):
-        res = client.get("/publishers?filter=country_code:de")
+        res = client.get("/publishers?filter=country_codes:de")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 201
         for result in json_data["results"][:25]:
@@ -145,7 +145,7 @@ class TestPublisherContinent:
 
 class TestPublisherGroupBy:
     def test_publisher_group_by_country_code(self, client):
-        res = client.get("/publishers?group_by=country_code")
+        res = client.get("/publishers?group_by=country_codes")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 106
         # check first result
