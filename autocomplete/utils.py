@@ -1,5 +1,6 @@
 AUTOCOMPLETE_SOURCE = [
     "id",
+    "ids",
     "display_name",
     "authorships",
     "cited_by_count",

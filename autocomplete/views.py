@@ -16,8 +16,11 @@ from core.exceptions import APIQueryParamsError
 from core.utils import clean_preference
 from extensions import cache
 from institutions.fields import fields_dict as institutions_fields_dict
+from publishers.fields import fields_dict as publishers_fields_dict
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
-                      VENUES_INDEX, WORKS_INDEX)
+                      PUBLISHERS_INDEX, SOURCES_INDEX, VENUES_INDEX,
+                      WORKS_INDEX)
+from sources.fields import fields_dict as sources_fields_dict
 from venues.fields import fields_dict as venues_fields_dict
 from works.fields import fields_dict as works_fields_dict
 
@@ -35,6 +38,7 @@ def autocomplete_full():
         "author": AUTHORS_INDEX,
         "concept": CONCEPTS_INDEX,
         "institution": INSTITUTIONS_INDEX,
+        "publisher": PUBLISHERS_INDEX,
         "venue": VENUES_INDEX,
         "work": WORKS_INDEX,
     }
@@ -143,6 +147,22 @@ def autocomplete_venues():
 def autocomplete_works():
     index_name = WORKS_INDEX
     result = single_entity_autocomplete(works_fields_dict, index_name, request)
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/publishers")
+def autocomplete_publishers():
+    index_name = PUBLISHERS_INDEX
+    result = single_entity_autocomplete(publishers_fields_dict, index_name, request)
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/sources")
+def autocomplete_sources():
+    index_name = SOURCES_INDEX
+    result = single_entity_autocomplete(sources_fields_dict, index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
 

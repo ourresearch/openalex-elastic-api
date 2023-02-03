@@ -43,6 +43,29 @@ class TestEntitiesAutoComplete:
         for result in json_data["results"][:25]:
             assert "uni" in result["display_name"].lower()
 
+    def test_publishers_autocomplete(self, client):
+        res = client.get("/autocomplete/publishers?q=else")
+        json_data = res.get_json()
+        assert "else" in json_data["results"][0]["display_name"].lower()
+        for result in json_data["results"][:25]:
+            assert "else" in result["display_name"].lower()
+
+    def test_sources_autocomplete(self, client):
+        res = client.get("/autocomplete/sources?q=nat")
+        json_data = res.get_json()
+        assert "nat" in json_data["results"][0]["display_name"].lower()
+        for result in json_data["results"][:25]:
+            assert "nat" in result["display_name"].lower()
+
+    def test_sources_autocomplete_additional_fields(self, client):
+        """Search across display_name, alternate_titles, and abbreviated_title."""
+        res = client.get("/autocomplete/sources?q=jas")
+        json_data = res.get_json()
+        assert (
+            json_data["results"][0]["display_name"]
+            == "Journal of the Acoustical Society of America"
+        )
+
     def test_venues_autocomplete(self, client):
         res = client.get("/autocomplete/venues?q=nat")
         json_data = res.get_json()

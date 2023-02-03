@@ -22,7 +22,7 @@ class AutoCompleteSchema(Schema):
             return obj.description if "description" in obj else None
         elif "institutions" in obj.meta.index:
             return self.get_location(obj)
-        elif "venues" in obj.meta.index:
+        elif "venues" in obj.meta.index or "sources" in obj.meta.index:
             if "publisher" in obj and obj.publisher is not None:
                 return obj.publisher
             else:
@@ -142,6 +142,8 @@ class AutoCompleteSchema(Schema):
             "authors": "author",
             "concepts": "concept",
             "institutions": "institution",
+            "publishers": "publisher",
+            "sources": "source",
             "venues": "venue",
             "works": "work",
         }
@@ -154,12 +156,15 @@ class AutoCompleteSchema(Schema):
             "authors": "orcid",
             "concepts": "wikidata",
             "institutions": "ror",
+            "sources": "issn_l",
             "venues": "issn_l",
             "works": "doi",
         }
         for key, value in entities.items():
             if key in obj.meta.index:
                 return getattr(obj, value, None)
+        if "publishers" in obj.meta.index:
+            return obj.ids.wikidata if "wikidata" in obj.ids else None
 
     class Meta:
         ordered = True
