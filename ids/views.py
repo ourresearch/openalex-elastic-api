@@ -381,7 +381,7 @@ def sources_random_get():
 
 
 @blueprint.route("/sources/<path:id>")
-@blueprint.route("/journals/<path:id>")
+@blueprint.route("/journals/<path:id>", endpoint="journals_id_get")
 def sources_id_get(id):
     s = Search(index=SOURCES_INDEX)
 
