@@ -14,7 +14,7 @@ blueprint = Blueprint("sources", __name__)
 
 
 @blueprint.route("/sources")
-# @blueprint.route("/journals")
+@blueprint.route("/journals")
 @cache.cached(
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
@@ -30,7 +30,7 @@ def sources():
 
 
 @blueprint.route("/sources/filters/<path:params>")
-# @blueprint.route("/journals/filters/<path:params>")
+@blueprint.route("/journals/filters/<path:params>")
 def sources_filters(params):
     index_name = SOURCES_INDEX
     results = shared_filter_view(request, params, fields_dict, index_name)

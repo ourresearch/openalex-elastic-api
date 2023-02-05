@@ -15,10 +15,8 @@ from ids.utils import (get_merged_id, is_author_openalex_id,
 from institutions.schemas import InstitutionsSchema
 from publishers.schemas import PublishersSchema
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
-                      PUBLISHERS_INDEX, SOURCES_INDEX, VENUES_INDEX,
-                      WORKS_INDEX)
+                      PUBLISHERS_INDEX, SOURCES_INDEX, WORKS_INDEX)
 from sources.schemas import SourcesSchema
-from venues.schemas import VenuesSchema
 from works.schemas import WorksSchema
 
 blueprint = Blueprint("ids", __name__)
@@ -228,80 +226,28 @@ def institutions_id_get(id):
     return institutions_schema.dump(response[0])
 
 
-# Venue
+# Venue (delete after one month)
 
 
 @blueprint.route("/venues/RANDOM")
 @blueprint.route("/venues/random")
-@blueprint.route("/journals/random")
 def venues_random_get():
-    s = Search(index=VENUES_INDEX)
-
-    random_query = Q("function_score", functions={"random_score": {}})
-    s = s.query(random_query).extra(size=1)
-    response = s.execute()
-    venues_schema = VenuesSchema(context={"display_relevance": False})
-    return venues_schema.dump(response[0])
+    return redirect(url_for("ids.sources_random_get", **request.args), code=301)
 
 
 @blueprint.route("/venues/<path:id>")
-@blueprint.route("/journals/<path:id>")
 def venues_id_get(id):
-    s = Search(index=VENUES_INDEX)
-
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
         if clean_id != id:
             return redirect(url_for("ids.venues_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
-        full_openalex_id = f"https://openalex.org/V{clean_id}"
-        query = Q("term", ids__openalex=full_openalex_id)
-        s = s.filter(query)
-        if s.count() == 0:
-            # check if document is merged
-            merged_id = get_merged_id("merge-venues", full_openalex_id)
-            if merged_id:
-                return redirect(
-                    url_for("ids.venues_id_get", id=merged_id, **request.args), code=301
-                )
-
-    elif id.startswith("mag:"):
-        clean_id = id.replace("mag:", "")
-        clean_id = f"V{clean_id}"
-        return redirect(url_for("ids.venues_id_get", id=clean_id, **request.args))
-    elif id.startswith("issn:"):
-        clean_issn = normalize_issn(id)
-        if not clean_issn:
-            abort(404)
-        query = Q("term", ids__issn__lower=clean_issn)
-        s = s.filter(query)
-        response = s.execute()
-        if response:
-            record_id = response[0].id
-            clean_id = normalize_openalex_id(record_id)
-            return redirect(url_for("ids.venues_id_get", id=clean_id, **request.args))
-        else:
-            abort(404)
-    elif id.startswith("issn_l:"):
-        clean_issn = normalize_issn(id)
-        if not clean_issn:
-            abort(404)
-        query = Q("term", ids__issn_l__lower=clean_issn)
-        s = s.filter(query)
-        response = s.execute()
-        if response:
-            record_id = response[0].id
-            clean_id = normalize_openalex_id(record_id)
-            return redirect(url_for("ids.venues_id_get", id=clean_id, **request.args))
-        else:
-            abort(404)
+        full_openalex_id = f"https://openalex.org/S{clean_id}"
+        return redirect(
+            url_for("ids.sources_id_get", id=full_openalex_id, **request.args), code=301
+        )
     else:
-        abort(404)
-    response = s.execute()
-    if not response:
-        abort(404)
-    venues_schema = VenuesSchema(context={"display_relevance": False})
-    return venues_schema.dump(response[0])
+        return redirect(url_for("ids.sources_id_get", **request.args), code=301)
 
 
 # Concept
@@ -423,7 +369,7 @@ def publishers_random_get():
 
 @blueprint.route("/sources/RANDOM")
 @blueprint.route("/sources/random")
-# @blueprint.route("/journals/random")
+@blueprint.route("/journals/random")
 def sources_random_get():
     s = Search(index=SOURCES_INDEX)
 
@@ -435,7 +381,7 @@ def sources_random_get():
 
 
 @blueprint.route("/sources/<path:id>")
-# @blueprint.route("/journals/<path:id>")
+@blueprint.route("/journals/<path:id>")
 def sources_id_get(id):
     s = Search(index=SOURCES_INDEX)
 
