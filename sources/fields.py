@@ -20,6 +20,9 @@ fields = [
     OpenAlexIDField(param="concept.id", custom_es_field="x_concepts.id"),
     OpenAlexIDField(param="concepts.id", custom_es_field="x_concepts.id"),
     OpenAlexIDField(
+        param="host_organization", custom_es_field="host_organization.keyword"
+    ),
+    OpenAlexIDField(
         param="host_organization.id", custom_es_field="host_organization.keyword"
     ),
     OpenAlexIDField(param="ids.openalex"),
