@@ -247,7 +247,7 @@ def venues_id_get(id):
             url_for("ids.sources_id_get", id=full_openalex_id, **request.args), code=301
         )
     else:
-        return redirect(url_for("ids.sources_id_get", **request.args), code=301)
+        return redirect(url_for("ids.sources_id_get", id=id, **request.args), code=301)
 
 
 # Concept
