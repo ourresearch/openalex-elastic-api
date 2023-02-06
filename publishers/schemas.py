@@ -26,7 +26,7 @@ class PublishersSchema(Schema):
     cited_by_count = fields.Int()
     ids = fields.Nested(IDsSchema)
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
-    venues_api_url = fields.Str()
+    sources_api_url = fields.Str()
     updated_date = fields.Str()
     created_date = fields.Str(dump_default=None)
 
