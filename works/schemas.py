@@ -87,6 +87,31 @@ class AlternateHostVenuesSchema(Schema):
         ordered = True
 
 
+class SourceSchema(Schema):
+    id = fields.Str()
+    display_name = fields.Str()
+    issn_l = fields.Str()
+    issn = fields.List(fields.Str())
+    host_organization = fields.Str()
+    type = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
+class LocationSchema(Schema):
+    is_oa = fields.Bool()
+    landing_page_url = fields.Str()
+    pdf_url = fields.Str()
+    source = fields.Nested(SourceSchema)
+    venue = fields.Nested(SourceSchema)
+    license = fields.Str()
+    version = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class OpenAccessSchema(Schema):
     is_oa = fields.Bool()
     oa_status = fields.Str()
@@ -130,6 +155,7 @@ class WorksSchema(Schema):
     publication_date = fields.Str()
     ids = fields.Nested(IDsSchema)
     host_venue = fields.Nested(HostVenueSchema)
+    best_oa_location = fields.Nested(LocationSchema)
     type = fields.Str()
     open_access = fields.Nested(OpenAccessSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
