@@ -33,6 +33,7 @@ DO_NOT_GROUP_BY = [
 ]
 
 EXTERNAL_ID_FIELDS = [
+    "best_oa_location.is_oa",
     "has_doi",
     "has_issn",
     "has_orcid",
@@ -41,6 +42,8 @@ EXTERNAL_ID_FIELDS = [
     "has_orcid",
     "has_ror",
     "has_wikidata",
+    "primary_location.is_oa",
+    "primary_location.source.has_issn",
 ]
 
 BOOLEAN_TEXT_FIELDS = ["has_abstract", "has_ngrams", "has_references"]

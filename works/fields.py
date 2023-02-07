@@ -165,7 +165,12 @@ fields = [
         custom_es_field="best_oa_location.license.keyword",
     ),
     TermField(
-        param="best_oa_location.type", custom_es_field="best_oa_location.type.keyword"
+        param="best_oa_location.source.type",
+        custom_es_field="best_oa_location.source.type.keyword",
+    ),
+    TermField(
+        param="best_oa_location.venue.type",
+        custom_es_field="best_oa_location.venue.type.keyword",
     ),
     TermField(
         param="best_oa_location.version",
@@ -208,7 +213,12 @@ fields = [
         param="locations.venue.issn", custom_es_field="locations.venue.issn.keyword"
     ),
     TermField(param="locations.license", custom_es_field="locations.license.keyword"),
-    TermField(param="locations.type", custom_es_field="locations.type.keyword"),
+    TermField(
+        param="locations.source.type", custom_es_field="locations.source.type.keyword"
+    ),
+    TermField(
+        param="locations.venue.type", custom_es_field="locations.venue.type.keyword"
+    ),
     TermField(param="locations.version", custom_es_field="locations.version.keyword"),
     TermField(param="mag", custom_es_field="ids.mag"),
     TermField(param="oa_status", alias="open_access.oa_status"),
@@ -228,7 +238,12 @@ fields = [
         custom_es_field="primary_location.license.keyword",
     ),
     TermField(
-        param="primary_location.type", custom_es_field="primary_location.type.keyword"
+        param="primary_location.source.type",
+        custom_es_field="primary_location.source.type.keyword",
+    ),
+    TermField(
+        param="primary_location.venue.type",
+        custom_es_field="primary_location.venue.type.keyword",
     ),
     TermField(
         param="primary_location.version",
