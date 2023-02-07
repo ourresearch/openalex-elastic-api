@@ -293,7 +293,7 @@ def get_group_by_results(group_by, response):
         buckets = response.aggregations.nested_groupby.groupby.buckets
     else:
         buckets = response.aggregations.groupby.buckets
-    if group_by.endswith(".id"):
+    if group_by.endswith(".id") or group_by.endswith("host_organization"):
         keys = [b.key for b in buckets]
         ids_to_display_names = get_display_names(keys)
         for b in buckets:
