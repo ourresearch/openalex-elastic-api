@@ -7,6 +7,7 @@ fields = [
         custom_es_field="authorships.institutions.country_code",
         nested=True,
     ),
+    BooleanField(param="best_oa_location.is_oa"),
     BooleanField(
         param=f"institutions.is_global_south",
         custom_es_field="authorships.institutions.country_code",
@@ -27,7 +28,9 @@ fields = [
     BooleanField(param="is_oa", alias="open_access.is_oa"),
     BooleanField(param="is_paratext"),
     BooleanField(param="is_retracted"),
+    BooleanField(param="locations.is_oa"),
     BooleanField(param="open_access.is_oa"),
+    BooleanField(param="primary_location.is_oa"),
     DateField(
         param="from_created_date",
         custom_es_field="created_date",
@@ -49,6 +52,22 @@ fields = [
     OpenAlexIDField(param="author.id", alias="authorships.author.id", nested=True),
     OpenAlexIDField(param="authorships.author.id", nested=True),
     OpenAlexIDField(param="authorships.institutions.id", nested=True),
+    OpenAlexIDField(
+        param="best_oa_location.source.id",
+        custom_es_field="best_oa_location.source.id.keyword",
+    ),
+    OpenAlexIDField(
+        param="best_oa_location.venue.id",
+        custom_es_field="best_oa_location.venue.id.keyword",
+    ),
+    OpenAlexIDField(
+        param="best_oa_location.source.host_organization",
+        custom_es_field="best_oa_location.source.host_organization.keyword",
+    ),
+    OpenAlexIDField(
+        param="best_oa_location.venue.host_organization",
+        custom_es_field="best_oa_location.venue.host_organization.keyword",
+    ),
     OpenAlexIDField(param="cited_by"),
     OpenAlexIDField(param="cites", alias="referenced_works"),
     OpenAlexIDField(param="concept.id", alias="concepts.id"),
@@ -62,6 +81,38 @@ fields = [
         param="institutions.id", alias="authorships.institutions.id", nested=True
     ),
     OpenAlexIDField(param="journal.id", alias="host_venue.id"),
+    OpenAlexIDField(
+        param="locations.source.id",
+        custom_es_field="locations.source.id.keyword",
+    ),
+    OpenAlexIDField(
+        param="locations.venue.id",
+        custom_es_field="locations.venue.id.keyword",
+    ),
+    OpenAlexIDField(
+        param="locations.source.host_organization",
+        custom_es_field="locations.source.host_organization.keyword",
+    ),
+    OpenAlexIDField(
+        param="locations.venue.host_organization",
+        custom_es_field="locations.venue.host_organization.keyword",
+    ),
+    OpenAlexIDField(
+        param="primary_location.source.id",
+        custom_es_field="primary_location.source.id.keyword",
+    ),
+    OpenAlexIDField(
+        param="primary_location.venue.id",
+        custom_es_field="primary_location.venue.id.keyword",
+    ),
+    OpenAlexIDField(
+        param="primary_location.source.host_organization",
+        custom_es_field="primary_location.source.host_organization.keyword",
+    ),
+    OpenAlexIDField(
+        param="primary_location.venue.host_organization",
+        custom_es_field="primary_location.venue.host_organization.keyword",
+    ),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(param="repository"),
@@ -93,6 +144,25 @@ fields = [
     ),
     TermField(param="authorships.institutions.ror", nested=True),
     TermField(param="authorships.institutions.type", nested=True),
+    TermField(
+        param="best_oa_location.source.issn",
+        custom_es_field="best_oa_location.source.issn.keyword",
+    ),
+    TermField(
+        param="best_oa_location.venue.issn",
+        custom_es_field="best_oa_location.venue.issn.keyword",
+    ),
+    TermField(
+        param="best_oa_location.license",
+        custom_es_field="best_oa_location.license.keyword",
+    ),
+    TermField(
+        param="best_oa_location.type", custom_es_field="best_oa_location.type.keyword"
+    ),
+    TermField(
+        param="best_oa_location.version",
+        custom_es_field="best_oa_location.version.keyword",
+    ),
     TermField(param="concepts.wikidata"),
     TermField(param="display_name", custom_es_field="display_name.lower"),
     TermField(param="doi", alias="ids.doi"),
@@ -123,11 +193,39 @@ fields = [
     TermField(
         param="institutions.type", alias="authorships.institutions.type", nested=True
     ),
+    TermField(
+        param="locations.source.issn", custom_es_field="locations.source.issn.keyword"
+    ),
+    TermField(
+        param="locations.venue.issn", custom_es_field="locations.venue.issn.keyword"
+    ),
+    TermField(param="locations.license", custom_es_field="locations.license.keyword"),
+    TermField(param="locations.type", custom_es_field="locations.type.keyword"),
+    TermField(param="locations.version", custom_es_field="locations.version.keyword"),
     TermField(param="mag", custom_es_field="ids.mag"),
     TermField(param="oa_status", alias="open_access.oa_status"),
     TermField(param="open_access.oa_status"),
     TermField(param="pmid", custom_es_field="ids.pmid"),
     TermField(param="pmcid", custom_es_field="ids.pmcid"),
+    TermField(
+        param="primary_location.source.issn",
+        custom_es_field="primary_location.source.issn.keyword",
+    ),
+    TermField(
+        param="primary_location.venue.issn",
+        custom_es_field="primary_location.venue.issn.keyword",
+    ),
+    TermField(
+        param="primary_location.license",
+        custom_es_field="primary_location.license.keyword",
+    ),
+    TermField(
+        param="primary_location.type", custom_es_field="primary_location.type.keyword"
+    ),
+    TermField(
+        param="primary_location.version",
+        custom_es_field="primary_location.version.keyword",
+    ),
     TermField(param="type"),
     TermField(param="version", custom_es_field="host_venue.version"),
 ]
