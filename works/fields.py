@@ -28,6 +28,14 @@ fields = [
     BooleanField(param="is_oa", alias="open_access.is_oa"),
     BooleanField(param="is_paratext"),
     BooleanField(param="is_retracted"),
+    BooleanField(
+        param="primary_location.source.has_issn",
+        custom_es_field="primary_location.source.issn.keyword",
+    ),
+    BooleanField(
+        param="primary_location.venue.has_issn",
+        custom_es_field="primary_location.venue.issn.keyword",
+    ),
     BooleanField(param="locations.is_oa"),
     BooleanField(param="open_access.is_oa"),
     BooleanField(param="primary_location.is_oa"),
