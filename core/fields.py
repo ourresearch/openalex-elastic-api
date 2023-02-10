@@ -13,14 +13,11 @@ from settings import (CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS,
 
 
 class Field(ABC):
-    def __init__(
-        self, param, alias=None, custom_es_field=None, nested=False, unique_id=None
-    ):
+    def __init__(self, param, alias=None, custom_es_field=None, unique_id=None):
         self.param = param
         self.alias = alias
         self.custom_es_field = custom_es_field
         self.value = None
-        self.nested = nested
         self.unique_id = unique_id
 
     @abstractmethod
@@ -109,42 +106,18 @@ class BooleanField(Field):
                 c["country_code"] for c in countries.GLOBAL_SOUTH_COUNTRIES
             ]
             if self.value.lower().strip() == "true":
-                if self.nested:
-                    q = Q(
-                        "nested",
-                        path="authorships",
-                        query=Q("terms", **{self.es_field(): country_codes}),
-                    )
-                else:
-                    q = Q("terms", **{self.es_field(): country_codes})
+                q = Q("terms", **{self.es_field(): country_codes})
             elif self.value.lower().strip() == "false":
-                if self.nested:
-                    q = ~Q(
-                        "nested",
-                        path="authorships",
-                        query=Q("terms", **{self.es_field(): country_codes}),
-                    )
-                else:
-                    q = ~Q("terms", **{self.es_field(): country_codes})
+                q = ~Q("terms", **{self.es_field(): country_codes})
             return q
         elif self.value == "null":
-            if self.nested:
-                q = ~Q(
-                    "nested",
-                    path="authorships",
-                    query=Q("exists", field=self.es_field()),
-                )
-                return q
-            else:
-                q = ~Q("exists", field=self.es_field())
+            q = ~Q("exists", field=self.es_field())
         elif self.value == "!null":
             q = Q("exists", field=self.es_field())
         else:
             self.validate(self.value)
             kwargs = {self.es_field(): self.value.lower().strip()}
             q = Q("term", **kwargs)
-        if q and self.nested:
-            q = Q("nested", path="authorships", query=q)
         return q
 
     def validate(self, query):
@@ -218,20 +191,12 @@ class OpenAlexIDField(Field):
         if self.value == "null" and self.param != "repository":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
-            if self.nested:
-                q = ~Q(
-                    "nested", path="authorships", query=Q("exists", field=field_name)
-                )
-            else:
-                q = ~Q("exists", field=field_name)
+            q = ~Q("exists", field=field_name)
             return q
         elif self.value == "!null" and self.param != "repository":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
-            if self.nested:
-                q = Q("nested", path="authorships", query=Q("exists", field=field_name))
-            else:
-                q = Q("exists", field=field_name)
+            q = Q("exists", field=field_name)
             return q
         elif self.value.startswith("!") and self.value != "!null":
             self.validate(self.value[1:])
@@ -241,8 +206,6 @@ class OpenAlexIDField(Field):
                 q = ~Q("term", host_venue__id=query) & ~Q(
                     "term", alternate_host_venues__id=query
                 )
-            elif self.nested:
-                q = ~Q("nested", path="authorships", query=Q("term", **kwargs))
             else:
                 q = ~Q("term", **kwargs)
             return q
@@ -271,8 +234,6 @@ class OpenAlexIDField(Field):
             query = get_full_openalex_id(self.value)
             kwargs = {self.es_field(): query}
             q = Q("term", **kwargs)
-        if q and self.nested:
-            q = Q("nested", path="authorships", query=q)
         return q
 
     def es_field(self) -> str:
@@ -431,11 +392,7 @@ class TermField(Field):
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
-            if self.nested:
-                q = ~Q(
-                    "nested", path="authorships", query=Q("exists", field=field_name)
-                )
-            elif self.param == "version":
+            if self.param == "version":
                 q = ~Q("exists", field="host_venue.version") & ~Q(
                     "exists", field="alternate_host_venues.version"
                 )
@@ -474,16 +431,7 @@ class TermField(Field):
             kwargs = {self.es_field(): query}
             if "continent" in self.param:
                 country_codes = self.get_country_codes()
-                if self.nested:
-                    q = ~Q(
-                        "nested",
-                        path="authorships",
-                        query=Q("terms", **{self.es_field(): country_codes}),
-                    )
-                else:
-                    q = ~Q("terms", **{self.es_field(): country_codes})
-            elif self.nested:
-                q = ~Q("nested", path="authorships", query=Q("term", **kwargs))
+                q = ~Q("terms", **{self.es_field(): country_codes})
             elif self.param == "version":
                 version = self.validate_version()
                 kwargs1 = {"host_venue.version": version}
@@ -518,8 +466,6 @@ class TermField(Field):
         else:
             kwargs = {self.es_field(): self.value}
             q = Q("term", **kwargs)
-        if q and self.nested:
-            q = Q("nested", path="authorships", query=q)
         return q
 
     def es_field(self) -> str:

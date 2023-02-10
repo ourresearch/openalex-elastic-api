@@ -172,43 +172,6 @@ class TestInstitutionsIDGet:
         assert res.status_code == 404
 
 
-class TestVenuesIDGet:
-    id_result = "https://openalex.org/V41354064"
-    name_result = "ChemInform"
-
-    def test_venues_openalex_get(self, client):
-        res = client.get("/venues/V41354064")
-        json_data = res.get_json()
-        assert json_data["id"] == self.id_result
-        assert json_data["display_name"] == self.name_result
-
-    def test_venues_issn_get_key(self, client):
-        res = client.get("/venues/issn:1431-5890", follow_redirects=True)
-        json_data = res.get_json()
-        assert json_data["id"] == self.id_result
-        assert json_data["display_name"] == self.name_result
-
-    def test_venues_issn_l_get_key(self, client):
-        res = client.get("/venues/issn_l:1057-610X", follow_redirects=True)
-        json_data = res.get_json()
-        assert json_data["id"] == "https://openalex.org/V41746314"
-        assert json_data["display_name"] == "Studies in Conflict & Terrorism"
-
-    def test_venues_id_bad_issn(self, client):
-        res = client.get("/venues/issn:778-333", follow_redirects=True)
-        assert res.status_code == 404
-
-    def test_venues_id_get_bad_data(self, client):
-        res = client.get("/venues/289744280", follow_redirects=True)
-        assert res.status_code == 404
-
-    def test_journals_openalex_get(self, client):
-        res = client.get("/journals/V41354064")
-        json_data = res.get_json()
-        assert json_data["id"] == self.id_result
-        assert json_data["display_name"] == self.name_result
-
-
 class TestConceptsIDGet:
     id_result = "https://openalex.org/C86803240"
     name_result = "Biology"
@@ -279,19 +242,19 @@ class TestSourcesIDGet:
     id_result = "https://openalex.org/S3880285"
     name_result = "Science"
 
-    def test_publishers_openalex_get(self, client):
+    def test_sources_openalex_get(self, client):
         res = client.get("/sources/S3880285")
         json_data = res.get_json()
         assert json_data["id"] == self.id_result
         assert json_data["display_name"] == self.name_result
 
-    def test_publishers_openalex_get_case_insensitive(self, client):
+    def test_sources_openalex_get_case_insensitive(self, client):
         res = client.get("/sources/s3880285", follow_redirects=True)
         json_data = res.get_json()
         assert json_data["id"] == self.id_result
         assert json_data["display_name"] == self.name_result
 
-    def test_publishers_openalex_get_url(self, client):
+    def test_sources_openalex_get_url(self, client):
         res = client.get(
             "/sources/https://openalex.org/S3880285", follow_redirects=True
         )
@@ -321,12 +284,6 @@ class TestUniversalIDGet:
         json_data = res.get_json()
         assert json_data["id"] == "https://openalex.org/I19820366"
         assert json_data["display_name"] == "Chinese Academy of Sciences"
-
-    def test_venues_openalex_get(self, client):
-        res = client.get("/V41354064", follow_redirects=True)
-        json_data = res.get_json()
-        assert json_data["id"] == "https://openalex.org/V41354064"
-        assert json_data["display_name"] == "ChemInform"
 
     def test_concepts_openalex_get(self, client):
         res = client.get("/C86803240", follow_redirects=True)

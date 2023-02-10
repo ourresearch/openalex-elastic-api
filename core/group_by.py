@@ -56,62 +56,19 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                     size=per_page,
                     shard_size=shard_size,
                 )
-            if field.nested:
-                s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
-                    "groupby", a
-                )
-            else:
-                s.aggs.bucket("groupby", a)
+            s.aggs.bucket("groupby", a)
     elif "is_global_south" in field.param:
         country_codes = [c["country_code"] for c in GLOBAL_SOUTH_COUNTRIES]
-        if field.nested:
-            exists = A(
-                "filter",
-                Q(
-                    "nested",
-                    path="authorships",
-                    query=Q("terms", **{group_by_field: country_codes}),
-                ),
-            )
-            not_exists = A(
-                "filter",
-                Q(
-                    "nested",
-                    path="authorships",
-                    query=~Q("terms", **{group_by_field: country_codes}),
-                ),
-            )
-            s.aggs.bucket("exists", exists)
-            s.aggs.bucket("not_exists", not_exists)
-        else:
-            exists = A("filter", Q("terms", **{group_by_field: country_codes}))
-            not_exists = A("filter", ~Q("terms", **{group_by_field: country_codes}))
-            s.aggs.bucket("exists", exists)
-            s.aggs.bucket("not_exists", not_exists)
+        exists = A("filter", Q("terms", **{group_by_field: country_codes}))
+        not_exists = A("filter", ~Q("terms", **{group_by_field: country_codes}))
+        s.aggs.bucket("exists", exists)
+        s.aggs.bucket("not_exists", not_exists)
     elif (
         field.param in settings.EXTERNAL_ID_FIELDS
         or field.param in settings.BOOLEAN_TEXT_FIELDS
     ):
-        if field.nested:
-            exists = A(
-                "filter",
-                Q(
-                    "nested",
-                    path="authorships",
-                    query=Q("exists", field=group_by_field),
-                ),
-            )
-            not_exists = A(
-                "filter",
-                ~Q(
-                    "nested",
-                    path="authorships",
-                    query=Q("exists", field=group_by_field),
-                ),
-            )
-        else:
-            exists = A("filter", Q("exists", field=group_by_field))
-            not_exists = A("filter", ~Q("exists", field=group_by_field))
+        exists = A("filter", Q("exists", field=group_by_field))
+        not_exists = A("filter", ~Q("exists", field=group_by_field))
         s.aggs.bucket("exists", exists)
         s.aggs.bucket("not_exists", not_exists)
     elif known:
@@ -121,12 +78,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
             size=per_page,
             shard_size=shard_size,
         )
-        if field.nested:
-            s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
-                "groupby", a
-            )
-        else:
-            s.aggs.bucket("groupby", a)
+        s.aggs.bucket("groupby", a)
     else:
         a = A(
             "terms",
@@ -135,55 +87,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
             size=per_page,
             shard_size=shard_size,
         )
-        if field.nested:
-            if "author.id" in field.param and q:
-                s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
-                    "inner",
-                    "filter",
-                    Q(
-                        "match_phrase_prefix",
-                        **{
-                            "authorships__author__display_name__autocomplete": {
-                                "query": q,
-                                "slop": 1,
-                                "max_expansions": 1000,
-                            }
-                        },
-                    ),
-                ).bucket("groupby", a)
-            elif (
-                q
-                and "institutions.id" in field.param
-                or q
-                and "institution.id" in field.param
-            ):
-                s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
-                    "inner",
-                    "filter",
-                    Q(
-                        "match_phrase_prefix",
-                        **{
-                            "authorships__institutions__display_name__autocomplete": {
-                                "query": q,
-                                "max_expansions": 500,
-                            }
-                        },
-                    ),
-                ).bucket("groupby", a)
-            else:
-                s.aggs.bucket("nested_groupby", "nested", path="authorships").bucket(
-                    "groupby",
-                    A(
-                        "terms",
-                        field=group_by_field,
-                        missing=missing,
-                        size=per_page,
-                        order={"inner": "desc"},
-                        shard_size=shard_size,
-                    ),
-                ).bucket("inner", "reverse_nested")
-        else:
-            s.aggs.bucket("groupby", a)
+        s.aggs.bucket("groupby", a)
     return s
 
 
@@ -210,14 +114,7 @@ def group_by_continent(
             s = filter_records(fields_dict, filter_params, s)
         s = s.extra(track_total_hits=True)
         country_codes = [c["country_code"] for c in COUNTRIES_BY_CONTINENT[continent]]
-        if field.nested:
-            s = s.filter(
-                "nested",
-                path="authorships",
-                query=Q("terms", **{field.es_field(): country_codes}),
-            )
-        else:
-            s = s.filter("terms", **{field.es_field(): country_codes})
+        s = s.filter("terms", **{field.es_field(): country_codes})
         ms = ms.add(s)
 
     responses = ms.execute()
@@ -243,16 +140,7 @@ def group_by_continent(
     # filter
     if filter_params:
         s = filter_records(fields_dict, filter_params, s)
-    if field.nested:
-        s = s.query(
-            ~Q(
-                "nested",
-                path="authorships",
-                query=Q("exists", field=field.es_field()),
-            )
-        )
-    else:
-        s = s.query(~Q("exists", field=field.es_field()))
+    s = s.query(~Q("exists", field=field.es_field()))
     response = s.execute()
     unknown_count = s.count()
     if (unknown_count and not q) or (unknown_count and q and q.lower() in "unknown"):
@@ -284,15 +172,7 @@ def group_by_continent(
 
 def get_group_by_results(group_by, response):
     group_by_results = []
-    if (
-        "nested_groupby" in response.aggregations
-        and "inner" in response.aggregations.nested_groupby
-    ):
-        buckets = response.aggregations.nested_groupby.inner.groupby.buckets
-    elif "nested_groupby" in response.aggregations:
-        buckets = response.aggregations.nested_groupby.groupby.buckets
-    else:
-        buckets = response.aggregations.groupby.buckets
+    buckets = response.aggregations.groupby.buckets
     if group_by.endswith(".id") or group_by.endswith("host_organization"):
         keys = [b.key for b in buckets]
         ids_to_display_names = get_display_names(keys)
@@ -499,15 +379,7 @@ def filter_group_by(field, group_by, q, s):
         s = s.query("match_phrase_prefix", **{field: q})
     elif "country_code" in group_by:
         country_codes = country_search(q)
-        if field.nested:
-            q = Q(
-                "nested",
-                path="authorships",
-                query=Q("terms", **{field.es_field(): country_codes}),
-            )
-            s = s.query(q)
-        else:
-            s = s.query("terms", **{field.es_field(): country_codes})
+        s = s.query("terms", **{field.es_field(): country_codes})
     elif group_by == "publication_year":
         min_year, max_year = set_year_min_max(q)
         kwargs = {"publication_year": {"gte": min_year, "lte": max_year}}

@@ -39,7 +39,7 @@ def autocomplete_full():
         "concept": CONCEPTS_INDEX,
         "institution": INSTITUTIONS_INDEX,
         "publisher": PUBLISHERS_INDEX,
-        "venue": VENUES_INDEX,
+        "source": SOURCES_INDEX,
         "work": WORKS_INDEX,
     }
     validate_full_autocomplete_params(request)

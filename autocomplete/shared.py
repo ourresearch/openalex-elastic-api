@@ -37,7 +37,7 @@ def single_entity_autocomplete(fields_dict, index_name, request):
             s = filter_records(fields_dict, filter_params, s)
 
         # autocomplete
-        if index_name.startswith("venue"):
+        if index_name.startswith("venue") or index_name.startswith("source"):
             s = s.query(
                 Q("match_phrase_prefix", display_name__autocomplete=q)
                 | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
@@ -73,6 +73,7 @@ def search_canonical_id_single(index_name, s, q):
             and id_utils.is_institution_openalex_id(q)
         )
         or (index_name.startswith("venue") and id_utils.is_venue_openalex_id(q))
+        or (index_name.startswith("source") and id_utils.is_source_openalex_id(q))
         or (index_name.startswith("work") and id_utils.is_work_openalex_id(q))
     ):
         s = filter_openalex_id(q, s)
@@ -92,7 +93,9 @@ def search_canonical_id_single(index_name, s, q):
         ror_id = f"https://ror.org/{normalized_id}"
         s = s.filter("term", ror=ror_id)
         canonical_id_found = True
-    elif index_name.startswith("venue") and id_utils.is_issn(q):
+    elif (index_name.startswith("venue") and id_utils.is_issn(q)) or (
+        index_name.startswith("source") and id_utils.is_issn(q)
+    ):
         normalized_id = id_utils.normalize_issn(q)
         s = s.filter("term", issn=normalized_id)
         canonical_id_found = True

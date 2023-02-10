@@ -3,21 +3,18 @@ class TestFullAutoComplete:
         res = client.get("/autocomplete?q=sci")
         json_data = res.get_json()
         first_object = json_data["results"][0]
-        assert first_object["id"] == "https://openalex.org/C41008148"
-        assert first_object["display_name"] == "Computer science"
-        assert first_object["cited_by_count"] == 389939670
-        assert first_object["entity_type"] == "concept"
-        assert first_object["external_id"] == "https://www.wikidata.org/wiki/Q21198"
+        assert first_object["id"] == "https://openalex.org/P4310320990"
+        assert first_object["display_name"] == "Elsevier BV"
+        assert first_object["cited_by_count"] == 395389023
+        assert first_object["entity_type"] == "publisher"
+        assert first_object["external_id"] == "https://www.wikidata.org/entity/Q746413"
 
-        for result in json_data["results"][:25]:
-            assert "sci" in result["display_name"].lower()
-
-    def test_autocomplete_full_venues_additional_fields(self, client):
-        res = client.get("/autocomplete?q=jasa")
+    def test_autocomplete_full_sources_additional_fields(self, client):
+        res = client.get("/autocomplete?q=jacs")
         json_data = res.get_json()
         assert (
             json_data["results"][0]["display_name"]
-            == "Journal of the Acoustical Society of America"
+            == "Journal of the American Chemical Society"
         )
 
 
@@ -59,27 +56,11 @@ class TestEntitiesAutoComplete:
 
     def test_sources_autocomplete_additional_fields(self, client):
         """Search across display_name, alternate_titles, and abbreviated_title."""
-        res = client.get("/autocomplete/sources?q=jas")
+        res = client.get("/autocomplete/sources?q=jacs")
         json_data = res.get_json()
         assert (
             json_data["results"][0]["display_name"]
-            == "Journal of the Acoustical Society of America"
-        )
-
-    def test_venues_autocomplete(self, client):
-        res = client.get("/autocomplete/venues?q=nat")
-        json_data = res.get_json()
-        assert "nat" in json_data["results"][0]["display_name"].lower()
-        for result in json_data["results"][:25]:
-            assert "nat" in result["display_name"].lower()
-
-    def test_venues_autocomplete_additional_fields(self, client):
-        """Search across display_name, alternate_titles, and abbreviated_title."""
-        res = client.get("/autocomplete/venues?q=jas")
-        json_data = res.get_json()
-        assert (
-            json_data["results"][0]["display_name"]
-            == "Journal of the Acoustical Society of America"
+            == "Journal of the American Chemical Society"
         )
 
     def test_works_autocomplete(self, client):
@@ -274,10 +255,13 @@ class TestAutocompleteIdDetection:
         assert json_data["results"][0]["display_name"] == "Chinese Academy of Sciences"
 
     def test_full_autocomplete_issn_urn(self, client):
-        res = client.get("/autocomplete?q=issn:0931-7597")
+        res = client.get("/autocomplete?q=issn:0002-7863")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
-        assert json_data["results"][0]["display_name"] == "ChemInform"
+        assert (
+            json_data["results"][0]["display_name"]
+            == "Journal of the American Chemical Society"
+        )
 
     def test_full_autocomplete_openalex(self, client):
         res = client.get("/autocomplete?q=W37005")

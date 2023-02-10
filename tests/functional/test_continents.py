@@ -150,7 +150,7 @@ class TestWorksGlobalSouthGroupBy:
         assert json_data["meta"]["count"] == 2
         assert json_data["group_by"] == [
             {"key": "true", "key_display_name": "true", "count": 632},
-            {"key": "false", "key_display_name": "false", "count": 9615},
+            {"key": "false", "key_display_name": "false", "count": 9368},
         ]
 
     def test_works_global_south_group_by_alias_1(self, client):
@@ -159,7 +159,7 @@ class TestWorksGlobalSouthGroupBy:
         assert json_data["meta"]["count"] == 2
         assert json_data["group_by"] == [
             {"key": "true", "key_display_name": "true", "count": 632},
-            {"key": "false", "key_display_name": "false", "count": 9615},
+            {"key": "false", "key_display_name": "false", "count": 9368},
         ]
 
 
@@ -243,49 +243,49 @@ class TestAuthorsContinentFilter:
         assert json_data["meta"]["count"] == 8795
 
 
-class TestVenuesContinentsFilters:
-    def test_venues_continent_africa(self, client):
-        res = client.get("/venues?filter=continent:africa")
+class TestSourcesContinentsFilters:
+    def test_sources_continent_africa(self, client):
+        res = client.get("/sources?filter=continent:africa")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 90
+        assert json_data["meta"]["count"] == 128
 
-    def test_venues_continent_not_africa(self, client):
-        res = client.get("/venues?filter=continent:!africa")
+    def test_sources_continent_not_africa(self, client):
+        res = client.get("/sources?filter=continent:!africa")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9910
+        assert json_data["meta"]["count"] == 9872
 
-    def test_venues_continent_africa_code(self, client):
-        res = client.get("/venues?filter=continent:Q15")
+    def test_sources_continent_africa_code(self, client):
+        res = client.get("/sources?filter=continent:Q15")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 90
+        assert json_data["meta"]["count"] == 128
 
-    def test_venues_continent_not_africa_code(self, client):
-        res = client.get("/venues?filter=continent:!Q15")
+    def test_sources_continent_not_africa_code(self, client):
+        res = client.get("/sources?filter=continent:!Q15")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9910
+        assert json_data["meta"]["count"] == 9872
 
-    def test_venues_global_south(self, client):
-        res = client.get("/venues?filter=is_global_south:true")
+    def test_sources_global_south(self, client):
+        res = client.get("/sources?filter=is_global_south:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 608
+        assert json_data["meta"]["count"] == 1612
 
 
 class TestVenuesContinentsGroupBy:
-    def test_venues_continent_group_by(self, client):
-        res = client.get("/venues?group_by=continent")
+    def test_sources_continent_group_by(self, client):
+        res = client.get("/sources?group_by=continent")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 8
         assert json_data["group_by"][1] == {
-            "key": "Q49",
-            "key_display_name": "North America",
-            "count": 2844,
+            "key": "Q46",
+            "key_display_name": "Europe",
+            "count": 1896,
         }
 
-    def test_venues_global_south_group_by(self, client):
-        res = client.get("/venues?group_by=is_global_south")
+    def test_sources_global_south_group_by(self, client):
+        res = client.get("/sources?group_by=is_global_south")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 2
         assert json_data["group_by"] == [
-            {"key": "true", "key_display_name": "true", "count": 608},
-            {"key": "false", "key_display_name": "false", "count": 9392},
+            {"key": "true", "key_display_name": "true", "count": 1612},
+            {"key": "false", "key_display_name": "false", "count": 8388},
         ]
