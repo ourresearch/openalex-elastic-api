@@ -874,3 +874,16 @@ class TestWorksNgramsURL:
         short_id = record["id"].replace("https://openalex.org/", "")
         ngrams_url = f"https://api.openalex.org/works/{short_id}/ngrams"
         assert record["ngrams_url"] == ngrams_url
+
+
+class TestWorksSelect:
+    def test_works_select(self, client):
+        res = client.get("/works?select=id, display_name,concepts")
+        json_data = res.get_json()
+        assert "meta" in json_data
+        assert "group_by" in json_data
+        result = json_data["results"][0]
+        assert len(result.keys()) == 3
+        assert "id" in result
+        assert "display_name" in result
+        assert "concepts" in result

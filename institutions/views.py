@@ -5,10 +5,10 @@ from core.filters_view import shared_filter_view
 from core.histogram import shared_histogram_view
 from core.schemas import FiltersWrapperSchema, HistogramWrapperSchema
 from core.shared_view import shared_view
-from core.utils import is_cached
+from core.utils import is_cached, process_only_fields
 from extensions import cache
 from institutions.fields import fields_dict
-from institutions.schemas import MessageSchema
+from institutions.schemas import InstitutionsSchema, MessageSchema
 from settings import INSTITUTIONS_INDEX
 
 blueprint = Blueprint("institutions", __name__)
@@ -21,11 +21,12 @@ blueprint = Blueprint("institutions", __name__)
 def institutions():
     index_name = INSTITUTIONS_INDEX
     default_sort = ["-works_count", "id"]
+    only_fields = process_only_fields(request, InstitutionsSchema)
     result = shared_view(request, fields_dict, index_name, default_sort)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
-    message_schema = MessageSchema()
+    message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
 
 

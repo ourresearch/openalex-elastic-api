@@ -2,6 +2,7 @@ import re
 
 from elasticsearch_dsl import Q, Search
 
+from core.exceptions import APIQueryParamsError
 from core.utils import normalize_openalex_id
 
 
@@ -233,3 +234,17 @@ def get_merged_id(index_name, full_openalex_id):
             merged_id = item.merge_into_id
             merged_id = normalize_openalex_id(merged_id)
     return merged_id
+
+
+def process_id_only_fields(request, schema):
+    schema_fields = [f for f in schema._declared_fields]
+    only_fields = request.args.get("select")
+    if only_fields:
+        only_fields = only_fields.split(",")
+        only_fields = [f.strip() for f in only_fields]
+        for field in only_fields:
+            if field not in schema_fields:
+                raise APIQueryParamsError(
+                    f"{field} is not a valid select field. Valid fields for select are: {', '.join(schema_fields)}."
+                )
+    return only_fields

@@ -4,11 +4,11 @@ from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
 from core.shared_view import shared_view
-from core.utils import is_cached
+from core.utils import is_cached, process_only_fields
 from extensions import cache
 from settings import SOURCES_INDEX
 from sources.fields import fields_dict
-from sources.schemas import MessageSchema
+from sources.schemas import MessageSchema, SourcesSchema
 
 blueprint = Blueprint("sources", __name__)
 
@@ -21,11 +21,12 @@ blueprint = Blueprint("sources", __name__)
 def sources():
     index_name = SOURCES_INDEX
     default_sort = ["-works_count", "id"]
+    only_fields = process_only_fields(request, SourcesSchema)
     result = shared_view(request, fields_dict, index_name, default_sort)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
-    message_schema = MessageSchema()
+    message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
 
 

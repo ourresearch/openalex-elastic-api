@@ -90,7 +90,7 @@ class FiltersWrapperSchema(Schema):
 
 
 def hide_relevance(data, context):
-    if (
+    if "relevance_score" in data.keys() and (
         not data["relevance_score"]
         and data["relevance_score"] != 0
         or "display_relevance" in context

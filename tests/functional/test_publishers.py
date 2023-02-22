@@ -189,3 +189,14 @@ class TestPublisherParentPublisher:
             json_data["results"][0]["parent_publisher"]
             == "https://openalex.org/P4310320990"
         )
+
+
+class TestPublishersSelect:
+    def test_publisher_select(self, client):
+        res = client.get("/publishers?select=id,country_codes")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 7210
+        for result in json_data["results"][:25]:
+            assert "id" in result
+            assert "country_codes" in result
+        assert "group_by" in json_data

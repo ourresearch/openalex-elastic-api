@@ -1,12 +1,12 @@
 from flask import Blueprint, request
 
 from concepts.fields import fields_dict
-from concepts.schemas import MessageSchema
+from concepts.schemas import ConceptsSchema, MessageSchema
 from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
 from core.shared_view import shared_view
-from core.utils import is_cached
+from core.utils import is_cached, process_only_fields
 from extensions import cache
 from settings import CONCEPTS_INDEX
 
@@ -20,11 +20,12 @@ blueprint = Blueprint("concepts", __name__)
 def concepts():
     index_name = CONCEPTS_INDEX
     default_sort = ["-works_count", "id"]
+    only_fields = process_only_fields(request, ConceptsSchema)
     result = shared_view(request, fields_dict, index_name, default_sort)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
-    message_schema = MessageSchema()
+    message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
 
 

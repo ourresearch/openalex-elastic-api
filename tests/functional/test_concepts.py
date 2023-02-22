@@ -211,3 +211,14 @@ class TestConceptsMultipleIDs:
         assert (
             json_data["results"][1]["wikidata"] == "https://www.wikidata.org/wiki/Q420"
         )
+
+
+class TestConceptsSelect:
+    def test_concepts_select(self, client):
+        res = client.get("/concepts?select=id,display_name")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 10000
+        for result in json_data["results"][:25]:
+            assert "id" in result
+            assert "display_name" in result
+            assert "wikidata" not in result

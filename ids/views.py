@@ -11,7 +11,8 @@ from ids.utils import (get_merged_id, is_author_openalex_id,
                        is_source_openalex_id, is_venue_openalex_id,
                        is_work_openalex_id, normalize_doi, normalize_issn,
                        normalize_openalex_id, normalize_orcid, normalize_pmid,
-                       normalize_ror, normalize_wikidata)
+                       normalize_ror, normalize_wikidata,
+                       process_id_only_fields)
 from institutions.schemas import InstitutionsSchema
 from publishers.schemas import PublishersSchema
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
@@ -29,6 +30,7 @@ blueprint = Blueprint("ids", __name__)
 @blueprint.route("/works/random")
 def works_random_get():
     s = Search(index=WORKS_INDEX)
+    only_fields = process_id_only_fields(request, WorksSchema)
 
     # divide queries into year groups to limit how much work the random function_score has to do
     year_groups = [
@@ -52,13 +54,14 @@ def works_random_get():
     )
     s = s.query(random_query).extra(size=1)
     response = s.execute()
-    works_schema = WorksSchema(context={"display_relevance": False})
+    works_schema = WorksSchema(context={"display_relevance": False}, only=only_fields)
     return works_schema.dump(response[0])
 
 
 @blueprint.route("/works/<path:id>")
 def works_id_get(id):
     s = Search(index=WORKS_INDEX)
+    only_fields = process_id_only_fields(request, WorksSchema)
 
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
@@ -98,7 +101,7 @@ def works_id_get(id):
     if not response:
         abort(404)
     works_schema = WorksSchema(
-        context={"display_relevance": False, "single_record": True}
+        context={"display_relevance": False, "single_record": True}, only=only_fields
     )
     return works_schema.dump(response[0])
 
@@ -111,6 +114,7 @@ def works_id_get(id):
 @blueprint.route("/people/random")
 def authors_random_get():
     s = Search(index=AUTHORS_INDEX)
+    only_fields = process_id_only_fields(request, AuthorsSchema)
 
     # divide queries into year groups to limit how much work the random function_score has to do
     cited_by_groups = [
@@ -124,7 +128,9 @@ def authors_random_get():
     )
     s = s.query(random_query).extra(size=1)
     response = s.execute()
-    authors_schema = AuthorsSchema(context={"display_relevance": False})
+    authors_schema = AuthorsSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
     return authors_schema.dump(response[0])
 
 
@@ -132,6 +138,7 @@ def authors_random_get():
 @blueprint.route("/people/<path:id>")
 def authors_id_get(id):
     s = Search(index=AUTHORS_INDEX)
+    only_fields = process_id_only_fields(request, AuthorsSchema)
 
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
@@ -165,7 +172,9 @@ def authors_id_get(id):
     response = s.execute()
     if not response:
         abort(404)
-    authors_schema = AuthorsSchema(context={"display_relevance": False})
+    authors_schema = AuthorsSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
     return authors_schema.dump(response[0])
 
 
@@ -176,17 +185,21 @@ def authors_id_get(id):
 @blueprint.route("/institutions/random")
 def institutions_random_get():
     s = Search(index=INSTITUTIONS_INDEX)
+    only_fields = process_id_only_fields(request, InstitutionsSchema)
 
     random_query = Q("function_score", functions={"random_score": {}})
     s = s.query(random_query).extra(size=1)
     response = s.execute()
-    institutions_schema = InstitutionsSchema(context={"display_relevance": False})
+    institutions_schema = InstitutionsSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
     return institutions_schema.dump(response[0])
 
 
 @blueprint.route("/institutions/<path:id>")
 def institutions_id_get(id):
     s = Search(index=INSTITUTIONS_INDEX)
+    only_fields = process_id_only_fields(request, InstitutionsSchema)
 
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
@@ -222,7 +235,9 @@ def institutions_id_get(id):
     response = s.execute()
     if not response:
         abort(404)
-    institutions_schema = InstitutionsSchema(context={"display_relevance": False})
+    institutions_schema = InstitutionsSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
     return institutions_schema.dump(response[0])
 
 
@@ -257,17 +272,21 @@ def venues_id_get(id):
 @blueprint.route("/concepts/random")
 def concepts_random_get():
     s = Search(index=CONCEPTS_INDEX)
+    only_fields = process_id_only_fields(request, ConceptsSchema)
 
     random_query = Q("function_score", functions={"random_score": {}})
     s = s.query(random_query).extra(size=1)
     response = s.execute()
-    concepts_schema = ConceptsSchema(context={"display_relevance": False})
+    concepts_schema = ConceptsSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
     return concepts_schema.dump(response[0])
 
 
 @blueprint.route("/concepts/<path:id>")
 def concepts_id_get(id):
     s = Search(index=CONCEPTS_INDEX)
+    only_fields = process_id_only_fields(request, ConceptsSchema)
 
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
@@ -301,7 +320,9 @@ def concepts_id_get(id):
     response = s.execute()
     if not response:
         abort(404)
-    concepts_schema = ConceptsSchema(context={"display_relevance": False})
+    concepts_schema = ConceptsSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
     return concepts_schema.dump(response[0])
 
 
@@ -324,6 +345,7 @@ def concepts_name_get(name):
 @blueprint.route("/publishers/<path:id>")
 def publishers_id_get(id):
     s = Search(index=PUBLISHERS_INDEX)
+    only_fields = process_id_only_fields(request, PublishersSchema)
 
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
@@ -348,7 +370,9 @@ def publishers_id_get(id):
     response = s.execute()
     if not response:
         abort(404)
-    publishers_schema = PublishersSchema(context={"display_relevance": False})
+    publishers_schema = PublishersSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
     return publishers_schema.dump(response[0])
 
 
@@ -356,11 +380,14 @@ def publishers_id_get(id):
 @blueprint.route("/publishers/random")
 def publishers_random_get():
     s = Search(index=PUBLISHERS_INDEX)
+    only_fields = process_id_only_fields(request, PublishersSchema)
 
     random_query = Q("function_score", functions={"random_score": {}})
     s = s.query(random_query).extra(size=1)
     response = s.execute()
-    publishers_schema = PublishersSchema(context={"display_relevance": False})
+    publishers_schema = PublishersSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
     return publishers_schema.dump(response[0])
 
 
@@ -372,11 +399,14 @@ def publishers_random_get():
 @blueprint.route("/journals/random")
 def sources_random_get():
     s = Search(index=SOURCES_INDEX)
+    only_fields = process_id_only_fields(request, SourcesSchema)
 
     random_query = Q("function_score", functions={"random_score": {}})
     s = s.query(random_query).extra(size=1)
     response = s.execute()
-    sources_schema = SourcesSchema(context={"display_relevance": False})
+    sources_schema = SourcesSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
     return sources_schema.dump(response[0])
 
 
@@ -384,6 +414,7 @@ def sources_random_get():
 @blueprint.route("/journals/<path:id>", endpoint="journals_id_get")
 def sources_id_get(id):
     s = Search(index=SOURCES_INDEX)
+    only_fields = process_id_only_fields(request, SourcesSchema)
 
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
@@ -437,7 +468,9 @@ def sources_id_get(id):
     response = s.execute()
     if not response:
         abort(404)
-    sources_schema = SourcesSchema(context={"display_relevance": False})
+    sources_schema = SourcesSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
     return sources_schema.dump(response[0])
 
 

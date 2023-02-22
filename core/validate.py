@@ -14,6 +14,7 @@ def validate_params(request):
         "per-page",
         "q",
         "search",
+        "select",
         "sort",
     ]
     for arg in request.args:
@@ -28,6 +29,11 @@ def validate_params(request):
             "Your URL contains filters like: /works?filter=publication_year:2020&filter=is_open_access:true. "
             "Combine and separate filters with a comma, like: /works?filter=publication_year:2020,is_open_access:true."
         )
+
+    if (
+        "group_by" in request.args or "group-by" in request.args
+    ) and "select" in request.args:
+        raise APIQueryParamsError("select does not work with group_by.")
 
 
 def validate_export_format(export_format):

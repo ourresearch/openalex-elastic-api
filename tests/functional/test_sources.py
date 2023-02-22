@@ -325,3 +325,28 @@ class TestOpenAlexId:
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
         assert json_data["results"][0]["id"] == "https://openalex.org/S49861241"
+
+
+class TestSourcesSelect:
+    def test_sources_select(self, client):
+        res = client.get("/sources?select=id,display_name")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 10000
+        for result in json_data["results"]:
+            assert len(result) == 2
+            assert "id" in result
+            assert "display_name" in result
+
+    def test_sources_select_error(self, client):
+        res = client.get("/sources?select=display_name,not_a_field")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert "not_a_field is not a valid select field" in json_data["message"]
+
+    def test_sources_group_by_select_error(self, client):
+        res = client.get("/sources?group-by=type&select=display_name")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"] == "select does not work with group_by."

@@ -215,3 +215,20 @@ def clean_preference(preference):
     elif preference and preference.endswith("known") and preference != "known":
         preference = preference.replace("known", " ")
     return preference
+
+
+def process_only_fields(request, schema):
+    schema_fields = [f for f in schema._declared_fields]
+    only_fields = request.args.get("select")
+    if only_fields:
+        only_fields = only_fields.split(",")
+        for field in only_fields:
+            if field.strip() not in schema_fields:
+                raise APIQueryParamsError(
+                    f"{field} is not a valid select field. Valid fields for select are: {', '.join(schema_fields)}."
+                )
+        only_fields = [f"results.{field.strip()}" for field in only_fields]
+        # add back meta and group_by fields
+        only_fields.insert(0, "meta")
+        only_fields.append("group_by")
+    return only_fields

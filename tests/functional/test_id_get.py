@@ -302,3 +302,40 @@ class TestUniversalIDGet:
         json_data = res.get_json()
         assert json_data["id"] == "https://openalex.org/S3880285"
         assert json_data["display_name"] == "Science"
+
+
+class TestIDSelect:
+    def test_works_select(self, client):
+        res = client.get("/works/W2894744280?select=id,display_name")
+        json_data = res.get_json()
+        assert json_data.keys() == {"id", "display_name"}
+
+    def test_authors_select(self, client):
+        res = client.get("/authors/A2609699?select=id,display_name")
+        json_data = res.get_json()
+        assert json_data.keys() == {"id", "display_name"}
+
+    def test_institutions_select(self, client):
+        res = client.get("/institutions/I19820366?select=id,display_name")
+        json_data = res.get_json()
+        assert json_data.keys() == {"id", "display_name"}
+
+    def test_concepts_select(self, client):
+        res = client.get("/C86803240?select=id,display_name", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data.keys() == {"id", "display_name"}
+
+    def test_publishers_select(self, client):
+        res = client.get("/P4310320006?select=id,display_name", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data.keys() == {"id", "display_name"}
+
+    def test_sources_select(self, client):
+        res = client.get("/S3880285?select=id,display_name", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data.keys() == {"id", "display_name"}
+
+    def test_universal_select(self, client):
+        res = client.get("/W2894744280?select=id,display_name", follow_redirects=True)
+        json_data = res.get_json()
+        assert json_data.keys() == {"id", "display_name"}

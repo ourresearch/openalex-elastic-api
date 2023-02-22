@@ -335,3 +335,32 @@ class TestPeopleAlias:
         res = client.get("/people")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 10000
+
+
+class TestAuthorsSelect:
+    def test_authors_select_two_fields(self, client):
+        res = client.get("/authors?select=display_name,orcid")
+        json_data = res.get_json()
+        result = json_data["results"][0]
+        assert len(result.keys()) == 2
+        assert "display_name" in result.keys()
+        assert "orcid" in result.keys()
+
+    def test_authors_select_with_search(self, client):
+        res = client.get("/authors?select=display_name,relevance_score&search=albert")
+        json_data = res.get_json()
+        result = json_data["results"][0]
+        assert len(result.keys()) == 2
+        assert "display_name" in result.keys()
+        assert "relevance_score" in result.keys()
+        assert isinstance(result["relevance_score"], float)
+
+    def test_authors_select_with_filter(self, client):
+        res = client.get(
+            "/authors?select=display_name,orcid&filter=orcid:0000-0001-5285-9835"
+        )
+        json_data = res.get_json()
+        result = json_data["results"][0]
+        assert len(result.keys()) == 2
+        assert "display_name" in result.keys()
+        assert "orcid" in result.keys()

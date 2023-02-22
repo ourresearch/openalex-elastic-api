@@ -207,3 +207,12 @@ class TestInstitutionsMultipleIDs:
         assert json_data["meta"]["count"] == 2
         assert json_data["results"][0]["ror"] == "https://ror.org/03vek6s52"
         assert json_data["results"][1]["ror"] == "https://ror.org/034t30j35"
+
+
+class TestInstitutionsSelect:
+    def test_institutions_select_with_sort(self, client):
+        res = client.get("/institutions?select=id,display_name&sort=display_name")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 10000
+        assert json_data["results"][0]["display_name"] == "A. M. Jain College"
+        assert json_data["results"][0].keys() == {"id", "display_name"}
