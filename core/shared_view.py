@@ -35,9 +35,6 @@ def shared_view(request, fields_dict, index_name, default_sort):
     page = set_number_param(request, "page", 1)
     sample = request.args.get("sample", type=int)
     seed = request.args.get("seed")
-    random_sort = (
-        request.args.get("sort") and request.args.get("sort").lower() == "random"
-    )
 
     # set per_page
     if is_group_by_export(request):
@@ -101,12 +98,12 @@ def shared_view(request, fields_dict, index_name, default_sort):
             "Must include a search query (such as ?search=example or /filter=display_name.search:example) in order to sort by relevance_score."
         )
 
-    if sort_params and cursor and not random_sort:
+    if sort_params and cursor:
         # add default sort if paginating with a cursor
         sort_fields = get_sort_fields(fields_dict, group_by, sort_params)
         sort_fields_with_default = sort_fields + default_sort
         s = s.sort(*sort_fields_with_default)
-    elif sample or random_sort:
+    elif sample:
         if seed:
             random_query = Q(
                 "function_score",
