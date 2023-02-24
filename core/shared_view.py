@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from elasticsearch.exceptions import RequestError
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import Q, Search
 
 import settings
 from core.cursor import decode_cursor, get_next_cursor
@@ -33,6 +33,9 @@ def shared_view(request, fields_dict, index_name, default_sort):
     filter_params = map_filter_params(request.args.get("filter"))
     group_by = request.args.get("group_by") or request.args.get("group-by")
     page = set_number_param(request, "page", 1)
+    sample = request.args.get("sample", type=int)
+    sample_seed = request.args.get("sample_seed")
+
     # set per_page
     if is_group_by_export(request):
         per_page = 200
@@ -49,7 +52,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         s = s.source(excludes=["abstract", "fulltext", "authorships_full"])
 
     # pagination
-    paginate = Paginate(group_by, page, per_page)
+    paginate = Paginate(group_by, page, per_page, sample)
     paginate.validate()
 
     if group_by:
@@ -100,6 +103,15 @@ def shared_view(request, fields_dict, index_name, default_sort):
         sort_fields = get_sort_fields(fields_dict, group_by, sort_params)
         sort_fields_with_default = sort_fields + default_sort
         s = s.sort(*sort_fields_with_default)
+    elif sample:
+        if sample_seed:
+            random_query = Q(
+                "function_score",
+                functions={"random_score": {"seed": sample_seed, "field": "_seq_no"}},
+            )
+        else:
+            random_query = Q("function_score", functions={"random_score": {}})
+        s = s.query(random_query)
     elif sort_params:
         sort_fields = get_sort_fields(fields_dict, group_by, sort_params)
         s = s.sort(*sort_fields)
@@ -155,16 +167,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
         else:
             s = group_by_records(field, s, sort_params, known, per_page, q)
 
-    if not group_by:
-        try:
-            response = s[paginate.start : paginate.end].execute()
-        except RequestError as e:
-            if "search_after has" in str(e) and "but sort has" in str(e):
-                raise APIPaginationError("Cursor value is invalid.")
-            else:
-                raise APISearchError("Something went wrong.")
-        count = s.count()
-    else:
+    if group_by:
         if group_by and q and q != "''":
             s = filter_group_by(field, group_by, q, s)
         response = s.execute()
@@ -178,6 +181,18 @@ def shared_view(request, fields_dict, index_name, default_sort):
             count = len(response)
         else:
             count = len(response.aggregations.groupby.buckets)
+    else:
+        try:
+            response = s[paginate.start : paginate.end].execute()
+        except RequestError as e:
+            if "search_after has" in str(e) and "but sort has" in str(e):
+                raise APIPaginationError("Cursor value is invalid.")
+            else:
+                raise APISearchError("Something went wrong.")
+        count = s.count()
+
+    if sample and sample < count and sample < 10000:
+        count = sample
 
     result = OrderedDict()
     result["meta"] = {

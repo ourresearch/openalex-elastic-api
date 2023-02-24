@@ -2,12 +2,13 @@ from core.exceptions import APIPaginationError
 
 
 class Paginate:
-    def __init__(self, group_by, page, per_page):
+    def __init__(self, group_by, page, per_page, sample=None):
         self.group_by = group_by
         self.max_per_page = 200
         self.max_result_size = 10000
         self.page = page
         self.per_page = per_page
+        self.sample = sample
 
     @property
     def start(self):
@@ -18,7 +19,10 @@ class Paginate:
 
     @property
     def end(self):
-        return self.per_page * self.page
+        if self.sample and self.sample < self.per_page * self.page:
+            return self.sample
+        else:
+            return self.per_page * self.page
 
     def validate(self):
         self.validate_page()
