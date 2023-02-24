@@ -14,7 +14,7 @@ def validate_params(request):
         "per-page",
         "q",
         "sample",
-        "sample_seed",
+        "seed",
         "search",
         "select",
         "sort",
@@ -47,6 +47,10 @@ def validate_select_param(request):
 
 
 def validate_sample_param(request):
+    random_sort = (
+        request.args.get("sort") and request.args.get("sort").lower() == "random"
+    )
+
     if "sample" in request.args:
         try:
             int(request.args.get("sample"))
@@ -58,16 +62,33 @@ def validate_sample_param(request):
 
     if "sample" in request.args and "sort" in request.args:
         raise APIQueryParamsError("sample does not work with sort.")
-    elif "sample_seed" in request.args and "sample" not in request.args:
+    elif "seed" in request.args and ("sample" not in request.args and not random_sort):
         raise APIQueryParamsError(
-            "You must include the sample parameter when using sample_seed."
+            "You must include the sample parameter or use a random sort when using a seed value."
         )
     elif "sample" in request.args and (
         "group-by" in request.args or "group_by" in request.args
     ):
         raise APIQueryParamsError("sample does not work with group_by.")
-    elif "sample" in request.args and "search" in request.args:
-        raise APIQueryParamsError("sample does not work with search right now.")
+    elif ("sample" in request.args or random_sort) and "search" in request.args:
+        raise APIQueryParamsError(
+            "sample and random sort do not work with search right now."
+        )
+
+    if (
+        ("sample" in request.args or random_sort)
+        and (
+            "page" in request.args
+            and int(request.args.get("page")) > 1
+            or "cursor" in request.args
+        )
+        and "seed" not in request.args
+    ):
+        raise APIQueryParamsError(
+            "A seed value is required when paginating through samples or randomly sorted results. "
+            "Without a seed value, you may receive duplicate results between pages. Add a seed value like: "
+            "/works?sample=100&seed=123&page=2"
+        )
 
 
 def validate_random_sort_param(request):

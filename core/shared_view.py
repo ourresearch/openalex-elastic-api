@@ -34,7 +34,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
     group_by = request.args.get("group_by") or request.args.get("group-by")
     page = set_number_param(request, "page", 1)
     sample = request.args.get("sample", type=int)
-    sample_seed = request.args.get("sample_seed")
+    seed = request.args.get("seed")
     random_sort = (
         request.args.get("sort") and request.args.get("sort").lower() == "random"
     )
@@ -106,17 +106,14 @@ def shared_view(request, fields_dict, index_name, default_sort):
         sort_fields = get_sort_fields(fields_dict, group_by, sort_params)
         sort_fields_with_default = sort_fields + default_sort
         s = s.sort(*sort_fields_with_default)
-    elif sample:
-        if sample_seed:
+    elif sample or random_sort:
+        if seed:
             random_query = Q(
                 "function_score",
-                functions={"random_score": {"seed": sample_seed, "field": "_seq_no"}},
+                functions={"random_score": {"seed": seed, "field": "_seq_no"}},
             )
         else:
             random_query = Q("function_score", functions={"random_score": {}})
-        s = s.query(random_query)
-    elif random_sort:
-        random_query = Q("function_score", functions={"random_score": {}})
         s = s.query(random_query)
     elif sort_params:
         sort_fields = get_sort_fields(fields_dict, group_by, sort_params)

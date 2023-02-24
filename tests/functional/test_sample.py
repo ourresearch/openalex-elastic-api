@@ -13,16 +13,16 @@ class TestSample:
         assert json_data1["results"][0]["id"] != json_data2["results"][0]["id"]
 
     def test_sample_seed(self, client):
-        res1 = client.get("/works?sample=1&sample_seed=1")
+        res1 = client.get("/works?sample=1&seed=1")
         json_data1 = res1.get_json()
-        res2 = client.get("/works?sample=1&sample_seed=1")
+        res2 = client.get("/works?sample=1&seed=1")
         json_data2 = res2.get_json()
         assert json_data1["results"][0]["id"] == json_data2["results"][0]["id"]
 
     def test_sample_seed_different(self, client):
-        res1 = client.get("/concepts?sample=1&sample_seed=1")
+        res1 = client.get("/concepts?sample=1&seed=1")
         json_data1 = res1.get_json()
-        res2 = client.get("/concepts?sample=1&sample_seed=2")
+        res2 = client.get("/concepts?sample=1&seed=2")
         json_data2 = res2.get_json()
         assert json_data1["results"][0]["id"] != json_data2["results"][0]["id"]
 
