@@ -52,6 +52,9 @@ def validate_sample_param(request):
         except ValueError:
             raise APIQueryParamsError("sample must be an integer.")
 
+    if "sample" in request.args and int(request.args.get("sample")) > 10000:
+        raise APIQueryParamsError("Sample size must be less than or equal to 10,000.")
+
     if "sample" in request.args and "sort" in request.args:
         raise APIQueryParamsError("sample does not work with sort.")
     elif "sample_seed" in request.args and "sample" not in request.args:

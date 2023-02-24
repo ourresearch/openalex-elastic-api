@@ -191,7 +191,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
                 raise APISearchError("Something went wrong.")
         count = s.count()
 
-    if sample and sample < count and sample < 10000:
+    if sample and sample < count:
         count = sample
 
     result = OrderedDict()

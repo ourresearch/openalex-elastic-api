@@ -1,4 +1,4 @@
-class TestSampleBasic:
+class TestSample:
     def test_sample_low_number(self, client):
         res = client.get("/works?sample=1")
         json_data = res.get_json()
@@ -26,8 +26,6 @@ class TestSampleBasic:
         json_data2 = res2.get_json()
         assert json_data1["results"][0]["id"] != json_data2["results"][0]["id"]
 
-
-class TestSamplePaginate:
     def test_sample_paginate(self, client):
         res = client.get("/works?sample=50")
         json_data = res.get_json()
@@ -35,3 +33,11 @@ class TestSamplePaginate:
         meta = json_data["meta"]
         assert meta["count"] == 50
         assert len(results) == 25
+
+    def test_sample_limit(self, client):
+        res = client.get("/works?sample=10001")
+        json_data = res.get_json()
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"] == "Sample size must be less than or equal to 10,000."
+        )
