@@ -27,6 +27,7 @@ def validate_params(request):
     validate_filter_param(request)
     validate_select_param(request)
     validate_sample_param(request)
+    validate_random_sort_param(request)
 
 
 def validate_filter_param(request):
@@ -67,6 +68,16 @@ def validate_sample_param(request):
         raise APIQueryParamsError("sample does not work with group_by.")
     elif "sample" in request.args and "search" in request.args:
         raise APIQueryParamsError("sample does not work with search right now.")
+
+
+def validate_random_sort_param(request):
+    if "sort" in request.args and request.args.get("sort") == "random":
+        if "group-by" in request.args or "group_by" in request.args:
+            raise APIQueryParamsError("random sort does not work with group_by.")
+        elif "sample" in request.args:
+            raise APIQueryParamsError("random sort does not work with sample.")
+        elif "search" in request.args:
+            raise APIQueryParamsError("random sort does not work with search.")
 
 
 def validate_export_format(export_format):

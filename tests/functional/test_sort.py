@@ -29,3 +29,15 @@ class TestSort:
             json_data["message"]
             == "Cannot sort when grouping by external ID boolean field."
         )
+
+
+class TestRandomSort:
+    def test_works_random_sort(self, client):
+        res1 = client.get("/works?sort=raNdom")
+        json_data1 = res1.get_json()
+        res2 = client.get("/works?sort=random")
+        json_data2 = res2.get_json()
+        assert (
+            json_data1["results"][0]["display_name"]
+            != json_data2["results"][0]["display_name"]
+        )
