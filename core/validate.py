@@ -65,8 +65,6 @@ def validate_sample_param(request):
         "group-by" in request.args or "group_by" in request.args
     ):
         raise APIQueryParamsError("sample does not work with group_by.")
-    elif "sample" in request.args and "search" in request.args:
-        raise APIQueryParamsError("sample does not work with search right now.")
 
     if (
         "sample" in request.args

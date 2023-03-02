@@ -69,12 +69,12 @@ def shared_view(request, fields_dict, index_name, default_sort):
 
     # search
     if search and search != '""':
-        s = full_search(index_name, s, search)
+        s = full_search(index_name, s, search, sample)
         s = s.params(preference=clean_preference(search))
 
     # filter
     if filter_params:
-        s = filter_records(fields_dict, filter_params, s)
+        s = filter_records(fields_dict, filter_params, s, sample)
 
         # set preference key if search param present. ensures
         preference = None

@@ -206,7 +206,7 @@ class SearchOpenAlex:
         return self.search_terms.startswith('"') and self.search_terms.endswith('"')
 
 
-def full_search(index_name, s, search):
+def full_search(index_name, s, search, sample=None):
     if index_name.lower().startswith("authors"):
         search_oa = SearchOpenAlex(search_terms=search, is_author_name_query=True)
     elif index_name.lower().startswith("concepts"):
@@ -237,7 +237,10 @@ def full_search(index_name, s, search):
     else:
         search_oa = SearchOpenAlex(search_terms=search)
     search_query = search_oa.build_query()
-    s = s.query(search_query)
+    if sample:
+        s = s.filter(search_query)
+    else:
+        s = s.query(search_query)
     return s
 
 

@@ -6,24 +6,29 @@ from core.exceptions import APIQueryParamsError
 from core.utils import get_field
 
 
-def filter_records(fields_dict, filter_params, s):
+def filter_records(fields_dict, filter_params, s, sample=None):
     for filter in filter_params:
         for key, value in filter.items():
             field = get_field(fields_dict, key)
 
             # OR queries have | in the param values
             if "|" in value:
-                s = handle_or_query(field, fields_dict, s, value)
+                s = handle_or_query(field, fields_dict, s, value, sample)
 
             # everything else is an AND query
             else:
                 field.value = value
                 q = field.build_query()
-                s = s.query(q)
+                if sample and "search" in field.param:
+                    s = s.filter(q)
+                elif "search" in field.param:
+                    s = s.query(q)
+                else:
+                    s = s.filter(q)
     return s
 
 
-def handle_or_query(field, fields_dict, s, value):
+def handle_or_query(field, fields_dict, s, value, sample):
     or_queries = []
 
     if len(value.split("|")) > 50:
@@ -51,7 +56,12 @@ def handle_or_query(field, fields_dict, s, value):
             field.value = or_value
             q = field.build_query()
             not_query = ~Q("bool", must=q)
-            s = s.query(not_query)
+            if sample and "search" in field.param:
+                s = s.filter(not_query)
+            elif "search" in field.param:
+                s = s.query(not_query)
+            else:
+                s = s.filter(not_query)
     else:
         # standard OR query, like: 42 or 43
         for or_value in value.split("|"):
@@ -65,5 +75,10 @@ def handle_or_query(field, fields_dict, s, value):
             q = field.build_query()
             or_queries.append(q)
         combined_or_query = Q("bool", should=or_queries, minimum_should_match=1)
-        s = s.query(combined_or_query)
+        if sample and "search" in field.param:
+            s = s.filter(combined_or_query)
+        elif "search" in field.param:
+            s = s.query(combined_or_query)
+        else:
+            s = s.filter(combined_or_query)
     return s
