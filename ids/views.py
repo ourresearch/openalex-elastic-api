@@ -230,6 +230,13 @@ def institutions_id_get(id):
         full_ror = f"https://ror.org/{clean_ror}"
         query = Q("term", ror=full_ror)
         s = s.filter(query)
+    elif id.startswith("wikidata:") or ("wikidata" in id):
+        clean_wikidata = normalize_wikidata(id)
+        if not clean_wikidata:
+            abort(404)
+        full_wikidata = f"https://www.wikidata.org/wiki/{clean_wikidata}"
+        query = Q("term", ids__wikidata=full_wikidata)
+        s = s.filter(query)
     else:
         abort(404)
     response = s.execute()
@@ -365,6 +372,13 @@ def publishers_id_get(id):
                     url_for("ids.publishers_id_get", id=merged_id, **request.args),
                     code=301,
                 )
+    elif id.startswith("ror:") or ("ror.org" in id):
+        clean_ror = normalize_ror(id)
+        if not clean_ror:
+            abort(404)
+        full_ror = f"https://ror.org/{clean_ror}"
+        query = Q("term", ids__ror=full_ror)
+        s = s.filter(query)
     else:
         abort(404)
     response = s.execute()
