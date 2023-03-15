@@ -93,6 +93,7 @@ class SourceSchema(Schema):
     issn_l = fields.Str()
     issn = fields.List(fields.Str())
     host_organization = fields.Str()
+    host_organization_name = fields.Str()
     type = fields.Str()
 
     class Meta:
