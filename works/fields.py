@@ -7,6 +7,7 @@ fields = [
         custom_es_field="authorships.institutions.country_code",
     ),
     BooleanField(param="best_oa_location.is_oa"),
+    BooleanField(param="authorships.is_corresponding"),
     BooleanField(
         param=f"institutions.is_global_south",
         custom_es_field="authorships.institutions.country_code",
@@ -24,6 +25,9 @@ fields = [
     BooleanField(param="has_ngrams", custom_es_field="fulltext"),
     BooleanField(param="has_oa_accepted_or_published_version"),
     BooleanField(param="has_oa_submitted_version"),
+    BooleanField(
+        param="is_corresponding", custom_es_field="authorships.is_corresponding"
+    ),
     BooleanField(param="is_oa", alias="open_access.is_oa"),
     BooleanField(param="is_paratext"),
     BooleanField(param="is_retracted"),

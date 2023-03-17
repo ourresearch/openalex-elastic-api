@@ -887,3 +887,48 @@ class TestWorksSelect:
         assert "id" in result
         assert "display_name" in result
         assert "concepts" in result
+
+
+class TestWorksCorrespondingAuthor:
+    def test_is_corresponding_true(self, client):
+        res = client.get("/works?filter=authorships.is_corresponding:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 33
+        for result in json_data["results"]:
+            assert any(
+                [author["is_corresponding"] is True for author in result["authorships"]]
+            )
+
+    def test_is_corresponding_alias_true(self, client):
+        res = client.get("/works?filter=is_corresponding:true")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 33
+        for result in json_data["results"]:
+            assert any(
+                [author["is_corresponding"] is True for author in result["authorships"]]
+            )
+
+    def test_is_corresponding_false(self, client):
+        res = client.get("/works?filter=authorships.is_corresponding:false")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 25
+        for result in json_data["results"]:
+            assert any(
+                [
+                    author["is_corresponding"] is False
+                    for author in result["authorships"]
+                ]
+            )
+
+    def test_is_corresponding_null(self, client):
+        res = client.get("/works?filter=authorships.is_corresponding:null")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 10000
+        for result in json_data["results"]:
+            # check if it contains is_corresponding == None
+            assert any(
+                [
+                    author.get("is_corresponding") is None
+                    for author in result["authorships"]
+                ]
+            )
