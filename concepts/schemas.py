@@ -3,7 +3,7 @@ from collections import OrderedDict
 from marshmallow import INCLUDE, Schema, fields, post_dump
 
 from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
-                          hide_relevance, relevance_score)
+                          SummaryStatsSchema, hide_relevance, relevance_score)
 
 
 class IDsSchema(Schema):
@@ -49,6 +49,7 @@ class ConceptsSchema(Schema):
     description = fields.Str()
     works_count = fields.Int()
     cited_by_count = fields.Int()
+    summary_stats = fields.Nested(SummaryStatsSchema, dump_default=None)
     ids = fields.Nested(IDsSchema)
     image_url = fields.Str()
     image_thumbnail_url = fields.Str()

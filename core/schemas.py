@@ -61,6 +61,17 @@ class XConceptsSchema(Schema):
         ordered = True
 
 
+class SummaryStatsSchema(Schema):
+    two_year_mean_citedness = fields.Float(
+        attribute="2yr_mean_citedness", data_key="2yr_mean_citedness"
+    )
+    h_index = fields.Int()
+    i10_index = fields.Int()
+
+    class Meta:
+        ordered = True
+
+
 class ValuesSchema(Schema):
     value = fields.Str()
     display_name = fields.Str()

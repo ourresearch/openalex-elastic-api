@@ -274,7 +274,7 @@ class TestAuthorsOrder:
         res = client.get("/authors")
         json_data = res.get_json()
         result = json_data["results"][0]
-        assert len(result.keys()) == 13
+        assert len(result.keys()) == 14
 
     def test_authors_order_of_primary_keys(self, client):
         res = client.get("/authors")
@@ -287,6 +287,7 @@ class TestAuthorsOrder:
             "display_name_alternatives",
             "works_count",
             "cited_by_count",
+            "summary_stats",
             "ids",
             "last_known_institution",
             "x_concepts",

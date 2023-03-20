@@ -1,7 +1,8 @@
 from marshmallow import INCLUDE, Schema, fields, post_dump
 
 from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
-                          XConceptsSchema, hide_relevance, relevance_score)
+                          SummaryStatsSchema, XConceptsSchema, hide_relevance,
+                          relevance_score)
 
 
 class IDsSchema(Schema):
@@ -58,6 +59,7 @@ class InstitutionsSchema(Schema):
     display_name_alternatives = fields.List(fields.Str())
     works_count = fields.Int()
     cited_by_count = fields.Int()
+    summary_stats = fields.Nested(SummaryStatsSchema, dump_default=None)
     ids = fields.Nested(IDsSchema)
     geo = fields.Nested(GeoSchema)
     international = fields.Method("get_international")

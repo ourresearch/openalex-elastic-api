@@ -1,7 +1,8 @@
 from marshmallow import INCLUDE, Schema, fields, post_dump
 
 from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
-                          XConceptsSchema, hide_relevance, relevance_score)
+                          SummaryStatsSchema, XConceptsSchema, hide_relevance,
+                          relevance_score)
 
 
 class IDsSchema(Schema):
@@ -36,6 +37,7 @@ class SourcesSchema(Schema):
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()
     cited_by_count = fields.Int()
+    summary_stats = fields.Nested(SummaryStatsSchema, dump_default=None)
     is_oa = fields.Bool()
     is_in_doaj = fields.Bool()
     ids = fields.Nested(IDsSchema)
