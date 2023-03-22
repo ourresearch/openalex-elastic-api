@@ -32,7 +32,7 @@ class TestGroupByNameKey:
         result = json_data["group_by"][0]
         assert result["key"] == "unknown"
         assert result["key_display_name"] == "unknown"
-        assert result["count"] == 3376
+        assert result["count"] == 3327
 
     def test_group_by_known_filter(self, client):
         res = client.get("/works?group-by=host_venue.id:known")
@@ -42,28 +42,28 @@ class TestGroupByNameKey:
             assert result["key"] != "unknown"
 
     def test_group_by_boolean(self, client):
-        res = client.get("/venues?group_by=is_oa")
+        res = client.get("/sources?group_by=is_oa")
         json_data = res.get_json()
         result1 = json_data["group_by"][0]
-        assert result1["key"] == "false"
-        assert result1["key_display_name"] == "false"
-        assert result1["count"] == 6767
+        assert result1["key"] == "unknown"
+        assert result1["key_display_name"] == "unknown"
+        assert result1["count"] == 5688
         result2 = json_data["group_by"][1]
-        assert result2["key"] == "unknown"
-        assert result2["key_display_name"] == "unknown"
-        assert result2["count"] == 1882
+        assert result2["key"] == "false"
+        assert result2["key_display_name"] == "false"
+        assert result2["count"] == 2602
         result3 = json_data["group_by"][2]
         assert result3["key"] == "true"
         assert result3["key_display_name"] == "true"
-        assert result3["count"] == 1351
+        assert result3["count"] == 1710
 
     def test_group_by_name_key(self, client):
         res = client.get("/works?group-by=host_venue.id")
         json_data = res.get_json()
         result = json_data["group_by"][4]
-        assert result["key"] == "https://openalex.org/V106296714"
+        assert result["key"] == "https://openalex.org/S2764744641"
         assert result["key_display_name"] == None
-        assert result["count"] == 47
+        assert result["count"] == 23
 
 
 class TestGroupByExternalIds:
@@ -122,10 +122,10 @@ class TestGroupByExternalIds:
         result2 = json_data["group_by"][1]
         assert result1["key"] == "true"
         assert result1["key_display_name"] == "true"
-        assert result1["count"] == 3718
+        assert result1["count"] == 3732
         assert result2["key"] == "false"
         assert result2["key_display_name"] == "false"
-        assert result2["count"] == 6282
+        assert result2["count"] == 6268
 
     def test_group_by_has_pmid(self, client):
         res = client.get("/works?group-by=has_pmid")

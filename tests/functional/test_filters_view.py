@@ -11,7 +11,7 @@ class TestFiltersView:
         assert filter_1["is_negated"] == False
         assert filter_1["values"][0]["value"] == "true"
         assert filter_1["values"][0]["display_name"] == "true"
-        assert filter_1["values"][0]["count"] == 1092
+        assert filter_1["values"][0]["count"] == 1105
 
     def test_filter_with_search(self, client):
         res = client.get("/works/filters/display_name.search:science,is_oa:true")
@@ -35,13 +35,13 @@ class TestFiltersView:
         assert filter_1["key"] == "is_oa"
         assert filter_1["type"] == "BooleanField"
         assert filter_1["values"][0]["display_name"] == "true"
-        assert filter_1["values"][0]["count"] == 99
+        assert filter_1["values"][0]["count"] == 100
         filter_2 = json_data["filters"][1]
         assert filter_2["key"] == "search"
         assert filter_2["type"] == "FullSearchField"
         assert filter_2["values"][0]["value"] == "science"
         assert filter_2["values"][0]["display_name"] == "science"
-        assert filter_2["values"][0]["count"] == 99
+        assert filter_2["values"][0]["count"] == 100
 
     def test_filter_with_search_negation(self, client):
         res = client.get("/works/filters/display_name.search:science,oa_status:!gold")
@@ -79,11 +79,11 @@ class TestFiltersView:
         )
         json_data = res.get_json()
         filter_1 = json_data["filters"][0]
-        assert filter_1["values"][0]["count"] == 36
+        assert filter_1["values"][0]["count"] == 34
         filter_2 = json_data["filters"][1]
         assert filter_2["key"] == "concepts.id"
         assert filter_2["values"][0]["value"] == "C556758197"
-        assert filter_2["values"][0]["count"] == 23
+        assert filter_2["values"][0]["count"] == 21
         assert filter_2["values"][1]["value"] == "C73283319"
         assert filter_2["values"][1]["count"] == 17
 
@@ -137,16 +137,16 @@ class TestFiltersView:
         res = client.get("/works/filters/authors_count:1")
         json_data = res.get_json()
         filter_1 = json_data["filters"][0]
-        assert filter_1["values"][0]["count"] == 5174
+        assert filter_1["values"][0]["count"] == 5176
 
     def test_filter_has_orcid_true(self, client):
         res = client.get("/works/filters/has_orcid:true")
         json_data = res.get_json()
         filter_1 = json_data["filters"][0]
-        assert filter_1["values"][0]["count"] == 2229
+        assert filter_1["values"][0]["count"] == 3522
 
     def test_filter_has_orcid_false(self, client):
         res = client.get("/works/filters/has_orcid:false")
         json_data = res.get_json()
         filter_1 = json_data["filters"][0]
-        assert filter_1["values"][0]["count"] == 7771
+        assert filter_1["values"][0]["count"] == 6478

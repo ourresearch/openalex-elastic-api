@@ -2,7 +2,7 @@ class TestWorksSearch:
     def test_works_search(self, client):
         res = client.get("/works?search=analysis")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1395
+        assert json_data["meta"]["count"] == 1396
         assert "analysis" in json_data["results"][0]["display_name"].lower()
         for result in json_data["results"][:25]:
             assert "analysis" in result["display_name"].lower()

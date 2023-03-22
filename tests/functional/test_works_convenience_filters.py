@@ -2,7 +2,7 @@ class TestWorksHasFilters:
     def test_works_has_references(self, client):
         res = client.get("/works?filter=has_references:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 2776
+        assert json_data["meta"]["count"] == 2781
 
     def test_works_has_references_error(self, client):
         res = client.get("/works?filter=has_references:null")
@@ -29,26 +29,26 @@ class TestWorksUniqueOAFilters:
     def test_works_has_oa_submitted_version_true(self, client):
         res = client.get("/works?filter=has_oa_submitted_version:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 252
+        assert json_data["meta"]["count"] == 251
 
     def test_works_has_oa_submitted_version_false(self, client):
         res = client.get("/works?filter=has_oa_submitted_version:false")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9748
+        assert json_data["meta"]["count"] == 9749
 
 
 class TestWorksExternalIDs:
     def test_works_has_doi_true(self, client):
         res = client.get("/works?filter=has_doi:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 3725
+        assert json_data["meta"]["count"] == 3732
         for result in json_data["results"][:25]:
             assert result["ids"]["doi"] is not None
 
     def test_works_has_doi_false(self, client):
         res = client.get("/works?filter=has_doi:false")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 6275
+        assert json_data["meta"]["count"] == 6268
         for result in json_data["results"][:25]:
             assert "doi" not in result["ids"] or result["ids"]["doi"] is None
 
@@ -93,7 +93,7 @@ class TestWorksVersionFilters:
     def test_works_version_accepted_version(self, client):
         res = client.get("/works?filter=version:acceptedversion")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 59
+        assert json_data["meta"]["count"] == 66
         for result in json_data["results"]:
             found = False
             if (
@@ -109,7 +109,7 @@ class TestWorksVersionFilters:
     def test_works_version_submitted_version(self, client):
         res = client.get("/works?filter=version:submittedversion")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 252
+        assert json_data["meta"]["count"] == 251
         for result in json_data["results"]:
             found = False
             if (
@@ -189,62 +189,61 @@ class TestWorksVersionFilters:
 
 class TestWorksRepositoryFilter:
     def test_works_repository_short(self, client):
-        res = client.get("/works?filter=repository:V28996644")
+        res = client.get("/works?filter=repository:S28996644")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
         for result in json_data["results"]:
             found = False
-            if (
-                "id" in result["host_venue"]
-                and result["host_venue"]["id"] == "https://openalex.org/V28996644"
-            ):
-                found = True
-            for venue in result["alternate_host_venues"]:
-                if "id" in venue and venue["id"] == "https://openalex.org/V28996644":
-                    found = True
-            assert found is True
+            for result in json_data["results"]:
+                found = False
+                for item in result["locations"]:
+                    if (
+                        "source" in item
+                        and item["source"]["id"] == "https://openalex.org/S28996644"
+                    ):
+                        found = True
+                assert found is True
 
     def test_works_repository_long(self, client):
-        res = client.get("/works?filter=repository:https://openalex.org/V28996644")
+        res = client.get("/works?filter=repository:https://openalex.org/S28996644")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
         for result in json_data["results"]:
             found = False
-            if (
-                "id" in result["host_venue"]
-                and result["host_venue"]["id"] == "https://openalex.org/V28996644"
-            ):
-                found = True
-            for venue in result["alternate_host_venues"]:
-                if "id" in venue and venue["id"] == "https://openalex.org/V28996644":
+            for item in result["locations"]:
+                if (
+                    "source" in item
+                    and item["source"]["id"] == "https://openalex.org/S28996644"
+                ):
                     found = True
             assert found is True
 
     def test_works_repository_not(self, client):
-        res = client.get("/works?filter=repository:!https://openalex.org/V28996644")
+        res = client.get("/works?filter=repository:!https://openalex.org/S28996644")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 9999
         for result in json_data["results"]:
             found = False
-            if (
-                "id" in result["host_venue"]
-                and result["host_venue"]["id"] == "https://openalex.org/V28996644"
-            ):
-                found = True
-            for venue in result["alternate_host_venues"]:
-                if "id" in venue and venue["id"] == "https://openalex.org/V28996644":
+            if "locations" not in result:
+                continue
+            for item in result["locations"]:
+                if (
+                    item.get("source")
+                    and item.get("source").get("id")
+                    and item["source"]["id"] == "https://openalex.org/S28996644"
+                ):
                     found = True
             assert found is False
 
     def test_works_repository_null(self, client):
         res = client.get("/works?filter=repository:null")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 3298
+        assert json_data["meta"]["count"] == 7099
 
     def test_works_repository_not_null(self, client):
         res = client.get("/works?filter=repository:!null")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 6702
+        assert json_data["meta"]["count"] == 2901
 
     def test_works_repository_group_by(self, client):
         res = client.get("/works?group_by=repository")
@@ -254,17 +253,14 @@ class TestWorksRepositoryFilter:
         assert json_data["message"] == "Cannot group by repository."
 
     def test_works_repository_filters_view(self, client):
-        res = client.get("/works/filters/repository:V28996644")
+        res = client.get("/works/filters/repository:S28996644")
         json_data = res.get_json()
         assert json_data["filters"][0]["key"] == "repository"
         assert json_data["filters"][0]["is_negated"] == False
         assert json_data["filters"][0]["type"] == "OpenAlexIDField"
-        assert json_data["filters"][0]["values"][0]["value"] == "V28996644"
+        assert json_data["filters"][0]["values"][0]["value"] == "S28996644"
         assert json_data["filters"][0]["values"][0]["count"] == 1
-        assert (
-            json_data["filters"][0]["values"][0]["display_name"]
-            == "Geographie Physique Et Quaternaire"
-        )
+        assert json_data["filters"][0]["values"][0]["display_name"] == "null"
 
 
 class TestWorksAuthorsCount:
@@ -304,14 +300,14 @@ class TestWorksConceptsCount:
     def test_works_concepts_count_exact(self, client):
         res = client.get("/works?filter=concepts_count:1")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1949
+        assert json_data["meta"]["count"] == 1967
         for result in json_data["results"]:
             assert len(result["concepts"]) == 1
 
     def test_works_concepts_count_lt(self, client):
         res = client.get("/works?filter=concepts_count:<5")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 4323
+        assert json_data["meta"]["count"] == 4342
         for result in json_data["results"]:
             assert len(result["concepts"]) < 5
 
@@ -327,10 +323,10 @@ class TestWorksConceptsCount:
         result2 = json_data["group_by"][1]
         assert result1["key"] == "1"
         assert result1["key_display_name"] == "1"
-        assert result1["count"] == 1949
+        assert result1["count"] == 1967
         assert result2["key"] == "3"
         assert result2["key_display_name"] == "3"
-        assert result2["count"] == 916
+        assert result2["count"] == 913
 
 
 class TestHasOrcid:

@@ -17,7 +17,7 @@ class TestGroupBySearchBasics:
         assert first_result == {
             "key": "https://openalex.org/C41008148",
             "key_display_name": "Computer science",
-            "count": 3172,
+            "count": 3176,
         }
 
 
@@ -133,7 +133,7 @@ class TestInstitutionsGroupBySearch:
         }
 
 
-class TestVenuesGroupBySearch:
+class TestSourcesGroupBySearch:
     def test_sources_group_by_search_publisher(self, client):
         res = client.get("/sources?group-by=publisher&q=els")
         json_data = res.get_json()
@@ -226,12 +226,12 @@ class TestWorksGroupBySearch:
         assert first_result == {
             "key": "https://openalex.org/C41008148",
             "key_display_name": "Computer science",
-            "count": 3172,
+            "count": 3176,
         }
         assert second_result == {
             "key": "https://openalex.org/C38652104",
             "key_display_name": "Computer security",
-            "count": 152,
+            "count": 153,
         }
 
     @pytest.mark.skip("no longer working")
@@ -271,7 +271,7 @@ class TestWorksGroupBySearch:
         assert first_result == {
             "key": "publishedVersion",
             "key_display_name": "publishedVersion",
-            "count": 845,
+            "count": 844,
         }
 
     def test_works_group_by_search_institutions_id(self, client):
@@ -320,7 +320,7 @@ class TestWorksGroupBySearch:
         assert first_result == {
             "key": "healthcare",
             "key_display_name": "healthcare",
-            "count": 326,
+            "count": 328,
         }
 
     def test_works_group_by_search_open_access_status(self, client):

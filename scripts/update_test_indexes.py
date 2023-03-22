@@ -3,12 +3,16 @@ import os
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 
+from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
+                      PUBLISHERS_INDEX, SOURCES_INDEX, WORKS_INDEX)
+
 INDEXES = [
-    "authors-v8",
-    "concepts-v7",
-    "institutions-v4",
-    "venues-v6",
-    "works-v16-*,-*invalid-data",
+    AUTHORS_INDEX,
+    CONCEPTS_INDEX,
+    INSTITUTIONS_INDEX,
+    PUBLISHERS_INDEX,
+    SOURCES_INDEX,
+    WORKS_INDEX,
 ]
 
 
@@ -16,7 +20,7 @@ def update_indexes():
     """Use this script to sync the test indexes with the production indexes."""
     # 1. Change the index names to match what is in settings.py
     # 2. Export the ES_PROD_URL_FOR_UPDATE environment variable
-    # 3. Run this script with: python/update_test_indexes.py
+    # 3. Run this script with: python scripts/update_test_indexes.py
     for index in INDEXES:
         update_test_index(index)
 
