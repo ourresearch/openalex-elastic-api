@@ -203,9 +203,7 @@ class OpenAlexIDField(Field):
             query = get_full_openalex_id(self.value[1:])
             kwargs = {self.es_field(): query}
             if self.param == "repository":
-                q = ~Q("term", host_venue__id=query) & ~Q(
-                    "term", alternate_host_venues__id=query
-                )
+                q = ~Q("term", locations__source__id=query)
             else:
                 q = ~Q("term", **kwargs)
             return q
@@ -217,18 +215,13 @@ class OpenAlexIDField(Field):
             q = Q("terms", id=openalex_ids)
         elif self.param == "repository":
             if self.value == "null":
-                q = ~Q("exists", field="host_venue.id") & ~Q(
-                    "exists", field="alternate_host_venues.id"
-                )
+                q = ~Q("exists", field="locations.source.id")
             elif self.value == "!null":
-                q = Q("exists", field="host_venue.id") | Q(
-                    "exists", field="alternate_host_venues.id"
-                )
+                q = Q("exists", field="locations.source.id")
             else:
-                kwargs1 = {"host_venue.id": get_full_openalex_id(self.value)}
-                kwargs2 = {"alternate_host_venues.id": get_full_openalex_id(self.value)}
                 self.validate(self.value)
-                q = Q("term", **kwargs1) | Q("term", **kwargs2)
+                kwargs = {"locations.source.id": get_full_openalex_id(self.value)}
+                q = Q("term", **kwargs)
         else:
             self.validate(self.value)
             query = get_full_openalex_id(self.value)
