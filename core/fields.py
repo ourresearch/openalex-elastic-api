@@ -456,6 +456,17 @@ class TermField(Field):
             kwargs1 = {"host_venue.version": version}
             kwargs2 = {"alternate_host_venues.version": version}
             q = Q("term", **kwargs1) | Q("term", **kwargs2)
+        elif self.param == "best_open_version":
+            self.validate_best_open_version()
+            submitted_query = Q("term", **{self.custom_es_field: "submittedVersion"})
+            accepted_query = Q("term", **{self.custom_es_field: "acceptedVersion"})
+            published_query = Q("term", **{self.custom_es_field: "publishedVersion"})
+            if self.value.lower() == "any":
+                q = submitted_query | accepted_query | published_query
+            elif self.value.lower() == "acceptedorpublished":
+                q = accepted_query | published_query
+            elif self.value.lower() == "published":
+                q = published_query
         else:
             kwargs = {self.es_field(): self.value}
             q = Q("term", **kwargs)
@@ -582,3 +593,10 @@ class TermField(Field):
         else:
             version = value
         return version
+
+    def validate_best_open_version(self):
+        valid_values = ["any", "acceptedOrPublished", "published"]
+        if self.value.lower() not in [value.lower() for value in valid_values]:
+            raise APIQueryParamsError(
+                f"Value for {self.param} must be one of {', '.join(valid_values)} and not {self.value}."
+            )

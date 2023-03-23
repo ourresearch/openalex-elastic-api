@@ -363,3 +363,43 @@ class TestHasOrcid:
         assert result2["key"] == "false"
         assert result2["key_display_name"] == "false"
         assert result2["count"] == 6478
+
+    def test_best_open_version_any(self, client):
+        res = client.get("/works?filter=best_open_version:any")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] > 1000
+        for result in json_data["results"]:
+            if "best_open_version" in result:
+                assert result["best_open_version"] in [
+                    "submittedVersion",
+                    "acceptedVersion",
+                    "publishedVersion",
+                ]
+
+    def test_best_open_version_accepted_or_published(self, client):
+        res = client.get("/works?filter=best_open_version:acceptedOrPubliSHED")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] > 900
+        for result in json_data["results"]:
+            if "best_open_version" in result:
+                assert result["best_open_version"] in [
+                    "acceptedVersion",
+                    "publishedVersion",
+                ]
+
+    def test_best_open_version_published(self, client):
+        res = client.get("/works?filter=best_open_version:published")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] > 800
+        for result in json_data["results"]:
+            if "best_open_version" in result:
+                assert result["best_open_version"] == "publishedVersion"
+
+    def test_best_open_version_error(self, client):
+        res = client.get("/works?filter=best_open_version:foo")
+        json_data = res.get_json()
+        assert json_data["error"] == "Invalid query parameters error."
+        assert (
+            json_data["message"]
+            == "Value for best_open_version must be one of any, acceptedOrPublished, published and not foo."
+        )

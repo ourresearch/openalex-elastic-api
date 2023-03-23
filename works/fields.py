@@ -140,6 +140,7 @@ fields = [
         custom_es_field="best_oa_location.venue.type.keyword",
     ),
     TermField(param="best_oa_location.version"),
+    TermField(param="best_open_version", custom_es_field="locations.version"),
     TermField(param="concepts.wikidata"),
     TermField(param="display_name", custom_es_field="display_name.lower"),
     TermField(param="doi", alias="ids.doi"),
