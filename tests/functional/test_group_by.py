@@ -196,3 +196,24 @@ class TestGroupByVersion:
                 "count": 27,
             },
         ]
+
+    def test_group_by_best_open_version(self, client):
+        res = client.get("/works?group-by=best_open_version")
+        json_data = res.get_json()
+        assert json_data["group_by"] == [
+            {
+                "key": "any",
+                "key_display_name": "any",
+                "count": 1072,
+            },
+            {
+                "key": "acceptedOrPublished",
+                "key_display_name": "acceptedOrPublished",
+                "count": 907,
+            },
+            {
+                "key": "published",
+                "key_display_name": "published",
+                "count": 864,
+            },
+        ]

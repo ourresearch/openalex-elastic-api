@@ -304,6 +304,71 @@ def group_by_version(
     return result
 
 
+def group_by_best_open_version(
+    field,
+    index_name,
+    search,
+    full_search,
+    filter_params,
+    filter_records,
+    fields_dict,
+    q,
+):
+    group_by_results = []
+    took = 0
+    ms = MultiSearch(index=index_name)
+    versions = ["any", "acceptedOrPublished", "published"]
+    for version in versions:
+        s = Search()
+        if search and search != '""':
+            s = full_search(index_name, s, search)
+
+        # filter
+        if filter_params:
+            s = filter_records(fields_dict, filter_params, s)
+        s = s.extra(track_total_hits=True)
+        submitted_query = Q("term", best_oa_location__version="submittedVersion")
+        accepted_query = Q("term", best_oa_location__version="acceptedVersion")
+        published_query = Q("term", best_oa_location__version="publishedVersion")
+        if version == "any":
+            query = submitted_query | accepted_query | published_query
+        elif version == "acceptedOrPublished":
+            query = accepted_query | published_query
+        elif version == "published":
+            query = published_query
+        ms = ms.add(s.filter(query))
+
+    responses = ms.execute()
+
+    for version, response in zip(versions, responses):
+        key_display_name = version
+        if not q or q and q.lower() in version.lower():
+            group_by_results.append(
+                {
+                    "key": version,
+                    "key_display_name": key_display_name,
+                    "doc_count": response.hits.total.value,
+                }
+            )
+        took = took + response.took
+
+    # sort by count
+    group_by_results = sorted(
+        group_by_results, key=lambda d: d["doc_count"], reverse=True
+    )
+
+    result = OrderedDict()
+    result["meta"] = {
+        "count": len(group_by_results),
+        "db_response_time_ms": took,
+        "page": 1,
+        "per_page": 10,
+    }
+    result["results"] = []
+    result["group_by"] = group_by_results
+    return result
+
+
 def group_by_records_transform(field, parent_index, sort_params):
     index_name = get_transform_index(field, parent_index)
     s = Search(index=index_name)

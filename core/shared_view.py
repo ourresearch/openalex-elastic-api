@@ -11,7 +11,8 @@ from core.export import is_group_by_export
 from core.filter import filter_records
 from core.group_by import (filter_group_by, get_group_by_results,
                            get_group_by_results_external_ids,
-                           get_group_by_results_transform, group_by_continent,
+                           get_group_by_results_transform,
+                           group_by_best_open_version, group_by_continent,
                            group_by_records, group_by_records_transform,
                            group_by_version, is_transform,
                            search_group_by_results, validate_group_by)
@@ -155,6 +156,17 @@ def shared_view(request, fields_dict, index_name, default_sort):
             )
         elif field.param == "version":
             return group_by_version(
+                field,
+                index_name,
+                search,
+                full_search,
+                filter_params,
+                filter_records,
+                fields_dict,
+                q,
+            )
+        elif field.param == "best_open_version":
+            return group_by_best_open_version(
                 field,
                 index_name,
                 search,
