@@ -215,13 +215,19 @@ class OpenAlexIDField(Field):
             q = Q("terms", id=openalex_ids)
         elif self.param == "repository":
             if self.value == "null":
-                q = ~Q("exists", field="locations.source.id")
+                q = ~Q("exists", field=self.custom_es_field) & Q(
+                    "term", **{"locations.source.type": "repository"}
+                )
             elif self.value == "!null":
-                q = Q("exists", field="locations.source.id")
+                q = Q("exists", field=self.custom_es_field) & Q(
+                    "term", **{"locations.source.type": "repository"}
+                )
             else:
                 self.validate(self.value)
-                kwargs = {"locations.source.id": get_full_openalex_id(self.value)}
-                q = Q("term", **kwargs)
+                kwargs = {self.custom_es_field: get_full_openalex_id(self.value)}
+                q = Q("term", **kwargs) & Q(
+                    "term", **{"locations.source.type": "repository"}
+                )
         else:
             self.validate(self.value)
             query = get_full_openalex_id(self.value)

@@ -189,9 +189,9 @@ class TestWorksVersionFilters:
 
 class TestWorksRepositoryFilter:
     def test_works_repository_short(self, client):
-        res = client.get("/works?filter=repository:S28996644")
+        res = client.get("/works?filter=repository:S4306400194")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1
+        assert json_data["meta"]["count"] == 23
         for result in json_data["results"]:
             found = False
             for result in json_data["results"]:
@@ -199,29 +199,32 @@ class TestWorksRepositoryFilter:
                 for item in result["locations"]:
                     if (
                         "source" in item
-                        and item["source"]["id"] == "https://openalex.org/S28996644"
+                        and item["source"]
+                        and item["source"].get("id")
+                        == "https://openalex.org/S4306400194"
                     ):
                         found = True
                 assert found is True
 
     def test_works_repository_long(self, client):
-        res = client.get("/works?filter=repository:https://openalex.org/S28996644")
+        res = client.get("/works?filter=repository:https://openalex.org/S4306400194")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1
+        assert json_data["meta"]["count"] == 23
         for result in json_data["results"]:
             found = False
             for item in result["locations"]:
                 if (
                     "source" in item
-                    and item["source"]["id"] == "https://openalex.org/S28996644"
+                    and item["source"]
+                    and item["source"].get("id") == "https://openalex.org/S4306400194"
                 ):
                     found = True
             assert found is True
 
     def test_works_repository_not(self, client):
-        res = client.get("/works?filter=repository:!https://openalex.org/S28996644")
+        res = client.get("/works?filter=repository:!https://openalex.org/S4306400806")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9999
+        assert json_data["meta"]["count"] == 9839
         for result in json_data["results"]:
             found = False
             if "locations" not in result:
@@ -230,7 +233,7 @@ class TestWorksRepositoryFilter:
                 if (
                     item.get("source")
                     and item.get("source").get("id")
-                    and item["source"]["id"] == "https://openalex.org/S28996644"
+                    and item["source"]["id"] == "https://openalex.org/S4306400806"
                 ):
                     found = True
             assert found is False
@@ -238,29 +241,34 @@ class TestWorksRepositoryFilter:
     def test_works_repository_null(self, client):
         res = client.get("/works?filter=repository:null")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 7099
+        assert json_data["meta"]["count"] == 0
 
     def test_works_repository_not_null(self, client):
         res = client.get("/works?filter=repository:!null")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 2901
+        assert json_data["meta"]["count"] == 456
 
     def test_works_repository_group_by(self, client):
         res = client.get("/works?group_by=repository")
         json_data = res.get_json()
-        assert res.status_code == 403
-        assert json_data["error"] == "Invalid query parameters error."
-        assert json_data["message"] == "Cannot group by repository."
+        result1 = json_data["group_by"][0]
+        result2 = json_data["group_by"][1]
+        assert result1["key"] == "https://openalex.org/S4306400806"
+        assert result1["key_display_name"] == None
+        assert result1["count"] == 161
+        assert result2["key"] == "https://openalex.org/S2764455111"
+        assert result2["key_display_name"] == None
+        assert result2["count"] == 150
 
     def test_works_repository_filters_view(self, client):
-        res = client.get("/works/filters/repository:S28996644")
+        res = client.get("/works/filters/repository:S4306400806")
         json_data = res.get_json()
         assert json_data["filters"][0]["key"] == "repository"
         assert json_data["filters"][0]["is_negated"] == False
         assert json_data["filters"][0]["type"] == "OpenAlexIDField"
-        assert json_data["filters"][0]["values"][0]["value"] == "S28996644"
-        assert json_data["filters"][0]["values"][0]["count"] == 1
-        assert json_data["filters"][0]["values"][0]["display_name"] == "null"
+        assert json_data["filters"][0]["values"][0]["value"] == "S4306400806"
+        assert json_data["filters"][0]["values"][0]["count"] == 161
+        assert json_data["filters"][0]["values"][0]["display_name"] == None
 
 
 class TestWorksAuthorsCount:

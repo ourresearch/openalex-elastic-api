@@ -20,6 +20,9 @@ def group_by_records(field, s, sort_params, known, per_page, q):
         per_page = 200
     shard_size = 3000
 
+    if field.param == "repository":
+        s = s.filter("term", **{"locations.source.type": "repository"})
+
     if sort_params:
         for key, order in sort_params.items():
             if key == "count" and not known:
@@ -173,7 +176,11 @@ def group_by_continent(
 def get_group_by_results(group_by, response):
     group_by_results = []
     buckets = response.aggregations.groupby.buckets
-    if group_by.endswith(".id") or group_by.endswith("host_organization"):
+    if (
+        group_by.endswith(".id")
+        or group_by.endswith("host_organization")
+        or group_by.endswith("repository")
+    ):
         keys = [b.key for b in buckets]
         ids_to_display_names = get_display_names(keys)
         for b in buckets:
