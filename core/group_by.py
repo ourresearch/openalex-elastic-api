@@ -456,7 +456,7 @@ def filter_group_by(field, group_by, q, s):
         min_year, max_year = set_year_min_max(q)
         kwargs = {"publication_year": {"gte": min_year, "lte": max_year}}
         s = s.query("range", **kwargs)
-    elif "author" in group_by or "institution" in group_by:
+    elif "author" in group_by or "institution" in group_by or group_by == "repository":
         return s
     else:
         s = s.query("prefix", **{field.es_field(): q.lower()})
