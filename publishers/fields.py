@@ -15,8 +15,11 @@ fields = [
     OpenAlexIDField(
         param="parent_publisher", custom_es_field="parent_publisher.keyword"
     ),
+    RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="cited_by_count"),
+    RangeField(param="summary_stats.h_index"),
     RangeField(param="hierarchy_level"),
+    RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
     SearchField(param="display_name.search"),
     TermField(param="country_codes", custom_es_field="country_codes.lower"),

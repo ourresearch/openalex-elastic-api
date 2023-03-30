@@ -304,22 +304,22 @@ class RangeField(Field):
         if "<" in self.value:
             query = self.value[1:]
             self.validate(query)
-            kwargs = {self.es_field(): {"lt": int(query)}}
+            kwargs = {self.es_field(): {"lt": float(query)}}
             q = Q("range", **kwargs)
         elif self.value.startswith("-"):
             query = self.value[1:]
             self.validate(query)
-            kwargs = {self.es_field(): {"lte": int(query)}}
+            kwargs = {self.es_field(): {"lte": float(query)}}
             q = Q("range", **kwargs)
         elif ">" in self.value:
             query = self.value[1:]
             self.validate(query)
-            kwargs = {self.es_field(): {"gt": int(query)}}
+            kwargs = {self.es_field(): {"gt": float(query)}}
             q = Q("range", **kwargs)
         elif self.value.endswith("-"):
             query = self.value[:-1]
             self.validate(query)
-            kwargs = {self.es_field(): {"gte": int(query)}}
+            kwargs = {self.es_field(): {"gte": float(query)}}
             q = Q("range", **kwargs)
         elif "-" in self.value:
             values = self.value.strip().split("-")
@@ -328,7 +328,7 @@ class RangeField(Field):
             self.validate(left_value)
             self.validate(right_value)
             kwargs = {
-                self.es_field(): {"gte": int(left_value), "lte": int(right_value)}
+                self.es_field(): {"gte": float(left_value), "lte": float(right_value)}
             }
             q = Q("range", **kwargs)
         elif self.value == "null":
@@ -341,7 +341,7 @@ class RangeField(Field):
 
     def validate(self, query):
         try:
-            int(query)
+            float(query)
         except ValueError:
             raise APIQueryParamsError(f"Value for param {self.param} must be a number.")
 

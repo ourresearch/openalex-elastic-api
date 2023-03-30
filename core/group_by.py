@@ -529,17 +529,23 @@ def set_year_min_max(q):
 
 
 def validate_group_by(field):
+    range_field_exceptions = [
+        "authors_count",
+        "cited_by_count",
+        "concepts_count",
+        "hierarchy_level",
+        "level",
+        "publication_year",
+        "summary_stats.2yr_mean_citedness",
+        "summary_stats.h_index",
+        "summary_stats.i10_index",
+        "works_count",
+    ]
     if (
         type(field).__name__ == "DateField"
         or (
             type(field).__name__ == "RangeField"
-            and field.param != "cited_by_count"
-            and field.param != "level"
-            and field.param != "publication_year"
-            and field.param != "works_count"
-            and field.param != "authors_count"
-            and field.param != "concepts_count"
-            and field.param != "hierarchy_level"
+            and field.param not in range_field_exceptions
         )
         or type(field).__name__ == "SearchField"
     ):

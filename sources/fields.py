@@ -30,7 +30,10 @@ fields = [
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(param="x_concepts.id"),
     PhraseField(param="publisher"),
+    RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="cited_by_count"),
+    RangeField(param="summary_stats.h_index"),
+    RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
     SearchField(param="display_name.search"),
     TermField(

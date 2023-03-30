@@ -3,7 +3,7 @@ import json
 from marshmallow import INCLUDE, Schema, fields, post_dump, pre_dump
 
 from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
-                          SummaryStatsSchema, hide_relevance, relevance_score)
+                          hide_relevance, relevance_score)
 
 
 class AuthorSchema(Schema):
@@ -163,7 +163,6 @@ class WorksSchema(Schema):
     authorships = fields.Nested(AuthorshipsSchema, many=True)
     is_authors_truncated = fields.Bool(attribute="authorships_truncated")
     cited_by_count = fields.Int()
-    summary_stats = fields.Nested(SummaryStatsSchema, dump_default=None)
     biblio = fields.Nested(BiblioSchema)
     is_retracted = fields.Bool()
     is_paratext = fields.Bool()
