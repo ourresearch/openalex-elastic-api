@@ -348,6 +348,7 @@ class RangeField(Field):
 
 class SearchField(Field):
     def build_query(self):
+        self.validate(self.value)
         if (
             self.param == "raw_affiliation_string.search"
             or self.param == "abstract.search"
@@ -367,6 +368,12 @@ class SearchField(Field):
             search_oa = SearchOpenAlex(search_terms=self.value)
             q = search_oa.build_query()
         return q
+
+    def validate(self, query):
+        if "!" in query:
+            raise APIQueryParamsError(
+                f"Search filters do not support the ! operator. Problem value: {query}"
+            )
 
 
 class TermField(Field):

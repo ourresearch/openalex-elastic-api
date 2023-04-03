@@ -27,6 +27,7 @@ def validate_params(request):
     validate_filter_param(request)
     validate_select_param(request)
     validate_sample_param(request)
+    validate_search_param(request)
 
 
 def validate_filter_param(request):
@@ -75,6 +76,17 @@ def validate_sample_param(request):
             "A seed value is required when paginating through samples of results. "
             "Without a seed value, you may receive duplicate results between pages. Add a seed value like this: "
             "/works?sample=100&seed=123&page=2"
+        )
+
+
+def validate_search_param(request):
+    if "search" in request.args and "!" in request.args.get("search"):
+        raise APIQueryParamsError(
+            f"The search parameter does not support the ! operator. Problem value: {request.args.get('search')}"
+        )
+    elif "search" in request.args and "|" in request.args.get("search"):
+        raise APIQueryParamsError(
+            f"The search parameter does not support the | operator. Problem value: {request.args.get('search')}"
         )
 
 

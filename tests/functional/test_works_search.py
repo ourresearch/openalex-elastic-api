@@ -50,3 +50,39 @@ class TestWorksSearch:
     def test_works_search_abstract(self, client):
         res = client.get("/works?filter=abstract.search:zoo keeper")
         assert res.status_code == 200
+
+    def test_works_search_not_operator_error(self, client):
+        res = client.get("/works?search=!zoo")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"] == (
+            "The search parameter does not support the ! operator. Problem value: !zoo"
+        )
+
+    def test_works_search_pipe_operator_error(self, client):
+        res = client.get("/works?search=dna|rna")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"] == (
+            "The search parameter does not support the | operator. Problem value: dna|rna"
+        )
+
+    def test_works_filter_search_not_operator_error(self, client):
+        res = client.get("/works?filter=abstract.search:!zoo")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"] == (
+            "Search filters do not support the ! operator. Problem value: !zoo"
+        )
+
+    def test_works_filter_search_pipe_operator_error(self, client):
+        res = client.get("/works?filter=display_name.search:dna|rna")
+        json_data = res.get_json()
+        assert res.status_code == 403
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"] == (
+            "Search filters do not support the | operator. Problem value: dna|rna"
+        )
