@@ -437,6 +437,8 @@ def filter_group_by(field, group_by, q, s):
     autocomplete_field_mapping = {
         "alternate_host_venues.id": "alternate_host_venues__display_name",
         "ancestors.id": "ancestors__display_name__autocomplete",
+        "authorships.institutions.id": "authorships__institutions__display_name__autocomplete",
+        "authorships.author.id": "authorships__author__display_name__autocomplete",
         "concept.id": "concepts__display_name__autocomplete",
         "concepts.id": "concepts__display_name__autocomplete",
         "host_venue.display_name": "host_venue__display_name__autocomplete",
