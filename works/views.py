@@ -25,9 +25,9 @@ def index():
 
 
 @blueprint.route("/works")
-# @cache.cached(
-#     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-# )
+@cache.cached(
+    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
+)
 def works():
     index_name = WORKS_INDEX
     default_sort = ["-cited_by_count", "id"]
