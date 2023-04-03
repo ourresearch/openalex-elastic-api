@@ -22,6 +22,8 @@ class PublishersSchema(Schema):
     parent_publisher = fields.Str()
     relevance_score = fields.Method("get_relevance_score")
     country_codes = fields.List(fields.Str())
+    image_url = fields.Str()
+    image_thumbnail_url = fields.Str()
     works_count = fields.Int()
     cited_by_count = fields.Int()
     summary_stats = fields.Nested(SummaryStatsSchema, dump_default=None)
