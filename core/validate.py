@@ -80,7 +80,7 @@ def validate_sample_param(request):
 
 
 def validate_search_param(request):
-    if "search" in request.args and "!" in request.args.get("search"):
+    if "search" in request.args and any([word.startswith("!") for word in request.args.get("search").split()]):
         raise APIQueryParamsError(
             f"The search parameter does not support the ! operator. Problem value: {request.args.get('search')}"
         )

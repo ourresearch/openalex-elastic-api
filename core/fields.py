@@ -370,7 +370,7 @@ class SearchField(Field):
         return q
 
     def validate(self, query):
-        if "!" in query:
+        if any([word.startswith("!") for word in query.split()]):
             raise APIQueryParamsError(
                 f"Search filters do not support the ! operator. Problem value: {query}"
             )
