@@ -442,6 +442,7 @@ def filter_group_by(field, group_by, q, s):
         "ancestors.id": "ancestors__display_name__autocomplete",
         "authorships.institutions.id": "authorships__institutions__display_name__autocomplete",
         "authorships.author.id": "authorships__author__display_name__autocomplete",
+        "best_oa_location.source.id": "best_oa_location__source__display_name__autocomplete",
         "concept.id": "concepts__display_name__autocomplete",
         "concepts.id": "concepts__display_name__autocomplete",
         "host_venue.display_name": "host_venue__display_name__autocomplete",
@@ -449,6 +450,8 @@ def filter_group_by(field, group_by, q, s):
         "host_venue.publisher": "host_venue__publisher__autocomplete",
         "journal.id": "host_venue__display_name__autocomplete",
         "last_known_instution.id": "last_known_instution__display_name__autocomplete",
+        "locations.source.id": "locations__source__display_name__autocomplete",
+        "primary_location.source.id": "primary_location__source__display_name__autocomplete",
         "publisher": "publisher__autocomplete",
     }
     if autocomplete_field_mapping.get(group_by):
