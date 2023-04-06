@@ -118,6 +118,28 @@ def get_display_names(ids):
     return results
 
 
+def get_display_names_host_organization(ids):
+    """Host organization is a special case because it can be an institution or a publisher."""
+    institution_ids = []
+    publisher_ids = []
+    for openalex_id in ids:
+        clean_id = normalize_openalex_id(openalex_id)
+        if clean_id and clean_id.startswith("I"):
+            institution_ids.append(openalex_id)
+        elif clean_id and clean_id.startswith("P"):
+            publisher_ids.append(openalex_id)
+    institution_names = get_display_names(institution_ids)
+    publisher_names = get_display_names(publisher_ids)
+
+    # merge the two dictionaries
+    results = {}
+    if institution_names:
+        results.update(institution_names)
+    if publisher_names:
+        results.update(publisher_names)
+    return results
+
+
 def get_display_name(openalex_id):
     """Takes an openalex id and returns a single display name."""
     if not openalex_id:

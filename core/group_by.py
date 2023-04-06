@@ -5,7 +5,7 @@ from elasticsearch_dsl import A, MultiSearch, Q, Search
 
 import settings
 from core.exceptions import APIQueryParamsError
-from core.utils import get_display_names
+from core.utils import get_display_names, get_display_names_host_organization
 from countries import COUNTRIES_BY_CONTINENT, GLOBAL_SOUTH_COUNTRIES
 
 
@@ -182,7 +182,10 @@ def get_group_by_results(group_by, response):
         or group_by.endswith("repository")
     ):
         keys = [b.key for b in buckets]
-        ids_to_display_names = get_display_names(keys)
+        if group_by.endswith("host_organization"):
+            ids_to_display_names = get_display_names_host_organization(keys)
+        else:
+            ids_to_display_names = get_display_names(keys)
         for b in buckets:
             if b.key == "unknown":
                 key_display_name = "unknown"
@@ -458,7 +461,12 @@ def filter_group_by(field, group_by, q, s):
         min_year, max_year = set_year_min_max(q)
         kwargs = {"publication_year": {"gte": min_year, "lte": max_year}}
         s = s.query("range", **kwargs)
-    elif "author" in group_by or "institution" in group_by or group_by == "repository":
+    elif (
+        "author" in group_by
+        or "institution" in group_by
+        or group_by == "repository"
+        or group_by == "locations.source.host_organization"
+    ):
         return s
     else:
         s = s.query("prefix", **{field.es_field(): q.lower()})
