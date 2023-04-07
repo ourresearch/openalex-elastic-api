@@ -5,6 +5,14 @@ from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
                           relevance_score)
 
 
+class APCSchema(Schema):
+    price = fields.Int()
+    currency = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class IDsSchema(Schema):
     openalex = fields.Str()
     issn_l = fields.Str()
@@ -42,6 +50,7 @@ class SourcesSchema(Schema):
     is_in_doaj = fields.Bool()
     ids = fields.Nested(IDsSchema)
     homepage_url = fields.Str()
+    apc_prices = fields.List(fields.Nested(APCSchema))
     apc_usd = fields.Integer()
     country = fields.Str()
     country_code = fields.Str()
