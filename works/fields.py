@@ -38,6 +38,7 @@ fields = [
     ),
     BooleanField(param="locations.is_oa"),
     BooleanField(param="open_access.is_oa"),
+    BooleanField(param="open_access.any_repository_has_fulltext"),
     BooleanField(param="primary_location.is_oa"),
     DateField(
         param="from_created_date",

@@ -118,6 +118,7 @@ class OpenAccessSchema(Schema):
     is_oa = fields.Bool()
     oa_status = fields.Str()
     oa_url = fields.Str()
+    any_repository_has_fulltext = fields.Bool()
 
     class Meta:
         ordered = True
