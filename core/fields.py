@@ -450,6 +450,9 @@ class TermField(Field):
             else:
                 q = ~Q("term", **kwargs)
             return q
+        elif self.param == "apc_prices.currency":
+            kwargs = {self.es_field(): self.value.upper()}
+            q = Q("term", **kwargs)
         elif self.param == "display_name":
             kwargs = {self.es_field(): self.value}
             q = Q("match", **kwargs)

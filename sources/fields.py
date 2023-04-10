@@ -30,12 +30,17 @@ fields = [
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(param="x_concepts.id"),
     PhraseField(param="publisher"),
-    RangeField(param="summary_stats.2yr_mean_citedness"),
+    RangeField(param="apc_usd"),
+    RangeField(param="apc_prices.price"),
     RangeField(param="cited_by_count"),
+    RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="summary_stats.h_index"),
     RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
     SearchField(param="display_name.search"),
+    TermField(
+        param="apc_prices.currency", custom_es_field="apc_prices.currency.keyword"
+    ),
     TermField(
         param=f"continent",
         custom_es_field="country_code",

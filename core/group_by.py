@@ -543,6 +543,8 @@ def set_year_min_max(q):
 
 def validate_group_by(field):
     range_field_exceptions = [
+        "apc_usd",
+        "apc_prices.price",
         "authors_count",
         "cited_by_count",
         "concepts_count",
