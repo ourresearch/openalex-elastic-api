@@ -38,7 +38,7 @@ fields = [
     RangeField(param="works_count"),
     SearchField(param="display_name.search"),
     TermField(
-        param="apc_prices.currency", custom_es_field="apc_prices.currency.keyword"
+        param="apc_prices.currency",
     ),
     TermField(
         param=f"continent",
