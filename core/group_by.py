@@ -180,9 +180,12 @@ def get_group_by_results(group_by, response):
         group_by.endswith(".id")
         or group_by.endswith("host_organization")
         or group_by.endswith("repository")
+        or group_by.endswith("host_organization_lineage")
     ):
         keys = [b.key for b in buckets]
-        if group_by.endswith("host_organization"):
+        if group_by.endswith("host_organization") or group_by.endswith(
+            "host_organization_lineage"
+        ):
             ids_to_display_names = get_display_names_host_organization(keys)
         else:
             ids_to_display_names = get_display_names(keys)
