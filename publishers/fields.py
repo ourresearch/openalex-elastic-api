@@ -1,12 +1,18 @@
-from core.fields import (DateField, OpenAlexIDField, RangeField, SearchField,
-                         TermField)
+from core.fields import (
+    DateField,
+    DateTimeField,
+    OpenAlexIDField,
+    RangeField,
+    SearchField,
+    TermField,
+)
 
 fields = [
     DateField(
         param="from_created_date",
         custom_es_field="created_date",
     ),
-    DateField(
+    DateTimeField(
         param="from_updated_date",
         custom_es_field="updated_date",
     ),

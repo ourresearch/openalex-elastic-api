@@ -8,8 +8,7 @@ import countries
 from core.exceptions import APIQueryParamsError
 from core.search import SearchOpenAlex
 from core.utils import get_full_openalex_id, normalize_openalex_id
-from settings import (CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS,
-                      WORKS_INDEX)
+from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX
 
 
 class Field(ABC):
@@ -182,6 +181,22 @@ class DateField(Field):
             raise APIQueryParamsError(invalid_date_message)
         try:
             datetime.datetime.strptime(query, "%Y-%m-%d")
+        except ValueError:
+            raise APIQueryParamsError(invalid_date_message)
+
+
+class DateTimeField(DateField):
+    def validate(self, query):
+        # override DateField.validate()
+
+        # First check to make sure it starts with a valid date string
+        date = re.search("\d{4}-\d{2}-\d{2}", query)
+
+        invalid_date_message = f'Value for param {self.param} is an invalid date. The date must be in ISO-8601 format, for example: "2020-05-17", "2020-05-17T15:30", or "2020-01-02T00:22:35.180390".'
+        if not date:
+            raise APIQueryParamsError(invalid_date_message)
+        try:
+            datetime.datetime.fromisoformat(query.replace('Z', '+00:00'))
         except ValueError:
             raise APIQueryParamsError(invalid_date_message)
 
