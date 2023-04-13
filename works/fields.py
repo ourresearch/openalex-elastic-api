@@ -81,25 +81,9 @@ fields = [
     OpenAlexIDField(param="institutions.id", alias="authorships.institutions.id"),
     OpenAlexIDField(param="journal.id", alias="host_venue.id"),
     OpenAlexIDField(param="locations.source.id"),
-    OpenAlexIDField(
-        param="locations.venue.id",
-        custom_es_field="locations.venue.id.keyword",
-    ),
     OpenAlexIDField(param="locations.source.host_organization"),
-    OpenAlexIDField(
-        param="locations.venue.host_organization",
-        custom_es_field="locations.venue.host_organization.keyword",
-    ),
     OpenAlexIDField(param="primary_location.source.id"),
-    OpenAlexIDField(
-        param="primary_location.venue.id",
-        custom_es_field="primary_location.venue.id.keyword",
-    ),
     OpenAlexIDField(param="primary_location.source.host_organization"),
-    OpenAlexIDField(
-        param="primary_location.venue.host_organization",
-        custom_es_field="primary_location.venue.host_organization.keyword",
-    ),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(param="repository", custom_es_field="locations.source.id"),
@@ -132,7 +116,7 @@ fields = [
     TermField(param="best_oa_location.source.issn"),
     TermField(
         param="best_oa_location.venue.issn",
-        custom_es_field="best_oa_location.venue.issn.keyword",
+        custom_es_field="best_oa_location.venue.issn.lower",
     ),
     TermField(param="best_oa_location.license"),
     TermField(param="best_oa_location.source.type"),

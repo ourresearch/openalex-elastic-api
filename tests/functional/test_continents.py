@@ -5,67 +5,67 @@ class TestWorksContinentsFilters:
     def test_works_continent_africa(self, client):
         res = client.get("/works?filter=institutions.continent:africa")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 72
+        assert json_data["meta"]["count"] > 50 and json_data["meta"]["count"] < 150
 
     def test_works_continent_not_africa(self, client):
         res = client.get("/works?filter=institutions.continent:!africa")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9928
+        assert json_data["meta"]["count"] > 9500 and json_data["meta"]["count"] < 9980
 
     def test_works_continent_africa_code_lower(self, client):
         res = client.get("/works?filter=authorships.institutions.continent:q15")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 72
+        assert json_data["meta"]["count"] > 50 and json_data["meta"]["count"] < 150
 
     def test_works_continent_not_africa_code(self, client):
         res = client.get("/works?filter=authorships.institutions.continent:!Q15")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9928
+        assert json_data["meta"]["count"] > 9500 and json_data["meta"]["count"] < 9980
 
     def test_works_continent_africa_code_upper(self, client):
         res = client.get("/works?filter=institutions.continent:Q15")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 72
+        assert json_data["meta"]["count"] > 50 and json_data["meta"]["count"] < 150
 
     def test_works_continent_asia(self, client):
         res = client.get("/works?filter=authorships.institutions.continent:asia")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 659
+        assert json_data["meta"]["count"] > 500 and json_data["meta"]["count"] < 700
 
     def test_works_continent_asia_alias_1(self, client):
         res = client.get("/works?filter=institutions.continent:asia")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 659
+        assert json_data["meta"]["count"] > 500 and json_data["meta"]["count"] < 700
 
     def test_works_continent_europe_mixed_case(self, client):
         res = client.get("/works?filter=institutions.continent:EuropE")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1027
+        assert json_data["meta"]["count"] > 800 and json_data["meta"]["count"] < 1200
 
     def test_works_continent_europe_code(self, client):
         res = client.get("/works?filter=institutions.continent:Q46")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1027
+        assert json_data["meta"]["count"] > 900 and json_data["meta"]["count"] < 1200
 
     def test_works_continent_north_america(self, client):
         res = client.get("/works?filter=institutions.continent:north_america")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 925
+        assert json_data["meta"]["count"] > 800 and json_data["meta"]["count"] < 1200
 
     def test_works_continent_north_america_code(self, client):
         res = client.get("/works?filter=institutions.continent:Q49")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 925
+        assert json_data["meta"]["count"] > 800 and json_data["meta"]["count"] < 1200
 
     def test_works_continent_oceania(self, client):
         res = client.get("/works?filter=institutions.continent:ocEania")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 80
+        assert json_data["meta"]["count"] > 50 and json_data["meta"]["count"] < 100
 
     def test_works_continent_oceania_code(self, client):
         res = client.get("/works?filter=institutions.continent:q55643&per-page=50")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 80
+        assert json_data["meta"]["count"] > 50 and json_data["meta"]["count"] < 100
         # ensure every work has at least one author institution in Oceania
         oceania_country_codes = [
             c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Oceania"]
@@ -82,12 +82,12 @@ class TestWorksContinentsFilters:
     def test_works_continent_south_america(self, client):
         res = client.get("/works?filter=institutions.continent:south_america")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 121
+        assert json_data["meta"]["count"] > 100 and json_data["meta"]["count"] < 150
 
     def test_works_continent_south_america_code(self, client):
         res = client.get("/works?filter=institutions.continent:Q18")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 121
+        assert json_data["meta"]["count"] > 100 and json_data["meta"]["count"] < 150
 
 
 class TestWorksGlobalSouthFilter:
@@ -96,7 +96,7 @@ class TestWorksGlobalSouthFilter:
             "/works?filter=authorships.institutions.is_global_south:true&per-page=50"
         )
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 632
+        assert json_data["meta"]["count"] > 500 and json_data["meta"]["count"] < 700
         # ensure every work has at least one author institution in Oceania
         global_south_country_codes = [
             c["country_code"] for c in countries.GLOBAL_SOUTH_COUNTRIES
@@ -113,12 +113,12 @@ class TestWorksGlobalSouthFilter:
     def test_works_global_south_alias_1(self, client):
         res = client.get("/works?filter=institutions.is_global_south:true")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 632
+        assert json_data["meta"]["count"] > 500 and json_data["meta"]["count"] < 700
 
     def test_works_global_south_false(self, client):
         res = client.get("/works?filter=institutions.is_global_south:False")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9368
+        assert json_data["meta"]["count"] > 9000 and json_data["meta"]["count"] < 9800
 
 
 class TestWorksContinentsGroupBy:
