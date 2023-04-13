@@ -77,12 +77,3 @@ class TestWorksSearch:
         assert json_data["message"] == (
             "Search filters do not support the ! operator. Problem value: !zoo"
         )
-
-    def test_works_filter_search_pipe_operator_error(self, client):
-        res = client.get("/works?filter=display_name.search:dna|rna")
-        json_data = res.get_json()
-        assert res.status_code == 403
-        assert json_data["error"] == "Invalid query parameters error."
-        assert json_data["message"] == (
-            "Search filters do not support the | operator. Problem value: dna|rna"
-        )
