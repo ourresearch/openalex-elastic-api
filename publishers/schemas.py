@@ -20,6 +20,7 @@ class PublishersSchema(Schema):
     alternate_titles = fields.List(fields.Str())
     hierarchy_level = fields.Int()
     parent_publisher = fields.Str()
+    lineage = fields.List(fields.Str())
     relevance_score = fields.Method("get_relevance_score")
     country_codes = fields.List(fields.Str())
     image_url = fields.Str(dump_default=None)

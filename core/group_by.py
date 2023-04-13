@@ -472,6 +472,7 @@ def filter_group_by(field, group_by, q, s):
         or "institution" in group_by
         or group_by == "repository"
         or group_by == "locations.source.host_organization"
+        or group_by == "lineage"
     ):
         return s
     else:
