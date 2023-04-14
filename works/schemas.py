@@ -163,6 +163,8 @@ class WorksSchema(Schema):
     type = fields.Str()
     open_access = fields.Nested(OpenAccessSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
+    corresponding_author_ids = fields.List(fields.Str())
+    corresponding_institution_ids = fields.List(fields.Str())
     is_authors_truncated = fields.Bool(attribute="authorships_truncated")
     cited_by_count = fields.Int()
     biblio = fields.Nested(BiblioSchema)
