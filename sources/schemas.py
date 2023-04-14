@@ -42,6 +42,7 @@ class SourcesSchema(Schema):
     display_name = fields.Str()
     host_organization = fields.Str()
     host_organization_name = fields.Str()
+    host_organization_lineage = fields.List(fields.Str())
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()
     cited_by_count = fields.Int()

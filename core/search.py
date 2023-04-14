@@ -109,7 +109,14 @@ class SearchOpenAlex:
         )
 
     def primary_secondary_tertiary_match_query(self):
-        """Searches primary, secondary, tertiary fields (used with works search param)."""
+        """Searches primary, secondary, tertiary fields."""
+        if self.tertiary_field == "display_name_acronyms":
+            tertiary_match_boost = 2
+            tertiary_phrase_boost = 2
+        else:
+            tertiary_match_boost = 0.05
+            tertiary_phrase_boost = 0.1
+
         return (
             Q(
                 "match",
@@ -150,7 +157,7 @@ class SearchOpenAlex:
                     self.tertiary_field: {
                         "query": self.search_terms,
                         "operator": "and",
-                        "boost": 0.05,
+                        "boost": tertiary_match_boost,
                     }
                 },
             )
@@ -159,7 +166,7 @@ class SearchOpenAlex:
                 **{
                     self.tertiary_field: {
                         "query": self.search_terms,
-                        "boost": 0.1,
+                        "boost": tertiary_phrase_boost,
                     }
                 },
             )

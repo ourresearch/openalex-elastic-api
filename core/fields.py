@@ -110,9 +110,9 @@ class BooleanField(Field):
                 q = ~Q("terms", **{self.es_field(): country_codes})
             return q
         elif self.value == "null":
-            q = ~Q("exists", field=self.es_field())
+            q = ~Q("exists", field=self.es_sort_field())
         elif self.value == "!null":
-            q = Q("exists", field=self.es_field())
+            q = Q("exists", field=self.es_sort_field())
         else:
             self.validate(self.value)
             kwargs = {self.es_field(): self.value.lower().strip()}
@@ -465,6 +465,9 @@ class TermField(Field):
             else:
                 q = ~Q("term", **kwargs)
             return q
+        elif self.param == "apc_prices.currency":
+            kwargs = {self.es_field(): self.value.upper()}
+            q = Q("term", **kwargs)
         elif self.param == "display_name":
             kwargs = {self.es_field(): self.value}
             q = Q("match", **kwargs)

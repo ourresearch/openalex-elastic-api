@@ -49,12 +49,6 @@ def handle_or_query(field, fields_dict, s, value, sample):
                     f"Problem value: {value}"
                 )
 
-    # raise error if using | in a search filter
-    if type(field).__name__ == "SearchField" and "|" in value:
-        raise APIQueryParamsError(
-            f"Search filters do not support the | operator. Problem value: {value}"
-        )
-
     if value.startswith("!"):
         # negate everything in values after !, like: NOT (42 or 43)
         for or_value in value.split("|"):

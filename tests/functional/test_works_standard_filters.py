@@ -957,7 +957,7 @@ class TestWorksCorrespondingAuthor:
     def test_is_corresponding_null(self, client):
         res = client.get("/works?filter=authorships.is_corresponding:null")
         json_data = res.get_json()
-        assert json_data["meta"]["count"] == 10000
+        assert json_data["meta"]["count"] == 9945
         for result in json_data["results"]:
             # check if it contains is_corresponding == None
             assert any(

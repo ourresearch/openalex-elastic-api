@@ -180,9 +180,12 @@ def get_group_by_results(group_by, response):
         group_by.endswith(".id")
         or group_by.endswith("host_organization")
         or group_by.endswith("repository")
+        or group_by.endswith("host_organization_lineage")
     ):
         keys = [b.key for b in buckets]
-        if group_by.endswith("host_organization"):
+        if group_by.endswith("host_organization") or group_by.endswith(
+            "host_organization_lineage"
+        ):
             ids_to_display_names = get_display_names_host_organization(keys)
         else:
             ids_to_display_names = get_display_names(keys)
@@ -469,6 +472,7 @@ def filter_group_by(field, group_by, q, s):
         or "institution" in group_by
         or group_by == "repository"
         or group_by == "locations.source.host_organization"
+        or group_by == "lineage"
     ):
         return s
     else:
@@ -543,6 +547,8 @@ def set_year_min_max(q):
 
 def validate_group_by(field):
     range_field_exceptions = [
+        "apc_usd",
+        "apc_prices.price",
         "authors_count",
         "cited_by_count",
         "concepts_count",

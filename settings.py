@@ -13,10 +13,10 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 AUTHORS_INDEX = "authors-v10"
 CONCEPTS_INDEX = "concepts-v8"
 INSTITUTIONS_INDEX = "institutions-v4"
-SOURCES_INDEX = "sources-v1"
+SOURCES_INDEX = "sources-v2"
 VENUES_INDEX = "venues-v8"
-WORKS_INDEX = "works-v17-*,-*invalid-data"
-PUBLISHERS_INDEX = "publishers-v1"
+WORKS_INDEX = "works-v18-*,-*invalid-data"
+PUBLISHERS_INDEX = "publishers-v2"
 
 DO_NOT_GROUP_BY = [
     "cited_by",

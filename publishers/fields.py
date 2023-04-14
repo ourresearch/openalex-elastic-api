@@ -17,6 +17,7 @@ fields = [
         custom_es_field="updated_date",
     ),
     OpenAlexIDField(param="ids.openalex", custom_es_field="ids.openalex.lower"),
+    OpenAlexIDField(param="lineage"),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(
         param="parent_publisher", custom_es_field="parent_publisher.keyword"

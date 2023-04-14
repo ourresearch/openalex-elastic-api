@@ -95,6 +95,7 @@ class SourceSchema(Schema):
     issn = fields.List(fields.Str())
     host_organization = fields.Str()
     host_organization_name = fields.Str()
+    host_organization_lineage = fields.List(fields.Str())
     type = fields.Str()
 
     class Meta:
@@ -118,6 +119,7 @@ class OpenAccessSchema(Schema):
     is_oa = fields.Bool()
     oa_status = fields.Str()
     oa_url = fields.Str()
+    any_repository_has_fulltext = fields.Bool()
 
     class Meta:
         ordered = True
