@@ -1,11 +1,5 @@
-from core.fields import (
-    DateField,
-    DateTimeField,
-    OpenAlexIDField,
-    RangeField,
-    SearchField,
-    TermField,
-)
+from core.fields import (DateField, DateTimeField, OpenAlexIDField, RangeField,
+                         SearchField, TermField)
 
 fields = [
     DateField(

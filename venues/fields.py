@@ -1,13 +1,6 @@
-from core.fields import (
-    BooleanField,
-    DateField,
-    DateTimeField,
-    OpenAlexIDField,
-    PhraseField,
-    RangeField,
-    SearchField,
-    TermField,
-)
+from core.fields import (BooleanField, DateField, DateTimeField,
+                         OpenAlexIDField, PhraseField, RangeField, SearchField,
+                         TermField)
 
 fields = [
     BooleanField(param="has_issn", custom_es_field="ids.issn_l"),

@@ -1,12 +1,5 @@
-from core.fields import (
-    BooleanField,
-    DateField,
-    DateTimeField,
-    OpenAlexIDField,
-    RangeField,
-    SearchField,
-    TermField,
-)
+from core.fields import (BooleanField, DateField, DateTimeField,
+                         OpenAlexIDField, RangeField, SearchField, TermField)
 
 fields = [
     BooleanField(param="has_orcid", custom_es_field="ids.orcid"),

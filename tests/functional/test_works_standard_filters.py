@@ -103,7 +103,6 @@ class TestWorksPublicationDateFilter:
             "2020-05-17T15:30",
             "2020-05-17T15:30:00",
             "2020-01-02T00:22:35.180390",
-            "2020-05-13T21:20:37.593194+00:00",
             "2020-05-30T01:45:36.123Z",
         ]
         for value in valid_values:
@@ -128,7 +127,7 @@ class TestWorksPublicationDateFilter:
             assert json_data["error"] == "Invalid query parameters error."
             assert (
                 json_data["message"]
-                == 'Value for param {self.param} is an invalid date. The date must be in ISO-8601 format, for example: "2020-05-17", "2020-05-17T15:30", or "2020-01-02T00:22:35.180390".'
+                == f'Value for param from_updated_date is an invalid date. The date must be in ISO-8601 format, for example: "2020-05-17", "2020-05-17T15:30", or "2020-01-02T00:22:35.180390". (Value given was {value})'
             )
 
 

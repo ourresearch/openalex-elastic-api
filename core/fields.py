@@ -8,7 +8,8 @@ import countries
 from core.exceptions import APIQueryParamsError
 from core.search import SearchOpenAlex
 from core.utils import get_full_openalex_id, normalize_openalex_id
-from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX
+from settings import (CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS,
+                      WORKS_INDEX)
 
 
 class Field(ABC):
@@ -196,7 +197,7 @@ class DateTimeField(DateField):
         if not date:
             raise APIQueryParamsError(invalid_date_message)
         try:
-            datetime.datetime.fromisoformat(query.replace('Z', '+00:00'))
+            datetime.datetime.fromisoformat(query.replace("Z", "+00:00"))
         except ValueError:
             raise APIQueryParamsError(invalid_date_message)
 

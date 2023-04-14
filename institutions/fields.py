@@ -1,12 +1,5 @@
-from core.fields import (
-    BooleanField,
-    DateField,
-    DateTimeField,
-    OpenAlexIDField,
-    RangeField,
-    SearchField,
-    TermField,
-)
+from core.fields import (BooleanField, DateField, DateTimeField,
+                         OpenAlexIDField, RangeField, SearchField, TermField)
 
 fields = [
     BooleanField(
