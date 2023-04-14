@@ -79,7 +79,7 @@ class TestWorksPublicationDateFilter:
         )
 
     def test_works_to_publication_date_error(self, client):
-        res = client.get("/works?filter=to_publication_date:2020-01-40")
+        res = client.get("/works?filter=to_publication_date:2019-01-40")
         json_data = res.get_json()
         assert json_data["error"] == "Invalid query parameters error."
         assert (
@@ -96,6 +96,40 @@ class TestWorksPublicationDateFilter:
             json_data["message"]
             == "Value for param publication_date is an invalid date. Format is yyyy-mm-dd (e.g. 2020-05-17)."
         )
+
+    def test_works_from_updated_date(self, client):
+        valid_values = [
+            "2020-05-17",
+            "2020-05-17T15:30",
+            "2020-05-17T15:30:00",
+            "2020-01-02T00:22:35.180390",
+            "2020-05-13T21:20:37.593194+00:00",
+            "2020-05-30T01:45:36.123Z",
+        ]
+        for value in valid_values:
+            res = client.get(f"/works?filter=from_updated_date:{value}")
+            json_data = res.get_json()
+            assert json_data["meta"]["count"] > 0
+
+    def test_works_from_updated_date_error(self, client):
+        invalid_values = [
+            "2020-1-17",
+            "2020-1-17T15:30",
+            "2019-01-40",
+            "2019-01-40T10:00:00",
+            "2020",
+            "20200117",
+            "aaaa-bb-cc",
+        ]
+        for value in invalid_values:
+            res = client.get(f"/works?filter=from_updated_date:{value}")
+            json_data = res.get_json()
+            assert res.status_code == 403
+            assert json_data["error"] == "Invalid query parameters error."
+            assert (
+                json_data["message"]
+                == 'Value for param {self.param} is an invalid date. The date must be in ISO-8601 format, for example: "2020-05-17", "2020-05-17T15:30", or "2020-01-02T00:22:35.180390".'
+            )
 
 
 class TestWorksHostVenueFilters:

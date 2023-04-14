@@ -562,6 +562,7 @@ def validate_group_by(field):
     ]
     if (
         type(field).__name__ == "DateField"
+        or type(field).__name__ == "DateTimeField"
         or (
             type(field).__name__ == "RangeField"
             and field.param not in range_field_exceptions

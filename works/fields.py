@@ -1,5 +1,13 @@
-from core.fields import (BooleanField, DateField, OpenAlexIDField, PhraseField,
-                         RangeField, SearchField, TermField)
+from core.fields import (
+    BooleanField,
+    DateField,
+    DateTimeField,
+    OpenAlexIDField,
+    PhraseField,
+    RangeField,
+    SearchField,
+    TermField,
+)
 
 fields = [
     BooleanField(
@@ -48,7 +56,7 @@ fields = [
         param="from_publication_date",
         custom_es_field="publication_date",
     ),
-    DateField(
+    DateTimeField(
         param="from_updated_date",
         custom_es_field="updated_date",
     ),
