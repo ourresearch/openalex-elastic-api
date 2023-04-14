@@ -9,6 +9,7 @@ import authors
 import autocomplete
 import concepts
 import counts
+import funders
 import ids
 import institutions
 import publishers
@@ -42,6 +43,7 @@ def register_blueprints(app):
     app.register_blueprint(autocomplete.views.blueprint)
     app.register_blueprint(concepts.views.blueprint)
     app.register_blueprint(counts.views.blueprint)
+    app.register_blueprint(funders.views.blueprint)
     app.register_blueprint(ids.views.blueprint)
     app.register_blueprint(institutions.views.blueprint)
     app.register_blueprint(publishers.views.blueprint)

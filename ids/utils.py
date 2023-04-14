@@ -10,11 +10,11 @@ def is_openalex_id(openalex_id):
     if not openalex_id:
         return False
     openalex_id = openalex_id.lower()
-    if re.findall(r"http[s]://openalex.org/([waicvps]\d{2,})", openalex_id):
+    if re.findall(r"http[s]://openalex.org/([waicfvps]\d{2,})", openalex_id):
         return True
-    if re.findall(r"^([waicvps]\d{2,})", openalex_id):
+    if re.findall(r"^([waicfvps]\d{2,})", openalex_id):
         return True
-    if re.findall(r"(openalex:[waicvps]\d{2,})", openalex_id):
+    if re.findall(r"(openalex:[waicfvps]\d{2,})", openalex_id):
         return True
     return False
 
@@ -62,6 +62,15 @@ def is_concept_openalex_id(id):
     if not clean_id:
         return False
     return clean_id.startswith("C")
+
+
+def is_funder_openalex_id(id):
+    if isinstance(id, int):
+        return False
+    clean_id = normalize_openalex_id(id)
+    if not clean_id:
+        return False
+    return clean_id.startswith("F")
 
 
 def is_publisher_openalex_id(id):

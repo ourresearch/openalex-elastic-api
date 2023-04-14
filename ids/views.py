@@ -5,18 +5,20 @@ from flask import Blueprint, abort, redirect, request, url_for
 
 from authors.schemas import AuthorsSchema
 from concepts.schemas import ConceptsSchema
+from funders.schemas import FundersSchema
 from ids.utils import (get_merged_id, is_author_openalex_id,
-                       is_concept_openalex_id, is_institution_openalex_id,
-                       is_openalex_id, is_publisher_openalex_id,
-                       is_source_openalex_id, is_venue_openalex_id,
-                       is_work_openalex_id, normalize_doi, normalize_issn,
-                       normalize_openalex_id, normalize_orcid, normalize_pmid,
-                       normalize_ror, normalize_wikidata,
-                       process_id_only_fields)
+                       is_concept_openalex_id, is_funder_openalex_id,
+                       is_institution_openalex_id, is_openalex_id,
+                       is_publisher_openalex_id, is_source_openalex_id,
+                       is_venue_openalex_id, is_work_openalex_id,
+                       normalize_doi, normalize_issn, normalize_openalex_id,
+                       normalize_orcid, normalize_pmid, normalize_ror,
+                       normalize_wikidata, process_id_only_fields)
 from institutions.schemas import InstitutionsSchema
 from publishers.schemas import PublishersSchema
-from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
-                      PUBLISHERS_INDEX, SOURCES_INDEX, WORKS_INDEX)
+from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, FUNDERS_INDEX,
+                      INSTITUTIONS_INDEX, PUBLISHERS_INDEX, SOURCES_INDEX,
+                      WORKS_INDEX)
 from sources.schemas import SourcesSchema
 from works.schemas import WorksSchema
 
@@ -346,6 +348,71 @@ def concepts_name_get(name):
     return concepts_schema.dump(response[0])
 
 
+# Funder
+
+
+@blueprint.route("/funders/RANDOM")
+@blueprint.route("/funders/random")
+def funders_random_get():
+    s = Search(index=FUNDERS_INDEX)
+    only_fields = process_id_only_fields(request, FundersSchema)
+
+    random_query = Q("function_score", functions={"random_score": {}})
+    s = s.query(random_query).extra(size=1)
+    response = s.execute()
+    funders_schema = FundersSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
+    return funders_schema.dump(response[0])
+
+
+@blueprint.route("/funders/<path:id>")
+def funders_id_get(id):
+    s = Search(index=FUNDERS_INDEX)
+    only_fields = process_id_only_fields(request, FundersSchema)
+
+    if is_openalex_id(id):
+        clean_id = normalize_openalex_id(id)
+        if clean_id != id:
+            return redirect(url_for("ids.funders_id_get", id=clean_id, **request.args))
+        clean_id = int(clean_id[1:])
+        full_openalex_id = f"https://openalex.org/F{clean_id}"
+        query = Q("term", ids__openalex=full_openalex_id)
+        s = s.filter(query)
+        if s.count() == 0:
+            # check if document is merged
+            merged_id = get_merged_id("merge-funders", full_openalex_id)
+            if merged_id:
+                return redirect(
+                    url_for("ids.funders_id_get", id=merged_id, **request.args),
+                    code=301,
+                )
+    elif id.startswith("ror:") or ("ror.org" in id):
+        clean_ror = normalize_ror(id)
+        if not clean_ror:
+            abort(404)
+        full_ror = f"https://ror.org/{clean_ror}"
+        query = Q("term", ids__ror=full_ror)
+        s = s.filter(query)
+
+    elif id.startswith("wikidata:") or ("wikidata" in id):
+        clean_wikidata = normalize_wikidata(id)
+        if not clean_wikidata:
+            abort(404)
+        full_wikidata = f"https://www.wikidata.org/entity/{clean_wikidata}"
+        query = Q("term", ids__wikidata=full_wikidata)
+        s = s.filter(query)
+    else:
+        abort(404)
+    response = s.execute()
+    if not response:
+        abort(404)
+    funders_schema = FundersSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
+    return funders_schema.dump(response[0])
+
+
 # Publisher
 
 
@@ -512,6 +579,8 @@ def universal_get(openalex_id):
         )
     elif is_concept_openalex_id(openalex_id):
         return redirect(url_for("ids.concepts_id_get", id=openalex_id, **request.args))
+    elif is_funder_openalex_id(openalex_id):
+        return redirect(url_for("ids.funders_id_get", id=openalex_id, **request.args))
     elif is_publisher_openalex_id(openalex_id):
         return redirect(
             url_for("ids.publishers_id_get", id=openalex_id, **request.args)

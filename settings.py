@@ -12,6 +12,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 # indexes
 AUTHORS_INDEX = "authors-v10"
 CONCEPTS_INDEX = "concepts-v8"
+FUNDERS_INDEX = "funders-v1"
 INSTITUTIONS_INDEX = "institutions-v4"
 SOURCES_INDEX = "sources-v2"
 VENUES_INDEX = "venues-v8"

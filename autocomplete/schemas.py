@@ -137,6 +137,7 @@ class AutoCompleteSchema(Schema):
         entities = {
             "authors": "author",
             "concepts": "concept",
+            "funders": "funder",
             "institutions": "institution",
             "publishers": "publisher",
             "sources": "source",
@@ -151,16 +152,20 @@ class AutoCompleteSchema(Schema):
         entities = {
             "authors": "orcid",
             "concepts": "wikidata",
+            "funders": "ids__ror",
             "institutions": "ror",
             "sources": "issn_l",
             "venues": "issn_l",
             "works": "doi",
         }
-        for key, value in entities.items():
-            if key in obj.meta.index:
-                return getattr(obj, value, None)
-        if "publishers" in obj.meta.index:
+        if "funders" in obj.meta.index:
+            return obj.ids.ror if "ror" in obj.ids else None
+        elif "publishers" in obj.meta.index:
             return obj.ids.wikidata if "wikidata" in obj.ids else None
+        else:
+            for key, value in entities.items():
+                if key in obj.meta.index:
+                    return getattr(obj, value, None)
 
     class Meta:
         ordered = True

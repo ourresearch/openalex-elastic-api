@@ -15,11 +15,12 @@ from concepts.fields import fields_dict as concepts_fields_dict
 from core.exceptions import APIQueryParamsError
 from core.utils import clean_preference
 from extensions import cache
+from funders.fields import fields_dict as funders_fields_dict
 from institutions.fields import fields_dict as institutions_fields_dict
 from publishers.fields import fields_dict as publishers_fields_dict
-from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
-                      PUBLISHERS_INDEX, SOURCES_INDEX, VENUES_INDEX,
-                      WORKS_INDEX)
+from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, FUNDERS_INDEX,
+                      INSTITUTIONS_INDEX, PUBLISHERS_INDEX, SOURCES_INDEX,
+                      VENUES_INDEX, WORKS_INDEX)
 from sources.fields import fields_dict as sources_fields_dict
 from venues.fields import fields_dict as venues_fields_dict
 from works.fields import fields_dict as works_fields_dict
@@ -38,6 +39,7 @@ def autocomplete_full():
         "author": AUTHORS_INDEX,
         "concept": CONCEPTS_INDEX,
         "institution": INSTITUTIONS_INDEX,
+        "funder": FUNDERS_INDEX,
         "publisher": PUBLISHERS_INDEX,
         "source": SOURCES_INDEX,
         "work": WORKS_INDEX,
@@ -118,6 +120,14 @@ def autocomplete_authors():
 def autocomplete_concepts():
     index_name = CONCEPTS_INDEX
     result = single_entity_autocomplete(concepts_fields_dict, index_name, request)
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/funders")
+def autocomplete_funders():
+    index_name = FUNDERS_INDEX
+    result = single_entity_autocomplete(funders_fields_dict, index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
 
