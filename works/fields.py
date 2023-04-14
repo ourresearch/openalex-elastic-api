@@ -62,6 +62,8 @@ fields = [
     OpenAlexIDField(param="author.id", alias="authorships.author.id"),
     OpenAlexIDField(param="authorships.author.id"),
     OpenAlexIDField(param="authorships.institutions.id"),
+    OpenAlexIDField(param="corresponding_author_ids"),
+    OpenAlexIDField(param="corresponding_institution_ids"),
     OpenAlexIDField(param="best_oa_location.source.id"),
     OpenAlexIDField(param="best_oa_location.source.host_organization"),
     OpenAlexIDField(param="best_oa_location.source.host_organization_lineage"),
