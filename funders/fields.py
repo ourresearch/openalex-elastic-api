@@ -1,12 +1,16 @@
-from core.fields import (DateField, OpenAlexIDField, RangeField, SearchField,
-                         TermField)
+from core.fields import (BooleanField, DateField, DateTimeField,
+                         OpenAlexIDField, RangeField, SearchField, TermField)
 
 fields = [
+    BooleanField(
+        param=f"is_global_south",
+        custom_es_field="country_code",
+    ),
     DateField(
         param="from_created_date",
         custom_es_field="created_date",
     ),
-    DateField(
+    DateTimeField(
         param="from_updated_date",
         custom_es_field="updated_date",
     ),
@@ -18,6 +22,11 @@ fields = [
     RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
     SearchField(param="display_name.search"),
+    TermField(
+        param=f"continent",
+        custom_es_field="country_code",
+    ),
+    TermField(param="country_code"),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="ids.ror", custom_es_field="ids.ror.lower"),
     TermField(

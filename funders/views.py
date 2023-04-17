@@ -7,8 +7,8 @@ from core.schemas import FiltersWrapperSchema, HistogramWrapperSchema
 from core.shared_view import shared_view
 from core.utils import is_cached, process_only_fields
 from extensions import cache
+from funders.fields import fields_dict
 from funders.schemas import FundersSchema, MessageSchema
-from publishers.fields import fields_dict
 from settings import FUNDERS_INDEX
 
 blueprint = Blueprint("funders", __name__)

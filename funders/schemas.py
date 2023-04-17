@@ -18,6 +18,7 @@ class FundersSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     alternate_titles = fields.List(fields.Str())
+    country_code = fields.Str()
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()
     cited_by_count = fields.Int()
