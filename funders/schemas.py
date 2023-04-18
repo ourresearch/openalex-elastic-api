@@ -22,6 +22,7 @@ class FundersSchema(Schema):
     description = fields.Str(dump_default=None)
     homepage_url = fields.Str(dump_default=None)
     image_url = fields.Str(dump_default=None)
+    image_thumbnail_url = fields.Str(dump_default=None)
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()
     cited_by_count = fields.Int()
