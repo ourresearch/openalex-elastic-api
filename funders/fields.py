@@ -21,6 +21,7 @@ fields = [
     RangeField(param="summary_stats.h_index"),
     RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
+    SearchField(param="description.search"),
     SearchField(param="display_name.search"),
     TermField(
         param=f"continent",
