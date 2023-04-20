@@ -38,14 +38,17 @@ def autocomplete_full():
     entities_to_indeces = {
         "author": AUTHORS_INDEX,
         "concept": CONCEPTS_INDEX,
+        "countries": "countries",
         "institution": INSTITUTIONS_INDEX,
         "funder": FUNDERS_INDEX,
         "publisher": PUBLISHERS_INDEX,
         "source": SOURCES_INDEX,
         "work": WORKS_INDEX,
+        "work_type": "work-type",
     }
     validate_full_autocomplete_params(request)
     q = request.args.get("q")
+    hide_works = request.args.get("hide_works")
     entity_type = request.args.get("entity_type")
 
     if not q:
@@ -57,6 +60,9 @@ def autocomplete_full():
         raise APIQueryParamsError(
             f"Must provide a 'q' parameter when filtering by an entity type."
         )
+
+    if hide_works:
+        entities_to_indeces.pop("work")
 
     if entity_type:
         try:

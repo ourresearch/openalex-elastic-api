@@ -15,6 +15,7 @@ def validate_full_autocomplete_params(request):
     valid_params = [
         "author_hint",
         "entity_type",
+        "hide_works",
         "mailto",
         "q",
     ]

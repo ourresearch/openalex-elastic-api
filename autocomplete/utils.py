@@ -1,4 +1,5 @@
 AUTOCOMPLETE_SOURCE = [
+    "country_code",
     "id",
     "ids",
     "display_name",

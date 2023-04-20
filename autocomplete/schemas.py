@@ -7,13 +7,14 @@ from settings import WORKS_INDEX
 
 
 class AutoCompleteSchema(Schema):
-    id = fields.Str()
+    id = fields.Method("get_id")
     display_name = fields.Str()
     hint = fields.Method("get_hint", dump_default=None)
     cited_by_count = fields.Int()
     works_count = fields.Int(default=None)
     entity_type = fields.Method("get_entity_type", dump_default=None)
     external_id = fields.Method("get_external_id", dump_default=None)
+    filter_key = fields.Method("get_filter_key", dump_default=None)
 
     def get_hint(self, obj):
         if "authors" in obj.meta.index:
@@ -166,6 +167,20 @@ class AutoCompleteSchema(Schema):
             for key, value in entities.items():
                 if key in obj.meta.index:
                     return getattr(obj, value, None)
+
+    def get_filter_key(self, obj):
+        if "countries" in obj.meta.index:
+            return "authorships.institutions.country_code"
+        elif "work-type" in obj.meta.index:
+            return "type"
+
+    def get_id(self, obj):
+        if "countries" in obj.meta.index:
+            return obj.country_code
+        elif "work-type" in obj.meta.index:
+            return obj.display_name
+        else:
+            return obj.id
 
     class Meta:
         ordered = True
