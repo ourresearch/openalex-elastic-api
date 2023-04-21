@@ -467,7 +467,6 @@ def filter_group_by(field, group_by, q, s):
             slop = 0
         field = autocomplete_field_mapping[group_by]
         query = Q("match_phrase_prefix", **{field: {"query": q, "slop": slop}})
-        s = s.params(preference=q)
         s = s.query(query)
     elif "country_code" in group_by:
         country_codes = country_search(q)
