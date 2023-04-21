@@ -17,8 +17,10 @@ def group_by_records(field, s, sort_params, known, per_page, q):
         missing = "unknown"
 
     if q:
-        per_page = 200
-    shard_size = 3000
+        per_page = 500
+        shard_size = 5000
+    else:
+        shard_size = 3000
 
     if field.param == "repository":
         s = s.filter("term", **{"locations.source.type": "repository"})
@@ -458,8 +460,15 @@ def filter_group_by(field, group_by, q, s):
         "publisher": "publisher__autocomplete",
     }
     if autocomplete_field_mapping.get(group_by):
+        if "author.id" in group_by:
+            # allows us to ignore middle initials in names
+            slop = 1
+        else:
+            slop = 0
         field = autocomplete_field_mapping[group_by]
-        s = s.query("match_phrase_prefix", **{field: q})
+        query = Q("match_phrase_prefix", **{field: {"query": q, "slop": slop}})
+        s = s.params(preference=q)
+        s = s.query(query)
     elif "country_code" in group_by:
         country_codes = country_search(q)
         s = s.query("terms", **{field.es_field(): country_codes})
