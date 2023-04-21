@@ -91,6 +91,7 @@ class BooleanField(Field):
             self.param == "has_abstract"
             or self.param == "has_fulltext"
             or self.param == "has_ngrams"
+            or self.param == "has_raw_affiliation_string"
             or self.param == "has_references"
             or self.param == "primary_location.source.has_issn"
             or self.param == "primary_location.venue.has_issn"
