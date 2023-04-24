@@ -81,8 +81,16 @@ fields = [
     OpenAlexIDField(param="institutions.id", alias="authorships.institutions.id"),
     OpenAlexIDField(param="journal.id", alias="host_venue.id"),
     OpenAlexIDField(param="locations.source.id"),
+    OpenAlexIDField(
+        param="locations.source.host_institution_lineage",
+        custom_es_field="locations.source.host_organization_lineage",
+    ),
     OpenAlexIDField(param="locations.source.host_organization"),
     OpenAlexIDField(param="locations.source.host_organization_lineage"),
+    OpenAlexIDField(
+        param="locations.source.publisher_lineage",
+        custom_es_field="locations.source.host_organization_lineage",
+    ),
     OpenAlexIDField(param="primary_location.source.id"),
     OpenAlexIDField(param="primary_location.source.host_organization"),
     OpenAlexIDField(param="primary_location.source.host_organization_lineage"),

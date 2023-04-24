@@ -272,6 +272,21 @@ class OpenAlexIDField(Field):
             error_id = f"'{self.value.replace('https://openalex.org/', '')}'"
             raise APIQueryParamsError(f"{error_id} is not a valid OpenAlex ID.")
 
+        if (
+            self.param == "locations.source.host_institution_lineage"
+            and not normalize_openalex_id(query).startswith("I")
+        ):
+            raise APIQueryParamsError(
+                "Use an institution ID with this convenience filter (OpenAlex ID that starts with I)."
+            )
+        elif (
+            self.param == "locations.source.publisher_lineage"
+            and not normalize_openalex_id(query).startswith("P")
+        ):
+            raise APIQueryParamsError(
+                "Use a publisher ID with this convenience filter (OpenAlex ID that starts with P)."
+            )
+
     @staticmethod
     def get_ids(openalex_id, category):
         full_openalex_id = get_full_openalex_id(openalex_id)

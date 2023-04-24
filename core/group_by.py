@@ -22,7 +22,10 @@ def group_by_records(field, s, sort_params, known, per_page, q):
     else:
         shard_size = 3000
 
-    if field.param == "repository":
+    if (
+        field.param == "repository"
+        or field.param == "locations.source.host_institution_lineage"
+    ):
         s = s.filter("term", **{"locations.source.type": "repository"})
     # TODO: add a similar filter for "journal" (with `primary_location.source.type`)?
 
@@ -185,7 +188,13 @@ def get_group_by_results(group_by, response):
         or group_by.endswith("repository")
         # TODO: do we need something similar here for "journal"?
         or group_by.endswith("host_organization_lineage")
+        or group_by.endswith("host_institution_lineage")
+        or group_by.endswith("publisher_lineage")
     ):
+        if group_by.endswith("host_institution_lineage"):
+            buckets = keep_institution_buckets(buckets)
+        elif group_by.endswith("publisher_lineage"):
+            buckets = keep_publisher_buckets(buckets)
         keys = [b.key for b in buckets]
         if group_by.endswith("host_organization") or group_by.endswith(
             "host_organization_lineage"
@@ -235,6 +244,26 @@ def get_group_by_results(group_by, response):
                 }
             )
     return group_by_results
+
+
+def keep_institution_buckets(buckets):
+    buckets_to_keep = []
+    for b in buckets:
+        if (
+            b["key"]
+            and b["key"].startswith("https://openalex.org/I")
+            or b["key"] == "unknown"
+        ):
+            buckets_to_keep.append(b)
+    return buckets_to_keep
+
+
+def keep_publisher_buckets(buckets):
+    buckets_to_keep = []
+    for b in buckets:
+        if b["key"] and b["key"].startswith("https://openalex.org/P"):
+            buckets_to_keep.append(b)
+    return buckets_to_keep
 
 
 def get_group_by_results_external_ids(response):
@@ -481,8 +510,10 @@ def filter_group_by(field, group_by, q, s):
         "author" in group_by
         or "institution" in group_by
         or group_by == "repository"
+        or group_by == "locations.source.host_institution_lineage"
         # TODO: do we need something similar here for "journal"?
         or group_by == "locations.source.host_organization"
+        or group_by == "locations.source.publisher_lineage"
         or group_by == "lineage"
     ):
         return s
