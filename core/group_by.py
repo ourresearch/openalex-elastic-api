@@ -27,7 +27,8 @@ def group_by_records(field, s, sort_params, known, per_page, q):
         or field.param == "locations.source.host_institution_lineage"
     ):
         s = s.filter("term", **{"locations.source.type": "repository"})
-    # TODO: add a similar filter for "journal" (with `primary_location.source.type`)?
+    if field.param == "journal":
+        s = s.filter("term", **{"primary_location.source.type": "journal"})
 
     if sort_params:
         for key, order in sort_params.items():
@@ -186,7 +187,7 @@ def get_group_by_results(group_by, response):
         group_by.endswith(".id")
         or group_by.endswith("host_organization")
         or group_by.endswith("repository")
-        # TODO: do we need something similar here for "journal"?
+        or group_by.endswith("journal")
         or group_by.endswith("host_organization_lineage")
         or group_by.endswith("host_institution_lineage")
         or group_by.endswith("publisher_lineage")
@@ -511,7 +512,7 @@ def filter_group_by(field, group_by, q, s):
         or "institution" in group_by
         or group_by == "repository"
         or group_by == "locations.source.host_institution_lineage"
-        # TODO: do we need something similar here for "journal"?
+        or group_by == "journal"
         or group_by == "locations.source.host_organization"
         or group_by == "locations.source.publisher_lineage"
         or group_by == "lineage"

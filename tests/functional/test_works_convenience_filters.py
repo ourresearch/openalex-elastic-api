@@ -271,6 +271,73 @@ class TestWorksRepositoryFilter:
         assert json_data["filters"][0]["values"][0]["display_name"] == None
 
 
+class TestWorksJournalFilter:
+    def test_works_journal_short(self, client):
+        res = client.get("/works?filter=journal:S137773608")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] > 0
+        for result in json_data["results"]:
+            found = False
+            for result in json_data["results"]:
+                found = False
+                for item in result["locations"]:
+                    if (
+                        "source" in item
+                        and item["source"]
+                        and item["source"].get("id")
+                        == "https://openalex.org/S137773608"
+                    ):
+                        found = True
+                assert found is True
+
+    def test_works_journal_long(self, client):
+        res = client.get("/works?filter=journal:https://openalex.org/S137773608")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] > 0
+        for result in json_data["results"]:
+            found = False
+            for item in result["locations"]:
+                if (
+                    "source" in item
+                    and item["source"]
+                    and item["source"].get("id") == "https://openalex.org/S137773608"
+                ):
+                    found = True
+            assert found is True
+
+    def test_works_journal_not(self, client):
+        res = client.get("/works?filter=repository:!https://openalex.org/S137773608")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] > 0
+        for result in json_data["results"]:
+            found = False
+            if "locations" not in result:
+                continue
+            for item in result["locations"]:
+                if (
+                    item.get("source")
+                    and item.get("source").get("id")
+                    and item["source"]["id"] == "https://openalex.org/S137773608"
+                ):
+                    found = True
+            assert found is False
+
+    def test_works_journal_null(self, client):
+        res = client.get("/works?filter=journal:null")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] == 0
+
+    def test_works_journal_not_null(self, client):
+        res = client.get("/works?filter=journal:!null")
+        json_data = res.get_json()
+        assert json_data["meta"]["count"] > 0
+
+    def test_works_journal_group_by(self, client):
+        res = client.get("/works?group_by=journal")
+        json_data = res.get_json()
+        assert len(json_data["group_by"]) > 0
+
+
 class TestWorksAuthorsCount:
     def test_works_authors_count_exact(self, client):
         res = client.get("/works?filter=authors_count:1")
