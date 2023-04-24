@@ -89,6 +89,7 @@ fields = [
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(param="repository", custom_es_field="locations.source.id"),
+    # TODO: make another entry for "journal" with custom_es_field="primary_location.source.id"?
     OpenAlexIDField(param="referenced_works"),
     OpenAlexIDField(param="related_to"),
     PhraseField(param="host_venue.publisher"),

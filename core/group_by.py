@@ -24,6 +24,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
 
     if field.param == "repository":
         s = s.filter("term", **{"locations.source.type": "repository"})
+    # TODO: add a similar filter for "journal" (with `primary_location.source.type`)?
 
     if sort_params:
         for key, order in sort_params.items():
@@ -182,6 +183,7 @@ def get_group_by_results(group_by, response):
         group_by.endswith(".id")
         or group_by.endswith("host_organization")
         or group_by.endswith("repository")
+        # TODO: do we need something similar here for "journal"?
         or group_by.endswith("host_organization_lineage")
     ):
         keys = [b.key for b in buckets]
@@ -479,6 +481,7 @@ def filter_group_by(field, group_by, q, s):
         "author" in group_by
         or "institution" in group_by
         or group_by == "repository"
+        # TODO: do we need something similar here for "journal"?
         or group_by == "locations.source.host_organization"
         or group_by == "lineage"
     ):

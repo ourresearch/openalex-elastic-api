@@ -206,11 +206,13 @@ class DateTimeField(DateField):
 class OpenAlexIDField(Field):
     def build_query(self):
         if self.value == "null" and self.param != "repository":
+            # TODO: change above to `...self.param not in ["repository", "journal"]`?
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
             q = ~Q("exists", field=field_name)
             return q
         elif self.value == "!null" and self.param != "repository":
+            # TODO: change above to `...self.param not in ["repository", "journal"]`?
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
             q = Q("exists", field=field_name)
@@ -221,6 +223,7 @@ class OpenAlexIDField(Field):
             kwargs = {self.es_field(): query}
             if self.param == "repository":
                 q = ~Q("term", locations__source__id=query)
+            # TODO: add a similar one for "journal," but use `primary_location__source__id`?
             else:
                 q = ~Q("term", **kwargs)
             return q
@@ -231,6 +234,7 @@ class OpenAlexIDField(Field):
             openalex_ids = self.get_ids(self.value, "related_works")
             q = Q("terms", id=openalex_ids)
         elif self.param == "repository":
+            # TODO: add similar logic for "journal" (with primary_location.source.type)?
             if self.value == "null":
                 q = ~Q("exists", field=self.custom_es_field) & Q(
                     "term", **{"locations.source.type": "repository"}
