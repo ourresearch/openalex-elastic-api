@@ -486,6 +486,7 @@ def filter_group_by(field, group_by, q, s):
         "host_venue.display_name": "host_venue__display_name__autocomplete",
         "host_venue.id": "host_venue__display_name__autocomplete",
         "host_venue.publisher": "host_venue__publisher__autocomplete",
+        "journal": "locations__source__display_name__autocomplete",
         "journal.id": "host_venue__display_name__autocomplete",
         "last_known_instution.id": "last_known_instution__display_name__autocomplete",
         "locations.source.id": "locations__source__display_name__autocomplete",
@@ -513,7 +514,6 @@ def filter_group_by(field, group_by, q, s):
         or "institution" in group_by
         or group_by == "repository"
         or group_by == "locations.source.host_institution_lineage"
-        or group_by == "journal"
         or group_by == "locations.source.host_organization"
         or group_by == "locations.source.publisher_lineage"
         or group_by == "lineage"
