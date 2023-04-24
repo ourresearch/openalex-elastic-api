@@ -188,6 +188,7 @@ def get_group_by_results(group_by, response):
         or group_by.endswith("host_organization_lineage")
         or group_by.endswith("host_institution_lineage")
         or group_by.endswith("publisher_lineage")
+        or group_by == "grants.funder"
     ):
         if group_by.endswith("host_institution_lineage"):
             buckets = keep_institution_buckets(buckets)
@@ -512,6 +513,7 @@ def filter_group_by(field, group_by, q, s):
         or group_by == "locations.source.host_organization"
         or group_by == "locations.source.publisher_lineage"
         or group_by == "lineage"
+        or group_by == "grants.funder"
     ):
         return s
     else:

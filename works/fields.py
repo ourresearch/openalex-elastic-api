@@ -75,6 +75,7 @@ fields = [
     OpenAlexIDField(param="cites", alias="referenced_works"),
     OpenAlexIDField(param="concept.id", alias="concepts.id"),
     OpenAlexIDField(param="concepts.id"),
+    OpenAlexIDField(param="grants.funder", custom_es_field="grants.funder.keyword"),
     OpenAlexIDField(param="host_venue.id"),
     OpenAlexIDField(param="ids.openalex"),
     OpenAlexIDField(param="institution.id", alias="authorships.institutions.id"),
@@ -160,6 +161,7 @@ fields = [
     ),
     TermField(param="institutions.ror", alias="authorships.institutions.ror"),
     TermField(param="institutions.type", alias="authorships.institutions.type"),
+    TermField(param="grants.award_id", custom_es_field="grants.award_id.keyword"),
     TermField(param="locations.source.issn"),
     TermField(
         param="locations.venue.issn", custom_es_field="locations.venue.issn.keyword"
