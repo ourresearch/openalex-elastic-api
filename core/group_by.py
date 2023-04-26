@@ -191,6 +191,7 @@ def get_group_by_results(group_by, response):
         or group_by.endswith("host_organization_lineage")
         or group_by.endswith("host_institution_lineage")
         or group_by.endswith("publisher_lineage")
+        or group_by.endswith("ids")
         or group_by == "grants.funder"
     ):
         if group_by.endswith("host_institution_lineage"):
@@ -483,6 +484,8 @@ def filter_group_by(field, group_by, q, s):
         "best_oa_location.source.id": "best_oa_location__source__display_name__autocomplete",
         "concept.id": "concepts__display_name__autocomplete",
         "concepts.id": "concepts__display_name__autocomplete",
+        "corresponding_author_ids": "authorships__author__display_name__autocomplete",
+        "corresponding_institution_ids": "authorships__institutions__display_name__autocomplete",
         "host_venue.display_name": "host_venue__display_name__autocomplete",
         "host_venue.id": "host_venue__display_name__autocomplete",
         "host_venue.publisher": "host_venue__publisher__autocomplete",
