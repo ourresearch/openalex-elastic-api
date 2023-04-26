@@ -19,6 +19,15 @@ fields = [
     OpenAlexIDField(param="concepts.id", custom_es_field="x_concepts.id"),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
+    OpenAlexIDField(
+        param="repositories.host_organization",
+        custom_es_field="repositories.host_organization.keyword",
+    ),
+    OpenAlexIDField(
+        param="repositories.host_organization_lineage",
+        alias="repositories.host_organization_lineage.keyword",
+    ),
+    OpenAlexIDField(param="repositories.id", custom_es_field="repositories.id.keyword"),
     OpenAlexIDField(param="x_concepts.id"),
     RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="cited_by_count"),

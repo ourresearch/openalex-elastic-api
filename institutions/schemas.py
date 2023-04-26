@@ -45,6 +45,17 @@ class AssociatedInstitutionsSchema(Schema):
         unknown = INCLUDE
 
 
+class RepositoriesSchema(Schema):
+    id = fields.Str()
+    display_name = fields.Str()
+    host_organization = fields.Str()
+    host_organization_name = fields.Str()
+    host_organization_lineage = fields.List(fields.Str())
+
+    class Meta:
+        ordered = True
+
+
 class InstitutionsSchema(Schema):
     id = fields.Str()
     ror = fields.Str()
@@ -57,6 +68,7 @@ class InstitutionsSchema(Schema):
     image_thumbnail_url = fields.Str()
     display_name_acronyms = fields.List(fields.Str())
     display_name_alternatives = fields.List(fields.Str())
+    repositories = fields.List(fields.Nested(RepositoriesSchema))
     works_count = fields.Int()
     cited_by_count = fields.Int()
     summary_stats = fields.Nested(SummaryStatsSchema, dump_default=None)

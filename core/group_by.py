@@ -514,13 +514,14 @@ def filter_group_by(field, group_by, q, s):
         s = s.query("range", **kwargs)
     elif (
         "author" in group_by
-        or "institution" in group_by
-        or group_by == "repository"
-        or group_by == "locations.source.host_institution_lineage"
-        or group_by == "locations.source.host_organization"
-        or group_by == "locations.source.publisher_lineage"
-        or group_by == "lineage"
         or group_by == "grants.funder"
+        or group_by.endswith("host_institution_lineage")
+        or group_by.endswith("host_organization")
+        or group_by.endswith("host_organization_lineage")
+        or "institution" in group_by
+        or group_by == "lineage"
+        or group_by.endswith("publisher_lineage")
+        or group_by == "repository"
     ):
         return s
     else:
