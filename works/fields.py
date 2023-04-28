@@ -80,7 +80,7 @@ fields = [
     OpenAlexIDField(param="ids.openalex"),
     OpenAlexIDField(param="institution.id", alias="authorships.institutions.id"),
     OpenAlexIDField(param="institutions.id", alias="authorships.institutions.id"),
-    OpenAlexIDField(param="journal.id", alias="host_venue.id"),
+    OpenAlexIDField(param="journal", custom_es_field="primary_location.source.id"),
     OpenAlexIDField(param="locations.source.id"),
     OpenAlexIDField(
         param="locations.source.host_institution_lineage",
@@ -98,7 +98,6 @@ fields = [
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(param="repository", custom_es_field="locations.source.id"),
-    OpenAlexIDField(param="journal", custom_es_field="primary_location.source.id"),
     OpenAlexIDField(param="referenced_works"),
     OpenAlexIDField(param="related_to"),
     PhraseField(param="host_venue.publisher"),
