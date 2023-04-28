@@ -46,7 +46,7 @@ def funders_histograms(param):
     return histogram_schema.dump(result)
 
 
-@blueprint.route("/concepts/valid_fields")
-def concepts_valid_fields():
+@blueprint.route("/funders/valid_fields")
+def funders_valid_fields():
     valid_fields = get_valid_fields(fields_dict)
     return jsonify(valid_fields)
