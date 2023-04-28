@@ -159,6 +159,15 @@ class MeshSchema(Schema):
         ordered = True
 
 
+class APCSchema(Schema):
+    price = fields.Integer()
+    currency = fields.Str()
+    provenance = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class WorksSchema(Schema):
     id = fields.Str()
     doi = fields.Str()
@@ -186,6 +195,8 @@ class WorksSchema(Schema):
     best_oa_location = fields.Nested(LocationSchema)
     alternate_host_venues = fields.List(fields.Nested(AlternateHostVenuesSchema))
     grants = fields.List(fields.Nested(GrantsSchema))
+    apc_paid = fields.List(fields.Nested(APCSchema), dump_default=[])
+    apc_paid_usd = fields.Integer(default=None)
     referenced_works = fields.List(fields.Str())
     related_works = fields.List(fields.Str())
     ngrams_url = fields.Method("get_ngrams_url")
