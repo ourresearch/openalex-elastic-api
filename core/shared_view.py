@@ -25,7 +25,7 @@ from core.validate import validate_export_format, validate_params
 
 
 def shared_view(request, fields_dict, index_name, default_sort):
-    """Primary function used to search, filter, and aggregate across all five entities."""
+    """Primary function used to search, filter, and aggregate across all entities."""
 
     # params
     validate_params(request)

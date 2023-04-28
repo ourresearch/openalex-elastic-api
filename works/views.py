@@ -4,7 +4,7 @@ from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
 from core.shared_view import shared_view
-from core.utils import is_cached, process_only_fields
+from core.utils import is_cached, process_only_fields, get_valid_fields
 from extensions import cache
 from settings import WORKS_INDEX
 from works.fields import fields_dict
@@ -46,3 +46,9 @@ def works_filters(params):
     results = shared_filter_view(request, params, fields_dict, index_name)
     filters_schema = FiltersWrapperSchema()
     return filters_schema.dump(results)
+
+
+@blueprint.route("/works/valid_fields")
+def works_valid_fields():
+    valid_fields = get_valid_fields(fields_dict)
+    return jsonify(valid_fields)

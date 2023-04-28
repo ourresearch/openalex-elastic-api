@@ -1,4 +1,4 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, jsonify
 
 from concepts.fields import fields_dict
 from concepts.schemas import ConceptsSchema, MessageSchema
@@ -6,7 +6,7 @@ from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
 from core.shared_view import shared_view
-from core.utils import is_cached, process_only_fields
+from core.utils import is_cached, process_only_fields, get_valid_fields
 from extensions import cache
 from settings import CONCEPTS_INDEX
 
@@ -35,3 +35,9 @@ def concepts_filters(params):
     results = shared_filter_view(request, params, fields_dict, index_name)
     filters_schema = FiltersWrapperSchema()
     return filters_schema.dump(results)
+
+
+@blueprint.route("/concepts/valid_fields")
+def concepts_valid_fields():
+    valid_fields = get_valid_fields(fields_dict)
+    return jsonify(valid_fields)

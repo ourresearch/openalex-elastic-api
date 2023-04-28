@@ -5,9 +5,21 @@ from iso3166 import countries
 
 import settings
 from core.exceptions import APIQueryParamsError, HighAuthorCountError
-from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
-                      PUBLISHERS_INDEX, SOURCES_INDEX, VENUES_INDEX,
-                      WORKS_INDEX)
+from settings import (
+    AUTHORS_INDEX,
+    CONCEPTS_INDEX,
+    INSTITUTIONS_INDEX,
+    PUBLISHERS_INDEX,
+    SOURCES_INDEX,
+    VENUES_INDEX,
+    WORKS_INDEX,
+)
+
+
+def get_valid_fields(fields_dict):
+    valid_fields = sorted(list(fields_dict.keys()))
+    valid_fields.remove("from_updated_date")
+    return valid_fields
 
 
 def get_field(fields_dict, key):
@@ -15,8 +27,7 @@ def get_field(fields_dict, key):
         field = fields_dict[key]
         return field
     except KeyError:
-        valid_fields = sorted(list(fields_dict.keys()))
-        valid_fields.remove("from_updated_date")
+        valid_fields = get_valid_fields(fields_dict)
         raise APIQueryParamsError(
             f"{key} is not a valid field. Valid fields are underscore or hyphenated versions of: {', '.join(valid_fields)}"
         )
