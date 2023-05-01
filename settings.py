@@ -12,12 +12,12 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 # indexes
 AUTHORS_INDEX = "authors-v10"
 CONCEPTS_INDEX = "concepts-v8"
-FUNDERS_INDEX = "funders-v2"
+FUNDERS_INDEX = "funders-v3"
 INSTITUTIONS_INDEX = "institutions-v4"
 SOURCES_INDEX = "sources-v2"
 VENUES_INDEX = "venues-v8"
 WORKS_INDEX = "works-v18-*,-*invalid-data"
-PUBLISHERS_INDEX = "publishers-v2"
+PUBLISHERS_INDEX = "publishers-v3"
 
 DO_NOT_GROUP_BY = [
     "cited_by",
@@ -44,7 +44,12 @@ EXTERNAL_ID_FIELDS = [
     "primary_location.source.has_issn",
 ]
 
-BOOLEAN_TEXT_FIELDS = ["has_abstract", "has_ngrams", "has_references"]
+BOOLEAN_TEXT_FIELDS = [
+    "has_abstract",
+    "has_ngrams",
+    "has_raw_affiliation_string",
+    "has_references",
+]
 
 TRANSFORMS = [
     {
