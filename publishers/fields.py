@@ -16,6 +16,7 @@ fields = [
     OpenAlexIDField(
         param="parent_publisher", custom_es_field="parent_publisher.keyword"
     ),
+    OpenAlexIDField(param="roles.id"),
     RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="cited_by_count"),
     RangeField(param="summary_stats.h_index"),

@@ -100,6 +100,15 @@ class FiltersWrapperSchema(Schema):
         ordered = True
 
 
+class RolesSchema(Schema):
+    role = fields.Str()
+    id = fields.Str()
+    works_count = fields.Int()
+
+    class Meta:
+        ordered = True
+
+
 def hide_relevance(data, context):
     if "relevance_score" in data.keys() and (
         not data["relevance_score"]
