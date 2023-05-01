@@ -238,10 +238,10 @@ def get_group_by_results(group_by, response):
                 key_display_name = "unknown"
             elif b.key == "doaj":
                 key_display_name = (
-                    "Directory of Open Access Journals (DOAJ) at https://doaj.org/"
+                    "Directory of Open Access Journals (DOAJ) at https://doaj.org"
                 )
             elif b.key == "openapc":
-                key_display_name = "OpenAPC at https://openapc.net/"
+                key_display_name = "OpenAPC at https://openapc.net"
             group_by_results.append(
                 {
                     "key": b.key,
