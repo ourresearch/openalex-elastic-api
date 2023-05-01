@@ -1,14 +1,8 @@
 from marshmallow import INCLUDE, Schema, fields, post_dump
 
-from core.schemas import (
-    CountsByYearSchema,
-    GroupBySchema,
-    MetaSchema,
-    SummaryStatsSchema,
-    RolesSchema,
-    hide_relevance,
-    relevance_score,
-)
+from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
+                          RolesSchema, SummaryStatsSchema, hide_relevance,
+                          relevance_score)
 
 
 class IDsSchema(Schema):
@@ -37,7 +31,7 @@ class PublishersSchema(Schema):
     summary_stats = fields.Nested(SummaryStatsSchema, dump_default=None)
     ids = fields.Nested(IDsSchema)
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
-    roles = fields.List(fields.Nested(RolesSchema))
+    # roles = fields.Nested(RolesSchema)
     sources_api_url = fields.Str()
     updated_date = fields.Str()
     created_date = fields.Str(dump_default=None)
