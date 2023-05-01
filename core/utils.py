@@ -1,6 +1,6 @@
 import re
 
-from elasticsearch_dsl import Q, Search
+from elasticsearch_dsl import MultiSearch, Q, Search
 from iso3166 import countries
 
 import settings
@@ -165,6 +165,27 @@ def get_display_name(openalex_id):
     else:
         display_name = None
     return display_name
+
+
+def get_display_names_award_ids(ids):
+    results = {}
+    ms = MultiSearch(index=WORKS_INDEX)
+    for award_id in ids:
+        s = Search()
+        s = s.filter("term", grants__award_id__keyword=award_id)
+        s = s.source(["grants"])
+        ms = ms.add(s)
+    responses = ms.execute()
+    for response in responses:
+        # get count for each query
+        count = response.hits.total.value
+        for item in response:
+            for grant in item.grants:
+                if grant.award_id in ids:
+                    results[
+                        grant.award_id
+                    ] = f"{grant.funder_display_name} ({grant.award_id})"
+    return results
 
 
 def get_index_name_by_id(openalex_id):

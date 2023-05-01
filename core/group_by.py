@@ -6,7 +6,8 @@ from iso4217 import Currency
 
 import settings
 from core.exceptions import APIQueryParamsError
-from core.utils import get_display_names, get_display_names_host_organization
+from core.utils import (get_display_names, get_display_names_award_ids,
+                        get_display_names_host_organization)
 from countries import COUNTRIES_BY_CONTINENT, GLOBAL_SOUTH_COUNTRIES
 
 
@@ -193,6 +194,7 @@ def get_group_by_results(group_by, response):
         or group_by.endswith("host_institution_lineage")
         or group_by.endswith("publisher_lineage")
         or group_by.endswith("ids")
+        or group_by == "grants.award_id"
         or group_by == "grants.funder"
     ):
         if group_by.endswith("host_institution_lineage"):
@@ -204,6 +206,8 @@ def get_group_by_results(group_by, response):
             "host_organization_lineage"
         ):
             ids_to_display_names = get_display_names_host_organization(keys)
+        elif group_by == "grants.award_id":
+            ids_to_display_names = get_display_names_award_ids(keys)
         else:
             ids_to_display_names = get_display_names(keys)
         for b in buckets:
