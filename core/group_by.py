@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import iso3166
 from elasticsearch_dsl import A, MultiSearch, Q, Search
+from iso4217 import Currency
 
 import settings
 from core.exceptions import APIQueryParamsError
@@ -224,6 +225,37 @@ def get_group_by_results(group_by, response):
             else:
                 country = iso3166.countries.get(b.key.lower())
                 key_display_name = country.name if country else None
+            group_by_results.append(
+                {
+                    "key": b.key,
+                    "key_display_name": key_display_name,
+                    "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
+                }
+            )
+    elif group_by == "apc_paid.provenance":
+        for b in buckets:
+            if b.key == "unknown":
+                key_display_name = "unknown"
+            elif b.key == "doaj":
+                key_display_name = (
+                    "Directory of Open Access Journals (DOAJ) at https://doaj.org/"
+                )
+            elif b.key == "openapc":
+                key_display_name = "OpenAPC at https://openapc.net/"
+            group_by_results.append(
+                {
+                    "key": b.key,
+                    "key_display_name": key_display_name,
+                    "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
+                }
+            )
+    elif group_by.endswith("currency"):
+        for b in buckets:
+            if b.key == "unknown":
+                key_display_name = "unknown"
+            else:
+                # convert currency code to full description
+                key_display_name = Currency(b.key).currency_name
             group_by_results.append(
                 {
                     "key": b.key,
@@ -597,6 +629,8 @@ def validate_group_by(field):
     range_field_exceptions = [
         "apc_usd",
         "apc_prices.price",
+        "apc_paid.price",
+        "apc_paid_usd",
         "authors_count",
         "cited_by_count",
         "concepts_count",
