@@ -22,13 +22,13 @@ fields = [
     OpenAlexIDField(param="roles.id"),
     OpenAlexIDField(
         param="repositories.host_organization",
-        custom_es_field="repositories.host_organization.keyword",
+        custom_es_field="repositories.host_organization",
     ),
     OpenAlexIDField(
         param="repositories.host_organization_lineage",
-        alias="repositories.host_organization_lineage.keyword",
+        alias="repositories.host_organization_lineage",
     ),
-    OpenAlexIDField(param="repositories.id", custom_es_field="repositories.id.keyword"),
+    OpenAlexIDField(param="repositories.id", custom_es_field="repositories.id"),
     OpenAlexIDField(param="x_concepts.id"),
     RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="cited_by_count"),
