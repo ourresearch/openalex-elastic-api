@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 
 from concepts.fields import fields_dict
 from concepts.schemas import ConceptsSchema, MessageSchema
@@ -6,7 +6,7 @@ from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
 from core.shared_view import shared_view
-from core.utils import is_cached, process_only_fields, get_valid_fields
+from core.utils import get_valid_fields, is_cached, process_only_fields
 from extensions import cache
 from settings import CONCEPTS_INDEX
 

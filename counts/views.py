@@ -1,8 +1,9 @@
 from elasticsearch_dsl import Search
 from flask import Blueprint, jsonify
 
-from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
-                      SOURCES_INDEX, WORKS_INDEX, PUBLISHERS_INDEX, FUNDERS_INDEX)
+from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, FUNDERS_INDEX,
+                      INSTITUTIONS_INDEX, PUBLISHERS_INDEX, SOURCES_INDEX,
+                      WORKS_INDEX)
 
 blueprint = Blueprint("counts", __name__)
 

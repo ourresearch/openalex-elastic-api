@@ -5,15 +5,9 @@ from iso3166 import countries
 
 import settings
 from core.exceptions import APIQueryParamsError, HighAuthorCountError
-from settings import (
-    AUTHORS_INDEX,
-    CONCEPTS_INDEX,
-    INSTITUTIONS_INDEX,
-    PUBLISHERS_INDEX,
-    SOURCES_INDEX,
-    VENUES_INDEX,
-    WORKS_INDEX,
-)
+from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
+                      PUBLISHERS_INDEX, SOURCES_INDEX, VENUES_INDEX,
+                      WORKS_INDEX)
 
 
 def get_valid_fields(fields_dict):
