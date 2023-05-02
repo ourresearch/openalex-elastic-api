@@ -17,7 +17,7 @@ from core.group_by import (filter_group_by, get_group_by_results,
                            group_by_version, is_transform,
                            search_group_by_results, validate_group_by)
 from core.paginate import Paginate
-from core.search import check_is_search_query, full_search
+from core.search import check_is_search_query, full_search_query
 from core.sort import get_sort_fields
 from core.utils import (clean_preference, get_field, map_filter_params,
                         map_sort_params, set_number_param)
@@ -70,7 +70,11 @@ def shared_view(request, fields_dict, index_name, default_sort):
 
     # search
     if search and search != '""':
-        s = full_search(index_name, s, search, sample)
+        search_query = full_search_query(index_name, search)
+        if sample:
+            s = s.filter(search_query)
+        else:
+            s = s.query(search_query)
         s = s.params(preference=clean_preference(search))
 
     # filter
@@ -145,36 +149,15 @@ def shared_view(request, fields_dict, index_name, default_sort):
             s = group_by_records_transform(field, index_name, sort_params)
         elif "continent" in field.param:
             return group_by_continent(
-                field,
-                index_name,
-                search,
-                full_search,
-                filter_params,
-                filter_records,
-                fields_dict,
-                q,
+                field, index_name, search, filter_params, filter_records, fields_dict, q
             )
         elif field.param == "version":
             return group_by_version(
-                field,
-                index_name,
-                search,
-                full_search,
-                filter_params,
-                filter_records,
-                fields_dict,
-                q,
+                field, index_name, search, filter_params, filter_records, fields_dict, q
             )
         elif field.param == "best_open_version":
             return group_by_best_open_version(
-                field,
-                index_name,
-                search,
-                full_search,
-                filter_params,
-                filter_records,
-                fields_dict,
-                q,
+                field, index_name, search, filter_params, filter_records, fields_dict, q
             )
         else:
             s = group_by_records(field, s, sort_params, known, per_page, q)

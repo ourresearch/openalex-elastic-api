@@ -107,6 +107,7 @@ fields = [
     RangeField(param="concepts_count"),
     RangeField(param="publication_year"),
     SearchField(param="abstract.search", custom_es_field="abstract"),
+    SearchField(param="default.search", index="works"),
     SearchField(param="display_name.search"),
     SearchField(param="fulltext.search", custom_es_field="fulltext"),
     SearchField(

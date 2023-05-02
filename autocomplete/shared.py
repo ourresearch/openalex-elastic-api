@@ -6,7 +6,7 @@ from autocomplete.utils import AUTOCOMPLETE_SOURCE
 from autocomplete.validate import validate_entity_autocomplete_params
 from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
-from core.search import full_search
+from core.search import full_search_query
 from core.utils import clean_preference, map_filter_params
 from ids import utils as id_utils
 
@@ -30,7 +30,8 @@ def single_entity_autocomplete(fields_dict, index_name, request):
     if not canonical_id_found:
         # search
         if search and search != '""':
-            s = full_search(index_name, s, search)
+            search_query = full_search_query(index_name, search)
+            s = s.query(search_query)
 
         # filters
         if filter_params:

@@ -6,6 +6,7 @@ from iso4217 import Currency
 
 import settings
 from core.exceptions import APIQueryParamsError
+from core.search import full_search_query
 from core.utils import (get_display_names, get_display_names_award_ids,
                         get_display_names_host_organization)
 from countries import COUNTRIES_BY_CONTINENT, GLOBAL_SOUTH_COUNTRIES
@@ -104,14 +105,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
 
 
 def group_by_continent(
-    field,
-    index_name,
-    search,
-    full_search,
-    filter_params,
-    filter_records,
-    fields_dict,
-    q,
+    field, index_name, search, filter_params, filter_records, fields_dict, q
 ):
     group_by_results = []
     took = 0
@@ -119,7 +113,8 @@ def group_by_continent(
     for continent in COUNTRIES_BY_CONTINENT:
         s = Search()
         if search and search != '""':
-            s = full_search(index_name, s, search)
+            search_query = full_search_query(index_name, search)
+            s = s.query(search_query)
 
         # filter
         if filter_params:
@@ -147,7 +142,8 @@ def group_by_continent(
     # get unknown
     s = Search(index=index_name)
     if search and search != '""':
-        s = full_search(index_name, s, search)
+        search_query = full_search_query(index_name, search)
+        s = s.query(search_query)
 
     # filter
     if filter_params:
@@ -325,14 +321,7 @@ def get_group_by_results_external_ids(response):
 
 
 def group_by_version(
-    field,
-    index_name,
-    search,
-    full_search,
-    filter_params,
-    filter_records,
-    fields_dict,
-    q,
+    field, index_name, search, filter_params, filter_records, fields_dict, q
 ):
     group_by_results = []
     took = 0
@@ -340,7 +329,8 @@ def group_by_version(
     for version in settings.VERSIONS:
         s = Search()
         if search and search != '""':
-            s = full_search(index_name, s, search)
+            search_query = full_search_query(index_name, search)
+            s = s.query(search_query)
 
         # filter
         if filter_params:
@@ -390,14 +380,7 @@ def group_by_version(
 
 
 def group_by_best_open_version(
-    field,
-    index_name,
-    search,
-    full_search,
-    filter_params,
-    filter_records,
-    fields_dict,
-    q,
+    field, index_name, search, filter_params, filter_records, fields_dict, q
 ):
     group_by_results = []
     took = 0
@@ -406,7 +389,8 @@ def group_by_best_open_version(
     for version in versions:
         s = Search()
         if search and search != '""':
-            s = full_search(index_name, s, search)
+            search_query = full_search_query(index_name, search)
+            s = s.query(search_query)
 
         # filter
         if filter_params:

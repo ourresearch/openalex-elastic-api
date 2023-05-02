@@ -5,7 +5,7 @@ from flask import url_for
 
 import settings
 from core.exceptions import APIQueryParamsError
-from core.search import full_search
+from core.search import full_search_query
 from core.utils import (get_country_name, get_display_name, get_field,
                         map_filter_params)
 
@@ -60,7 +60,8 @@ def filter_records_filters_view(fields_dict, filter_params, ms, index_name):
         for key, value in filter.items():
             # handle full search differently
             if key == "search":
-                s = full_search(index_name, s, value)
+                search_query = full_search_query(index_name, value)
+                s = s.query(search_query)
                 field_meta = {"key": key, "type": "FullSearchField", "values": []}
                 field_meta["values"].append(
                     {

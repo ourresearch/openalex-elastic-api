@@ -6,19 +6,22 @@ from elasticsearch_dsl import Q, Search
 
 import countries
 from core.exceptions import APIQueryParamsError
-from core.search import SearchOpenAlex
+from core.search import SearchOpenAlex, full_search_query
 from core.utils import get_full_openalex_id, normalize_openalex_id
 from settings import (CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS,
                       WORKS_INDEX)
 
 
 class Field(ABC):
-    def __init__(self, param, alias=None, custom_es_field=None, unique_id=None):
+    def __init__(
+        self, param, alias=None, custom_es_field=None, unique_id=None, index=None
+    ):
         self.param = param
         self.alias = alias
         self.custom_es_field = custom_es_field
         self.value = None
         self.unique_id = unique_id
+        self.index = index
 
     @abstractmethod
     def build_query(self):
@@ -398,7 +401,9 @@ class RangeField(Field):
 class SearchField(Field):
     def build_query(self):
         self.validate(self.value)
-        if (
+        if self.param == "default.search":
+            q = full_search_query(self.index, self.value)
+        elif (
             self.param == "raw_affiliation_string.search"
             or self.param == "abstract.search"
             or self.param == "fulltext.search"

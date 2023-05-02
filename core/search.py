@@ -213,7 +213,7 @@ class SearchOpenAlex:
         return self.search_terms.startswith('"') and self.search_terms.endswith('"')
 
 
-def full_search(index_name, s, search, sample=None):
+def full_search_query(index_name, search):
     if index_name.lower().startswith("authors"):
         search_oa = SearchOpenAlex(search_terms=search, is_author_name_query=True)
     elif index_name.lower().startswith("concepts"):
@@ -250,31 +250,26 @@ def full_search(index_name, s, search, sample=None):
     else:
         search_oa = SearchOpenAlex(search_terms=search)
     search_query = search_oa.build_query()
-    if sample:
-        s = s.filter(search_query)
-    else:
-        s = s.query(search_query)
-    return s
+    return search_query
 
 
 def check_is_search_query(filter_params, search):
-    is_search_query = False
+    search_keys = [
+        "abstract.search",
+        "default.search",
+        "display_name.search",
+        "fulltext.search",
+        "raw_affiliation_string.search",
+        "title.search",
+    ]
+
+    if search and search != '""':
+        return True
+
     if filter_params:
         for filter in filter_params:
-            if (
-                "abstract.search" in filter.keys()
-                and filter["abstract.search"] != ""
-                or "display_name.search" in filter.keys()
-                and filter["display_name.search"] != ""
-                or "title.search" in filter.keys()
-                and filter["title.search"] != ""
-                or "raw_affiliation_string.search" in filter.keys()
-                and filter["raw_affiliation_string.search"] != ""
-                or "fulltext.search" in filter.keys()
-                and filter["fulltext.search"] != ""
-            ):
-                is_search_query = True
-                break
-    if search and search != '""':
-        is_search_query = True
-    return is_search_query
+            for key in search_keys:
+                if filter.get(key, "") != "":
+                    return True
+
+    return False
