@@ -12,18 +12,26 @@ def delete_merged_works():
         total = 0
         last_id = "https://openalex.org/W35623074"
         last_id_seen = False
+        ids_to_delete = []
         for row in reader:
             if row["merge_from_id"] == last_id:
                 last_id_seen = True
             if not last_id_seen:
                 continue
-            id_to_delete = row["merge_from_id"]
-            s = Search(index=settings.WORKS_INDEX)
-            s = s.filter("term", id=id_to_delete)
-            if s.count() < 5:
-                print("deleting", id_to_delete)
+            ids_to_delete.append(row["merge_from_id"])
+            if len(ids_to_delete) == 100:
+                s = Search(index=settings.WORKS_INDEX)
+                s = s.filter("terms", id=ids_to_delete)
+                s = s.extra(size=1000)
                 s.delete()
+                print(f"deleted {total} records")
+                ids_to_delete.clear()
             total = total + 1
+
+        if ids_to_delete:
+            s = Search(index=settings.WORKS_INDEX)
+            s = s.filter("terms", id=ids_to_delete)
+            s.delete()
             print(f"deleted {total} records")
 
 
