@@ -35,6 +35,7 @@ fields = [
     RangeField(param="summary_stats.h_index"),
     RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
+    SearchField(param="default.search", index="institutions"),
     SearchField(param="display_name.search"),
     TermField(param="country_code"),
     TermField(

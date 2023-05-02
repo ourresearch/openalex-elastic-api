@@ -26,6 +26,7 @@ fields = [
     RangeField(param="summary_stats.h_index"),
     RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
+    SearchField(param="default.search", index="authors"),
     SearchField(param="display_name.search", unique_id="author_search"),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="last_known_institution.country_code"),
