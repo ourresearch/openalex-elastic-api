@@ -10,26 +10,21 @@ def delete_merged_works():
     with gzip.open("merge-works.csv.gz", "rt") as f:
         reader = csv.DictReader(f)
         total = 0
+        last_id = "https://openalex.org/W35623074"
+        last_id_seen = False
         for row in reader:
+            if row["merge_from_id"] == last_id:
+                last_id_seen = True
+            if not last_id_seen:
+                continue
             id_to_delete = row["merge_from_id"]
-            find_id_and_delete(id_to_delete)
+            s = Search(index=settings.WORKS_INDEX)
+            s = s.filter("term", id=id_to_delete)
+            if s.count() < 5:
+                print("deleting", id_to_delete)
+                s.delete()
             total = total + 1
             print(f"deleted {total} records")
-
-
-def find_id_and_delete(id_to_delete):
-    s = Search(index=settings.WORKS_INDEX)
-    s = s.filter("term", id=id_to_delete)
-    response = s.execute()
-    for r in response:
-        delete_from_elastic(r.id, r.meta.index)
-
-
-def delete_from_elastic(id_to_delete, index):
-    s = Search(index=index)
-    s = s.filter("term", id=id_to_delete)
-    s.delete()
-    print(f"deleted id {id_to_delete} with index {index}")
 
 
 if __name__ == "__main__":
