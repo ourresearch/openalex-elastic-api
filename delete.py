@@ -15,7 +15,6 @@ def delete_merged_works():
             find_id_and_delete(id_to_delete)
             total = total + 1
             print(f"deleted {total} records")
-            break
 
 
 def find_id_and_delete(id_to_delete):
