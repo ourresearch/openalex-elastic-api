@@ -77,7 +77,7 @@ class InstitutionsSchema(Schema):
     international = fields.Method("get_international")
     associated_institutions = fields.List(fields.Nested(AssociatedInstitutionsSchema))
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
-    # roles = fields.List(fields.Nested(RolesSchema))
+    roles = fields.List(fields.Nested(RolesSchema))
     x_concepts = fields.List(fields.Nested(XConceptsSchema))
     works_api_url = fields.Str()
     updated_date = fields.Str()
