@@ -53,7 +53,7 @@ class ConceptsSchema(Schema):
     wikidata = fields.Str()
     display_name = fields.Str()
     level = fields.Int()
-    score = fields.Decimal()
+    score = fields.Float()
 
     class Meta:
         ordered = True
