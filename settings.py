@@ -14,10 +14,10 @@ AUTHORS_INDEX = "authors-v10"
 CONCEPTS_INDEX = "concepts-v8"
 FUNDERS_INDEX = "funders-v3"
 INSTITUTIONS_INDEX = "institutions-v5"
+PUBLISHERS_INDEX = "publishers-v4"
 SOURCES_INDEX = "sources-v2"
 VENUES_INDEX = "venues-v8"
 WORKS_INDEX = "works-v18-*,-*invalid-data"
-PUBLISHERS_INDEX = "publishers-v3"
 
 DO_NOT_GROUP_BY = [
     "cited_by",
