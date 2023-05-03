@@ -15,12 +15,21 @@ class IDsSchema(Schema):
         unknown = INCLUDE
 
 
+class ParentPublisherSchema(Schema):
+    id = fields.Str()
+    display_name = fields.Str()
+    ids = fields.Nested(IDsSchema)
+
+    class Meta:
+        ordered = True
+
+
 class PublishersSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     alternate_titles = fields.List(fields.Str())
     hierarchy_level = fields.Int()
-    parent_publisher = fields.Str()
+    parent_publisher = fields.Nested(ParentPublisherSchema)
     lineage = fields.List(fields.Str())
     relevance_score = fields.Method("get_relevance_score")
     country_codes = fields.List(fields.Str())
