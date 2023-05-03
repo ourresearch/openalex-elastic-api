@@ -337,14 +337,10 @@ def group_by_version(
             s = filter_records(fields_dict, filter_params, s)
         s = s.extra(track_total_hits=True)
         if version == "null":
-            s = s.filter(
-                ~Q("exists", field="host_venue.version")
-                & ~Q("exists", field="alternate_host_venues.version")
-            )
+            s = s.filter(~Q("exists", field="locations.version"))
         else:
-            kwargs1 = {"host_venue.version": version}
-            kwargs2 = {"alternate_host_venues.version": version}
-            s = s.query(Q("term", **kwargs1) | Q("term", **kwargs2))
+            kwargs1 = {"locations.version": version}
+            s = s.query(Q("term", **kwargs1))
         ms = ms.add(s)
 
     responses = ms.execute()
@@ -497,7 +493,6 @@ def get_group_by_results_transform(group_by, response):
 def filter_group_by(field, group_by, q, s):
     """Reduce records that will be grouped based on q param."""
     autocomplete_field_mapping = {
-        "alternate_host_venues.id": "alternate_host_venues__display_name",
         "ancestors.id": "ancestors__display_name__autocomplete",
         "authorships.institutions.id": "authorships__institutions__display_name__autocomplete",
         "authorships.author.id": "authorships__author__display_name__autocomplete",
@@ -506,9 +501,6 @@ def filter_group_by(field, group_by, q, s):
         "concepts.id": "concepts__display_name__autocomplete",
         "corresponding_author_ids": "authorships__author__display_name__autocomplete",
         "corresponding_institution_ids": "authorships__institutions__display_name__autocomplete",
-        "host_venue.display_name": "host_venue__display_name__autocomplete",
-        "host_venue.id": "host_venue__display_name__autocomplete",
-        "host_venue.publisher": "host_venue__publisher__autocomplete",
         "journal": "locations__source__display_name__autocomplete",
         "last_known_institution.id": "last_known_institution__display_name__autocomplete",
         "locations.source.id": "locations__source__display_name__autocomplete",

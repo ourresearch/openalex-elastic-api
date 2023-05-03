@@ -131,90 +131,6 @@ class TestWorksPublicationDateFilter:
             )
 
 
-class TestWorksHostVenueFilters:
-    def test_works_host_venue_issn(self, client):
-        res = client.get("/works?filter=host_venue.issn:2332-7790")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1
-        for result in json_data["results"]:
-            assert "2332-7790" in result["host_venue"]["issn"]
-
-    def test_works_host_venue_publisher_single(self, client):
-        res = client.get("/works?filter=host_venue.publisher:ElseVier BV")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 463
-        for result in json_data["results"]:
-            assert result["host_venue"]["publisher"] == "Elsevier BV"
-
-    def test_works_host_venue_id_short(self, client):
-        res = client.get("/works?filter=host_venue.id:v2898264183")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1
-        assert json_data["results"][0]["publication_date"] == "2019-09-01"
-        assert (
-            json_data["results"][0]["host_venue"]["display_name"]
-            == "Health Professions Education"
-        )
-        assert json_data["results"][0]["host_venue"]["publisher"] == "Elsevier BV"
-        assert res.status_code == 200
-
-    def test_works_host_venue_id_long(self, client):
-        res = client.get("/works?filter=host_venue.id:https://openalex.org/v2898264183")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1
-        assert json_data["results"][0]["publication_date"] == "2019-09-01"
-        assert (
-            json_data["results"][0]["host_venue"]["display_name"]
-            == "Health Professions Education"
-        )
-        assert json_data["results"][0]["host_venue"]["publisher"] == "Elsevier BV"
-        assert res.status_code == 200
-
-    def test_works_host_venue_version_published(self, client):
-        res = client.get("/works?filter=host_venue.version:publishedversion")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 845
-        for result in json_data["results"]:
-            assert result["host_venue"]["version"] == "publishedVersion"
-
-    def test_works_host_venue_version_submitted(self, client):
-        res = client.get("/works?filter=host_venue.version:submittedversion")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 20
-        for result in json_data["results"]:
-            assert result["host_venue"]["version"] == "submittedVersion"
-
-    def test_works_host_venue_version_accepted(self, client):
-        res = client.get("/works?filter=host_venue.version:acceptedversion")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 5
-        for result in json_data["results"]:
-            assert result["host_venue"]["version"] == "acceptedVersion"
-
-    def test_works_host_venue_version_not(self, client):
-        res = client.get("/works?filter=host_venue.version:!publishedversion")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9155
-        for result in json_data["results"]:
-            assert result["host_venue"]["version"] != "publishedVersion"
-
-    def test_works_host_venue_version_null(self, client):
-        res = client.get("/works?filter=host_venue.version:null")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 9130
-        for result in json_data["results"]:
-            assert result["host_venue"]["version"] is None
-
-    def test_works_host_venue_version_error(self, client):
-        res = client.get("/works?filter=host_venue.version:accepted")
-        json_data = res.get_json()
-        assert json_data["error"] == "Invalid query parameters error."
-        assert (
-            json_data["message"]
-            == "Value for host_venue.version must be one of null, acceptedVersion, submittedVersion, publishedVersion."
-        )
-
-
 class TestWorksTypeFilter:
     def test_works_type(self, client):
         res = client.get("/works?filter=type:journAl-arTicle")
@@ -443,52 +359,6 @@ class TestWorksConcepts:
         assert concept_found == True
 
 
-class TestWorksAlternateHostVenues:
-    def test_works_alternate_host_venues_id_short(self, client):
-        """Needs to be made case insensitive."""
-        res = client.get("/works?filter=alternate_host_venues.id:V173526857")
-        json_data = res.get_json()
-        for result in json_data["results"][:25]:
-            assert (
-                result["alternate_host_venues"][0]["id"]
-                == "https://openalex.org/V173526857"
-            )
-
-    def test_works_alternate_host_venues_id_long(self, client):
-        """Needs to be made case insensitive."""
-        res = client.get(
-            "/works?filter=alternate_host_venues.id:https://openalex.org/V173526857"
-        )
-        json_data = res.get_json()
-        for result in json_data["results"][:25]:
-            assert (
-                result["alternate_host_venues"][0]["id"]
-                == "https://openalex.org/V173526857"
-            )
-
-    def test_works_host_venue_license(self, client):
-        """Implement once local elastic data is updated."""
-        res = client.get("/works?filter=host_venue.license:cc-by")
-        json_data = res.get_json()
-        assert json_data["results"][0]["host_venue"]["license"] == "cc-by"
-
-    def test_works_alternate_host_venues_license(self, client):
-        res = client.get("/works?filter=alternate_host_venues.license:CC-by-nc")
-        json_data = res.get_json()
-        assert (
-            json_data["results"][0]["alternate_host_venues"][0]["license"] == "cc-by-nc"
-        )
-
-    @pytest.mark.skip(reason="Not passing, but this field is deprecated.")
-    def test_works_alternate_host_venues_version(self, client):
-        res = client.get("/works?filter=alternate_host_venues.version:publishedVersion")
-        json_data = res.get_json()
-        assert (
-            json_data["results"][0]["alternate_host_venues"][0]["version"]
-            == "publishedVersion"
-        )
-
-
 class TestWorksReferencedWorks:
     def test_works_referenced_works_short(self, client):
         res = client.get("/works?filter=referenced_works:W2516086211")
@@ -615,18 +485,6 @@ class TestWorksNotFilter:
                 assert concept["id"] != "https://openalex.org/C41008148"
 
         res_2 = client.get("/works?filter=concepts.id:c41008148")
-        json_data_2 = res_2.get_json()
-        assert json_data_1["meta"]["count"] + json_data_2["meta"]["count"] == 10000
-
-    def test_works_publisher_not_term(self, client):
-        """Tests ! filter for phrase field."""
-        res_1 = client.get("/works?filter=host_venue.publisher:!elsevier")
-        json_data_1 = res_1.get_json()
-        assert len(json_data_1["results"]) > 0
-        for result in json_data_1["results"][:50]:
-            assert result["host_venue"]["publisher"] != "elsevier"
-
-        res_2 = client.get("/works?filter=host_venue.publisher:elsevier")
         json_data_2 = res_2.get_json()
         assert json_data_1["meta"]["count"] + json_data_2["meta"]["count"] == 10000
 

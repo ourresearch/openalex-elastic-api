@@ -62,7 +62,6 @@ fields = [
         param="to_publication_date",
         custom_es_field="publication_date",
     ),
-    OpenAlexIDField(param="alternate_host_venues.id"),
     OpenAlexIDField(param="author.id", alias="authorships.author.id"),
     OpenAlexIDField(param="authorships.author.id"),
     OpenAlexIDField(param="authorships.institutions.id"),
@@ -115,8 +114,6 @@ fields = [
         custom_es_field="authorships.raw_affiliation_string",
     ),
     SearchField(param="title.search"),
-    TermField(param="alternate_host_venues.license"),
-    TermField(param="alternate_host_venues.version"),
     TermField(param="apc_paid.currency", custom_es_field="apc_paid.currency"),
     TermField(param="apc_paid.provenance", custom_es_field="apc_paid.provenance"),
     TermField(param="author.orcid", alias="authorships.author.orcid"),
@@ -149,13 +146,6 @@ fields = [
     TermField(param="ids.pmid", custom_es_field="ids.pmid"),
     TermField(param="ids.pmcid", custom_es_field="ids.pmcid"),
     TermField(
-        param="host_venue.display_name", custom_es_field="host_venue.display_name"
-    ),
-    TermField(param="host_venue.issn"),
-    TermField(param="host_venue.license", custom_es_field="host_venue.license"),
-    TermField(param="host_venue.type", custom_es_field="host_venue.type"),
-    TermField(param="host_venue.version", custom_es_field="host_venue.version"),
-    TermField(
         param="institutions.country_code",
         alias="authorships.institutions.country_code",
     ),
@@ -186,7 +176,7 @@ fields = [
     TermField(param="primary_location.source.type"),
     TermField(param="primary_location.version"),
     TermField(param="type"),
-    TermField(param="version", custom_es_field="host_venue.version"),
+    TermField(param="version", custom_es_field="locations.version"),
 ]
 
 fields_dict = {f.param: f for f in fields}

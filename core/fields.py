@@ -60,18 +60,8 @@ class BooleanField(Field):
 
         if self.param == "has_oa_accepted_or_published_version":
             self.validate_true_false()
-            query = (
-                Q("term", host_venue__is_oa="true")
-                | Q("term", alternate_host_venues__is_oa="true")
-            ) & (
-                Q("terms", host_venue__version=["acceptedVersion", "publishedVersion"])
-                | Q(
-                    "terms",
-                    alternate_host_venues__version=[
-                        "acceptedVersion",
-                        "publishedVersion",
-                    ],
-                )
+            query = Q("term", locations__is_oa="true") & Q(
+                "terms", locations__version=["acceptedVersion", "publishedVersion"]
             )
             if self.value.lower().strip() == "true":
                 q = query
@@ -79,12 +69,8 @@ class BooleanField(Field):
                 q = ~query
         elif self.param == "has_oa_submitted_version":
             self.validate_true_false()
-            query = (
-                Q("term", host_venue__is_oa="true")
-                | Q("term", alternate_host_venues__is_oa="true")
-            ) & (
-                Q("term", host_venue__version="submittedVersion")
-                | Q("term", alternate_host_venues__version="submittedVersion")
+            query = Q("term", locations__is_oa="true") & Q(
+                "term", locations__version="submittedVersion"
             )
             if self.value.lower().strip() == "true":
                 q = query
@@ -454,17 +440,13 @@ class TermField(Field):
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
             if self.param == "version":
-                q = ~Q("exists", field="host_venue.version") & ~Q(
-                    "exists", field="alternate_host_venues.version"
-                )
+                q = ~Q("exists", field="locations.version")
             else:
                 q = ~Q("exists", field=field_name)
             return q
         elif self.value == "!null":
             if self.param == "version":
-                q = Q("exists", field="host_venue.version") | Q(
-                    "exists", field="alternate_host_venues.version"
-                )
+                q = Q("exists", field="locations.version")
             else:
                 field_name = self.es_field()
                 field_name = field_name.replace("__", ".")
@@ -493,15 +475,6 @@ class TermField(Field):
             if "continent" in self.param:
                 country_codes = self.get_country_codes()
                 q = ~Q("terms", **{self.es_field(): country_codes})
-            elif self.param == "version":
-                version = self.validate_version()
-                kwargs1 = {"host_venue.version": version}
-                kwargs2 = {"alternate_host_venues.version": version}
-                q = ~(Q("term", **kwargs1) | Q("term", **kwargs2))
-            elif self.param == "host_venue.version":
-                version = self.validate_version()
-                kwargs = {"host_venue.version": version}
-                q = ~Q("term", **kwargs)
             else:
                 q = ~Q("term", **kwargs)
             return q
@@ -514,22 +487,10 @@ class TermField(Field):
         elif self.param == "display_name":
             kwargs = {self.es_field(): self.value}
             q = Q("match", **kwargs)
-        elif self.param == "host_venue.license":
-            kwargs = {self.es_field(): self.value.lower()}
-            q = Q("term", **kwargs)
-        elif self.param == "host_venue.version":
-            version = self.validate_version()
-            kwargs = {self.es_field(): version}
-            q = Q("term", **kwargs)
         elif "continent" in self.param:
             country_codes = self.get_country_codes()
             kwargs = {self.es_field(): country_codes}
             q = Q("terms", **kwargs)
-        elif self.param == "version":
-            version = self.validate_version()
-            kwargs1 = {"host_venue.version": version}
-            kwargs2 = {"alternate_host_venues.version": version}
-            q = Q("term", **kwargs1) | Q("term", **kwargs2)
         elif self.param == "best_open_version":
             self.validate_best_open_version()
             submitted_query = Q("term", **{self.custom_es_field: "submittedVersion"})

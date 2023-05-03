@@ -59,40 +59,10 @@ class ConceptsSchema(Schema):
         ordered = True
 
 
-class HostVenueSchema(Schema):
-    id = fields.Str()
-    issn_l = fields.Str()
-    issn = fields.List(fields.Str())
-    display_name = fields.Str()
-    publisher = fields.Str()
-    type = fields.Str()
-    url = fields.Str()
-    is_oa = fields.Bool()
-    version = fields.Str()
-    license = fields.Str()
-
-    class Meta:
-        ordered = True
-
-
 class GrantsSchema(Schema):
     funder = fields.Str()
     funder_display_name = fields.Str()
     award_id = fields.Str()
-
-    class Meta:
-        ordered = True
-
-
-class AlternateHostVenuesSchema(Schema):
-    id = fields.Str()
-    display_name = fields.Str()
-    type = fields.Str()
-    url = fields.Str()
-    is_oa = fields.Bool()
-    is_best = fields.Str()
-    version = fields.Str()
-    license = fields.Str()
 
     class Meta:
         ordered = True
@@ -178,7 +148,6 @@ class WorksSchema(Schema):
     publication_date = fields.Str()
     ids = fields.Nested(IDsSchema)
     primary_location = fields.Nested(LocationSchema)
-    host_venue = fields.Nested(HostVenueSchema)
     type = fields.Str()
     open_access = fields.Nested(OpenAccessSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
@@ -195,7 +164,6 @@ class WorksSchema(Schema):
     mesh = fields.List(fields.Nested(MeshSchema))
     locations = fields.Nested(LocationSchema, many=True)
     best_oa_location = fields.Nested(LocationSchema)
-    alternate_host_venues = fields.List(fields.Nested(AlternateHostVenuesSchema))
     grants = fields.List(fields.Nested(GrantsSchema))
     referenced_works = fields.List(fields.Str())
     related_works = fields.List(fields.Str())
