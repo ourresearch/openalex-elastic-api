@@ -232,7 +232,7 @@ def get_group_by_results(group_by, response):
                     "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
                 }
             )
-    elif group_by == "apc_paid.provenance":
+    elif group_by == "apc_payment.provenance":
         for b in buckets:
             if b.key == "unknown":
                 key_display_name = "unknown"
@@ -609,8 +609,8 @@ def validate_group_by(field):
     range_field_exceptions = [
         "apc_usd",
         "apc_prices.price",
-        "apc_paid.price",
-        "apc_paid_usd",
+        "apc_payment.price",
+        "apc_payment.price_usd",
         "authors_count",
         "cited_by_count",
         "concepts_count",
