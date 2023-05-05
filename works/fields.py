@@ -91,9 +91,17 @@ fields = [
         param="locations.source.publisher_lineage",
         custom_es_field="locations.source.host_organization_lineage",
     ),
+    OpenAlexIDField(
+        param="primary_location.source.host_institution_lineage",
+        custom_es_field="primary_location.source.host_organization_lineage",
+    ),
     OpenAlexIDField(param="primary_location.source.id"),
     OpenAlexIDField(param="primary_location.source.host_organization"),
     OpenAlexIDField(param="primary_location.source.host_organization_lineage"),
+    OpenAlexIDField(
+        param="primary_location.source.publisher_lineage",
+        custom_es_field="primary_location.source.host_organization_lineage",
+    ),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(param="repository", custom_es_field="locations.source.id"),
