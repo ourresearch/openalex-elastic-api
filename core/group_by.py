@@ -615,6 +615,7 @@ def validate_group_by(field):
         "cited_by_count",
         "concepts_count",
         "hierarchy_level",
+        "grants_count",
         "level",
         "publication_year",
         "summary_stats.2yr_mean_citedness",

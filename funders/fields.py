@@ -19,6 +19,7 @@ fields = [
     OpenAlexIDField(param="roles.id"),
     RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="cited_by_count"),
+    RangeField(param="grants_count"),
     RangeField(param="summary_stats.h_index"),
     RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
