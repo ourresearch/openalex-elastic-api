@@ -33,6 +33,7 @@ class PublishersSchema(Schema):
     lineage = fields.List(fields.Str())
     relevance_score = fields.Method("get_relevance_score")
     country_codes = fields.List(fields.Str())
+    homepage_url = fields.Str(dump_default=None)
     image_url = fields.Str(dump_default=None)
     image_thumbnail_url = fields.Str(dump_default=None)
     works_count = fields.Int()
