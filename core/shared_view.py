@@ -20,7 +20,7 @@ from core.paginate import Paginate
 from core.search import check_is_search_query, full_search_query
 from core.sort import get_sort_fields
 from core.utils import (clean_preference, get_field, map_filter_params,
-                        map_sort_params, set_number_param)
+                        map_sort_params, set_number_param, get_all_groupby_values)
 from core.validate import validate_export_format, validate_params
 
 
@@ -213,6 +213,19 @@ def shared_view(request, fields_dict, index_name, default_sort):
             result["group_by"] = get_group_by_results_transform(group_by, response)
         else:
             result["group_by"] = get_group_by_results(group_by, response)
+        # add in zero values
+        ignore_values = set([item["key"] for item in result["group_by"]])
+        if known:
+            ignore_values.add("unknown")
+            ignore_values.add("-111")
+        possible_buckets = get_all_groupby_values(entity=index_name.split('-')[0], field=group_by)
+        for bucket in possible_buckets:
+            if bucket["key"] not in ignore_values:
+                result["group_by"].append({
+                    "key": bucket["key"],
+                    "key_display_name": bucket["key_display_name"],
+                    "doc_count": 0,
+                })
     else:
         result["group_by"] = []
         result["results"] = response
