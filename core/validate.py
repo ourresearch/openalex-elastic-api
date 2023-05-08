@@ -24,6 +24,16 @@ def validate_params(request):
             raise APIQueryParamsError(
                 f"{arg} is not a valid parameter. Valid parameters are: {', '.join(valid_params)}."
             )
+    if any(
+        [
+            "host_venue" in value or "alternate_host_venues" in value
+            for value in request.args.values()
+        ]
+    ):
+        raise APIQueryParamsError(
+            "host_venue and alternate_host_venues are deprecated in favor of locations. "
+            "Read more here: https://groups.google.com/g/openalex-users/c/rRf34GRr-Oo"
+        )
     validate_filter_param(request)
     validate_select_param(request)
     validate_sample_param(request)
