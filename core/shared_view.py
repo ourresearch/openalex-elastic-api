@@ -114,6 +114,7 @@ def shared_view(request, fields_dict, index_name, default_sort):
                 "function_score",
                 functions={"random_score": {"seed": seed, "field": "_seq_no"}},
             )
+            s = s.params(preference=clean_preference(seed))
         else:
             random_query = Q("function_score", functions={"random_score": {}})
         s = s.query(random_query)
