@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 import iso3166
+import pycountry
 from elasticsearch_dsl import A, MultiSearch, Q, Search
 from iso4217 import Currency
 
@@ -256,6 +257,22 @@ def get_group_by_results(group_by, response):
             else:
                 # convert currency code to full description
                 key_display_name = Currency(b.key).currency_name
+            group_by_results.append(
+                {
+                    "key": b.key,
+                    "key_display_name": key_display_name,
+                    "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
+                }
+            )
+    elif group_by == "language":
+        for b in buckets:
+            if b.key == "unknown":
+                key_display_name = "unknown"
+            elif b.key.lower() == "zh-cn":
+                key_display_name = "Chinese"
+            else:
+                language = pycountry.languages.get(alpha_2=b.key.lower())
+                key_display_name = language.name if language else None
             group_by_results.append(
                 {
                     "key": b.key,
@@ -533,6 +550,7 @@ def filter_group_by(field, group_by, q, s):
         or group_by == "lineage"
         or group_by.endswith("publisher_lineage")
         or group_by == "repository"
+        or group_by == "language"
     ):
         return s
     else:

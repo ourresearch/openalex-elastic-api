@@ -19,8 +19,8 @@ from core.group_by import (filter_group_by, get_group_by_results,
 from core.paginate import Paginate
 from core.search import check_is_search_query, full_search_query
 from core.sort import get_sort_fields
-from core.utils import (clean_preference, get_field, map_filter_params,
-                        map_sort_params, set_number_param, get_all_groupby_values)
+from core.utils import (clean_preference, get_all_groupby_values, get_field,
+                        map_filter_params, map_sort_params, set_number_param)
 from core.validate import validate_export_format, validate_params
 
 
@@ -218,14 +218,18 @@ def shared_view(request, fields_dict, index_name, default_sort):
         if known:
             ignore_values.add("unknown")
             ignore_values.add("-111")
-        possible_buckets = get_all_groupby_values(entity=index_name.split('-')[0], field=group_by)
+        possible_buckets = get_all_groupby_values(
+            entity=index_name.split("-")[0], field=group_by
+        )
         for bucket in possible_buckets:
             if bucket["key"] not in ignore_values:
-                result["group_by"].append({
-                    "key": bucket["key"],
-                    "key_display_name": bucket["key_display_name"],
-                    "doc_count": 0,
-                })
+                result["group_by"].append(
+                    {
+                        "key": bucket["key"],
+                        "key_display_name": bucket["key_display_name"],
+                        "doc_count": 0,
+                    }
+                )
     else:
         result["group_by"] = []
         result["results"] = response
