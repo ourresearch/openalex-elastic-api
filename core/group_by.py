@@ -523,6 +523,7 @@ def filter_group_by(field, group_by, q, s):
         "locations.source.id": "locations__source__display_name__autocomplete",
         "primary_location.source.id": "primary_location__source__display_name__autocomplete",
         "publisher": "publisher__autocomplete",
+        "repository": "locations__source__display_name__autocomplete",
     }
     if autocomplete_field_mapping.get(group_by):
         if "author.id" in group_by:
