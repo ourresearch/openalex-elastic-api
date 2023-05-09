@@ -289,6 +289,7 @@ def get_all_groupby_values(entity, field):
     s = s.filter("term", group_by=field)
     try:
         response = s.execute()
-    except NotFoundError:
+        return response[0].buckets
+    except (NotFoundError, IndexError):
+        # Nothing found for this entity/groupby combination
         return []
-    return response[0].buckets
