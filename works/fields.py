@@ -26,6 +26,7 @@ fields = [
     BooleanField(param="has_ngrams", custom_es_field="fulltext"),
     BooleanField(param="has_oa_accepted_or_published_version"),
     BooleanField(param="has_oa_submitted_version"),
+    BooleanField(param="has_pdf_url", custom_es_field="locations.pdf_url"),
     BooleanField(
         param="has_raw_affiliation_string",
         custom_es_field="authorships.raw_affiliation_strings",
