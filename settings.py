@@ -48,6 +48,7 @@ EXTERNAL_ID_FIELDS = [
 BOOLEAN_TEXT_FIELDS = [
     "has_abstract",
     "has_ngrams",
+    "has_pdf_url",
     "has_raw_affiliation_string",
     "has_references",
 ]
