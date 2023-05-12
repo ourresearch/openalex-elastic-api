@@ -18,6 +18,7 @@ PUBLISHERS_INDEX = "publishers-v4"
 SOURCES_INDEX = "sources-v2"
 VENUES_INDEX = "venues-v8"
 WORKS_INDEX = "works-v18-*,-*invalid-data"
+GROUPBY_VALUES_INDEX = "groupby_values"
 
 DO_NOT_GROUP_BY = [
     "cited_by",

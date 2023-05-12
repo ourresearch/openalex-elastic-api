@@ -148,6 +148,7 @@ class WorksSchema(Schema):
     publication_year = fields.Int()
     publication_date = fields.Str()
     ids = fields.Nested(IDsSchema)
+    language = fields.Str()
     primary_location = fields.Nested(LocationSchema)
     type = fields.Str()
     open_access = fields.Nested(OpenAccessSchema)

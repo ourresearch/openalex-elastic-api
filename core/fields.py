@@ -499,6 +499,9 @@ class TermField(Field):
                 q = accepted_query | published_query
             elif self.value.lower() == "published":
                 q = published_query
+        elif self.param == "language":
+            kwargs = {self.es_field(): self.value.lower()}
+            q = Q("term", **kwargs)
         else:
             kwargs = {self.es_field(): self.value}
             q = Q("term", **kwargs)

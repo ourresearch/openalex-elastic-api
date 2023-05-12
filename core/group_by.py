@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 import iso3166
+import pycountry
 from elasticsearch_dsl import A, MultiSearch, Q, Search
 from iso4217 import Currency
 
@@ -263,6 +264,22 @@ def get_group_by_results(group_by, response):
                     "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
                 }
             )
+    elif group_by == "language":
+        for b in buckets:
+            if b.key == "unknown":
+                key_display_name = "unknown"
+            elif b.key.lower() == "zh-cn":
+                key_display_name = "Chinese"
+            else:
+                language = pycountry.languages.get(alpha_2=b.key.lower())
+                key_display_name = language.name if language else None
+            group_by_results.append(
+                {
+                    "key": b.key,
+                    "key_display_name": key_display_name,
+                    "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
+                }
+            )
     else:
         for b in buckets:
             if b.key == -111:
@@ -504,8 +521,10 @@ def filter_group_by(field, group_by, q, s):
         "journal": "locations__source__display_name__autocomplete",
         "last_known_institution.id": "last_known_institution__display_name__autocomplete",
         "locations.source.id": "locations__source__display_name__autocomplete",
+        "locations.source.publisher_lineage": "locations__source__host_organization_name__autocomplete",
         "primary_location.source.id": "primary_location__source__display_name__autocomplete",
         "publisher": "publisher__autocomplete",
+        "repository": "locations__source__display_name__autocomplete",
     }
     if autocomplete_field_mapping.get(group_by):
         if "author.id" in group_by:
@@ -533,6 +552,7 @@ def filter_group_by(field, group_by, q, s):
         or group_by == "lineage"
         or group_by.endswith("publisher_lineage")
         or group_by == "repository"
+        or group_by == "language"
     ):
         return s
     else:

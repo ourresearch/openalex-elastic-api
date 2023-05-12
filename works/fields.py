@@ -166,6 +166,7 @@ fields = [
     TermField(param="institutions.ror", alias="authorships.institutions.ror"),
     TermField(param="institutions.type", alias="authorships.institutions.type"),
     TermField(param="grants.award_id", custom_es_field="grants.award_id.keyword"),
+    TermField(param="language", custom_es_field="language.keyword"),
     TermField(param="locations.source.issn"),
     TermField(
         param="locations.venue.issn", custom_es_field="locations.venue.issn.keyword"

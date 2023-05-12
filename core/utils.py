@@ -1,13 +1,14 @@
 import re
 
+from elasticsearch import NotFoundError
 from elasticsearch_dsl import MultiSearch, Q, Search
 from iso3166 import countries
 
 import settings
 from core.exceptions import APIQueryParamsError, HighAuthorCountError
-from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
-                      PUBLISHERS_INDEX, SOURCES_INDEX, VENUES_INDEX,
-                      WORKS_INDEX)
+from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, GROUPBY_VALUES_INDEX,
+                      INSTITUTIONS_INDEX, PUBLISHERS_INDEX, SOURCES_INDEX,
+                      VENUES_INDEX, WORKS_INDEX)
 
 
 def get_valid_fields(fields_dict):
@@ -280,3 +281,15 @@ def process_only_fields(request, schema):
         only_fields.insert(0, "meta")
         only_fields.append("group_by")
     return only_fields
+
+
+def get_all_groupby_values(entity, field):
+    s = Search(index=GROUPBY_VALUES_INDEX)
+    s = s.filter("term", entity=entity)
+    s = s.filter("term", group_by=field)
+    try:
+        response = s.execute()
+        return response[0].buckets
+    except (NotFoundError, IndexError):
+        # Nothing found for this entity/groupby combination
+        return []
