@@ -37,6 +37,7 @@ fields = [
     TermField(param="last_known_institution.ror"),
     TermField(param="last_known_institution.type"),
     TermField(param="orcid", alias="ids.orcid"),
+    TermField(param="scopus", alias="ids.scopus"),
 ]
 
 fields_dict = {f.param: f for f in fields}

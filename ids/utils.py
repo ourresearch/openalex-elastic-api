@@ -159,6 +159,21 @@ def normalize_orcid(orcid):
     return orcid
 
 
+def normalize_scopus(scopus):
+    # returns just the scopus ID
+    if not scopus:
+        return None
+    scopus = scopus.strip().lower()
+    if scopus.startswith('http'):
+        p = re.compile(r"authorID=(\d+)")
+        matches = re.findall(p, scopus)
+        if len(matches) == 0:
+            return None
+        scopus = matches[0]
+    scopus = scopus.replace("\0", "")
+    return scopus
+
+
 def is_ror(ror):
     if re.search(r"(ror:[a-z\d]*$)", ror.lower().strip()) or re.search(
         r"(ror.org/[a-z\d]*$)", ror.lower().strip()
