@@ -163,6 +163,7 @@ class WorksSchema(Schema):
     is_paratext = fields.Bool()
     concepts = fields.Nested(ConceptsSchema, many=True)
     mesh = fields.List(fields.Nested(MeshSchema))
+    locations_count = fields.Int()
     locations = fields.Nested(LocationSchema, many=True)
     best_oa_location = fields.Nested(LocationSchema)
     grants = fields.List(fields.Nested(GrantsSchema))

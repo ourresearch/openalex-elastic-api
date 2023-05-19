@@ -114,6 +114,7 @@ fields = [
     RangeField(param="authors_count"),
     RangeField(param="cited_by_count"),
     RangeField(param="concepts_count"),
+    RangeField(param="locations_count"),
     RangeField(param="publication_year"),
     SearchField(param="abstract.search", custom_es_field="abstract"),
     SearchField(param="default.search", index="works"),
