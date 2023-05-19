@@ -1,5 +1,6 @@
 from urllib.parse import unquote
 
+import pycountry
 from elasticsearch_dsl import MultiSearch, Q, Search
 from flask import url_for
 
@@ -231,6 +232,9 @@ def set_display_name(value, field):
         display_name = get_display_name(value)
     elif field.param.endswith("country_code") or field.param.endswith("country-code"):
         display_name = get_country_name(value.lower())
+    elif field.param == "language":
+        language = pycountry.languages.get(alpha_2=value.lower())
+        display_name = language.name if language else None
     elif field.param.endswith("continent"):
         display_name = ""
         for continent in settings.CONTINENT_NAMES:
