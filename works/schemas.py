@@ -76,6 +76,7 @@ class SourceSchema(Schema):
     host_organization = fields.Str()
     host_organization_name = fields.Str()
     host_organization_lineage = fields.List(fields.Str())
+    host_organization_lineage_names = fields.List(fields.Str())
     type = fields.Str()
 
     class Meta:

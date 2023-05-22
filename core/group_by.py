@@ -521,7 +521,7 @@ def filter_group_by(field, group_by, q, s):
         "journal": "locations__source__display_name__autocomplete",
         "last_known_institution.id": "last_known_institution__display_name__autocomplete",
         "locations.source.id": "locations__source__display_name__autocomplete",
-        "locations.source.publisher_lineage": "locations__source__host_organization_name__autocomplete",
+        "locations.source.publisher_lineage": "locations__source__host_organization_lineage_names__autocomplete",
         "primary_location.source.id": "primary_location__source__display_name__autocomplete",
         "publisher": "publisher__autocomplete",
         "repository": "locations__source__display_name__autocomplete",

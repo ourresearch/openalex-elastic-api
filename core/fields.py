@@ -470,9 +470,10 @@ class TermField(Field):
             query = f"https://doi.org/{self.value}"
             kwargs = {self.es_field(): query}
             q = Q("prefix", **kwargs)
-        elif self.param == 'scopus':
+        elif self.param == "scopus":
             # a search against the ids.scopus field should give the correct result
             from ids.utils import normalize_scopus
+
             scopus = normalize_scopus(self.value)
             q = Q("match", **{"ids.scopus": scopus})
         elif self.value.startswith("!"):

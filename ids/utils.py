@@ -164,7 +164,7 @@ def normalize_scopus(scopus):
     if not scopus:
         return None
     scopus = scopus.strip().lower()
-    if scopus.startswith('http'):
+    if scopus.startswith("http"):
         p = re.compile(r"authorID=(\d+)")
         matches = re.findall(p, scopus)
         if len(matches) == 0:
