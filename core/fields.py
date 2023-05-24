@@ -83,8 +83,6 @@ class BooleanField(Field):
             or self.param == "has_pdf_url"
             or self.param == "has_raw_affiliation_string"
             or self.param == "has_references"
-            or self.param == "primary_location.source.has_issn"
-            or self.param == "primary_location.venue.has_issn"
         ):
             self.validate_true_false()
             if self.value.lower().strip() == "true":
