@@ -19,8 +19,9 @@ def validate_params(request):
         "select",
         "sort",
     ]
+    hidden_valid_params = ["bypass_cache"]
     for arg in request.args:
-        if arg not in valid_params:
+        if arg not in valid_params and arg not in hidden_valid_params:
             raise APIQueryParamsError(
                 f"{arg} is not a valid parameter. Valid parameters are: {', '.join(valid_params)}."
             )
