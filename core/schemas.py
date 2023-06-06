@@ -119,7 +119,7 @@ class PercentilesSchema(Schema):
 
 class StatsSchema(Schema):
     key = fields.Str()
-    percentiles = fields.Dict()
+    percentiles = fields.Dict(keys=fields.Integer(), values=fields.Float())
     sum = fields.Float()
 
     class Meta:
