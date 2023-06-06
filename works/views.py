@@ -2,8 +2,9 @@ from flask import Blueprint, jsonify, request
 
 from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
-from core.schemas import FiltersWrapperSchema
+from core.schemas import FiltersWrapperSchema, StatsWrapperSchema
 from core.shared_view import shared_view
+from core.stats_view import shared_stats_view
 from core.utils import get_valid_fields, is_cached, process_only_fields
 from extensions import cache
 from settings import WORKS_INDEX
@@ -46,6 +47,15 @@ def works_filters(params):
     results = shared_filter_view(request, params, fields_dict, index_name)
     filters_schema = FiltersWrapperSchema()
     return filters_schema.dump(results)
+
+
+@blueprint.route("/works/stats/")
+def works_stats():
+    stats_fields = ["apc_payment.price_usd", "authors_count", "cited_by_count"]
+    index_name = WORKS_INDEX
+    result = shared_stats_view(request, fields_dict, index_name, stats_fields)
+    stats_schema = StatsWrapperSchema()
+    return stats_schema.dump(result)
 
 
 @blueprint.route("/works/valid_fields")

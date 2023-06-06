@@ -109,6 +109,31 @@ class RolesSchema(Schema):
         ordered = True
 
 
+class PercentilesSchema(Schema):
+    percentile = fields.Float()
+    value = fields.Float()
+
+    class Meta:
+        ordered = True
+
+
+class StatsSchema(Schema):
+    key = fields.Str()
+    percentiles = fields.Dict()
+    sum = fields.Float()
+
+    class Meta:
+        ordered = True
+
+
+class StatsWrapperSchema(Schema):
+    meta = fields.Nested(MetaSchema)
+    stats = fields.Nested(StatsSchema, many=True)
+
+    class Meta:
+        ordered = True
+
+
 def hide_relevance(data, context):
     if "relevance_score" in data.keys() and (
         not data["relevance_score"]
