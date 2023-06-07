@@ -53,7 +53,10 @@ def works_filters(params):
 def works_stats():
     stats_fields = ["apc_payment.price_usd", "authors_count", "cited_by_count"]
     index_name = WORKS_INDEX
-    result = shared_stats_view(request, fields_dict, index_name, stats_fields)
+    entity_name = "works"
+    result = shared_stats_view(
+        request, fields_dict, index_name, stats_fields, entity_name
+    )
     stats_schema = StatsWrapperSchema()
     return stats_schema.dump(result)
 

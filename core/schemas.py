@@ -119,6 +119,7 @@ class PercentilesSchema(Schema):
 
 class StatsMetaSchema(Schema):
     count = fields.Int()
+    entity = fields.Str()
     filters = fields.List(fields.Dict())
     search = fields.Str()
     db_response_time_ms = fields.Int()

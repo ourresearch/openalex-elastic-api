@@ -5,7 +5,7 @@ from core.search import full_search_query
 from core.utils import map_filter_params
 
 
-def shared_stats_view(request, fields_dict, index_name, stats_fields):
+def shared_stats_view(request, fields_dict, index_name, stats_fields, entity_name):
     s = Search(index=index_name)
     s = s.extra(size=0)
 
@@ -47,6 +47,7 @@ def shared_stats_view(request, fields_dict, index_name, stats_fields):
         "meta": {
             "count": count,
             "db_response_time_ms": response.took,
+            "entity": entity_name,
         },
         "stats": [],
     }
