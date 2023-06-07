@@ -3,8 +3,10 @@ from flask import Blueprint, jsonify, request
 from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.histogram import shared_histogram_view
-from core.schemas import FiltersWrapperSchema, HistogramWrapperSchema
+from core.schemas import (FiltersWrapperSchema, HistogramWrapperSchema,
+                          StatsWrapperSchema)
 from core.shared_view import shared_view
+from core.stats_view import shared_stats_view
 from core.utils import get_valid_fields, is_cached, process_only_fields
 from extensions import cache
 from institutions.fields import fields_dict
@@ -36,6 +38,18 @@ def institutions_filters(params):
     results = shared_filter_view(request, params, fields_dict, index_name)
     filters_schema = FiltersWrapperSchema()
     return filters_schema.dump(results)
+
+
+@blueprint.route("/institutions/stats/")
+def institutions_stats():
+    stats_fields = ["cited_by_count", "works_count"]
+    index_name = INSTITUTIONS_INDEX
+    entity_name = "institutions"
+    result = shared_stats_view(
+        request, fields_dict, index_name, stats_fields, entity_name
+    )
+    stats_schema = StatsWrapperSchema()
+    return stats_schema.dump(result)
 
 
 @blueprint.route("/institutions/histogram/<string:param>")
