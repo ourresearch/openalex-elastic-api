@@ -22,13 +22,19 @@ def shared_stats_view(request, fields_dict, index_name, stats_fields):
     if filter_params:
         s = filter_records(fields_dict, filter_params, s, sample=None)
 
+    count = s.count()
+    if count > 5000000:
+        percents = [25, 50, 75, 90]
+    else:
+        percents = list(range(1, 100))
+
     for field in stats_fields:
         s.aggs.bucket(
             field + "_percentiles",
             A(
                 "percentiles",
                 field=field,
-                percents=[25, 50, 75, 90],
+                percents=percents,
                 tdigest={"compression": 25},
             ),
         )
@@ -39,11 +45,15 @@ def shared_stats_view(request, fields_dict, index_name, stats_fields):
     # set up results
     result = {
         "meta": {
-            "count": s.count(),
+            "count": count,
             "db_response_time_ms": response.took,
         },
         "stats": [],
     }
+    if filter_params:
+        result["meta"]["filters"] = filter_params
+    if search:
+        result["meta"]["search"] = search
 
     for field in stats_fields:
         percentiles = {}
@@ -54,7 +64,7 @@ def shared_stats_view(request, fields_dict, index_name, stats_fields):
             .items()
         ):
             key_display = int(float(key))
-            value = round(value, 2)
+            value = int(value)
             percentiles[key_display] = value
         result["stats"].append(
             {

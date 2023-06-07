@@ -117,17 +117,27 @@ class PercentilesSchema(Schema):
         ordered = True
 
 
+class StatsMetaSchema(Schema):
+    count = fields.Int()
+    filters = fields.List(fields.Dict())
+    search = fields.Str()
+    db_response_time_ms = fields.Int()
+
+    class Meta:
+        ordered = True
+
+
 class StatsSchema(Schema):
     key = fields.Str()
-    percentiles = fields.Dict(keys=fields.Integer(), values=fields.Float())
-    sum = fields.Float()
+    percentiles = fields.Dict(keys=fields.Integer(), values=fields.Integer())
+    sum = fields.Integer()
 
     class Meta:
         ordered = True
 
 
 class StatsWrapperSchema(Schema):
-    meta = fields.Nested(MetaSchema)
+    meta = fields.Nested(StatsMetaSchema)
     stats = fields.Nested(StatsSchema, many=True)
 
     class Meta:
