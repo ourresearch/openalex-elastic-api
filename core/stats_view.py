@@ -23,10 +23,7 @@ def shared_stats_view(request, fields_dict, index_name, stats_fields, entity_nam
         s = filter_records(fields_dict, filter_params, s, sample=None)
 
     count = s.count()
-    if count > 5000000:
-        percents = [25, 50, 75, 90]
-    else:
-        percents = list(range(1, 100))
+    percents = [25, 50, 75]
 
     for field in stats_fields:
         s.aggs.bucket(
