@@ -9,6 +9,8 @@ class IDsSchema(Schema):
     openalex = fields.Str()
     ror = fields.Str()
     wikidata = fields.Str()
+    crossref = fields.Str()
+    doi = fields.Str()
 
     class Meta:
         ordered = True
