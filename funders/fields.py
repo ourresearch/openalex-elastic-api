@@ -44,8 +44,8 @@ fields = [
         custom_es_field="ids.wikidata.lower",
         unique_id="wikidata_entity",
     ),
-    TermField(param="ids.crossref"),
-    TermField(param="ids.doi", custom_es_field="ids.doi.lower"),
+    TermField(param="ids.crossref", custom_es_field="ids.crossref"),
+    TermField(param="ids.doi", custom_es_field="ids.doi.keyword"),
 ]
 
 fields_dict = {f.param: f for f in fields}
