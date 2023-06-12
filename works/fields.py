@@ -7,12 +7,9 @@ fields = [
         param=f"authorships.institutions.is_global_south",
         custom_es_field="authorships.institutions.country_code",
     ),
-    BooleanField(param="best_oa_location.is_oa"),
     BooleanField(param="authorships.is_corresponding"),
-    BooleanField(
-        param=f"institutions.is_global_south",
-        custom_es_field="authorships.institutions.country_code",
-    ),
+    BooleanField(param="best_oa_location.is_oa"),
+    BooleanField(param="best_oa_location.source.is_in_doaj"),
     BooleanField(param="has_abstract", custom_es_field="abstract"),
     BooleanField(param="has_doi", custom_es_field="ids.doi"),
     BooleanField(param="has_fulltext", custom_es_field="fulltext"),
@@ -32,19 +29,28 @@ fields = [
         custom_es_field="authorships.raw_affiliation_strings",
     ),
     BooleanField(
+        param="institutions.is_global_south",
+        custom_es_field="authorships.institutions.country_code",
+    ),
+    BooleanField(
         param="is_corresponding", custom_es_field="authorships.is_corresponding"
     ),
     BooleanField(param="is_oa", alias="open_access.is_oa"),
     BooleanField(param="is_paratext"),
     BooleanField(param="is_retracted"),
+    BooleanField(param="locations.is_oa"),
+    BooleanField(
+        param="locations.source.has_issn", custom_es_field="locations.source.issn"
+    ),
+    BooleanField(param="locations.source.is_in_doaj"),
+    BooleanField(param="open_access.is_oa"),
+    BooleanField(param="open_access.any_repository_has_fulltext"),
+    BooleanField(param="primary_location.is_oa"),
+    BooleanField(param="primary_location.source.is_in_doaj"),
     BooleanField(
         param="primary_location.source.has_issn",
         custom_es_field="primary_location.source.issn",
     ),
-    BooleanField(param="locations.is_oa"),
-    BooleanField(param="open_access.is_oa"),
-    BooleanField(param="open_access.any_repository_has_fulltext"),
-    BooleanField(param="primary_location.is_oa"),
     DateField(
         param="from_created_date",
         custom_es_field="created_date",
@@ -136,16 +142,8 @@ fields = [
     TermField(param="authorships.institutions.ror"),
     TermField(param="authorships.institutions.type"),
     TermField(param="best_oa_location.source.issn"),
-    TermField(
-        param="best_oa_location.venue.issn",
-        custom_es_field="best_oa_location.venue.issn.lower",
-    ),
     TermField(param="best_oa_location.license"),
     TermField(param="best_oa_location.source.type"),
-    TermField(
-        param="best_oa_location.venue.type",
-        custom_es_field="best_oa_location.venue.type.keyword",
-    ),
     TermField(param="best_oa_location.version"),
     TermField(param="best_open_version", custom_es_field="locations.version"),
     TermField(param="concepts.wikidata"),
@@ -168,14 +166,8 @@ fields = [
     TermField(param="grants.award_id", custom_es_field="grants.award_id.keyword"),
     TermField(param="language", custom_es_field="language.keyword"),
     TermField(param="locations.source.issn"),
-    TermField(
-        param="locations.venue.issn", custom_es_field="locations.venue.issn.keyword"
-    ),
     TermField(param="locations.license"),
     TermField(param="locations.source.type"),
-    TermField(
-        param="locations.venue.type", custom_es_field="locations.venue.type.keyword"
-    ),
     TermField(param="locations.version"),
     TermField(param="mag", custom_es_field="ids.mag"),
     TermField(param="oa_status", alias="open_access.oa_status"),

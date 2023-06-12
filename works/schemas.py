@@ -73,6 +73,7 @@ class SourceSchema(Schema):
     display_name = fields.Str()
     issn_l = fields.Str()
     issn = fields.List(fields.Str())
+    is_in_doaj = fields.Bool()
     host_organization = fields.Str()
     host_organization_name = fields.Str()
     host_organization_lineage = fields.List(fields.Str())
@@ -88,7 +89,6 @@ class LocationSchema(Schema):
     landing_page_url = fields.Str()
     pdf_url = fields.Str()
     source = fields.Nested(SourceSchema)
-    venue = fields.Nested(SourceSchema)
     license = fields.Str()
     version = fields.Str()
 
