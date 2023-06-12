@@ -131,10 +131,10 @@ class MeshSchema(Schema):
 
 
 class APCSchema(Schema):
-    price = fields.Integer()
+    value = fields.Integer()
     currency = fields.Str()
+    value_usd = fields.Integer()
     provenance = fields.Str()
-    price_usd = fields.Integer()
 
     class Meta:
         ordered = True
@@ -156,7 +156,8 @@ class WorksSchema(Schema):
     authorships = fields.Nested(AuthorshipsSchema, many=True)
     corresponding_author_ids = fields.List(fields.Str())
     corresponding_institution_ids = fields.List(fields.Str())
-    apc_payment = fields.Nested(APCSchema, dump_default=None)
+    apc_list = fields.Nested(APCSchema, dump_default=None)
+    apc_paid = fields.Nested(APCSchema, dump_default=None)
     is_authors_truncated = fields.Bool(attribute="authorships_truncated")
     cited_by_count = fields.Int()
     biblio = fields.Nested(BiblioSchema)
