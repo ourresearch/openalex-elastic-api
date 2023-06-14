@@ -51,7 +51,12 @@ def works_filters(params):
 
 @blueprint.route("/works/stats/")
 def works_stats():
-    stats_fields = ["apc_payment.price_usd", "authors_count", "cited_by_count"]
+    stats_fields = [
+        "apc_payment.price_usd",
+        "authors_count",
+        "cited_by_count",
+        "referenced_works_count",
+    ]
     index_name = WORKS_INDEX
     entity_name = "works"
     result = shared_stats_view(

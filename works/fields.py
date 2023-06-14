@@ -123,6 +123,7 @@ fields = [
     RangeField(param="concepts_count"),
     RangeField(param="locations_count"),
     RangeField(param="publication_year"),
+    RangeField(param="referenced_works_count"),
     SearchField(param="abstract.search", custom_es_field="abstract"),
     SearchField(param="default.search", index="works"),
     SearchField(param="display_name.search"),

@@ -169,6 +169,7 @@ class WorksSchema(Schema):
     locations = fields.Nested(LocationSchema, many=True)
     best_oa_location = fields.Nested(LocationSchema)
     grants = fields.List(fields.Nested(GrantsSchema))
+    referenced_works_count = fields.Int()
     referenced_works = fields.List(fields.Str())
     related_works = fields.List(fields.Str())
     ngrams_url = fields.Method("get_ngrams_url")
