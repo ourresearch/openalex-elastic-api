@@ -63,6 +63,10 @@ fields = [
         param="from_updated_date",
         custom_es_field="updated_date",
     ),
+    DateTimeField(
+        param="to_updated_date",
+        custom_es_field="updated_date",
+    ),
     DateField(param="publication_date"),
     DateField(
         param="to_publication_date",
