@@ -640,6 +640,7 @@ def validate_group_by(field):
         "level",
         "locations_count",
         "publication_year",
+        "referenced_works_count",
         "summary_stats.2yr_mean_citedness",
         "summary_stats.h_index",
         "summary_stats.i10_index",
