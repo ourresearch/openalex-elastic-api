@@ -224,7 +224,10 @@ def get_group_by_results(group_by, response):
             if b.key == "unknown":
                 key_display_name = "unknown"
             else:
-                country = iso3166.countries.get(b.key.lower())
+                try:
+                    country = iso3166.countries.get(b.key.lower())
+                except KeyError:
+                    country = None
                 key_display_name = country.name if country else None
             group_by_results.append(
                 {
