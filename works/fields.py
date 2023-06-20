@@ -9,6 +9,7 @@ fields = [
     ),
     BooleanField(param="authorships.is_corresponding"),
     BooleanField(param="best_oa_location.is_oa"),
+    BooleanField(param="best_oa_location.source.is_oa"),
     BooleanField(param="best_oa_location.source.is_in_doaj"),
     BooleanField(param="has_abstract", custom_es_field="abstract"),
     BooleanField(param="has_doi", custom_es_field="ids.doi"),
@@ -39,6 +40,7 @@ fields = [
     BooleanField(param="is_paratext"),
     BooleanField(param="is_retracted"),
     BooleanField(param="locations.is_oa"),
+    BooleanField(param="locations.source.is_oa"),
     BooleanField(
         param="locations.source.has_issn", custom_es_field="locations.source.issn"
     ),
@@ -46,6 +48,7 @@ fields = [
     BooleanField(param="open_access.is_oa"),
     BooleanField(param="open_access.any_repository_has_fulltext"),
     BooleanField(param="primary_location.is_oa"),
+    BooleanField(param="primary_location.source.is_oa"),
     BooleanField(param="primary_location.source.is_in_doaj"),
     BooleanField(
         param="primary_location.source.has_issn",
