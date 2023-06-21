@@ -5,7 +5,7 @@ from core.filters_view import shared_filter_view
 from core.histogram import shared_histogram_view
 from core.schemas import FiltersWrapperSchema, HistogramWrapperSchema
 from core.shared_view import shared_view
-from core.utils import get_valid_fields, is_cached, process_only_fields
+from core.utils import get_valid_fields, is_cached, process_only_fields, get_flattened_fields
 from extensions import cache
 from funders.fields import fields_dict
 from funders.schemas import FundersSchema, MessageSchema
@@ -50,3 +50,9 @@ def funders_histograms(param):
 def funders_valid_fields():
     valid_fields = get_valid_fields(fields_dict)
     return jsonify(valid_fields)
+
+
+@blueprint.route("/funders/flattened_schema")
+def funders_flattened_schema():
+    flattened_schema = get_flattened_fields(FundersSchema())
+    return jsonify(flattened_schema)

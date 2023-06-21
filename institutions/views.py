@@ -7,7 +7,7 @@ from core.schemas import (FiltersWrapperSchema, HistogramWrapperSchema,
                           StatsWrapperSchema)
 from core.shared_view import shared_view
 from core.stats_view import shared_stats_view
-from core.utils import get_valid_fields, is_cached, process_only_fields
+from core.utils import get_valid_fields, is_cached, process_only_fields, get_flattened_fields
 from extensions import cache
 from institutions.fields import fields_dict
 from institutions.schemas import InstitutionsSchema, MessageSchema
@@ -64,3 +64,9 @@ def institutions_histograms(param):
 def institutions_valid_fields():
     valid_fields = get_valid_fields(fields_dict)
     return jsonify(valid_fields)
+
+
+@blueprint.route("/institutions/flattened_schema")
+def institutions_flattened_schema():
+    flattened_schema = get_flattened_fields(InstitutionsSchema())
+    return jsonify(flattened_schema)

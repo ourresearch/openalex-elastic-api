@@ -6,7 +6,7 @@ from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
 from core.shared_view import shared_view
-from core.utils import get_valid_fields, is_cached, process_only_fields
+from core.utils import get_valid_fields, is_cached, process_only_fields, get_flattened_fields
 from extensions import cache
 from settings import AUTHORS_INDEX
 
@@ -40,6 +40,14 @@ def authors_filters(params):
 
 
 @blueprint.route("/authors/valid_fields")
+@blueprint.route("/people/valid_fields")
 def authors_valid_fields():
     valid_fields = get_valid_fields(fields_dict)
     return jsonify(valid_fields)
+
+
+@blueprint.route("/authors/flattened_schema")
+@blueprint.route("/people/flattened_schema")
+def authors_flattened_schema():
+    flattened_schema = get_flattened_fields(AuthorsSchema())
+    return jsonify(flattened_schema)

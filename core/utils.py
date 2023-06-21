@@ -293,3 +293,26 @@ def get_all_groupby_values(entity, field):
     except (NotFoundError, IndexError):
         # Nothing found for this entity/groupby combination
         return []
+    
+
+def dump_field_names_recurse(field, collected=None, prefix=None):
+    if collected is None:
+        collected = []
+    if prefix is None:
+        prefix = []
+    if hasattr(field, "schema"):
+        prefix = prefix + [field.name]
+        for field2 in field.schema.fields.values():
+            collected = dump_field_names_recurse(field2, collected, prefix=prefix)
+    else:
+        item = ".".join(prefix + [field.name])
+        collected.append(item)
+    return collected
+
+
+def get_flattened_fields(schema):
+    fields = schema.fields
+    flattened_fields = []
+    for field in fields.values():
+        flattened_fields.extend(dump_field_names_recurse(field))
+    return flattened_fields

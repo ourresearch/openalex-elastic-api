@@ -5,7 +5,7 @@ from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema, StatsWrapperSchema
 from core.shared_view import shared_view
 from core.stats_view import shared_stats_view
-from core.utils import get_valid_fields, is_cached, process_only_fields
+from core.utils import get_valid_fields, is_cached, process_only_fields, get_flattened_fields
 from extensions import cache
 from settings import WORKS_INDEX
 from works.fields import fields_dict
@@ -70,3 +70,9 @@ def works_stats():
 def works_valid_fields():
     valid_fields = get_valid_fields(fields_dict)
     return jsonify(valid_fields)
+
+
+@blueprint.route("/works/flattened_schema")
+def works_flattened_schema():
+    flattened_schema = get_flattened_fields(WorksSchema())
+    return jsonify(flattened_schema)

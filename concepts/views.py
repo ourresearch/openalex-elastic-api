@@ -6,7 +6,7 @@ from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
 from core.shared_view import shared_view
-from core.utils import get_valid_fields, is_cached, process_only_fields
+from core.utils import get_valid_fields, is_cached, process_only_fields, get_flattened_fields
 from extensions import cache
 from settings import CONCEPTS_INDEX
 
@@ -41,3 +41,9 @@ def concepts_filters(params):
 def concepts_valid_fields():
     valid_fields = get_valid_fields(fields_dict)
     return jsonify(valid_fields)
+
+
+@blueprint.route("/concepts/flattened_schema")
+def concepts_flattened_schema():
+    flattened_schema = get_flattened_fields(ConceptsSchema())
+    return jsonify(flattened_schema)
