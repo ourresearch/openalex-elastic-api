@@ -395,7 +395,12 @@ class SearchField(Field):
             or self.param == "description.search"
             or self.param == "title.search"
         ):
-            if "AND" in self.value or "OR" in self.value:
+            if (
+                "AND" in self.value
+                or "OR" in self.value
+                or "NOT" in self.value
+                or ("(" in self.value and ")" in self.value)
+            ):
                 q = Q("query_string", query=self.value, default_field=self.es_field())
             else:
                 search_oa = SearchOpenAlex(
