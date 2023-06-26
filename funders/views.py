@@ -5,7 +5,8 @@ from core.filters_view import shared_filter_view
 from core.histogram import shared_histogram_view
 from core.schemas import FiltersWrapperSchema, HistogramWrapperSchema
 from core.shared_view import shared_view
-from core.utils import get_valid_fields, is_cached, process_only_fields, get_flattened_fields
+from core.utils import (get_flattened_fields, get_valid_fields, is_cached,
+                        process_only_fields)
 from extensions import cache
 from funders.fields import fields_dict
 from funders.schemas import FundersSchema, MessageSchema

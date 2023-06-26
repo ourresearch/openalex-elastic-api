@@ -139,7 +139,7 @@ fields = [
         param="raw_affiliation_string.search",
         custom_es_field="authorships.raw_affiliation_string",
     ),
-    SearchField(param="title.search"),
+    SearchField(param="title.search", custom_es_field="display_name"),
     TermField(param="apc_list.currency", custom_es_field="apc_list.currency.keyword"),
     TermField(
         param="apc_list.provenance", custom_es_field="apc_list.provenance.keyword"

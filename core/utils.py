@@ -293,7 +293,7 @@ def get_all_groupby_values(entity, field):
     except (NotFoundError, IndexError):
         # Nothing found for this entity/groupby combination
         return []
-    
+
 
 def dump_field_names_recurse(field, collected=None, prefix=None):
     if collected is None:
