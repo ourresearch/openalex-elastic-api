@@ -1,5 +1,7 @@
 from elasticsearch_dsl import Q
 
+from core.exceptions import APISearchError
+
 
 class SearchOpenAlex:
     def __init__(
@@ -25,9 +27,6 @@ class SearchOpenAlex:
         ):
             query_string_query = self.query_string_query()
             query = self.citation_boost_query(query_string_query)
-        elif self.is_phrase():
-            phrase_query = self.primary_phrase_query()
-            query = self.citation_boost_query(phrase_query)
         elif self.is_author_name_query:
             author_name_query = self.author_name_query()
             query = self.citation_boost_query(author_name_query)
@@ -59,54 +58,75 @@ class SearchOpenAlex:
 
     def primary_match_query(self):
         """Searches with 'and' and phrase queries, with phrase boosted by 2."""
-        return Q(
-            "match",
-            **{self.primary_field: {"query": self.search_terms, "operator": "and"}},
-        ) | Q(
-            "match_phrase",
-            **{self.primary_field: {"query": self.search_terms, "boost": 2}},
-        )
-
-    def primary_phrase_query(self):
-        return Q("match_phrase", **{self.primary_field: {"query": self.search_terms}})
-
-    def primary_secondary_match_query(self):
-        """Searches primary and secondary fields."""
-        return (
-            Q(
-                "match",
-                **{
-                    self.primary_field: {
-                        "query": self.search_terms,
-                        "operator": "and",
-                        "boost": 1,
-                    }
-                },
+        if self.is_boolean_search() or self.has_phrase():
+            self.validate_boolean_query()
+            return Q(
+                "query_string",
+                query=self.search_terms,
+                default_field=self.primary_field,
+                default_operator="AND",
             )
-            | Q(
+        else:
+            return Q(
+                "match",
+                **{self.primary_field: {"query": self.search_terms, "operator": "and"}},
+            ) | Q(
                 "match_phrase",
                 **{self.primary_field: {"query": self.search_terms, "boost": 2}},
             )
-            | Q(
-                "match",
-                **{
-                    self.secondary_field: {
-                        "query": self.search_terms,
-                        "operator": "and",
-                        "boost": 0.10,
-                    }
-                },
+
+    def primary_secondary_match_query(self):
+        """Searches primary and secondary fields."""
+        if self.is_boolean_search() or self.has_phrase():
+            self.validate_boolean_query()
+            return Q(
+                "query_string",
+                query=self.search_terms,
+                default_field=self.primary_field,
+                default_operator="AND",
+            ) | Q(
+                "query_string",
+                query=self.search_terms,
+                default_field=self.secondary_field,
+                boost=0.10,
+                default_operator="AND",
             )
-            | Q(
-                "match_phrase",
-                **{
-                    self.secondary_field: {
-                        "query": self.search_terms,
-                        "boost": 0.15,
-                    }
-                },
+        else:
+            return (
+                Q(
+                    "match",
+                    **{
+                        self.primary_field: {
+                            "query": self.search_terms,
+                            "operator": "and",
+                            "boost": 1,
+                        }
+                    },
+                )
+                | Q(
+                    "match_phrase",
+                    **{self.primary_field: {"query": self.search_terms, "boost": 2}},
+                )
+                | Q(
+                    "match",
+                    **{
+                        self.secondary_field: {
+                            "query": self.search_terms,
+                            "operator": "and",
+                            "boost": 0.10,
+                        }
+                    },
+                )
+                | Q(
+                    "match_phrase",
+                    **{
+                        self.secondary_field: {
+                            "query": self.search_terms,
+                            "boost": 0.15,
+                        }
+                    },
+                )
             )
-        )
 
     def primary_secondary_tertiary_match_query(self):
         """Searches primary, secondary, tertiary fields."""
@@ -117,60 +137,85 @@ class SearchOpenAlex:
             tertiary_match_boost = 0.05
             tertiary_phrase_boost = 0.1
 
-        return (
-            Q(
-                "match",
-                **{
-                    self.primary_field: {
-                        "query": self.search_terms,
-                        "operator": "and",
-                        "boost": 1.5,
-                    }
-                },
+        if self.is_boolean_search() or self.has_phrase():
+            self.validate_boolean_query()
+            return (
+                Q(
+                    "query_string",
+                    query=self.search_terms,
+                    default_field=self.primary_field,
+                    default_operator="AND",
+                )
+                | Q(
+                    "query_string",
+                    query=self.search_terms,
+                    default_field=self.secondary_field,
+                    boost=0.5,
+                    default_operator="AND",
+                )
+                | Q(
+                    "query_string",
+                    query=self.search_terms,
+                    default_field=self.tertiary_field,
+                    boost=tertiary_match_boost,
+                    default_operator="AND",
+                )
             )
-            | Q(
-                "match_phrase",
-                **{self.primary_field: {"query": self.search_terms, "boost": 3}},
+        else:
+            return (
+                Q(
+                    "match",
+                    **{
+                        self.primary_field: {
+                            "query": self.search_terms,
+                            "operator": "and",
+                            "boost": 1.5,
+                        }
+                    },
+                )
+                | Q(
+                    "match_phrase",
+                    **{self.primary_field: {"query": self.search_terms, "boost": 3}},
+                )
+                | Q(
+                    "match",
+                    **{
+                        self.secondary_field: {
+                            "query": self.search_terms,
+                            "operator": "and",
+                            "boost": 0.3,
+                        }
+                    },
+                )
+                | Q(
+                    "match_phrase",
+                    **{
+                        self.secondary_field: {
+                            "query": self.search_terms,
+                            "boost": 0.5,
+                        }
+                    },
+                )
+                | Q(
+                    "match",
+                    **{
+                        self.tertiary_field: {
+                            "query": self.search_terms,
+                            "operator": "and",
+                            "boost": tertiary_match_boost,
+                        }
+                    },
+                )
+                | Q(
+                    "match_phrase",
+                    **{
+                        self.tertiary_field: {
+                            "query": self.search_terms,
+                            "boost": tertiary_phrase_boost,
+                        }
+                    },
+                )
             )
-            | Q(
-                "match",
-                **{
-                    self.secondary_field: {
-                        "query": self.search_terms,
-                        "operator": "and",
-                        "boost": 0.3,
-                    }
-                },
-            )
-            | Q(
-                "match_phrase",
-                **{
-                    self.secondary_field: {
-                        "query": self.search_terms,
-                        "boost": 0.5,
-                    }
-                },
-            )
-            | Q(
-                "match",
-                **{
-                    self.tertiary_field: {
-                        "query": self.search_terms,
-                        "operator": "and",
-                        "boost": tertiary_match_boost,
-                    }
-                },
-            )
-            | Q(
-                "match_phrase",
-                **{
-                    self.tertiary_field: {
-                        "query": self.search_terms,
-                        "boost": tertiary_phrase_boost,
-                    }
-                },
-            )
-        )
 
     def author_name_query(self):
         """Search display_name and display_name.folded in order to ignore diacritics."""
@@ -209,8 +254,24 @@ class SearchOpenAlex:
             boost_mode="multiply",
         )
 
-    def is_phrase(self):
-        return self.search_terms.startswith('"') and self.search_terms.endswith('"')
+    def has_phrase(self):
+        # search term contains two or more quotes
+        return self.search_terms.count('"') >= 2
+
+    def is_boolean_search(self):
+        boolean_words = [" AND ", " OR ", " NOT "]
+        return any(word in self.search_terms for word in boolean_words)
+
+    def validate_boolean_query(self):
+        """Ensure not using wildcard, regex, or fuzzy search with boolean query."""
+        if (
+            "*" in self.search_terms
+            or "?" in self.search_terms
+            or "~" in self.search_terms
+        ):
+            raise APISearchError(
+                "Boolean and phrase search does not support wildcard characters such as *, ?, or ~."
+            )
 
 
 def full_search_query(index_name, search):

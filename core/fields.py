@@ -395,18 +395,10 @@ class SearchField(Field):
             or self.param == "description.search"
             or self.param == "title.search"
         ):
-            if (
-                "AND" in self.value
-                or "OR" in self.value
-                or "NOT" in self.value
-                or ("(" in self.value and ")" in self.value)
-            ):
-                q = Q("query_string", query=self.value, default_field=self.es_field())
-            else:
-                search_oa = SearchOpenAlex(
-                    search_terms=self.value, primary_field=self.es_field()
-                )
-                q = search_oa.build_query()
+            search_oa = SearchOpenAlex(
+                search_terms=self.value, primary_field=self.es_field()
+            )
+            q = search_oa.build_query()
         elif self.param == "display_name.search" and self.unique_id == "author_search":
             search_oa = SearchOpenAlex(
                 search_terms=self.value,
