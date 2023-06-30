@@ -59,7 +59,7 @@ class SearchOpenAlex:
     def primary_match_query(self):
         """Searches with 'and' and phrase queries, with phrase boosted by 2."""
         if self.is_boolean_search() or self.has_phrase():
-            self.validate_boolean_query()
+            self.remove_wildcard_characters()
             return Q(
                 "query_string",
                 query=self.search_terms,
@@ -78,7 +78,7 @@ class SearchOpenAlex:
     def primary_secondary_match_query(self):
         """Searches primary and secondary fields."""
         if self.is_boolean_search() or self.has_phrase():
-            self.validate_boolean_query()
+            self.remove_wildcard_characters()
             return Q(
                 "query_string",
                 query=self.search_terms,
@@ -138,7 +138,7 @@ class SearchOpenAlex:
             tertiary_phrase_boost = 0.1
 
         if self.is_boolean_search() or self.has_phrase():
-            self.validate_boolean_query()
+            self.remove_wildcard_characters()
             return (
                 Q(
                     "query_string",
@@ -262,16 +262,11 @@ class SearchOpenAlex:
         boolean_words = [" AND ", " OR ", " NOT "]
         return any(word in self.search_terms for word in boolean_words)
 
-    def validate_boolean_query(self):
-        """Ensure not using wildcard, regex, or fuzzy search with boolean query."""
-        if (
-            "*" in self.search_terms
-            or "?" in self.search_terms
-            or "~" in self.search_terms
-        ):
-            raise APISearchError(
-                "Boolean and phrase search does not support wildcard characters such as *, ?, or ~."
-            )
+    def remove_wildcard_characters(self):
+        """Remove characters used for wildcard, regex, or fuzzy search."""
+        self.search_terms = (
+            self.search_terms.replace("*", "").replace("?", "").replace("~", "")
+        )
 
 
 def full_search_query(index_name, search):
