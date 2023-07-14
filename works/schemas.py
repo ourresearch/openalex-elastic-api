@@ -141,6 +141,15 @@ class APCSchema(Schema):
         ordered = True
 
 
+class SDGSchema(Schema):
+    id = fields.String()
+    display_name = fields.String()
+    score = fields.Float()
+
+    class Meta:
+        ordered = True
+
+
 class WorksSchema(Schema):
     id = fields.Str()
     doi = fields.Str()
@@ -169,6 +178,7 @@ class WorksSchema(Schema):
     locations_count = fields.Int()
     locations = fields.Nested(LocationSchema, many=True)
     best_oa_location = fields.Nested(LocationSchema)
+    sustainable_development_goals = fields.Nested(SDGSchema, many=True)
     grants = fields.List(fields.Nested(GrantsSchema))
     referenced_works_count = fields.Int()
     referenced_works = fields.List(fields.Str())
