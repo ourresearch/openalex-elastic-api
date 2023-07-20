@@ -44,7 +44,7 @@ class TestSample:
 
     def test_sample_with_filter(self, client):
         res = client.get(
-            "/works?sample=25&per-page=25&filter=type:journal-article&select=doi,publication_year"
+            "/works?sample=25&per-page=25&filter=type:article&select=doi,publication_year"
         )
         json_data = res.get_json()
         results = json_data["results"]

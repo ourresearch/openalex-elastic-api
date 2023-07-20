@@ -133,11 +133,11 @@ class TestWorksPublicationDateFilter:
 
 class TestWorksTypeFilter:
     def test_works_type(self, client):
-        res = client.get("/works?filter=type:journAl-arTicle")
+        res = client.get("/works?filter=type:arTicle")
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 7524
         for result in json_data["results"][:25]:
-            assert result["type"] == "journal-article"
+            assert result["type"] == "article"
 
 
 class TestWorksBooleanFilters:
