@@ -13,6 +13,7 @@ fields = [
     OpenAlexIDField(param="ids.openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="lineage"),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
+    OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(
         param="parent_publisher", custom_es_field="parent_publisher.id.keyword"
     ),

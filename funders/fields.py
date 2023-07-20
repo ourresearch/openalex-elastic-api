@@ -16,6 +16,7 @@ fields = [
     ),
     OpenAlexIDField(param="ids.openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
+    OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(param="roles.id"),
     RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="cited_by_count"),
