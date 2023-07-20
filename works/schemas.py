@@ -162,6 +162,7 @@ class WorksSchema(Schema):
     language = fields.Str()
     primary_location = fields.Nested(LocationSchema)
     type = fields.Str()
+    type_crossref = fields.Str()
     open_access = fields.Nested(OpenAccessSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
     corresponding_author_ids = fields.List(fields.Str())

@@ -193,6 +193,7 @@ fields = [
     TermField(param="primary_location.source.type"),
     TermField(param="primary_location.version"),
     TermField(param="type"),
+    TermField(param="type_crossref"),
     TermField(param="version", custom_es_field="locations.version"),
 ]
 
