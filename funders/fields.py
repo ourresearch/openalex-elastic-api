@@ -15,6 +15,7 @@ fields = [
         custom_es_field="updated_date",
     ),
     OpenAlexIDField(param="ids.openalex", custom_es_field="ids.openalex.lower"),
+    OpenAlexIDField(param="ids.openalex"),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(param="roles.id"),

@@ -12,6 +12,7 @@ fields = [
         custom_es_field="updated_date",
     ),
     OpenAlexIDField(param="ancestors.id"),
+    OpenAlexIDField(param="ids.openalex"),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     RangeField(param="summary_stats.2yr_mean_citedness"),
