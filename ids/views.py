@@ -18,7 +18,7 @@ from institutions.schemas import InstitutionsSchema
 from publishers.schemas import PublishersSchema
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, FUNDERS_INDEX,
                       INSTITUTIONS_INDEX, PUBLISHERS_INDEX, SOURCES_INDEX,
-                      WORKS_INDEX)
+                      WORKS_INDEX, AUTHORS_INDEX_OLD)
 from sources.schemas import SourcesSchema
 from works.schemas import WorksSchema
 
@@ -147,6 +147,8 @@ def authors_id_get(id):
         if clean_id != id:
             return redirect(url_for("ids.authors_id_get", id=clean_id, **request.args))
         author_id = int(clean_id[1:])
+        if author_id < 5000000000:
+            s = Search(index=AUTHORS_INDEX_OLD)
         full_author_id = f"https://openalex.org/A{author_id}"
         query = Q("term", ids__openalex=full_author_id)
         s = s.filter(query)
