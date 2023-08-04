@@ -219,7 +219,7 @@ def get_group_by_results(group_by, response):
                     "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
                 }
             )
-    elif group_by.endswith("country_code"):
+    elif group_by.endswith("country_code") or group_by.endswith("countries"):
         for b in buckets:
             if b.key == "unknown":
                 key_display_name = "unknown"

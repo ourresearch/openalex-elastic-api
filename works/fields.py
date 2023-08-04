@@ -148,6 +148,9 @@ fields = [
     TermField(param="apc_paid.provenance", custom_es_field="apc_paid.provenance"),
     TermField(param="author.orcid", alias="authorships.author.orcid"),
     TermField(param="authorships.author.orcid"),
+    TermField(
+        param="authorships.countries", custom_es_field="authorships.countries.keyword"
+    ),
     TermField(param="authorships.institutions.country_code"),
     TermField(
         param=f"authorships.institutions.continent",
