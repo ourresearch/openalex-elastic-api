@@ -166,6 +166,7 @@ class WorksSchema(Schema):
     type_crossref = fields.Str()
     open_access = fields.Nested(OpenAccessSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
+    institutions_distinct_count = fields.Int()
     corresponding_author_ids = fields.List(fields.Str())
     corresponding_institution_ids = fields.List(fields.Str())
     apc_list = fields.Nested(APCSchema, dump_default=None)

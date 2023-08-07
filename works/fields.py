@@ -128,6 +128,7 @@ fields = [
     RangeField(param="authors_count"),
     RangeField(param="cited_by_count"),
     RangeField(param="concepts_count"),
+    RangeField(param="institutions_distinct_count"),
     RangeField(param="locations_count"),
     RangeField(param="publication_year"),
     RangeField(param="referenced_works_count"),
