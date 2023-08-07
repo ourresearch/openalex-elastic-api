@@ -202,7 +202,7 @@ def get_display_names_sdgs(ids):
         # get count for each query
         count = response.hits.total.value
         for item in response:
-            results[item.id] = item.display_name
+            results[item.sustainable_development_goals.id] = item.sustainable_development_goals.display_name
     return results
 
 
