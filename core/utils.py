@@ -189,6 +189,23 @@ def get_display_names_award_ids(ids):
     return results
 
 
+def get_display_names_sdgs(ids):
+    results = {}
+    ms = MultiSearch(index=WORKS_INDEX)
+    for sdg_id in ids:
+        s = Search()
+        s = s.filter("term", sustainable_development_goals__id__keyword=sdg_id)
+        s = s.source(["sustainable_development_goals.id", "sustainable_development_goals.display_name"])
+        ms = ms.add(s)
+    responses = ms.execute()
+    for response in responses:
+        # get count for each query
+        count = response.hits.total.value
+        for item in response:
+            results[item.id] = item.display_name
+    return results
+
+
 def get_index_name_by_id(openalex_id):
     """Takes an openalex ID and returns an appropriate index."""
     clean_id = normalize_openalex_id(openalex_id)

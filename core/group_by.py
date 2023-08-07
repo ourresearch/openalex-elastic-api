@@ -9,7 +9,7 @@ import settings
 from core.exceptions import APIQueryParamsError
 from core.search import full_search_query
 from core.utils import (get_display_names, get_display_names_award_ids,
-                        get_display_names_host_organization)
+                        get_display_names_host_organization, get_display_names_sdgs)
 from countries import COUNTRIES_BY_CONTINENT, GLOBAL_SOUTH_COUNTRIES
 
 
@@ -205,6 +205,8 @@ def get_group_by_results(group_by, response):
             ids_to_display_names = get_display_names_host_organization(keys)
         elif group_by == "grants.award_id":
             ids_to_display_names = get_display_names_award_ids(keys)
+        elif group_by == "sustainable_development_goals.id":
+            ids_to_display_names = get_display_names_sdgs(keys)
         else:
             ids_to_display_names = get_display_names(keys)
         for b in buckets:
