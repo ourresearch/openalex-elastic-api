@@ -190,6 +190,7 @@ def get_display_names_award_ids(ids):
 
 
 def get_display_names_sdgs(ids):
+    # kind of hacky. consider redoing
     results = {}
     ms = MultiSearch(index=WORKS_INDEX)
     for sdg_id in ids:

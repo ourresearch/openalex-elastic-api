@@ -642,6 +642,7 @@ def validate_group_by(field):
         "concepts_count",
         "hierarchy_level",
         "grants_count",
+        "institutions_distinct_count",
         "level",
         "locations_count",
         "publication_year",
