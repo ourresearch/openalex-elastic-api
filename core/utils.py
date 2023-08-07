@@ -198,11 +198,14 @@ def get_display_names_sdgs(ids):
         s = s.source(["sustainable_development_goals.id", "sustainable_development_goals.display_name"])
         ms = ms.add(s)
     responses = ms.execute()
-    for response in responses:
-        # get count for each query
-        count = response.hits.total.value
-        for item in response:
-            results[item.sustainable_development_goals.id] = item.sustainable_development_goals.display_name
+    for sdg_id in ids:
+        for response in responses:
+            for item in response:
+                if sdg_id in results:
+                    break
+                for sdg in item.sustainable_development_goals:
+                    if sdg.id == sdg_id:
+                        results[sdg.id] = sdg.display_name
     return results
 
 
