@@ -4,3 +4,7 @@ __pycache__/
 .pytest_cache/
 dump.rdb
 venv/
+
+scripts/logs
+localdata/
+scratch/
