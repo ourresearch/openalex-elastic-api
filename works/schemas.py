@@ -93,6 +93,8 @@ class LocationSchema(Schema):
     source = fields.Nested(SourceSchema)
     license = fields.Str()
     version = fields.Str()
+    is_accepted = fields.Bool()
+    is_published = fields.Bool()
 
     class Meta:
         ordered = True

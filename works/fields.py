@@ -50,6 +50,8 @@ fields = [
     BooleanField(param="primary_location.is_oa"),
     BooleanField(param="primary_location.source.is_oa"),
     BooleanField(param="primary_location.source.is_in_doaj"),
+    BooleanField(param="primary_location.is_accepted"),
+    BooleanField(param="primary_location.is_published"),
     BooleanField(
         param="primary_location.source.has_issn",
         custom_es_field="primary_location.source.issn",
