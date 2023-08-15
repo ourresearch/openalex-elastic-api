@@ -11,6 +11,8 @@ fields = [
     BooleanField(param="best_oa_location.is_oa"),
     BooleanField(param="best_oa_location.source.is_oa"),
     BooleanField(param="best_oa_location.source.is_in_doaj"),
+    BooleanField(param="best_oa_location.is_accepted"),
+    BooleanField(param="best_oa_location.is_published"),
     BooleanField(param="has_abstract", custom_es_field="abstract"),
     BooleanField(param="has_doi", custom_es_field="ids.doi"),
     BooleanField(param="has_fulltext", custom_es_field="fulltext"),
@@ -45,6 +47,8 @@ fields = [
         param="locations.source.has_issn", custom_es_field="locations.source.issn"
     ),
     BooleanField(param="locations.source.is_in_doaj"),
+    BooleanField(param="locations.is_accepted"),
+    BooleanField(param="locations.is_published"),
     BooleanField(param="open_access.is_oa"),
     BooleanField(param="open_access.any_repository_has_fulltext"),
     BooleanField(param="primary_location.is_oa"),
