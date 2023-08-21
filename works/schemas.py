@@ -32,6 +32,7 @@ class AuthorshipsSchema(Schema):
     institutions = fields.Nested(InstitutionsSchema, many=True)
     countries = fields.List(fields.Str())
     is_corresponding = fields.Bool()
+    raw_author_name = fields.Str()
     raw_affiliation_string = fields.Str()
     raw_affiliation_strings = fields.List(fields.Str())
 
