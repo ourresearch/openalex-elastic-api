@@ -6,9 +6,10 @@ from iso3166 import countries
 
 import settings
 from core.exceptions import APIQueryParamsError, HighAuthorCountError
-from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, GROUPBY_VALUES_INDEX,
-                      INSTITUTIONS_INDEX, PUBLISHERS_INDEX, SOURCES_INDEX,
-                      VENUES_INDEX, WORKS_INDEX, AUTHORS_INDEX_OLD)
+from settings import (AUTHORS_INDEX, AUTHORS_INDEX_OLD, CONCEPTS_INDEX,
+                      GROUPBY_VALUES_INDEX, INSTITUTIONS_INDEX,
+                      PUBLISHERS_INDEX, SOURCES_INDEX, VENUES_INDEX,
+                      WORKS_INDEX)
 
 
 def get_valid_fields(fields_dict):
@@ -196,7 +197,12 @@ def get_display_names_sdgs(ids):
     for sdg_id in ids:
         s = Search()
         s = s.filter("term", sustainable_development_goals__id__keyword=sdg_id)
-        s = s.source(["sustainable_development_goals.id", "sustainable_development_goals.display_name"])
+        s = s.source(
+            [
+                "sustainable_development_goals.id",
+                "sustainable_development_goals.display_name",
+            ]
+        )
         ms = ms.add(s)
     responses = ms.execute()
     for sdg_id in ids:

@@ -16,21 +16,23 @@ blueprint = Blueprint("authors", __name__)
 
 def is_query_for_old_authors():
     # backwards compatability check. returns True if all of the author IDs requested are old authors
-    from core.utils import map_filter_params, get_index_name_by_id
+    from core.utils import get_index_name_by_id, map_filter_params
+
     filter_params = map_filter_params(request.args.get("filter"))
     if filter_params:
-        fields_to_check = ['openalex', 'openalex_id']
+        fields_to_check = ["openalex", "openalex_id"]
         index_list = []
         for filter in filter_params:
             for key, value in filter.items():
                 if key in fields_to_check:
-                    openalex_ids = value.split('|')
+                    openalex_ids = value.split("|")
                     for openalex_id in openalex_ids:
                         index_list.append(get_index_name_by_id(openalex_id))
-        if index_list and all([index_name == AUTHORS_INDEX_OLD for index_name in index_list]):
+        if index_list and all(
+            [index_name == AUTHORS_INDEX_OLD for index_name in index_list]
+        ):
             return True
     return False
-
 
 
 @blueprint.route("/authors")

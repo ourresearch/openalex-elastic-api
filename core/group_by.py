@@ -9,7 +9,8 @@ import settings
 from core.exceptions import APIQueryParamsError
 from core.search import full_search_query
 from core.utils import (get_display_names, get_display_names_award_ids,
-                        get_display_names_host_organization, get_display_names_sdgs)
+                        get_display_names_host_organization,
+                        get_display_names_sdgs)
 from countries import COUNTRIES_BY_CONTINENT, GLOBAL_SOUTH_COUNTRIES
 
 
@@ -191,6 +192,7 @@ def get_group_by_results(group_by, response):
         or group_by.endswith("host_institution_lineage")
         or group_by.endswith("publisher_lineage")
         or group_by.endswith("ids")
+        or group_by == "authorships.institutions.lineage"
         or group_by == "grants.award_id"
         or group_by == "grants.funder"
     ):

@@ -84,6 +84,10 @@ fields = [
     OpenAlexIDField(param="author.id", alias="authorships.author.id"),
     OpenAlexIDField(param="authorships.author.id"),
     OpenAlexIDField(param="authorships.institutions.id"),
+    OpenAlexIDField(
+        param="authorships.institutions.lineage",
+        custom_es_field="authorships.institutions.lineage",
+    ),
     OpenAlexIDField(param="corresponding_author_ids"),
     OpenAlexIDField(param="corresponding_institution_ids"),
     OpenAlexIDField(param="best_oa_location.source.id"),
@@ -202,7 +206,10 @@ fields = [
     TermField(param="primary_location.source.issn"),
     TermField(param="primary_location.source.type"),
     TermField(param="primary_location.version"),
-    TermField(param="sustainable_development_goals.id", custom_es_field="sustainable_development_goals.id.keyword"),
+    TermField(
+        param="sustainable_development_goals.id",
+        custom_es_field="sustainable_development_goals.id.keyword",
+    ),
     TermField(param="type"),
     TermField(param="type_crossref", custom_es_field="type_crossref.keyword"),
     TermField(param="version", custom_es_field="locations.version"),

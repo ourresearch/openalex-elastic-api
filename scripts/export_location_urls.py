@@ -2,10 +2,12 @@
 
 DESCRIPTION = """for all works in elasticsearch, export the work id and the url for the locations"""
 
-import sys, os, time
-from pathlib import Path
 import csv
+import os
+import sys
+import time
 from datetime import datetime
+from pathlib import Path
 from timeit import default_timer as timer
 
 try:
@@ -47,7 +49,8 @@ def get_ids():
                     writer.writerow([id_numerical_part, location["landing_page_url"]])
                     count_lines += 1
                     if (
-                        count_lines in [100, 1000, 10000, 100000, 500000, 1000000, 5000000]
+                        count_lines
+                        in [100, 1000, 10000, 100000, 500000, 1000000, 5000000]
                         or count_lines % 10000000 == 0
                     ):
                         logger.info(f"{count_lines} rows written ({count_works} works)")
@@ -59,7 +62,7 @@ def get_ids():
 
 def main(args):
     connections.create_connection(hosts=[ES_URL], timeout=600)
-    logging.getLogger('elasticsearch').setLevel(logging.WARNING)
+    logging.getLogger("elasticsearch").setLevel(logging.WARNING)
     get_ids()
 
 

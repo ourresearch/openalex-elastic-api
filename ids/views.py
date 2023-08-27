@@ -16,9 +16,9 @@ from ids.utils import (get_merged_id, is_author_openalex_id,
                        normalize_wikidata, process_id_only_fields)
 from institutions.schemas import InstitutionsSchema
 from publishers.schemas import PublishersSchema
-from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, FUNDERS_INDEX,
-                      INSTITUTIONS_INDEX, PUBLISHERS_INDEX, SOURCES_INDEX,
-                      WORKS_INDEX, AUTHORS_INDEX_OLD)
+from settings import (AUTHORS_INDEX, AUTHORS_INDEX_OLD, CONCEPTS_INDEX,
+                      FUNDERS_INDEX, INSTITUTIONS_INDEX, PUBLISHERS_INDEX,
+                      SOURCES_INDEX, WORKS_INDEX)
 from sources.schemas import SourcesSchema
 from works.schemas import WorksSchema
 
