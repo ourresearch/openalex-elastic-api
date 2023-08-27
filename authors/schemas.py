@@ -24,6 +24,7 @@ class LastKnownInstitutionSchema(Schema):
     display_name = fields.Str()
     country_code = fields.Str()
     type = fields.Str()
+    lineage = fields.List(fields.Str())
 
     class Meta:
         ordered = True

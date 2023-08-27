@@ -195,6 +195,7 @@ def get_group_by_results(group_by, response):
         or group_by == "authorships.institutions.lineage"
         or group_by == "grants.award_id"
         or group_by == "grants.funder"
+        or group_by == "last_known_institution.lineage"
     ):
         if group_by.endswith("host_institution_lineage"):
             buckets = keep_institution_buckets(buckets)
