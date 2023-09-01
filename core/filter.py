@@ -11,11 +11,20 @@ def filter_records(fields_dict, filter_params, s, sample=None):
         for key, value in filter.items():
             field = get_field(fields_dict, key)
 
-            # OR queries have | in the param values
+            # multiple OR queries have | in the param values
             if "|" in value:
                 s = handle_or_query(field, fields_dict, s, value, sample)
 
-            # everything else is an AND query
+            # multiple AND queries have + in the param values which is converted to a space
+            elif (
+                " " in value
+                and "search" not in field.param
+                and type(field).__name__ != "RangeField"
+                and type(field).__name__ != "BooleanField"
+            ):
+                s = handle_and_query(field, s, value)
+
+            # everything else is a normal and query
             else:
                 field.value = value
                 q = field.build_query()
@@ -81,4 +90,23 @@ def handle_or_query(field, fields_dict, s, value, sample):
             s = s.query(combined_or_query)
         else:
             s = s.filter(combined_or_query)
+    return s
+
+
+def handle_and_query(field, s, value):
+    and_queries = []
+
+    if len(value.split(" ")) > 50:
+        raise APIQueryParamsError(
+            f"Maximum number of values exceeded for {field.param}. Decrease values to 50 or "
+            f"below, or consider downloading the full dataset at "
+            f"https://docs.openalex.org/download-snapshot"
+        )
+
+    for and_value in value.split(" "):
+        field.value = and_value
+        q = field.build_query()
+        and_queries.append(q)
+    combined_and_query = Q("bool", must=and_queries)
+    s = s.filter(combined_and_query)
     return s
