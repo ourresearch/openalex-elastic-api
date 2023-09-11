@@ -99,6 +99,13 @@ class BooleanField(Field):
             elif self.value.lower().strip() == "false":
                 q = ~Q("terms", **{self.es_field(): country_codes})
             return q
+        elif self.param == "has_old_authors":
+            q = (
+                Q("prefix", authorships__author__id="https://openalex.org/A4")
+                | Q("prefix", authorships__author__id="https://openalex.org/A3")
+                | Q("prefix", authorships__author__id="https://openalex.org/A2")
+                | Q("prefix", authorships__author__id="https://openalex.org/A1")
+            )
         elif self.value == "null":
             q = ~Q("exists", field=self.es_sort_field())
         elif self.value == "!null":
