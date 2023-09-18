@@ -9,30 +9,31 @@ from core.shared_view import shared_view
 from core.utils import (get_flattened_fields, get_valid_fields, is_cached,
                         process_only_fields)
 from extensions import cache
-from settings import AUTHORS_INDEX, AUTHORS_INDEX_OLD
+from settings import AUTHORS_INDEX
 
 blueprint = Blueprint("authors", __name__)
 
 
-def is_query_for_old_authors():
-    # backwards compatability check. returns True if all of the author IDs requested are old authors
-    from core.utils import get_index_name_by_id, map_filter_params
+# Old Author IDs are fully deprecated, so the below is commented out
+# def is_query_for_old_authors():
+#     # backwards compatability check. returns True if all of the author IDs requested are old authors
+#     from core.utils import get_index_name_by_id, map_filter_params
 
-    filter_params = map_filter_params(request.args.get("filter"))
-    if filter_params:
-        fields_to_check = ["openalex", "openalex_id"]
-        index_list = []
-        for filter in filter_params:
-            for key, value in filter.items():
-                if key in fields_to_check:
-                    openalex_ids = value.split("|")
-                    for openalex_id in openalex_ids:
-                        index_list.append(get_index_name_by_id(openalex_id))
-        if index_list and all(
-            [index_name == AUTHORS_INDEX_OLD for index_name in index_list]
-        ):
-            return True
-    return False
+#     filter_params = map_filter_params(request.args.get("filter"))
+#     if filter_params:
+#         fields_to_check = ["openalex", "openalex_id"]
+#         index_list = []
+#         for filter in filter_params:
+#             for key, value in filter.items():
+#                 if key in fields_to_check:
+#                     openalex_ids = value.split("|")
+#                     for openalex_id in openalex_ids:
+#                         index_list.append(get_index_name_by_id(openalex_id))
+#         if index_list and all(
+#             [index_name == AUTHORS_INDEX_OLD for index_name in index_list]
+#         ):
+#             return True
+#     return False
 
 
 @blueprint.route("/authors")
@@ -42,8 +43,8 @@ def is_query_for_old_authors():
 )
 def authors():
     index_name = AUTHORS_INDEX
-    if is_query_for_old_authors() is True:
-        index_name = AUTHORS_INDEX_OLD
+    # if is_query_for_old_authors() is True:
+    #     index_name = AUTHORS_INDEX_OLD
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, AuthorsSchema)
     result = shared_view(request, fields_dict, index_name, default_sort)

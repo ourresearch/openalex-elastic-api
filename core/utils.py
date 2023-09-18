@@ -6,7 +6,7 @@ from iso3166 import countries
 
 import settings
 from core.exceptions import APIQueryParamsError, HighAuthorCountError
-from settings import (AUTHORS_INDEX, AUTHORS_INDEX_OLD, CONCEPTS_INDEX,
+from settings import (AUTHORS_INDEX, CONCEPTS_INDEX,
                       GROUPBY_VALUES_INDEX, INSTITUTIONS_INDEX,
                       PUBLISHERS_INDEX, SOURCES_INDEX, VENUES_INDEX,
                       WORKS_INDEX)
@@ -225,12 +225,6 @@ def get_index_name_by_id(openalex_id):
     index_name = None
     if clean_id.startswith("A"):
         index_name = AUTHORS_INDEX
-        try:
-            id_int = int(clean_id[1:])
-            if id_int < 5000000000:
-                index_name = AUTHORS_INDEX_OLD
-        except (TypeError, ValueError):
-            pass
     elif clean_id.startswith("C"):
         index_name = CONCEPTS_INDEX
     elif clean_id.startswith("I"):
