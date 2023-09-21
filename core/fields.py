@@ -14,7 +14,7 @@ from settings import (CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS,
 
 class Field(ABC):
     def __init__(
-        self, param, alias=None, custom_es_field=None, unique_id=None, index=None
+        self, param, alias=None, custom_es_field=None, unique_id=None, index=None, docstring="", documentation_link=""
     ):
         self.param = param
         self.alias = alias
@@ -22,6 +22,8 @@ class Field(ABC):
         self.value = None
         self.unique_id = unique_id
         self.index = index
+        self.docstring = docstring
+        self.documentation_link = documentation_link
 
     @abstractmethod
     def build_query(self):
