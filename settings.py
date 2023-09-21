@@ -10,7 +10,7 @@ JSON_SORT_KEYS = False
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # indexes
-AUTHORS_INDEX = "authors-v11"
+AUTHORS_INDEX = "authors-v12"
 AUTHORS_INDEX_OLD = "authors-v10"
 CONCEPTS_INDEX = "concepts-v8"
 FUNDERS_INDEX = "funders-v3"

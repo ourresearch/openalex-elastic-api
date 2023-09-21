@@ -38,7 +38,12 @@ def single_entity_autocomplete(fields_dict, index_name, request):
             s = filter_records(fields_dict, filter_params, s)
 
         # autocomplete
-        if index_name.startswith("venue") or index_name.startswith("source"):
+        if index_name.startswith("author"):
+            s = s.query(
+                Q("match_phrase_prefix", display_name__autocomplete=q)
+                | Q("match_phrase_prefix", display_name_alternatives__autocomplete=q)
+            )
+        elif index_name.startswith("source"):
             s = s.query(
                 Q("match_phrase_prefix", display_name__autocomplete=q)
                 | Q("match_phrase_prefix", alternate_titles__autocomplete=q)

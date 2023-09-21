@@ -223,7 +223,12 @@ class SearchOpenAlex:
             "multi_match",
             **{
                 "query": self.search_terms,
-                "fields": [self.primary_field, self.primary_field + ".folded"],
+                "fields": [
+                    self.primary_field,
+                    self.primary_field + ".folded",
+                    self.secondary_field,
+                    self.secondary_field + ".folded",
+                ],
                 "operator": "and",
                 "type": "most_fields",
             },
@@ -231,7 +236,12 @@ class SearchOpenAlex:
             "multi_match",
             **{
                 "query": self.search_terms,
-                "fields": [self.primary_field, self.primary_field + ".folded"],
+                "fields": [
+                    self.primary_field,
+                    self.primary_field + ".folded",
+                    self.secondary_field,
+                    self.secondary_field + ".folded",
+                ],
                 "type": "phrase",
                 "boost": 2,
             },
@@ -271,7 +281,11 @@ class SearchOpenAlex:
 
 def full_search_query(index_name, search):
     if index_name.lower().startswith("authors"):
-        search_oa = SearchOpenAlex(search_terms=search, is_author_name_query=True)
+        search_oa = SearchOpenAlex(
+            search_terms=search,
+            secondary_field="display_name_alternatives",
+            is_author_name_query=True,
+        )
     elif index_name.lower().startswith("concepts"):
         search_oa = SearchOpenAlex(search_terms=search, secondary_field="description")
     elif index_name.lower().startswith("funders"):
