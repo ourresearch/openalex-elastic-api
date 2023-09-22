@@ -77,3 +77,16 @@ def works_valid_fields():
 def works_flattened_schema():
     flattened_schema = get_flattened_fields(WorksSchema())
     return jsonify(flattened_schema)
+
+
+@blueprint.route("/works/filters_docstrings")
+def works_filters_doctrings():
+    ret = {}
+    for param, f in fields_dict.items():
+        ret[param] = {
+            "key": f.param,
+            "entityType": "works",
+            "docstring": f.docstring,
+            "documentationLink": f.documentation_link,
+        }
+    return jsonify(ret)
