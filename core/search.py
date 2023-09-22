@@ -219,33 +219,28 @@ class SearchOpenAlex:
 
     def author_name_query(self):
         """Search display_name and display_name.folded in order to ignore diacritics."""
-        return Q(
+        fields = [self.primary_field, self.primary_field + ".folded"]
+
+        if self.secondary_field:
+            fields.extend([self.secondary_field, self.secondary_field + ".folded"])
+
+        most_fields_query = Q(
             "multi_match",
-            **{
-                "query": self.search_terms,
-                "fields": [
-                    self.primary_field,
-                    self.primary_field + ".folded",
-                    self.secondary_field,
-                    self.secondary_field + ".folded",
-                ],
-                "operator": "and",
-                "type": "most_fields",
-            },
-        ) | Q(
-            "multi_match",
-            **{
-                "query": self.search_terms,
-                "fields": [
-                    self.primary_field,
-                    self.primary_field + ".folded",
-                    self.secondary_field,
-                    self.secondary_field + ".folded",
-                ],
-                "type": "phrase",
-                "boost": 2,
-            },
+            query=self.search_terms,
+            fields=fields,
+            operator="and",
+            type="most_fields",
         )
+
+        phrase_query = Q(
+            "multi_match",
+            query=self.search_terms,
+            fields=fields,
+            type="phrase",
+            boost=2,
+        )
+
+        return most_fields_query | phrase_query
 
     @staticmethod
     def citation_boost_query(query):
