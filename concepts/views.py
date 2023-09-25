@@ -48,3 +48,16 @@ def concepts_valid_fields():
 def concepts_flattened_schema():
     flattened_schema = get_flattened_fields(ConceptsSchema())
     return jsonify(flattened_schema)
+
+
+@blueprint.route("/concepts/filters_docstrings")
+def concepts_filters_doctrings():
+    ret = {}
+    for param, f in fields_dict.items():
+        ret[param] = {
+            "key": f.param,
+            "entityType": "concepts",
+            "docstring": f.docstring,
+            "documentationLink": f.documentation_link,
+        }
+    return jsonify(ret)

@@ -71,3 +71,16 @@ def institutions_valid_fields():
 def institutions_flattened_schema():
     flattened_schema = get_flattened_fields(InstitutionsSchema())
     return jsonify(flattened_schema)
+
+
+@blueprint.route("/institutions/filters_docstrings")
+def institutions_filters_doctrings():
+    ret = {}
+    for param, f in fields_dict.items():
+        ret[param] = {
+            "key": f.param,
+            "entityType": "institutions",
+            "docstring": f.docstring,
+            "documentationLink": f.documentation_link,
+        }
+    return jsonify(ret)

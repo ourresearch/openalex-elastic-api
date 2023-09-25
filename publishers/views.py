@@ -57,3 +57,16 @@ def publishers_valid_fields():
 def publishers_flattened_schema():
     flattened_schema = get_flattened_fields(PublishersSchema())
     return jsonify(flattened_schema)
+
+
+@blueprint.route("/publishers/filters_docstrings")
+def publishers_filters_doctrings():
+    ret = {}
+    for param, f in fields_dict.items():
+        ret[param] = {
+            "key": f.param,
+            "entityType": "publishers",
+            "docstring": f.docstring,
+            "documentationLink": f.documentation_link,
+        }
+    return jsonify(ret)

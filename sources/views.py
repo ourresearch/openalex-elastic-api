@@ -50,3 +50,16 @@ def sources_valid_fields():
 def sources_flattened_schema():
     flattened_schema = get_flattened_fields(SourcesSchema())
     return jsonify(flattened_schema)
+
+
+@blueprint.route("/sources/filters_docstrings")
+def sources_filters_doctrings():
+    ret = {}
+    for param, f in fields_dict.items():
+        ret[param] = {
+            "key": f.param,
+            "entityType": "sources",
+            "docstring": f.docstring,
+            "documentationLink": f.documentation_link,
+        }
+    return jsonify(ret)

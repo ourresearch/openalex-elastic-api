@@ -57,3 +57,16 @@ def funders_valid_fields():
 def funders_flattened_schema():
     flattened_schema = get_flattened_fields(FundersSchema())
     return jsonify(flattened_schema)
+
+
+@blueprint.route("/funders/filters_docstrings")
+def funders_filters_doctrings():
+    ret = {}
+    for param, f in fields_dict.items():
+        ret[param] = {
+            "key": f.param,
+            "entityType": "funders",
+            "docstring": f.docstring,
+            "documentationLink": f.documentation_link,
+        }
+    return jsonify(ret)

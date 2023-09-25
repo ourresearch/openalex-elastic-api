@@ -76,3 +76,16 @@ def authors_valid_fields():
 def authors_flattened_schema():
     flattened_schema = get_flattened_fields(AuthorsSchema())
     return jsonify(flattened_schema)
+
+@blueprint.route("/authors/filters_docstrings")
+@blueprint.route("/people/filters_docstrings")
+def authors_filters_doctrings():
+    ret = {}
+    for param, f in fields_dict.items():
+        ret[param] = {
+            "key": f.param,
+            "entityType": "authors",
+            "docstring": f.docstring,
+            "documentationLink": f.documentation_link,
+        }
+    return jsonify(ret)
