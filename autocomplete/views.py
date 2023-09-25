@@ -84,6 +84,7 @@ def autocomplete_full():
             Q("match_phrase_prefix", display_name__autocomplete=q)
             | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
             | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
+            | Q("match_phrase_prefix", display_name_acronyms__autocomplete=q)
             | Q("match_phrase_prefix", display_name_alternatives__autocomplete=q)
         )
         s = s.sort("-cited_by_count")
