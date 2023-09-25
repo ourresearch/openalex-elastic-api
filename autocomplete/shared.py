@@ -43,6 +43,12 @@ def single_entity_autocomplete(fields_dict, index_name, request):
                 Q("match_phrase_prefix", display_name__autocomplete=q)
                 | Q("match_phrase_prefix", display_name_alternatives__autocomplete=q)
             )
+        elif index_name.startswith("institution"):
+            s = s.query(
+                Q("match_phrase_prefix", display_name__autocomplete=q)
+                | Q("match_phrase_prefix", display_name_acronyms__autocomplete=q)
+                | Q("match_phrase_prefix", display_name_alternatives__autocomplete=q)
+            )
         elif index_name.startswith("source"):
             s = s.query(
                 Q("match_phrase_prefix", display_name__autocomplete=q)
