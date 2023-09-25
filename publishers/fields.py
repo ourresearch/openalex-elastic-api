@@ -1,5 +1,11 @@
-from core.fields import (DateField, DateTimeField, OpenAlexIDField, RangeField,
-                         SearchField, TermField)
+from core.fields import (
+    DateField,
+    DateTimeField,
+    OpenAlexIDField,
+    RangeField,
+    SearchField,
+    TermField,
+)
 
 fields = [
     DateField(
@@ -10,7 +16,12 @@ fields = [
         param="from_updated_date",
         custom_es_field="updated_date",
     ),
-    OpenAlexIDField(param="ids.openalex", custom_es_field="ids.openalex.lower"),
+    OpenAlexIDField(
+        param="ids.openalex",
+        custom_es_field="ids.openalex.lower",
+        docstring="The OpenAlex ID for a publisher",
+        documentation_link="https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
+    ),
     OpenAlexIDField(param="lineage"),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
@@ -25,7 +36,11 @@ fields = [
     RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
     SearchField(param="default.search", index="publishers"),
-    SearchField(param="display_name.search"),
+    SearchField(
+        param="display_name.search",
+        docstring="Free text search among publishers' names",
+        documentation_link="https://docs.openalex.org/api-entities/publishers/search-publishers#search-a-specific-field",
+    ),
     TermField(param="country_codes", custom_es_field="country_codes.lower"),
     TermField(
         param=f"continent",

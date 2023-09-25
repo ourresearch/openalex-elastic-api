@@ -1,5 +1,12 @@
-from core.fields import (BooleanField, DateField, DateTimeField,
-                         OpenAlexIDField, RangeField, SearchField, TermField)
+from core.fields import (
+    BooleanField,
+    DateField,
+    DateTimeField,
+    OpenAlexIDField,
+    RangeField,
+    SearchField,
+    TermField,
+)
 
 fields = [
     BooleanField(
@@ -14,7 +21,12 @@ fields = [
         param="from_updated_date",
         custom_es_field="updated_date",
     ),
-    OpenAlexIDField(param="ids.openalex", custom_es_field="ids.openalex.lower"),
+    OpenAlexIDField(
+        param="ids.openalex",
+        custom_es_field="ids.openalex.lower",
+        docstring="The OpenAlex ID for a funder",
+        documentation_link="https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
+    ),
     OpenAlexIDField(param="ids.openalex"),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
@@ -27,7 +39,11 @@ fields = [
     RangeField(param="works_count"),
     SearchField(param="default.search", index="funders"),
     SearchField(param="description.search", custom_es_field="description"),
-    SearchField(param="display_name.search"),
+    SearchField(
+        param="display_name.search",
+        docstring="Free text search among funders' names",
+        documentation_link="https://docs.openalex.org/api-entities/funders/search-funders#search-a-specific-field",
+    ),
     TermField(
         param=f"continent",
         custom_es_field="country_code",

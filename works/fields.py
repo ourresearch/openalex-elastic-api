@@ -350,11 +350,13 @@ fields = [
         docstring="Filter by authors' institutional affiliations, using ROR ID",
         documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#ror",
     ),
-    TermField(param="authorships.institutions.type"),
     TermField(
-        param="best_oa_location.source.issn",
+        param="authorships.institutions.type",
         docstring='Filter by institution type. For example, universities are type "Education," and hospitals are type "Healthcare".',
         documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#type",
+    ),
+    TermField(
+        param="best_oa_location.source.issn",
     ),
     TermField(
         param="best_oa_location.license",
