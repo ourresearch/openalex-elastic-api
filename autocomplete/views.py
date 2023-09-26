@@ -6,10 +6,12 @@ from flask import Blueprint, request
 
 from authors.fields import fields_dict as authors_fields_dict
 from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
-from autocomplete.shared import (search_canonical_id_full,
-                                 single_entity_autocomplete)
-from autocomplete.utils import (AUTOCOMPLETE_SOURCE, is_cached_autocomplete,
-                                strip_punctuation)
+from autocomplete.shared import search_canonical_id_full, single_entity_autocomplete
+from autocomplete.utils import (
+    AUTOCOMPLETE_SOURCE,
+    is_cached_autocomplete,
+    strip_punctuation,
+)
 from autocomplete.validate import validate_full_autocomplete_params
 from concepts.fields import fields_dict as concepts_fields_dict
 from core.exceptions import APIQueryParamsError
@@ -18,9 +20,16 @@ from extensions import cache
 from funders.fields import fields_dict as funders_fields_dict
 from institutions.fields import fields_dict as institutions_fields_dict
 from publishers.fields import fields_dict as publishers_fields_dict
-from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, FUNDERS_INDEX,
-                      INSTITUTIONS_INDEX, PUBLISHERS_INDEX, SOURCES_INDEX,
-                      VENUES_INDEX, WORKS_INDEX)
+from settings import (
+    AUTHORS_INDEX,
+    CONCEPTS_INDEX,
+    FUNDERS_INDEX,
+    INSTITUTIONS_INDEX,
+    PUBLISHERS_INDEX,
+    SOURCES_INDEX,
+    VENUES_INDEX,
+    WORKS_INDEX,
+)
 from sources.fields import fields_dict as sources_fields_dict
 from venues.fields import fields_dict as venues_fields_dict
 from works.fields import fields_dict as works_fields_dict
@@ -51,16 +60,6 @@ def autocomplete_full():
     hide_works = request.args.get("hide_works")
     entity_type = request.args.get("entity_type")
 
-    if not q:
-        raise APIQueryParamsError(
-            f"Must enter a 'q' parameter in order to use autocomplete. Example: {request.url_rule}?q=my search"
-        )
-
-    if entity_type and not q:
-        raise APIQueryParamsError(
-            f"Must provide a 'q' parameter when filtering by an entity type."
-        )
-
     if hide_works:
         entities_to_indeces.pop("work")
 
@@ -76,21 +75,23 @@ def autocomplete_full():
 
     s = Search(index=index)
 
-    # canonical id match
-    s, canonical_id_found = search_canonical_id_full(s, q)
+    if q:
+        # canonical id match
+        s, canonical_id_found = search_canonical_id_full(s, q)
 
-    if not canonical_id_found:
-        s = s.query(
-            Q("match_phrase_prefix", display_name__autocomplete=q)
-            | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
-            | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
-            | Q("match_phrase_prefix", display_name_acronyms__autocomplete=q)
-            | Q("match_phrase_prefix", display_name_alternatives__autocomplete=q)
-        )
-        s = s.sort("-cited_by_count")
-        s = s.source(AUTOCOMPLETE_SOURCE)
-        preference = clean_preference(q)
-        s = s.params(preference=preference)
+        if not canonical_id_found:
+            s = s.query(
+                Q("match_phrase_prefix", display_name__autocomplete=q)
+                | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
+                | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
+                | Q("match_phrase_prefix", display_name_acronyms__autocomplete=q)
+                | Q("match_phrase_prefix", display_name_alternatives__autocomplete=q)
+            )
+            s = s.sort("-cited_by_count")
+            s = s.source(AUTOCOMPLETE_SOURCE)
+            preference = clean_preference(q)
+            s = s.params(preference=preference)
+
     response = s.execute()
 
     result = OrderedDict()

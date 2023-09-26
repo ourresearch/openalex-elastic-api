@@ -17,18 +17,15 @@ def single_entity_autocomplete(fields_dict, index_name, request):
     filter_params = map_filter_params(request.args.get("filter"))
     q = request.args.get("q")
     search = request.args.get("search")
-    if not q:
-        raise APIQueryParamsError(
-            f"Must enter a 'q' parameter in order to use autocomplete. Example: {request.url_rule}?q=my search"
-        )
 
     s = Search(index=index_name)
+    canonical_id_found = False
 
-    # canonical id match
-    s, canonical_id_found = search_canonical_id_single(index_name, s, q)
+    if q:
+        # canonical id match
+        s, canonical_id_found = search_canonical_id_single(index_name, s, q)
 
     if not canonical_id_found:
-        # search
         if search and search != '""':
             search_query = full_search_query(index_name, search)
             s = s.query(search_query)
@@ -37,26 +34,31 @@ def single_entity_autocomplete(fields_dict, index_name, request):
         if filter_params:
             s = filter_records(fields_dict, filter_params, s)
 
-        # autocomplete
-        if index_name.startswith("author"):
-            s = s.query(
-                Q("match_phrase_prefix", display_name__autocomplete=q)
-                | Q("match_phrase_prefix", display_name_alternatives__autocomplete=q)
-            )
-        elif index_name.startswith("institution"):
-            s = s.query(
-                Q("match_phrase_prefix", display_name__autocomplete=q)
-                | Q("match_phrase_prefix", display_name_acronyms__autocomplete=q)
-                | Q("match_phrase_prefix", display_name_alternatives__autocomplete=q)
-            )
-        elif index_name.startswith("source"):
-            s = s.query(
-                Q("match_phrase_prefix", display_name__autocomplete=q)
-                | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
-                | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
-            )
-        else:
-            s = s.query("match_phrase_prefix", display_name__autocomplete=q)
+        if q:
+            # autocomplete
+            if index_name.startswith("author"):
+                s = s.query(
+                    Q("match_phrase_prefix", display_name__autocomplete=q)
+                    | Q(
+                        "match_phrase_prefix", display_name_alternatives__autocomplete=q
+                    )
+                )
+            elif index_name.startswith("institution"):
+                s = s.query(
+                    Q("match_phrase_prefix", display_name__autocomplete=q)
+                    | Q("match_phrase_prefix", display_name_acronyms__autocomplete=q)
+                    | Q(
+                        "match_phrase_prefix", display_name_alternatives__autocomplete=q
+                    )
+                )
+            elif index_name.startswith("source"):
+                s = s.query(
+                    Q("match_phrase_prefix", display_name__autocomplete=q)
+                    | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
+                    | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
+                )
+            else:
+                s = s.query("match_phrase_prefix", display_name__autocomplete=q)
         s = s.sort("-cited_by_count")
         s = s.source(AUTOCOMPLETE_SOURCE)
         preference = clean_preference(q)
