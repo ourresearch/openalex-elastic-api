@@ -168,11 +168,24 @@ class AutoCompleteSchema(Schema):
                 if key in obj.meta.index:
                     return getattr(obj, value, None)
 
-    def get_filter_key(self, obj):
-        if "countries" in obj.meta.index:
-            return "authorships.institutions.country_code"
-        elif "work-type" in obj.meta.index:
-            return "type"
+    @staticmethod
+    def get_filter_key(obj):
+        """Filter key you would need to filter in works, based on the index."""
+        mapping = {
+            "authors": "authorships.author.id",
+            "concepts": "concepts.id",
+            "countries": "authorships.institutions.country_code",
+            "funders": "grants.funder",
+            "institutions": "authorships.institutions.id",
+            "publishers": "locations.source.host_organization",
+            "sources": "locations.source.id",
+            "works": "id",
+            "work-type": "type",
+        }
+
+        for index, key in mapping.items():
+            if index in obj.meta.index:
+                return key
 
     def get_id(self, obj):
         if "countries" in obj.meta.index:
