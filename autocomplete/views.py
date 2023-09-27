@@ -7,7 +7,8 @@ from flask import Blueprint, request
 from authors.fields import fields_dict as authors_fields_dict
 from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
 from autocomplete.shared import (
-    is_year,
+    get_year_filter_query,
+    is_year_query,
     search_canonical_id_full,
     single_entity_autocomplete,
 )
@@ -83,8 +84,9 @@ def autocomplete_full():
         # canonical id match
         s, canonical_id_found = search_canonical_id_full(s, q)
 
-        if is_year(q) and not canonical_id_found:
-            s = s.query("term", publication_year=q)
+        if is_year_query(q) and not canonical_id_found:
+            query = get_year_filter_query(q)
+            s = s.query(query)
         elif not canonical_id_found:
             s = s.query(
                 Q("match_phrase_prefix", display_name__autocomplete=q)

@@ -1,10 +1,10 @@
+import re
 from collections import OrderedDict
 
 from elasticsearch_dsl import Q, Search
 
 from autocomplete.utils import AUTOCOMPLETE_SOURCE
 from autocomplete.validate import validate_entity_autocomplete_params
-from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
 from core.search import full_search_query
 from core.utils import clean_preference, map_filter_params
@@ -57,8 +57,9 @@ def single_entity_autocomplete(fields_dict, index_name, request):
                     | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
                     | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
                 )
-            elif index_name.startswith("works") and is_year(q):
-                s = s.filter("term", publication_year=q)
+            elif index_name.startswith("works") and is_year_query(q):
+                query = get_year_filter_query(q)
+                s = s.query(query)
             else:
                 s = s.query("match_phrase_prefix", display_name__autocomplete=q)
         s = s.sort("-cited_by_count")
@@ -162,9 +163,32 @@ def filter_openalex_id(q, s):
     return s
 
 
-def is_year(q):
-    try:
-        if int(q) and len(q.strip()) == 4:
-            return True
-    except ValueError:
-        return False
+def is_year_query(q):
+    # matches a year or a range of years, such as <1999, 2000-2005, 2006-, 2007-2009
+    pattern = re.compile(r"\b(?:\d{4}|-\d{4}|\d{4}-|\d{4}-\d{4}|[<>]\d{4})\b")
+    return bool(pattern.findall(q))
+
+
+def get_year_filter_query(q):
+    if "<" in q:
+        value = q[1:]
+        query = Q("range", publication_year={"lt": int(value)})
+    elif q.startswith("-"):
+        value = q[1:]
+        query = Q("range", publication_year={"lte": int(value)})
+    elif ">" in q:
+        value = q[1:]
+        query = Q("range", publication_year={"gt": int(value)})
+    elif q.endswith("-"):
+        value = q[:-1]
+        query = Q("range", publication_year={"gte": int(value)})
+    elif "-" in q:
+        values = q.strip().split("-")
+        left_value = values[0]
+        right_value = values[1]
+        query = Q(
+            "range", publication_year={"gte": int(left_value), "lte": int(right_value)}
+        )
+    else:
+        query = Q("term", publication_year=q)
+    return query
