@@ -174,11 +174,11 @@ class AutoCompleteSchema(Schema):
         mapping = {
             "authors": "authorships.author.id",
             "concepts": "concepts.id",
-            "countries": "authorships.institutions.country_code",
+            "countries": "authorships.countries",
             "funders": "grants.funder",
-            "institutions": "authorships.institutions.id",
-            "publishers": "locations.source.host_organization",
-            "sources": "locations.source.id",
+            "institutions": "authorships.institutions.lineage",
+            "publishers": "primary_location.source.host_organization_lineage",
+            "sources": "primary_location.source.id",
             "works": "id",
             "work-type": "type",
         }
