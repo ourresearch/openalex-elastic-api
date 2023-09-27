@@ -57,6 +57,8 @@ def single_entity_autocomplete(fields_dict, index_name, request):
                     | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
                     | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
                 )
+            elif index_name.startswith("works") and is_year(q):
+                s = s.filter("term", publication_year=q)
             else:
                 s = s.query("match_phrase_prefix", display_name__autocomplete=q)
         s = s.sort("-cited_by_count")
@@ -158,3 +160,11 @@ def filter_openalex_id(q, s):
     openalex_id = f"https://openalex.org/{normalized_id}"
     s = s.filter("term", ids__openalex=openalex_id)
     return s
+
+
+def is_year(q):
+    try:
+        if int(q) and len(q.strip()) == 4:
+            return True
+    except ValueError:
+        return False

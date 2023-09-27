@@ -6,7 +6,11 @@ from flask import Blueprint, request
 
 from authors.fields import fields_dict as authors_fields_dict
 from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
-from autocomplete.shared import search_canonical_id_full, single_entity_autocomplete
+from autocomplete.shared import (
+    is_year,
+    search_canonical_id_full,
+    single_entity_autocomplete,
+)
 from autocomplete.utils import (
     AUTOCOMPLETE_SOURCE,
     is_cached_autocomplete,
@@ -79,7 +83,9 @@ def autocomplete_full():
         # canonical id match
         s, canonical_id_found = search_canonical_id_full(s, q)
 
-        if not canonical_id_found:
+        if is_year(q) and not canonical_id_found:
+            s = s.query("term", publication_year=q)
+        elif not canonical_id_found:
             s = s.query(
                 Q("match_phrase_prefix", display_name__autocomplete=q)
                 | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
@@ -87,11 +93,11 @@ def autocomplete_full():
                 | Q("match_phrase_prefix", display_name_acronyms__autocomplete=q)
                 | Q("match_phrase_prefix", display_name_alternatives__autocomplete=q)
             )
-            s = s.sort("-cited_by_count")
-            s = s.source(AUTOCOMPLETE_SOURCE)
-            preference = clean_preference(q)
-            s = s.params(preference=preference)
 
+    s = s.sort("-cited_by_count")
+    s = s.source(AUTOCOMPLETE_SOURCE)
+    preference = clean_preference(q)
+    s = s.params(preference=preference)
     response = s.execute()
 
     result = OrderedDict()
