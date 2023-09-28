@@ -60,6 +60,16 @@ def autocomplete_full():
         "work": WORKS_INDEX,
         "work_type": "work-type",
     }
+    index_boosts = {
+        AUTHORS_INDEX: 3,
+        CONCEPTS_INDEX: 0.35,
+        FUNDERS_INDEX: 0.5,
+        INSTITUTIONS_INDEX: 2,
+        PUBLISHERS_INDEX: 0.15,
+        SOURCES_INDEX: 0.5,
+        WORKS_INDEX: 0.75,
+    }
+
     validate_full_autocomplete_params(request)
     q = request.args.get("q")
     hide_works = request.args.get("hide_works")
@@ -95,10 +105,28 @@ def autocomplete_full():
                 | Q("match_phrase_prefix", display_name_acronyms__autocomplete=q)
                 | Q("match_phrase_prefix", display_name_alternatives__autocomplete=q)
             )
+            # do not show repository
+            s = s.exclude("term", type="repository")
 
-    s = s.sort("-cited_by_count")
+            # boost by cited_by_count
+            s = s.query(
+                "function_score",
+                functions=[
+                    {
+                        "field_value_factor": {
+                            "field": "cited_by_count",
+                            "factor": 1,
+                            "modifier": "sqrt",
+                            "missing": 1,
+                        }
+                    }
+                ],
+                boost_mode="multiply",
+            )
+
     s = s.source(AUTOCOMPLETE_SOURCE)
     preference = clean_preference(q)
+    s = s.extra(indices_boost=index_boosts)
     s = s.params(preference=preference)
     response = s.execute()
 
