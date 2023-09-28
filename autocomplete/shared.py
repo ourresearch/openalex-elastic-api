@@ -163,10 +163,33 @@ def filter_openalex_id(q, s):
     return s
 
 
-def is_year_query(q):
-    # matches a year or a range of years, such as <1999, 2000-2005, 2006-, 2007-2009
-    pattern = re.compile(r"\b(?:\d{4}|-\d{4}|\d{4}-|\d{4}-\d{4}|[<>]\d{4})\b")
-    return bool(pattern.findall(q))
+def is_valid_year(year_str):
+    if len(year_str) != 4:
+        return False
+    try:
+        int(year_str)
+        return True
+    except ValueError:
+        return False
+
+
+def is_valid_year_range(year_range_str):
+    if len(year_range_str.split("-")) != 2:
+        return False
+    start_year, end_year = year_range_str.split("-")
+    return is_valid_year(start_year) and is_valid_year(end_year)
+
+
+def is_year_query(query_str):
+    """Check if a string matches a year or a range of years."""
+    if len(query_str) >= 1 and query_str[0] in ["<", "-", ">"]:
+        return is_valid_year(query_str[1:])
+    elif len(query_str) >= 1 and query_str[-1] == "-":
+        return is_valid_year(query_str[:-1])
+    elif "-" in query_str:
+        return is_valid_year_range(query_str)
+    else:
+        return is_valid_year(query_str)
 
 
 def get_year_filter_query(q):
