@@ -52,11 +52,6 @@ fields = [
         docstring="Filter for sources that have works that tend to be about a given Concept",
         documentation_link="https://docs.openalex.org/api-entities/concepts",
     ),
-    PhraseField(
-        param="publisher",
-        docstring="Filter by the publisher of a source",
-        documentation_link="https://docs.openalex.org/api-entities/publishers",
-    ),
     RangeField(param="apc_usd"),
     RangeField(param="apc_prices.price"),
     RangeField(param="cited_by_count"),
