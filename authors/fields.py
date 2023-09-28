@@ -83,7 +83,7 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#type",
     ),
     TermField(param="orcid", alias="ids.orcid"),
-    TermField(param="scopus", alias="ids.scopus"),
+    TermField(param="scopus", alias="ids.scopus.keyword"),
 ]
 
 fields_dict = {f.param: f for f in fields}
