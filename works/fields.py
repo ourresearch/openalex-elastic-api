@@ -379,6 +379,7 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#doi",
     ),
     TermField(param="doi_starts_with", custom_es_field="ids.doi"),
+    TermField(param="fulltext_origin", custom_es_field="fulltext_origin.keyword"),
     TermField(param="ids.mag", custom_es_field="ids.mag"),
     TermField(param="ids.pmid", custom_es_field="ids.pmid"),
     TermField(param="ids.pmcid", custom_es_field="ids.pmcid"),

@@ -2,8 +2,13 @@ import json
 
 from marshmallow import INCLUDE, Schema, fields, post_dump, pre_dump
 
-from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
-                          hide_relevance, relevance_score)
+from core.schemas import (
+    CountsByYearSchema,
+    GroupBySchema,
+    MetaSchema,
+    hide_relevance,
+    relevance_score,
+)
 
 
 class AuthorSchema(Schema):
@@ -177,6 +182,8 @@ class WorksSchema(Schema):
     apc_list = fields.Nested(APCSchema, dump_default=None)
     apc_paid = fields.Nested(APCSchema, dump_default=None)
     is_authors_truncated = fields.Bool(attribute="authorships_truncated")
+    has_fulltext = fields.Bool()
+    fulltext_origin = fields.Str()
     cited_by_count = fields.Int()
     biblio = fields.Nested(BiblioSchema)
     is_retracted = fields.Bool()
