@@ -54,15 +54,16 @@ def create_short_circuit_result(filter_key, return_value):
 
 def short_circuit_response(q):
     result = None
+    is_oa_filter = "open_access.is_oa"
     # open access
     if q and len(q) > 3 and "open access".startswith(q.lower()):
-        result = create_short_circuit_result("is_oa.open_access", True)
+        result = create_short_circuit_result(is_oa_filter, True)
 
     # closed access
     if q and len(q) > 4 and "closed access".startswith(q.lower()):
-        result = create_short_circuit_result("is_oa.open_access", False)
+        result = create_short_circuit_result(is_oa_filter, False)
     elif q and len(q) > 5 and "not open access".startswith(q.lower()):
-        result = create_short_circuit_result("is_oa.open_access", False)
+        result = create_short_circuit_result(is_oa_filter, False)
     return result
 
 
