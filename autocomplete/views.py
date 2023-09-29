@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
 import iso3166
-from elasticsearch_dsl import A, Q, Search
-from flask import Blueprint, request
+from elasticsearch_dsl import A, Search
+from flask import Blueprint, request, jsonify
 
 from authors.fields import fields_dict as authors_fields_dict
 from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
@@ -16,6 +16,11 @@ from autocomplete.utils import (
     AUTOCOMPLETE_SOURCE,
     is_cached_autocomplete,
     strip_punctuation,
+)
+from autocomplete.full import (
+    get_indices_and_boosts,
+    short_circuit_response,
+    build_full_search_query,
 )
 from autocomplete.validate import validate_full_autocomplete_params
 from concepts.fields import fields_dict as concepts_fields_dict
@@ -49,32 +54,12 @@ blueprint = Blueprint("complete", __name__)
     unless=lambda: not is_cached_autocomplete(request),
 )
 def autocomplete_full():
-    entities_to_indeces = {
-        "author": AUTHORS_INDEX,
-        "concept": CONCEPTS_INDEX,
-        "countries": "countries",
-        "institution": INSTITUTIONS_INDEX,
-        "funder": FUNDERS_INDEX,
-        "publisher": PUBLISHERS_INDEX,
-        "source": SOURCES_INDEX,
-        "work": WORKS_INDEX,
-        "work_type": "work-type",
-    }
-    index_boosts = {
-        AUTHORS_INDEX: 3,
-        CONCEPTS_INDEX: 0.35,
-        FUNDERS_INDEX: 0.5,
-        INSTITUTIONS_INDEX: 2,
-        PUBLISHERS_INDEX: 0.15,
-        SOURCES_INDEX: 0.5,
-        WORKS_INDEX: 0.75,
-    }
-
     validate_full_autocomplete_params(request)
     q = request.args.get("q")
     hide_works = request.args.get("hide_works")
     entity_type = request.args.get("entity_type")
 
+    entities_to_indeces, index_boosts = get_indices_and_boosts()
     if hide_works:
         entities_to_indeces.pop("work")
 
@@ -88,6 +73,11 @@ def autocomplete_full():
     else:
         index = ",".join(entities_to_indeces.values())
 
+    if q:
+        short_circuit_result = short_circuit_response(q)
+        if short_circuit_result:
+            return jsonify(short_circuit_result)
+
     s = Search(index=index)
 
     if q:
@@ -98,31 +88,7 @@ def autocomplete_full():
             query = get_year_filter_query(q)
             s = s.query(query)
         elif not canonical_id_found:
-            s = s.query(
-                Q("match_phrase_prefix", display_name__autocomplete=q)
-                | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
-                | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
-                | Q("match_phrase_prefix", display_name_acronyms__autocomplete=q)
-                | Q("match_phrase_prefix", display_name_alternatives__autocomplete=q)
-            )
-            # do not show repository
-            s = s.exclude("term", type="repository")
-
-            # boost by cited_by_count
-            s = s.query(
-                "function_score",
-                functions=[
-                    {
-                        "field_value_factor": {
-                            "field": "cited_by_count",
-                            "factor": 1,
-                            "modifier": "sqrt",
-                            "missing": 1,
-                        }
-                    }
-                ],
-                boost_mode="multiply",
-            )
+            s = build_full_search_query(q, s)
 
     s = s.source(AUTOCOMPLETE_SOURCE)
     preference = clean_preference(q)

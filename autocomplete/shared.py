@@ -1,4 +1,3 @@
-import re
 from collections import OrderedDict
 
 from elasticsearch_dsl import Q, Search
