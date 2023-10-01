@@ -3,6 +3,7 @@ from collections import OrderedDict
 from elasticsearch_dsl import Q
 
 import settings
+from autocomplete.shared import is_year_query
 
 
 def get_indices_and_boosts():
@@ -55,6 +56,8 @@ def create_short_circuit_result(filter_key, return_value):
 def short_circuit_response(q):
     result = None
     is_oa_filter = "open_access.is_oa"
+    year_filter = "publication_year"
+
     # open access
     if q and len(q) > 3 and "open access".startswith(q.lower()):
         result = create_short_circuit_result(is_oa_filter, True)
@@ -64,6 +67,10 @@ def short_circuit_response(q):
         result = create_short_circuit_result(is_oa_filter, False)
     elif q and len(q) > 5 and "not open access".startswith(q.lower()):
         result = create_short_circuit_result(is_oa_filter, False)
+
+    # year
+    if q and is_year_query(q):
+        result = create_short_circuit_result(year_filter, q)
     return result
 
 

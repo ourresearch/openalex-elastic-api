@@ -56,9 +56,6 @@ def single_entity_autocomplete(fields_dict, index_name, request):
                     | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
                     | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
                 )
-            elif index_name.startswith("works") and is_year_query(q):
-                query = get_year_filter_query(q)
-                s = s.query(query)
             else:
                 s = s.query("match_phrase_prefix", display_name__autocomplete=q)
         s = s.sort("-cited_by_count")
@@ -189,28 +186,3 @@ def is_year_query(query_str):
         return is_valid_year_range(query_str)
     else:
         return is_valid_year(query_str)
-
-
-def get_year_filter_query(q):
-    if "<" in q:
-        value = q[1:]
-        query = Q("range", publication_year={"lt": int(value)})
-    elif q.startswith("-"):
-        value = q[1:]
-        query = Q("range", publication_year={"lte": int(value)})
-    elif ">" in q:
-        value = q[1:]
-        query = Q("range", publication_year={"gt": int(value)})
-    elif q.endswith("-"):
-        value = q[:-1]
-        query = Q("range", publication_year={"gte": int(value)})
-    elif "-" in q:
-        values = q.strip().split("-")
-        left_value = values[0]
-        right_value = values[1]
-        query = Q(
-            "range", publication_year={"gte": int(left_value), "lte": int(right_value)}
-        )
-    else:
-        query = Q("term", publication_year=q)
-    return query
