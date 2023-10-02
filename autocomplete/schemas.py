@@ -179,6 +179,7 @@ class AutoCompleteSchema(Schema):
             "institutions": "authorships.institutions.lineage",
             "publishers": "primary_location.source.host_organization_lineage",
             "sources": "primary_location.source.id",
+            "work-sdgs": "sustainable_development_goals.id",
             "works": "id",
             "work-type": "type",
         }

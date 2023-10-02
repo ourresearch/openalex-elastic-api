@@ -14,6 +14,7 @@ def get_indices_and_boosts():
         "institution": settings.INSTITUTIONS_INDEX,
         "funder": settings.FUNDERS_INDEX,
         "publisher": settings.PUBLISHERS_INDEX,
+        "sdgs": "work-sdgs",
         "source": settings.SOURCES_INDEX,
         "work": settings.WORKS_INDEX,
         "work_type": "work-type",
