@@ -44,38 +44,45 @@ def create_filter_result(filter_key, return_value):
 
 
 def get_filter_result(q):
-    filter_result = None
-    is_oa_filter = "open_access.is_oa"
-    paratext_filter = "is_paratext"
-    retracted_filter = "is_retracted"
-    year_filter = "publication_year"
+    if not q:
+        return None
 
-    # open access
-    if q and len(q) > 3 and "open access".startswith(q.lower()):
-        filter_result = create_filter_result(is_oa_filter, True)
+    # special cases
+    if is_year_query(q):
+        return create_filter_result("publication_year", q)
 
-    # closed access
-    if q and len(q) > 4 and "closed access".startswith(q.lower()):
-        filter_result = create_filter_result(is_oa_filter, False)
-    elif q and len(q) > 5 and "not open access".startswith(q.lower()):
-        filter_result = create_filter_result(is_oa_filter, False)
+    # general
+    filters = [
+        {
+            "name": "open_access.is_oa",
+            "matches": [
+                {"query": "open access", "min_len": 3, "value": True},
+                {"query": "closed access", "min_len": 5, "value": False},
+                {"query": "not open access", "min_len": 6, "value": False},
+            ],
+        },
+        {
+            "name": "is_paratext",
+            "matches": [
+                {"query": "paratext", "min_len": 3, "value": True},
+                {"query": "not paratext", "min_len": 6, "value": False},
+            ],
+        },
+        {
+            "name": "is_retracted",
+            "matches": [
+                {"query": "retracted", "min_len": 3, "value": True},
+                {"query": "not retracted", "min_len": 5, "value": False},
+            ],
+        },
+    ]
 
-    # paratext
-    if q and len(q) > 3 and "paratext".startswith(q.lower()):
-        filter_result = create_filter_result(paratext_filter, True)
-    elif q and len(q) > 6 and "not paratext".startswith(q.lower()):
-        filter_result = create_filter_result(paratext_filter, False)
+    for filter in filters:
+        for match in filter["matches"]:
+            if len(q) >= match["min_len"] and match["query"].startswith(q.lower()):
+                return create_filter_result(filter["name"], match["value"])
 
-    # retracted
-    if q and len(q) > 3 and "retracted".startswith(q.lower()):
-        filter_result = create_filter_result(retracted_filter, True)
-    elif q and len(q) > 6 and "not retracted".startswith(q.lower()):
-        filter_result = create_filter_result(retracted_filter, False)
-
-    # year
-    if q and is_year_query(q):
-        filter_result = create_filter_result(year_filter, q)
-    return filter_result
+    return None
 
 
 def build_full_search_query(q, s):
