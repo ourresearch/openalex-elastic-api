@@ -129,6 +129,18 @@ def get_filter_results(q):
         },
     ]
 
+    # oa statuses
+    statuses = [
+        "closed",
+        "bronze",
+        "hybrid",
+        "green",
+        "gold",
+    ]
+    for status in statuses:
+        if len(q) >= 3 and status.startswith(q.lower()):
+            filter_results.append(create_filter_result("oa_status", status))
+
     for filter in filters:
         for match in filter["matches"]:
             if len(q) >= match["min_len"] and match["query"].startswith(q.lower()):
