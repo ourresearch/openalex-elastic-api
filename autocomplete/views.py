@@ -17,7 +17,7 @@ from autocomplete.utils import (
 )
 from autocomplete.full import (
     get_indices_and_boosts,
-    short_circuit_response,
+    get_filter_result,
     build_full_search_query,
 )
 from autocomplete.validate import validate_full_autocomplete_params
@@ -56,6 +56,7 @@ def autocomplete_full():
     q = request.args.get("q")
     hide_works = request.args.get("hide_works")
     entity_type = request.args.get("entity_type")
+    filter_result = None
 
     entities_to_indeces, index_boosts = get_indices_and_boosts()
     if hide_works:
@@ -71,11 +72,6 @@ def autocomplete_full():
     else:
         index = ",".join(entities_to_indeces.values())
 
-    if q:
-        short_circuit_result = short_circuit_response(q)
-        if short_circuit_result:
-            return jsonify(short_circuit_result)
-
     s = Search(index=index)
 
     if q:
@@ -83,6 +79,7 @@ def autocomplete_full():
         s, canonical_id_found = search_canonical_id_full(s, q)
         if not canonical_id_found:
             s = build_full_search_query(q, s)
+            filter_result = get_filter_result(q)
 
     s = s.source(AUTOCOMPLETE_SOURCE)
     preference = clean_preference(q)
@@ -102,7 +99,14 @@ def autocomplete_full():
     author_hint = request.args.get("author_hint")
     if author_hint:
         message_schema.context["author_hint"] = author_hint
-    return message_schema.dump(result)
+    results = message_schema.dump(result)
+    if filter_result:
+        # add as first result
+        results["results"].insert(0, filter_result)
+        # remove last result if we have 11 results
+        if len(results["results"]) == 11:
+            results["results"].pop()
+    return results
 
 
 @blueprint.route("/autocomplete/authors")

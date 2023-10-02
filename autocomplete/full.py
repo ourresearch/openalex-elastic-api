@@ -30,48 +30,52 @@ def get_indices_and_boosts():
     return entities_to_indeces, index_boosts
 
 
-def create_short_circuit_result(filter_key, return_value):
-    result = OrderedDict()
-    result["meta"] = {
-        "count": 1,
-        "db_response_time_ms": 0,
-        "page": 1,
-        "per_page": 10,
-    }
-    result["results"] = [
-        OrderedDict(
-            {
-                "id": return_value,
-                "display_name": None,
-                "cited_by_count": 0,
-                "entity_type": "filter",
-                "external_id": None,
-                "filter_key": filter_key,
-            }
-        )
-    ]
-    return result
+def create_filter_result(filter_key, return_value):
+    return OrderedDict(
+        {
+            "id": return_value,
+            "display_name": None,
+            "cited_by_count": 0,
+            "entity_type": "filter",
+            "external_id": None,
+            "filter_key": filter_key,
+        }
+    )
 
 
-def short_circuit_response(q):
-    result = None
+def get_filter_result(q):
+    filter_result = None
     is_oa_filter = "open_access.is_oa"
+    paratext_filter = "is_paratext"
+    retracted_filter = "is_retracted"
     year_filter = "publication_year"
 
     # open access
     if q and len(q) > 3 and "open access".startswith(q.lower()):
-        result = create_short_circuit_result(is_oa_filter, True)
+        filter_result = create_filter_result(is_oa_filter, True)
 
     # closed access
     if q and len(q) > 4 and "closed access".startswith(q.lower()):
-        result = create_short_circuit_result(is_oa_filter, False)
+        filter_result = create_filter_result(is_oa_filter, False)
     elif q and len(q) > 5 and "not open access".startswith(q.lower()):
-        result = create_short_circuit_result(is_oa_filter, False)
+        filter_result = create_filter_result(is_oa_filter, False)
+
+    # paratext
+    if q and len(q) > 3 and "paratext".startswith(q.lower()):
+        filter_result = create_filter_result(paratext_filter, True)
+    elif q and len(q) > 6 and "not paratext".startswith(q.lower()):
+        filter_result = create_filter_result(paratext_filter, False)
+
+    # retracted
+    if q and len(q) > 3 and "retracted".startswith(q.lower()):
+        filter_result = create_filter_result(retracted_filter, True)
+    elif q and len(q) > 6 and "not retracted".startswith(q.lower()):
+        filter_result = create_filter_result(retracted_filter, False)
 
     # year
     if q and is_year_query(q):
-        result = create_short_circuit_result(year_filter, q)
-    return result
+        filter_result = create_filter_result(year_filter, q)
+    return filter_result
 
 
 def build_full_search_query(q, s):
