@@ -43,22 +43,65 @@ def create_filter_result(filter_key, return_value):
     )
 
 
-def get_filter_result(q):
+def get_filter_results(q):
     if not q:
-        return None
+        return []
+
+    filter_results = []
 
     # special cases
     if is_year_query(q):
-        return create_filter_result("publication_year", q)
+        filter_results.append(create_filter_result("publication_year", q))
 
     # general
     filters = [
         {
-            "name": "open_access.is_oa",
+            "name": "has_abstract",
             "matches": [
-                {"query": "open access", "min_len": 3, "value": True},
-                {"query": "closed access", "min_len": 5, "value": False},
-                {"query": "not open access", "min_len": 6, "value": False},
+                {"query": "has abstract", "min_len": 5, "value": True},
+                {"query": "no abstract", "min_len": 5, "value": False},
+            ],
+        },
+        {
+            "name": "has_doi",
+            "matches": [
+                {"query": "has doi", "min_len": 5, "value": True},
+                {"query": "no doi", "min_len": 4, "value": False},
+            ],
+        },
+        {
+            "name": "has_fulltext",
+            "matches": [
+                {"query": "has fulltext", "min_len": 5, "value": True},
+                {"query": "no fulltext", "min_len": 4, "value": False},
+            ],
+        },
+        {
+            "name": "has_orcid",
+            "matches": [
+                {"query": "has orcid", "min_len": 5, "value": True},
+                {"query": "no orcid", "min_len": 4, "value": False},
+            ],
+        },
+        {
+            "name": "has_pmid",
+            "matches": [
+                {"query": "has pmid", "min_len": 5, "value": True},
+                {"query": "no pmid", "min_len": 4, "value": False},
+            ],
+        },
+        {
+            "name": "has_pmcid",
+            "matches": [
+                {"query": "has pmcid", "min_len": 5, "value": True},
+                {"query": "no pmcid", "min_len": 4, "value": False},
+            ],
+        },
+        {
+            "name": "has_pdf_url",
+            "matches": [
+                {"query": "has pdf url", "min_len": 5, "value": True},
+                {"query": "no pdf url", "min_len": 4, "value": False},
             ],
         },
         {
@@ -66,6 +109,7 @@ def get_filter_result(q):
             "matches": [
                 {"query": "paratext", "min_len": 3, "value": True},
                 {"query": "not paratext", "min_len": 6, "value": False},
+                {"query": "no paratext", "min_len": 5, "value": False},
             ],
         },
         {
@@ -75,14 +119,24 @@ def get_filter_result(q):
                 {"query": "not retracted", "min_len": 5, "value": False},
             ],
         },
+        {
+            "name": "open_access.is_oa",
+            "matches": [
+                {"query": "open access", "min_len": 3, "value": True},
+                {"query": "closed access", "min_len": 5, "value": False},
+                {"query": "not open access", "min_len": 6, "value": False},
+            ],
+        },
     ]
 
     for filter in filters:
         for match in filter["matches"]:
             if len(q) >= match["min_len"] and match["query"].startswith(q.lower()):
-                return create_filter_result(filter["name"], match["value"])
+                filter_results.append(
+                    create_filter_result(filter["name"], match["value"])
+                )
 
-    return None
+    return filter_results
 
 
 def build_full_search_query(q, s):
