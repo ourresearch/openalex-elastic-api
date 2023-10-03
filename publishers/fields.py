@@ -19,7 +19,7 @@ fields = [
     OpenAlexIDField(
         param="ids.openalex",
         custom_es_field="ids.openalex.lower",
-        docstring="The OpenAlex ID for a publisher",
+        docstring="The OpenAlex ID for the publisher",
         documentation_link="https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
     ),
     OpenAlexIDField(param="lineage"),

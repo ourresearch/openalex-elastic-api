@@ -12,7 +12,7 @@ fields = [
     BooleanField(
         param="has_orcid",
         custom_es_field="ids.orcid",
-        docstring="Filter for only authors that have an ORCID",
+        docstring="The author has an ORCID",
         documentation_link="https://docs.openalex.org/api-entities/authors/author-object#orcid",
     ),
     BooleanField(
@@ -35,7 +35,7 @@ fields = [
     OpenAlexIDField(param="concepts.id", custom_es_field="x_concepts.id"),
     OpenAlexIDField(
         param="last_known_institution.id",
-        docstring="Filter by the institution most recently affiliated with an author",
+        docstring="The institution to which the author most recently claimed affiliation",
         documentation_link="https://docs.openalex.org/api-entities/authors/author-object#last_known_institution",
     ),
     OpenAlexIDField(
@@ -44,14 +44,14 @@ fields = [
     ),
     OpenAlexIDField(
         param="ids.openalex",
-        docstring="The OpenAlex ID for an author",
+        docstring="The OpenAlex ID for the author",
         documentation_link="https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
     ),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(
         param="x_concepts.id",
-        docstring="Filter for authors who tend to publish about a certain Concept",
+        docstring="Concepts that the author tends to publish about",
         documentation_link="https://docs.openalex.org/api-entities/concepts",
     ),
     RangeField(param="summary_stats.2yr_mean_citedness"),
@@ -69,7 +69,7 @@ fields = [
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(
         param="last_known_institution.country_code",
-        docstring="Filter for authors with a last known institution in a certain country",
+        docstring="The country of the author's last known institution",
         documentation_link="https://docs.openalex.org/api-entities/authors/author-object#last_known_institution",
     ),
     TermField(
@@ -79,7 +79,7 @@ fields = [
     TermField(param="last_known_institution.ror"),
     TermField(
         param="last_known_institution.type",
-        docstring='Filter for authors with a last known institution of a certain type. For example, universities are type "Education," and hospitals are type "Healthcare".',
+        docstring="""The type of the author's last known institution. For example, universities are type "Education," and hospitals are type "Healthcare".""",
         documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#type",
     ),
     TermField(param="orcid", alias="ids.orcid"),

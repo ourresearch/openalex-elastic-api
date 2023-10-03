@@ -27,7 +27,7 @@ fields = [
     OpenAlexIDField(
         param="ids.openalex",
         custom_es_field="ids.openalex.lower",
-        docstring="The OpenAlex ID for an institution",
+        docstring="The OpenAlex ID for the institution",
         documentation_link="https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
     ),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
@@ -45,7 +45,7 @@ fields = [
     OpenAlexIDField(param="repositories.id", custom_es_field="repositories.id"),
     OpenAlexIDField(
         param="x_concepts.id",
-        docstring="Filter for institutions that have works that tend to be about a given Concept",
+        docstring="Concepts that the institution's works tend to be about",
         documentation_link="https://docs.openalex.org/api-entities/concepts",
     ),
     RangeField(param="summary_stats.2yr_mean_citedness"),
@@ -61,7 +61,7 @@ fields = [
     ),
     TermField(
         param="country_code",
-        docstring="Filter by country",
+        docstring="The country where the institution is located",
         documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#country_code",
     ),
     TermField(
@@ -72,7 +72,7 @@ fields = [
     TermField(param="ror", alias="ror"),
     TermField(
         param="type",
-        docstring='Filter by institution type. For example, universities are type "Education," and hospitals are type "Healthcare".',
+        docstring="""The institution's type. For example, universities are type "Education," and hospitals are type "Healthcare".""",
         documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#type",
     ),
 ]

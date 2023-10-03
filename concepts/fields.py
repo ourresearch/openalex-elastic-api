@@ -22,7 +22,7 @@ fields = [
     OpenAlexIDField(
         param="ids.openalex",
         custom_es_field="ids.openalex.lower",
-        docstring="The OpenAlex ID for a concept",
+        docstring="The OpenAlex ID for the concept",
         documentation_link="https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
     ),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
@@ -33,7 +33,7 @@ fields = [
     RangeField(param="summary_stats.i10_index"),
     RangeField(
         param="level",
-        docstring="Filter by concept level. Lower-level concepts are more general, and higher-level concepts are more specific.",
+        docstring="The concept's level. Lower-level concepts are more general, and higher-level concepts are more specific.",
         documentation_link="https://docs.openalex.org/api-entities/concepts/concept-object#level",
     ),
     RangeField(param="works_count"),
