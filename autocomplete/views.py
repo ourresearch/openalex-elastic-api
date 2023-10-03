@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import iso3166
 from elasticsearch_dsl import A, Search
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
 
 from authors.fields import fields_dict as authors_fields_dict
 from autocomplete.schemas import MessageAutocompleteCustomSchema, MessageSchema
@@ -96,9 +96,6 @@ def autocomplete_full():
     }
     result["results"] = response
     message_schema = MessageSchema()
-    author_hint = request.args.get("author_hint")
-    if author_hint:
-        message_schema.context["author_hint"] = author_hint
     results = message_schema.dump(result)
     if filter_results:
         max_results_count = 10 - len(filter_results)
@@ -118,12 +115,9 @@ def autocomplete_full():
     unless=lambda: not is_cached_autocomplete(request),
 )
 def autocomplete_authors():
-    author_hint = request.args.get("author_hint")
     index_name = AUTHORS_INDEX
     result = single_entity_autocomplete(authors_fields_dict, index_name, request)
     message_schema = MessageSchema()
-    if author_hint:
-        message_schema.context["author_hint"] = author_hint
     return message_schema.dump(result)
 
 

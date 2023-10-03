@@ -34,11 +34,7 @@ class AutoCompleteSchema(Schema):
     @pre_dump(pass_many=True)
     def author_hint_prep(self, data, many, **kwargs):
         """This function sets the author hint."""
-        author_hint = self.context.get("author_hint")
-        if author_hint and author_hint == "institution":
-            data = self.set_author_hint_institution(data)
-        else:
-            data = self.set_author_hint_highly_cited(data)
+        data = self.set_author_hint_institution(data)
         return data
 
     def set_author_hint_institution(self, data):
@@ -60,30 +56,6 @@ class AutoCompleteSchema(Schema):
                     obj.hint = institution_display_name
                 else:
                     obj.hint = None
-        return data
-
-    @staticmethod
-    def set_author_hint_highly_cited(data):
-        ms = MultiSearch(index=WORKS_INDEX)
-        has_hints = False
-        # first pass, build search hints with multisearch
-        for d in data:
-            if "authors" in d.meta.index:
-                has_hints = True
-                s = Search()
-                s = s.filter("term", authorships__author__id=d.id)
-                s = s.sort("-cited_by_count")
-                s = s.extra(size=1)
-                s = s.source(["title", "publication_year"])
-                s = s.params(preference=d.id)
-                ms = ms.add(s)
-
-        # second pass, map hints to objects
-        if has_hints:
-            responses = ms.execute()
-            for d, response in zip(data, responses):
-                for h in response:
-                    d.hint = f"{h.title} ({h.publication_year})"
         return data
 
     def get_location(self, obj):
