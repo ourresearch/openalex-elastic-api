@@ -6,12 +6,9 @@ from iso4217 import Currency
 import settings
 from core.exceptions import APIQueryParamsError
 from core.search import full_search_query
-from core.utils import (
-    get_display_names,
-    get_display_names_award_ids,
-    get_display_names_host_organization,
-    get_display_names_sdgs,
-)
+from core.utils import (get_display_names, get_display_names_award_ids,
+                        get_display_names_host_organization,
+                        get_display_names_sdgs)
 from countries import COUNTRIES_BY_CONTINENT, GLOBAL_SOUTH_COUNTRIES
 
 

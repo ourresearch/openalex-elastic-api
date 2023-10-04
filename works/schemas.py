@@ -2,14 +2,8 @@ import json
 
 from marshmallow import INCLUDE, Schema, fields, post_dump, pre_dump
 
-from core.schemas import (
-    CountsByYearSchema,
-    GroupBySchema,
-    GroupBysSchema,
-    MetaSchema,
-    hide_relevance,
-    relevance_score,
-)
+from core.schemas import (CountsByYearSchema, GroupBySchema, GroupBysSchema,
+                          MetaSchema, hide_relevance, relevance_score)
 
 
 class AuthorSchema(Schema):

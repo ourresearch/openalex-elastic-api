@@ -5,32 +5,20 @@ from elasticsearch_dsl import Q, Search
 
 import settings
 from core.cursor import decode_cursor, get_next_cursor
-from core.exceptions import APIPaginationError, APIQueryParamsError, APISearchError
+from core.exceptions import (APIPaginationError, APIQueryParamsError,
+                             APISearchError)
 from core.export import is_group_by_export
 from core.filter import filter_records
-from core.group_by import (
-    filter_group_by,
-    get_group_by_results,
-    get_group_by_results_external_ids,
-    group_by_best_open_version,
-    group_by_continent,
-    group_by_records,
-    group_by_version,
-    search_group_by_results,
-    validate_group_by,
-    parse_group_by,
-)
+from core.group_by import (filter_group_by, get_group_by_results,
+                           get_group_by_results_external_ids,
+                           group_by_best_open_version, group_by_continent,
+                           group_by_records, group_by_version, parse_group_by,
+                           search_group_by_results, validate_group_by)
 from core.paginate import Paginate
 from core.search import check_is_search_query, full_search_query
 from core.sort import get_sort_fields
-from core.utils import (
-    clean_preference,
-    get_all_groupby_values,
-    get_field,
-    map_filter_params,
-    map_sort_params,
-    set_number_param,
-)
+from core.utils import (clean_preference, get_all_groupby_values, get_field,
+                        map_filter_params, map_sort_params, set_number_param)
 from core.validate import validate_export_format, validate_params
 
 

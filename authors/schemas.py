@@ -1,8 +1,8 @@
 from marshmallow import INCLUDE, Schema, fields, post_dump
 
-from core.schemas import (CountsByYearSchema, GroupBySchema, MetaSchema,
-                          SummaryStatsSchema, XConceptsSchema, hide_relevance,
-                          relevance_score)
+from core.schemas import (CountsByYearSchema, GroupBySchema, GroupBysSchema,
+                          MetaSchema, SummaryStatsSchema, XConceptsSchema,
+                          hide_relevance, relevance_score)
 
 
 class IDsSchema(Schema):
@@ -64,6 +64,7 @@ class MessageSchema(Schema):
     meta = fields.Nested(MetaSchema)
     results = fields.Nested(AuthorsSchema, many=True)
     group_by = fields.Nested(GroupBySchema, many=True)
+    group_bys = fields.Nested(GroupBysSchema, many=True)
 
     class Meta:
         ordered = True
