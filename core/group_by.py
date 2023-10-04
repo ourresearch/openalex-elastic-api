@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import iso3166
 import pycountry
 from elasticsearch_dsl import A, MultiSearch, Q, Search
@@ -8,13 +6,16 @@ from iso4217 import Currency
 import settings
 from core.exceptions import APIQueryParamsError
 from core.search import full_search_query
-from core.utils import (get_display_names, get_display_names_award_ids,
-                        get_display_names_host_organization,
-                        get_display_names_sdgs)
+from core.utils import (
+    get_display_names,
+    get_display_names_award_ids,
+    get_display_names_host_organization,
+    get_display_names_sdgs,
+)
 from countries import COUNTRIES_BY_CONTINENT, GLOBAL_SOUTH_COUNTRIES
 
 
-def group_by_records(field, s, sort_params, known, per_page, q):
+def group_by_records(group_by, field, s, sort_params, known, per_page, q):
     group_by_field = field.alias if field.alias else field.es_sort_field()
     if type(field).__name__ == "RangeField" or type(field).__name__ == "BooleanField":
         missing = -111
@@ -71,21 +72,21 @@ def group_by_records(field, s, sort_params, known, per_page, q):
                     size=per_page,
                     shard_size=shard_size,
                 )
-            s.aggs.bucket("groupby", a)
+            s.aggs.bucket(f"groupby_{group_by}", a)
     elif "is_global_south" in field.param:
         country_codes = [c["country_code"] for c in GLOBAL_SOUTH_COUNTRIES]
         exists = A("filter", Q("terms", **{group_by_field: country_codes}))
         not_exists = A("filter", ~Q("terms", **{group_by_field: country_codes}))
-        s.aggs.bucket("exists", exists)
-        s.aggs.bucket("not_exists", not_exists)
+        s.aggs.bucket(f"exists_{group_by}", exists)
+        s.aggs.bucket(f"not_exists_{group_by}", not_exists)
     elif (
         field.param in settings.EXTERNAL_ID_FIELDS
         or field.param in settings.BOOLEAN_TEXT_FIELDS
     ):
         exists = A("filter", Q("exists", field=group_by_field))
         not_exists = A("filter", ~Q("exists", field=group_by_field))
-        s.aggs.bucket("exists", exists)
-        s.aggs.bucket("not_exists", not_exists)
+        s.aggs.bucket(f"exists_{group_by}", exists)
+        s.aggs.bucket(f"not_exists_{group_by}", not_exists)
     elif known:
         a = A(
             "terms",
@@ -93,7 +94,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
             size=per_page,
             shard_size=shard_size,
         )
-        s.aggs.bucket("groupby", a)
+        s.aggs.bucket(f"groupby_{group_by}", a)
     else:
         a = A(
             "terms",
@@ -102,7 +103,7 @@ def group_by_records(field, s, sort_params, known, per_page, q):
             size=per_page,
             shard_size=shard_size,
         )
-        s.aggs.bucket("groupby", a)
+        s.aggs.bucket(f"groupby_{group_by}", a)
     return s
 
 
@@ -167,22 +168,12 @@ def group_by_continent(
     group_by_results = sorted(
         group_by_results, key=lambda d: d["doc_count"], reverse=True
     )
-
-    result = OrderedDict()
-    result["meta"] = {
-        "count": len(group_by_results),
-        "db_response_time_ms": took,
-        "page": 1,
-        "per_page": 10,
-    }
-    result["results"] = []
-    result["group_by"] = group_by_results
-    return result
+    return group_by_results
 
 
 def get_group_by_results(group_by, response):
     group_by_results = []
-    buckets = response.aggregations.groupby.buckets
+    buckets = response.aggregations[f"groupby_{group_by}"].buckets
     if (
         group_by.endswith(".id")
         or group_by.endswith("host_organization")
@@ -326,9 +317,9 @@ def keep_publisher_buckets(buckets):
     return buckets_to_keep
 
 
-def get_group_by_results_external_ids(response):
-    exists_count = response.aggregations.exists.doc_count
-    not_exists_count = response.aggregations.not_exists.doc_count
+def get_group_by_results_external_ids(response, group_by):
+    exists_count = response.aggregations[f"exists_{group_by}"].doc_count
+    not_exists_count = response.aggregations[f"not_exists_{group_by}"].doc_count
 
     group_by_results = [
         {
@@ -387,17 +378,7 @@ def group_by_version(
     group_by_results = sorted(
         group_by_results, key=lambda d: d["doc_count"], reverse=True
     )
-
-    result = OrderedDict()
-    result["meta"] = {
-        "count": len(group_by_results),
-        "db_response_time_ms": took,
-        "page": 1,
-        "per_page": 10,
-    }
-    result["results"] = []
-    result["group_by"] = group_by_results
-    return result
+    return group_by_results
 
 
 def group_by_best_open_version(
@@ -447,71 +428,6 @@ def group_by_best_open_version(
         group_by_results, key=lambda d: d["doc_count"], reverse=True
     )
 
-    result = OrderedDict()
-    result["meta"] = {
-        "count": len(group_by_results),
-        "db_response_time_ms": took,
-        "page": 1,
-        "per_page": 10,
-    }
-    result["results"] = []
-    result["group_by"] = group_by_results
-    return result
-
-
-def group_by_records_transform(field, parent_index, sort_params):
-    index_name = get_transform_index(field, parent_index)
-    s = Search(index=index_name)
-    s = s.query("match_all").extra(size=200)
-
-    if sort_params:
-        for key, order in sort_params.items():
-            if key == "count" and order == "desc":
-                s = s.sort("-doc_count")
-            elif key == "count" and order == "asc":
-                s = s.sort("doc_count")
-            elif key == "key" and order == "desc":
-                s = s.sort("-key")
-            elif key == "key" and order == "asc":
-                s = s.sort("key")
-    else:
-        s = s.sort("-doc_count")
-    return s
-
-
-def get_group_by_results_transform(group_by, response):
-    group_by_results = []
-    if group_by.endswith(".id"):
-        keys = []
-        for b in response:
-            if b.key:
-                keys.append(b.key)
-        ids_to_display_names = get_display_names(keys)
-        for b in response:
-            if b.key:
-                key = b.key
-                key_display_name = ids_to_display_names.get(b.key)
-            else:
-                key = "unknown"
-                key_display_name = "unknown"
-            group_by_results.append(
-                {
-                    "key": key,
-                    "key_display_name": key_display_name,
-                    "doc_count": b.doc_count,
-                }
-            )
-    else:
-        for b in response:
-            if b.key == -111:
-                key = "unknown"
-            elif "key_as_string" in b:
-                key = b.key_as_string
-            else:
-                key = b.key
-            group_by_results.append(
-                {"key": key, "key_display_name": key, "doc_count": b.doc_count}
-            )
     return group_by_results
 
 
@@ -580,25 +496,6 @@ def search_group_by_results(group_by, q, result, per_page):
             if q.lower() in str(r["key_display_name"]).lower():
                 filtered_result.append(r)
     return filtered_result
-
-
-def is_transform(field, parent_index, filter_params):
-    if filter_params:
-        return False
-
-    for transform in settings.TRANSFORMS:
-        if field.param == transform["field"] and parent_index.startswith(
-            transform["parent_index"]
-        ):
-            return True
-
-
-def get_transform_index(field, parent_index):
-    for transform in settings.TRANSFORMS:
-        if field.param == transform["field"] and parent_index.startswith(
-            transform["parent_index"]
-        ):
-            return transform["index_name"]
 
 
 def country_search(q):
@@ -672,3 +569,17 @@ def validate_group_by(field):
         )
     elif field.param in settings.DO_NOT_GROUP_BY:
         raise APIQueryParamsError(f"Cannot group by {field.param}.")
+
+
+def parse_group_by(group_by):
+    known = False
+    if ":" in group_by:
+        group_by_split = group_by.split(":")
+        if len(group_by_split) == 2 and group_by_split[1].lower() == "known":
+            group_by = group_by_split[0]
+            known = True
+        elif len(group_by_split) == 2 and group_by_split[1].lower() != "known":
+            raise APIQueryParamsError(
+                "The only valid filter for a group_by param is 'known', which hides the unknown group from results."
+            )
+    return group_by, known

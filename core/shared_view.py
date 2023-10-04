@@ -5,22 +5,32 @@ from elasticsearch_dsl import Q, Search
 
 import settings
 from core.cursor import decode_cursor, get_next_cursor
-from core.exceptions import (APIPaginationError, APIQueryParamsError,
-                             APISearchError)
+from core.exceptions import APIPaginationError, APIQueryParamsError, APISearchError
 from core.export import is_group_by_export
 from core.filter import filter_records
-from core.group_by import (filter_group_by, get_group_by_results,
-                           get_group_by_results_external_ids,
-                           get_group_by_results_transform,
-                           group_by_best_open_version, group_by_continent,
-                           group_by_records, group_by_records_transform,
-                           group_by_version, is_transform,
-                           search_group_by_results, validate_group_by)
+from core.group_by import (
+    filter_group_by,
+    get_group_by_results,
+    get_group_by_results_external_ids,
+    group_by_best_open_version,
+    group_by_continent,
+    group_by_records,
+    group_by_version,
+    search_group_by_results,
+    validate_group_by,
+    parse_group_by,
+)
 from core.paginate import Paginate
 from core.search import check_is_search_query, full_search_query
 from core.sort import get_sort_fields
-from core.utils import (clean_preference, get_all_groupby_values, get_field,
-                        map_filter_params, map_sort_params, set_number_param)
+from core.utils import (
+    clean_preference,
+    get_all_groupby_values,
+    get_field,
+    map_filter_params,
+    map_sort_params,
+    set_number_param,
+)
 from core.validate import validate_export_format, validate_params
 
 
@@ -33,6 +43,8 @@ def shared_view(request, fields_dict, index_name, default_sort):
     validate_export_format(request.args.get("format"))
     filter_params = map_filter_params(request.args.get("filter"))
     group_by = request.args.get("group_by") or request.args.get("group-by")
+    group_bys_param = request.args.get("group_bys") or request.args.get("group-bys")
+    group_bys = group_bys_param.split(",") if group_bys_param else []
     page = set_number_param(request, "page", 1)
     sample = request.args.get("sample", type=int)
     seed = request.args.get("seed")
@@ -129,54 +141,52 @@ def shared_view(request, fields_dict, index_name, default_sort):
         s = s.sort(*default_sort)
 
     # group by
-    transform = False
     if group_by:
         s = s.params(preference=clean_preference(group_by))
-        # handle known filter
-        known = False
-        if ":" in group_by:
-            group_by_split = group_by.split(":")
-            if len(group_by_split) == 2 and group_by_split[1].lower() == "known":
-                group_by = group_by_split[0]
-                known = True
-            elif len(group_by_split) == 2 and group_by_split[1].lower() != "known":
-                raise APIQueryParamsError(
-                    "The only valid filter for a group_by param is 'known', which hides the unknown group from results."
-                )
+        group_by, known = parse_group_by(group_by)
         field = get_field(fields_dict, group_by)
-        transform = is_transform(field, index_name, filter_params)
         validate_group_by(field)
-        if transform:
-            s = group_by_records_transform(field, index_name, sort_params)
-        elif "continent" in field.param:
-            return group_by_continent(
-                field, index_name, search, filter_params, filter_records, fields_dict, q
-            )
-        elif field.param == "version":
-            return group_by_version(
-                field, index_name, search, filter_params, filter_records, fields_dict, q
-            )
-        elif field.param == "best_open_version":
-            return group_by_best_open_version(
-                field, index_name, search, filter_params, filter_records, fields_dict, q
-            )
-        else:
-            s = group_by_records(field, s, sort_params, known, per_page, q)
+        if not any(
+            keyword in field.param
+            for keyword in ["continent", "version", "best_open_version"]
+        ):
+            s = group_by_records(group_by, field, s, sort_params, known, per_page, q)
+    elif group_bys:
+        s = s.params(preference=clean_preference(group_by))
+        for group_by_item in group_bys:
+            group_by_item, known = parse_group_by(group_by_item)
+            field = get_field(fields_dict, group_by_item)
+            validate_group_by(field)
+            if not any(
+                keyword in field.param
+                for keyword in ["continent", "version", "best_open_version"]
+            ):
+                s = group_by_records(
+                    group_by_item, field, s, sort_params, known, per_page, q
+                )
 
     if group_by:
         if group_by and q and q != "''":
             s = filter_group_by(field, group_by, q, s)
         response = s.execute()
+
+        # group by count
         if (
             group_by in settings.EXTERNAL_ID_FIELDS
             or group_by in settings.BOOLEAN_TEXT_FIELDS
             or "is_global_south" in group_by
         ):
             count = 2
-        elif transform:
-            count = len(response)
+        elif any(
+            keyword in field.param
+            for keyword in ["continent", "version", "best_open_version"]
+        ):
+            count = 3
         else:
-            count = len(response.aggregations.groupby.buckets)
+            count = len(response.aggregations[f"groupby_{group_by}"].buckets)
+    elif group_bys:
+        response = s.execute()
+        count = 0
     else:
         try:
             response = s[paginate.start : paginate.end].execute()
@@ -202,15 +212,29 @@ def shared_view(request, fields_dict, index_name, default_sort):
     if cursor:
         result["meta"]["next_cursor"] = get_next_cursor(response)
 
+    # handle group by results
     if group_by:
         if (
             group_by in settings.EXTERNAL_ID_FIELDS
             or group_by in settings.BOOLEAN_TEXT_FIELDS
             or "is_global_south" in group_by
         ):
-            result["group_by"] = get_group_by_results_external_ids(response)
-        elif transform:
-            result["group_by"] = get_group_by_results_transform(group_by, response)
+            result["group_by"] = get_group_by_results_external_ids(response, group_by)
+        elif "continent" in field.param:
+            result["group_by"] = group_by_continent(
+                field, index_name, search, filter_params, filter_records, fields_dict, q
+            )
+            result["meta"]["count"] = len(result["group_by"])
+        elif field.param == "version":
+            result["group_by"] = group_by_version(
+                field, index_name, search, filter_params, filter_records, fields_dict, q
+            )
+            result["meta"]["count"] = len(result["group_by"])
+        elif field.param == "best_open_version":
+            result["group_by"] = group_by_best_open_version(
+                field, index_name, search, filter_params, filter_records, fields_dict, q
+            )
+            result["meta"]["count"] = len(result["group_by"])
         else:
             result["group_by"] = get_group_by_results(group_by, response)
         # add in zero values
@@ -230,6 +254,74 @@ def shared_view(request, fields_dict, index_name, default_sort):
                         "doc_count": 0,
                     }
                 )
+    elif group_bys:
+        result["group_bys"] = []
+        for group_by_item in group_bys:
+            group_by_item, known = parse_group_by(group_by_item)
+            if (
+                group_by_item in settings.EXTERNAL_ID_FIELDS
+                or group_by_item in settings.BOOLEAN_TEXT_FIELDS
+                or "is_global_south" in group_by_item
+            ):
+                item_results = get_group_by_results_external_ids(
+                    response, group_by_item
+                )
+            elif "continent" in group_by_item:
+                item_results = group_by_continent(
+                    field,
+                    index_name,
+                    search,
+                    filter_params,
+                    filter_records,
+                    fields_dict,
+                    q,
+                )
+            elif group_by_item == "version":
+                item_results = group_by_version(
+                    field,
+                    index_name,
+                    search,
+                    filter_params,
+                    filter_records,
+                    fields_dict,
+                    q,
+                )
+            elif group_by_item == "best_open_version":
+                item_results = group_by_best_open_version(
+                    field,
+                    index_name,
+                    search,
+                    filter_params,
+                    filter_records,
+                    fields_dict,
+                    q,
+                )
+            else:
+                item_results = get_group_by_results(group_by_item, response)
+            # add in zero values
+            ignore_values = set([item["key"] for item in item_results])
+            if known:
+                ignore_values.add("unknown")
+                ignore_values.add("-111")
+            possible_buckets = get_all_groupby_values(
+                entity=index_name.split("-")[0], field=group_by_item
+            )
+            for bucket in possible_buckets:
+                if bucket["key"] not in ignore_values:
+                    item_results.append(
+                        {
+                            "key": bucket["key"],
+                            "key_display_name": bucket["key_display_name"],
+                            "doc_count": 0,
+                        }
+                    )
+            result["group_bys"].append(
+                {
+                    "group_by_key": group_by_item,
+                    "groups": item_results,
+                }
+            )
+        result["group_by"] = []
     else:
         result["group_by"] = []
         result["results"] = response
@@ -237,11 +329,21 @@ def shared_view(request, fields_dict, index_name, default_sort):
     if "q" in request.args:
         result["meta"]["q"] = q
 
+    # search group bys
     if group_by and q and q != "''":
         result["group_by"] = search_group_by_results(
             group_by, q, result["group_by"], per_page
         )
         result["meta"]["count"] = len(result["group_by"])
+    elif group_bys and q and q != "''":
+        for group_by_item in group_bys:
+            group_by_item, known = parse_group_by(group_by_item)
+            for group in result["group_bys"]:
+                if group["group_by_key"] == group_by_item:
+                    group["groups"] = search_group_by_results(
+                        group_by_item, q, group["groups"], per_page
+                    )
+                    break
     if settings.DEBUG:
         print(s.to_dict())
     return result

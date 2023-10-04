@@ -8,6 +8,8 @@ def validate_params(request):
         "format",
         "group_by",
         "group-by",
+        "group_bys",
+        "group-bys",
         "mailto",
         "page",
         "per_page",

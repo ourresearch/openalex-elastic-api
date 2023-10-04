@@ -54,14 +54,6 @@ BOOLEAN_TEXT_FIELDS = [
     "has_references",
 ]
 
-TRANSFORMS = [
-    {
-        "field": "x_concepts.id",
-        "index_name": "authors-transform-x-concepts-id",
-        "parent_index": "authors",
-    }
-]
-
 CONTINENT_PARAMS = {
     "africa": "Q15",
     "antarctica": "Q51",

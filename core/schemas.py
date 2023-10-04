@@ -22,6 +22,14 @@ class GroupBySchema(Schema):
         ordered = True
 
 
+class GroupBysSchema(Schema):
+    group_by_key = fields.Str()
+    groups = fields.Nested(GroupBySchema, many=True)
+
+    class Meta:
+        ordered = True
+
+
 class HistogramSchema(Schema):
     min = fields.Integer()
     key = fields.Integer()
