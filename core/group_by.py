@@ -211,6 +211,11 @@ def get_group_by_results(group_by, response):
                 key_display_name = "unknown"
             else:
                 key_display_name = ids_to_display_names.get(b.key)
+            if (
+                group_by == "authorships.author.id" or group_by == "author.id"
+            ) and not key_display_name:
+                # do not include null authors
+                continue
             group_by_results.append(
                 {
                     "key": b.key,
