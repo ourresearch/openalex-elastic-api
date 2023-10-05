@@ -16,7 +16,7 @@ from autocomplete.utils import (
     strip_punctuation,
 )
 from autocomplete.full import (
-    get_indices_and_boosts,
+    get_indices,
     get_filter_results,
     build_full_search_query,
 )
@@ -58,7 +58,7 @@ def autocomplete_full():
     entity_type = request.args.get("entity_type")
     filter_results = []
 
-    entities_to_indeces, index_boosts = get_indices_and_boosts()
+    entities_to_indeces = get_indices()
     if hide_works:
         entities_to_indeces.pop("work")
 
@@ -70,7 +70,15 @@ def autocomplete_full():
                 f"{entity_type} is not a valid value for parameter entity_type. Valid entity_type values are: {', '.join(entities_to_indeces.keys())}."
             )
     else:
-        index = ",".join(entities_to_indeces.values())
+        if q and len(q) <= 5:
+            entities = [
+                entity
+                for entity in entities_to_indeces.values()
+                if "institution" in entity or "author" in entity
+            ]
+            index = ",".join(entities)
+        else:
+            index = ",".join(entities_to_indeces.values())
 
     s = Search(index=index)
 
@@ -83,7 +91,6 @@ def autocomplete_full():
 
     s = s.source(AUTOCOMPLETE_SOURCE)
     preference = clean_preference(q)
-    s = s.extra(indices_boost=index_boosts)
     s = s.params(preference=preference)
     response = s.execute()
 

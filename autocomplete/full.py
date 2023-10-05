@@ -6,7 +6,7 @@ import settings
 from autocomplete.shared import is_year_query
 
 
-def get_indices_and_boosts():
+def get_indices():
     entities_to_indeces = {
         "author": settings.AUTHORS_INDEX,
         "concept": settings.CONCEPTS_INDEX,
@@ -19,16 +19,7 @@ def get_indices_and_boosts():
         "work": settings.WORKS_INDEX,
         "work_type": "work-type",
     }
-    index_boosts = {
-        settings.AUTHORS_INDEX: 3,
-        settings.CONCEPTS_INDEX: 0.35,
-        settings.FUNDERS_INDEX: 0.5,
-        settings.INSTITUTIONS_INDEX: 2,
-        settings.PUBLISHERS_INDEX: 0.15,
-        settings.SOURCES_INDEX: 0.5,
-        settings.WORKS_INDEX: 0.75,
-    }
-    return entities_to_indeces, index_boosts
+    return entities_to_indeces
 
 
 def create_filter_result(filter_key, return_value):
@@ -153,7 +144,7 @@ def get_filter_results(q):
 
 
 def build_full_search_query(q, s):
-    s = s.query(
+    s = s.filter(
         Q("match_phrase_prefix", display_name__autocomplete=q)
         | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
         | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
@@ -162,19 +153,5 @@ def build_full_search_query(q, s):
     )
     # do not show repository
     s = s.exclude("term", type="repository")
-    # boost by cited_by_count
-    s = s.query(
-        "function_score",
-        functions=[
-            {
-                "field_value_factor": {
-                    "field": "cited_by_count",
-                    "factor": 1,
-                    "modifier": "sqrt",
-                    "missing": 1,
-                }
-            }
-        ],
-        boost_mode="multiply",
-    )
+    s = s.sort("-cited_by_count")
     return s
