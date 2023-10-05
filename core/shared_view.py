@@ -5,20 +5,32 @@ from elasticsearch_dsl import Q, Search
 
 import settings
 from core.cursor import decode_cursor, get_next_cursor
-from core.exceptions import (APIPaginationError, APIQueryParamsError,
-                             APISearchError)
+from core.exceptions import APIPaginationError, APIQueryParamsError, APISearchError
 from core.export import is_group_by_export
 from core.filter import filter_records
-from core.group_by import (filter_group_by, get_group_by_results,
-                           get_group_by_results_external_ids,
-                           group_by_best_open_version, group_by_continent,
-                           group_by_records, group_by_version, parse_group_by,
-                           search_group_by_results, validate_group_by)
+from core.group_by import (
+    filter_group_by,
+    get_group_by_results,
+    get_group_by_results_external_ids,
+    group_by_best_open_version,
+    group_by_continent,
+    group_by_records,
+    group_by_version,
+    parse_group_by,
+    search_group_by_results,
+    validate_group_by,
+)
 from core.paginate import Paginate
 from core.search import check_is_search_query, full_search_query
 from core.sort import get_sort_fields
-from core.utils import (clean_preference, get_all_groupby_values, get_field,
-                        map_filter_params, map_sort_params, set_number_param)
+from core.utils import (
+    clean_preference,
+    get_all_groupby_values,
+    get_field,
+    map_filter_params,
+    map_sort_params,
+    set_number_param,
+)
 from core.validate import validate_export_format, validate_params
 
 
@@ -134,9 +146,10 @@ def shared_view(request, fields_dict, index_name, default_sort):
         group_by, known = parse_group_by(group_by)
         field = get_field(fields_dict, group_by)
         validate_group_by(field)
-        if not any(
-            keyword in field.param
-            for keyword in ["continent", "version", "best_open_version"]
+        if (
+            field.param != "best_open_version"
+            or field.param != "version"
+            or "continent" not in field.param
         ):
             s = group_by_records(group_by, field, s, sort_params, known, per_page, q)
     elif group_bys:
@@ -145,9 +158,10 @@ def shared_view(request, fields_dict, index_name, default_sort):
             group_by_item, known = parse_group_by(group_by_item)
             field = get_field(fields_dict, group_by_item)
             validate_group_by(field)
-            if not any(
-                keyword in field.param
-                for keyword in ["continent", "version", "best_open_version"]
+            if (
+                field.param != "best_open_version"
+                or field.param != "version"
+                or "continent" not in field.param
             ):
                 s = group_by_records(
                     group_by_item, field, s, sort_params, known, per_page, q
@@ -171,7 +185,9 @@ def shared_view(request, fields_dict, index_name, default_sort):
         ):
             count = 3
         else:
-            count = len(response.aggregations[f"groupby_{group_by}"].buckets)
+            count = len(
+                response.aggregations[f"groupby_{group_by.replace('.', '_')}"].buckets
+            )
     elif group_bys:
         response = s.execute()
         count = 0

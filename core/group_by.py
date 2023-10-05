@@ -6,14 +6,20 @@ from iso4217 import Currency
 import settings
 from core.exceptions import APIQueryParamsError
 from core.search import full_search_query
-from core.utils import (get_display_names, get_display_names_award_ids,
-                        get_display_names_host_organization,
-                        get_display_names_sdgs)
+from core.utils import (
+    get_display_names,
+    get_display_names_award_ids,
+    get_display_names_host_organization,
+    get_display_names_sdgs,
+)
 from countries import COUNTRIES_BY_CONTINENT, GLOBAL_SOUTH_COUNTRIES
 
 
 def group_by_records(group_by, field, s, sort_params, known, per_page, q):
     group_by_field = field.alias if field.alias else field.es_sort_field()
+    bucket_key = f"groupby_{group_by.replace('.', '_')}"
+    exists_bucket_key = f"exists_{group_by.replace('.', '_')}"
+    not_exists_bucket_key = f"not_exists_{group_by.replace('.', '_')}"
     if type(field).__name__ == "RangeField" or type(field).__name__ == "BooleanField":
         missing = -111
     else:
@@ -69,21 +75,21 @@ def group_by_records(group_by, field, s, sort_params, known, per_page, q):
                     size=per_page,
                     shard_size=shard_size,
                 )
-            s.aggs.bucket(f"groupby_{group_by}", a)
+            s.aggs.bucket(bucket_key, a)
     elif "is_global_south" in field.param:
         country_codes = [c["country_code"] for c in GLOBAL_SOUTH_COUNTRIES]
         exists = A("filter", Q("terms", **{group_by_field: country_codes}))
         not_exists = A("filter", ~Q("terms", **{group_by_field: country_codes}))
-        s.aggs.bucket(f"exists_{group_by}", exists)
-        s.aggs.bucket(f"not_exists_{group_by}", not_exists)
+        s.aggs.bucket(exists_bucket_key, exists)
+        s.aggs.bucket(not_exists_bucket_key, not_exists)
     elif (
         field.param in settings.EXTERNAL_ID_FIELDS
         or field.param in settings.BOOLEAN_TEXT_FIELDS
     ):
         exists = A("filter", Q("exists", field=group_by_field))
         not_exists = A("filter", ~Q("exists", field=group_by_field))
-        s.aggs.bucket(f"exists_{group_by}", exists)
-        s.aggs.bucket(f"not_exists_{group_by}", not_exists)
+        s.aggs.bucket(exists_bucket_key, exists)
+        s.aggs.bucket(not_exists_bucket_key, not_exists)
     elif known:
         a = A(
             "terms",
@@ -91,7 +97,7 @@ def group_by_records(group_by, field, s, sort_params, known, per_page, q):
             size=per_page,
             shard_size=shard_size,
         )
-        s.aggs.bucket(f"groupby_{group_by}", a)
+        s.aggs.bucket(bucket_key, a)
     else:
         a = A(
             "terms",
@@ -100,7 +106,7 @@ def group_by_records(group_by, field, s, sort_params, known, per_page, q):
             size=per_page,
             shard_size=shard_size,
         )
-        s.aggs.bucket(f"groupby_{group_by}", a)
+        s.aggs.bucket(bucket_key, a)
     return s
 
 
@@ -170,7 +176,7 @@ def group_by_continent(
 
 def get_group_by_results(group_by, response):
     group_by_results = []
-    buckets = response.aggregations[f"groupby_{group_by}"].buckets
+    buckets = response.aggregations[f"groupby_{group_by.replace('.', '_')}"].buckets
     if (
         group_by.endswith(".id")
         or group_by.endswith("host_organization")
@@ -315,8 +321,12 @@ def keep_publisher_buckets(buckets):
 
 
 def get_group_by_results_external_ids(response, group_by):
-    exists_count = response.aggregations[f"exists_{group_by}"].doc_count
-    not_exists_count = response.aggregations[f"not_exists_{group_by}"].doc_count
+    exists_count = response.aggregations[
+        f"exists_{group_by.replace('.', '_')}"
+    ].doc_count
+    not_exists_count = response.aggregations[
+        f"not_exists_{group_by.replace('.', '_')}"
+    ].doc_count
 
     group_by_results = [
         {
