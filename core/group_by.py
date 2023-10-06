@@ -489,6 +489,7 @@ def filter_group_by(field, group_by, q, s):
         or group_by.endswith("publisher_lineage")
         or group_by == "repository"
         or group_by == "language"
+        or group_by == "sustainable_development_goals.id"
     ):
         return s
     else:
