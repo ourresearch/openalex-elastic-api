@@ -250,7 +250,9 @@ def shared_view(request, fields_dict, index_name, default_sort):
             entity=index_name.split("-")[0], field=group_by
         )
         for bucket in possible_buckets:
-            if bucket["key"] not in ignore_values:
+            if bucket["key"] not in ignore_values and not bucket["key"].startswith(
+                "http://metadata.un.org"
+            ):
                 result["group_by"].append(
                     {
                         "key": bucket["key"],
