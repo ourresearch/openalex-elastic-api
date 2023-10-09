@@ -274,46 +274,51 @@ class SearchOpenAlex:
         )
 
 
-def full_search_query(index_name, search):
+def full_search_query(index_name, search_terms):
+    search_terms = search_terms.strip().replace("/", " ")
     if index_name.lower().startswith("authors"):
         search_oa = SearchOpenAlex(
-            search_terms=search,
+            search_terms=search_terms,
             secondary_field="display_name_alternatives",
             is_author_name_query=True,
         )
     elif index_name.lower().startswith("concepts"):
-        search_oa = SearchOpenAlex(search_terms=search, secondary_field="description")
+        search_oa = SearchOpenAlex(
+            search_terms=search_terms, secondary_field="description"
+        )
     elif index_name.lower().startswith("funders"):
         search_oa = SearchOpenAlex(
-            search_terms=search,
+            search_terms=search_terms,
             secondary_field="alternate_titles",
             tertiary_field="description",
         )
     elif index_name.lower().startswith("institutions"):
         search_oa = SearchOpenAlex(
-            search_terms=search,
+            search_terms=search_terms,
             secondary_field="display_name_alternatives",
             tertiary_field="display_name_acronyms",
         )
     elif index_name.lower().startswith("publishers"):
         search_oa = SearchOpenAlex(
-            search_terms=search,
+            search_terms=search_terms,
             secondary_field="alternate_titles",
         )
     elif index_name.lower().startswith("venues") or index_name.lower().startswith(
         "sources"
     ):
         search_oa = SearchOpenAlex(
-            search_terms=search,
+            search_terms=search_terms,
             secondary_field="alternate_titles",
             tertiary_field="abbreviated_title",
         )
     elif index_name.lower().startswith("works"):
         search_oa = SearchOpenAlex(
-            search_terms=search, secondary_field="abstract", tertiary_field="fulltext"
+            search_terms=search_terms,
+            secondary_field="abstract",
+            tertiary_field="fulltext",
         )
     else:
-        search_oa = SearchOpenAlex(search_terms=search)
+        search_oa = SearchOpenAlex(search_terms=search_terms)
     search_query = search_oa.build_query()
     return search_query
 
