@@ -5,7 +5,7 @@ from elasticsearch_dsl import Q, Search
 
 import settings
 from core.cursor import decode_cursor, get_next_cursor
-from core.exceptions import APIPaginationError, APIQueryParamsError, APISearchError
+from core.exceptions import APIPaginationError, APIQueryParamsError
 from core.export import is_group_by_export
 from core.filter import filter_records
 from core.group_by import (
@@ -197,8 +197,6 @@ def shared_view(request, fields_dict, index_name, default_sort):
         except RequestError as e:
             if "search_after has" in str(e) and "but sort has" in str(e):
                 raise APIPaginationError("Cursor value is invalid.")
-            else:
-                raise APISearchError("Something went wrong.")
         count = s.count()
 
     if sample and sample < count:
