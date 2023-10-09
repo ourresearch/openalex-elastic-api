@@ -60,6 +60,7 @@ class SearchOpenAlex:
         """Searches with 'and' and phrase queries, with phrase boosted by 2."""
         if self.is_boolean_search() or self.has_phrase():
             self.remove_wildcard_characters()
+            self.clean_search_terms()
             return Q(
                 "query_string",
                 query=self.search_terms,
@@ -79,6 +80,7 @@ class SearchOpenAlex:
         """Searches primary and secondary fields."""
         if self.is_boolean_search() or self.has_phrase():
             self.remove_wildcard_characters()
+            self.clean_search_terms()
             return Q(
                 "query_string",
                 query=self.search_terms,
@@ -139,6 +141,7 @@ class SearchOpenAlex:
 
         if self.is_boolean_search() or self.has_phrase():
             self.remove_wildcard_characters()
+            self.clean_search_terms()
             return (
                 Q(
                     "query_string",
@@ -273,9 +276,15 @@ class SearchOpenAlex:
             self.search_terms.replace("*", "").replace("?", "").replace("~", "")
         )
 
+    def clean_search_terms(self):
+        self.search_terms = self.search_terms.strip().replace("/", " ")
+        if self.search_terms.lower().endswith(
+            "and"
+        ) or self.search_terms.lower().endswith("not"):
+            self.search_terms = self.search_terms[:-3].strip()
+
 
 def full_search_query(index_name, search_terms):
-    search_terms = search_terms.strip().replace("/", " ")
     if index_name.lower().startswith("authors"):
         search_oa = SearchOpenAlex(
             search_terms=search_terms,
