@@ -1,12 +1,15 @@
 import iso3166
 import pycountry
-from elasticsearch_dsl import A, MultiSearch, Q, Search
+from elasticsearch_dsl import A, Q
 from iso4217 import Currency
 
 import settings
+from core.custom_group_bys import (
+    group_by_continent,
+    group_by_version,
+    group_by_best_open_version,
+)
 from core.exceptions import APIQueryParamsError
-from core.filter import filter_records
-from core.search import full_search_query
 from core.utils import (
     get_display_names,
     get_display_names_award_ids,
@@ -16,7 +19,7 @@ from core.utils import (
     get_all_groupby_values,
 )
 from core.preference import clean_preference
-from countries import COUNTRIES_BY_CONTINENT, GLOBAL_SOUTH_COUNTRIES
+from countries import GLOBAL_SOUTH_COUNTRIES
 
 
 def group_by_records(group_by, field, s, sort_params, known, per_page, q):
@@ -112,68 +115,6 @@ def group_by_records(group_by, field, s, sort_params, known, per_page, q):
         )
         s.aggs.bucket(bucket_key, a)
     return s
-
-
-def group_by_continent(field, index_name, search, filter_params, fields_dict, q):
-    group_by_results = []
-    took = 0
-    ms = MultiSearch(index=index_name)
-    for continent in COUNTRIES_BY_CONTINENT:
-        s = Search()
-        if search and search != '""':
-            search_query = full_search_query(index_name, search)
-            s = s.query(search_query)
-
-        # filter
-        if filter_params:
-            s = filter_records(fields_dict, filter_params, s)
-        s = s.extra(track_total_hits=True)
-        country_codes = [c["country_code"] for c in COUNTRIES_BY_CONTINENT[continent]]
-        s = s.filter("terms", **{field.es_field(): country_codes})
-        ms = ms.add(s)
-
-    responses = ms.execute()
-
-    for continent, response in zip(COUNTRIES_BY_CONTINENT.keys(), responses):
-        if not q or q and q.lower() in continent.lower():
-            group_by_results.append(
-                {
-                    "key": settings.CONTINENT_PARAMS.get(
-                        continent.lower().replace(" ", "_")
-                    ),
-                    "key_display_name": continent,
-                    "doc_count": response.hits.total.value,
-                }
-            )
-        took = took + response.took
-
-    # get unknown
-    s = Search(index=index_name)
-    if search and search != '""':
-        search_query = full_search_query(index_name, search)
-        s = s.query(search_query)
-
-    # filter
-    if filter_params:
-        s = filter_records(fields_dict, filter_params, s)
-    s = s.query(~Q("exists", field=field.es_field()))
-    response = s.execute()
-    unknown_count = s.count()
-    if (unknown_count and not q) or (unknown_count and q and q.lower() in "unknown"):
-        group_by_results.append(
-            {
-                "key": "unknown",
-                "key_display_name": "unknown",
-                "doc_count": unknown_count,
-            }
-        )
-    took = took + response.took
-
-    # sort by count
-    group_by_results = sorted(
-        group_by_results, key=lambda d: d["doc_count"], reverse=True
-    )
-    return group_by_results
 
 
 def get_group_by_results(group_by, response):
@@ -347,99 +288,6 @@ def get_group_by_results_external_ids(response, group_by):
             "doc_count": not_exists_count,
         },
     ]
-    return group_by_results
-
-
-def group_by_version(field, index_name, search, filter_params, fields_dict, q):
-    group_by_results = []
-    took = 0
-    ms = MultiSearch(index=index_name)
-    for version in settings.VERSIONS:
-        s = Search()
-        if search and search != '""':
-            search_query = full_search_query(index_name, search)
-            s = s.query(search_query)
-
-        # filter
-        if filter_params:
-            s = filter_records(fields_dict, filter_params, s)
-        s = s.extra(track_total_hits=True)
-        if version == "null":
-            s = s.filter(~Q("exists", field="locations.version"))
-        else:
-            kwargs1 = {"locations.version": version}
-            s = s.query(Q("term", **kwargs1))
-        ms = ms.add(s)
-
-    responses = ms.execute()
-
-    for version, response in zip(settings.VERSIONS, responses):
-        version = "unknown" if version == "null" else version
-        key_display_name = "unknown" if version == "null" else version
-        if not q or q and q.lower() in version.lower():
-            group_by_results.append(
-                {
-                    "key": version,
-                    "key_display_name": key_display_name,
-                    "doc_count": response.hits.total.value,
-                }
-            )
-        took = took + response.took
-
-    # sort by count
-    group_by_results = sorted(
-        group_by_results, key=lambda d: d["doc_count"], reverse=True
-    )
-    return group_by_results
-
-
-def group_by_best_open_version(
-    field, index_name, search, filter_params, fields_dict, q
-):
-    group_by_results = []
-    took = 0
-    ms = MultiSearch(index=index_name)
-    versions = ["any", "acceptedOrPublished", "published"]
-    for version in versions:
-        s = Search()
-        if search and search != '""':
-            search_query = full_search_query(index_name, search)
-            s = s.query(search_query)
-
-        # filter
-        if filter_params:
-            s = filter_records(fields_dict, filter_params, s)
-        s = s.extra(track_total_hits=True)
-        submitted_query = Q("term", best_oa_location__version="submittedVersion")
-        accepted_query = Q("term", best_oa_location__version="acceptedVersion")
-        published_query = Q("term", best_oa_location__version="publishedVersion")
-        if version == "any":
-            query = submitted_query | accepted_query | published_query
-        elif version == "acceptedOrPublished":
-            query = accepted_query | published_query
-        elif version == "published":
-            query = published_query
-        ms = ms.add(s.filter(query))
-
-    responses = ms.execute()
-
-    for version, response in zip(versions, responses):
-        key_display_name = version
-        if not q or q and q.lower() in version.lower():
-            group_by_results.append(
-                {
-                    "key": version,
-                    "key_display_name": key_display_name,
-                    "doc_count": response.hits.total.value,
-                }
-            )
-        took = took + response.took
-
-    # sort by count
-    group_by_results = sorted(
-        group_by_results, key=lambda d: d["doc_count"], reverse=True
-    )
-
     return group_by_results
 
 
