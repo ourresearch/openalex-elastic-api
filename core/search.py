@@ -277,7 +277,13 @@ class SearchOpenAlex:
         )
 
     def clean_search_terms(self):
-        self.search_terms = self.search_terms.strip().replace("/", " ")
+        self.search_terms = (
+            self.search_terms.strip()
+            .replace("/", " ")
+            .replace(":", " ")
+            .replace("[", "")
+            .replace("]", "")
+        )
         if self.search_terms.lower().endswith(
             "and"
         ) or self.search_terms.lower().endswith("not"):
