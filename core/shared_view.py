@@ -7,10 +7,14 @@ import settings
 from core.cursor import get_next_cursor, handle_cursor
 from core.exceptions import APIPaginationError, APIQueryParamsError
 from core.filter import filter_records
-from core.group_by import (add_zero_values, filter_group_by,
-                           handle_group_by_logic, parse_group_by,
-                           process_group_by_item,
-                           search_group_by_strings_with_q)
+from core.group_by import (
+    add_zero_values,
+    filter_group_by,
+    handle_group_by_logic,
+    parse_group_by,
+    process_group_by_item,
+    search_group_by_strings_with_q,
+)
 from core.paginate import get_pagination
 from core.params import parse_params
 from core.preference import clean_preference, set_preference_for_filter_search
@@ -145,6 +149,7 @@ def execute_search(s, params):
         except RequestError as e:
             if "search_after has" in str(e) and "sort has" in str(e):
                 raise APIPaginationError("Cursor value is invalid.")
+            raise e
     return response
 
 
