@@ -1,353 +1,237 @@
 from collections import OrderedDict
 
 from elasticsearch.exceptions import RequestError
-from elasticsearch_dsl import Q, Search
+from elasticsearch_dsl import Search
 
 import settings
-from core.cursor import decode_cursor, get_next_cursor
+from core.cursor import get_next_cursor, handle_cursor
 from core.exceptions import APIPaginationError, APIQueryParamsError
-from core.export import is_group_by_export
 from core.filter import filter_records
-from core.group_by import (
-    filter_group_by,
-    get_group_by_results,
-    get_group_by_results_external_ids,
-    group_by_best_open_version,
-    group_by_continent,
-    group_by_records,
-    group_by_version,
-    parse_group_by,
-    search_group_by_results,
-    validate_group_by,
-)
-from core.paginate import Paginate
+from core.group_by import (add_zero_values, filter_group_by,
+                           handle_group_by_logic, parse_group_by,
+                           process_group_by_item,
+                           search_group_by_strings_with_q)
+from core.paginate import get_pagination
+from core.params import parse_params
+from core.preference import clean_preference, set_preference_for_filter_search
 from core.search import check_is_search_query, full_search_query
-from core.sort import get_sort_fields
-from core.utils import (
-    clean_preference,
-    get_all_groupby_values,
-    get_field,
-    map_filter_params,
-    map_sort_params,
-    set_number_param,
-)
-from core.validate import validate_export_format, validate_params
+from core.sort import get_sort_fields, sort_with_cursor, sort_with_sample
+from core.utils import get_field
 
 
 def shared_view(request, fields_dict, index_name, default_sort):
     """Primary function used to search, filter, and aggregate across all entities."""
+    params = parse_params(request)
+    s = construct_query(params, fields_dict, index_name, default_sort)
+    response = execute_search(s, params)
+    result = format_response(response, params, index_name, fields_dict, s)
+    if settings.DEBUG:
+        print(s.to_dict())
+    return result
 
-    # params
-    validate_params(request)
-    cursor = request.args.get("cursor")
-    validate_export_format(request.args.get("format"))
-    filter_params = map_filter_params(request.args.get("filter"))
-    group_by = request.args.get("group_by") or request.args.get("group-by")
-    group_bys_param = request.args.get("group_bys") or request.args.get("group-bys")
-    group_bys = group_bys_param.split(",") if group_bys_param else []
-    page = set_number_param(request, "page", 1)
-    sample = request.args.get("sample", type=int)
-    seed = request.args.get("seed")
 
-    # set per_page
-    if is_group_by_export(request):
-        per_page = 200
-    elif not group_by:
-        per_page = set_number_param(request, "per-page", 25)
-    else:
-        per_page = set_number_param(request, "per-page", 200)
-    q = request.args.get("q")
-    search = request.args.get("search")
-    sort_params = map_sort_params(request.args.get("sort"))
-
+def construct_query(params, fields_dict, index_name, default_sort):
     s = Search(index=index_name)
+
+    s = set_source(index_name, s)
+
+    s = set_size(params, s)
+
+    s = set_cursor_pagination(params, s)
+
+    s = add_search_query(params, index_name, s)
+
+    s = apply_filters(params, fields_dict, s)
+
+    s = apply_sorting(params, fields_dict, default_sort, index_name, s)
+
+    s = apply_grouping(params, fields_dict, s)
+
+    s = filter_group_with_q(params, fields_dict, s)
+
+    return s
+
+
+def set_source(index_name, s):
     if index_name.startswith("works"):
         s = s.source(excludes=["abstract", "fulltext", "authorships_full"])
+    return s
 
-    # pagination
-    paginate = Paginate(group_by, page, per_page, sample)
-    paginate.validate()
 
-    if group_by:
+def set_size(params, s):
+    if params["group_by"]:
         s = s.extra(size=0)
     else:
-        s = s.extra(size=per_page)
+        s = s.extra(size=params["per_page"])
+    return s
 
-    if cursor and page != 1:
-        raise APIPaginationError("Cannot use page parameter with cursor.")
 
-    if cursor and cursor != "*":
-        decoded_cursor = decode_cursor(cursor)
-        s = s.extra(search_after=decoded_cursor)
+def set_cursor_pagination(params, s):
+    s = handle_cursor(params["cursor"], params["page"], s)
+    return s
 
-    # search
-    if search and search != '""':
-        search_query = full_search_query(index_name, search)
-        if sample:
+
+def add_search_query(params, index_name, s):
+    if params["search"] and params["search"] != '""':
+        search_query = full_search_query(index_name, params["search"])
+        if params["sample"]:
             s = s.filter(search_query)
         else:
             s = s.query(search_query)
-        s = s.params(preference=clean_preference(search))
+        s = s.params(preference=clean_preference(params["search"]))
+    return s
 
-    # filter
-    if filter_params:
-        s = filter_records(fields_dict, filter_params, s, sample)
 
-        # set preference key if search param present. ensures
-        preference = None
-        for filter_param in filter_params:
-            for key in filter_param:
-                if key in [
-                    "abstract.search",
-                    "display_name.search",
-                    "title.search",
-                    "raw_affiliation_string.search",
-                ]:
-                    preference = filter_param[key]
-        if preference:
-            s = s.params(preference=clean_preference(preference))
+def apply_filters(params, fields_dict, s):
+    if params["filters"]:
+        s = filter_records(fields_dict, params["filters"], s, params["sample"])
+        s = set_preference_for_filter_search(params["filters"], s)
+    return s
 
-    # sort
-    is_search_query = check_is_search_query(filter_params, search)
+
+def apply_sorting(params, fields_dict, default_sort, index_name, s):
+    is_search_query = check_is_search_query(params["filters"], params["search"])
+
     # do not allow sorting by relevance score without search query
-    if not is_search_query and sort_params and "relevance_score" in sort_params:
+    if not is_search_query and params["sort"] and "relevance_score" in params["sort"]:
         raise APIQueryParamsError(
             "Must include a search query (such as ?search=example or /filter=display_name.search:example) in order to sort by relevance_score."
         )
 
-    if sort_params and cursor:
-        # add default sort if paginating with a cursor
-        sort_fields = get_sort_fields(fields_dict, group_by, sort_params)
-        sort_fields_with_default = sort_fields + default_sort
-        s = s.sort(*sort_fields_with_default)
-    elif sample:
-        if seed:
-            random_query = Q(
-                "function_score",
-                functions={"random_score": {"seed": seed, "field": "_seq_no"}},
-            )
-            s = s.params(preference=clean_preference(seed))
-        else:
-            random_query = Q("function_score", functions={"random_score": {}})
-        s = s.query(random_query)
-    elif sort_params:
-        sort_fields = get_sort_fields(fields_dict, group_by, sort_params)
+    if params["sort"] and params["cursor"]:
+        s = sort_with_cursor(
+            default_sort, fields_dict, params["group_by"], s, params["sort"]
+        )
+    elif params["sample"]:
+        s = sort_with_sample(s, params["seed"])
+    elif params["sort"]:
+        sort_fields = get_sort_fields(fields_dict, params["group_by"], params["sort"])
         s = s.sort(*sort_fields)
-    elif is_search_query and not sort_params and index_name.startswith("works"):
+    elif is_search_query and not params["sort"] and index_name.startswith("works"):
         s = s.sort("_score", "publication_date", "id")
-    elif is_search_query and not sort_params:
+    elif is_search_query and not params["sort"]:
         s = s.sort("_score", "-works_count", "id")
-    elif not group_by:
+    elif not params["group_by"]:
         s = s.sort(*default_sort)
+    return s
 
-    # group by
-    if group_by:
-        s = s.params(preference=clean_preference(group_by))
-        group_by, known = parse_group_by(group_by)
+
+def apply_grouping(params, fields_dict, s):
+    if params["group_by"]:
+        group_by_item, _ = parse_group_by(params["group_by"])
+        s = process_group_by_item(fields_dict, group_by_item, s, params)
+    elif params["group_bys"]:
+        for group_by_item in params["group_bys"]:
+            group_by_item, _ = parse_group_by(group_by_item)
+            s = process_group_by_item(fields_dict, group_by_item, s, params)
+    return s
+
+
+def filter_group_with_q(params, fields_dict, s):
+    if params["group_by"] and params["q"] and params["q"] != "''":
+        group_by, _ = parse_group_by(params["group_by"])
         field = get_field(fields_dict, group_by)
-        validate_group_by(field)
-        if (
-            field.param != "best_open_version"
-            or field.param != "version"
-            or "continent" not in field.param
-        ):
-            s = group_by_records(group_by, field, s, sort_params, known, per_page, q)
-    elif group_bys:
-        s = s.params(preference=clean_preference(group_by))
-        for group_by_item in group_bys:
-            group_by_item, known = parse_group_by(group_by_item)
-            field = get_field(fields_dict, group_by_item)
-            validate_group_by(field)
-            if (
-                field.param != "best_open_version"
-                or field.param != "version"
-                or "continent" not in field.param
-            ):
-                s = group_by_records(
-                    group_by_item, field, s, sort_params, known, per_page, q
-                )
+        s = filter_group_by(field, group_by, params["q"], s)
+    return s
 
-    if group_by:
-        if group_by and q and q != "''":
-            s = filter_group_by(field, group_by, q, s)
-        response = s.execute()
 
-        # group by count
-        if (
-            group_by in settings.EXTERNAL_ID_FIELDS
-            or group_by in settings.BOOLEAN_TEXT_FIELDS
-            or "is_global_south" in group_by
-        ):
-            count = 2
-        elif any(
-            keyword in field.param
-            for keyword in ["continent", "version", "best_open_version"]
-        ):
-            count = 3
-        else:
-            count = len(
-                response.aggregations[f"groupby_{group_by.replace('.', '_')}"].buckets
-            )
-    elif group_bys:
+def execute_search(s, params):
+    paginate = get_pagination(params)
+    if params["group_by"]:
         response = s.execute()
-        count = 0
     else:
         try:
             response = s[paginate.start : paginate.end].execute()
         except RequestError as e:
-            if "search_after has" in str(e) and "but sort has" in str(e):
+            if "search_after has" in str(e) and "sort has" in str(e):
                 raise APIPaginationError("Cursor value is invalid.")
-        count = s.count()
+    return response
 
-    if sample and sample < count:
-        count = sample
 
+def format_response(response, params, index_name, fields_dict, s):
     result = OrderedDict()
-    result["meta"] = {
-        "count": count,
-        "db_response_time_ms": response.took,
-        "page": page if not cursor else None,
-        "per_page": per_page,
-    }
-    result["results"] = []
 
-    if cursor:
-        result["meta"]["next_cursor"] = get_next_cursor(response)
+    result["meta"] = format_meta(response, params, s)
 
-    # handle group by results
-    if group_by:
-        if (
-            group_by in settings.EXTERNAL_ID_FIELDS
-            or group_by in settings.BOOLEAN_TEXT_FIELDS
-            or "is_global_south" in group_by
-        ):
-            result["group_by"] = get_group_by_results_external_ids(response, group_by)
-        elif "continent" in field.param:
-            result["group_by"] = group_by_continent(
-                field, index_name, search, filter_params, filter_records, fields_dict, q
-            )
-            result["meta"]["count"] = len(result["group_by"])
-        elif field.param == "version":
-            result["group_by"] = group_by_version(
-                field, index_name, search, filter_params, filter_records, fields_dict, q
-            )
-            result["meta"]["count"] = len(result["group_by"])
-        elif field.param == "best_open_version":
-            result["group_by"] = group_by_best_open_version(
-                field, index_name, search, filter_params, filter_records, fields_dict, q
-            )
-            result["meta"]["count"] = len(result["group_by"])
-        else:
-            result["group_by"] = get_group_by_results(group_by, response)
-        # add in zero values
-        ignore_values = set([item["key"] for item in result["group_by"]])
-        if known:
-            ignore_values.add("unknown")
-            ignore_values.add("-111")
-        possible_buckets = get_all_groupby_values(
-            entity=index_name.split("-")[0], field=group_by
+    if params["group_by"]:
+        result["group_by"] = format_group_by(response, params, index_name, fields_dict)
+    elif params["group_bys"]:
+        result["group_bys"] = format_group_bys(
+            response, params, index_name, fields_dict
         )
-        for bucket in possible_buckets:
-            if bucket["key"] not in ignore_values and not bucket["key"].startswith(
-                "http://metadata.un.org"
-            ):
-                result["group_by"].append(
-                    {
-                        "key": bucket["key"],
-                        "key_display_name": bucket["key_display_name"],
-                        "doc_count": 0,
-                    }
-                )
-    elif group_bys:
-        result["group_bys"] = []
-        for group_by_item in group_bys:
-            group_by_item, known = parse_group_by(group_by_item)
-            if (
-                group_by_item in settings.EXTERNAL_ID_FIELDS
-                or group_by_item in settings.BOOLEAN_TEXT_FIELDS
-                or "is_global_south" in group_by_item
-            ):
-                item_results = get_group_by_results_external_ids(
-                    response, group_by_item
-                )
-            elif "continent" in group_by_item:
-                item_results = group_by_continent(
-                    field,
-                    index_name,
-                    search,
-                    filter_params,
-                    filter_records,
-                    fields_dict,
-                    q,
-                )
-            elif group_by_item == "version":
-                item_results = group_by_version(
-                    field,
-                    index_name,
-                    search,
-                    filter_params,
-                    filter_records,
-                    fields_dict,
-                    q,
-                )
-            elif group_by_item == "best_open_version":
-                item_results = group_by_best_open_version(
-                    field,
-                    index_name,
-                    search,
-                    filter_params,
-                    filter_records,
-                    fields_dict,
-                    q,
-                )
-            else:
-                item_results = get_group_by_results(group_by_item, response)
-            # add in zero values
-            ignore_values = set([item["key"] for item in item_results])
-            if known:
-                ignore_values.add("unknown")
-                ignore_values.add("-111")
-            possible_buckets = get_all_groupby_values(
-                entity=index_name.split("-")[0], field=group_by_item
-            )
-            for bucket in possible_buckets:
-                if bucket["key"] not in ignore_values:
-                    item_results.append(
-                        {
-                            "key": bucket["key"],
-                            "key_display_name": bucket["key_display_name"],
-                            "doc_count": 0,
-                        }
-                    )
-            result["group_bys"].append(
-                {
-                    "group_by_key": group_by_item,
-                    "groups": item_results,
-                }
-            )
         result["group_by"] = []
     else:
         result["group_by"] = []
         result["results"] = response
 
-    if "q" in request.args:
-        result["meta"]["q"] = q
+    if params["q"] and params["q"] != "''":
+        result = search_group_by_strings_with_q(params, result)
 
-    # search group bys
-    if group_by and q and q != "''":
-        result["group_by"] = search_group_by_results(
-            group_by, q, result["group_by"], per_page
-        )
-        result["meta"]["count"] = len(result["group_by"])
-    elif group_bys and q and q != "''":
-        for group_by_item in group_bys:
-            group_by_item, known = parse_group_by(group_by_item)
-            for group in result["group_bys"]:
-                if group["group_by_key"] == group_by_item:
-                    group["groups"] = search_group_by_results(
-                        group_by_item, q, group["groups"], per_page
-                    )
-                    break
-    if settings.DEBUG:
-        print(s.to_dict())
     return result
+
+
+def format_meta(response, params, s):
+    meta = {
+        "count": calculate_count(response, params, s),
+        "db_response_time_ms": response.took,
+        "page": params["page"] if not params["cursor"] else None,
+        "per_page": params["per_page"],
+    }
+
+    if params.get("cursor"):
+        meta["next_cursor"] = get_next_cursor(response)
+
+    return meta
+
+
+def format_group_by(response, params, index_name, fields_dict):
+    group_by, known = parse_group_by(params["group_by"])
+    group_by_data = handle_group_by_logic(
+        group_by, params, index_name, fields_dict, response
+    )
+    group_by_data = add_zero_values(group_by_data, known, index_name, group_by)
+    return group_by_data
+
+
+def format_group_bys(response, params, index_name, fields_dict):
+    group_bys_data = []
+
+    for group_by_item in params["group_bys"]:
+        group_by_item, known = parse_group_by(group_by_item)
+        item_results = handle_group_by_logic(
+            group_by_item, params, index_name, fields_dict, response
+        )
+        item_results = add_zero_values(item_results, known, index_name, group_by_item)
+        group_bys_data.append({"group_by_key": group_by_item, "groups": item_results})
+
+    return group_bys_data
+
+
+def calculate_count(response, params, s):
+    if params["group_by"]:
+        return calculate_group_by_count(params, response)
+    if params["group_bys"]:
+        return 0
+    return calculate_sample_or_default_count(params, s)
+
+
+def calculate_group_by_count(params, response):
+    group_by, known = parse_group_by(params["group_by"])
+    if (
+        group_by in settings.EXTERNAL_ID_FIELDS
+        or group_by in settings.BOOLEAN_TEXT_FIELDS
+    ):
+        return 2
+    if "is_global_south" in group_by:
+        return 2
+    if any(
+        keyword in group_by for keyword in ["continent", "version", "best_open_version"]
+    ):
+        return 3
+    return len(response.aggregations[f"groupby_{group_by.replace('.', '_')}"].buckets)
+
+
+def calculate_sample_or_default_count(params, s):
+    if params["sample"] and params["sample"] < s.count():
+        return params["sample"]
+    return s.count()

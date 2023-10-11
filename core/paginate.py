@@ -1,4 +1,6 @@
 from core.exceptions import APIPaginationError
+from core.export import is_group_by_export
+from core.utils import set_number_param
 
 
 class Paginate:
@@ -48,3 +50,21 @@ class Paginate:
             raise APIPaginationError(
                 f"Maximum results size of {self.max_result_size:,} records is exceeded. Cursor pagination is required for records beyond {self.max_result_size:,}. See: https://docs.openalex.org/api#cursor-paging"
             )
+
+
+def get_per_page(group_by, request):
+    if is_group_by_export(request):
+        per_page = 200
+    elif not group_by:
+        per_page = set_number_param(request, "per-page", 25)
+    else:
+        per_page = set_number_param(request, "per-page", 200)
+    return per_page
+
+
+def get_pagination(params):
+    paginate = Paginate(
+        params["group_by"], params["page"], params["per_page"], params["sample"]
+    )
+    paginate.validate()
+    return paginate

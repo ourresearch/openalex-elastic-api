@@ -1,6 +1,9 @@
+from elasticsearch_dsl import Q
+
 import settings
 from core.exceptions import APIQueryParamsError
 from core.utils import get_field
+from core.preference import clean_preference
 
 
 def get_sort_fields(fields_dict, group_by, sort_params):
@@ -42,3 +45,23 @@ def get_sort_fields(fields_dict, group_by, sort_params):
         elif value == "desc":
             sort_fields.append(f"-{field.es_sort_field()}")
     return sort_fields
+
+
+def sort_with_cursor(default_sort, fields_dict, group_by, s, sort_params):
+    sort_fields = get_sort_fields(fields_dict, group_by, sort_params)
+    sort_fields_with_default = sort_fields + default_sort
+    s = s.sort(*sort_fields_with_default)
+    return s
+
+
+def sort_with_sample(s, seed):
+    if seed:
+        random_query = Q(
+            "function_score",
+            functions={"random_score": {"seed": seed, "field": "_seq_no"}},
+        )
+        s = s.params(preference=clean_preference(seed))
+    else:
+        random_query = Q("function_score", functions={"random_score": {}})
+    s = s.query(random_query)
+    return s

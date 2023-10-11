@@ -23,7 +23,7 @@ from autocomplete.full import (
 from autocomplete.validate import validate_full_autocomplete_params
 from concepts.fields import fields_dict as concepts_fields_dict
 from core.exceptions import APIQueryParamsError
-from core.utils import clean_preference
+from core.preference import clean_preference
 from extensions import cache
 from funders.fields import fields_dict as funders_fields_dict
 from institutions.fields import fields_dict as institutions_fields_dict

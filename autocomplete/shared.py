@@ -6,7 +6,8 @@ from autocomplete.utils import AUTOCOMPLETE_SOURCE
 from autocomplete.validate import validate_entity_autocomplete_params
 from core.filter import filter_records
 from core.search import full_search_query
-from core.utils import clean_preference, map_filter_params
+from core.utils import map_filter_params
+from core.preference import clean_preference
 from ids import utils as id_utils
 
 

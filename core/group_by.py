@@ -5,13 +5,17 @@ from iso4217 import Currency
 
 import settings
 from core.exceptions import APIQueryParamsError
+from core.filter import filter_records
 from core.search import full_search_query
 from core.utils import (
     get_display_names,
     get_display_names_award_ids,
     get_display_names_host_organization,
     get_display_names_sdgs,
+    get_field,
+    get_all_groupby_values,
 )
+from core.preference import clean_preference
 from countries import COUNTRIES_BY_CONTINENT, GLOBAL_SOUTH_COUNTRIES
 
 
@@ -110,9 +114,7 @@ def group_by_records(group_by, field, s, sort_params, known, per_page, q):
     return s
 
 
-def group_by_continent(
-    field, index_name, search, filter_params, filter_records, fields_dict, q
-):
+def group_by_continent(field, index_name, search, filter_params, fields_dict, q):
     group_by_results = []
     took = 0
     ms = MultiSearch(index=index_name)
@@ -348,9 +350,7 @@ def get_group_by_results_external_ids(response, group_by):
     return group_by_results
 
 
-def group_by_version(
-    field, index_name, search, filter_params, filter_records, fields_dict, q
-):
+def group_by_version(field, index_name, search, filter_params, fields_dict, q):
     group_by_results = []
     took = 0
     ms = MultiSearch(index=index_name)
@@ -394,7 +394,7 @@ def group_by_version(
 
 
 def group_by_best_open_version(
-    field, index_name, search, filter_params, filter_records, fields_dict, q
+    field, index_name, search, filter_params, fields_dict, q
 ):
     group_by_results = []
     took = 0
@@ -596,3 +596,114 @@ def parse_group_by(group_by):
                 "The only valid filter for a group_by param is 'known', which hides the unknown group from results."
             )
     return group_by, known
+
+
+def process_group_by_item(fields_dict, group_by_item, s, params):
+    s = s.params(preference=clean_preference(group_by_item))
+    group_by_item, known = parse_group_by(group_by_item)
+    field = get_field(fields_dict, group_by_item)
+    validate_group_by(field)
+    if (
+        field.param != "best_open_version"
+        or field.param != "version"
+        or "continent" not in field.param
+    ):
+        s = group_by_records(
+            group_by_item,
+            field,
+            s,
+            params["sort"],
+            known,
+            params["per_page"],
+            params["q"],
+        )
+    return s
+
+
+def handle_group_by_logic(
+    group_by,
+    params,
+    index_name,
+    fields_dict,
+    response,
+):
+    field = get_field(fields_dict, group_by)
+    if (
+        group_by in settings.EXTERNAL_ID_FIELDS
+        or group_by in settings.BOOLEAN_TEXT_FIELDS
+        or "is_global_south" in group_by
+    ):
+        return get_group_by_results_external_ids(response, group_by)
+    elif "continent" in field.param:
+        results = group_by_continent(
+            field,
+            index_name,
+            params["search"],
+            params["filters"],
+            fields_dict,
+            params["q"],
+        )
+    elif field.param == "version":
+        results = group_by_version(
+            field,
+            index_name,
+            params["search"],
+            params["filters"],
+            fields_dict,
+            params["q"],
+        )
+    elif field.param == "best_open_version":
+        results = group_by_best_open_version(
+            field,
+            index_name,
+            params["search"],
+            params["filters"],
+            fields_dict,
+            params["q"],
+        )
+    else:
+        results = get_group_by_results(group_by, response)
+    return results
+
+
+def add_zero_values(results, known, index_name, field):
+    ignore_values = set([item["key"] for item in results])
+    if known:
+        ignore_values.update(["unknown", "-111"])
+    possible_buckets = get_all_groupby_values(
+        entity=index_name.split("-")[0], field=field
+    )
+    for bucket in possible_buckets:
+        if bucket["key"] not in ignore_values and not bucket["key"].startswith(
+            "http://metadata.un.org"
+        ):
+            results.append(
+                {
+                    "key": bucket["key"],
+                    "key_display_name": bucket["key_display_name"],
+                    "doc_count": 0,
+                }
+            )
+    return results
+
+
+def search_group_by_strings_with_q(params, result):
+    result["meta"]["q"] = params["q"]
+    if params["group_by"] and params["q"] and params["q"] != "''":
+        result["group_by"] = search_group_by_results(
+            params["group_by"], params["q"], result["group_by"], params["per_page"]
+        )
+        result["meta"]["count"] = len(result["group_by"])
+    elif params["group_bys"] and params["q"] and params["q"] != "''":
+        for group_by_item in params["group_bys"]:
+            group_by_item, _ = parse_group_by(group_by_item)
+            for group in result["group_bys"]:
+                if group["group_by_key"] == group_by_item:
+                    group["groups"] = search_group_by_results(
+                        group_by_item,
+                        params["q"],
+                        group["groups"],
+                        params["per_page"],
+                    )
+                    break
+    return result

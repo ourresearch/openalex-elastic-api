@@ -35,3 +35,12 @@ def get_next_cursor(response):
     elastic_cursor = get_cursor(response)
     next_cursor = encode_cursor(elastic_cursor) if elastic_cursor else None
     return next_cursor
+
+
+def handle_cursor(cursor, page, s):
+    if cursor and page != 1:
+        raise APIPaginationError("Cannot use page parameter with cursor.")
+    if cursor and cursor != "*":
+        decoded_cursor = decode_cursor(cursor)
+        s = s.extra(search_after=decoded_cursor)
+    return s
