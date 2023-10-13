@@ -1,3 +1,4 @@
+import settings
 from core.exceptions import APIQueryParamsError
 
 
@@ -109,3 +110,44 @@ def validate_export_format(export_format):
     valid_formats = ["csv", "json", "xlsx"]
     if export_format and export_format.lower() not in valid_formats:
         raise APIQueryParamsError(f"Valid formats are {', '.join(valid_formats)}")
+
+
+def validate_group_by(field):
+    range_field_exceptions = [
+        "apc_usd",
+        "apc_list.value",
+        "apc_list.value_usd",
+        "apc_paid.value",
+        "apc_paid.value_usd",
+        "authors_count",
+        "cited_by_count",
+        "concepts_count",
+        "hierarchy_level",
+        "grants_count",
+        "level",
+        "countries_distinct_count",
+        "institutions_distinct_count",
+        "locations_count",
+        "publication_year",
+        "referenced_works_count",
+        "summary_stats.2yr_mean_citedness",
+        "summary_stats.h_index",
+        "summary_stats.i10_index",
+        "works_count",
+    ]
+    if (
+        type(field).__name__ == "DateField"
+        or type(field).__name__ == "DateTimeField"
+        or (
+            type(field).__name__ == "RangeField"
+            and field.param not in range_field_exceptions
+        )
+        or type(field).__name__ == "SearchField"
+    ):
+        raise APIQueryParamsError("Cannot group by date, number, or search fields.")
+    elif field.param == "referenced_works":
+        raise APIQueryParamsError(
+            "Group by referenced_works is not supported at this time."
+        )
+    elif field.param in settings.DO_NOT_GROUP_BY:
+        raise APIQueryParamsError(f"Cannot group by {field.param}.")

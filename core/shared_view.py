@@ -7,14 +7,11 @@ import settings
 from core.cursor import get_next_cursor, handle_cursor
 from core.exceptions import APIPaginationError, APIQueryParamsError
 from core.filter import filter_records
-from core.group_by import (
-    add_zero_values,
-    filter_group_by,
-    handle_group_by_logic,
-    parse_group_by,
-    process_group_by_item,
-    search_group_by_strings_with_q,
-)
+from core.group_by.results import handle_group_by_logic, add_zero_values
+from core.group_by.filter import filter_group_by
+from core.group_by.utils import parse_group_by
+from core.group_by.search import search_group_by_strings_with_q
+from core.group_by.buckets import create_group_by_buckets
 from core.paginate import get_pagination
 from core.params import parse_params
 from core.preference import clean_preference, set_preference_for_filter_search
@@ -123,11 +120,11 @@ def apply_sorting(params, fields_dict, default_sort, index_name, s):
 def apply_grouping(params, fields_dict, s):
     if params["group_by"]:
         group_by_item, _ = parse_group_by(params["group_by"])
-        s = process_group_by_item(fields_dict, group_by_item, s, params)
+        s = create_group_by_buckets(fields_dict, group_by_item, s, params)
     elif params["group_bys"]:
         for group_by_item in params["group_bys"]:
             group_by_item, _ = parse_group_by(group_by_item)
-            s = process_group_by_item(fields_dict, group_by_item, s, params)
+            s = create_group_by_buckets(fields_dict, group_by_item, s, params)
     return s
 
 
