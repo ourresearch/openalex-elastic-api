@@ -288,6 +288,8 @@ class SearchOpenAlex:
             "and"
         ) or self.search_terms.lower().endswith("not"):
             self.search_terms = self.search_terms[:-3].strip()
+        # strip html
+        self.search_terms = self.search_terms.replace("<", "").replace(">", "")
 
 
 def full_search_query(index_name, search_terms):
