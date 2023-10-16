@@ -1,6 +1,7 @@
-from elasticsearch_dsl import A, Q
+from elasticsearch_dsl import A, Q, AttrDict
 
 import settings
+from core.cursor import decode_group_by_cursor
 from core.group_by.utils import get_bucket_keys, parse_group_by
 from core.validate import validate_group_by
 from core.preference import clean_preference
@@ -14,6 +15,7 @@ Bucket creation.
 
 
 def create_group_by_buckets(fields_dict, group_by_item, s, params):
+    cursor = params.get("cursor")
     q = params.get("q")
     per_page = 500 if q else params.get("per_page")
     sort_params = params.get("sort")
@@ -53,6 +55,14 @@ def create_group_by_buckets(fields_dict, group_by_item, s, params):
         or field.param in settings.BOOLEAN_TEXT_FIELDS
     ):
         create_boolean_group_by_buckets(bucket_keys, group_by_field, s)
+    elif cursor:
+        if cursor and cursor != "*":
+            after_key = decode_group_by_cursor(cursor)
+        else:
+            after_key = None
+        create_pagination_group_by_buckets(
+            bucket_keys, group_by_field, known, missing, params, s, after_key
+        )
     else:
         create_default_group_by_buckets(
             bucket_keys, group_by_field, known, missing, per_page, s, shard_size
@@ -94,6 +104,23 @@ def create_boolean_group_by_buckets(bucket_keys, group_by_field, s):
     not_exists = A("filter", ~Q("exists", field=group_by_field))
     s.aggs.bucket(bucket_keys["exists"], exists)
     s.aggs.bucket(bucket_keys["not_exists"], not_exists)
+    return s
+
+
+def create_pagination_group_by_buckets(
+    bucket_keys, group_by_field, known, missing, params, s, after_key
+):
+    sources = [{"sub_key": {"terms": {"field": group_by_field}}}]
+
+    composite_agg = A("composite", sources=sources, size=params["per_page"])
+
+    if after_key:
+        composite_agg.after = after_key
+
+    # handle missing value
+    if known and missing is not None:
+        s = s.filter("bool", must=[{"exists": {"field": group_by_field.es_field()}}])
+    s.aggs.bucket(bucket_keys["default"], composite_agg)
     return s
 
 
@@ -143,6 +170,18 @@ Bucket retrieval.
 def get_default_buckets(group_by, response):
     bucket_keys = get_bucket_keys(group_by)
     buckets = response.aggregations[bucket_keys["default"]].buckets
+    buckets = transform_paginated_buckets(buckets)
+    return buckets
+
+
+def transform_paginated_buckets(buckets):
+    """
+    Paginated buckets (composite) have a different structure than non-paginated buckets.
+    Convert the paginated buckets to the same structure as non-paginated buckets.
+    """
+    for b in buckets:
+        if isinstance(b.key, AttrDict):
+            b.key = b.key["sub_key"]
     return buckets
 
 

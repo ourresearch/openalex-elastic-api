@@ -68,7 +68,8 @@ def set_size(params, s):
 
 
 def set_cursor_pagination(params, s):
-    s = handle_cursor(params["cursor"], params["page"], s)
+    if not params["group_by"]:
+        s = handle_cursor(params["cursor"], params["page"], s)
     return s
 
 
@@ -181,7 +182,7 @@ def format_meta(response, params, s):
     }
 
     if params.get("cursor"):
-        meta["next_cursor"] = get_next_cursor(response)
+        meta["next_cursor"] = get_next_cursor(params, response)
 
     return meta
 

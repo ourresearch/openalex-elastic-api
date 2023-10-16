@@ -6,13 +6,16 @@ from core.group_by.buckets import (
     not_exists_bucket_count,
     exists_bucket_count,
 )
-from core.group_by.custom_results import group_by_best_open_version, group_by_continent, group_by_version
-from core.group_by.utils import parse_group_by
+from core.group_by.custom_results import (
+    group_by_best_open_version,
+    group_by_continent,
+    group_by_version,
+)
+from core.group_by.utils import parse_group_by, get_all_groupby_values
 
 from core.utils import (
     get_field,
 )
-from group_by.utils import get_all_groupby_values
 from core.group_by.display_names import (
     get_key_display_name,
     get_display_name_mapping,
