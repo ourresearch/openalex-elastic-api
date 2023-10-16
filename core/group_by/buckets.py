@@ -22,7 +22,7 @@ def create_group_by_buckets(fields_dict, group_by_item, s, params):
 
     s = s.params(preference=clean_preference(group_by_item))
     field = get_field(fields_dict, group_by_item)
-    validate_group_by(field)
+    validate_group_by(field, params)
 
     if field.param in ["best_open_version", "version"] or "continent" in field.param:
         return s

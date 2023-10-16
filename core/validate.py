@@ -112,7 +112,7 @@ def validate_export_format(export_format):
         raise APIQueryParamsError(f"Valid formats are {', '.join(valid_formats)}")
 
 
-def validate_group_by(field):
+def validate_group_by(field, params):
     range_field_exceptions = [
         "apc_usd",
         "apc_list.value",
@@ -151,3 +151,11 @@ def validate_group_by(field):
         )
     elif field.param in settings.DO_NOT_GROUP_BY:
         raise APIQueryParamsError(f"Cannot group by {field.param}.")
+    elif (
+        field.param in settings.BOOLEAN_TEXT_FIELDS
+        or field.param in settings.EXTERNAL_ID_FIELDS
+        or type(field).__name__ == "BooleanField"
+    ) and params.get("cursor"):
+        raise APIQueryParamsError(
+            "Cannot use cursor pagination when grouping fields that return true or false."
+        )

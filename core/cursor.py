@@ -3,6 +3,7 @@ import json
 
 from elasticsearch_dsl import AttrDict
 
+import settings
 from core.exceptions import APIPaginationError
 from core.group_by.utils import parse_group_by, get_bucket_keys
 
@@ -59,7 +60,10 @@ def handle_cursor(cursor, page, s):
 def get_group_by_after_key(group_by, response):
     group_by, _ = parse_group_by(group_by)
     bucket_keys = get_bucket_keys(group_by)
-    if "after_key" not in response.aggregations[bucket_keys["default"]]:
+    if (
+        bucket_keys["default"] not in response.aggregations
+        or "after_key" not in response.aggregations[bucket_keys["default"]]
+    ):
         return None
     return response.aggregations[bucket_keys["default"]].after_key["sub_key"]
 
