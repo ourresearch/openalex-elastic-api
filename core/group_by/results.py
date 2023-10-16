@@ -1,176 +1,62 @@
-import iso3166
-import pycountry
-from iso4217 import Currency
-
 import settings
-from core.group_by.custom_results import group_by_continent, group_by_version, group_by_best_open_version
+from core.group_by.buckets import (
+    get_bucket_keys,
+    get_default_buckets,
+    buckets_to_keep,
+    not_exists_bucket_count,
+    exists_bucket_count,
+)
+from core.group_by.custom_results import group_by_best_open_version, group_by_continent, group_by_version
+from core.group_by.utils import parse_group_by
 
 from core.utils import (
     get_field,
 )
 from group_by.utils import get_all_groupby_values
-from core.group_by.display_names import get_display_names, get_display_names_host_organization, \
-    get_display_names_award_ids, get_display_names_sdgs
+from core.group_by.display_names import (
+    get_key_display_name,
+    get_display_name_mapping,
+    requires_display_name_conversion,
+)
 
 
-def get_group_by_results(group_by, response):
-    group_by_results = []
-    buckets = response.aggregations[f"groupby_{group_by.replace('.', '_')}"].buckets
-    if (
-        group_by.endswith(".id")
-        or group_by.endswith("host_organization")
-        or group_by.endswith("repository")
-        or group_by.endswith("journal")
-        or group_by.endswith("host_organization_lineage")
-        or group_by.endswith("host_institution_lineage")
-        or group_by.endswith("publisher_lineage")
-        or group_by.endswith("ids")
-        or group_by == "authorships.institutions.lineage"
-        or group_by == "grants.award_id"
-        or group_by == "grants.funder"
-        or group_by == "last_known_institution.lineage"
-    ):
-        if group_by.endswith("host_institution_lineage"):
-            buckets = keep_institution_buckets(buckets)
-        elif group_by.endswith("publisher_lineage"):
-            buckets = keep_publisher_buckets(buckets)
-        keys = [b.key for b in buckets]
-        if group_by.endswith("host_organization") or group_by.endswith(
-            "host_organization_lineage"
-        ):
-            ids_to_display_names = get_display_names_host_organization(keys)
-        elif group_by == "grants.award_id":
-            ids_to_display_names = get_display_names_award_ids(keys)
-        elif group_by == "sustainable_development_goals.id":
-            ids_to_display_names = get_display_names_sdgs(keys)
-        else:
-            ids_to_display_names = get_display_names(keys)
-        for b in buckets:
-            if b.key == "unknown":
-                key_display_name = "unknown"
-            else:
-                key_display_name = ids_to_display_names.get(b.key)
-            if (
-                group_by == "authorships.author.id" or group_by == "author.id"
-            ) and not key_display_name:
-                # do not include null authors
-                continue
-            group_by_results.append(
-                {
-                    "key": b.key,
-                    "key_display_name": key_display_name,
-                    "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
-                }
-            )
-    elif group_by.endswith("country_code") or group_by.endswith("countries"):
-        for b in buckets:
-            if b.key == "unknown":
-                key_display_name = "unknown"
-            else:
-                try:
-                    country = iso3166.countries.get(b.key.lower())
-                except KeyError:
-                    country = None
-                key_display_name = country.name if country else None
-            group_by_results.append(
-                {
-                    "key": b.key,
-                    "key_display_name": key_display_name,
-                    "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
-                }
-            )
-    elif group_by == "apc_payment.provenance":
-        for b in buckets:
-            if b.key == "unknown":
-                key_display_name = "unknown"
-            elif b.key == "doaj":
-                key_display_name = (
-                    "Directory of Open Access Journals (DOAJ) at https://doaj.org"
-                )
-            elif b.key == "openapc":
-                key_display_name = "OpenAPC at https://openapc.net"
-            group_by_results.append(
-                {
-                    "key": b.key,
-                    "key_display_name": key_display_name,
-                    "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
-                }
-            )
-    elif group_by.endswith("currency"):
-        for b in buckets:
-            if b.key == "unknown":
-                key_display_name = "unknown"
-            else:
-                # convert currency code to full description
-                key_display_name = Currency(b.key).currency_name
-            group_by_results.append(
-                {
-                    "key": b.key,
-                    "key_display_name": key_display_name,
-                    "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
-                }
-            )
-    elif group_by == "language":
-        for b in buckets:
-            if b.key == "unknown":
-                key_display_name = "unknown"
-            elif b.key.lower() == "zh-cn":
-                key_display_name = "Chinese"
-            else:
-                language = pycountry.languages.get(alpha_2=b.key.lower())
-                key_display_name = language.name if language else None
-            group_by_results.append(
-                {
-                    "key": b.key,
-                    "key_display_name": key_display_name,
-                    "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
-                }
-            )
+def get_group_by_results(
+    group_by,
+    known,
+    params,
+    index_name,
+    fields_dict,
+    response,
+):
+    """
+    Top level function for getting boolean, custom, or default group by results.
+    """
+    field = get_field(fields_dict, group_by)
+    if is_boolean_group_by(group_by):
+        return get_boolean_group_by_results(response, group_by)
+    elif "continent" in field.param:
+        results = group_by_continent(field, index_name, params, fields_dict)
+    elif field.param == "version":
+        results = group_by_version(field, index_name, params, fields_dict)
+    elif field.param == "best_open_version":
+        results = group_by_best_open_version(field, index_name, params, fields_dict)
     else:
-        for b in buckets:
-            if b.key == -111:
-                key = "unknown"
-            elif "key_as_string" in b:
-                key = b.key_as_string
-            else:
-                key = b.key
-            group_by_results.append(
-                {
-                    "key": key,
-                    "key_display_name": key,
-                    "doc_count": b.inner.doc_count if "inner" in b else b.doc_count,
-                }
-            )
-    return group_by_results
+        results = get_default_group_by_results(group_by, response)
+    results = add_zero_values(results, known, index_name, group_by)
+    return results
 
 
-def keep_institution_buckets(buckets):
-    buckets_to_keep = []
-    for b in buckets:
-        if (
-            b["key"]
-            and b["key"].startswith("https://openalex.org/I")
-            or b["key"] == "unknown"
-        ):
-            buckets_to_keep.append(b)
-    return buckets_to_keep
+def is_boolean_group_by(group_by):
+    return (
+        group_by in settings.EXTERNAL_ID_FIELDS
+        or group_by in settings.BOOLEAN_TEXT_FIELDS
+        or "is_global_south" in group_by
+    )
 
 
-def keep_publisher_buckets(buckets):
-    buckets_to_keep = []
-    for b in buckets:
-        if b["key"] and b["key"].startswith("https://openalex.org/P"):
-            buckets_to_keep.append(b)
-    return buckets_to_keep
-
-
-def get_group_by_results_external_ids(response, group_by):
-    exists_count = response.aggregations[
-        f"exists_{group_by.replace('.', '_')}"
-    ].doc_count
-    not_exists_count = response.aggregations[
-        f"not_exists_{group_by.replace('.', '_')}"
-    ].doc_count
+def get_boolean_group_by_results(response, group_by):
+    exists_count = exists_bucket_count(group_by, response)
+    not_exists_count = not_exists_bucket_count(group_by, response)
 
     group_by_results = [
         {
@@ -187,50 +73,43 @@ def get_group_by_results_external_ids(response, group_by):
     return group_by_results
 
 
-def handle_group_by_logic(
-    group_by,
-    params,
-    index_name,
-    fields_dict,
-    response,
-):
-    field = get_field(fields_dict, group_by)
-    if (
-        group_by in settings.EXTERNAL_ID_FIELDS
-        or group_by in settings.BOOLEAN_TEXT_FIELDS
-        or "is_global_south" in group_by
-    ):
-        return get_group_by_results_external_ids(response, group_by)
-    elif "continent" in field.param:
-        results = group_by_continent(
-            field,
-            index_name,
-            params["search"],
-            params["filters"],
-            fields_dict,
-            params["q"],
-        )
-    elif field.param == "version":
-        results = group_by_version(
-            field,
-            index_name,
-            params["search"],
-            params["filters"],
-            fields_dict,
-            params["q"],
-        )
-    elif field.param == "best_open_version":
-        results = group_by_best_open_version(
-            field,
-            index_name,
-            params["search"],
-            params["filters"],
-            fields_dict,
-            params["q"],
-        )
+def get_default_group_by_results(group_by, response):
+    """
+    Default group by results.
+    """
+    group_by_results = []
+    buckets = get_default_buckets(group_by, response)
+    buckets = buckets_to_keep(buckets, group_by)
+
+    if requires_display_name_conversion(group_by):
+        keys = [b.key for b in buckets]
+        key_display_names = get_display_name_mapping(keys, group_by)
     else:
-        results = get_group_by_results(group_by, response)
-    return results
+        key_display_names = {}
+
+    for b in buckets:
+        result = get_result(b, key_display_names, group_by)
+        if result:
+            group_by_results.append(result)
+
+    return group_by_results
+
+
+def get_result(b, key_display_names, group_by):
+    if group_by in ["authorships.author.id", "author.id"]:
+        if not key_display_names or not key_display_names.get(b.key):
+            return None
+
+    if b.key == "unknown":
+        key_display_name = "unknown"
+    elif key_display_names:
+        key_display_name = key_display_names.get(b.key)
+    else:
+        key_display_name = get_key_display_name(b, group_by)
+
+    doc_count = b.inner.doc_count if "inner" in b else b.doc_count
+
+    return {"key": b.key, "key_display_name": key_display_name, "doc_count": doc_count}
 
 
 def add_zero_values(results, known, index_name, field):
@@ -252,3 +131,20 @@ def add_zero_values(results, known, index_name, field):
                 }
             )
     return results
+
+
+def calculate_group_by_count(params, response):
+    group_by, _ = parse_group_by(params["group_by"])
+    bucket_keys = get_bucket_keys(group_by)
+    if (
+        group_by in settings.EXTERNAL_ID_FIELDS
+        or group_by in settings.BOOLEAN_TEXT_FIELDS
+    ):
+        return 2
+    if "is_global_south" in group_by:
+        return 2
+    if any(
+        keyword in group_by for keyword in ["continent", "version", "best_open_version"]
+    ):
+        return 3
+    return len(response.aggregations[bucket_keys["default"]].buckets)

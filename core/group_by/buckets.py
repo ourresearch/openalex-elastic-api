@@ -8,6 +8,11 @@ from core.utils import get_field
 from countries import GLOBAL_SOUTH_COUNTRIES
 
 
+"""
+Bucket creation.
+"""
+
+
 def create_group_by_buckets(fields_dict, group_by_item, s, params):
     q = params.get("q")
     per_page = 500 if q else params.get("per_page")
@@ -128,3 +133,51 @@ def filter_by_repository_or_journal(field, s):
     if field.param == "journal":
         s = s.filter("term", **{"primary_location.source.type": "journal"})
     return s
+
+
+"""
+Bucket retrieval.
+"""
+
+
+def get_default_buckets(group_by, response):
+    bucket_keys = get_bucket_keys(group_by)
+    buckets = response.aggregations[bucket_keys["default"]].buckets
+    return buckets
+
+
+def buckets_to_keep(buckets, group_by):
+    if group_by.endswith("host_institution_lineage"):
+        buckets = keep_institution_buckets(buckets)
+    elif group_by.endswith("publisher_lineage"):
+        buckets = keep_publisher_buckets(buckets)
+    return buckets
+
+
+def filter_buckets_by_key_start(buckets, key_prefix):
+    return [
+        b
+        for b in buckets
+        if b["key"] and (b["key"].startswith(key_prefix) or b["key"] == "unknown")
+    ]
+
+
+def keep_institution_buckets(buckets):
+    return filter_buckets_by_key_start(buckets, "https://openalex.org/I")
+
+
+def keep_publisher_buckets(buckets):
+    return filter_buckets_by_key_start(buckets, "https://openalex.org/P")
+
+
+def get_bucket_doc_count(group_by, response, bucket_key):
+    bucket_keys = get_bucket_keys(group_by)
+    return response.aggregations[bucket_keys[bucket_key]].doc_count
+
+
+def exists_bucket_count(group_by, response):
+    return get_bucket_doc_count(group_by, response, "exists")
+
+
+def not_exists_bucket_count(group_by, response):
+    return get_bucket_doc_count(group_by, response, "not_exists")

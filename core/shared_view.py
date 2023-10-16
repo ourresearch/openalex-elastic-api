@@ -7,7 +7,7 @@ import settings
 from core.cursor import get_next_cursor, handle_cursor
 from core.exceptions import APIPaginationError, APIQueryParamsError
 from core.filter import filter_records
-from core.group_by.results import handle_group_by_logic, add_zero_values
+from core.group_by.results import get_group_by_results, calculate_group_by_count
 from core.group_by.filter import filter_group_by
 from core.group_by.utils import parse_group_by
 from core.group_by.search import search_group_by_strings_with_q
@@ -188,10 +188,9 @@ def format_meta(response, params, s):
 
 def format_group_by(response, params, index_name, fields_dict):
     group_by, known = parse_group_by(params["group_by"])
-    group_by_data = handle_group_by_logic(
-        group_by, params, index_name, fields_dict, response
+    group_by_data = get_group_by_results(
+        group_by, known, params, index_name, fields_dict, response
     )
-    group_by_data = add_zero_values(group_by_data, known, index_name, group_by)
     return group_by_data
 
 
@@ -200,10 +199,9 @@ def format_group_bys(response, params, index_name, fields_dict):
 
     for group_by_item in params["group_bys"]:
         group_by_item, known = parse_group_by(group_by_item)
-        item_results = handle_group_by_logic(
-            group_by_item, params, index_name, fields_dict, response
+        item_results = get_group_by_results(
+            group_by_item, known, params, index_name, fields_dict, response
         )
-        item_results = add_zero_values(item_results, known, index_name, group_by_item)
         group_bys_data.append({"group_by_key": group_by_item, "groups": item_results})
 
     return group_bys_data
@@ -215,22 +213,6 @@ def calculate_count(response, params, s):
     if params["group_bys"]:
         return 0
     return calculate_sample_or_default_count(params, s)
-
-
-def calculate_group_by_count(params, response):
-    group_by, known = parse_group_by(params["group_by"])
-    if (
-        group_by in settings.EXTERNAL_ID_FIELDS
-        or group_by in settings.BOOLEAN_TEXT_FIELDS
-    ):
-        return 2
-    if "is_global_south" in group_by:
-        return 2
-    if any(
-        keyword in group_by for keyword in ["continent", "version", "best_open_version"]
-    ):
-        return 3
-    return len(response.aggregations[f"groupby_{group_by.replace('.', '_')}"].buckets)
 
 
 def calculate_sample_or_default_count(params, s):
