@@ -144,7 +144,11 @@ def determine_shard_size(q):
 
 
 def get_missing(field):
-    if type(field).__name__ == "RangeField" or type(field).__name__ == "BooleanField":
+    if (
+        type(field).__name__ == "RangeField"
+        or type(field).__name__ == "BooleanField"
+        or field.param == "ids.crossref"
+    ):
         missing = -111
     else:
         missing = "unknown"
