@@ -150,11 +150,12 @@ def get_full_openalex_id(openalex_id):
 
 
 def is_cached(request):
+    bypass_cache = request.args.get("bypass_cache") == "true"
     # cache urls with group-by
     if (
-        request.args.get("group_by")
-        or request.args.get("group-by")
+        (request.args.get("group_by") or request.args.get("group-by"))
         and not request.args.get("format")
+        and not bypass_cache
         and not settings.DEBUG
     ):
         cached = True
