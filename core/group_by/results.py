@@ -116,7 +116,7 @@ def get_result(b, key_display_names, group_by):
 
 
 def add_zero_values(results, known, index_name, field):
-    ignore_values = set([item["key"] for item in results])
+    ignore_values = set([str(item["key"]) for item in results])
     if known:
         ignore_values.update(["unknown", "-111"])
     possible_buckets = get_all_groupby_values(
