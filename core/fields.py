@@ -80,7 +80,6 @@ class BooleanField(Field):
                 q = ~query
         elif (
             self.param == "has_abstract"
-            or self.param == "has_fulltext"
             or self.param == "has_ngrams"
             or self.param == "has_pdf_url"
             or self.param == "has_raw_affiliation_string"

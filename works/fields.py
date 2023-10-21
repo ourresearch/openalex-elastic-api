@@ -40,7 +40,7 @@ fields = [
         docstring="The work has a DOI (Digital Object Identifier). Usually, this means that a work has been indexed by Crossref.",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#doi",
     ),
-    BooleanField(param="has_fulltext", custom_es_field="fulltext"),
+    BooleanField(param="has_fulltext"),
     BooleanField(
         param="has_orcid",
         custom_es_field="authorships.author.orcid",
