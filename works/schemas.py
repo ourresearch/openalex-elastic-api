@@ -2,8 +2,14 @@ import json
 
 from marshmallow import INCLUDE, Schema, fields, post_dump, pre_dump
 
-from core.schemas import (CountsByYearSchema, GroupBySchema, GroupBysSchema,
-                          MetaSchema, hide_relevance, relevance_score)
+from core.schemas import (
+    CountsByYearSchema,
+    GroupBySchema,
+    GroupBysSchema,
+    MetaSchema,
+    hide_relevance,
+    relevance_score,
+)
 
 
 class AuthorSchema(Schema):
@@ -155,6 +161,14 @@ class SDGSchema(Schema):
         ordered = True
 
 
+class CitedByPercentileYearSchema(Schema):
+    min = fields.Float()
+    max = fields.Float()
+
+    class Meta:
+        ordered = True
+
+
 class WorksSchema(Schema):
     id = fields.Str()
     doi = fields.Str()
@@ -180,6 +194,7 @@ class WorksSchema(Schema):
     has_fulltext = fields.Bool()
     fulltext_origin = fields.Str()
     cited_by_count = fields.Int()
+    cited_by_percentile_year = fields.Nested(CitedByPercentileYearSchema)
     biblio = fields.Nested(BiblioSchema)
     is_retracted = fields.Bool()
     is_paratext = fields.Bool()

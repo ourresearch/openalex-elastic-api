@@ -512,6 +512,14 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#cited_by_count",
         alternate_names=ALTERNATE_NAMES.get("cites", None),
     ),
+    RangeField(
+        param="cited_by_percentile_year.min",
+        docstring="The minimum percentile rank for this work's citation count, compared to other works published in the same year",
+    ),
+    RangeField(
+        param="cited_by_percentile_year.max",
+        docstring="The maximum percentile rank for this work's citation count, compared to other works published in the same year",
+    ),
     RangeField(param="concepts_count"),
     RangeField(
         param="countries_distinct_count",
