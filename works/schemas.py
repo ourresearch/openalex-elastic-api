@@ -169,6 +169,14 @@ class CitedByPercentileYearSchema(Schema):
         ordered = True
 
 
+class KeywordsSchema(Schema):
+    keyword = fields.String()
+    score = fields.Float()
+
+    class Meta:
+        ordered = True
+
+
 class WorksSchema(Schema):
     id = fields.Str()
     doi = fields.Str()
@@ -198,6 +206,7 @@ class WorksSchema(Schema):
     biblio = fields.Nested(BiblioSchema)
     is_retracted = fields.Bool()
     is_paratext = fields.Bool()
+    keywords = fields.Nested(KeywordsSchema, many=True)
     concepts = fields.Nested(ConceptsSchema, many=True)
     mesh = fields.List(fields.Nested(MeshSchema))
     locations_count = fields.Int()
