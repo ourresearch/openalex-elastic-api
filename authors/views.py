@@ -87,5 +87,6 @@ def authors_filters_doctrings():
             "entityType": "authors",
             "docstring": f.docstring,
             "documentationLink": f.documentation_link,
+            "alternateNames": f.alternate_names,
         }
     return jsonify(ret)

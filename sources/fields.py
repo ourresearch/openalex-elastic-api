@@ -8,18 +8,35 @@ from core.fields import (
     SearchField,
     TermField,
 )
+from core.alternate_names import ALTERNATE_NAMES
+
+# shared docstrings for when multiple fields share the same docstring (such as aliases)
+DOCSTRINGS = {
+    "openalex": "The OpenAlex ID for the source",
+    "concept": "Concepts that the source's works tend to be about",
+    "type": "The source type, such as journal or repository",
+}
+
+# shared documentation_links for when multiple fields share the same link (such as aliases)
+DOCUMENTATION_LINKS = {
+    "openalex": "https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
+    "concept": "https://docs.openalex.org/api-entities/concepts",
+    "type": "https://docs.openalex.org/api-entities/sources/source-object#type",
+}
 
 fields = [
     BooleanField(param="has_issn", custom_es_field="ids.issn_l"),
     BooleanField(
         param="is_in_doaj",
-        docstring="Filter for only journals that are in DOAJ, the Directory of Open Access Journals",
+        docstring="The journal is in DOAJ, the Directory of Open Access Journals",
         documentation_link="https://docs.openalex.org/api-entities/sources/source-object#is_in_doaj",
+        alternate_names=ALTERNATE_NAMES.get("source.is_in_doaj", None),
     ),
     BooleanField(
         param="is_oa",
-        docstring="Filter only sources that are currently Open Access",
+        docstring="The source is currently Open Access",
         documentation_link="https://docs.openalex.org/api-entities/sources/source-object#is_oa",
+        alternate_names=ALTERNATE_NAMES.get("is_oa", None),
     ),
     BooleanField(
         param=f"is_global_south",
@@ -33,8 +50,20 @@ fields = [
         param="from_updated_date",
         custom_es_field="updated_date",
     ),
-    OpenAlexIDField(param="concept.id", custom_es_field="x_concepts.id"),
-    OpenAlexIDField(param="concepts.id", custom_es_field="x_concepts.id"),
+    OpenAlexIDField(
+        param="concept.id",
+        custom_es_field="x_concepts.id",
+        docstring=DOCSTRINGS["concept"],
+        documentation_link=DOCUMENTATION_LINKS["concept"],
+        alternate_names=ALTERNATE_NAMES.get("concept", None),
+    ),
+    OpenAlexIDField(
+        param="concepts.id",
+        custom_es_field="x_concepts.id",
+        docstring=DOCSTRINGS["concept"],
+        documentation_link=DOCUMENTATION_LINKS["concept"],
+        alternate_names=ALTERNATE_NAMES.get("concept", None),
+    ),
     OpenAlexIDField(param="host_organization"),
     OpenAlexIDField(
         param="host_organization.id", custom_es_field="host_organization.lower"
@@ -42,15 +71,29 @@ fields = [
     OpenAlexIDField(param="host_organization_lineage"),
     OpenAlexIDField(
         param="ids.openalex",
-        docstring="The OpenAlex ID for a source",
-        documentation_link="https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
+        docstring=DOCSTRINGS["openalex"],
+        documentation_link=DOCUMENTATION_LINKS["openalex"],
+        alternate_names=ALTERNATE_NAMES.get("openalex", None),
     ),
-    OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
-    OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
+    OpenAlexIDField(
+        param="openalex",
+        custom_es_field="ids.openalex.lower",
+        docstring=DOCSTRINGS["openalex"],
+        documentation_link=DOCUMENTATION_LINKS["openalex"],
+        alternate_names=ALTERNATE_NAMES.get("openalex", None),
+    ),
+    OpenAlexIDField(
+        param="openalex_id",
+        alias="ids.openalex",
+        docstring=DOCSTRINGS["openalex"],
+        documentation_link=DOCUMENTATION_LINKS["openalex"],
+        alternate_names=ALTERNATE_NAMES.get("openalex", None),
+    ),
     OpenAlexIDField(
         param="x_concepts.id",
-        docstring="Filter for sources that have works that tend to be about a given Concept",
-        documentation_link="https://docs.openalex.org/api-entities/concepts",
+        docstring=DOCSTRINGS["concept"],
+        documentation_link=DOCUMENTATION_LINKS["concept"],
+        alternate_names=ALTERNATE_NAMES.get("concept", None),
     ),
     RangeField(param="apc_usd"),
     RangeField(param="apc_prices.price"),
@@ -78,8 +121,9 @@ fields = [
     TermField(param="issn"),
     TermField(
         param="type",
-        docstring="Filter by source type. For example, filter for only journals, or only repositories.",
-        documentation_link="https://docs.openalex.org/api-entities/sources/source-object#type",
+        docstring=DOCSTRINGS["type"],
+        documentation_link=DOCUMENTATION_LINKS["type"],
+        alternate_names=ALTERNATE_NAMES.get("source.type", None),
     ),
 ]
 

@@ -6,6 +6,18 @@ from core.fields import (
     SearchField,
     TermField,
 )
+from core.alternate_names import ALTERNATE_NAMES
+
+# shared docstrings for when multiple fields share the same docstring (such as aliases)
+DOCSTRINGS = {
+    "openalex": "The OpenAlex ID for the publisher",
+}
+
+# shared documentation_links for when multiple fields share the same link (such as aliases)
+DOCUMENTATION_LINKS = {
+    "openalex": "https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
+}
+
 
 fields = [
     DateField(
@@ -19,12 +31,25 @@ fields = [
     OpenAlexIDField(
         param="ids.openalex",
         custom_es_field="ids.openalex.lower",
-        docstring="The OpenAlex ID for the publisher",
-        documentation_link="https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
+        docstring=DOCSTRINGS["openalex"],
+        documentation_link=DOCUMENTATION_LINKS["openalex"],
+        alternate_names=ALTERNATE_NAMES.get("openalex", None),
     ),
     OpenAlexIDField(param="lineage"),
-    OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
-    OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
+    OpenAlexIDField(
+        param="openalex",
+        docstring=DOCSTRINGS["openalex"],
+        documentation_link=DOCUMENTATION_LINKS["openalex"],
+        alternate_names=ALTERNATE_NAMES.get("openalex", None),
+    ),
+    OpenAlexIDField(
+        param="openalex_id",
+        alias="ids.openalex",
+        custom_es_field="ids.openalex.lower",
+        docstring=DOCSTRINGS["openalex"],
+        documentation_link=DOCUMENTATION_LINKS["openalex"],
+        alternate_names=ALTERNATE_NAMES.get("openalex", None),
+    ),
     OpenAlexIDField(
         param="parent_publisher", custom_es_field="parent_publisher.id.keyword"
     ),

@@ -68,5 +68,6 @@ def funders_filters_doctrings():
             "entityType": "funders",
             "docstring": f.docstring,
             "documentationLink": f.documentation_link,
+            "alternateNames": f.alternate_names,
         }
     return jsonify(ret)

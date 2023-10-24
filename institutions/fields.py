@@ -7,11 +7,32 @@ from core.fields import (
     SearchField,
     TermField,
 )
+from core.alternate_names import ALTERNATE_NAMES
+
+# shared docstrings for when multiple fields share the same docstring (such as aliases)
+DOCSTRINGS = {
+    "is_global_south": "The institution is located in the Global South. The Global South is a term used to identify regions within Latin America, Asia, Africa, and Oceania.",
+    "openalex": "The OpenAlex ID for the institution",
+    "concept": "Concepts that the institution's works tend to be about",
+    "type": """The institution's type. For example, universities are type "Education," and hospitals are type "Healthcare".""",
+}
+
+# shared documentation_links for when multiple fields share the same link (such as aliases)
+DOCUMENTATION_LINKS = {
+    "is_global_south": "https://docs.openalex.org/api-entities/geo/regions",
+    "openalex": "https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
+    "concept": "https://docs.openalex.org/api-entities/concepts",
+    "type": "https://docs.openalex.org/api-entities/institutions/institution-object#type",
+}
+
 
 fields = [
     BooleanField(
         param=f"is_global_south",
         custom_es_field="country_code",
+        docstring=DOCSTRINGS["is_global_south"],
+        documentation_link=DOCUMENTATION_LINKS["is_global_south"],
+        alternate_names=ALTERNATE_NAMES.get("is_global_south", None),
     ),
     BooleanField(param="has_ror", custom_es_field="ids.ror.keyword"),
     DateField(
@@ -22,16 +43,38 @@ fields = [
         param="from_updated_date",
         custom_es_field="updated_date",
     ),
-    OpenAlexIDField(param="concept.id", custom_es_field="x_concepts.id"),
-    OpenAlexIDField(param="concepts.id", custom_es_field="x_concepts.id"),
+    OpenAlexIDField(
+        param="concept.id",
+        custom_es_field="x_concepts.id",
+        docstring=DOCSTRINGS["concept"],
+        documentation_link=DOCUMENTATION_LINKS["concept"],
+        alternate_names=ALTERNATE_NAMES.get("concept", None),
+    ),
+    OpenAlexIDField(param="concepts.id", custom_es_field="x_concepts.id",
+                            docstring=DOCSTRINGS["concept"],
+        documentation_link=DOCUMENTATION_LINKS["concept"],
+        alternate_names=ALTERNATE_NAMES.get("concept", None),),
     OpenAlexIDField(
         param="ids.openalex",
         custom_es_field="ids.openalex.lower",
-        docstring="The OpenAlex ID for the institution",
-        documentation_link="https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
+        docstring=DOCSTRINGS["openalex"],
+        documentation_link=DOCUMENTATION_LINKS["openalex"],
+        alternate_names=ALTERNATE_NAMES.get("openalex", None),
     ),
-    OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
-    OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
+    OpenAlexIDField(
+        param="openalex",
+        custom_es_field="ids.openalex.lower",
+        docstring=DOCSTRINGS["openalex"],
+        documentation_link=DOCUMENTATION_LINKS["openalex"],
+        alternate_names=ALTERNATE_NAMES.get("openalex", None),
+    ),
+    OpenAlexIDField(
+        param="openalex_id",
+        alias="ids.openalex",
+        docstring=DOCSTRINGS["openalex"],
+        documentation_link=DOCUMENTATION_LINKS["openalex"],
+        alternate_names=ALTERNATE_NAMES.get("openalex", None),
+    ),
     OpenAlexIDField(param="roles.id"),
     OpenAlexIDField(param="lineage", custom_es_field="lineage"),
     OpenAlexIDField(
@@ -45,8 +88,9 @@ fields = [
     OpenAlexIDField(param="repositories.id", custom_es_field="repositories.id"),
     OpenAlexIDField(
         param="x_concepts.id",
-        docstring="Concepts that the institution's works tend to be about",
-        documentation_link="https://docs.openalex.org/api-entities/concepts",
+        docstring=DOCSTRINGS["concept"],
+        documentation_link=DOCUMENTATION_LINKS["concept"],
+        alternate_names=ALTERNATE_NAMES.get("concept", None),
     ),
     RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="cited_by_count"),
@@ -63,17 +107,22 @@ fields = [
         param="country_code",
         docstring="The country where the institution is located",
         documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#country_code",
+        alternate_names=ALTERNATE_NAMES.get("country", None),
     ),
     TermField(
         param=f"continent",
         custom_es_field="country_code",
+        docstring="The continent where the institution is located",
+        documentation_link="https://docs.openalex.org/api-entities/geo/continents",
+        alternate_names=ALTERNATE_NAMES.get("continent", None),
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="ror", alias="ror"),
     TermField(
         param="type",
-        docstring="""The institution's type. For example, universities are type "Education," and hospitals are type "Healthcare".""",
-        documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#type",
+        docstring=DOCSTRINGS["type"],
+        documentation_link=DOCUMENTATION_LINKS["type"],
+        alternate_names=ALTERNATE_NAMES.get("institution.type", None),
     ),
 ]
 

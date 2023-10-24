@@ -7,6 +7,17 @@ from core.fields import (
     SearchField,
     TermField,
 )
+from core.alternate_names import ALTERNATE_NAMES
+
+# shared docstrings for when multiple fields share the same docstring (such as aliases)
+DOCSTRINGS = {
+    "openalex": "The OpenAlex ID for the publisher",
+}
+
+# shared documentation_links for when multiple fields share the same link (such as aliases)
+DOCUMENTATION_LINKS = {
+    "openalex": "https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
+}
 
 fields = [
     BooleanField(
@@ -24,12 +35,30 @@ fields = [
     OpenAlexIDField(
         param="ids.openalex",
         custom_es_field="ids.openalex.lower",
-        docstring="The OpenAlex ID for the funder",
-        documentation_link="https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
+        docstring=DOCSTRINGS["openalex"],
+        documentation_link=DOCUMENTATION_LINKS["openalex"],
+        alternate_names=ALTERNATE_NAMES.get("openalex", None),
     ),
-    OpenAlexIDField(param="ids.openalex"),
-    OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
-    OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
+    # OpenAlexIDField(
+    #     param="ids.openalex",
+    #     docstring=DOCSTRINGS["openalex"],
+    #     documentation_link=DOCUMENTATION_LINKS["openalex"],
+    #     alternate_names=ALTERNATE_NAMES.get("openalex", None),
+    # ),
+    OpenAlexIDField(
+        param="openalex",
+        custom_es_field="ids.openalex.lower",
+        docstring=DOCSTRINGS["openalex"],
+        documentation_link=DOCUMENTATION_LINKS["openalex"],
+        alternate_names=ALTERNATE_NAMES.get("openalex", None),
+    ),
+    OpenAlexIDField(
+        param="openalex_id",
+        alias="ids.openalex",
+        docstring=DOCSTRINGS["openalex"],
+        documentation_link=DOCUMENTATION_LINKS["openalex"],
+        alternate_names=ALTERNATE_NAMES.get("openalex", None),
+    ),
     OpenAlexIDField(param="roles.id"),
     RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="cited_by_count"),
