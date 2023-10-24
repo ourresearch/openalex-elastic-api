@@ -13,6 +13,7 @@ def filter_group_by(field, group_by, q, s):
         "concepts.id": "concepts__display_name__autocomplete",
         "corresponding_author_ids": "authorships__author__display_name__autocomplete",
         "corresponding_institution_ids": "authorships__institutions__display_name__autocomplete",
+        "keywords.keyword": "keywords__keyword",
         "journal": "locations__source__display_name__autocomplete",
         "last_known_institution.id": "last_known_institution__display_name__autocomplete",
         "locations.source.id": "locations__source__display_name__autocomplete",

@@ -8,13 +8,20 @@ import countries
 from core.exceptions import APIQueryParamsError
 from core.search import SearchOpenAlex, full_search_query
 from core.utils import get_full_openalex_id, normalize_openalex_id
-from settings import (CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS,
-                      WORKS_INDEX)
+from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX
 
 
 class Field(ABC):
     def __init__(
-        self, param, alias=None, custom_es_field=None, unique_id=None, index=None, docstring="", documentation_link="", alternate_names=None
+        self,
+        param,
+        alias=None,
+        custom_es_field=None,
+        unique_id=None,
+        index=None,
+        docstring="",
+        documentation_link="",
+        alternate_names=None,
     ):
         self.param = param
         self.alias = alias
@@ -24,7 +31,9 @@ class Field(ABC):
         self.index = index
         self.docstring = docstring
         self.documentation_link = documentation_link
-        self.alternate_names  = alternate_names  # optional list of strings, useful for search
+        self.alternate_names = (
+            alternate_names  # optional list of strings, useful for search
+        )
 
     @abstractmethod
     def build_query(self):
@@ -490,6 +499,10 @@ class TermField(Field):
             if "continent" in self.param:
                 country_codes = self.get_country_codes()
                 q = ~Q("terms", **{self.es_field(): country_codes})
+            elif self.param == "keywords.keyword":
+                kwargs = {self.es_field(): query.title()}
+                kwargs_lower = {self.es_field(): query.lower()}
+                q = ~Q("term", **kwargs) & ~Q("term", **kwargs_lower)
             else:
                 q = ~Q("term", **kwargs)
             return q
@@ -502,6 +515,14 @@ class TermField(Field):
         elif self.param == "display_name":
             kwargs = {self.es_field(): self.value}
             q = Q("match", **kwargs)
+        elif (
+            self.param == "keywords.keyword"
+            and self.value != "null"
+            and self.value != "!null"
+        ):
+            kwargs = {self.es_field(): self.value.title()}
+            kwargs_lower = {self.es_field(): self.value.lower()}
+            q = Q("term", **kwargs) | Q("term", **kwargs_lower)
         elif "continent" in self.param:
             country_codes = self.get_country_codes()
             kwargs = {self.es_field(): country_codes}
