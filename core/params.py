@@ -13,7 +13,7 @@ def parse_params(request):
         "group_by": request.args.get("group_by") or request.args.get("group-by"),
         "group_bys": request.args.get("group_bys") or request.args.get("group-bys"),
         "page": set_number_param(request, "page", 1),
-        "per_page": get_per_page(request.args.get("group_by"), request),
+        "per_page": get_per_page(request),
         "sample": request.args.get("sample", type=int),
         "seed": request.args.get("seed"),
         "q": request.args.get("q"),

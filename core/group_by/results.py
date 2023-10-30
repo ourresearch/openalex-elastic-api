@@ -45,7 +45,7 @@ def get_group_by_results(
         results = group_by_best_open_version(field, index_name, params, fields_dict)
     else:
         results = get_default_group_by_results(group_by, response)
-    results = add_zero_values(results, known, index_name, group_by)
+    results = add_zero_values(results, known, index_name, group_by, params)
     return results
 
 
@@ -115,7 +115,7 @@ def get_result(b, key_display_names, group_by):
     return {"key": b.key, "key_display_name": key_display_name, "doc_count": doc_count}
 
 
-def add_zero_values(results, known, index_name, field):
+def add_zero_values(results, known, index_name, field, params):
     ignore_values = set([str(item["key"]) for item in results])
     if known:
         ignore_values.update(["unknown", "-111"])
@@ -123,8 +123,10 @@ def add_zero_values(results, known, index_name, field):
         entity=index_name.split("-")[0], field=field
     )
     for bucket in possible_buckets:
-        if bucket["key"] not in ignore_values and not bucket["key"].startswith(
-            "http://metadata.un.org"
+        if (
+            bucket["key"] not in ignore_values
+            and not bucket["key"].startswith("http://metadata.un.org")
+            and len(results) < params["per_page"]
         ):
             results.append(
                 {

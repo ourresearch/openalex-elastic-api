@@ -52,7 +52,8 @@ class Paginate:
             )
 
 
-def get_per_page(group_by, request):
+def get_per_page(request):
+    group_by = request.args.get("group_by") or request.args.get("group-by")
     if is_group_by_export(request):
         per_page = 200
     elif not group_by:
