@@ -87,7 +87,7 @@ def get_display_names_sdgs(ids):
     ms = MultiSearch(index=WORKS_INDEX)
     for sdg_id in ids:
         s = Search()
-        s = s.filter("term", sustainable_development_goals__id__keyword=sdg_id)
+        s = s.filter("term", sustainable_development_goals__id__lower=sdg_id)
         s = s.source(
             [
                 "sustainable_development_goals.id",

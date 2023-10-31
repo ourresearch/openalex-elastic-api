@@ -499,30 +499,12 @@ class TermField(Field):
             if "continent" in self.param:
                 country_codes = self.get_country_codes()
                 q = ~Q("terms", **{self.es_field(): country_codes})
-            elif self.param == "keywords.keyword":
-                kwargs = {self.es_field(): query.title()}
-                kwargs_lower = {self.es_field(): query.lower()}
-                q = ~Q("term", **kwargs) & ~Q("term", **kwargs_lower)
             else:
                 q = ~Q("term", **kwargs)
             return q
-        elif self.param == "apc_list.currency":
-            kwargs = {self.es_field(): self.value.upper()}
-            q = Q("term", **kwargs)
-        elif self.param == "apc_list.provenance":
-            kwargs = {self.es_field(): self.value.lower()}
-            q = Q("term", **kwargs)
         elif self.param == "display_name":
             kwargs = {self.es_field(): self.value}
             q = Q("match", **kwargs)
-        elif (
-            self.param == "keywords.keyword"
-            and self.value != "null"
-            and self.value != "!null"
-        ):
-            kwargs = {self.es_field(): self.value.title()}
-            kwargs_lower = {self.es_field(): self.value.lower()}
-            q = Q("term", **kwargs) | Q("term", **kwargs_lower)
         elif "continent" in self.param:
             country_codes = self.get_country_codes()
             kwargs = {self.es_field(): country_codes}

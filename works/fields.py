@@ -3,7 +3,6 @@ from core.fields import (
     DateField,
     DateTimeField,
     OpenAlexIDField,
-    PhraseField,
     RangeField,
     SearchField,
     TermField,
@@ -477,7 +476,6 @@ fields = [
         docstring="Related works, based on common concepts the works have.",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#related_works",
     ),
-    PhraseField(param="host_venue.publisher"),
     RangeField(
         param="apc_list.value",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#apc_list",
@@ -569,14 +567,11 @@ fields = [
         docstring="Free text search within the work's title only",
         documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
     ),
-    TermField(param="apc_list.currency", custom_es_field="apc_list.currency.keyword"),
-    TermField(
-        param="apc_list.provenance", custom_es_field="apc_list.provenance.keyword"
-    ),
+    TermField(param="apc_list.currency"),
+    TermField(param="apc_list.provenance"),
     TermField(param="apc_paid.currency"),
     TermField(
         param="apc_paid.provenance",
-        custom_es_field="apc_paid.provenance",
         docstring="The source of our information about the work's APC. Works with OpenAPC data might have more accurate prices for APC paid.",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#apc_paid",
     ),
@@ -588,7 +583,6 @@ fields = [
     ),
     TermField(
         param="authorships.countries",
-        custom_es_field="authorships.countries.keyword",
         docstring=DOCSTRINGS["country"],
         documentation_link=DOCUMENTATION_LINKS["country"],
         alternate_names=ALTERNATE_NAMES.get("country", None),
@@ -641,7 +635,7 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#doi",
     ),
     TermField(param="doi_starts_with", custom_es_field="ids.doi"),
-    TermField(param="fulltext_origin", custom_es_field="fulltext_origin.keyword"),
+    TermField(param="fulltext_origin"),
     TermField(param="ids.mag", custom_es_field="ids.mag"),
     TermField(param="ids.pmid", custom_es_field="ids.pmid"),
     TermField(param="ids.pmcid", custom_es_field="ids.pmcid"),
@@ -661,16 +655,14 @@ fields = [
     ),
     TermField(param="institutions.ror", alias="authorships.institutions.ror"),
     TermField(param="institutions.type", alias="authorships.institutions.type"),
-    TermField(param="keywords.keyword", custom_es_field="keywords.keyword.keyword"),
+    TermField(param="keywords.keyword", custom_es_field="keywords.keyword.lower"),
     TermField(
         param="grants.award_id",
-        custom_es_field="grants.award_id.keyword",
         docstring="The award IDs listed in the work's grants",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#grants",
     ),
     TermField(
         param="language",
-        custom_es_field="language.keyword",
         docstring=DOCSTRINGS["language"],
         documentation_link=DOCUMENTATION_LINKS["language"],
         alternate_names=ALTERNATE_NAMES.get("language", None),
@@ -713,7 +705,6 @@ fields = [
     TermField(param="primary_location.version"),
     TermField(
         param="sustainable_development_goals.id",
-        custom_es_field="sustainable_development_goals.id.keyword",
         docstring=DOCSTRINGS["sustainable_development_goals"],
         documentation_link=DOCUMENTATION_LINKS["sustainable_development_goals"],
         alternate_names=ALTERNATE_NAMES.get("sustainable_development_goals"),
@@ -724,7 +715,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["type"],
         alternate_names=ALTERNATE_NAMES.get("work.type", None),
     ),
-    TermField(param="type_crossref", custom_es_field="type_crossref.keyword"),
+    TermField(param="type_crossref"),
     TermField(param="version", custom_es_field="locations.version"),
 ]
 
