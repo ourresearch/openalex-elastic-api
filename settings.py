@@ -4,7 +4,7 @@ CACHE_TYPE = "RedisCache"
 CACHE_DEFAULT_TIMEOUT = 300
 CACHE_REDIS_URL = os.environ.get("REDISCLOUD_URL")
 ENV = os.environ.get("FLASK_ENV", "production")
-ES_URL = os.environ.get("ES_URL_PROD_TEMPORARY", "http://elastic:testpass@127.0.0.1:9200")
+ES_URL = os.environ.get("ES_URL_PROD", "http://elastic:testpass@127.0.0.1:9200")
 DEBUG = ENV == "development"
 JSON_SORT_KEYS = False
 SECRET_KEY = os.environ.get("SECRET_KEY")
