@@ -86,6 +86,8 @@ def create_sorted_group_by_buckets(
             )
             if not known:
                 a.missing = missing
+            if "cited_by_percentile_year" in group_by_field:
+                a.format = "0.0"
             s.aggs.bucket(bucket_keys["default"], a)
     return s
 
@@ -135,6 +137,8 @@ def create_default_group_by_buckets(
     )
     if not known:
         a.missing = missing
+    if "cited_by_percentile_year" in group_by_field:
+        a.format = "0.0"
     s.aggs.bucket(bucket_keys["default"], a)
     return s
 

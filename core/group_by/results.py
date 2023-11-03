@@ -112,6 +112,10 @@ def get_result(b, key_display_names, group_by):
 
     doc_count = b.inner.doc_count if "inner" in b else b.doc_count
 
+    if "cited_by_percentile_year" in group_by:
+        # format as one decimal place
+        b.key = str(round(b.key, 1))
+
     return {"key": b.key, "key_display_name": key_display_name, "doc_count": doc_count}
 
 
