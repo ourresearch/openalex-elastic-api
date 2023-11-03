@@ -121,6 +121,8 @@ def validate_group_by(field, params):
         "apc_paid.value_usd",
         "authors_count",
         "cited_by_count",
+        "cited_by_percentile_year.min",
+        "cited_by_percentile_year.max",
         "concepts_count",
         "hierarchy_level",
         "grants_count",
