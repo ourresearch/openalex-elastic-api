@@ -120,12 +120,12 @@ def apply_sorting(params, fields_dict, default_sort, index_name, s):
 
 def apply_grouping(params, fields_dict, s):
     if params["group_by"]:
-        group_by_item, _ = parse_group_by(params["group_by"])
-        s = create_group_by_buckets(fields_dict, group_by_item, s, params)
+        group_by, known = parse_group_by(params["group_by"])
+        s = create_group_by_buckets(fields_dict, group_by, known, s, params)
     elif params["group_bys"]:
         for group_by_item in params["group_bys"]:
-            group_by_item, _ = parse_group_by(group_by_item)
-            s = create_group_by_buckets(fields_dict, group_by_item, s, params)
+            group_by, known = parse_group_by(group_by_item)
+            s = create_group_by_buckets(fields_dict, group_by, known, s, params)
     return s
 
 

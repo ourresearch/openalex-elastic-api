@@ -14,20 +14,19 @@ Bucket creation.
 """
 
 
-def create_group_by_buckets(fields_dict, group_by_item, s, params):
+def create_group_by_buckets(fields_dict, group_by, known, s, params):
     cursor = params.get("cursor")
     q = params.get("q")
     per_page = 500 if q else params.get("per_page")
     sort_params = params.get("sort")
 
-    s = s.params(preference=clean_preference(group_by_item))
-    field = get_field(fields_dict, group_by_item)
+    s = s.params(preference=clean_preference(group_by))
+    field = get_field(fields_dict, group_by)
     validate_group_by(field, params)
 
     if field.param in ["best_open_version", "version"] or "continent" in field.param:
         return s
 
-    group_by, known = parse_group_by(group_by_item)
     group_by_field = field.alias if field.alias else field.es_sort_field()
 
     bucket_keys = get_bucket_keys(group_by)

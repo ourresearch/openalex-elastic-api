@@ -40,7 +40,7 @@ def get_group_by_results(
     elif "continent" in field.param:
         results = group_by_continent(field, index_name, params, fields_dict)
     elif field.param == "version":
-        results = group_by_version(field, index_name, params, fields_dict)
+        results = group_by_version(field, index_name, params, known, fields_dict)
     elif field.param == "best_open_version":
         results = group_by_best_open_version(field, index_name, params, fields_dict)
     else:
