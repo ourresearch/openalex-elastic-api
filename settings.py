@@ -4,7 +4,7 @@ CACHE_TYPE = "RedisCache"
 CACHE_DEFAULT_TIMEOUT = 300
 CACHE_REDIS_URL = os.environ.get("REDISCLOUD_URL")
 ENV = os.environ.get("FLASK_ENV", "production")
-ES_URL = os.environ.get("ES_URL_PROD", "http://elastic:testpass@127.0.0.1:9200")
+ES_URL = os.environ.get("ES_URL_PROD_VERSION_2", "http://elastic:testpass@127.0.0.1:9200")
 DEBUG = ENV == "development"
 JSON_SORT_KEYS = False
 SECRET_KEY = os.environ.get("SECRET_KEY")
@@ -18,7 +18,7 @@ INSTITUTIONS_INDEX = "institutions-v7"
 PUBLISHERS_INDEX = "publishers-v4"
 SOURCES_INDEX = "sources-v2"
 VENUES_INDEX = "venues-v8"
-WORKS_INDEX = "works-v19-*,-*invalid-data"
+WORKS_INDEX = "works-v20-*,-*invalid-data"
 GROUPBY_VALUES_INDEX = "groupby_values"
 
 DO_NOT_GROUP_BY = [
