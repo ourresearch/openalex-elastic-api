@@ -12,7 +12,7 @@ from ids.utils import (get_merged_id, is_author_openalex_id,
                        is_publisher_openalex_id, is_source_openalex_id,
                        is_venue_openalex_id, is_work_openalex_id,
                        normalize_doi, normalize_issn, normalize_openalex_id,
-                       normalize_orcid, normalize_pmid, normalize_ror,
+                       normalize_orcid, normalize_pmid, normalize_pmcid, normalize_ror,
                        normalize_wikidata, process_id_only_fields)
 from institutions.schemas import InstitutionsSchema
 from publishers.schemas import PublishersSchema
@@ -89,6 +89,12 @@ def works_id_get(id):
         clean_pmid = normalize_pmid(id)
         full_pmid = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}"
         query = Q("term", ids__pmid=full_pmid)
+        s = s.filter(query)
+    elif id.startswith("pmcid:"):
+        id = id.replace("pmcid:", "")
+        clean_pmcid = normalize_pmcid(id)
+        full_pmcid = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{clean_pmcid}"
+        query = Q("term", ids__pmcid=full_pmcid)
         s = s.filter(query)
     elif id.startswith("doi:") or ("doi" in id):
         clean_doi = normalize_doi(id, return_none_if_error=True)

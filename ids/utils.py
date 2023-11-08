@@ -248,6 +248,19 @@ def normalize_pmid(pmid):
     return pmid
 
 
+def normalize_pmcid(pmcid):
+    if not pmcid:
+        return None
+    pmcid = pmcid.strip().lower()
+    p = re.compile(r"(\d+)")
+    matches = re.findall(p, pmcid)
+    if len(matches) == 0:
+        return None
+    pmcid = matches[0]
+    pmcid = pmcid.replace("\0", "")
+    return pmcid
+
+
 def get_merged_id(index_name, full_openalex_id):
     merged_id = None
     s = Search(index=index_name)
