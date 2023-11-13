@@ -8,6 +8,7 @@ class MetaSchema(Schema):
     page = fields.Int()
     per_page = fields.Int()
     next_cursor = fields.Str()
+    groups_count = fields.Int()
 
     class Meta:
         ordered = True

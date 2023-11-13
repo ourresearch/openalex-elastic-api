@@ -177,10 +177,13 @@ def format_response(response, params, index_name, fields_dict, s):
 
 def format_meta(response, params, s):
     meta = {
-        "count": calculate_count(response, params, s),
+        "count": calculate_sample_or_default_count(params, s),
         "db_response_time_ms": response.took,
         "page": params["page"] if not params["cursor"] else None,
         "per_page": params["per_page"],
+        "groups_count": calculate_group_by_count(params, response)
+        if params["group_by"]
+        else None,
     }
 
     if params.get("cursor"):
@@ -208,14 +211,6 @@ def format_group_bys(response, params, index_name, fields_dict):
         group_bys_data.append({"group_by_key": group_by_item, "groups": item_results})
 
     return group_bys_data
-
-
-def calculate_count(response, params, s):
-    if params["group_by"]:
-        return calculate_group_by_count(params, response)
-    if params["group_bys"]:
-        return 0
-    return calculate_sample_or_default_count(params, s)
 
 
 def calculate_sample_or_default_count(params, s):
