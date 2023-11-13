@@ -120,12 +120,14 @@ def apply_sorting(params, fields_dict, default_sort, index_name, s):
 
 def apply_grouping(params, fields_dict, s):
     if params["group_by"]:
-        group_by, known = parse_group_by(params["group_by"])
-        s = create_group_by_buckets(fields_dict, group_by, known, s, params)
+        group_by, include_unknown = parse_group_by(params["group_by"])
+        s = create_group_by_buckets(fields_dict, group_by, include_unknown, s, params)
     elif params["group_bys"]:
         for group_by_item in params["group_bys"]:
-            group_by, known = parse_group_by(group_by_item)
-            s = create_group_by_buckets(fields_dict, group_by, known, s, params)
+            group_by, include_unknown = parse_group_by(group_by_item)
+            s = create_group_by_buckets(
+                fields_dict, group_by, include_unknown, s, params
+            )
     return s
 
 
@@ -188,9 +190,9 @@ def format_meta(response, params, s):
 
 
 def format_group_by(response, params, index_name, fields_dict):
-    group_by, known = parse_group_by(params["group_by"])
+    group_by, include_unknown = parse_group_by(params["group_by"])
     group_by_data = get_group_by_results(
-        group_by, known, params, index_name, fields_dict, response
+        group_by, include_unknown, params, index_name, fields_dict, response
     )
     return group_by_data
 
@@ -199,9 +201,9 @@ def format_group_bys(response, params, index_name, fields_dict):
     group_bys_data = []
 
     for group_by_item in params["group_bys"]:
-        group_by_item, known = parse_group_by(group_by_item)
+        group_by_item, include_unknown = parse_group_by(group_by_item)
         item_results = get_group_by_results(
-            group_by_item, known, params, index_name, fields_dict, response
+            group_by_item, include_unknown, params, index_name, fields_dict, response
         )
         group_bys_data.append({"group_by_key": group_by_item, "groups": item_results})
 

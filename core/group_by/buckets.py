@@ -14,7 +14,7 @@ Bucket creation.
 """
 
 
-def create_group_by_buckets(fields_dict, group_by, known, s, params):
+def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params):
     cursor = params.get("cursor")
     q = params.get("q")
     per_page = 500 if q else params.get("per_page")
@@ -40,7 +40,7 @@ def create_group_by_buckets(fields_dict, group_by, known, s, params):
         create_sorted_group_by_buckets(
             bucket_keys,
             group_by_field,
-            known,
+            include_unknown,
             missing,
             per_page,
             s,
@@ -60,18 +60,31 @@ def create_group_by_buckets(fields_dict, group_by, known, s, params):
         else:
             after_key = None
         create_pagination_group_by_buckets(
-            bucket_keys, group_by_field, known, missing, params, s, after_key
+            bucket_keys, group_by_field, include_unknown, missing, params, s, after_key
         )
     else:
         create_default_group_by_buckets(
-            bucket_keys, group_by_field, known, missing, per_page, s, shard_size
+            bucket_keys,
+            group_by_field,
+            include_unknown,
+            missing,
+            per_page,
+            s,
+            shard_size,
         )
 
     return s
 
 
 def create_sorted_group_by_buckets(
-    bucket_keys, group_by_field, known, missing, per_page, s, shard_size, sort_params
+    bucket_keys,
+    group_by_field,
+    include_unknown,
+    missing,
+    per_page,
+    s,
+    shard_size,
+    sort_params,
 ):
     for key, order in sort_params.items():
         if key in ["count", "key"]:
@@ -83,7 +96,7 @@ def create_sorted_group_by_buckets(
                 size=per_page,
                 shard_size=shard_size,
             )
-            if not known:
+            if include_unknown:
                 a.missing = missing
             if "cited_by_percentile_year" in group_by_field:
                 a.format = "0.0"
@@ -109,7 +122,7 @@ def create_boolean_group_by_buckets(bucket_keys, group_by_field, s):
 
 
 def create_pagination_group_by_buckets(
-    bucket_keys, group_by_field, known, missing, params, s, after_key
+    bucket_keys, group_by_field, include_unknown, missing, params, s, after_key
 ):
     sources = [{"sub_key": {"terms": {"field": group_by_field}}}]
 
@@ -119,14 +132,14 @@ def create_pagination_group_by_buckets(
         composite_agg.after = after_key
 
     # handle missing value
-    if known and missing is not None:
+    if not include_unknown and missing is not None:
         s = s.filter("bool", must=[{"exists": {"field": group_by_field.es_field()}}])
     s.aggs.bucket(bucket_keys["default"], composite_agg)
     return s
 
 
 def create_default_group_by_buckets(
-    bucket_keys, group_by_field, known, missing, per_page, s, shard_size
+    bucket_keys, group_by_field, include_unknown, missing, per_page, s, shard_size
 ):
     a = A(
         "terms",
@@ -134,7 +147,7 @@ def create_default_group_by_buckets(
         size=per_page,
         shard_size=shard_size,
     )
-    if not known:
+    if include_unknown:
         a.missing = missing
     if "cited_by_percentile_year" in group_by_field:
         a.format = "0.0"

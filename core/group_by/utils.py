@@ -18,17 +18,21 @@ def format_key(base, group_by):
 
 
 def parse_group_by(group_by):
-    known = False
+    include_unknown = False
     if ":" in group_by:
         group_by_split = group_by.split(":")
-        if len(group_by_split) == 2 and group_by_split[1].lower() == "known":
+        if len(group_by_split) == 2 and group_by_split[1].lower() == "include_unknown":
             group_by = group_by_split[0]
-            known = True
-        elif len(group_by_split) == 2 and group_by_split[1].lower() != "known":
+            include_unknown = True
+        elif len(group_by_split) == 2 and group_by_split[1].lower() == "known":
+            group_by = group_by_split[0]
+            include_unknown = False
+        elif len(group_by_split) == 2:
             raise APIQueryParamsError(
-                "The only valid filter for a group_by param is 'known', which hides the unknown group from results."
+                "The only valid filters for a group_by param is 'include_unknown' or the deprecated value 'known'"
             )
-    return group_by, known
+
+    return group_by, include_unknown
 
 
 def get_all_groupby_values(entity, field):

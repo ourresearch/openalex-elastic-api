@@ -25,7 +25,7 @@ from core.group_by.display_names import (
 
 def get_group_by_results(
     group_by,
-    known,
+    include_unknown,
     params,
     index_name,
     fields_dict,
@@ -40,12 +40,14 @@ def get_group_by_results(
     elif "continent" in field.param:
         results = group_by_continent(field, index_name, params, fields_dict)
     elif field.param == "version":
-        results = group_by_version(field, index_name, params, known, fields_dict)
+        results = group_by_version(
+            field, index_name, params, include_unknown, fields_dict
+        )
     elif field.param == "best_open_version":
         results = group_by_best_open_version(field, index_name, params, fields_dict)
     else:
         results = get_default_group_by_results(group_by, response)
-    results = add_zero_values(results, known, index_name, group_by, params)
+    results = add_zero_values(results, include_unknown, index_name, group_by, params)
     return results
 
 
@@ -119,9 +121,9 @@ def get_result(b, key_display_names, group_by):
     return {"key": b.key, "key_display_name": key_display_name, "doc_count": doc_count}
 
 
-def add_zero_values(results, known, index_name, field, params):
+def add_zero_values(results, include_unknown, index_name, field, params):
     ignore_values = set([str(item["key"]) for item in results])
-    if known:
+    if not include_unknown:
         ignore_values.update(["unknown", "-111"])
     possible_buckets = get_all_groupby_values(
         entity=index_name.split("-")[0], field=field

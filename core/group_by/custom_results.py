@@ -62,7 +62,7 @@ def group_by_continent(field, index_name, params, fields_dict):
     return group_by_results
 
 
-def group_by_version(field, index_name, params, known, fields_dict):
+def group_by_version(field, index_name, params, include_unknown, fields_dict):
     group_by_results = []
     took = 0
     ms = MultiSearch(index=index_name)
@@ -80,7 +80,7 @@ def group_by_version(field, index_name, params, known, fields_dict):
     for version, response in zip(settings.VERSIONS, responses):
         version = "unknown" if version == "null" else version
         key_display_name = "unknown" if version == "null" else version
-        if key_display_name == "unknown" and known:
+        if key_display_name == "unknown" and not include_unknown:
             continue
         if not params["q"] or params["q"] and params["q"].lower() in version.lower():
             group_by_results.append(
