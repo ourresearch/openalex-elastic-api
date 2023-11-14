@@ -1,8 +1,10 @@
 from elasticsearch_dsl import A, Q, AttrDict
+from flask import current_app as app
+
 
 import settings
 from core.cursor import decode_group_by_cursor
-from core.group_by.utils import get_bucket_keys, parse_group_by
+from core.group_by.utils import get_bucket_keys
 from core.validate import validate_group_by
 from core.preference import clean_preference
 from core.utils import get_field
@@ -131,9 +133,13 @@ def create_pagination_group_by_buckets(
     if after_key:
         composite_agg.after = after_key
 
-    # handle missing value
-    if not include_unknown and missing is not None:
-        s = s.filter("bool", must=[{"exists": {"field": group_by_field.es_field()}}])
+    try:
+        if not include_unknown and missing is not None:
+            s = s.filter(
+                "bool", must=[{"exists": {"field": group_by_field.es_field()}}]
+            )
+    except AttributeError:
+        app.logger.warn(f"No field available for {group_by_field}.es_field()")
     s.aggs.bucket(bucket_keys["default"], composite_agg)
     return s
 
