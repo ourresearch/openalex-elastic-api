@@ -32,7 +32,7 @@ def index():
 )
 def works():
     index_name = WORKS_INDEX
-    default_sort = ["-cited_by_count", "id"]
+    default_sort = ["-cited_by_percentile_year.max", "-cited_by_count", "id"]
     only_fields = process_only_fields(request, WorksSchema)
     result = shared_view(request, fields_dict, index_name, default_sort)
     # export option
