@@ -35,6 +35,9 @@ class AffiliationSchema(Schema):
     institution = fields.Nested(InstitutionSchema)
     years = fields.List(fields.Int())
 
+    class Meta:
+        ordered = True
+
 
 class AuthorsSchema(Schema):
     id = fields.Str()
