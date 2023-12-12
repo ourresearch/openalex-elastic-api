@@ -18,7 +18,7 @@ class IDsSchema(Schema):
         unknown = INCLUDE
 
 
-class LastKnownInstitutionSchema(Schema):
+class InstitutionSchema(Schema):
     id = fields.Str()
     ror = fields.Str()
     display_name = fields.Str()
@@ -31,6 +31,11 @@ class LastKnownInstitutionSchema(Schema):
         unknown = INCLUDE
 
 
+class AffiliationSchema(Schema):
+    institution = fields.Nested(InstitutionSchema)
+    years = fields.List(fields.Int())
+
+
 class AuthorsSchema(Schema):
     id = fields.Str()
     orcid = fields.Str()
@@ -41,7 +46,8 @@ class AuthorsSchema(Schema):
     cited_by_count = fields.Int()
     summary_stats = fields.Nested(SummaryStatsSchema, dump_default=None)
     ids = fields.Nested(IDsSchema)
-    last_known_institution = fields.Nested(LastKnownInstitutionSchema)
+    affiliations = fields.List(fields.Nested(AffiliationSchema))
+    last_known_institution = fields.Nested(InstitutionSchema)
     x_concepts = fields.List(fields.Nested(XConceptsSchema))
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     works_api_url = fields.Str()
