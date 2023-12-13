@@ -38,6 +38,10 @@ def get_sort_fields(fields_dict, group_by, sort_params):
                 "Sorting relevance score ascending is not allowed."
             )
 
+        # override publication_year into publication_date
+        if key == "publication_year":
+            key = "publication_date"
+
         # all others
         field = get_field(fields_dict, key)
         if value == "asc":
