@@ -247,19 +247,26 @@ class SearchOpenAlex:
 
     @staticmethod
     def citation_boost_query(query):
-        """Uses cited_by_count to boost query results."""
+        """Uses cited_by_count to boost query results with a conditional script."""
         return Q(
             "function_score",
-            functions={
-                "field_value_factor": {
-                    "field": "cited_by_count",
-                    "factor": 1,
-                    "modifier": "sqrt",
-                    "missing": 1,
+            functions=[
+                {
+                    "script_score": {
+                        "script": {
+                            "source": """
+                            if (doc['cited_by_count'].size() == 0 || doc['cited_by_count'].value == 0) {
+                                return 0.5;
+                            } else {
+                                return Math.sqrt(doc['cited_by_count'].value);
+                            }
+                            """
+                        }
+                    }
                 }
-            },
+            ],
             query=query,
-            boost_mode="multiply",
+            boost_mode="multiply"
         )
 
     def has_phrase(self):
