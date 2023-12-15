@@ -59,7 +59,7 @@ def autocomplete_full():
     filter_results = []
 
     entities_to_indeces = get_indices()
-    if hide_works:
+    if hide_works and hide_works.lower() == "true":
         entities_to_indeces.pop("work")
 
     if entity_type:
