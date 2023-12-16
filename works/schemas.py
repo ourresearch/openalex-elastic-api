@@ -162,8 +162,8 @@ class SDGSchema(Schema):
 
 
 class CitedByPercentileYearSchema(Schema):
-    min = fields.Float()
-    max = fields.Float()
+    min = fields.Integer()
+    max = fields.Integer()
 
     class Meta:
         ordered = True
