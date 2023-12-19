@@ -158,7 +158,7 @@ def authors_id_get(id):
         s = s.filter(query)
         if s.count() == 0:
             # check if document is merged
-            merged_id = get_merged_id("merge-authors", full_author_id)
+            merged_id = get_merged_id("merge-authors-v1", full_author_id)
             if merged_id:
                 return redirect(
                     url_for("ids.authors_id_get", id=merged_id, **request.args),

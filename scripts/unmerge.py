@@ -4,7 +4,7 @@ import settings
 
 
 def unmerge():
-    """Delete records from the merge-authors index in batches of 50."""
+    """Delete records from the merge-authors-v1 index in batches of 50."""
     with open("scripts/author_ids_to_fix.csv", "rt") as f:
         reader = csv.DictReader(f)
         total = 0
@@ -26,7 +26,7 @@ def unmerge():
 
 def delete_batch(batch):
     """Delete a batch of records."""
-    s = Search(index="merge-authors").filter("terms", _id=batch)
+    s = Search(index="merge-authors-v1").filter("terms", _id=batch)
     s.delete()
 
 

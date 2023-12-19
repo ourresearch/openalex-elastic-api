@@ -264,7 +264,10 @@ def normalize_pmcid(pmcid):
 def get_merged_id(index_name, full_openalex_id):
     merged_id = None
     s = Search(index=index_name)
-    s = s.filter(Q("term", id__keyword=full_openalex_id))
+    if is_author_openalex_id(full_openalex_id):
+        s = s.filter(Q("term", id=full_openalex_id))
+    else:
+        s = s.filter(Q("term", id__keyword=full_openalex_id))
     response = s.execute()
     for item in response:
         if "merge_into_id" in item:
