@@ -536,6 +536,7 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("publication_date", None),
     ),
     RangeField(param="referenced_works_count"),
+    RangeField(param="sustainable_development_goals.score"),
     SearchField(
         param="abstract.search",
         custom_es_field="abstract",
