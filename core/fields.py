@@ -438,6 +438,7 @@ class SearchField(Field):
 class TermField(Field):
     def build_query(self):
         id_params = [
+            "affiliations.institution.ror",
             "author.orcid",
             "authorships.author.orcid",
             "authorships.institutions.ror",
@@ -558,7 +559,13 @@ class TermField(Field):
         elif self.param == "openalex_id":
             formatted = get_full_openalex_id(self.value)
         elif (
-            self.param in ["authorships.institutions.ror", "institutions.ror", "ror"]
+            self.param
+            in [
+                "affiliations.institution.ror",
+                "authorships.institutions.ror",
+                "institutions.ror",
+                "ror",
+            ]
             and "ror.org" not in self.value
         ):
             formatted = f"https://ror.org/{self.value}"

@@ -45,6 +45,8 @@ fields = [
         param="to_updated_date",
         custom_es_field="updated_date",
     ),
+    OpenAlexIDField(param="affiliations.institution.id"),
+    OpenAlexIDField(param="affiliations.institution.lineage"),
     OpenAlexIDField(
         param="concept.id",
         custom_es_field="x_concepts.id",
@@ -106,6 +108,9 @@ fields = [
         docstring="Free text search among authors' names",
         documentation_link="https://docs.openalex.org/api-entities/authors/search-authors#search-a-specific-field",
     ),
+    TermField(param="affiliations.institution.country_code"),
+    TermField(param="affiliations.institution.ror"),
+    TermField(param="affiliations.institution.type"),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(
         param="last_known_institution.country_code",
