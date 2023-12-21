@@ -51,6 +51,7 @@ class AuthorsSchema(Schema):
     ids = fields.Nested(IDsSchema)
     affiliations = fields.List(fields.Nested(AffiliationSchema))
     last_known_institution = fields.Nested(InstitutionSchema)
+    last_known_institutions = fields.List(fields.Nested(InstitutionSchema))
     x_concepts = fields.List(fields.Nested(XConceptsSchema))
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     works_api_url = fields.Str()

@@ -33,6 +33,10 @@ fields = [
         param=f"last_known_institution.is_global_south",
         custom_es_field="last_known_institution.country_code",
     ),
+    BooleanField(
+        param=f"last_known_institutions.is_global_south",
+        custom_es_field="last_known_institutions.country_code",
+    ),
     DateField(
         param="from_created_date",
         custom_es_field="created_date",
@@ -69,6 +73,15 @@ fields = [
     OpenAlexIDField(
         param="last_known_institution.lineage",
         custom_es_field="last_known_institution.lineage",
+    ),
+    OpenAlexIDField(
+        param="last_known_institutions.id",
+        docstring="The institution to which the author most recently claimed affiliation",
+        documentation_link="https://docs.openalex.org/api-entities/authors/author-object#last_known_institutions",
+    ),
+    OpenAlexIDField(
+        param="last_known_institutions.lineage",
+        custom_es_field="last_known_institutions.lineage",
     ),
     OpenAlexIDField(
         param="ids.openalex",
@@ -128,6 +141,26 @@ fields = [
     TermField(param="last_known_institution.ror"),
     TermField(
         param="last_known_institution.type",
+        docstring="""The type of the author's last known institution. For example, universities are type "Education," and hospitals are type "Healthcare".""",
+        documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#type",
+        alternate_names=ALTERNATE_NAMES.get("institution.type", None),
+    ),
+    TermField(
+        param="last_known_institutions.country_code",
+        docstring="The country of the author's last known institution",
+        documentation_link="https://docs.openalex.org/api-entities/authors/author-object#last_known_institutions",
+        alternate_names=ALTERNATE_NAMES.get("country", None),
+    ),
+    TermField(
+        param="last_known_institutions.continent",
+        custom_es_field="last_known_institutions.country_code",
+        docstring="The continent of the author's last known institution",
+        documentation_link="https://docs.openalex.org/api-entities/authors/author-object#last_known_institutions",
+        alternate_names=ALTERNATE_NAMES.get("continent", None),
+    ),
+    TermField(param="last_known_institutions.ror"),
+    TermField(
+        param="last_known_institutions.type",
         docstring="""The type of the author's last known institution. For example, universities are type "Education," and hospitals are type "Healthcare".""",
         documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#type",
         alternate_names=ALTERNATE_NAMES.get("institution.type", None),
