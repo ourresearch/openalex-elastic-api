@@ -266,7 +266,7 @@ class SearchOpenAlex:
                 }
             ],
             query=query,
-            boost_mode="multiply"
+            boost_mode="multiply",
         )
 
     def has_phrase(self):
@@ -353,8 +353,10 @@ def check_is_search_query(filter_params, search):
         "default.search",
         "display_name.search",
         "fulltext.search",
+        "keyword.search",
         "raw_affiliation_string.search",
         "title.search",
+        "title_and_abstract.search",
     ]
 
     if search and search != '""':

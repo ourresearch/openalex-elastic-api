@@ -558,6 +558,12 @@ fields = [
         alternate_names=["body", "full", "text"],
     ),
     SearchField(
+        param="keyword.search",
+        custom_es_field="keywords.keyword",
+        docstring="Free text search within the work's keywords only",
+        documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
+    ),
+    SearchField(
         param="raw_affiliation_string.search",
         custom_es_field="authorships.raw_affiliation_string",
     ),
@@ -565,6 +571,11 @@ fields = [
         param="title.search",
         custom_es_field="display_name",
         docstring="Free text search within the work's title only",
+        documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
+    ),
+    SearchField(
+        param="title_and_abstract.search",
+        docstring="Free text search within the work's title and abstract",
         documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
     ),
     TermField(param="apc_list.currency"),
@@ -610,7 +621,10 @@ fields = [
         docstring='The type of institutions affiliated with the work. For example, universities are type "Education," and hospitals are type "Healthcare".',
         documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#type",
     ),
-    TermField(param="best_oa_location.landing_page_url", custom_es_field="best_oa_location.landing_page_url"),
+    TermField(
+        param="best_oa_location.landing_page_url",
+        custom_es_field="best_oa_location.landing_page_url",
+    ),
     TermField(
         param="best_oa_location.source.issn",
     ),
@@ -668,7 +682,9 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["language"],
         alternate_names=ALTERNATE_NAMES.get("language", None),
     ),
-    TermField(param="locations.landing_page_url", custom_es_field="locations.landing_page_url"),
+    TermField(
+        param="locations.landing_page_url", custom_es_field="locations.landing_page_url"
+    ),
     TermField(param="locations.source.issn"),
     TermField(
         param="locations.license",
@@ -687,7 +703,10 @@ fields = [
     ),
     TermField(param="pmid", custom_es_field="ids.pmid"),
     TermField(param="pmcid", custom_es_field="ids.pmcid"),
-    TermField(param="primary_location.landing_page_url", custom_es_field="primary_location.landing_page_url"),
+    TermField(
+        param="primary_location.landing_page_url",
+        custom_es_field="primary_location.landing_page_url",
+    ),
     TermField(
         param="primary_location.license",
         docstring=DOCSTRINGS["license"],

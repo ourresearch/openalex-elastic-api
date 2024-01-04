@@ -410,6 +410,7 @@ class SearchField(Field):
             self.param == "raw_affiliation_string.search"
             or self.param == "abstract.search"
             or self.param == "fulltext.search"
+            or self.param == "keyword.search"
             or self.param == "description.search"
             or self.param == "title.search"
         ):
@@ -421,6 +422,13 @@ class SearchField(Field):
             search_oa = SearchOpenAlex(
                 search_terms=self.value,
                 is_author_name_query=True,
+            )
+            q = search_oa.build_query()
+        elif self.param == "title_and_abstract.search":
+            search_oa = SearchOpenAlex(
+                search_terms=self.value,
+                primary_field="display_name",
+                secondary_field="abstract",
             )
             q = search_oa.build_query()
         else:
