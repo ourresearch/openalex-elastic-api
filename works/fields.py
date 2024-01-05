@@ -655,6 +655,9 @@ fields = [
     TermField(param="ids.pmid", custom_es_field="ids.pmid"),
     TermField(param="ids.pmcid", custom_es_field="ids.pmcid"),
     TermField(
+        param="indexed_in",
+    ),
+    TermField(
         param="institutions.country_code",
         alias="authorships.institutions.country_code",
         docstring=DOCSTRINGS["country"],

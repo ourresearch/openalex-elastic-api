@@ -190,6 +190,7 @@ class WorksSchema(Schema):
     primary_location = fields.Nested(LocationSchema)
     type = fields.Str()
     type_crossref = fields.Str()
+    indexed_in = fields.List(fields.Str())
     open_access = fields.Nested(OpenAccessSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
     countries_distinct_count = fields.Int()
