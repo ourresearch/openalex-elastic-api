@@ -22,6 +22,8 @@ WORKS_INDEX = "works-v22-*,-*invalid-data"
 GROUPBY_VALUES_INDEX = "groupby_values"
 
 DO_NOT_GROUP_BY = [
+    "biblio.first_page",
+    "biblio.last_page",
     "cited_by",
     "display_name",
     "doi",

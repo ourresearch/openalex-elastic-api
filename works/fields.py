@@ -641,6 +641,10 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/works/work-object/location-object#version",
     ),
     TermField(param="best_open_version", custom_es_field="locations.version"),
+    TermField(param="biblio.first_page"),
+    TermField(param="biblio.issue"),
+    TermField(param="biblio.last_page"),
+    TermField(param="biblio.volume"),
     TermField(param="concepts.wikidata"),
     TermField(param="display_name", custom_es_field="display_name.lower"),
     TermField(
