@@ -150,6 +150,10 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("has_doi", None),
     ),
     BooleanField(
+        param="has_embeddings",
+        custom_es_field="embeddings",
+    ),
+    BooleanField(
         param="has_fulltext",
         docstring=DOCSTRINGS["has_fulltext"],
         documentation_link=DOCUMENTATION_LINKS["has_fulltext"],
