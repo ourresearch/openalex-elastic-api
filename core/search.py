@@ -1,6 +1,7 @@
 from elasticsearch_dsl import Q
 
 from core.exceptions import APISearchError
+from core.text_expansion import TextExpansionQuery
 
 
 class SearchOpenAlex:
@@ -11,12 +12,14 @@ class SearchOpenAlex:
         secondary_field=None,
         tertiary_field=None,
         is_author_name_query=False,
+        is_semantic_query=False,
     ):
         self.search_terms = search_terms
         self.primary_field = primary_field if primary_field else "display_name"
         self.secondary_field = secondary_field
         self.tertiary_field = tertiary_field
         self.is_author_name_query = is_author_name_query
+        self.is_semantic_query = is_semantic_query
 
     def build_query(self):
         if not self.search_terms:
@@ -36,6 +39,8 @@ class SearchOpenAlex:
         elif self.primary_field and self.secondary_field:
             basic_query = self.primary_secondary_match_query()
             query = self.citation_boost_query(basic_query)
+        elif self.is_semantic_query:
+            query = self.semantic_query()
         else:
             basic_query = self.primary_match_query()
             query = self.citation_boost_query(basic_query)
@@ -245,26 +250,47 @@ class SearchOpenAlex:
 
         return most_fields_query | phrase_query
 
+    def semantic_query(self):
+        expansion_query = self.text_expansion_query()
+        query = self.citation_boost_query(expansion_query, scaling_type="log")
+        return query
+
+    def text_expansion_query(self, boost=1):
+        q = TextExpansionQuery(
+            sparse_vector_field="embeddings",
+            model_id=".elser_model_2_linux-x86_64",
+            model_text=self.search_terms,
+            boost=boost,
+        )
+        return q
+
     @staticmethod
-    def citation_boost_query(query):
-        """Uses cited_by_count to boost query results with a conditional script."""
+    def citation_boost_query(query, scaling_type="sqrt"):
+        """Uses cited_by_count to boost query results with a conditional script.
+        Supports two types of scaling: 'sqrt' for square root, and 'log' for logarithmic scaling.
+        """
+        if scaling_type == "sqrt":
+            script_source = """
+            if (doc['cited_by_count'].size() == 0 || doc['cited_by_count'].value == 0) {
+                return 0.5;
+            } else {
+                return 1 + Math.sqrt(doc['cited_by_count'].value);
+            }
+            """
+        elif scaling_type == "log":
+            script_source = """
+            if (doc['cited_by_count'].size() == 0 || doc['cited_by_count'].value <= 1) {
+                return 0.5;
+            } else {
+                return 1 + Math.log(doc['cited_by_count'].value);
+            }
+            """
+        else:
+            raise ValueError("Invalid scaling_type. Choose 'sqrt' or 'log'.")
+
         return Q(
             "function_score",
-            functions=[
-                {
-                    "script_score": {
-                        "script": {
-                            "source": """
-                            if (doc['cited_by_count'].size() == 0 || doc['cited_by_count'].value == 0) {
-                                return 0.5;
-                            } else {
-                                return Math.sqrt(doc['cited_by_count'].value);
-                            }
-                            """
-                        }
-                    }
-                }
-            ],
+            functions=[{"script_score": {"script": {"source": script_source}}}],
             query=query,
             boost_mode="multiply",
         )
@@ -355,6 +381,7 @@ def check_is_search_query(filter_params, search):
         "fulltext.search",
         "keyword.search",
         "raw_affiliation_string.search",
+        "semantic.search",
         "title.search",
         "title_and_abstract.search",
     ]

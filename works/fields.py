@@ -572,6 +572,10 @@ fields = [
         custom_es_field="authorships.raw_affiliation_string",
     ),
     SearchField(
+        param="semantic.search",
+        custom_es_field="embeddings",
+    ),
+    SearchField(
         param="title.search",
         custom_es_field="display_name",
         docstring="Free text search within the work's title only",

@@ -432,6 +432,12 @@ class SearchField(Field):
                 secondary_field="abstract",
             )
             q = search_oa.build_query()
+        elif self.param == "semantic.search":
+            search_oa = SearchOpenAlex(
+                search_terms=self.value,
+                is_semantic_query=True,
+            )
+            q = search_oa.build_query()
         else:
             search_oa = SearchOpenAlex(search_terms=self.value)
             q = search_oa.build_query()
