@@ -78,7 +78,7 @@ def export_group_by_xlsx(filename, group_by_results):
 
     col_index = 1
     for group_by_key in group_by_results.keys():
-        ws.cell(row=1, column=col_index, value=group_by_key)
+        ws.cell(row=1, column=col_index, value=friendly_header_name(group_by_key))
         col_index += 3
 
     col_index = 1
