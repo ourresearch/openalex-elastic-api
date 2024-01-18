@@ -59,7 +59,10 @@ def single_entity_autocomplete(fields_dict, index_name, request):
                 )
             else:
                 s = s.query("match_phrase_prefix", display_name__autocomplete=q)
-        s = s.sort("-cited_by_count")
+        if index_name.startswith("work"):
+            s = s.sort("-cited_by_count")
+        else:
+            s = s.sort("-works_count")
         s = s.source(AUTOCOMPLETE_SOURCE)
         preference = clean_preference(q)
         s = s.params(preference=preference)

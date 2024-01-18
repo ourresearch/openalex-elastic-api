@@ -143,7 +143,7 @@ def get_filter_results(q):
     return filter_results
 
 
-def build_full_search_query(q, s):
+def build_full_search_query(q, s, sort):
     s = s.filter(
         Q("match_phrase_prefix", display_name__autocomplete=q)
         | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
@@ -153,5 +153,5 @@ def build_full_search_query(q, s):
     )
     # do not show repository
     s = s.exclude("term", type="repository")
-    s = s.sort("-cited_by_count")
+    s = s.sort(sort)
     return s

@@ -61,6 +61,9 @@ def autocomplete_full():
     entities_to_indeces = get_indices()
     if hide_works and hide_works.lower() == "true":
         entities_to_indeces.pop("work")
+        sort = "-works_count"
+    else:
+        sort = "-cited_by_count"
 
     if entity_type:
         try:
@@ -86,7 +89,7 @@ def autocomplete_full():
         # canonical id match
         s, canonical_id_found = search_canonical_id_full(s, q)
         if not canonical_id_found:
-            s = build_full_search_query(q, s)
+            s = build_full_search_query(q, s, sort)
             filter_results = get_filter_results(q)
 
     s = s.source(AUTOCOMPLETE_SOURCE)
