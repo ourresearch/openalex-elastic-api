@@ -116,6 +116,15 @@ def apply_sorting(params, fields_dict, default_sort, index_name, s):
         s = sort_with_sample(s, params["seed"])
     elif params["sort"]:
         sort_fields = get_sort_fields(fields_dict, params["group_by"], params["sort"])
+
+        # override cited_by_percentile_year into default sort
+        if (
+            sort_fields
+            and sort_fields == ["-cited_by_percentile_year.min"]
+            or sort_fields == ["-cited_by_percentile_year.max"]
+        ):
+            sort_fields = default_sort
+
         s = s.sort(*sort_fields)
     elif is_search_query and not params["sort"] and index_name.startswith("works"):
         s = s.sort("_score", "publication_date", "id")
