@@ -56,7 +56,13 @@ def construct_query(params, fields_dict, index_name, default_sort):
 def set_source(index_name, s):
     if index_name.startswith("works"):
         s = s.source(
-            excludes=["abstract", "embeddings", "fulltext", "authorships_full"]
+            excludes=[
+                "abstract",
+                "embeddings",
+                "fulltext",
+                "authorships_full",
+                "vector_embedding",
+            ]
         )
     return s
 
