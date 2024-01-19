@@ -1,7 +1,9 @@
 from elasticsearch_dsl import Q
 
-from core.exceptions import APISearchError
-from core.text_expansion import TextExpansionQuery
+from core.knn import KNNQuery
+import requests
+
+from settings import ES_URL
 
 
 class SearchOpenAlex:
@@ -40,7 +42,8 @@ class SearchOpenAlex:
             basic_query = self.primary_secondary_match_query()
             query = self.citation_boost_query(basic_query)
         elif self.is_semantic_query:
-            query = self.semantic_query()
+            semantic_query = self.semantic_query()
+            query = self.citation_boost_query(semantic_query, scaling_type="log")
         else:
             basic_query = self.primary_match_query()
             query = self.citation_boost_query(basic_query)
@@ -251,18 +254,9 @@ class SearchOpenAlex:
         return most_fields_query | phrase_query
 
     def semantic_query(self):
-        expansion_query = self.text_expansion_query()
-        query = self.citation_boost_query(expansion_query, scaling_type="log")
-        return query
-
-    def text_expansion_query(self, boost=1):
-        q = TextExpansionQuery(
-            sparse_vector_field="embeddings",
-            model_id=".elser_model_2_linux-x86_64",
-            model_text=self.search_terms,
-            boost=boost,
-        )
-        return q
+        query_vector = get_vector(self.search_terms)
+        knn_query = KNNQuery("vector_embedding", query_vector, 100, similarity=0.5)
+        return knn_query
 
     @staticmethod
     def citation_boost_query(query, scaling_type="sqrt"):
@@ -396,3 +390,14 @@ def check_is_search_query(filter_params, search):
                     return True
 
     return False
+
+
+def get_vector(text):
+    """
+    Use the minilm-l12-v2 model to get embeddings.
+    """
+    url = f"{ES_URL}/_ml/trained_models/sentence-transformers__all-minilm-l12-v2/_infer"
+    data = {"docs": [{"text_field": text}]}
+    response = requests.post(url, json=data)
+    result = response.json()["inference_results"][0]["predicted_value"]
+    return result

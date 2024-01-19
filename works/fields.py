@@ -151,7 +151,7 @@ fields = [
     ),
     BooleanField(
         param="has_embeddings",
-        custom_es_field="embeddings",
+        custom_es_field="vector_embedding",
     ),
     BooleanField(
         param="has_fulltext",
@@ -573,7 +573,7 @@ fields = [
     ),
     SearchField(
         param="semantic.search",
-        custom_es_field="embeddings",
+        custom_es_field="vector_embedding",
     ),
     SearchField(
         param="title.search",
