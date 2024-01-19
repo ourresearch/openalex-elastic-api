@@ -8,4 +8,5 @@ marshmallow==3.18.0
 openpyxl==3.0.10
 pycountry==22.3.5
 redis==4.3.1
+requests==2.31.0
 sentry-sdk[flask]==1.10.1
