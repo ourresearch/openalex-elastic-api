@@ -131,7 +131,7 @@ def normalize_openalex_id(openalex_id):
     if not openalex_id:
         return None
     openalex_id = openalex_id.strip().upper()
-    p = re.compile("([WAICFVPS]\d{2,})")
+    p = re.compile("([WAICFVPST]\d{2,})")
     matches = re.findall(p, openalex_id)
     if len(matches) == 0:
         return None

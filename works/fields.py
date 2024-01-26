@@ -479,6 +479,7 @@ fields = [
         docstring="Related works, based on common concepts the works have.",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#related_works",
     ),
+    OpenAlexIDField(param="topics.id"),
     RangeField(
         param="apc_list.value",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#apc_list",
@@ -527,6 +528,8 @@ fields = [
         docstring="The number of distinct countries represented among the work's authors",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#countries_distinct_count",
     ),
+    RangeField(param="domains.id"),
+    RangeField(param="fields.id"),
     RangeField(param="institutions_distinct_count"),
     RangeField(
         param="locations_count",
@@ -540,7 +543,9 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("publication_date", None),
     ),
     RangeField(param="referenced_works_count"),
+    RangeField(param="subfields.id"),
     RangeField(param="sustainable_development_goals.score"),
+    RangeField(param="topics_count"),
     SearchField(
         param="abstract.search",
         custom_es_field="abstract",
