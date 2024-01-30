@@ -155,18 +155,27 @@ class APCSchema(Schema):
         ordered = True
 
 
-class ScoreSchema(Schema):
+class SDGSchema(Schema):
     id = ma_fields.String()
     display_name = ma_fields.String()
     score = ma_fields.Float()
+
+
+class NumberIdSchema(Schema):
+    id = ma_fields.Integer()
+    display_name = ma_fields.Str()
 
     class Meta:
         ordered = True
 
 
-class TopicAncestorsSchema(Schema):
-    id = ma_fields.Integer()
-    display_name = ma_fields.String()
+class TopicSchema(Schema):
+    id = ma_fields.Str()
+    display_name = ma_fields.Str()
+    score = ma_fields.Float()
+    subfield = ma_fields.Nested(NumberIdSchema)
+    field = ma_fields.Nested(NumberIdSchema)
+    domain = ma_fields.Nested(NumberIdSchema)
 
     class Meta:
         ordered = True
@@ -218,17 +227,15 @@ class WorksSchema(Schema):
     biblio = ma_fields.Nested(BiblioSchema)
     is_retracted = ma_fields.Bool()
     is_paratext = ma_fields.Bool()
-    topics = ma_fields.Nested(ScoreSchema, many=True)
-    subfields = ma_fields.Nested(TopicAncestorsSchema, many=True)
-    fields = ma_fields.Nested(TopicAncestorsSchema, many=True)
-    domains = ma_fields.Nested(TopicAncestorsSchema, many=True)
+    primary_topic = ma_fields.Nested(TopicSchema)
+    topics = ma_fields.Nested(TopicSchema, many=True)
     keywords = ma_fields.Nested(KeywordsSchema, many=True)
     concepts = ma_fields.Nested(ConceptsSchema, many=True)
     mesh = ma_fields.List(ma_fields.Nested(MeshSchema))
     locations_count = ma_fields.Int()
     locations = ma_fields.Nested(LocationSchema, many=True)
     best_oa_location = ma_fields.Nested(LocationSchema)
-    sustainable_development_goals = ma_fields.Nested(ScoreSchema, many=True)
+    sustainable_development_goals = ma_fields.Nested(SDGSchema, many=True)
     grants = ma_fields.List(ma_fields.Nested(GrantsSchema))
     referenced_works_count = ma_fields.Int()
     referenced_works = ma_fields.List(ma_fields.Str())
