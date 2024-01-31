@@ -459,6 +459,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["publisher"],
         alternate_names=ALTERNATE_NAMES.get("publisher", None),
     ),
+    OpenAlexIDField(param="primary_topic.id"),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
     OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
     OpenAlexIDField(
@@ -528,14 +529,15 @@ fields = [
         docstring="The number of distinct countries represented among the work's authors",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#countries_distinct_count",
     ),
-    RangeField(param="domains.id"),
-    RangeField(param="fields.id"),
     RangeField(param="institutions_distinct_count"),
     RangeField(
         param="locations_count",
         docstring="The number of distinct online locations we have found for the work",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object/location-object",
     ),
+    RangeField(param="primary_topic.domain.id"),
+    RangeField(param="primary_topic.field.id"),
+    RangeField(param="primary_topic.subfield.id"),
     RangeField(
         param="publication_year",
         docstring=DOCSTRINGS["publication_date"],
@@ -543,7 +545,9 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("publication_date", None),
     ),
     RangeField(param="referenced_works_count"),
-    RangeField(param="subfields.id"),
+    RangeField(param="topics.domain.id"),
+    RangeField(param="topics.field.id"),
+    RangeField(param="topics.subfield.id"),
     RangeField(param="sustainable_development_goals.score"),
     RangeField(param="topics_count"),
     SearchField(
