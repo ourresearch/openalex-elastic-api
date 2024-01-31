@@ -10,6 +10,7 @@ from core.schemas import (
     GroupBySchema,
     GroupBysSchema,
     MetaSchema,
+    NumberIdSchema,
     hide_relevance,
     relevance_score,
 )
@@ -159,14 +160,6 @@ class SDGSchema(Schema):
     id = ma_fields.String()
     display_name = ma_fields.String()
     score = ma_fields.Float()
-
-
-class NumberIdSchema(Schema):
-    id = ma_fields.Integer()
-    display_name = ma_fields.Str()
-
-    class Meta:
-        ordered = True
 
 
 class TopicSchema(Schema):

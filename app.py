@@ -16,6 +16,7 @@ import publishers
 import settings
 import sources
 import suggest
+import topics
 import venues
 import works
 from core.exceptions import APIError
@@ -49,6 +50,7 @@ def register_blueprints(app):
     app.register_blueprint(publishers.views.blueprint)
     app.register_blueprint(sources.views.blueprint)
     app.register_blueprint(suggest.views.blueprint)
+    app.register_blueprint(topics.views.blueprint)
     app.register_blueprint(works.views.blueprint)
     app.register_blueprint(venues.views.blueprint)
     return None
