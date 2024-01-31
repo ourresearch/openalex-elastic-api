@@ -6,20 +6,42 @@ from flask import Blueprint, abort, redirect, request, url_for
 from authors.schemas import AuthorsSchema
 from concepts.schemas import ConceptsSchema
 from funders.schemas import FundersSchema
-from ids.utils import (get_merged_id, is_author_openalex_id,
-                       is_concept_openalex_id, is_funder_openalex_id,
-                       is_institution_openalex_id, is_openalex_id,
-                       is_publisher_openalex_id, is_source_openalex_id,
-                       is_venue_openalex_id, is_work_openalex_id,
-                       normalize_doi, normalize_issn, normalize_openalex_id,
-                       normalize_orcid, normalize_pmid, normalize_pmcid, normalize_ror,
-                       normalize_wikidata, process_id_only_fields)
+from ids.utils import (
+    get_merged_id,
+    is_author_openalex_id,
+    is_concept_openalex_id,
+    is_funder_openalex_id,
+    is_institution_openalex_id,
+    is_openalex_id,
+    is_publisher_openalex_id,
+    is_source_openalex_id,
+    is_topic_openalex_id,
+    is_venue_openalex_id,
+    is_work_openalex_id,
+    normalize_doi,
+    normalize_issn,
+    normalize_openalex_id,
+    normalize_orcid,
+    normalize_pmid,
+    normalize_pmcid,
+    normalize_ror,
+    normalize_wikidata,
+    process_id_only_fields,
+)
 from institutions.schemas import InstitutionsSchema
 from publishers.schemas import PublishersSchema
-from settings import (AUTHORS_INDEX, CONCEPTS_INDEX,
-                      FUNDERS_INDEX, INSTITUTIONS_INDEX, PUBLISHERS_INDEX,
-                      SOURCES_INDEX, WORKS_INDEX)
+from settings import (
+    AUTHORS_INDEX,
+    CONCEPTS_INDEX,
+    FUNDERS_INDEX,
+    INSTITUTIONS_INDEX,
+    PUBLISHERS_INDEX,
+    SOURCES_INDEX,
+    TOPICS_INDEX,
+    WORKS_INDEX,
+)
 from sources.schemas import SourcesSchema
+from topics.schemas import TopicsSchema
 from works.schemas import WorksSchema
 
 blueprint = Blueprint("ids", __name__)
@@ -561,6 +583,44 @@ def sources_id_get(id):
     return sources_schema.dump(response[0])
 
 
+# Topic
+
+
+@blueprint.route("/topics/RANDOM")
+@blueprint.route("/topics/random")
+def topics_random_get():
+    s = Search(index=TOPICS_INDEX)
+    only_fields = process_id_only_fields(request, TopicsSchema)
+
+    random_query = Q("function_score", functions={"random_score": {}})
+    s = s.query(random_query).extra(size=1)
+    response = s.execute()
+    topics_schema = TopicsSchema(context={"display_relevance": False}, only=only_fields)
+    return topics_schema.dump(response[0])
+
+
+@blueprint.route("/topics/<path:id>")
+def topics_id_get(id):
+    s = Search(index=TOPICS_INDEX)
+    only_fields = process_id_only_fields(request, TopicsSchema)
+
+    if is_openalex_id(id):
+        clean_id = normalize_openalex_id(id)
+        if clean_id != id:
+            return redirect(url_for("ids.topics_id_get", id=clean_id, **request.args))
+        clean_id = int(clean_id[1:])
+        full_openalex_id = f"https://openalex.org/T{clean_id}"
+        query = Q("term", id=full_openalex_id)
+        s = s.filter(query)
+    else:
+        abort(404)
+    response = s.execute()
+    if not response:
+        abort(404)
+    topics_schema = TopicsSchema(context={"display_relevance": False}, only=only_fields)
+    return topics_schema.dump(response[0])
+
+
 # Universal
 
 
@@ -593,4 +653,6 @@ def universal_get(openalex_id):
         )
     elif is_source_openalex_id(openalex_id):
         return redirect(url_for("ids.sources_id_get", id=openalex_id, **request.args))
+    elif is_topic_openalex_id(openalex_id):
+        return redirect(url_for("ids.topics_id_get", id=openalex_id, **request.args))
     return {"message": "OpenAlex ID format not recognized"}, 404
