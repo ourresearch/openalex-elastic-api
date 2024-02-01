@@ -18,6 +18,7 @@ class DomainsSchema(Schema):
     relevance_score = ma_fields.Method("get_relevance_score")
     works_count = ma_fields.Int()
     cited_by_count = ma_fields.Int()
+    works_api_url = ma_fields.Str()
     updated_date = ma_fields.Str()
     created_date = ma_fields.Str(dump_default=None)
 

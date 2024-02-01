@@ -6,6 +6,7 @@ from flask import Blueprint, abort, redirect, request, url_for
 from authors.schemas import AuthorsSchema
 from concepts.schemas import ConceptsSchema
 from domains.schemas import DomainsSchema
+from fields.schemas import FieldsSchema
 from funders.schemas import FundersSchema
 from ids.utils import (
     get_merged_id,
@@ -36,6 +37,7 @@ from settings import (
     AUTHORS_INDEX,
     CONCEPTS_INDEX,
     DOMAINS_INDEX,
+    FIELDS_INDEX,
     FUNDERS_INDEX,
     INSTITUTIONS_INDEX,
     PUBLISHERS_INDEX,
@@ -642,6 +644,26 @@ def domains_id_get(id):
         context={"display_relevance": False}, only=only_fields
     )
     return domains_schema.dump(response[0])
+
+
+@blueprint.route("/fields/<path:id>")
+def fields_id_get(id):
+    s = Search(index=FIELDS_INDEX)
+    only_fields = process_id_only_fields(request, FieldsSchema)
+
+    if is_integer_id(id):
+        clean_id = int(id)
+        query = Q("term", id=clean_id)
+        s = s.filter(query)
+    else:
+        abort(404)
+    response = s.execute()
+    if not response:
+        abort(404)
+    fields_schema = FieldsSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
+    return fields_schema.dump(response[0])
 
 
 # Universal
