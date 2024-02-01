@@ -42,10 +42,12 @@ from settings import (
     INSTITUTIONS_INDEX,
     PUBLISHERS_INDEX,
     SOURCES_INDEX,
+    SUBFIELDS_INDEX,
     TOPICS_INDEX,
     WORKS_INDEX,
 )
 from sources.schemas import SourcesSchema
+from subfields.schemas import SubfieldsSchema
 from topics.schemas import TopicsSchema
 from works.schemas import WorksSchema
 
@@ -626,10 +628,9 @@ def topics_id_get(id):
     return topics_schema.dump(response[0])
 
 
-@blueprint.route("/domains/<path:id>")
-def domains_id_get(id):
-    s = Search(index=DOMAINS_INDEX)
-    only_fields = process_id_only_fields(request, DomainsSchema)
+def get_by_integer_id(index, schema, id):
+    s = Search(index=index)
+    only_fields = process_id_only_fields(request, schema)
 
     if is_integer_id(id):
         clean_id = int(id)
@@ -637,33 +638,28 @@ def domains_id_get(id):
         s = s.filter(query)
     else:
         abort(404)
+
     response = s.execute()
     if not response:
         abort(404)
-    domains_schema = DomainsSchema(
-        context={"display_relevance": False}, only=only_fields
-    )
-    return domains_schema.dump(response[0])
+
+    schema_instance = schema(context={"display_relevance": False}, only=only_fields)
+    return schema_instance.dump(response[0])
+
+
+@blueprint.route("/domains/<path:id>")
+def domains_id_get(id):
+    return get_by_integer_id(DOMAINS_INDEX, DomainsSchema, id)
 
 
 @blueprint.route("/fields/<path:id>")
 def fields_id_get(id):
-    s = Search(index=FIELDS_INDEX)
-    only_fields = process_id_only_fields(request, FieldsSchema)
+    return get_by_integer_id(FIELDS_INDEX, FieldsSchema, id)
 
-    if is_integer_id(id):
-        clean_id = int(id)
-        query = Q("term", id=clean_id)
-        s = s.filter(query)
-    else:
-        abort(404)
-    response = s.execute()
-    if not response:
-        abort(404)
-    fields_schema = FieldsSchema(
-        context={"display_relevance": False}, only=only_fields
-    )
-    return fields_schema.dump(response[0])
+
+@blueprint.route("/subfields/<path:id>")
+def subfields_id_get(id):
+    return get_by_integer_id(SUBFIELDS_INDEX, SubfieldsSchema, id)
 
 
 # Universal
