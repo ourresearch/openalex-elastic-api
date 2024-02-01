@@ -270,6 +270,14 @@ def normalize_pmcid(pmcid):
     return pmcid
 
 
+def is_integer_id(id):
+    try:
+        int(id)
+        return True
+    except ValueError:
+        return False
+
+
 def get_merged_id(index_name, full_openalex_id):
     merged_id = None
     s = Search(index=index_name)

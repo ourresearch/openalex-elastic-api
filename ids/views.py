@@ -5,6 +5,7 @@ from flask import Blueprint, abort, redirect, request, url_for
 
 from authors.schemas import AuthorsSchema
 from concepts.schemas import ConceptsSchema
+from domains.schemas import DomainsSchema
 from funders.schemas import FundersSchema
 from ids.utils import (
     get_merged_id,
@@ -12,6 +13,7 @@ from ids.utils import (
     is_concept_openalex_id,
     is_funder_openalex_id,
     is_institution_openalex_id,
+    is_integer_id,
     is_openalex_id,
     is_publisher_openalex_id,
     is_source_openalex_id,
@@ -33,6 +35,7 @@ from publishers.schemas import PublishersSchema
 from settings import (
     AUTHORS_INDEX,
     CONCEPTS_INDEX,
+    DOMAINS_INDEX,
     FUNDERS_INDEX,
     INSTITUTIONS_INDEX,
     PUBLISHERS_INDEX,
@@ -619,6 +622,26 @@ def topics_id_get(id):
         abort(404)
     topics_schema = TopicsSchema(context={"display_relevance": False}, only=only_fields)
     return topics_schema.dump(response[0])
+
+
+@blueprint.route("/domains/<path:id>")
+def domains_id_get(id):
+    s = Search(index=DOMAINS_INDEX)
+    only_fields = process_id_only_fields(request, DomainsSchema)
+
+    if is_integer_id(id):
+        clean_id = int(id)
+        query = Q("term", id=clean_id)
+        s = s.filter(query)
+    else:
+        abort(404)
+    response = s.execute()
+    if not response:
+        abort(404)
+    domains_schema = DomainsSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
+    return domains_schema.dump(response[0])
 
 
 # Universal
