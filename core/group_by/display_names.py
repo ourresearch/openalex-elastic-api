@@ -4,7 +4,7 @@ from elasticsearch_dsl import Search, Q, MultiSearch
 from iso4217 import Currency
 
 from core.utils import get_index_name_by_id, normalize_openalex_id
-from settings import WORKS_INDEX
+from settings import DOMAINS_INDEX, FIELDS_INDEX, SUBFIELDS_INDEX, WORKS_INDEX
 
 
 """
@@ -107,6 +107,28 @@ def get_display_names_sdgs(ids):
     return results
 
 
+def get_display_names_topics(ids):
+    if not ids or (ids[0] == "unknown" and len(ids) == 1):
+        return None
+
+    index = f"{FIELDS_INDEX},{SUBFIELDS_INDEX},{DOMAINS_INDEX}"
+    s = Search(index=index)
+    s = s.extra(size=500)
+    s = s.source(["id", "display_name"])
+
+    results = {}
+    or_queries = []
+    for integer_id in ids:
+        or_queries.append(Q("term", id=integer_id))
+    combined_or_query = Q("bool", should=or_queries, minimum_should_match=1)
+    s = s.query(combined_or_query)
+    response = s.execute()
+
+    for item in response:
+        results[item.id] = item.display_name
+    return results
+
+
 def get_key_display_name(b, group_by):
     if b.key == "unknown":
         return "unknown"
@@ -141,6 +163,11 @@ def get_display_name_mapping(keys, group_by):
     display_name_functions = {
         "host_organization": get_display_names_host_organization,
         "host_organization_lineage": get_display_names_host_organization,
+        "domain.id": get_display_names_topics,
+        "subfield.id": get_display_names_topics,
+        "subfields.id": get_display_names_topics,
+        "field.id": get_display_names_topics,
+        "fields.id": get_display_names_topics,
         "grants.award_id": get_display_names_award_ids,
         "sustainable_development_goals.id": get_display_names_sdgs,
     }
