@@ -6,7 +6,7 @@ from core.utils import set_number_param
 class Paginate:
     def __init__(self, group_by, page, per_page, sample=None):
         self.group_by = group_by
-        self.max_per_page = 500
+        self.max_per_page = 200
         self.max_result_size = 10000
         self.page = page
         self.per_page = per_page
