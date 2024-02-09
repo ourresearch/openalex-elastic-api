@@ -10,11 +10,20 @@ from core.schemas import (
 )
 
 
+class IDsSchema(Schema):
+    openalex = fields.Str()
+    wikipedia = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class TopicsSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     description = fields.Str()
     keywords = fields.List(fields.Str())
+    ids = fields.Nested(IDsSchema)
     subfield = fields.Nested(NumberIdSchema)
     field = fields.Nested(NumberIdSchema)
     domain = fields.Nested(NumberIdSchema)
