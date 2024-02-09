@@ -82,3 +82,5 @@ CONTINENT_NAMES = [
 ]
 
 VERSIONS = ["null", "acceptedVersion", "submittedVersion", "publishedVersion"]
+
+MAX_IDS_IN_FILTER = 100

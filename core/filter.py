@@ -4,6 +4,7 @@ from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
 from core.utils import get_field
+from settings import MAX_IDS_IN_FILTER
 
 
 def filter_records(fields_dict, filter_params, s, sample=None):
@@ -40,9 +41,9 @@ def filter_records(fields_dict, filter_params, s, sample=None):
 def handle_or_query(field, fields_dict, s, value, sample):
     or_queries = []
 
-    if len(value.split("|")) > 50:
+    if len(value.split("|")) > MAX_IDS_IN_FILTER:
         raise APIQueryParamsError(
-            f"Maximum number of values exceeded for {field.param}. Decrease values to 50 or "
+            f"Maximum number of values exceeded for {field.param}. Decrease values to {MAX_IDS_IN_FILTER} or "
             f"below, or consider downloading the full dataset at "
             f"https://docs.openalex.org/download-snapshot"
         )
@@ -96,9 +97,9 @@ def handle_or_query(field, fields_dict, s, value, sample):
 def handle_and_query(field, s, value):
     and_queries = []
 
-    if len(value.split(" ")) > 50:
+    if len(value.split(" ")) > MAX_IDS_IN_FILTER:
         raise APIQueryParamsError(
-            f"Maximum number of values exceeded for {field.param}. Decrease values to 50 or "
+            f"Maximum number of values exceeded for {field.param}. Decrease values to {MAX_IDS_IN_FILTER} or "
             f"below, or consider downloading the full dataset at "
             f"https://docs.openalex.org/download-snapshot"
         )
