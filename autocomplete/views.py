@@ -35,10 +35,12 @@ from settings import (
     INSTITUTIONS_INDEX,
     PUBLISHERS_INDEX,
     SOURCES_INDEX,
+    TOPICS_INDEX,
     VENUES_INDEX,
     WORKS_INDEX,
 )
 from sources.fields import fields_dict as sources_fields_dict
+from topics.fields import fields_dict as topics_fields_dict
 from venues.fields import fields_dict as venues_fields_dict
 from works.fields import fields_dict as works_fields_dict
 
@@ -151,6 +153,14 @@ def autocomplete_funders():
 def autocomplete_institutions():
     index_name = INSTITUTIONS_INDEX
     result = single_entity_autocomplete(institutions_fields_dict, index_name, request)
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/topics")
+def autocomplete_topics():
+    index_name = TOPICS_INDEX
+    result = single_entity_autocomplete(topics_fields_dict, index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
 

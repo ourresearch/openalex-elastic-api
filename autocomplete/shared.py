@@ -57,6 +57,12 @@ def single_entity_autocomplete(fields_dict, index_name, request):
                     | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
                     | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
                 )
+            elif index_name.startswith("topic"):
+                s = s.query(
+                    Q("match_phrase_prefix", display_name__autocomplete=q)
+                    | Q("match_phrase_prefix", description__autocomplete=q)
+                    | Q("match_phrase_prefix", keywords__autocomplete=q)
+                )
             else:
                 s = s.query("match_phrase_prefix", display_name__autocomplete=q)
         if index_name.startswith("work"):

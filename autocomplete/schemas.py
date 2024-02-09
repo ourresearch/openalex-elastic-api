@@ -23,6 +23,8 @@ class AutoCompleteSchema(Schema):
             return obj.description if "description" in obj else None
         elif "institutions" in obj.meta.index:
             return self.get_location(obj)
+        elif "topics" in obj.meta.index:
+            return obj.description if "description" in obj else None
         elif "venues" in obj.meta.index or "sources" in obj.meta.index:
             if "publisher" in obj and obj.publisher is not None:
                 return obj.publisher
@@ -114,6 +116,7 @@ class AutoCompleteSchema(Schema):
             "institutions": "institution",
             "publishers": "publisher",
             "sources": "source",
+            "topics": "topic",
             "venues": "venue",
             "works": "work",
         }
@@ -135,6 +138,8 @@ class AutoCompleteSchema(Schema):
             return obj.ids.ror if "ror" in obj.ids else None
         elif "publishers" in obj.meta.index:
             return obj.ids.wikidata if "wikidata" in obj.ids else None
+        elif "topics" in obj.meta.index:
+            return obj.ids.wikipedia if "wikipedia" in obj.ids else None
         else:
             for key, value in entities.items():
                 if key in obj.meta.index:
@@ -151,6 +156,7 @@ class AutoCompleteSchema(Schema):
             "institutions": "authorships.institutions.lineage",
             "publishers": "primary_location.source.host_organization_lineage",
             "sources": "primary_location.source.id",
+            "topics": "topics.id",
             "work-sdgs": "sustainable_development_goals.id",
             "works": "id",
             "work-type": "type",

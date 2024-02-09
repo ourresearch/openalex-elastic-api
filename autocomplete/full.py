@@ -16,6 +16,7 @@ def get_indices():
         "publisher": settings.PUBLISHERS_INDEX,
         "sdgs": "work-sdgs",
         "source": settings.SOURCES_INDEX,
+        "topic": settings.TOPICS_INDEX,
         "work": settings.WORKS_INDEX,
         "work_type": "work-type",
     }
@@ -150,6 +151,7 @@ def build_full_search_query(q, s, sort):
         | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
         | Q("match_phrase_prefix", display_name_acronyms__autocomplete=q)
         | Q("match_phrase_prefix", display_name_alternatives__autocomplete=q)
+        | Q("match_phrase_prefix", description__autocomplete=q)
     )
     # do not show repository
     s = s.exclude("term", type="repository")
