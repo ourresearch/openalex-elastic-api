@@ -3,7 +3,7 @@ from elasticsearch_dsl import MultiSearch, Search, Q
 import settings
 from core.filter import filter_records
 from core.search import full_search_query
-from countries import COUNTRIES_BY_CONTINENT
+from country_list import COUNTRIES_BY_CONTINENT
 
 
 def group_by_continent(field, index_name, params, fields_dict):

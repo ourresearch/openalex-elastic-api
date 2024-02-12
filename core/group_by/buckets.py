@@ -8,7 +8,7 @@ from core.group_by.utils import get_bucket_keys
 from core.validate import validate_group_by
 from core.preference import clean_preference
 from core.utils import get_field
-from countries import GLOBAL_SOUTH_COUNTRIES
+from country_list import GLOBAL_SOUTH_COUNTRIES
 
 
 """

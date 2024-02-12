@@ -1,4 +1,4 @@
-import countries
+import country_list
 
 
 class TestWorksContinentsFilters:
@@ -68,7 +68,7 @@ class TestWorksContinentsFilters:
         assert json_data["meta"]["count"] > 50 and json_data["meta"]["count"] < 100
         # ensure every work has at least one author institution in Oceania
         oceania_country_codes = [
-            c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Oceania"]
+            c["country_code"] for c in country_list.COUNTRIES_BY_CONTINENT["Oceania"]
         ]
         for work in json_data["results"]:
             country_found = False

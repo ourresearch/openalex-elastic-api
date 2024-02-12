@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 from elasticsearch_dsl import Q, Search
 
-import countries
+import country_list
 from core.exceptions import APIQueryParamsError
 from core.search import SearchOpenAlex, full_search_query
 from core.utils import get_full_openalex_id, normalize_openalex_id
@@ -104,7 +104,7 @@ class BooleanField(Field):
         elif "is_global_south" in self.param:
             self.validate_true_false()
             country_codes = [
-                c["country_code"] for c in countries.GLOBAL_SOUTH_COUNTRIES
+                c["country_code"] for c in country_list.GLOBAL_SOUTH_COUNTRIES
             ]
             if self.value.lower().strip() == "true":
                 q = Q("terms", **{self.es_field(): country_codes})
@@ -608,7 +608,7 @@ class TermField(Field):
             )
         if continent == "africa" or continent.upper() == CONTINENT_PARAMS["africa"]:
             country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Africa"]
+                c["country_code"] for c in country_list.COUNTRIES_BY_CONTINENT["Africa"]
             ]
         elif (
             continent == "antarctica"
@@ -616,15 +616,15 @@ class TermField(Field):
         ):
             country_codes = [
                 c["country_code"]
-                for c in countries.COUNTRIES_BY_CONTINENT["Antarctica"]
+                for c in country_list.COUNTRIES_BY_CONTINENT["Antarctica"]
             ]
         elif continent == "asia" or continent.upper() == CONTINENT_PARAMS["asia"]:
             country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Asia"]
+                c["country_code"] for c in country_list.COUNTRIES_BY_CONTINENT["Asia"]
             ]
         elif continent == "europe" or continent.upper() == CONTINENT_PARAMS["europe"]:
             country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Europe"]
+                c["country_code"] for c in country_list.COUNTRIES_BY_CONTINENT["Europe"]
             ]
         elif (
             continent == "north_america"
@@ -632,11 +632,12 @@ class TermField(Field):
         ):
             country_codes = [
                 c["country_code"]
-                for c in countries.COUNTRIES_BY_CONTINENT["North America"]
+                for c in country_list.COUNTRIES_BY_CONTINENT["North America"]
             ]
         elif continent == "oceania" or continent.upper() == CONTINENT_PARAMS["oceania"]:
             country_codes = [
-                c["country_code"] for c in countries.COUNTRIES_BY_CONTINENT["Oceania"]
+                c["country_code"]
+                for c in country_list.COUNTRIES_BY_CONTINENT["Oceania"]
             ]
         elif (
             continent == "south_america"
@@ -644,7 +645,7 @@ class TermField(Field):
         ):
             country_codes = [
                 c["country_code"]
-                for c in countries.COUNTRIES_BY_CONTINENT["South America"]
+                for c in country_list.COUNTRIES_BY_CONTINENT["South America"]
             ]
         else:
             country_codes = []
