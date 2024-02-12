@@ -5,6 +5,7 @@ from flask import Blueprint, abort, redirect, request, url_for
 
 from authors.schemas import AuthorsSchema
 from concepts.schemas import ConceptsSchema
+from countries.schemas import CountriesSchema
 from domains.schemas import DomainsSchema
 from fields.schemas import FieldsSchema
 from funders.schemas import FundersSchema
@@ -36,6 +37,7 @@ from publishers.schemas import PublishersSchema
 from settings import (
     AUTHORS_INDEX,
     CONCEPTS_INDEX,
+    COUNTRIES_INDEX,
     DOMAINS_INDEX,
     FIELDS_INDEX,
     FUNDERS_INDEX,
@@ -669,6 +671,24 @@ def types_id_get(id):
 
     types_schema = TypesSchema(context={"display_relevance": False}, only=only_fields)
     return types_schema.dump(response[0])
+
+
+@blueprint.route("/countries/<path:id>")
+def countries_id_get(id):
+    s = Search(index=COUNTRIES_INDEX)
+    only_fields = process_id_only_fields(request, CountriesSchema)
+    clean_id = str(id).lower()
+
+    query = Q("term", id__lower=clean_id)
+
+    response = s.filter(query).execute()
+    if not response:
+        abort(404, description="No types found matching the ID.")
+
+    countries_schema = CountriesSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
+    return countries_schema.dump(response[0])
 
 
 def get_by_integer_id(index, schema, id):
