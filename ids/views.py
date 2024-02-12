@@ -45,12 +45,14 @@ from settings import (
     SDGS_INDEX,
     SUBFIELDS_INDEX,
     TOPICS_INDEX,
+    TYPES_INDEX,
     WORKS_INDEX,
 )
 from sources.schemas import SourcesSchema
 from sdgs.schemas import SdgsSchema
 from subfields.schemas import SubfieldsSchema
 from topics.schemas import TopicsSchema
+from work_types.schemas import TypesSchema
 from works.schemas import WorksSchema
 
 blueprint = Blueprint("ids", __name__)
@@ -651,6 +653,22 @@ def sdgs_id_get(id):
 
     sdgs_schema = SdgsSchema(context={"display_relevance": False}, only=only_fields)
     return sdgs_schema.dump(response[0])
+
+
+@blueprint.route("/types/<path:id>")
+def types_id_get(id):
+    s = Search(index=TYPES_INDEX)
+    only_fields = process_id_only_fields(request, TypesSchema)
+    clean_id = str(id).lower()
+
+    query = Q("term", id=clean_id)
+
+    response = s.filter(query).execute()
+    if not response:
+        abort(404, description="No types found matching the ID.")
+
+    types_schema = TypesSchema(context={"display_relevance": False}, only=only_fields)
+    return types_schema.dump(response[0])
 
 
 def get_by_integer_id(index, schema, id):

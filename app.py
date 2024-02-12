@@ -23,6 +23,7 @@ import suggest
 import topics
 import venues
 import works
+import work_types
 from core.exceptions import APIError
 from extensions import cache
 
@@ -60,6 +61,7 @@ def register_blueprints(app):
     app.register_blueprint(suggest.views.blueprint)
     app.register_blueprint(topics.views.blueprint)
     app.register_blueprint(works.views.blueprint)
+    app.register_blueprint(work_types.views.blueprint)
     app.register_blueprint(venues.views.blueprint)
     return None
 

@@ -9,10 +9,11 @@ from core.schemas import (
 )
 
 
-class SdgsSchema(Schema):
+class TypesSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     relevance_score = fields.Method("get_relevance_score")
+    crossref_types = fields.List(fields.Str())
     works_count = fields.Int()
     cited_by_count = fields.Int()
     works_api_url = fields.Str()
@@ -33,7 +34,7 @@ class SdgsSchema(Schema):
 
 class MessageSchema(Schema):
     meta = fields.Nested(MetaSchema)
-    results = fields.Nested(SdgsSchema, many=True)
+    results = fields.Nested(TypesSchema, many=True)
     group_by = fields.Nested(GroupBySchema, many=True)
     group_bys = fields.Nested(GroupBysSchema, many=True)
 
