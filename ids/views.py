@@ -33,6 +33,7 @@ from ids.utils import (
     process_id_only_fields,
 )
 from institutions.schemas import InstitutionsSchema
+from languages.schemas import LanguagesSchema
 from publishers.schemas import PublishersSchema
 from settings import (
     AUTHORS_INDEX,
@@ -42,6 +43,7 @@ from settings import (
     FIELDS_INDEX,
     FUNDERS_INDEX,
     INSTITUTIONS_INDEX,
+    LANGUAGES_INDEX,
     PUBLISHERS_INDEX,
     SOURCES_INDEX,
     SDGS_INDEX,
@@ -689,6 +691,24 @@ def countries_id_get(id):
         context={"display_relevance": False}, only=only_fields
     )
     return countries_schema.dump(response[0])
+
+
+@blueprint.route("/languages/<path:id>")
+def languages_id_get(id):
+    s = Search(index=LANGUAGES_INDEX)
+    only_fields = process_id_only_fields(request, LanguagesSchema)
+    clean_id = str(id).lower()
+
+    query = Q("term", id__lower=clean_id)
+
+    response = s.filter(query).execute()
+    if not response:
+        abort(404, description="No languages found matching the ID.")
+
+    languages_schema = LanguagesSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
+    return languages_schema.dump(response[0])
 
 
 def get_by_integer_id(index, schema, id):
