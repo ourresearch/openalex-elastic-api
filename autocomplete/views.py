@@ -75,6 +75,9 @@ def autocomplete_full():
                 f"{entity_type} is not a valid value for parameter entity_type. Valid entity_type values are: {', '.join(entities_to_indeces.keys())}."
             )
     else:
+        # remove concept from full autocomplete
+        entities_to_indeces.pop("concept")
+
         if q and len(q) <= 5:
             entities = [
                 entity
