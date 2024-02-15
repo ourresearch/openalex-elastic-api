@@ -11,9 +11,21 @@ from core.schemas import (
 )
 
 
+class IdsSchema(Schema):
+    openalex = ma_fields.Str()
+    wikidata = ma_fields.Str()
+    wikipedia = ma_fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class DomainsSchema(Schema):
     id = ma_fields.Int()
     display_name = ma_fields.Str()
+    description = ma_fields.Str()
+    ids = ma_fields.Nested(IdsSchema)
+    display_name_alternatives = ma_fields.List(ma_fields.Str())
     fields = ma_fields.Nested(NumberIdSchema, many=True)
     relevance_score = ma_fields.Method("get_relevance_score")
     works_count = ma_fields.Int()
