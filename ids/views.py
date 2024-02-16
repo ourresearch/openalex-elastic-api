@@ -29,6 +29,7 @@ from ids.utils import (
     normalize_pmid,
     normalize_pmcid,
     normalize_ror,
+    normalize_scopus_id,
     normalize_wikidata,
     process_id_only_fields,
 )
@@ -211,6 +212,13 @@ def authors_id_get(id):
             return abort(404)
         full_orcid = f"https://orcid.org/{clean_orcid}"
         query = Q("term", ids__orcid=full_orcid)
+        s = s.filter(query)
+    elif id.startswith("scopus:") or id.startswith("https://www.scopus.com"):
+        scopus_id = id.replace("scopus:", "")
+        clean_scopus = normalize_scopus_id(scopus_id)
+        if not clean_scopus:
+            return abort(404)
+        query = Q("term", ids__scopus__keyword=clean_scopus)
         s = s.filter(query)
     else:
         abort(404)

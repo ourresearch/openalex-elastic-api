@@ -270,6 +270,16 @@ def normalize_pmcid(pmcid):
     return pmcid
 
 
+def normalize_scopus_id(scopus_id):
+    if not scopus_id:
+        return None
+    try:
+        short_scopus_id = int(scopus_id)
+        return f"http://www.scopus.com/inward/authorDetails.url?authorID={short_scopus_id}&partnerID=MN8TOARS"
+    except ValueError:
+        return None
+
+
 def is_integer_id(id):
     try:
         int(id)
