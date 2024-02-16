@@ -15,9 +15,22 @@ class TopicSchema(Schema):
     display_name = fields.Str()
 
 
+class IdsSchema(Schema):
+    openalex = fields.Str()
+    wikidata = fields.Str()
+    wikipedia = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
+
 class SubfieldsSchema(Schema):
     id = fields.Int()
     display_name = fields.Str()
+    description = fields.Str()
+    ids = fields.Nested(IdsSchema)
+    display_name_alternatives = fields.List(fields.Str())
     field = fields.Nested(NumberIdSchema)
     domain = fields.Nested(NumberIdSchema)
     topics = fields.Nested(TopicSchema, many=True)
