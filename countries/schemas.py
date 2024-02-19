@@ -17,14 +17,30 @@ class ContinentSchema(Schema):
         ordered = True
 
 
+class IdsSchema(Schema):
+    openalex = fields.Str()
+    iso = fields.Str()
+    wikidata = fields.Str()
+    wikipedia = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class CountriesSchema(Schema):
     id = fields.Str()
+    country_code = fields.Str()
     display_name = fields.Str()
+    description = fields.Str()
+    ids = fields.Nested(IdsSchema)
+    display_name_alternatives = fields.List(fields.Str())
     relevance_score = fields.Method("get_relevance_score")
     continent = fields.Nested(ContinentSchema)
     is_global_south = fields.Bool()
     works_count = fields.Int()
     cited_by_count = fields.Int()
+    authors_api_url = fields.Str()
+    institutions_api_url = fields.Str()
     works_api_url = fields.Str()
     updated_date = fields.Str()
     created_date = fields.Str(dump_default=None)
