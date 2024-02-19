@@ -535,9 +535,6 @@ fields = [
         docstring="The number of distinct online locations we have found for the work",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object/location-object",
     ),
-    RangeField(param="primary_topic.domain.id"),
-    RangeField(param="primary_topic.field.id"),
-    RangeField(param="primary_topic.subfield.id"),
     RangeField(
         param="publication_year",
         docstring=DOCSTRINGS["publication_date"],
@@ -545,9 +542,6 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("publication_date", None),
     ),
     RangeField(param="referenced_works_count"),
-    RangeField(param="topics.domain.id"),
-    RangeField(param="topics.field.id"),
-    RangeField(param="topics.subfield.id"),
     RangeField(param="sustainable_development_goals.score"),
     RangeField(param="topics_count"),
     SearchField(
@@ -750,11 +744,21 @@ fields = [
     ),
     TermField(param="primary_location.version"),
     TermField(
+        param="primary_topic.domain.id", custom_es_field="primary_topic.domain.id"
+    ),
+    TermField(param="primary_topic.field.id", custom_es_field="primary_topic.field.id"),
+    TermField(
+        param="primary_topic.subfield.id", custom_es_field="primary_topic.subfield.id"
+    ),
+    TermField(
         param="sustainable_development_goals.id",
         docstring=DOCSTRINGS["sustainable_development_goals"],
         documentation_link=DOCUMENTATION_LINKS["sustainable_development_goals"],
         alternate_names=ALTERNATE_NAMES.get("sustainable_development_goals"),
     ),
+    TermField(param="topics.domain.id", custom_es_field="topics.domain.id"),
+    TermField(param="topics.field.id", custom_es_field="topics.field.id"),
+    TermField(param="topics.subfield.id", custom_es_field="topics.subfield.id"),
     TermField(
         param="type",
         docstring=DOCSTRINGS["type"],
