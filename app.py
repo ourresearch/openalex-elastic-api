@@ -8,6 +8,7 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 import authors
 import autocomplete
 import concepts
+import continents
 import countries
 import counts
 import domains
@@ -50,6 +51,7 @@ def register_blueprints(app):
     app.register_blueprint(authors.views.blueprint)
     app.register_blueprint(autocomplete.views.blueprint)
     app.register_blueprint(concepts.views.blueprint)
+    app.register_blueprint(continents.views.blueprint)
     app.register_blueprint(countries.views.blueprint)
     app.register_blueprint(counts.views.blueprint)
     app.register_blueprint(domains.views.blueprint)
