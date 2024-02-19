@@ -5,6 +5,7 @@ from flask import Blueprint, abort, redirect, request, url_for
 
 from authors.schemas import AuthorsSchema
 from concepts.schemas import ConceptsSchema
+from continents.schemas import ContinentsSchema
 from countries.schemas import CountriesSchema
 from domains.schemas import DomainsSchema
 from fields.schemas import FieldsSchema
@@ -39,6 +40,7 @@ from publishers.schemas import PublishersSchema
 from settings import (
     AUTHORS_INDEX,
     CONCEPTS_INDEX,
+    CONTINENTS_INDEX,
     COUNTRIES_INDEX,
     DOMAINS_INDEX,
     FIELDS_INDEX,
@@ -717,6 +719,24 @@ def languages_id_get(id):
         context={"display_relevance": False}, only=only_fields
     )
     return languages_schema.dump(response[0])
+
+
+@blueprint.route("/continents/<path:id>")
+def continents_id_get(id):
+    s = Search(index=CONTINENTS_INDEX)
+    only_fields = process_id_only_fields(request, ContinentsSchema)
+    clean_id = str(id).lower()
+
+    query = Q("term", id__lower=clean_id)
+
+    response = s.filter(query).execute()
+    if not response:
+        abort(404, description="No continents found matching the ID.")
+
+    continents_schema = ContinentsSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
+    return continents_schema.dump(response[0])
 
 
 def get_by_integer_id(index, schema, id):
