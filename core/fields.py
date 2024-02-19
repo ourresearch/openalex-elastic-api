@@ -377,6 +377,24 @@ class RangeField(Field):
             self.validate(query)
             kwargs = {self.es_field(): {"gte": float(query)}}
             q = Q("range", **kwargs)
+        elif self.value.startswith("!"):
+            if "-" in self.value:
+                values = self.value[1:].strip().split("-")
+                left_value = values[0]
+                right_value = values[1]
+                self.validate(left_value)
+                self.validate(right_value)
+                kwargs = {
+                    self.es_field(): {
+                        "gte": float(left_value),
+                        "lte": float(right_value),
+                    }
+                }
+                q = ~Q("range", **kwargs)
+            else:
+                query = self.value[1:]
+                kwargs = {self.es_field(): float(query)}
+                q = ~Q("term", **kwargs)
         elif "-" in self.value:
             values = self.value.strip().split("-")
             left_value = values[0]
