@@ -4,7 +4,7 @@ from core.schemas import (
     GroupBySchema,
     GroupBysSchema,
     MetaSchema,
-    NumberIdSchema,
+    TopicHierarchySchema,
     hide_relevance,
     relevance_score,
 )
@@ -24,9 +24,9 @@ class TopicsSchema(Schema):
     description = fields.Str()
     keywords = fields.List(fields.Str())
     ids = fields.Nested(IDsSchema)
-    subfield = fields.Nested(NumberIdSchema)
-    field = fields.Nested(NumberIdSchema)
-    domain = fields.Nested(NumberIdSchema)
+    subfield = fields.Nested(TopicHierarchySchema)
+    field = fields.Nested(TopicHierarchySchema)
+    domain = fields.Nested(TopicHierarchySchema)
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()
     cited_by_count = fields.Int()

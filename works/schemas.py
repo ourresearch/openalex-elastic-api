@@ -10,7 +10,7 @@ from core.schemas import (
     GroupBySchema,
     GroupBysSchema,
     MetaSchema,
-    NumberIdSchema,
+    TopicHierarchySchema,
     hide_relevance,
     relevance_score,
 )
@@ -166,9 +166,9 @@ class TopicSchema(Schema):
     id = ma_fields.Str()
     display_name = ma_fields.Str()
     score = ma_fields.Float()
-    subfield = ma_fields.Nested(NumberIdSchema)
-    field = ma_fields.Nested(NumberIdSchema)
-    domain = ma_fields.Nested(NumberIdSchema)
+    subfield = ma_fields.Nested(TopicHierarchySchema)
+    field = ma_fields.Nested(TopicHierarchySchema)
+    domain = ma_fields.Nested(TopicHierarchySchema)
 
     class Meta:
         ordered = True

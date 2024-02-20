@@ -109,8 +109,8 @@ class FiltersWrapperSchema(Schema):
         ordered = True
 
 
-class NumberIdSchema(Schema):
-    id = fields.Integer()
+class TopicHierarchySchema(Schema):
+    id = fields.Str()
     display_name = fields.Str()
 
     class Meta:
