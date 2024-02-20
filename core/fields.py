@@ -533,6 +533,30 @@ class TermField(Field):
             if "continent" in self.param:
                 country_codes = self.get_country_codes()
                 q = ~Q("terms", **{self.es_field(): country_codes})
+            elif (
+                self.param == "topics.domain.id"
+                or self.param == "primary_topic.domain.id"
+            ):
+                formatted_version = f"https://openalex.org/domains/{query}"
+                kwargs_new_format = {self.es_field(): formatted_version}
+                kwargs_old_format = {self.es_field(): query}
+                q = ~(Q("term", **kwargs_new_format) | Q("term", **kwargs_old_format))
+            elif (
+                self.param == "topics.field.id"
+                or self.param == "primary_topic.field.id"
+            ):
+                formatted_version = f"https://openalex.org/fields/{query}"
+                kwargs_new_format = {self.es_field(): formatted_version}
+                kwargs_old_format = {self.es_field(): query}
+                q = ~(Q("term", **kwargs_new_format) | Q("term", **kwargs_old_format))
+            elif (
+                self.param == "topics.subfield.id"
+                or self.param == "primary_topic.subfield.id"
+            ):
+                formatted_version = f"https://openalex.org/subfields/{query}"
+                kwargs_new_format = {self.es_field(): formatted_version}
+                kwargs_old_format = {self.es_field(): query}
+                q = ~(Q("term", **kwargs_new_format) | Q("term", **kwargs_old_format))
             else:
                 q = ~Q("term", **kwargs)
             return q
@@ -557,6 +581,26 @@ class TermField(Field):
         elif self.param == "language":
             kwargs = {self.es_field(): self.value.lower()}
             q = Q("term", **kwargs)
+        elif (
+            self.param == "topics.domain.id" or self.param == "primary_topic.domain.id"
+        ):
+            formatted_version = f"https://openalex.org/domains/{self.value}"
+            kwargs_new_format = {self.es_field(): formatted_version}
+            kwargs_old_format = {self.es_field(): self.value}
+            q = Q("term", **kwargs_new_format) | Q("term", **kwargs_old_format)
+        elif self.param == "topics.field.id" or self.param == "primary_topic.field.id":
+            formatted_version = f"https://openalex.org/fields/{self.value}"
+            kwargs_new_format = {self.es_field(): formatted_version}
+            kwargs_old_format = {self.es_field(): self.value}
+            q = Q("term", **kwargs_new_format) | Q("term", **kwargs_old_format)
+        elif (
+            self.param == "topics.subfield.id"
+            or self.param == "primary_topic.subfield.id"
+        ):
+            formatted_version = f"https://openalex.org/subfields/{self.value}"
+            kwargs_new_format = {self.es_field(): formatted_version}
+            kwargs_old_format = {self.es_field(): self.value}
+            q = Q("term", **kwargs_new_format) | Q("term", **kwargs_old_format)
         else:
             kwargs = {self.es_field(): self.value}
             q = Q("term", **kwargs)
