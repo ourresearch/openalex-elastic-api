@@ -21,7 +21,7 @@ class IdsSchema(Schema):
 
 
 class DomainsSchema(Schema):
-    id = ma_fields.Int()
+    id = ma_fields.Str()
     display_name = ma_fields.Str()
     description = ma_fields.Str()
     ids = ma_fields.Nested(IdsSchema)

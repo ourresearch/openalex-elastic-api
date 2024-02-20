@@ -20,7 +20,7 @@ class IdsSchema(Schema):
 
 
 class FieldsSchema(Schema):
-    id = fields.Int()
+    id = fields.Str()
     display_name = fields.Str()
     description = fields.Str()
     ids = fields.Nested(IdsSchema)

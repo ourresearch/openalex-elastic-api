@@ -669,109 +669,58 @@ def sdgs_id_get(id):
     return sdgs_schema.dump(response[0])
 
 
-@blueprint.route("/types/<path:id>")
-def types_id_get(id):
-    s = Search(index=TYPES_INDEX)
-    only_fields = process_id_only_fields(request, TypesSchema)
-    clean_id = str(id).lower()
-
-    query = Q("term", id=clean_id)
-
-    response = s.filter(query).execute()
-    if not response:
-        abort(404, description="No types found matching the ID.")
-
-    types_schema = TypesSchema(context={"display_relevance": False}, only=only_fields)
-    return types_schema.dump(response[0])
-
-
-@blueprint.route("/countries/<path:id>")
-def countries_id_get(id):
-    s = Search(index=COUNTRIES_INDEX)
-    only_fields = process_id_only_fields(request, CountriesSchema)
-    clean_id = str(id).lower()
-    formatted_id = f"https://openalex.org/countries/{clean_id}"
-
-    query = Q("term", id__lower=formatted_id)
-
-    response = s.filter(query).execute()
-    if not response:
-        abort(404, description="No types found matching the ID.")
-
-    countries_schema = CountriesSchema(
-        context={"display_relevance": False}, only=only_fields
-    )
-    return countries_schema.dump(response[0])
-
-
-@blueprint.route("/languages/<path:id>")
-def languages_id_get(id):
-    s = Search(index=LANGUAGES_INDEX)
-    only_fields = process_id_only_fields(request, LanguagesSchema)
-    clean_id = str(id).lower()
-
-    query = Q("term", id__lower=clean_id)
-
-    response = s.filter(query).execute()
-    if not response:
-        abort(404, description="No languages found matching the ID.")
-
-    languages_schema = LanguagesSchema(
-        context={"display_relevance": False}, only=only_fields
-    )
-    return languages_schema.dump(response[0])
-
-
-@blueprint.route("/continents/<path:id>")
-def continents_id_get(id):
-    s = Search(index=CONTINENTS_INDEX)
-    only_fields = process_id_only_fields(request, ContinentsSchema)
-    clean_id = str(id).lower()
-
-    query = Q("term", id__lower=clean_id)
-
-    response = s.filter(query).execute()
-    if not response:
-        abort(404, description="No continents found matching the ID.")
-
-    continents_schema = ContinentsSchema(
-        context={"display_relevance": False}, only=only_fields
-    )
-    return continents_schema.dump(response[0])
-
-
-def get_by_integer_id(index, schema, id):
+def get_by_openalex_external_id(index, schema, id):
     s = Search(index=index)
     only_fields = process_id_only_fields(request, schema)
 
-    if is_integer_id(id):
-        clean_id = int(id)
-        query = Q("term", id=clean_id)
-        s = s.filter(query)
-    else:
-        abort(404)
+    endpoint_name = index.split("-")[0]
 
-    response = s.execute()
+    clean_id = str(id).lower()
+    formatted_id = f"https://openalex.org/{endpoint_name}/{clean_id}"
+
+    query = Q("term", id__lower=formatted_id)
+    response = s.filter(query).execute()
+
     if not response:
-        abort(404)
+        abort(404, description=f"No {endpoint_name} found matching the ID.")
 
     schema_instance = schema(context={"display_relevance": False}, only=only_fields)
     return schema_instance.dump(response[0])
 
 
+@blueprint.route("/continents/<path:id>")
+def continents_id_get(id):
+    return get_by_openalex_external_id(CONTINENTS_INDEX, ContinentsSchema, id)
+
+
+@blueprint.route("/countries/<path:id>")
+def countries_id_get(id):
+    return get_by_openalex_external_id(COUNTRIES_INDEX, CountriesSchema, id)
+
+
+@blueprint.route("/languages/<path:id>")
+def languages_id_get(id):
+    return get_by_openalex_external_id(LANGUAGES_INDEX, LanguagesSchema, id)
+
+
+@blueprint.route("/types/<path:id>")
+def types_id_get(id):
+    return get_by_openalex_external_id(TYPES_INDEX, TypesSchema, id)
+
+
 @blueprint.route("/domains/<path:id>")
 def domains_id_get(id):
-    return get_by_integer_id(DOMAINS_INDEX, DomainsSchema, id)
+    return get_by_openalex_external_id(DOMAINS_INDEX, DomainsSchema, id)
 
 
 @blueprint.route("/fields/<path:id>")
 def fields_id_get(id):
-    return get_by_integer_id(FIELDS_INDEX, FieldsSchema, id)
+    return get_by_openalex_external_id(FIELDS_INDEX, FieldsSchema, id)
 
 
 @blueprint.route("/subfields/<path:id>")
 def subfields_id_get(id):
-    return get_by_integer_id(SUBFIELDS_INDEX, SubfieldsSchema, id)
+    return get_by_openalex_external_id(SUBFIELDS_INDEX, SubfieldsSchema, id)
 
 
 # Universal

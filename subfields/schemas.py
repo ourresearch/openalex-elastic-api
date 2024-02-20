@@ -24,9 +24,8 @@ class IdsSchema(Schema):
         ordered = True
 
 
-
 class SubfieldsSchema(Schema):
-    id = fields.Int()
+    id = fields.Str()
     display_name = fields.Str()
     description = fields.Str()
     ids = fields.Nested(IdsSchema)
