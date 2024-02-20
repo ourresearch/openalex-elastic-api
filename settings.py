@@ -27,7 +27,7 @@ SUBFIELDS_INDEX = "subfields-v1"
 TOPICS_INDEX = "topics-v3"
 TYPES_INDEX = "types-v1"
 VENUES_INDEX = "venues-v8"
-WORKS_INDEX = "works-v22-*,-*invalid-data"
+WORKS_INDEX = "works-v23-*,-*invalid-data"
 GROUPBY_VALUES_INDEX = "groupby_values"
 
 DO_NOT_GROUP_BY = [
