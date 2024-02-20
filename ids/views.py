@@ -690,8 +690,9 @@ def countries_id_get(id):
     s = Search(index=COUNTRIES_INDEX)
     only_fields = process_id_only_fields(request, CountriesSchema)
     clean_id = str(id).lower()
+    formatted_id = f"https://openalex.org/countries/{clean_id}"
 
-    query = Q("term", id__lower=clean_id)
+    query = Q("term", id__lower=formatted_id)
 
     response = s.filter(query).execute()
     if not response:
