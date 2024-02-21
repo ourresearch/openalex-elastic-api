@@ -48,9 +48,6 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
     ),
     RangeField(param="cited_by_count"),
-    RangeField(param="domain.id"),
-    RangeField(param="field.id"),
-    RangeField(param="subfield.id"),
     RangeField(param="works_count"),
     SearchField(param="default.search", index="topics"),
     SearchField(param="description.search", custom_es_field="description"),
@@ -61,6 +58,9 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/topics/search-topics#search-a-specific-field",
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
+    TermField(param="domain.id"),
+    TermField(param="field.id"),
+    TermField(param="subfield.id"),
 ]
 
 fields_dict = {f.param: f for f in fields}
