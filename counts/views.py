@@ -3,7 +3,8 @@ from flask import Blueprint, jsonify
 
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, FUNDERS_INDEX,
                       INSTITUTIONS_INDEX, PUBLISHERS_INDEX, SOURCES_INDEX,
-                      WORKS_INDEX)
+                      WORKS_INDEX, TOPICS_INDEX, SUBFIELDS_INDEX,
+                      FIELDS_INDEX, DOMAINS_INDEX)
 
 blueprint = Blueprint("counts", __name__)
 
@@ -12,12 +13,15 @@ blueprint = Blueprint("counts", __name__)
 def counts():
     entities_to_indeces = {
         "authors": AUTHORS_INDEX,
-        "concepts": CONCEPTS_INDEX,
         "institutions": INSTITUTIONS_INDEX,
         "sources": SOURCES_INDEX,
         "publishers": PUBLISHERS_INDEX,
         "funders": FUNDERS_INDEX,
         "works": WORKS_INDEX,
+        "topics": TOPICS_INDEX,
+        "subfields": SUBFIELDS_INDEX,
+        "fields": FIELDS_INDEX,
+        "domains": DOMAINS_INDEX,
     }
     results = {}
     for name, index in entities_to_indeces.items():
