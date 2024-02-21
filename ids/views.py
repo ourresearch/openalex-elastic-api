@@ -646,29 +646,6 @@ def topics_id_get(id):
     return topics_schema.dump(response[0])
 
 
-@blueprint.route("/sdgs/<path:id>")
-def sdgs_id_get(id):
-    if not id or (
-        not is_integer_id(id) and not id.startswith("https://metadata.un.org/sdg/")
-    ):
-        abort(404, description="Invalid ID format.")
-
-    s = Search(index=SDGS_INDEX)
-    only_fields = process_id_only_fields(request, SdgsSchema)
-
-    formatted_id = (
-        f"https://metadata.un.org/sdg/{id}" if is_integer_id(id) else id.lower()
-    )
-    query = Q("term", id=formatted_id)
-
-    response = s.filter(query).execute()
-    if not response:
-        abort(404, description="No SDGs found matching the ID.")
-
-    sdgs_schema = SdgsSchema(context={"display_relevance": False}, only=only_fields)
-    return sdgs_schema.dump(response[0])
-
-
 def get_by_openalex_external_id(index, schema, id):
     s = Search(index=index)
     only_fields = process_id_only_fields(request, schema)
@@ -686,6 +663,11 @@ def get_by_openalex_external_id(index, schema, id):
 
     schema_instance = schema(context={"display_relevance": False}, only=only_fields)
     return schema_instance.dump(response[0])
+
+
+@blueprint.route("/sdgs/<path:id>")
+def sdgs_id_get(id):
+    return get_by_openalex_external_id(SDGS_INDEX, SdgsSchema, id)
 
 
 @blueprint.route("/continents/<path:id>")
