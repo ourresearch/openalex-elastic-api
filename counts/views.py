@@ -4,7 +4,8 @@ from flask import Blueprint, jsonify
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, FUNDERS_INDEX,
                       INSTITUTIONS_INDEX, PUBLISHERS_INDEX, SOURCES_INDEX,
                       WORKS_INDEX, TOPICS_INDEX, SUBFIELDS_INDEX,
-                      FIELDS_INDEX, DOMAINS_INDEX)
+                      FIELDS_INDEX, DOMAINS_INDEX, SDGS_INDEX,
+                      COUNTRIES_INDEX, CONTINENTS_INDEX)
 
 blueprint = Blueprint("counts", __name__)
 
@@ -22,6 +23,9 @@ def counts():
         "subfields": SUBFIELDS_INDEX,
         "fields": FIELDS_INDEX,
         "domains": DOMAINS_INDEX,
+        "sustainable_development_goals": SDGS_INDEX,
+        "countries": COUNTRIES_INDEX,
+        "continents": CONTINENTS_INDEX,
     }
     results = {}
     for name, index in entities_to_indeces.items():
