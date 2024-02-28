@@ -488,6 +488,10 @@ class TermField(Field):
             "wikidata_id",
         ]
 
+        if self.param == "sustainable_development_goals.id":
+            if len(self.value) == 1 or len(self.value) == 2:
+                self.value = f"https://metadata.un.org/sdg/{self.value}"
+
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
