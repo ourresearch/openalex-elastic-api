@@ -69,6 +69,7 @@ def get_group_by_results(
         "country_code",
         "countries",
         "language",
+        "sustainable_development_goals.id",
     ) or (field.param == "type" and "works" in index_name):
         results = [result for result in results if "openalex.org" in result["key"]]
     return results
@@ -233,13 +234,16 @@ def calculate_group_by_count(params, response):
 
 
 def format_key(key, group_by, index_name):
-    print(index_name)
+    id_prefix = "https://openalex.org"
     if group_by.endswith("country_code") or group_by.endswith("countries"):
-        formatted_key = f"https://openalex.org/countries/{key.upper()}"
+        formatted_key = f"{id_prefix}/countries/{key.upper()}"
     elif group_by == "language":
-        formatted_key = f"https://openalex.org/languages/{key}"
+        formatted_key = f"{id_prefix}/languages/{key}"
     elif group_by == "type" and "works" in index_name:
-        formatted_key = f"https://openalex.org/types/{key}"
+        formatted_key = f"{id_prefix}/types/{key}"
+    elif group_by == "sustainable_development_goals.id":
+        sdg_number = key.split("/")[-1]
+        formatted_key = f"{id_prefix}/sdgs/{sdg_number}"
     else:
         formatted_key = key
     return formatted_key
