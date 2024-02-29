@@ -45,9 +45,32 @@ def get_group_by_results(
         )
     elif field.param == "best_open_version":
         results = group_by_best_open_version(field, index_name, params, fields_dict)
+    # temp function until topics propagation done
+    elif field.param in (
+        "topics.domain.id",
+        "topics.subdomain.id",
+        "topics.field.id",
+        "primary_topic.domain.id",
+        "primary_topic.field.id",
+        "primary_topic.subfield.id",
+    ):
+        results = get_topics_group_by_results(group_by, response, index_name)
     else:
-        results = get_default_group_by_results(group_by, response)
+        results = get_default_group_by_results(group_by, response, index_name)
     results = add_zero_values(results, include_unknown, index_name, group_by, params)
+    # temp function until topics propagation done
+    if field.param in (
+        "topics.domain.id",
+        "topics.subdomain.id",
+        "topics.field.id",
+        "primary_topic.domain.id",
+        "primary_topic.field.id",
+        "primary_topic.subfield.id",
+        "country_code",
+        "countries",
+        "language",
+    ) or (field.param == "type" and "works" in index_name):
+        results = [result for result in results if "openalex.org" in result["key"]]
     return results
 
 
@@ -78,7 +101,7 @@ def get_boolean_group_by_results(response, group_by):
     return group_by_results
 
 
-def get_default_group_by_results(group_by, response):
+def get_default_group_by_results(group_by, response, index_name):
     """
     Default group by results.
     """
@@ -93,14 +116,61 @@ def get_default_group_by_results(group_by, response):
         key_display_names = {}
 
     for b in buckets:
-        result = get_result(b, key_display_names, group_by)
+        result = get_result(b, key_display_names, group_by, index_name)
         if result:
             group_by_results.append(result)
 
     return group_by_results
 
 
-def get_result(b, key_display_names, group_by):
+def get_topics_group_by_results(group_by, response, index_name):
+    group_by_results = []
+    buckets = get_default_buckets(group_by, response)
+    buckets = buckets_to_keep(buckets, group_by)
+
+    if requires_display_name_conversion(group_by):
+        keys = [b.key for b in buckets]
+        key_display_names = get_display_name_mapping(keys, group_by)
+    else:
+        key_display_names = {}
+
+    for b in buckets:
+        result = get_result(b, key_display_names, group_by, index_name)
+        if result:
+            group_by_results.append(result)
+
+    # format single integer keys as URLs
+    entity = f"{group_by.split('.')[1]}s"
+    for group_by_result in group_by_results:
+        if "openalex.org" not in group_by_result["key"]:
+            group_by_result[
+                "key"
+            ] = f"https://openalex.org/{entity}/{group_by_result['key']}"
+
+    # merge the duplicate ids together and sum the doc_counts
+    for group_by_result in group_by_results:
+        if (
+            group_by_result["key"] in [item["key"] for item in group_by_results]
+            and group_by_result["key_display_name"]
+        ):
+            group_by_result["doc_count"] = sum(
+                [
+                    item["doc_count"]
+                    for item in group_by_results
+                    if item["key"] == group_by_result["key"]
+                ]
+            )
+            group_by_results = [
+                item
+                for item in group_by_results
+                if item["key"] != group_by_result["key"]
+            ]
+            group_by_results.append(group_by_result)
+
+    return group_by_results
+
+
+def get_result(b, key_display_names, group_by, index_name):
     if group_by in ["authorships.author.id", "author.id"]:
         if not key_display_names or not key_display_names.get(b.key):
             return None
@@ -118,7 +188,8 @@ def get_result(b, key_display_names, group_by):
         # format as one decimal place
         b.key = str(round(b.key, 1))
 
-    return {"key": b.key, "key_display_name": key_display_name, "doc_count": doc_count}
+    key = format_key(b.key, group_by, index_name)
+    return {"key": key, "key_display_name": key_display_name, "doc_count": doc_count}
 
 
 def add_zero_values(results, include_unknown, index_name, field, params):
@@ -159,3 +230,16 @@ def calculate_group_by_count(params, response):
     ):
         return 3
     return len(response.aggregations[bucket_keys["default"]].buckets)
+
+
+def format_key(key, group_by, index_name):
+    print(index_name)
+    if group_by.endswith("country_code") or group_by.endswith("countries"):
+        formatted_key = f"https://openalex.org/countries/{key.upper()}"
+    elif group_by == "language":
+        formatted_key = f"https://openalex.org/languages/{key}"
+    elif group_by == "type" and "works" in index_name:
+        formatted_key = f"https://openalex.org/types/{key}"
+    else:
+        formatted_key = key
+    return formatted_key
