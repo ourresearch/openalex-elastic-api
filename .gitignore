@@ -8,3 +8,10 @@ venv/
 scripts/logs
 localdata/
 scratch/
+
+# vscode editor
+.vscode/**/*
+# !.vscode/settings.json
+# !.vscode/tasks.json
+# !.vscode/launch.json
+# !.vscode/extensions.json
