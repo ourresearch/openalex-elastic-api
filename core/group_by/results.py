@@ -45,9 +45,29 @@ def get_group_by_results(
         )
     elif field.param == "best_open_version":
         results = group_by_best_open_version(field, index_name, params, fields_dict)
+    # temp function until topics propagation done
+    elif field.param in (
+        "topics.domain.id",
+        "topics.subdomain.id",
+        "topics.field.id",
+        "primary_topic.domain.id",
+        "primary_topic.field.id",
+        "primary_topic.subfield.id",
+    ):
+        results = get_topics_group_by_results(group_by, response)
     else:
         results = get_default_group_by_results(group_by, response)
     results = add_zero_values(results, include_unknown, index_name, group_by, params)
+    # temp function until topics propagation done
+    if field.param in (
+        "topics.domain.id",
+        "topics.subdomain.id",
+        "topics.field.id",
+        "primary_topic.domain.id",
+        "primary_topic.field.id",
+        "primary_topic.subfield.id",
+    ):
+        results = [result for result in results if "openalex.org" in result["key"]]
     return results
 
 
@@ -96,6 +116,53 @@ def get_default_group_by_results(group_by, response):
         result = get_result(b, key_display_names, group_by)
         if result:
             group_by_results.append(result)
+
+    return group_by_results
+
+
+def get_topics_group_by_results(group_by, response):
+    group_by_results = []
+    buckets = get_default_buckets(group_by, response)
+    buckets = buckets_to_keep(buckets, group_by)
+
+    if requires_display_name_conversion(group_by):
+        keys = [b.key for b in buckets]
+        key_display_names = get_display_name_mapping(keys, group_by)
+    else:
+        key_display_names = {}
+
+    for b in buckets:
+        result = get_result(b, key_display_names, group_by)
+        if result:
+            group_by_results.append(result)
+
+    # format single integer keys as URLs
+    entity = f"{group_by.split('.')[1]}s"
+    for group_by_result in group_by_results:
+        if "openalex.org" not in group_by_result["key"]:
+            group_by_result[
+                "key"
+            ] = f"https://openalex.org/{entity}/{group_by_result['key']}"
+
+    # merge the duplicate ids together and sum the doc_counts
+    for group_by_result in group_by_results:
+        if (
+            group_by_result["key"] in [item["key"] for item in group_by_results]
+            and group_by_result["key_display_name"]
+        ):
+            group_by_result["doc_count"] = sum(
+                [
+                    item["doc_count"]
+                    for item in group_by_results
+                    if item["key"] == group_by_result["key"]
+                ]
+            )
+            group_by_results = [
+                item
+                for item in group_by_results
+                if item["key"] != group_by_result["key"]
+            ]
+            group_by_results.append(group_by_result)
 
     return group_by_results
 
