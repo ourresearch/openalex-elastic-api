@@ -487,7 +487,6 @@ class TermField(Field):
             "ror",
             "wikidata_id",
         ]
-
         if self.param == "sustainable_development_goals.id":
             if len(self.value) == 1 or len(self.value) == 2:
                 self.value = f"https://metadata.un.org/sdg/{self.value}"
@@ -497,7 +496,12 @@ class TermField(Field):
             self.value = self.value.replace("types/", "")
         elif "country_code" in self.param or "countries" in self.param:
             self.value = self.value.replace("countries/", "")
-
+        elif "domain" in self.param:
+            self.value = self.value.replace("domains/", "")
+        elif "field" in self.param and "subfield" not in self.param:
+            self.value = self.value.replace("fields/", "")
+        elif "subfield" in self.param:
+            self.value = self.value.replace("subfields/", "")
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
