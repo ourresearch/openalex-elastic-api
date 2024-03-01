@@ -9,13 +9,24 @@ from core.schemas import (
 )
 
 
+class IdsSchema(Schema):
+    openalex = fields.Str()
+    un = fields.Str()
+    wikidata = fields.Str()
+
+    class Meta:
+        ordered = True
+
 class SdgsSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     relevance_score = fields.Method("get_relevance_score")
     description = fields.Str()
+    ids = fields.Nested(IdsSchema)
     works_count = fields.Int()
     cited_by_count = fields.Int()
+    image_url = fields.Str()
+    image_thumbnail_url = fields.Str()
     works_api_url = fields.Str()
     updated_date = fields.Str()
     created_date = fields.Str(dump_default=None)
