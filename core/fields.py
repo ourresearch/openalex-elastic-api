@@ -495,7 +495,7 @@ class TermField(Field):
             self.value = self.value.replace("languages/", "")
         elif self.param == "type":
             self.value = self.value.replace("types/", "")
-        elif self.param == "country_code":
+        elif "country_code" in self.param or "countries" in self.param:
             self.value = self.value.replace("countries/", "")
 
         if self.value == "null":
