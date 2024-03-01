@@ -27,6 +27,7 @@ class FieldsSchema(Schema):
     display_name_alternatives = fields.List(fields.Str())
     domain = fields.Nested(TopicHierarchySchema)
     subfields = fields.Nested(TopicHierarchySchema, many=True)
+    siblings = fields.Nested(TopicHierarchySchema, many=True)
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()
     cited_by_count = fields.Int()

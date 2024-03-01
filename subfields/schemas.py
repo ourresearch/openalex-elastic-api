@@ -33,6 +33,7 @@ class SubfieldsSchema(Schema):
     field = fields.Nested(TopicHierarchySchema)
     domain = fields.Nested(TopicHierarchySchema)
     topics = fields.Nested(TopicSchema, many=True)
+    siblings = fields.Nested(TopicHierarchySchema, many=True)
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()
     cited_by_count = fields.Int()
