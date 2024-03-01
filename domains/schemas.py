@@ -27,6 +27,7 @@ class DomainsSchema(Schema):
     ids = ma_fields.Nested(IdsSchema)
     display_name_alternatives = ma_fields.List(ma_fields.Str())
     fields = ma_fields.Nested(TopicHierarchySchema, many=True)
+    siblings = ma_fields.Nested(TopicHierarchySchema, many=True)
     relevance_score = ma_fields.Method("get_relevance_score")
     works_count = ma_fields.Int()
     cited_by_count = ma_fields.Int()
