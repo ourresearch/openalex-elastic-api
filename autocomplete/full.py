@@ -10,15 +10,15 @@ def get_indices():
     entities_to_indeces = {
         "author": settings.AUTHORS_INDEX,
         "concept": settings.CONCEPTS_INDEX,
-        "countries": "countries",
+        "countries": settings.COUNTRIES_INDEX,
         "institution": settings.INSTITUTIONS_INDEX,
         "funder": settings.FUNDERS_INDEX,
         "publisher": settings.PUBLISHERS_INDEX,
-        "sdgs": "work-sdgs",
+        "sdgs": settings.SDGS_INDEX,
         "source": settings.SOURCES_INDEX,
         "topic": settings.TOPICS_INDEX,
         "work": settings.WORKS_INDEX,
-        "work_type": "work-type",
+        "work_type": settings.TYPES_INDEX,
     }
     return entities_to_indeces
 

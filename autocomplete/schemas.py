@@ -112,11 +112,14 @@ class AutoCompleteSchema(Schema):
         entities = {
             "authors": "author",
             "concepts": "concept",
+            "countries": "country",
             "funders": "funder",
             "institutions": "institution",
             "publishers": "publisher",
             "sources": "source",
+            "sdgs": "sdg",
             "topics": "topic",
+            "types": "type",
             "venues": "venue",
             "works": "work",
         }
@@ -128,9 +131,11 @@ class AutoCompleteSchema(Schema):
         entities = {
             "authors": "orcid",
             "concepts": "wikidata",
+            "countries": "country_code",
             "funders": "ids__ror",
             "institutions": "ror",
             "sources": "issn_l",
+            "topics": "wikipedia",
             "venues": "issn_l",
             "works": "doi",
         }
@@ -138,6 +143,8 @@ class AutoCompleteSchema(Schema):
             return obj.ids.ror if "ror" in obj.ids else None
         elif "publishers" in obj.meta.index:
             return obj.ids.wikidata if "wikidata" in obj.ids else None
+        elif "sdgs" in obj.meta.index:
+            return obj.ids.un if "un" in obj.ids else None
         elif "topics" in obj.meta.index:
             return obj.ids.wikipedia if "wikipedia" in obj.ids else None
         else:
@@ -157,7 +164,8 @@ class AutoCompleteSchema(Schema):
             "publishers": "primary_location.source.host_organization_lineage",
             "sources": "primary_location.source.id",
             "topics": "topics.id",
-            "work-sdgs": "sustainable_development_goals.id",
+            "types": "type",
+            "sdgs": "sustainable_development_goals.id",
             "works": "id",
             "work-type": "type",
         }
@@ -167,12 +175,7 @@ class AutoCompleteSchema(Schema):
                 return key
 
     def get_id(self, obj):
-        if "countries" in obj.meta.index:
-            return obj.country_code
-        elif "work-type" in obj.meta.index:
-            return obj.display_name
-        else:
-            return obj.id
+        return obj.id
 
     class Meta:
         ordered = True
