@@ -159,6 +159,7 @@ class AutoCompleteSchema(Schema):
             "countries": "authorships.countries",
             "funders": "grants.funder",
             "institutions": "authorships.institutions.lineage",
+            "languages": "language",
             "publishers": "primary_location.source.host_organization_lineage",
             "sources": "primary_location.source.id",
             "topics": "topics.id",

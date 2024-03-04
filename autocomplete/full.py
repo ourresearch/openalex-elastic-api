@@ -13,6 +13,7 @@ def get_indices():
         "countries": settings.COUNTRIES_INDEX,
         "institution": settings.INSTITUTIONS_INDEX,
         "funder": settings.FUNDERS_INDEX,
+        "language": settings.LANGUAGES_INDEX,
         "publisher": settings.PUBLISHERS_INDEX,
         "sdgs": settings.SDGS_INDEX,
         "source": settings.SOURCES_INDEX,
