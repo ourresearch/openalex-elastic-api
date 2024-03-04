@@ -19,12 +19,8 @@ class AutoCompleteSchema(Schema):
     def get_hint(self, obj):
         if "authors" in obj.meta.index:
             return obj.hint if "hint" in obj else None
-        elif "concepts" in obj.meta.index:
-            return obj.description if "description" in obj else None
         elif "institutions" in obj.meta.index:
             return self.get_location(obj)
-        elif "topics" in obj.meta.index:
-            return obj.description if "description" in obj else None
         elif "venues" in obj.meta.index or "sources" in obj.meta.index:
             if "publisher" in obj and obj.publisher is not None:
                 return obj.publisher
@@ -32,6 +28,8 @@ class AutoCompleteSchema(Schema):
                 return "publisher unknown"
         elif "works" in obj.meta.index:
             return self.build_author_string(obj)
+        else:
+            return obj.description if "description" in obj else None
 
     @pre_dump(pass_many=True)
     def author_hint_prep(self, data, many, **kwargs):
