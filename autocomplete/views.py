@@ -79,10 +79,13 @@ def autocomplete_full():
         entities_to_indeces.pop("concept")
 
         if q and len(q) <= 5:
+            print("q is less than 5 characters")
             entities = [
                 entity
                 for entity in entities_to_indeces.values()
-                if "institution" in entity or "author" in entity
+                if "institution" in entity
+                or "author" in entity
+                or "countries" in entity
             ]
             index = ",".join(entities)
         else:
