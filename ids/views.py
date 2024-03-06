@@ -16,7 +16,6 @@ from ids.utils import (
     is_concept_openalex_id,
     is_funder_openalex_id,
     is_institution_openalex_id,
-    is_integer_id,
     is_openalex_id,
     is_publisher_openalex_id,
     is_source_openalex_id,
@@ -49,6 +48,7 @@ from settings import (
     LANGUAGES_INDEX,
     PUBLISHERS_INDEX,
     SOURCES_INDEX,
+    SOURCE_TYPES_INDEX,
     SDGS_INDEX,
     SUBFIELDS_INDEX,
     TOPICS_INDEX,
@@ -56,6 +56,7 @@ from settings import (
     WORKS_INDEX,
 )
 from sources.schemas import SourcesSchema
+from source_types.schemas import SourceTypesSchema
 from sdgs.schemas import SdgsSchema
 from subfields.schemas import SubfieldsSchema
 from topics.schemas import TopicsSchema
@@ -650,7 +651,10 @@ def get_by_openalex_external_id(index, schema, id):
     s = Search(index=index)
     only_fields = process_id_only_fields(request, schema)
 
-    endpoint_name = index.split("-")[0]
+    if index.startswith("source-types"):
+        endpoint_name = "source-types"
+    else:
+        endpoint_name = index.split("-")[0]
 
     clean_id = str(id).lower()
     formatted_id = f"https://openalex.org/{endpoint_name}/{clean_id}"
@@ -688,6 +692,11 @@ def languages_id_get(id):
 @blueprint.route("/types/<path:id>")
 def types_id_get(id):
     return get_by_openalex_external_id(TYPES_INDEX, TypesSchema, id)
+
+
+@blueprint.route("/source-types/<path:id>")
+def source_types_id_get(id):
+    return get_by_openalex_external_id(SOURCE_TYPES_INDEX, SourceTypesSchema, id)
 
 
 @blueprint.route("/domains/<path:id>")
