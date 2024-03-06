@@ -58,19 +58,27 @@ def get_group_by_results(
     else:
         results = get_default_group_by_results(group_by, response, index_name)
     results = add_zero_values(results, include_unknown, index_name, group_by, params)
-    # temp function until topics propagation done
-    if field.param in (
-        "topics.domain.id",
-        "topics.subdomain.id",
-        "topics.field.id",
-        "primary_topic.domain.id",
-        "primary_topic.field.id",
-        "primary_topic.subfield.id",
-        "country_code",
-        "countries",
-        "language",
-        "sustainable_development_goals.id",
-    ) or (field.param == "type" and "works" in index_name):
+
+    # support new id formats so duplicates do not show up with 0 values
+    if (
+        field.param
+        in (
+            "topics.domain.id",
+            "topics.subdomain.id",
+            "topics.field.id",
+            "primary_topic.domain.id",
+            "primary_topic.field.id",
+            "primary_topic.subfield.id",
+            "country_code",
+            "countries",
+            "language",
+            "sustainable_development_goals.id",
+            "locations.source.type",
+            "primary_location.source.type",
+        )
+        or (field.param == "type" and "works" in index_name)
+        or (field.param == "type" and "sources" in index_name)
+    ):
         results = [result for result in results if "openalex.org" in result["key"]]
     return results
 
@@ -244,6 +252,13 @@ def format_key(key, group_by, index_name):
     elif group_by == "sustainable_development_goals.id":
         sdg_number = key.split("/")[-1]
         formatted_key = f"{id_prefix}/sdgs/{sdg_number}"
+    elif (
+        group_by == "locations.source.type"
+        or group_by == "primary_location.source.type"
+        or (group_by == "type" and "sources" in index_name)
+    ):
+        key = key.replace(" ", "%20")
+        formatted_key = f"{id_prefix}/source-types/{key}"
     else:
         formatted_key = key
     return formatted_key
