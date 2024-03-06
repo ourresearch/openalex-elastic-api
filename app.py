@@ -21,6 +21,7 @@ import publishers
 import settings
 import sdgs
 import sources
+import source_types
 import subfields
 import suggest
 import topics
@@ -61,8 +62,9 @@ def register_blueprints(app):
     app.register_blueprint(institutions.views.blueprint)
     app.register_blueprint(languages.views.blueprint)
     app.register_blueprint(publishers.views.blueprint)
-    app.register_blueprint(sources.views.blueprint)
     app.register_blueprint(sdgs.views.blueprint)
+    app.register_blueprint(sources.views.blueprint)
+    app.register_blueprint(source_types.views.blueprint)
     app.register_blueprint(subfields.views.blueprint)
     app.register_blueprint(suggest.views.blueprint)
     app.register_blueprint(topics.views.blueprint)
