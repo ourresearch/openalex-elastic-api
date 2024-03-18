@@ -1,8 +1,16 @@
 from marshmallow import INCLUDE, Schema, fields, post_dump
 
-from core.schemas import (CountsByYearSchema, GroupBySchema, GroupBysSchema,
-                          MetaSchema, SummaryStatsSchema, XConceptsSchema,
-                          hide_relevance, relevance_score)
+from core.schemas import (
+    CountsByYearSchema,
+    GroupBySchema,
+    GroupBysSchema,
+    MetaSchema,
+    SummaryStatsSchema,
+    TopicSchema,
+    XConceptsSchema,
+    hide_relevance,
+    relevance_score,
+)
 
 
 class APCSchema(Schema):
@@ -59,6 +67,7 @@ class SourcesSchema(Schema):
     alternate_titles = fields.List(fields.Str())
     abbreviated_title = fields.Str()
     type = fields.Str()
+    topics = fields.List(fields.Nested(TopicSchema))
     x_concepts = fields.List(fields.Nested(XConceptsSchema))
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     works_api_url = fields.Str()

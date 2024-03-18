@@ -1,8 +1,16 @@
 from marshmallow import INCLUDE, Schema, fields, post_dump
 
-from core.schemas import (CountsByYearSchema, GroupBySchema, GroupBysSchema,
-                          MetaSchema, SummaryStatsSchema, XConceptsSchema,
-                          hide_relevance, relevance_score)
+from core.schemas import (
+    CountsByYearSchema,
+    GroupBySchema,
+    GroupBysSchema,
+    MetaSchema,
+    SummaryStatsSchema,
+    TopicSchema,
+    XConceptsSchema,
+    hide_relevance,
+    relevance_score,
+)
 
 
 class IDsSchema(Schema):
@@ -52,6 +60,7 @@ class AuthorsSchema(Schema):
     affiliations = fields.List(fields.Nested(AffiliationSchema))
     last_known_institution = fields.Nested(InstitutionSchema)
     last_known_institutions = fields.List(fields.Nested(InstitutionSchema))
+    topics = fields.List(fields.Nested(TopicSchema))
     x_concepts = fields.List(fields.Nested(XConceptsSchema))
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     works_api_url = fields.Str()

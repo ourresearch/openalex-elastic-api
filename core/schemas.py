@@ -117,6 +117,18 @@ class TopicHierarchySchema(Schema):
         ordered = True
 
 
+class TopicSchema(Schema):
+    id = fields.Str()
+    display_name = fields.Str()
+    score = fields.Float()
+    subfield = fields.Nested(TopicHierarchySchema)
+    field = fields.Nested(TopicHierarchySchema)
+    domain = fields.Nested(TopicHierarchySchema)
+
+    class Meta:
+        ordered = True
+
+
 class RolesSchema(Schema):
     role = fields.Str()
     id = fields.Str()
