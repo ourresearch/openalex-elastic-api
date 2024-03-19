@@ -20,6 +20,7 @@ blueprint = Blueprint("types", __name__)
 
 
 @blueprint.route("/types")
+@blueprint.route("/work-types")
 @cache.cached(
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
@@ -36,6 +37,7 @@ def types():
 
 
 @blueprint.route("/types/filters/<path:params>")
+@blueprint.route("/work-types/filters/<path:params>")
 def types_filters(params):
     index_name = TYPES_INDEX
     results = shared_filter_view(request, params, fields_dict, index_name)
@@ -44,6 +46,7 @@ def types_filters(params):
 
 
 @blueprint.route("/types/histogram/<string:param>")
+@blueprint.route("/work-types/histogram/<string:param>")
 def types_histograms(param):
     index_name = TYPES_INDEX
     result = shared_histogram_view(request, param, fields_dict, index_name)
@@ -52,18 +55,21 @@ def types_histograms(param):
 
 
 @blueprint.route("/types/valid_fields")
+@blueprint.route("/work-types/valid_fields")
 def types_valid_fields():
     valid_fields = get_valid_fields(fields_dict)
     return jsonify(valid_fields)
 
 
 @blueprint.route("/types/flattened_schema")
+@blueprint.route("/work-types/flattened_schema")
 def types_flattened_schema():
     flattened_schema = get_flattened_fields(TypesSchema())
     return jsonify(flattened_schema)
 
 
 @blueprint.route("/types/filters_docstrings")
+@blueprint.route("/work-types/filters_docstrings")
 def types_filters_doctrings():
     ret = {}
     for param, f in fields_dict.items():

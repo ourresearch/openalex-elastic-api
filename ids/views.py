@@ -690,6 +690,7 @@ def languages_id_get(id):
 
 
 @blueprint.route("/types/<path:id>")
+@blueprint.route("/work-types/<path:id>")
 def types_id_get(id):
     return get_by_openalex_external_id(TYPES_INDEX, TypesSchema, id)
 
