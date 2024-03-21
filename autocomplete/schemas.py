@@ -21,11 +21,14 @@ class AutoCompleteSchema(Schema):
             return obj.hint if "hint" in obj else None
         elif "institutions" in obj.meta.index:
             return self.get_location(obj)
-        elif "venues" in obj.meta.index or "sources" in obj.meta.index:
-            if "publisher" in obj and obj.publisher is not None:
-                return obj.publisher
+        elif "sources" in obj.meta.index or "venues" in obj.meta.index:
+            if (
+                "host_organization_name" in obj
+                and obj.host_organization_name is not None
+            ):
+                return obj.host_organization_name
             else:
-                return "publisher unknown"
+                return "host organization unknown"
         elif "works" in obj.meta.index:
             return self.build_author_string(obj)
         else:

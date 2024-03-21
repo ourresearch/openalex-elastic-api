@@ -8,6 +8,7 @@ AUTOCOMPLETE_SOURCE = [
     "doi",
     "description",
     "geo",
+    "host_organization_name",
     "issn_l",
     "last_known_institution",
     "orcid",
