@@ -13,7 +13,7 @@ from core.utils import (
 )
 from extensions import cache
 from institution_types.fields import fields_dict
-from institution_types.schemas import SourceTypesSchema, MessageSchema
+from institution_types.schemas import InstitutionTypesSchema, MessageSchema
 from settings import INSTITUTION_TYPES_INDEX
 
 blueprint = Blueprint("institution_types", __name__)
@@ -26,7 +26,7 @@ blueprint = Blueprint("institution_types", __name__)
 def institution_types():
     index_name = INSTITUTION_TYPES_INDEX
     default_sort = ["-works_count", "id"]
-    only_fields = process_only_fields(request, SourceTypesSchema)
+    only_fields = process_only_fields(request, InstitutionTypesSchema)
     result = shared_view(request, fields_dict, index_name, default_sort)
     # export option
     if is_group_by_export(request):
@@ -59,7 +59,7 @@ def institution_types_valid_fields():
 
 @blueprint.route("/institution-types/flattened_schema")
 def institution_types_flattened_schema():
-    flattened_schema = get_flattened_fields(SourceTypesSchema())
+    flattened_schema = get_flattened_fields(InstitutionTypesSchema())
     return jsonify(flattened_schema)
 
 

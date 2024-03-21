@@ -3,6 +3,7 @@ import random
 from elasticsearch_dsl import Q, Search
 from flask import Blueprint, abort, redirect, request, url_for
 
+import settings
 from authors.schemas import AuthorsSchema
 from concepts.schemas import ConceptsSchema
 from continents.schemas import ContinentsSchema
@@ -33,28 +34,10 @@ from ids.utils import (
     normalize_wikidata,
     process_id_only_fields,
 )
+from institution_types.schemas import InstitutionTypesSchema
 from institutions.schemas import InstitutionsSchema
 from languages.schemas import LanguagesSchema
 from publishers.schemas import PublishersSchema
-from settings import (
-    AUTHORS_INDEX,
-    CONCEPTS_INDEX,
-    CONTINENTS_INDEX,
-    COUNTRIES_INDEX,
-    DOMAINS_INDEX,
-    FIELDS_INDEX,
-    FUNDERS_INDEX,
-    INSTITUTIONS_INDEX,
-    LANGUAGES_INDEX,
-    PUBLISHERS_INDEX,
-    SOURCES_INDEX,
-    SOURCE_TYPES_INDEX,
-    SDGS_INDEX,
-    SUBFIELDS_INDEX,
-    TOPICS_INDEX,
-    TYPES_INDEX,
-    WORKS_INDEX,
-)
 from sources.schemas import SourcesSchema
 from source_types.schemas import SourceTypesSchema
 from sdgs.schemas import SdgsSchema
@@ -72,7 +55,7 @@ blueprint = Blueprint("ids", __name__)
 @blueprint.route("/works/RANDOM")
 @blueprint.route("/works/random")
 def works_random_get():
-    s = Search(index=WORKS_INDEX)
+    s = Search(index=settings.WORKS_INDEX)
     only_fields = process_id_only_fields(request, WorksSchema)
 
     # divide queries into year groups to limit how much work the random function_score has to do
@@ -103,7 +86,7 @@ def works_random_get():
 
 @blueprint.route("/works/<path:id>")
 def works_id_get(id):
-    s = Search(index=WORKS_INDEX)
+    s = Search(index=settings.WORKS_INDEX)
     only_fields = process_id_only_fields(request, WorksSchema)
 
     if is_openalex_id(id):
@@ -162,7 +145,7 @@ def works_id_get(id):
 @blueprint.route("/authors/random")
 @blueprint.route("/people/random")
 def authors_random_get():
-    s = Search(index=AUTHORS_INDEX)
+    s = Search(index=settings.AUTHORS_INDEX)
     only_fields = process_id_only_fields(request, AuthorsSchema)
 
     # divide queries into year groups to limit how much work the random function_score has to do
@@ -186,7 +169,7 @@ def authors_random_get():
 @blueprint.route("/authors/<path:id>")
 @blueprint.route("/people/<path:id>")
 def authors_id_get(id):
-    s = Search(index=AUTHORS_INDEX)
+    s = Search(index=settings.AUTHORS_INDEX)
     only_fields = process_id_only_fields(request, AuthorsSchema)
 
     if is_openalex_id(id):
@@ -240,7 +223,7 @@ def authors_id_get(id):
 @blueprint.route("/institutions/RANDOM")
 @blueprint.route("/institutions/random")
 def institutions_random_get():
-    s = Search(index=INSTITUTIONS_INDEX)
+    s = Search(index=settings.INSTITUTIONS_INDEX)
     only_fields = process_id_only_fields(request, InstitutionsSchema)
 
     random_query = Q("function_score", functions={"random_score": {}})
@@ -254,7 +237,7 @@ def institutions_random_get():
 
 @blueprint.route("/institutions/<path:id>")
 def institutions_id_get(id):
-    s = Search(index=INSTITUTIONS_INDEX)
+    s = Search(index=settings.INSTITUTIONS_INDEX)
     only_fields = process_id_only_fields(request, InstitutionsSchema)
 
     if is_openalex_id(id):
@@ -334,7 +317,7 @@ def venues_id_get(id):
 @blueprint.route("/concepts/RANDOM")
 @blueprint.route("/concepts/random")
 def concepts_random_get():
-    s = Search(index=CONCEPTS_INDEX)
+    s = Search(index=settings.CONCEPTS_INDEX)
     only_fields = process_id_only_fields(request, ConceptsSchema)
 
     random_query = Q("function_score", functions={"random_score": {}})
@@ -348,7 +331,7 @@ def concepts_random_get():
 
 @blueprint.route("/concepts/<path:id>")
 def concepts_id_get(id):
-    s = Search(index=CONCEPTS_INDEX)
+    s = Search(index=settings.CONCEPTS_INDEX)
     only_fields = process_id_only_fields(request, ConceptsSchema)
 
     if is_openalex_id(id):
@@ -391,7 +374,7 @@ def concepts_id_get(id):
 
 @blueprint.route("/concepts/name/<string:name>")
 def concepts_name_get(name):
-    s = Search(index=CONCEPTS_INDEX)
+    s = Search(index=settings.CONCEPTS_INDEX)
 
     query = Q("match_phrase_prefix", display_name=name)
     s = s.query(query)
@@ -408,7 +391,7 @@ def concepts_name_get(name):
 @blueprint.route("/funders/RANDOM")
 @blueprint.route("/funders/random")
 def funders_random_get():
-    s = Search(index=FUNDERS_INDEX)
+    s = Search(index=settings.FUNDERS_INDEX)
     only_fields = process_id_only_fields(request, FundersSchema)
 
     random_query = Q("function_score", functions={"random_score": {}})
@@ -422,7 +405,7 @@ def funders_random_get():
 
 @blueprint.route("/funders/<path:id>")
 def funders_id_get(id):
-    s = Search(index=FUNDERS_INDEX)
+    s = Search(index=settings.FUNDERS_INDEX)
     only_fields = process_id_only_fields(request, FundersSchema)
 
     if is_openalex_id(id):
@@ -472,7 +455,7 @@ def funders_id_get(id):
 
 @blueprint.route("/publishers/<path:id>")
 def publishers_id_get(id):
-    s = Search(index=PUBLISHERS_INDEX)
+    s = Search(index=settings.PUBLISHERS_INDEX)
     only_fields = process_id_only_fields(request, PublishersSchema)
 
     if is_openalex_id(id):
@@ -514,7 +497,7 @@ def publishers_id_get(id):
 @blueprint.route("/publishers/RANDOM")
 @blueprint.route("/publishers/random")
 def publishers_random_get():
-    s = Search(index=PUBLISHERS_INDEX)
+    s = Search(index=settings.PUBLISHERS_INDEX)
     only_fields = process_id_only_fields(request, PublishersSchema)
 
     random_query = Q("function_score", functions={"random_score": {}})
@@ -533,7 +516,7 @@ def publishers_random_get():
 @blueprint.route("/sources/random")
 @blueprint.route("/journals/random")
 def sources_random_get():
-    s = Search(index=SOURCES_INDEX)
+    s = Search(index=settings.SOURCES_INDEX)
     only_fields = process_id_only_fields(request, SourcesSchema)
 
     random_query = Q("function_score", functions={"random_score": {}})
@@ -548,7 +531,7 @@ def sources_random_get():
 @blueprint.route("/sources/<path:id>")
 @blueprint.route("/journals/<path:id>", endpoint="journals_id_get")
 def sources_id_get(id):
-    s = Search(index=SOURCES_INDEX)
+    s = Search(index=settings.SOURCES_INDEX)
     only_fields = process_id_only_fields(request, SourcesSchema)
 
     if is_openalex_id(id):
@@ -615,7 +598,7 @@ def sources_id_get(id):
 @blueprint.route("/topics/RANDOM")
 @blueprint.route("/topics/random")
 def topics_random_get():
-    s = Search(index=TOPICS_INDEX)
+    s = Search(index=settings.TOPICS_INDEX)
     only_fields = process_id_only_fields(request, TopicsSchema)
 
     random_query = Q("function_score", functions={"random_score": {}})
@@ -627,7 +610,7 @@ def topics_random_get():
 
 @blueprint.route("/topics/<path:id>")
 def topics_id_get(id):
-    s = Search(index=TOPICS_INDEX)
+    s = Search(index=settings.TOPICS_INDEX)
     only_fields = process_id_only_fields(request, TopicsSchema)
 
     if is_openalex_id(id):
@@ -671,48 +654,57 @@ def get_by_openalex_external_id(index, schema, id):
 
 @blueprint.route("/sdgs/<path:id>")
 def sdgs_id_get(id):
-    return get_by_openalex_external_id(SDGS_INDEX, SdgsSchema, id)
+    return get_by_openalex_external_id(settings.SDGS_INDEX, SdgsSchema, id)
 
 
 @blueprint.route("/continents/<path:id>")
 def continents_id_get(id):
-    return get_by_openalex_external_id(CONTINENTS_INDEX, ContinentsSchema, id)
+    return get_by_openalex_external_id(settings.CONTINENTS_INDEX, ContinentsSchema, id)
 
 
 @blueprint.route("/countries/<path:id>")
 def countries_id_get(id):
-    return get_by_openalex_external_id(COUNTRIES_INDEX, CountriesSchema, id)
+    return get_by_openalex_external_id(settings.COUNTRIES_INDEX, CountriesSchema, id)
+
+
+@blueprint.route("/institution-types/<path:id>")
+def institution_types_id_get(id):
+    return get_by_openalex_external_id(
+        settings.INSTITUTION_TYPES_INDEX, InstitutionTypesSchema, id
+    )
 
 
 @blueprint.route("/languages/<path:id>")
 def languages_id_get(id):
-    return get_by_openalex_external_id(LANGUAGES_INDEX, LanguagesSchema, id)
+    return get_by_openalex_external_id(settings.LANGUAGES_INDEX, LanguagesSchema, id)
 
 
 @blueprint.route("/types/<path:id>")
 @blueprint.route("/work-types/<path:id>")
 def types_id_get(id):
-    return get_by_openalex_external_id(TYPES_INDEX, TypesSchema, id)
+    return get_by_openalex_external_id(settings.TYPES_INDEX, TypesSchema, id)
 
 
 @blueprint.route("/source-types/<path:id>")
 def source_types_id_get(id):
-    return get_by_openalex_external_id(SOURCE_TYPES_INDEX, SourceTypesSchema, id)
+    return get_by_openalex_external_id(
+        settings.SOURCE_TYPES_INDEX, SourceTypesSchema, id
+    )
 
 
 @blueprint.route("/domains/<path:id>")
 def domains_id_get(id):
-    return get_by_openalex_external_id(DOMAINS_INDEX, DomainsSchema, id)
+    return get_by_openalex_external_id(settings.DOMAINS_INDEX, DomainsSchema, id)
 
 
 @blueprint.route("/fields/<path:id>")
 def fields_id_get(id):
-    return get_by_openalex_external_id(FIELDS_INDEX, FieldsSchema, id)
+    return get_by_openalex_external_id(settings.FIELDS_INDEX, FieldsSchema, id)
 
 
 @blueprint.route("/subfields/<path:id>")
 def subfields_id_get(id):
-    return get_by_openalex_external_id(SUBFIELDS_INDEX, SubfieldsSchema, id)
+    return get_by_openalex_external_id(settings.SUBFIELDS_INDEX, SubfieldsSchema, id)
 
 
 # Universal

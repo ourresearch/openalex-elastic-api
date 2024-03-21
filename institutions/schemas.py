@@ -63,6 +63,7 @@ class InstitutionsSchema(Schema):
     relevance_score = fields.Method("get_relevance_score")
     country_code = fields.Str()
     type = fields.Str()
+    type_id = fields.Str()
     lineage = fields.List(fields.Str())
     homepage_url = fields.Str()
     image_url = fields.Str()

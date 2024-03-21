@@ -9,7 +9,7 @@ from core.schemas import (
 )
 
 
-class SourceTypesSchema(Schema):
+class InstitutionTypesSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     relevance_score = fields.Method("get_relevance_score")
@@ -34,7 +34,7 @@ class SourceTypesSchema(Schema):
 
 class MessageSchema(Schema):
     meta = fields.Nested(MetaSchema)
-    results = fields.Nested(SourceTypesSchema, many=True)
+    results = fields.Nested(InstitutionTypesSchema, many=True)
     group_by = fields.Nested(GroupBySchema, many=True)
     group_bys = fields.Nested(GroupBysSchema, many=True)
 
