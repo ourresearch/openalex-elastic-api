@@ -634,8 +634,12 @@ def get_by_openalex_external_id(index, schema, id):
     s = Search(index=index)
     only_fields = process_id_only_fields(request, schema)
 
-    if index.startswith("source-types"):
+    if index.startswith("institution-types"):
+        endpoint_name = "institution-types"
+    elif index.startswith("source-types"):
         endpoint_name = "source-types"
+    elif index.startswith("work-types"):
+        endpoint_name = "work-types"
     else:
         endpoint_name = index.split("-")[0]
 
