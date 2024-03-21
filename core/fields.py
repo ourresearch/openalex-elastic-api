@@ -493,7 +493,11 @@ class TermField(Field):
         elif self.param == "language":
             self.value = self.value.replace("languages/", "")
         elif self.param == "type":
-            self.value = self.value.replace("types/", "").replace("source-types/", "")
+            self.value = (
+                self.value.replace("work-types/", "")
+                .replace("source-types/", "")
+                .replace("types/", "")
+            )
         elif (
             self.param == "primary_location.source.type"
             or self.param == "locations.source.type"
