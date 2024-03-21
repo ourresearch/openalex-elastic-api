@@ -19,7 +19,7 @@ def get_indices():
         "source": settings.SOURCES_INDEX,
         "topic": settings.TOPICS_INDEX,
         "work": settings.WORKS_INDEX,
-        "work_type": settings.TYPES_INDEX,
+        "work_type": settings.WORK_TYPES_INDEX,
     }
     return entities_to_indeces
 

@@ -14,7 +14,7 @@ from core.utils import (
 from extensions import cache
 from work_types.fields import fields_dict
 from work_types.schemas import TypesSchema, MessageSchema
-from settings import TYPES_INDEX
+from settings import WORK_TYPES_INDEX
 
 blueprint = Blueprint("types", __name__)
 
@@ -25,7 +25,7 @@ blueprint = Blueprint("types", __name__)
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
 def types():
-    index_name = TYPES_INDEX
+    index_name = WORK_TYPES_INDEX
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, TypesSchema)
     result = shared_view(request, fields_dict, index_name, default_sort)
@@ -39,7 +39,7 @@ def types():
 @blueprint.route("/types/filters/<path:params>")
 @blueprint.route("/work-types/filters/<path:params>")
 def types_filters(params):
-    index_name = TYPES_INDEX
+    index_name = WORK_TYPES_INDEX
     results = shared_filter_view(request, params, fields_dict, index_name)
     filters_schema = FiltersWrapperSchema()
     return filters_schema.dump(results)
@@ -48,7 +48,7 @@ def types_filters(params):
 @blueprint.route("/types/histogram/<string:param>")
 @blueprint.route("/work-types/histogram/<string:param>")
 def types_histograms(param):
-    index_name = TYPES_INDEX
+    index_name = WORK_TYPES_INDEX
     result = shared_histogram_view(request, param, fields_dict, index_name)
     histogram_schema = HistogramWrapperSchema()
     return histogram_schema.dump(result)

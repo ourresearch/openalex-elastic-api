@@ -248,7 +248,7 @@ def format_key(key, group_by, index_name):
     elif group_by == "language":
         formatted_key = f"{id_prefix}/languages/{key}"
     elif group_by == "type" and "works" in index_name:
-        formatted_key = f"{id_prefix}/types/{key}"
+        formatted_key = f"{id_prefix}/work-types/{key}"
     elif group_by == "sustainable_development_goals.id":
         sdg_number = key.split("/")[-1]
         formatted_key = f"{id_prefix}/sdgs/{sdg_number}"
