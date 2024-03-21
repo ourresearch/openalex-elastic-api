@@ -15,6 +15,7 @@ import domains
 import fields
 import funders
 import ids
+import institution_types
 import institutions
 import languages
 import publishers
@@ -59,6 +60,7 @@ def register_blueprints(app):
     app.register_blueprint(fields.views.blueprint)
     app.register_blueprint(funders.views.blueprint)
     app.register_blueprint(ids.views.blueprint)
+    app.register_blueprint(institution_types.views.blueprint)
     app.register_blueprint(institutions.views.blueprint)
     app.register_blueprint(languages.views.blueprint)
     app.register_blueprint(publishers.views.blueprint)
