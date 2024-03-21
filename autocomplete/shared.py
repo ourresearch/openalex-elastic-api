@@ -95,7 +95,6 @@ def search_canonical_id_single(index_name, s, q):
             index_name.startswith("institution")
             and id_utils.is_institution_openalex_id(q)
         )
-        or (index_name.startswith("venue") and id_utils.is_venue_openalex_id(q))
         or (index_name.startswith("source") and id_utils.is_source_openalex_id(q))
         or (index_name.startswith("work") and id_utils.is_work_openalex_id(q))
     ):
@@ -116,9 +115,7 @@ def search_canonical_id_single(index_name, s, q):
         ror_id = f"https://ror.org/{normalized_id}"
         s = s.filter("term", ror=ror_id)
         canonical_id_found = True
-    elif (index_name.startswith("venue") and id_utils.is_issn(q)) or (
-        index_name.startswith("source") and id_utils.is_issn(q)
-    ):
+    elif index_name.startswith("source") and id_utils.is_issn(q):
         normalized_id = id_utils.normalize_issn(q)
         s = s.filter("term", issn=normalized_id)
         canonical_id_found = True

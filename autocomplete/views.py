@@ -36,12 +36,10 @@ from settings import (
     PUBLISHERS_INDEX,
     SOURCES_INDEX,
     TOPICS_INDEX,
-    VENUES_INDEX,
     WORKS_INDEX,
 )
 from sources.fields import fields_dict as sources_fields_dict
 from topics.fields import fields_dict as topics_fields_dict
-from venues.fields import fields_dict as venues_fields_dict
 from works.fields import fields_dict as works_fields_dict
 
 blueprint = Blueprint("complete", __name__)
@@ -171,14 +169,6 @@ def autocomplete_topics():
     return message_schema.dump(result)
 
 
-@blueprint.route("/autocomplete/venues")
-def autocomplete_venues():
-    index_name = VENUES_INDEX
-    result = single_entity_autocomplete(venues_fields_dict, index_name, request)
-    message_schema = MessageSchema()
-    return message_schema.dump(result)
-
-
 @blueprint.route("/autocomplete/works")
 @cache.cached(
     timeout=24 * 60 * 60 * 7,
@@ -258,49 +248,6 @@ def autocomplete_institutions_country():
         "per_page": 10,
     }
     result["results"] = found_countries_sorted[:10]
-    message_schema = MessageAutocompleteCustomSchema()
-    return message_schema.dump(result)
-
-
-@blueprint.route("/autocomplete/venues/publisher")
-def autocomplete_venues_publisher():
-    q = request.args.get("q")
-    q = strip_punctuation(q) if q else None
-    q = q.lower() if q else None
-    if not q:
-        raise APIQueryParamsError(
-            f"Must enter a 'q' parameter in order to use autocomplete. Example: {request.url_rule}?q=my search"
-        )
-
-    s = Search(index="venues-publisher-transform-v2")
-    s = s.query(
-        "match_phrase_prefix", publisher__transform={"query": q, "max_expansions": 100}
-    )
-    s = s.sort("-cited_by_count.sum")
-    response = s.execute()
-
-    hits = []
-    for item in response:
-        hits.append(
-            OrderedDict(
-                {
-                    "id": None,
-                    "display_name": item.publisher.transform,
-                    "cited_by_count": item.cited_by_count.sum,
-                    "entity_type": "venue",
-                    "external_id": None,
-                }
-            )
-        )
-
-    result = OrderedDict()
-    result["meta"] = {
-        "count": s.count(),
-        "db_response_time_ms": response.took,
-        "page": 1,
-        "per_page": 10,
-    }
-    result["results"] = hits
     message_schema = MessageAutocompleteCustomSchema()
     return message_schema.dump(result)
 

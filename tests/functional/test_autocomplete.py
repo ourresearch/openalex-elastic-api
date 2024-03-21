@@ -109,12 +109,6 @@ class TestFiltersInAutocomplete:
         json_data = res.get_json()
         assert "shota rustaveli" in json_data["results"][0]["display_name"].lower()
 
-    def test_venues_filters_autocomplete(self, client):
-        res = client.get("/autocomplete/venues?filter=publisher:wiley&q=chem")
-        json_data = res.get_json()
-        for result in json_data["results"][:25]:
-            assert "wiley" in result["hint"].lower()
-
     def test_works_filters_autocomplete(self, client):
         res = client.get(
             "/autocomplete/works?filter=is_oa:true,publication_year:2019&q=tra"
@@ -201,26 +195,6 @@ class TestAutocompleteIdDetection:
         json_data = res.get_json()
         assert json_data["meta"]["count"] == 1
         assert json_data["results"][0]["display_name"] == "Chinese Academy of Sciences"
-
-    def test_venues_openalex(self, client):
-        res = client.get("/autocomplete/venues?q=V41354064")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1
-        assert json_data["results"][0]["display_name"] == "ChemInform"
-
-    def test_venues_issn(self, client):
-        res = client.get(
-            "/autocomplete/venues?q=https://portal.issn.org/resource/issn/0931-7597"
-        )
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1
-        assert json_data["results"][0]["display_name"] == "ChemInform"
-
-    def test_venues_issn_urn(self, client):
-        res = client.get("/autocomplete/venues?q=issn:0931-7597")
-        json_data = res.get_json()
-        assert json_data["meta"]["count"] == 1
-        assert json_data["results"][0]["display_name"] == "ChemInform"
 
     def test_works_openalex(self, client):
         res = client.get("/autocomplete/works?q=W37005")

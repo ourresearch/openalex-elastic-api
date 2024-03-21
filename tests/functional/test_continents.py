@@ -270,7 +270,7 @@ class TestSourcesContinentsFilters:
         assert json_data["meta"]["count"] == 1612
 
 
-class TestVenuesContinentsGroupBy:
+class TestSourcesContinentsGroupBy:
     def test_sources_continent_group_by(self, client):
         res = client.get("/sources?group_by=continent")
         json_data = res.get_json()

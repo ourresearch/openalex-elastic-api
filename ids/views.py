@@ -21,7 +21,6 @@ from ids.utils import (
     is_publisher_openalex_id,
     is_source_openalex_id,
     is_topic_openalex_id,
-    is_venue_openalex_id,
     is_work_openalex_id,
     normalize_doi,
     normalize_issn,
@@ -285,30 +284,6 @@ def institutions_id_get(id):
         context={"display_relevance": False}, only=only_fields
     )
     return institutions_schema.dump(response[0])
-
-
-# Venue (delete after one month)
-
-
-@blueprint.route("/venues/RANDOM")
-@blueprint.route("/venues/random")
-def venues_random_get():
-    return redirect(url_for("ids.sources_random_get", **request.args), code=301)
-
-
-@blueprint.route("/venues/<path:id>")
-def venues_id_get(id):
-    if is_openalex_id(id):
-        clean_id = normalize_openalex_id(id)
-        if clean_id != id:
-            return redirect(url_for("ids.venues_id_get", id=clean_id, **request.args))
-        clean_id = int(clean_id[1:])
-        full_openalex_id = f"https://openalex.org/S{clean_id}"
-        return redirect(
-            url_for("ids.sources_id_get", id=full_openalex_id, **request.args), code=301
-        )
-    else:
-        return redirect(url_for("ids.sources_id_get", id=id, **request.args), code=301)
 
 
 # Concept
@@ -727,8 +702,6 @@ def universal_get(openalex_id):
         return redirect(url_for("ids.works_id_get", id=openalex_id, **request.args))
     elif is_author_openalex_id(openalex_id):
         return redirect(url_for("ids.authors_id_get", id=openalex_id, **request.args))
-    elif is_venue_openalex_id(openalex_id):
-        return redirect(url_for("ids.venues_id_get", id=openalex_id, **request.args))
     elif is_institution_openalex_id(openalex_id):
         return redirect(
             url_for("ids.institutions_id_get", id=openalex_id, **request.args)

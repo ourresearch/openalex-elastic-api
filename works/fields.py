@@ -415,7 +415,6 @@ fields = [
         docstring="The funders listed in the work's grants",
         documentation_link="https://docs.openalex.org/api-entities/funders",
     ),
-    OpenAlexIDField(param="host_venue.id"),
     OpenAlexIDField(
         param="ids.openalex",
         docstring="The OpenAlex ID for a work",

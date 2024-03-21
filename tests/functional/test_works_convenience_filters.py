@@ -52,14 +52,6 @@ class TestWorksExternalIDs:
         for result in json_data["results"][:25]:
             assert "doi" not in result["ids"] or result["ids"]["doi"] is None
 
-    def test_venues_has_doi_error(self, client):
-        res = client.get("/works?filter=has_doi:stt")
-        json_data = res.get_json()
-        assert json_data["error"] == "Invalid query parameters error."
-        assert (
-            json_data["message"] == "Value for has_doi must be true or false, not stt."
-        )
-
     def test_works_has_pmid_true(self, client):
         res = client.get("/works?filter=has_pmid:true")
         json_data = res.get_json()

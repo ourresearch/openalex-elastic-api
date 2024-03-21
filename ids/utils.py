@@ -37,15 +37,6 @@ def is_author_openalex_id(id):
     return clean_id.startswith("A")
 
 
-def is_venue_openalex_id(id):
-    if isinstance(id, int):
-        return False
-    clean_id = normalize_openalex_id(id)
-    if not clean_id:
-        return False
-    return clean_id.startswith("V")
-
-
 def is_institution_openalex_id(id):
     if isinstance(id, int):
         return False

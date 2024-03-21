@@ -12,7 +12,6 @@ from settings import (
     PUBLISHERS_INDEX,
     SOURCES_INDEX,
     TOPICS_INDEX,
-    VENUES_INDEX,
     WORKS_INDEX,
 )
 
@@ -123,8 +122,6 @@ def get_index_name_by_id(openalex_id):
         index_name = SOURCES_INDEX
     elif clean_id.startswith("T"):
         index_name = TOPICS_INDEX
-    elif clean_id.startswith("V"):
-        index_name = VENUES_INDEX
     elif clean_id.startswith("W"):
         index_name = WORKS_INDEX
     return index_name

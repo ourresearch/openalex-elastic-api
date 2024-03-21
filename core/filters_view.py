@@ -214,8 +214,6 @@ def set_url(search_param, key, value, index_name):
         url = url_for("concepts.concepts", filter=params, _external=True)
     elif index_name.startswith("institutions"):
         url = url_for("institutions.institutions", filter=params, _external=True)
-    elif index_name.startswith("venues"):
-        url = url_for("venues.venues", filter=params, _external=True)
     elif index_name.startswith("works"):
         url = url_for("works.works", filter=params, _external=True)
     else:

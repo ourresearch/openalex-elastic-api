@@ -353,7 +353,7 @@ def full_search_query(index_name, search_terms):
             secondary_field="description",
             tertiary_field="keywords",
         )
-    elif index_name.lower().startswith("venues") or index_name.lower().startswith(
+    elif index_name.lower().startswith(
         "sources"
     ):
         search_oa = SearchOpenAlex(
