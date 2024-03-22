@@ -490,6 +490,9 @@ class TermField(Field):
         if self.param == "sustainable_development_goals.id":
             if len(self.value) == 1 or len(self.value) == 2:
                 self.value = f"https://metadata.un.org/sdg/{self.value}"
+            elif self.value.startswith("sdgs/"):
+                sdg_number = self.value.replace("sdgs/", "")
+                self.value = f"https://metadata.un.org/sdg/{sdg_number}"
         elif self.param == "language":
             self.value = self.value.replace("languages/", "")
         elif self.param == "type":
