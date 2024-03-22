@@ -495,9 +495,10 @@ class TermField(Field):
                 self.value = f"https://metadata.un.org/sdg/{sdg_number}"
         elif self.param == "language":
             self.value = self.value.replace("languages/", "")
-        elif self.param == "type":
+        elif self.param == "type" or self.param == "last_known_institution.type":
             self.value = (
                 self.value.replace("work-types/", "")
+                .replace("institution-types/", "")
                 .replace("source-types/", "")
                 .replace("types/", "")
             )
