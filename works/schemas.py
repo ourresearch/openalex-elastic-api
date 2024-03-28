@@ -216,6 +216,7 @@ class WorksSchema(Schema):
     best_oa_location = fields.Nested(LocationSchema)
     sustainable_development_goals = fields.Nested(SDGSchema, many=True)
     grants = fields.List(fields.Nested(GrantsSchema))
+    versions = fields.List(fields.Str())
     referenced_works_count = fields.Int()
     referenced_works = fields.List(fields.Str())
     related_works = fields.List(fields.Str())
