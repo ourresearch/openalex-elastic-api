@@ -120,6 +120,8 @@ class TopicHierarchySchema(Schema):
 class TopicSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
+    count = fields.Int()
+    value = fields.Float()
     score = fields.Float()
     subfield = fields.Nested(TopicHierarchySchema)
     field = fields.Nested(TopicHierarchySchema)
