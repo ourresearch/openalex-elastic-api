@@ -68,6 +68,7 @@ class SourcesSchema(Schema):
     abbreviated_title = fields.Str()
     type = fields.Str()
     topics = fields.List(fields.Nested(TopicSchema))
+    topic_share = fields.List(fields.Nested(TopicSchema))
     x_concepts = fields.List(fields.Nested(XConceptsSchema))
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     works_api_url = fields.Str()
