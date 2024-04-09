@@ -288,6 +288,9 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("any_repository_has_fulltext", None),
     ),
     BooleanField(
+        param="mag_only",
+    ),
+    BooleanField(
         param="primary_location.is_oa",
         docstring=DOCSTRINGS["is_oa"],
         documentation_link=DOCUMENTATION_LINKS["is_oa"],

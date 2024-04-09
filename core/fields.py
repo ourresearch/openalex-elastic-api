@@ -118,6 +118,23 @@ class BooleanField(Field):
                 | Q("prefix", authorships__author__id="https://openalex.org/A2")
                 | Q("prefix", authorships__author__id="https://openalex.org/A1")
             )
+        elif self.param == "mag_only":
+            self.validate_true_false()
+            if self.value.lower().strip() == "true":
+                q = (
+                    Q("exists", field="ids.mag")
+                    & ~Q("exists", field="ids.pmid")
+                    & ~Q("exists", field="ids.pmcid")
+                    & ~Q("exists", field="ids.doi")
+                    & ~Q("exists", field="ids.arxiv")
+                )
+            else:
+                q = (
+                    Q("exists", field="ids.pmid")
+                    | Q("exists", field="ids.pmcid")
+                    | Q("exists", field="ids.doi")
+                    | Q("exists", field="ids.arxiv")
+                )
         elif self.value == "null":
             q = ~Q("exists", field=self.es_sort_field())
         elif self.value == "!null":
