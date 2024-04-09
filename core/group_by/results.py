@@ -88,6 +88,7 @@ def is_boolean_group_by(group_by):
         group_by in settings.EXTERNAL_ID_FIELDS
         or group_by in settings.BOOLEAN_TEXT_FIELDS
         or "is_global_south" in group_by
+        or "mag_only" in group_by
     )
 
 
@@ -232,7 +233,7 @@ def calculate_group_by_count(params, response):
         or group_by in settings.BOOLEAN_TEXT_FIELDS
     ):
         return 2
-    if "is_global_south" in group_by:
+    if "is_global_south" in group_by or "mag_only" in group_by:
         return 2
     if any(
         keyword in group_by for keyword in ["continent", "version", "best_open_version"]

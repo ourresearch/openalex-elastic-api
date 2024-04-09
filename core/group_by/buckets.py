@@ -56,6 +56,8 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params):
         or field.param in settings.BOOLEAN_TEXT_FIELDS
     ):
         create_boolean_group_by_buckets(bucket_keys, group_by_field, s)
+    elif field.param == "mag_only":
+        create_mag_only_group_by_buckets(bucket_keys, s)
     elif cursor:
         if cursor and cursor != "*":
             after_key = decode_group_by_cursor(cursor)
@@ -110,6 +112,31 @@ def create_global_south_group_by_buckets(bucket_keys, group_by_field, s):
     country_codes = [c["country_code"] for c in GLOBAL_SOUTH_COUNTRIES]
     exists = A("filter", Q("terms", **{group_by_field: country_codes}))
     not_exists = A("filter", ~Q("terms", **{group_by_field: country_codes}))
+    s.aggs.bucket(bucket_keys["exists"], exists)
+    s.aggs.bucket(bucket_keys["not_exists"], not_exists)
+    return s
+
+
+def create_mag_only_group_by_buckets(bucket_keys, s):
+    exists = A(
+        "filter",
+        (
+            Q("exists", field="ids.mag")
+            & ~Q("exists", field="ids.pmid")
+            & ~Q("exists", field="ids.pmcid")
+            & ~Q("exists", field="ids.doi")
+            & ~Q("exists", field="ids.arxiv")
+        ),
+    )
+    not_exists = A(
+        "filter",
+        (
+            Q("exists", field="ids.pmid")
+            | Q("exists", field="ids.pmcid")
+            | Q("exists", field="ids.doi")
+            | Q("exists", field="ids.arxiv")
+        ),
+    )
     s.aggs.bucket(bucket_keys["exists"], exists)
     s.aggs.bucket(bucket_keys["not_exists"], not_exists)
     return s
