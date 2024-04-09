@@ -50,10 +50,13 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["concept"],
         alternate_names=ALTERNATE_NAMES.get("concept", None),
     ),
-    OpenAlexIDField(param="concepts.id", custom_es_field="x_concepts.id",
-                            docstring=DOCSTRINGS["concept"],
+    OpenAlexIDField(
+        param="concepts.id",
+        custom_es_field="x_concepts.id",
+        docstring=DOCSTRINGS["concept"],
         documentation_link=DOCUMENTATION_LINKS["concept"],
-        alternate_names=ALTERNATE_NAMES.get("concept", None),),
+        alternate_names=ALTERNATE_NAMES.get("concept", None),
+    ),
     OpenAlexIDField(
         param="ids.openalex",
         custom_es_field="ids.openalex.lower",
@@ -118,6 +121,8 @@ fields = [
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="ror", alias="ror"),
+    TermField(param="topics.id"),
+    TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),
     TermField(
         param="type",
         docstring=DOCSTRINGS["type"],

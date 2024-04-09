@@ -167,6 +167,8 @@ fields = [
     ),
     TermField(param="orcid", alias="ids.orcid"),
     TermField(param="scopus", alias="ids.scopus.keyword"),
+    TermField(param="topics.id"),
+    TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),
 ]
 
 fields_dict = {f.param: f for f in fields}

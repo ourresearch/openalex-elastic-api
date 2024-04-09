@@ -628,6 +628,11 @@ class TermField(Field):
         elif self.param == "language":
             kwargs = {self.es_field(): self.value.lower()}
             q = Q("term", **kwargs)
+        elif self.param == "topics.id" or self.param == "topic_share.id":
+            if "https://openalex.org/" not in self.value:
+                formatted_version = f"https://openalex.org/{self.value}"
+                kwargs = {self.es_field(): formatted_version}
+                q = Q("term", **kwargs)
         elif (
             self.param == "topics.domain.id"
             or self.param == "primary_topic.domain.id"
