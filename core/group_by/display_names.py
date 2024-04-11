@@ -4,7 +4,13 @@ from elasticsearch_dsl import Search, Q, MultiSearch
 from iso4217 import Currency
 
 from core.utils import get_index_name_by_id, normalize_openalex_id
-from settings import DOMAINS_INDEX, FIELDS_INDEX, SUBFIELDS_INDEX, WORKS_INDEX
+from settings import (
+    DOMAINS_INDEX,
+    FIELDS_INDEX,
+    KEYWORDS_INDEX,
+    SUBFIELDS_INDEX,
+    WORKS_INDEX,
+)
 
 
 """
@@ -82,7 +88,6 @@ def get_display_names_award_ids(ids):
 
 
 def get_display_names_sdgs(ids):
-    # kind of hacky. consider redoing
     results = {}
     ms = MultiSearch(index=WORKS_INDEX)
     for sdg_id in ids:
@@ -107,11 +112,11 @@ def get_display_names_sdgs(ids):
     return results
 
 
-def get_display_names_topics(ids):
+def get_display_names_topics_and_keywords(ids):
     if not ids or (ids[0] == "unknown" and len(ids) == 1):
         return None
 
-    index = f"{FIELDS_INDEX},{SUBFIELDS_INDEX},{DOMAINS_INDEX}"
+    index = f"{FIELDS_INDEX},{SUBFIELDS_INDEX},{DOMAINS_INDEX},{KEYWORDS_INDEX}"
     s = Search(index=index)
     s = s.extra(size=500)
     s = s.source(["id", "display_name"])
@@ -163,11 +168,12 @@ def get_display_name_mapping(keys, group_by):
     display_name_functions = {
         "host_organization": get_display_names_host_organization,
         "host_organization_lineage": get_display_names_host_organization,
-        "domain.id": get_display_names_topics,
-        "subfield.id": get_display_names_topics,
-        "subfields.id": get_display_names_topics,
-        "field.id": get_display_names_topics,
-        "fields.id": get_display_names_topics,
+        "domain.id": get_display_names_topics_and_keywords,
+        "subfield.id": get_display_names_topics_and_keywords,
+        "subfields.id": get_display_names_topics_and_keywords,
+        "field.id": get_display_names_topics_and_keywords,
+        "fields.id": get_display_names_topics_and_keywords,
+        "keywords.id": get_display_names_topics_and_keywords,
         "grants.award_id": get_display_names_award_ids,
         "sustainable_development_goals.id": get_display_names_sdgs,
     }

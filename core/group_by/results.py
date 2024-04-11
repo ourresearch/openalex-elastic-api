@@ -75,6 +75,7 @@ def get_group_by_results(
             "sustainable_development_goals.id",
             "locations.source.type",
             "primary_location.source.type",
+            "keywords.id",
         )
         or (field.param == "type" and "works" in index_name)
         or (field.param == "type" and "sources" in index_name)
