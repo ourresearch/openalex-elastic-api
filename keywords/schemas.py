@@ -13,6 +13,8 @@ class KeywordsSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     relevance_score = fields.Method("get_relevance_score")
+    works_count = fields.Int()
+    cited_by_count = fields.Int()
     works_api_url = fields.Str()
     updated_date = fields.Str()
     created_date = fields.Str(dump_default=None)
