@@ -169,6 +169,8 @@ class CitedByPercentileYearSchema(Schema):
 
 
 class KeywordsSchema(Schema):
+    id = fields.String()
+    display_name = fields.String()
     keyword = fields.String()
     score = fields.Float()
 

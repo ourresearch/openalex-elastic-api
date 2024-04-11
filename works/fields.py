@@ -690,6 +690,7 @@ fields = [
     ),
     TermField(param="institutions.ror", alias="authorships.institutions.ror"),
     TermField(param="institutions.type", alias="authorships.institutions.type"),
+    TermField(param="keywords.id", custom_es_field="keywords.id.keyword"),
     TermField(param="keywords.keyword", custom_es_field="keywords.keyword.lower"),
     TermField(
         param="grants.award_id",
