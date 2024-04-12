@@ -37,6 +37,7 @@ from institution_types.schemas import InstitutionTypesSchema
 from institutions.schemas import InstitutionsSchema
 from keywords.schemas import KeywordsSchema
 from languages.schemas import LanguagesSchema
+from licenses.schemas import LicensesSchema
 from publishers.schemas import PublishersSchema
 from sources.schemas import SourcesSchema
 from source_types.schemas import SourceTypesSchema
@@ -690,6 +691,11 @@ def subfields_id_get(id):
 @blueprint.route("/keywords/<path:id>")
 def keywords_id_get(id):
     return get_by_openalex_external_id(settings.KEYWORDS_INDEX, KeywordsSchema, id)
+
+
+@blueprint.route("/licenses/<path:id>")
+def licenses_id_get(id):
+    return get_by_openalex_external_id(settings.LICENSES_INDEX, LicensesSchema, id)
 
 
 # Universal
