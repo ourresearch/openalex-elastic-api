@@ -273,3 +273,10 @@ def exists_bucket_count(group_by, response):
 
 def not_exists_bucket_count(group_by, response):
     return get_bucket_doc_count(group_by, response, "not_exists")
+
+
+def create_apc_sum(index_name, s):
+    if index_name.startswith("sources"):
+        a = A("sum", field="apc_usd")
+        s.aggs.bucket("apc_sum", a)
+    return s

@@ -11,7 +11,7 @@ from core.group_by.results import get_group_by_results, calculate_group_by_count
 from core.group_by.filter import filter_group_by
 from core.group_by.utils import parse_group_by
 from core.group_by.search import search_group_by_strings_with_q
-from core.group_by.buckets import create_group_by_buckets
+from core.group_by.buckets import create_group_by_buckets, create_apc_sum
 from core.paginate import get_pagination
 from core.params import parse_params
 from core.preference import clean_preference, set_preference_for_filter_search
@@ -49,6 +49,8 @@ def construct_query(params, fields_dict, index_name, default_sort):
     s = apply_grouping(params, fields_dict, s)
 
     s = filter_group_with_q(params, fields_dict, s)
+
+    s = create_apc_sum(index_name, s)
 
     return s
 
@@ -205,6 +207,9 @@ def format_meta(response, params, s):
 
     if params.get("cursor"):
         meta["next_cursor"] = get_next_cursor(params, response)
+
+    if hasattr(response, "aggregations") and "apc_sum" in response.aggregations:
+        meta["apc_usd_sum"] = response.aggregations.apc_sum.value
 
     return meta
 
