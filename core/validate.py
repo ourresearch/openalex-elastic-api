@@ -4,6 +4,7 @@ from core.exceptions import APIQueryParamsError
 
 def validate_params(request):
     valid_params = [
+        "apc_sum",
         "cursor",
         "filter",
         "format",

@@ -50,7 +50,7 @@ def construct_query(params, fields_dict, index_name, default_sort):
 
     s = filter_group_with_q(params, fields_dict, s)
 
-    s = create_apc_sum(index_name, s)
+    s = create_apc_sum(params, index_name, s)
 
     return s
 
@@ -209,7 +209,7 @@ def format_meta(response, params, s):
         meta["next_cursor"] = get_next_cursor(params, response)
 
     if hasattr(response, "aggregations") and "apc_sum" in response.aggregations:
-        meta["apc_usd_sum"] = response.aggregations.apc_sum.value
+        meta["apc_sum_usd"] = response.aggregations.apc_sum.value
 
     return meta
 
