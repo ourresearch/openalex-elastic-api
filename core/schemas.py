@@ -9,7 +9,8 @@ class MetaSchema(Schema):
     per_page = fields.Int()
     next_cursor = fields.Str()
     groups_count = fields.Int()
-    apc_sum_usd = fields.Int()
+    apc_list_sum_usd = fields.Int()
+    apc_paid_sum_usd = fields.Int()
 
     class Meta:
         ordered = True

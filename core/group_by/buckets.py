@@ -279,8 +279,14 @@ def create_apc_sum(params, index_name, s):
     display_apc_sum = params.get("apc_sum") and params.get("apc_sum").lower() == "true"
     if display_apc_sum and index_name.startswith("sources"):
         a = A("sum", field="apc_usd")
-        s.aggs.bucket("apc_sum", a)
+        s.aggs.bucket("apc_list_sum_usd", a)
     elif display_apc_sum and index_name.startswith("works"):
-        a = A("sum", field="apc_paid.value_usd")
-        s.aggs.bucket("apc_sum", a)
+        a = A("sum", field="apc_list.value_usd")
+        s.aggs.bucket("apc_list_sum_usd", a)
+        s.aggs.bucket(
+            "filtered_apc_paid_sum",
+            "filter",
+            filter={"terms": {"open_access.oa_status": ["gold", "hybrid"]}},
+            aggs={"apc_paid_sum_usd": A("sum", field="apc_paid.value_usd")},
+        )
     return s

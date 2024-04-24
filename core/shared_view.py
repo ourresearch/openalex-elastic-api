@@ -208,8 +208,19 @@ def format_meta(response, params, s):
     if params.get("cursor"):
         meta["next_cursor"] = get_next_cursor(params, response)
 
-    if hasattr(response, "aggregations") and "apc_sum" in response.aggregations:
-        meta["apc_sum_usd"] = response.aggregations.apc_sum.value
+    if (
+        hasattr(response, "aggregations")
+        and "apc_list_sum_usd" in response.aggregations
+    ):
+        meta["apc_list_sum_usd"] = response.aggregations.apc_list_sum_usd.value
+
+    if (
+        hasattr(response, "aggregations")
+        and "filtered_apc_paid_sum" in response.aggregations
+    ):
+        agg_result = response.aggregations.filtered_apc_paid_sum
+        if "apc_paid_sum_usd" in agg_result:
+            meta["apc_paid_sum_usd"] = agg_result.apc_paid_sum_usd.value
 
     return meta
 
