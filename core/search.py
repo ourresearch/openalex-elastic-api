@@ -27,7 +27,7 @@ class SearchOpenAlex:
         if not self.search_terms:
             query = self.match_all()
         elif (
-            self.primary_field == "authorships.raw_affiliation_string"
+            self.primary_field == "authorships.raw_affiliation_strings"
             and len(self.search_terms.strip()) > 3
         ):
             query_string_query = self.query_string_query()
@@ -353,9 +353,7 @@ def full_search_query(index_name, search_terms):
             secondary_field="description",
             tertiary_field="keywords",
         )
-    elif index_name.lower().startswith(
-        "sources"
-    ):
+    elif index_name.lower().startswith("sources"):
         search_oa = SearchOpenAlex(
             search_terms=search_terms,
             secondary_field="alternate_titles",
@@ -380,7 +378,7 @@ def check_is_search_query(filter_params, search):
         "display_name.search",
         "fulltext.search",
         "keyword.search",
-        "raw_affiliation_string.search",
+        "raw_affiliation_strings.search",
         "semantic.search",
         "title.search",
         "title_and_abstract.search",

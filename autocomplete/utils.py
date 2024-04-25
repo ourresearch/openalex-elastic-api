@@ -10,7 +10,7 @@ AUTOCOMPLETE_SOURCE = [
     "geo",
     "host_organization_name",
     "issn_l",
-    "last_known_institution",
+    "last_known_institutions",
     "orcid",
     "publisher",
     "ror",

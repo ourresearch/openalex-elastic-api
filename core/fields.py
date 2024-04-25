@@ -93,7 +93,7 @@ class BooleanField(Field):
             or self.param == "has_embeddings"
             or self.param == "has_ngrams"
             or self.param == "has_pdf_url"
-            or self.param == "has_raw_affiliation_string"
+            or self.param == "has_raw_affiliation_strings"
             or self.param == "has_references"
         ):
             self.validate_true_false()
@@ -443,7 +443,7 @@ class SearchField(Field):
         if self.param == "default.search":
             q = full_search_query(self.index, self.value)
         elif (
-            self.param == "raw_affiliation_string.search"
+            self.param == "raw_affiliation_strings.search"
             or self.param == "abstract.search"
             or self.param == "fulltext.search"
             or self.param == "keyword.search"

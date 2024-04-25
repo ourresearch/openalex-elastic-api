@@ -19,7 +19,7 @@ def set_preference_for_filter_search(filter_params, s):
                 "abstract.search",
                 "display_name.search",
                 "title.search",
-                "raw_affiliation_string.search",
+                "raw_affiliation_strings.search",
             ]:
                 preference = filter_param[key]
     if preference:

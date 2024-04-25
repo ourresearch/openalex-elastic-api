@@ -58,7 +58,6 @@ class AuthorsSchema(Schema):
     summary_stats = fields.Nested(SummaryStatsSchema, dump_default=None)
     ids = fields.Nested(IDsSchema)
     affiliations = fields.List(fields.Nested(AffiliationSchema))
-    last_known_institution = fields.Nested(InstitutionSchema)
     last_known_institutions = fields.List(fields.Nested(InstitutionSchema))
     topics = fields.List(fields.Nested(TopicSchema))
     topic_share = fields.List(fields.Nested(TopicSchema))

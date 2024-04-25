@@ -43,22 +43,24 @@ class AutoCompleteSchema(Schema):
     def set_author_hint_institution(self, data):
         for obj in data:
             if "authors" in obj.meta.index:
-                institution_display_name = (
-                    obj.last_known_institution.display_name
-                    if obj.last_known_institution
-                    else None
-                )
-                institution_country_code = (
-                    obj.last_known_institution.country_code
-                    if obj.last_known_institution
-                    else None
-                )
-                if institution_display_name and institution_country_code:
-                    obj.hint = f"{institution_display_name}, {self.get_country_name(institution_country_code)}"
-                elif institution_display_name:
-                    obj.hint = institution_display_name
-                else:
-                    obj.hint = None
+                for last_known_institution in obj.last_known_institutions[0:1]:
+                    if last_known_institution:
+                        institution_display_name = (
+                            last_known_institution.display_name
+                            if last_known_institution
+                            else None
+                        )
+                        institution_country_code = (
+                            last_known_institution.country_code
+                            if last_known_institution
+                            else None
+                        )
+                        if institution_display_name and institution_country_code:
+                            obj.hint = f"{institution_display_name}, {self.get_country_name(institution_country_code)}"
+                        elif institution_display_name:
+                            obj.hint = institution_display_name
+                        else:
+                            obj.hint = None
         return data
 
     def get_location(self, obj):

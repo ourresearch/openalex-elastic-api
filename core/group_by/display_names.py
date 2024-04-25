@@ -200,6 +200,6 @@ def requires_display_name_conversion(group_by):
         "authorships.institutions.lineage",
         "grants.award_id",
         "grants.funder",
-        "last_known_institution.lineage",
+        "last_known_institutions.lineage",
     )
     return group_by.endswith(endings) or group_by in exact_matches

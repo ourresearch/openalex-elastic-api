@@ -202,7 +202,7 @@ fields = [
     ),
     BooleanField(param="has_pdf_url", custom_es_field="locations.pdf_url"),
     BooleanField(
-        param="has_raw_affiliation_string",
+        param="has_raw_affiliation_strings",
         custom_es_field="authorships.raw_affiliation_strings",
     ),
     BooleanField(
@@ -573,8 +573,8 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
     ),
     SearchField(
-        param="raw_affiliation_string.search",
-        custom_es_field="authorships.raw_affiliation_string",
+        param="raw_affiliation_strings.search",
+        custom_es_field="authorships.raw_affiliation_strings",
     ),
     SearchField(
         param="semantic.search",
