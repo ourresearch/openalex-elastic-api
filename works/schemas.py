@@ -101,6 +101,7 @@ class LocationSchema(Schema):
     pdf_url = fields.Str()
     source = fields.Nested(SourceSchema)
     license = fields.Str()
+    license_id = fields.Str()
     version = fields.Str()
     is_accepted = fields.Bool()
     is_published = fields.Bool()

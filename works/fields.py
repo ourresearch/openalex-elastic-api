@@ -713,6 +713,9 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["license"],
         alternate_names=ALTERNATE_NAMES.get("license", None),
     ),
+    TermField(
+        param="locations.license_id", custom_es_field="locations.license_id.keyword"
+    ),
     TermField(param="locations.source.type"),
     TermField(param="locations.version"),
     TermField(param="mag", custom_es_field="ids.mag"),
@@ -733,6 +736,10 @@ fields = [
         docstring=DOCSTRINGS["license"],
         documentation_link=DOCUMENTATION_LINKS["license"],
         alternate_names=ALTERNATE_NAMES.get("license", None),
+    ),
+    TermField(
+        param="primary_location.license_id",
+        custom_es_field="primary_location.license_id.keyword",
     ),
     TermField(
         param="primary_location.source.issn",
