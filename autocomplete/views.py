@@ -27,12 +27,14 @@ from core.preference import clean_preference
 from extensions import cache
 from funders.fields import fields_dict as funders_fields_dict
 from institutions.fields import fields_dict as institutions_fields_dict
+from keywords.fields import fields_dict as keywords_fields_dict
 from publishers.fields import fields_dict as publishers_fields_dict
 from settings import (
     AUTHORS_INDEX,
     CONCEPTS_INDEX,
     FUNDERS_INDEX,
     INSTITUTIONS_INDEX,
+    KEYWORDS_INDEX,
     PUBLISHERS_INDEX,
     SOURCES_INDEX,
     TOPICS_INDEX,
@@ -194,6 +196,14 @@ def autocomplete_publishers():
 def autocomplete_sources():
     index_name = SOURCES_INDEX
     result = single_entity_autocomplete(sources_fields_dict, index_name, request)
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/keywords")
+def autocomplete_keywords():
+    index_name = KEYWORDS_INDEX
+    result = single_entity_autocomplete(publishers_fields_dict, index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
 
