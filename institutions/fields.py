@@ -34,6 +34,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["is_global_south"],
         alternate_names=ALTERNATE_NAMES.get("is_global_south", None),
     ),
+    BooleanField(param="is_super_system"),
     BooleanField(param="has_ror", custom_es_field="ids.ror.keyword"),
     DateField(
         param="from_created_date",

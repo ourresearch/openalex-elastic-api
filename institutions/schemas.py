@@ -92,6 +92,7 @@ class InstitutionsSchema(Schema):
     topics = fields.List(fields.Nested(TopicSchema))
     topic_share = fields.List(fields.Nested(TopicSchema))
     x_concepts = fields.List(fields.Nested(XConceptsSchema))
+    is_super_system = fields.Bool()
     works_api_url = fields.Str()
     updated_date = fields.Str()
     created_date = fields.Str(dump_default=None)
