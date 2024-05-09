@@ -123,6 +123,7 @@ fields = [
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="ids.mag", custom_es_field="ids.mag"),
     TermField(param="issn"),
+    TermField(param="issn_l", custom_es_field="issn_l"),
     TermField(param="topics.id"),
     TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),
     TermField(
