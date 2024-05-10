@@ -608,6 +608,10 @@ class TermField(Field):
                 kwargs_new_format = {self.es_field(): formatted_version}
                 kwargs_old_format = {self.es_field(): query}
                 q = ~(Q("term", **kwargs_new_format) | Q("term", **kwargs_old_format))
+            elif self.param == "keywords.id":
+                formatted_version = f"https://openalex.org/keywords/{query}"
+                kwargs = {self.es_field(): formatted_version}
+                q = ~Q("term", **kwargs)
             else:
                 q = ~Q("term", **kwargs)
             return q
