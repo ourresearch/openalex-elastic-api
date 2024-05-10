@@ -92,10 +92,10 @@ def is_topic_openalex_id(id):
 
 
 def is_doi(doi):
-    if re.search(r"doi:10\.\d+/[^\s]+", doi.strip()) or re.search(
-        r"doi.org/10\.\d+/[^\s]+", doi.strip()
-    ):
+    doi = doi.strip().lower()
+    if re.search(r"(doi:)?10\.\d+/[^\s]+", doi):
         return True
+    return False
 
 
 def normalize_doi(doi, return_none_if_error=False):
@@ -196,10 +196,9 @@ def normalize_ror(ror):
 
 def is_issn(issn):
     issn = issn.strip().lower()
-    if re.search(r"issn:[\dx]{4}-[\dx]{4}", issn) or re.search(
-        r"portal.issn.org/resource/issn/[\dx]{4}-[\dx]{4}", issn
-    ):
+    if re.fullmatch(r"(issn:)?[\dx]{4}-[\dx]{4}", issn):
         return True
+    return False
 
 
 def normalize_issn(issn):
