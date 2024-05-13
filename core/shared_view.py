@@ -11,7 +11,7 @@ from core.group_by.results import get_group_by_results, calculate_group_by_count
 from core.group_by.filter import filter_group_by
 from core.group_by.utils import parse_group_by
 from core.group_by.search import search_group_by_strings_with_q
-from core.group_by.buckets import create_group_by_buckets, create_apc_sum
+from core.group_by.buckets import add_meta_sums, create_group_by_buckets
 from core.paginate import get_pagination
 from core.params import parse_params
 from core.preference import clean_preference, set_preference_for_filter_search
@@ -50,7 +50,7 @@ def construct_query(params, fields_dict, index_name, default_sort):
 
     s = filter_group_with_q(params, fields_dict, s)
 
-    s = create_apc_sum(params, index_name, s)
+    s = add_meta_sums(params, index_name, s)
 
     return s
 
@@ -222,6 +222,11 @@ def format_meta(response, params, s):
         if "apc_paid_sum_usd" in agg_result:
             meta["apc_paid_sum_usd"] = agg_result.apc_paid_sum_usd.value
 
+    if (
+        hasattr(response, "aggregations")
+        and "cited_by_count_sum" in response.aggregations
+    ):
+        meta["cited_by_count_sum"] = response.aggregations.cited_by_count_sum.value
     return meta
 
 

@@ -290,3 +290,20 @@ def create_apc_sum(params, index_name, s):
             aggs={"apc_paid_sum_usd": A("sum", field="apc_paid.value_usd")},
         )
     return s
+
+
+def create_cited_by_count_sum(params, s):
+    display_cited_by_count_sum = (
+        params.get("cited_by_count_sum")
+        and params.get("cited_by_count_sum").lower() == "true"
+    )
+    if display_cited_by_count_sum:
+        a = A("sum", field="cited_by_count")
+        s.aggs.bucket("cited_by_count_sum", a)
+    return s
+
+
+def add_meta_sums(params, index_name, s):
+    s = create_apc_sum(params, index_name, s)
+    s = create_cited_by_count_sum(params, s)
+    return s

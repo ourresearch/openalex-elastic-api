@@ -11,6 +11,7 @@ class MetaSchema(Schema):
     groups_count = fields.Int()
     apc_list_sum_usd = fields.Int()
     apc_paid_sum_usd = fields.Int()
+    cited_by_count_sum = fields.Int()
 
     class Meta:
         ordered = True

@@ -8,6 +8,7 @@ def parse_params(request):
     validate_params(request)
     params = {
         "apc_sum": request.args.get("apc_sum"),
+        "cited_by_count_sum": request.args.get("cited_by_count_sum"),
         "cursor": request.args.get("cursor"),
         "format": validate_export_format(request.args.get("format")),
         "filters": map_filter_params(request.args.get("filter")),
