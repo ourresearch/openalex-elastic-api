@@ -12,7 +12,7 @@ from core.utils import (
     process_only_fields,
 )
 from extensions import cache
-from fields.fields import fields_dict
+from keywords.fields import fields_dict
 from keywords.schemas import KeywordsSchema, MessageSchema
 from settings import KEYWORDS_INDEX
 
