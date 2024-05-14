@@ -8,6 +8,7 @@ from settings import (
     DOMAINS_INDEX,
     FIELDS_INDEX,
     KEYWORDS_INDEX,
+    LICENSES_INDEX,
     SUBFIELDS_INDEX,
     WORKS_INDEX,
 )
@@ -112,11 +113,11 @@ def get_display_names_sdgs(ids):
     return results
 
 
-def get_display_names_topics_and_keywords(ids):
+def get_display_names_keywords_licenses_topics(ids):
     if not ids or (ids[0] == "unknown" and len(ids) == 1):
         return None
 
-    index = f"{FIELDS_INDEX},{SUBFIELDS_INDEX},{DOMAINS_INDEX},{KEYWORDS_INDEX}"
+    index = f"{FIELDS_INDEX},{SUBFIELDS_INDEX},{DOMAINS_INDEX},{KEYWORDS_INDEX},{LICENSES_INDEX}"
     s = Search(index=index)
     s = s.extra(size=500)
     s = s.source(["id", "display_name"])
@@ -168,14 +169,16 @@ def get_display_name_mapping(keys, group_by):
     display_name_functions = {
         "host_organization": get_display_names_host_organization,
         "host_organization_lineage": get_display_names_host_organization,
-        "domain.id": get_display_names_topics_and_keywords,
-        "subfield.id": get_display_names_topics_and_keywords,
-        "subfields.id": get_display_names_topics_and_keywords,
-        "field.id": get_display_names_topics_and_keywords,
-        "fields.id": get_display_names_topics_and_keywords,
-        "keywords.id": get_display_names_topics_and_keywords,
+        "domain.id": get_display_names_keywords_licenses_topics,
+        "subfield.id": get_display_names_keywords_licenses_topics,
+        "subfields.id": get_display_names_keywords_licenses_topics,
+        "field.id": get_display_names_keywords_licenses_topics,
+        "fields.id": get_display_names_keywords_licenses_topics,
+        "keywords.id": get_display_names_keywords_licenses_topics,
         "grants.award_id": get_display_names_award_ids,
         "sustainable_development_goals.id": get_display_names_sdgs,
+        "license": get_display_names_keywords_licenses_topics,
+        "license_id": get_display_names_keywords_licenses_topics,
     }
 
     for key, func in display_name_functions.items():
@@ -195,6 +198,8 @@ def requires_display_name_conversion(group_by):
         "host_institution_lineage",
         "publisher_lineage",
         "ids",
+        "license",
+        "license_id",
     )
     exact_matches = (
         "authorships.institutions.lineage",

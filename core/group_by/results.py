@@ -76,6 +76,12 @@ def get_group_by_results(
             "locations.source.type",
             "primary_location.source.type",
             "keywords.id",
+            "best_oa_location.license",
+            "best_oa_location.license_id",
+            "locations.license",
+            "locations.license_id",
+            "primary_location.license",
+            "primary_location.license_id",
         )
         or (field.param == "type" and "works" in index_name)
         or (field.param == "type" and "sources" in index_name)

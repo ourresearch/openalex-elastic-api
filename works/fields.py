@@ -639,6 +639,10 @@ fields = [
         custom_es_field="best_oa_location.landing_page_url",
     ),
     TermField(
+        param="best_oa_location.license",
+        custom_es_field="best_oa_location.license_id.keyword",
+    ),
+    TermField(
         param="best_oa_location.source.issn",
     ),
     TermField(
@@ -712,6 +716,7 @@ fields = [
         docstring=DOCSTRINGS["license"],
         documentation_link=DOCUMENTATION_LINKS["license"],
         alternate_names=ALTERNATE_NAMES.get("license", None),
+        custom_es_field="locations.license_id.keyword",
     ),
     TermField(
         param="locations.license_id", custom_es_field="locations.license_id.keyword"
@@ -736,6 +741,7 @@ fields = [
         docstring=DOCSTRINGS["license"],
         documentation_link=DOCUMENTATION_LINKS["license"],
         alternate_names=ALTERNATE_NAMES.get("license", None),
+        custom_es_field="primary_location.license_id.keyword",
     ),
     TermField(
         param="primary_location.license_id",
