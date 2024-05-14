@@ -536,6 +536,11 @@ class TermField(Field):
             self.value = self.value.replace("https://openalex.org/", "").replace(
                 "keywords/", ""
             )
+        elif self.param == "id":
+            if "keywords/" in self.value and not self.value.startswith(
+                "https://openalex.org/"
+            ):
+                self.value = f"https://openalex.org/{self.value}"
         if self.value == "null":
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
@@ -669,7 +674,6 @@ class TermField(Field):
             kwargs_old_format = {self.es_field(): self.value}
             q = Q("term", **kwargs_new_format) | Q("term", **kwargs_old_format)
         elif self.param == "keywords.id":
-            print(f"self.value: {self.value}")
             formatted_version = f"https://openalex.org/keywords/{self.value}"
             kwargs = {self.es_field(): formatted_version}
             q = Q("term", **kwargs)
