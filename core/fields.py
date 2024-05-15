@@ -541,10 +541,9 @@ class TermField(Field):
             and self.param.endswith("license_id")
             or self.param.endswith("license")
         ):
-            if "licenses/" in self.value and not self.value.startswith(
-                "https://openalex.org/"
-            ):
-                self.value = self.value.replace("licenses/", "")
+            self.value = self.value.replace("https://openalex.org/", "").replace(
+                "licenses/", ""
+            )
         elif self.param == "id":
             if "keywords/" in self.value and not self.value.startswith(
                 "https://openalex.org/"
@@ -624,6 +623,14 @@ class TermField(Field):
                 q = ~(Q("term", **kwargs_new_format) | Q("term", **kwargs_old_format))
             elif self.param == "keywords.id":
                 formatted_version = f"https://openalex.org/keywords/{query}"
+                kwargs = {self.es_field(): formatted_version}
+                q = ~Q("term", **kwargs)
+            elif (
+                self.param
+                and self.param.endswith("license_id")
+                or self.param.endswith("license")
+            ):
+                formatted_version = f"https://openalex.org/licenses/{query}"
                 kwargs = {self.es_field(): formatted_version}
                 q = ~Q("term", **kwargs)
             else:
