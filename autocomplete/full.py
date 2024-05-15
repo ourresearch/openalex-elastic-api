@@ -15,6 +15,7 @@ def get_indices():
         "funder": settings.FUNDERS_INDEX,
         "keyword": settings.KEYWORDS_INDEX,
         "language": settings.LANGUAGES_INDEX,
+        "license": settings.LICENSES_INDEX,
         "publisher": settings.PUBLISHERS_INDEX,
         "sdgs": settings.SDGS_INDEX,
         "source": settings.SOURCES_INDEX,

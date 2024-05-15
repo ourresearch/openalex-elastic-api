@@ -28,6 +28,7 @@ from extensions import cache
 from funders.fields import fields_dict as funders_fields_dict
 from institutions.fields import fields_dict as institutions_fields_dict
 from keywords.fields import fields_dict as keywords_fields_dict
+from licenses.fields import fields_dict as licenses_fields_dict
 from publishers.fields import fields_dict as publishers_fields_dict
 from settings import (
     AUTHORS_INDEX,
@@ -35,6 +36,7 @@ from settings import (
     FUNDERS_INDEX,
     INSTITUTIONS_INDEX,
     KEYWORDS_INDEX,
+    LICENSES_INDEX,
     PUBLISHERS_INDEX,
     SOURCES_INDEX,
     TOPICS_INDEX,
@@ -79,13 +81,13 @@ def autocomplete_full():
         entities_to_indeces.pop("concept")
 
         if q and len(q) <= 5:
-            print("q is less than 5 characters")
             entities = [
                 entity
                 for entity in entities_to_indeces.values()
                 if "institution" in entity
                 or "author" in entity
                 or "countries" in entity
+                or "licenses" in entity
             ]
             index = ",".join(entities)
         else:
@@ -203,7 +205,15 @@ def autocomplete_sources():
 @blueprint.route("/autocomplete/keywords")
 def autocomplete_keywords():
     index_name = KEYWORDS_INDEX
-    result = single_entity_autocomplete(publishers_fields_dict, index_name, request)
+    result = single_entity_autocomplete(keywords_fields_dict, index_name, request)
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
+
+
+@blueprint.route("/autocomplete/licenses")
+def autocomplete_licenses():
+    index_name = LICENSES_INDEX
+    result = single_entity_autocomplete(licenses_fields_dict, index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
 
