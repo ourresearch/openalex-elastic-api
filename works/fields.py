@@ -639,17 +639,18 @@ fields = [
         custom_es_field="best_oa_location.landing_page_url",
     ),
     TermField(
-        param="best_oa_location.license",
-        custom_es_field="best_oa_location.license_id.keyword",
+        param="best_oa_location.source.issn",
     ),
     TermField(
-        param="best_oa_location.source.issn",
+        param="best_oa_location.license_id",
+        custom_es_field="best_oa_location.license_id.keyword",
     ),
     TermField(
         param="best_oa_location.license",
         docstring=DOCSTRINGS["license"],
         documentation_link=DOCUMENTATION_LINKS["license"],
         alternate_names=ALTERNATE_NAMES.get("license", None),
+        custom_es_field="best_oa_location.license_id.keyword",
     ),
     TermField(param="best_oa_location.source.type"),
     TermField(

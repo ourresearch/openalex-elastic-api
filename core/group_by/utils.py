@@ -41,7 +41,8 @@ def get_all_groupby_values(entity, field):
     s = s.filter("term", group_by=field)
     try:
         response = s.execute()
-        return response[0].buckets
+        buckets = response[0].buckets
+        return buckets if buckets else []
     except (NotFoundError, IndexError):
         # Nothing found for this entity/groupby combination
         return []
