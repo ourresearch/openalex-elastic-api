@@ -188,7 +188,7 @@ def get_topics_group_by_results(group_by, response, index_name):
 
 
 def get_result(b, key_display_names, group_by, index_name):
-    if group_by in ["authorships.author.id", "author.id"]:
+    if group_by in ["authorships.author.id", "author.id"] or "licenses/None" in b.key:
         if not key_display_names or not key_display_names.get(b.key):
             return None
 
@@ -220,6 +220,7 @@ def add_zero_values(results, include_unknown, index_name, field, params):
         if (
             bucket["key"] not in ignore_values
             and not bucket["key"].startswith("http://metadata.un.org")
+            and "licenses/None" not in bucket["key"]
             and len(results) < params["per_page"]
         ):
             results.append(
