@@ -188,7 +188,9 @@ def get_topics_group_by_results(group_by, response, index_name):
 
 
 def get_result(b, key_display_names, group_by, index_name):
-    if group_by in ["authorships.author.id", "author.id"] or "licenses/None" in b.key:
+    if group_by in ["authorships.author.id", "author.id"] or "licenses/None" in str(
+        b.key
+    ):
         if not key_display_names or not key_display_names.get(b.key):
             return None
 
