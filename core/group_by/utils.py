@@ -36,6 +36,10 @@ def parse_group_by(group_by):
 
 
 def get_all_groupby_values(entity, field):
+    # temp fix for best_oa_location.license
+    if field == "best_oa_location.license":
+        field = "locations.license"
+
     s = Search(index=GROUPBY_VALUES_INDEX)
     s = s.filter("term", entity=entity)
     s = s.filter("term", group_by=field)
