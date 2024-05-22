@@ -30,7 +30,7 @@ def create_filter_result(filter_key, return_value):
     return OrderedDict(
         {
             "id": return_value,
-            "display_name": None,
+            "display_name": return_value,
             "cited_by_count": 0,
             "entity_type": "filter",
             "external_id": None,
