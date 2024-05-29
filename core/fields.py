@@ -445,10 +445,12 @@ class SearchField(Field):
         elif (
             self.param == "raw_affiliation_strings.search"
             or self.param == "abstract.search"
+            or self.param == "abstract.search.no_stem"
             or self.param == "fulltext.search"
             or self.param == "keyword.search"
             or self.param == "description.search"
             or self.param == "title.search"
+            or self.param == "title.search.no_stem"
         ):
             search_oa = SearchOpenAlex(
                 search_terms=self.value, primary_field=self.es_field()
@@ -460,11 +462,24 @@ class SearchField(Field):
                 is_author_name_query=True,
             )
             q = search_oa.build_query()
+        elif self.param == "display_name.search.no_stem":
+            search_oa = SearchOpenAlex(
+                search_terms=self.value,
+                primary_field=self.es_field(),
+            )
+            q = search_oa.build_query()
         elif self.param == "title_and_abstract.search":
             search_oa = SearchOpenAlex(
                 search_terms=self.value,
                 primary_field="display_name",
                 secondary_field="abstract",
+            )
+            q = search_oa.build_query()
+        elif self.param == "title_and_abstract.search.no_stem":
+            search_oa = SearchOpenAlex(
+                search_terms=self.value,
+                primary_field="display_name.nostem",
+                secondary_field="abstract.nostem",
             )
             q = search_oa.build_query()
         elif self.param == "semantic.search":

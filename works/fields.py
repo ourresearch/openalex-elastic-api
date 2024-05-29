@@ -553,12 +553,21 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
     ),
     SearchField(
+        param="abstract.search.no_stem",
+        custom_es_field="abstract.nostem",
+        docstring="Free text search within the work's abstract only, without stemming",
+        documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
+    ),
+    SearchField(
         param="default.search",
         index="works",
         docstring="Free text search among the work's title, abstract (when available) and full text (when available)",
         documentation_link="https://docs.openalex.org/how-to-use-the-api/get-lists-of-entities/search-entities",
     ),
     SearchField(param="display_name.search"),
+    SearchField(
+        param="display_name.search.no_stem", custom_es_field="display_name.nostem"
+    ),
     SearchField(
         param="fulltext.search",
         custom_es_field="fulltext",
@@ -587,8 +596,19 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
     ),
     SearchField(
+        param="title.search.no_stem",
+        custom_es_field="display_name.nostem",
+        docstring="Free text search within the work's title only, without stemming",
+        documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
+    ),
+    SearchField(
         param="title_and_abstract.search",
         docstring="Free text search within the work's title and abstract",
+        documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
+    ),
+    SearchField(
+        param="title_and_abstract.search.no_stem",
+        docstring="Free text search within the work's title and abstract, without stemming",
         documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
     ),
     TermField(param="apc_list.currency"),
@@ -695,8 +715,7 @@ fields = [
     ),
     TermField(param="institutions.ror", alias="authorships.institutions.ror"),
     TermField(param="institutions.type", alias="authorships.institutions.type"),
-    TermField(param="keywords.id", custom_es_field="keywords.id.keyword"),
-    TermField(param="keywords.keyword", custom_es_field="keywords.keyword"),
+    TermField(param="keywords.id", custom_es_field="keywords.id"),
     TermField(
         param="grants.award_id",
         docstring="The award IDs listed in the work's grants",
