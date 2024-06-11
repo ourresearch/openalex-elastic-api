@@ -616,7 +616,7 @@ def get_by_openalex_external_id(index, schema, id):
     elif index.startswith("source-types"):
         endpoint_name = "source-types"
     elif index.startswith("work-types"):
-        endpoint_name = "work-types"
+        endpoint_name = "types"
     else:
         endpoint_name = index.split("-")[0]
 
