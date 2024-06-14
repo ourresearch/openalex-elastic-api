@@ -39,6 +39,9 @@ class AffiliationsSchema(Schema):
     raw_affiliation_string = fields.Str()
     institution_ids = fields.List(fields.Str())
 
+    class Meta:
+        ordered = True
+
 
 class AuthorshipsSchema(Schema):
     author_position = fields.Str()
