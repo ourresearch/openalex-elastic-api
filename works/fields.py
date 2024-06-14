@@ -619,6 +619,10 @@ fields = [
         docstring="The source of our information about the work's APC. Works with OpenAPC data might have more accurate prices for APC paid.",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#apc_paid",
     ),
+    TermField(
+        param="authorships.affiliations.institution_ids",
+        custom_es_field="authorships.affiliations.institution_ids.keyword",
+    ),
     TermField(param="author.orcid", alias="authorships.author.orcid"),
     TermField(
         param="authorships.author.orcid",
