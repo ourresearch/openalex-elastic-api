@@ -208,6 +208,7 @@ class WorksSchema(Schema):
     corresponding_institution_ids = fields.List(fields.Str())
     apc_list = fields.Nested(APCSchema, dump_default=None)
     apc_paid = fields.Nested(APCSchema, dump_default=None)
+    fwci = fields.Float()
     is_authors_truncated = fields.Bool(attribute="authorships_truncated")
     has_fulltext = fields.Bool()
     fulltext_origin = fields.Str()

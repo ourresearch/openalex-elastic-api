@@ -531,6 +531,7 @@ fields = [
         docstring="The number of distinct countries represented among the work's authors",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#countries_distinct_count",
     ),
+    RangeField(param="fwci"),
     RangeField(param="institutions_distinct_count"),
     RangeField(
         param="locations_count",
