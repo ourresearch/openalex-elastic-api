@@ -117,7 +117,7 @@ def search_canonical_id_single(index_name, s, q):
         canonical_id_found = True
     elif index_name.startswith("source") and id_utils.is_issn(q):
         normalized_id = id_utils.normalize_issn(q)
-        s = s.filter("term", issn=normalized_id)
+        s = s.filter("term", ids__issn__lower=normalized_id)
         canonical_id_found = True
     elif index_name.startswith("work") and id_utils.is_doi(q):
         normalized_id = id_utils.normalize_doi(q)
@@ -149,7 +149,7 @@ def search_canonical_id_full(s, q):
         canonical_id_found = True
     elif id_utils.is_issn(q):
         normalized_id = id_utils.normalize_issn(q)
-        s = s.filter("term", issn=normalized_id.upper())
+        s = s.filter("term", ids__issn__lower=normalized_id.upper())
         canonical_id_found = True
     elif id_utils.is_doi(q):
         normalized_id = id_utils.normalize_doi(q)
