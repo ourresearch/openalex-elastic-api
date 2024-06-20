@@ -35,7 +35,7 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("is_global_south", None),
     ),
     BooleanField(param="is_super_system"),
-    BooleanField(param="has_ror", custom_es_field="ids.ror.keyword"),
+    BooleanField(param="has_ror", custom_es_field="ids.ror"),
     DateField(
         param="from_created_date",
         custom_es_field="created_date",
