@@ -57,6 +57,7 @@ class SourcesSchema(Schema):
     summary_stats = fields.Nested(SummaryStatsSchema, dump_default=None)
     is_oa = fields.Bool()
     is_in_doaj = fields.Bool()
+    is_core = fields.Bool()
     ids = fields.Nested(IDsSchema)
     homepage_url = fields.Str()
     apc_prices = fields.List(fields.Nested(APCSchema))

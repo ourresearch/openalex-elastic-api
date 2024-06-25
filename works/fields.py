@@ -260,6 +260,9 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("source.is_in_doaj", None),
     ),
     BooleanField(
+        param="locations.source.is_core",
+    ),
+    BooleanField(
         param="locations.is_accepted",
         docstring=DOCSTRINGS["is_accepted"].format(
             location_type="at least one version"
@@ -307,6 +310,9 @@ fields = [
         docstring=DOCSTRINGS["source.is_in_doaj"],
         documentation_link=DOCUMENTATION_LINKS["source.is_in_doaj"],
         alternate_names=ALTERNATE_NAMES.get("source.is_in_doaj", None),
+    ),
+    BooleanField(
+        param="primary_location.source.is_core",
     ),
     BooleanField(
         param="primary_location.is_accepted",

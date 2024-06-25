@@ -39,6 +39,9 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("is_oa", None),
     ),
     BooleanField(
+        param="is_core",
+    ),
+    BooleanField(
         param=f"is_global_south",
         custom_es_field="country_code",
     ),
