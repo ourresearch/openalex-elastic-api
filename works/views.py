@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
+from core.semantic import semantic_search
 from core.schemas import FiltersWrapperSchema, StatsWrapperSchema
 from core.shared_view import shared_view
 from core.stats_view import shared_stats_view
@@ -91,3 +92,12 @@ def works_filters_doctrings():
             "alternateNames": f.alternate_names,
         }
     return jsonify(ret)
+
+
+@blueprint.route("/works/semantic")
+def works_semantic():
+    text = request.args.get("q")
+    response = semantic_search(text)
+    return jsonify(
+        response
+    )
