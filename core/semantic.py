@@ -24,24 +24,21 @@ def call_embeddings_api(text):
     return embedding
 
 
-def knn_query(embedding, k=5):
+def knn_query(embedding, k=10):
     es = Elasticsearch([os.getenv("ELASTIC_SEMANTIC_URL")])
     query = {
         "knn": {
             "field": "embedding",
             "query_vector": embedding,
             "k": k,
-            "num_candidates": 50,
+            "num_candidates": 100,
         },
         "_source": ["work_id"],  # Specify the source fields to be returned
     }
     response = es.search(index="work-embeddings-v1", body=query)
-    # log query time
-    print(f"Query time: {response['took']} ms")
     work_ids_with_scores = [
         (hit["_source"]["work_id"], hit["_score"]) for hit in response["hits"]["hits"]
     ]
-    print(work_ids_with_scores)
     response_time = response["took"]
     return work_ids_with_scores, response_time
 
@@ -64,8 +61,6 @@ def format_response(work_ids_with_scores, response_time):
     # Attach scores to the response
     for work in response_json["results"]:
         work_id_int = int(work["id"].replace("https://openalex.org/W", ""))
-        print(f"work: {work}")
-        print(f"work_ids_with_scores: {work_ids_with_scores}")
         score = next(
             score for work_id, score in work_ids_with_scores if work_id == work_id_int
         )
@@ -74,7 +69,6 @@ def format_response(work_ids_with_scores, response_time):
     response_json["meta"] = {
         "total_embeddings": total_record_count(),
         "db_response_time_ms": response_time,
-        "score_threshold": 0.78,
     }
     # limit fields in results to id, display_name, abstract_inverted_index
     response_json["results"] = [
