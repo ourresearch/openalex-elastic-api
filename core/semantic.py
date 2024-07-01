@@ -6,8 +6,8 @@ from elasticsearch import Elasticsearch
 
 def semantic_search(text):
     embedding = call_embeddings_api(text)
-    work_ids_with_scores = knn_query(embedding)
-    response = format_response(work_ids_with_scores)
+    work_ids_with_scores, response_time = knn_query(embedding)
+    response = format_response(work_ids_with_scores, response_time)
     return response
 
 
@@ -42,7 +42,8 @@ def knn_query(embedding, k=5):
         (hit["_source"]["work_id"], hit["_score"]) for hit in response["hits"]["hits"]
     ]
     print(work_ids_with_scores)
-    return work_ids_with_scores
+    response_time = response["took"]
+    return work_ids_with_scores, response_time
 
 
 def total_record_count():
@@ -51,7 +52,7 @@ def total_record_count():
     return response["count"]
 
 
-def format_response(work_ids_with_scores):
+def format_response(work_ids_with_scores, response_time):
     joined_work_ids = "|".join(
         f"W{str(work_id)}" for work_id, _ in work_ids_with_scores
     )
@@ -72,6 +73,7 @@ def format_response(work_ids_with_scores):
 
     response_json["meta"] = {
         "total_embeddings": total_record_count(),
+        "db_response_time_ms": response_time,
         "score_threshold": 0.78,
     }
     # limit fields in results to id, display_name, abstract_inverted_index
