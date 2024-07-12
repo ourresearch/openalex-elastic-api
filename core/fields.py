@@ -579,14 +579,6 @@ class TermField(Field):
                 field_name = self.es_field()
                 field_name = field_name.replace("__", ".")
                 q = Q("exists", field=field_name)
-        elif self.param in id_params:
-            formatted_id = self.format_id()
-            if formatted_id is None:
-                raise APIQueryParamsError(
-                    f"{self.value} is not a valid ID for {self.param}"
-                )
-            kwargs = {self.es_field(): formatted_id}
-            q = Q("term", **kwargs)
         elif self.param == "doi_starts_with":
             if "https://doi.org" in self.value:
                 raise APIQueryParamsError("Enter DOI in short format such as 10.12")
@@ -605,6 +597,17 @@ class TermField(Field):
             q = Q("match", **{"ids.scopus": scopus})
         elif self.value.startswith("!"):
             query = self.value[1:]
+            if (
+                self.param
+                in [
+                    "affiliations.institution.ror",
+                    "authorships.institutions.ror",
+                    "institutions.ror",
+                    "ror",
+                ]
+                and "ror.org" not in self.value
+            ):
+                query = f"https://ror.org/{query}"
             kwargs = {self.es_field(): query}
             if "continent" in self.param:
                 country_codes = self.get_country_codes()
@@ -715,6 +718,14 @@ class TermField(Field):
         ):
             formatted_version = f"https://openalex.org/licenses/{self.value}"
             kwargs = {self.es_field(): formatted_version}
+            q = Q("term", **kwargs)
+        elif self.param in id_params:
+            formatted_id = self.format_id()
+            if formatted_id is None:
+                raise APIQueryParamsError(
+                    f"{self.value} is not a valid ID for {self.param}"
+                )
+            kwargs = {self.es_field(): formatted_id}
             q = Q("term", **kwargs)
         else:
             kwargs = {self.es_field(): self.value}
