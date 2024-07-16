@@ -335,6 +335,10 @@ fields = [
         custom_es_field="created_date",
     ),
     DateField(
+        param="to_created_date",
+        custom_es_field="created_date",
+    ),
+    DateField(
         param="from_publication_date",
         custom_es_field="publication_date",
         docstring=DOCSTRINGS["publication_date"],

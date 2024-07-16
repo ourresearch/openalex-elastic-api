@@ -37,6 +37,10 @@ fields = [
         param="from_created_date",
         custom_es_field="created_date",
     ),
+    DateField(
+        param="to_created_date",
+        custom_es_field="created_date",
+    ),
     DateTimeField(
         param="from_updated_date",
         custom_es_field="updated_date",
