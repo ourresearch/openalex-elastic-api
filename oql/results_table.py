@@ -62,7 +62,7 @@ class ResultTable:
         keys = path.split(".")[1:]
         values = []
         for dict_ in list_of_dicts:
-            if keys[-1] == "id":
+            if keys and keys[-1] == "id":
                 modified_keys = keys[:-1] + ["display_name"]
                 value = self.get_nested_value(dict_, ".".join(keys))
                 display_name = self.get_nested_value(dict_, ".".join(modified_keys))
