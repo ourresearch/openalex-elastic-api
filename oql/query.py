@@ -2,8 +2,10 @@ import re
 
 import requests
 
+from config.entity_config import entity_configs_dict
+
 valid_columns = ['id', 'display_name', 'title', 'publication_year', 'cited_by_count']
-valid_entities = ['works', 'authors', 'institutions', 'sources', 'topics']
+valid_entities = list(entity_configs_dict.keys())
 
 
 class Query:

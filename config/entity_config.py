@@ -510,3 +510,5 @@ entity_configs = [
     },
 
 ]
+
+entity_configs_dict = {config['key']: config for config in entity_configs}

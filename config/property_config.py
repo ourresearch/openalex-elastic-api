@@ -1,5 +1,5 @@
 # based on https://github.com/ourresearch/openalex-gui/blob/8c01677c30104bf994c841fe9597ad0af6631a4b/src/facetConfigs.js#L58-L59
-properties = [
+property_configs = [
     # works: WASPFIC.
     {
         "key": "ids.openalex",
@@ -753,6 +753,22 @@ properties = [
         "category": "source",
         "actions": ["filter", "column", "group_by"],
         "icon": "mdi-tag-outline",
+    },
+    {
+        "key": "id",
+        "id": "id",
+        "entityType": "works",
+        "subjectEntity": "works",
+        "entityId": "works",
+        "objectEntity": "works",
+        "displayName": "id",
+        "type": "select",
+        "newType": "entity",
+        "category": "other",
+        "actions": ["filter", "column", "group_by"],
+        "actionsPopular": ["filter", "column", "group_by"],
+        "icon": "mdi-shape-outline",
+        "extractFn": "(entity) => entity.type",
     },
     {
         "key": "type",
@@ -2725,3 +2741,14 @@ properties = [
         "extractFn": "(entity) => entity.cited_by_count",
     },
 ]
+
+property_configs_dict = {}
+
+for config in property_configs:
+    entity_type = config['entityType']
+    key = config['key']
+
+    if entity_type not in property_configs_dict:
+        property_configs_dict[entity_type] = {}
+
+    property_configs_dict[entity_type][key] = config
