@@ -38,6 +38,7 @@ properties = [
     {
         "key": "concepts.id",
         "id": "concepts.id",
+        "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
         "displayName": "concept",
@@ -73,6 +74,7 @@ properties = [
     {
         "key": "keywords.id",
         "id": "keywords.id",
+        "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
         "displayName": "keyword",
@@ -149,6 +151,7 @@ properties = [
     {
         "key": "grants.funder",
         "id": "grants.funder",
+        "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
         "displayName": "funder",
@@ -167,6 +170,7 @@ properties = [
     {
         "key": "grants.award_id",
         "id": "grants.award_id",
+        "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
         "displayName": "grant ID",
@@ -180,6 +184,7 @@ properties = [
     {
         "key": "authorships.institutions.lineage",
         "id": "authorships.institutions.lineage",
+        "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
         "displayName": "institution",
@@ -202,6 +207,7 @@ properties = [
     {
         "key": "authorships.institutions.ror",
         "id": "authorships.institutions.ror",
+        "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
         "entityId": "institutions",
@@ -218,6 +224,7 @@ properties = [
     {
         "key": "authorships.author.id",
         "id": "authorships.author.id",
+        "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
         "displayName": "author",
@@ -240,6 +247,7 @@ properties = [
     {
         "key": "authorships.author.orcid",
         "id": "authorships.author.orcid",
+        "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
         "entityId": "authors",
@@ -388,6 +396,7 @@ properties = [
     {
         "key": "corresponding_author_ids",
         "id": "corresponding_author_ids",
+        "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
         "entityId": "authors",
@@ -490,6 +499,7 @@ properties = [
     {
         "key": "apc_paid.value_usd",
         "id": "apc_paid.value_usd",
+        "isCurrency": True,
         "entityType": "works",
         "subjectEntity": "works",
         "displayName": "APC paid (est)",
@@ -506,6 +516,7 @@ properties = [
     {
         "key": "authorships.countries",
         "id": "authorships.countries",
+        "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
         "entityId": "countries",
@@ -564,6 +575,7 @@ properties = [
     {
         "key": "authorships.institutions.continent",
         "id": "authorships.institutions.continent",
+        "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
         "entityId": "continents",
@@ -599,6 +611,7 @@ properties = [
     {
         "key": "authorships.institutions.type",
         "id": "authorships.institutions.type",
+        "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
         "displayName": "institution type",
@@ -614,6 +627,7 @@ properties = [
     {
         "key": "corresponding_institution_ids",
         "id": "corresponding_institution_ids",
+        "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
         "entityId": "institutions",
@@ -771,6 +785,7 @@ properties = [
     {
         "key": "publication_year",
         "id": "publication_year",
+        "isYear": True,
         "entityType": "works",
         "subjectEntity": "works",
         "displayName": "year",
@@ -788,6 +803,7 @@ properties = [
     {
         "key": "apc_sum",
         "id": "apc_sum",
+        "isCurrency": True,
         "entityType": "works",
         "subjectEntity": "works",
         "displayName": "APC sum",
@@ -904,6 +920,7 @@ properties = [
     {
         "key": "sustainable_development_goals.id",
         "id": "sustainable_development_goals.id",
+        "isList": True,
         "entityId": "sdgs",
         "objectEntity": "sdgs",
         "entityType": "works",
@@ -1070,6 +1087,7 @@ properties = [
     {
         "key": "affiliations.institution.id",
         "id": "affiliations.institution.id",
+        "isList": True,
         "entityType": "authors",
         "subjectEntity": "authors",
         "displayName": "Past institutions",
@@ -1085,6 +1103,7 @@ properties = [
     {
         "key": "affiliations.institution.type",
         "id": "affiliations.institution.type",
+        "isList": True,
         "entityType": "authors",
         "subjectEntity": "authors",
         "entityId": "institution-types",
@@ -1099,6 +1118,7 @@ properties = [
     {
         "key": "last_known_institutions.id",
         "id": "last_known_institutions.id",
+        "isList": True,
         "entityType": "authors",
         "subjectEntity": "authors",
         "displayName": "institution",
@@ -1114,6 +1134,7 @@ properties = [
     {
         "key": "last_known_institutions.country_code",
         "id": "last_known_institutions.country_code",
+        "isList": True,
         "entityType": "authors",
         "subjectEntity": "authors",
         "entityId": "countries",
@@ -1130,6 +1151,7 @@ properties = [
     {
         "key": "last_known_institutions.type",
         "id": "last_known_institutions.type",
+        "isList": True,
         "entityType": "authors",
         "subjectEntity": "authors",
         "entityId": "institution-types",
@@ -1158,6 +1180,7 @@ properties = [
     {
         "key": "display_name_alternatives",
         "id": "display_name_alternatives",
+        "isList": True,
         "entityType": "authors",
         "subjectEntity": "authors",
         "entityId": "authors",
@@ -1301,6 +1324,7 @@ properties = [
     {
         "key": "apc_usd",
         "id": "apc_usd",
+        "isCurrency": True,
         "entityType": "sources",
         "subjectEntity": "sources",
         "displayName": "Article Processing Charge",
@@ -1340,6 +1364,7 @@ properties = [
     {
         "key": "alternate_titles",
         "id": "alternate_titles",
+        "isList": True,
         "entityType": "sources",
         "subjectEntity": "sources",
         "displayName": "alternate names",
@@ -1537,6 +1562,7 @@ properties = [
     {
         "key": "x_concepts.id",
         "id": "x_concepts.id",
+        "isList": True,
         "entityType": "institutions",
         "subjectEntity": "institutions",
         "displayName": "Concepts",
@@ -1549,6 +1575,7 @@ properties = [
     {
         "key": "display_name_alternatives",
         "id": "display_name_alternatives",
+        "isList": True,
         "entityType": "institutions",
         "subjectEntity": "institutions",
         "displayName": "alternate names",
@@ -1562,6 +1589,7 @@ properties = [
     {
         "key": "parent_institutions",
         "id": "parent_institutions",
+        "isList": True,
         "entityType": "institutions",
         "subjectEntity": "institutions",
         "displayName": "parent institutions",
@@ -1575,6 +1603,7 @@ properties = [
     {
         "key": "child_institutions",
         "id": "child_institutions",
+        "isList": True,
         "entityType": "institutions",
         "subjectEntity": "institutions",
         "displayName": "child institutions",
@@ -1588,6 +1617,7 @@ properties = [
     {
         "key": "related_institutions",
         "id": "related_institutions",
+        "isList": True,
         "entityType": "institutions",
         "subjectEntity": "institutions",
         "displayName": "related institutions",
@@ -1652,6 +1682,7 @@ properties = [
     {
         "key": "siblings",
         "id": "siblings",
+        "isList": True,
         "entityType": "topics",
         "subjectEntity": "topics",
         "entityId": "topics",
@@ -1718,6 +1749,7 @@ properties = [
     {
         "key": "display_name_alternatives",
         "id": "display_name_alternatives",
+        "isList": True,
         "entityType": "subfields",
         "subjectEntity": "subfields",
         "entityId": "subfields",
@@ -1731,6 +1763,7 @@ properties = [
     {
         "key": "topics",
         "id": "topics",
+        "isList": True,
         "entityType": "subfields",
         "subjectEntity": "subfields",
         "entityId": "subfields",
@@ -1744,6 +1777,7 @@ properties = [
     {
         "key": "siblings",
         "id": "siblings",
+        "isList": True,
         "entityType": "subfields",
         "subjectEntity": "subfields",
         "entityId": "subfields",
@@ -1797,6 +1831,7 @@ properties = [
     {
         "key": "display_name_alternatives",
         "id": "display_name_alternatives",
+        "isList": True,
         "entityType": "fields",
         "subjectEntity": "fields",
         "entityId": "fields",
@@ -1810,6 +1845,7 @@ properties = [
     {
         "key": "siblings",
         "id": "siblings",
+        "isList": True,
         "entityType": "fields",
         "subjectEntity": "fields",
         "entityId": "fields",
@@ -1823,6 +1859,7 @@ properties = [
     {
         "key": "subfields",
         "id": "subfields",
+        "isList": True,
         "entityType": "fields",
         "subjectEntity": "fields",
         "entityId": "fields",
@@ -1863,6 +1900,7 @@ properties = [
     {
         "key": "display_name_alternatives",
         "id": "display_name_alternatives",
+        "isList": True,
         "entityType": "domains",
         "subjectEntity": "domains",
         "entityId": "domains",
@@ -1876,6 +1914,7 @@ properties = [
     {
         "key": "fields",
         "id": "fields",
+        "isList": True,
         "entityType": "domains",
         "subjectEntity": "domains",
         "entityId": "domains",
@@ -1889,6 +1928,7 @@ properties = [
     {
         "key": "siblings",
         "id": "siblings",
+        "isList": True,
         "entityType": "domains",
         "subjectEntity": "domains",
         "entityId": "domains",
@@ -1916,6 +1956,7 @@ properties = [
     {
         "key": "crossref_types",
         "id": "crossref_types",
+        "isList": True,
         "entityType": "types",
         "subjectEntity": "types",
         "entityId": "types",
@@ -1930,6 +1971,7 @@ properties = [
     {
         "key": "countries",
         "id": "countries",
+        "isList": True,
         "entityType": "continents",
         "subjectEntity": "continents",
         "entityId": "continents",
