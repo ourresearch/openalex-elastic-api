@@ -3,8 +3,8 @@ import re
 import requests
 
 from config.entity_config import entity_configs_dict
+from config.property_config import property_configs_dict
 
-valid_columns = ['id', 'display_name', 'title', 'publication_year', 'cited_by_count']
 valid_entities = list(entity_configs_dict.keys())
 
 
@@ -13,6 +13,7 @@ class Query:
         self.query_string = query_string
         self.entity = self.detect_entity()
         self.columns = self.detect_columns()
+        self.valid_columns = property_configs_dict[self.entity].keys()
 
     def detect_entity(self):
         pattern = re.compile(r'\b(?:using|from|select)\s+(\w+)', re.IGNORECASE)
@@ -44,7 +45,7 @@ class Query:
                 return True
 
         if self.query_string.lower().startswith(f"using {self.entity} return columns"):
-            if self.columns and all(col in valid_columns for col in self.columns):
+            if self.columns and all(col in self.valid_columns for col in self.columns):
                 return True
 
         return False
@@ -96,7 +97,7 @@ class Query:
                     return {"type": "none", "suggestions": []}
                 elif len(parts) >= 4 and parts[3] == "columns":
                     partial_column = " ".join(parts[4:])
-                    filtered_suggestions = [column for column in valid_columns if column.startswith(partial_column)]
+                    filtered_suggestions = [column for column in self.valid_columns if column.startswith(partial_column)]
                     return {"type": "column", "suggestions": filtered_suggestions}
 
         return {"type": "unknown", "suggestions": []}
