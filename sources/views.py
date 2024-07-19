@@ -1,5 +1,7 @@
 from flask import Blueprint, jsonify, request
 
+from config.entity_config import entity_configs_dict
+from config.property_config import property_configs_dict
 from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
@@ -64,3 +66,10 @@ def sources_filters_doctrings():
             "alternateNames": f.alternate_names,
         }
     return jsonify(ret)
+
+
+@blueprint.route("/sources/config")
+def sources_config():
+    result = entity_configs_dict["sources"]
+    result["properties"] = property_configs_dict["sources"]
+    return jsonify(result)

@@ -2,6 +2,8 @@ from flask import Blueprint, jsonify, request
 
 from authors.fields import fields_dict
 from authors.schemas import AuthorsSchema, MessageSchema
+from config.entity_config import entity_configs_dict
+from config.property_config import property_configs_dict
 from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
@@ -90,3 +92,10 @@ def authors_filters_doctrings():
             "alternateNames": f.alternate_names,
         }
     return jsonify(ret)
+
+
+@blueprint.route("/authors/config")
+def authors_config():
+    result = entity_configs_dict["authors"]
+    result["properties"] = property_configs_dict["authors"]
+    return jsonify(result)

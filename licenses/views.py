@@ -1,5 +1,7 @@
 from flask import Blueprint, jsonify, request
 
+from config.entity_config import entity_configs_dict
+from config.property_config import property_configs_dict
 from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.histogram import shared_histogram_view
@@ -75,3 +77,10 @@ def licenses_filters_doctrings():
             "alternateNames": f.alternate_names,
         }
     return jsonify(ret)
+
+
+@blueprint.route("/licenses/config")
+def licenses_config():
+    result = entity_configs_dict["licenses"]
+    result["properties"] = property_configs_dict["licenses"]
+    return jsonify(result)
