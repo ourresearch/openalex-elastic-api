@@ -99,8 +99,10 @@ class ResultTable:
 
     def response(self):
         return {
-            "header": self.header(),
-            "body": self.body()
+            "results": {
+                "header": self.header(),
+                "body": self.body()
+            }
         }
 
 

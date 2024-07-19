@@ -24,6 +24,8 @@ def query():
 def results():
     query_string = request.args.get("q")
     format = request.args.get("format")
+    if not query_string:
+        query_string = "using works"
     query = Query(query_string)
     if query.is_valid():
         json_data = query.execute()
@@ -43,8 +45,7 @@ def results():
         # reorder the dictionary
         results_table_response = {
             "meta": results_table_response.pop("meta"),
-            "header": results_table_response.pop("header"),
-            "body": results_table_response.pop("body"),
+            "results": results_table_response.pop("results"),
         }
         return jsonify(results_table_response)
     else:
