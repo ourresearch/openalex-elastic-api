@@ -60,7 +60,8 @@ class Query:
 
     def old_query(self):
         if self.entity and self.columns:
-            columns_formatted = ','.join(self.columns)
+            split_columns = [col.split('.')[0] for col in self.columns]
+            columns_formatted = ','.join(split_columns)
             return f"/{self.entity}?select={columns_formatted}" if self.is_valid() else None
         elif self.entity:
             return f"/{self.entity}" if self.is_valid() else None
