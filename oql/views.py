@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
 
+from config.entity_config import entity_configs_dict
+from config.property_config import property_configs_dict
 from oql.query import Query
 from oql.schemas import QuerySchema
 from oql.results_table import ResultTable
@@ -60,3 +62,22 @@ def results():
         return jsonify(results_table_response)
     else:
         return json_data
+
+
+@blueprint.route("/entities/config", methods=["GET"])
+def entities_config():
+    config = {}
+    for entity in entity_configs_dict:
+        config[entity] = entity_configs_dict[entity]
+        config[entity]["properties"] = property_configs_dict[entity]
+    return jsonify(config)
+
+
+@blueprint.route("/entities/<entity>/config", methods=["GET"])
+def entity_config(entity):
+    if entity not in entity_configs_dict:
+        return jsonify({"error": "Entity not found"}), 404
+
+    config = entity_configs_dict[entity]
+    config["properties"] = property_configs_dict[entity]
+    return jsonify(config)
