@@ -43,6 +43,8 @@ class ResultTable:
 
         if column.endswith(".id") and not self.is_list(column):
             return self.get_entity_with_display_name(row, column)
+        elif column == "grants.funder":
+            return self.get_funder_with_display_name(row, column)
 
         return self.get_nested_value(row, column)
 
@@ -51,6 +53,11 @@ class ResultTable:
         id_value = self.get_nested_value(data, path)
         display_name = self.get_nested_value(data, f"{base_path}.display_name")
         return {"id": id_value, "display_name": display_name}
+
+    def get_funder_with_display_name(self, row, column):
+        funder_id = self.get_nested_value(row, column)
+        funder_display_name = self.get_nested_value(row, "grants.funder_display_name")
+        return {"id": funder_id, "display_name": funder_display_name}
 
     @staticmethod
     def get_nested_value(data, path):
@@ -73,7 +80,7 @@ class ResultTable:
                 nested_key = remaining_keys[0]
                 if isinstance(dict_.get(nested_key), list):
                     nested_values = self.get_nested_values(dict_, ".".join(remaining_keys))
-                    values.append(nested_values)
+                    values.extend(nested_values)
                 else:
                     if remaining_keys[-1] == "id":
                         modified_keys = remaining_keys[:-1] + ["display_name"]
