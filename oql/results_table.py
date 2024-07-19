@@ -117,6 +117,9 @@ class ResultTable:
     def external_id_prefix(self, column):
         return property_configs_dict[self.entity][column].get("externalIdPrefix", "")
 
+    def count(self):
+        return self.json_data["meta"]["count"]
+
     def response(self):
         return {
             "results": {

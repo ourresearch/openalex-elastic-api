@@ -21,11 +21,20 @@ def query():
 
 
 @blueprint.route("/results", methods=["GET"])
+@blueprint.route("/entities", methods=["GET"])
 def results():
     query_string = request.args.get("q")
     format = request.args.get("format")
     if not query_string:
-        query_string = "using works"
+        return {
+            "meta": {
+                "count": 0,
+                "q": "",
+                "oql": "",
+                "v1": "",
+            },
+            "results": [],
+        }
     query = Query(query_string)
     if query.is_valid():
         json_data = query.execute()
@@ -37,6 +46,7 @@ def results():
         results_table = ResultTable(entity, columns, json_data)
         results_table_response = results_table.response()
         results_table_response['meta'] = {
+            "count": results_table.count(),
             "q": query_string,
             "oql": query.oql_query(),
             "v1": query.old_query(),
