@@ -9,11 +9,13 @@ valid_entities = list(entity_configs_dict.keys())
 
 
 class Query:
-    def __init__(self, query_string):
+    def __init__(self, query_string, page=1, per_page=25):
         self.query_string = query_string
         self.entity = self.detect_entity()
         self.columns = self.detect_columns()
         self.valid_columns = property_configs_dict[self.entity].keys()
+        self.page = int(page) if page else None
+        self.per_page = int(per_page) if per_page else None
 
     def detect_entity(self):
         pattern = re.compile(r'\b(?:using|from|select)\s+(\w+)', re.IGNORECASE)
@@ -59,12 +61,26 @@ class Query:
         return f"return columns {', '.join(self.columns)}" if self.columns else None
 
     def old_query(self):
+        url = None
         if self.entity and self.columns:
             split_columns = [col.split('.')[0] for col in self.columns]
             columns_formatted = ','.join(split_columns)
-            return f"/{self.entity}?select={columns_formatted}" if self.is_valid() else None
+            url = f"/{self.entity}?select={columns_formatted}" if self.is_valid() else None
         elif self.entity:
-            return f"/{self.entity}" if self.is_valid() else None
+            url = f"/{self.entity}" if self.is_valid() else None
+
+        if url:
+            params = []
+            if self.page:
+                params.append(f"page={self.page}")
+            if self.per_page:
+                params.append(f"per_page={self.per_page}")
+            if params:
+                if '?' in url:
+                    url += '&' + '&'.join(params)
+                else:
+                    url += '?' + '&'.join(params)
+        return url
 
     def oql_query(self):
         if self.use_clause and self.columns_clause:
