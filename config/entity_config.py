@@ -29,24 +29,20 @@ entity_configs = [
             "display_name",
             "publication_year",
             "type",
-            "abstract",
+            "abstract_inverted_index",
             "primary_location.source.id",
             "authorships.author.id",
-            "authorships.institutions.lineage",
-            # None,
+            "authorships.institutions.id",
             "cites",
             "cited_by",
             "related_to",
-            # None,
             "primary_topic.id",
             "primary_topic.subfield.id",
             "primary_topic.field.id",
             "primary_topic.domain.id",
             "sustainable_development_goals.id",
-            # None,
             "open_access.oa_status",
             "apc_paid.value_usd",
-            # None,
             "grants.funder",
             "grants.award_id",
         ],
@@ -61,7 +57,6 @@ entity_configs = [
     {
         "key": "authors",
         "id": "authors",
-        # icon: "mdi-account-school-outline",
         "icon": "mdi-account-outline",
         "name": "authors",
         "entityType": "authors",
@@ -83,6 +78,8 @@ entity_configs = [
             {"key": "last_known_institutions.is_global_south", "value": True, "displayName": "from the Global South"},
         ],
         "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
             "display_name_alternatives",
             "last_known_institutions.id",
             "affiliations.institution.id",
@@ -122,6 +119,8 @@ entity_configs = [
             {"key": "is_oa", "value": True, "displayName": "that are Open Access"},
         ],
         "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
             "ids.issn",
             "type",
             "publisher",
@@ -159,7 +158,10 @@ entity_configs = [
         "color": "pink",
         "hasAutocomplete": True,
         "isNative": True,
-        "rowsToShowOnEntityPage": [],
+        "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
+        ],
     },
     {
         "key": "funders",
@@ -179,7 +181,10 @@ entity_configs = [
         "color": "brown",
         "hasAutocomplete": True,
         "isNative": True,
-        "rowsToShowOnEntityPage": [],
+        "rowsToShowOnEntityPage": [
+            "id",
+            "display_name"
+        ],
     },
     {
         "key": "institutions",
@@ -201,6 +206,8 @@ entity_configs = [
         "isNative": True,
         "hasSerp": True,
         "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
             "display_name_alternatives",
             "parent_institutions",
             "child_institutions",
@@ -228,7 +235,11 @@ entity_configs = [
         "filterKey": "concepts.id",
         "hasAutocomplete": True,
         "isNative": True,
-        "rowsToShowOnEntityPage": [],
+        "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
+            "description",
+        ],
     },
 
     {
@@ -249,6 +260,8 @@ entity_configs = [
         "hasAutocomplete": True,
         "isNative": False,
         "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
         ],
     },
 
@@ -271,8 +284,9 @@ entity_configs = [
         "hasAutocomplete": True,
         "isNative": True,
         "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
             "description",
-            # None,
             "siblings",
             "subfield",
             "field",
@@ -296,9 +310,10 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
             "description",
             "display_name_alternatives",
-            # None,
             "topics",
             "siblings",
             "field",
@@ -322,9 +337,10 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
             "description",
             "display_name_alternatives",
-            # None,
             "subfields",
             "siblings",
             "domain",
@@ -347,9 +363,10 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
             "description",
             "display_name_alternatives",
-            # None,
             "fields",
             "siblings",
         ],
@@ -370,7 +387,10 @@ entity_configs = [
         "filterKey": "sustainable_development_goals.id",
         "hasAutocomplete": False,
         "isNative": False,
-        "rowsToShowOnEntityPage": [],
+        "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
+        ],
     },
 
 
@@ -390,7 +410,10 @@ entity_configs = [
         "filterKey": "authorships.countries",
         "hasAutocomplete": False,
         "isNative": False,
-        "rowsToShowOnEntityPage": [],
+        "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
+        ],
     },
 
     {
@@ -410,6 +433,8 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
             "countries",
         ],
     },
@@ -430,7 +455,10 @@ entity_configs = [
         "filterKey": "language",
         "hasAutocomplete": False,
         "isNative": False,
-        "rowsToShowOnEntityPage": [],
+        "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
+        ],
     },
 
     {
@@ -450,6 +478,8 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
             "description",
             "crossref_types",
         ],
@@ -470,7 +500,11 @@ entity_configs = [
         "filterKey": "primary_location.source.type",
         "hasAutocomplete": False,
         "isNative": False,
-        "rowsToShowOnEntityPage": [],
+        "rowsToShowOnEntityPage": [
+            "id",
+            "display_name",
+            "description",
+        ],
     },
     {
         "key": "institution-types",
@@ -488,7 +522,10 @@ entity_configs = [
         "filterKey": "authorships.institutions.type",
         "hasAutocomplete": False,
         "isNative": False,
-        "rowsToShowOnEntityPage": [],
+        "rowsToShowOnEntityPage": [
+            "id",
+            "display_name"
+        ],
     },
 
 
@@ -508,7 +545,10 @@ entity_configs = [
         "filterKey": "best_oa_location.license",
         "hasAutocomplete": False,
         "isNative": False,
-        "rowsToShowOnEntityPage": [],
+        "rowsToShowOnEntityPage": [
+            "id",
+            "display_name"
+        ],
     },
 
 ]

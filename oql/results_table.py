@@ -29,11 +29,17 @@ class ResultTable:
         return result
 
     def get_column_value(self, row, column):
-        if column == "abstract" and "abstract_inverted_index" in row:
-            return row["abstract_inverted_index"]
-
         if self.is_list(column):
             return self.get_nested_values(row, column)
+
+        if self.is_external_id(column):
+            value = self.get_nested_value(row, column)
+            prefix = self.external_id_prefix(column)
+            formatted_id = f"https://openalex.org/{prefix}/{value}"
+            return {
+                "id": formatted_id,
+                "display_name": value,
+            }
 
         if column.endswith(".id") and not self.is_list(column):
             return self.get_entity_with_display_name(row, column)
@@ -57,29 +63,33 @@ class ResultTable:
         return data
 
     def get_nested_values(self, data, path):
-        list_key = path.split(".")[0]
+        keys = path.split(".")
+        list_key = keys[0]
         list_of_dicts = data.get(list_key, [])
-        keys = path.split(".")[1:]
+        remaining_keys = keys[1:]
         values = []
         for dict_ in list_of_dicts:
-            if keys and keys[-1] == "id":
-                modified_keys = keys[:-1] + ["display_name"]
-                value = self.get_nested_value(dict_, ".".join(keys))
-                display_name = self.get_nested_value(dict_, ".".join(modified_keys))
-                values.append({"id": value, "display_name": display_name})
+            if remaining_keys:
+                nested_key = remaining_keys[0]
+                if isinstance(dict_.get(nested_key), list):
+                    nested_values = self.get_nested_values(dict_, ".".join(remaining_keys))
+                    values.append(nested_values)
+                else:
+                    if remaining_keys[-1] == "id":
+                        modified_keys = remaining_keys[:-1] + ["display_name"]
+                        value = self.get_nested_value(dict_, ".".join(remaining_keys))
+                        display_name = self.get_nested_value(dict_, ".".join(modified_keys))
+                        values.append({"id": value, "display_name": display_name})
+                    else:
+                        value = self.get_nested_value(dict_, ".".join(remaining_keys))
+                        values.append(value)
             else:
-                value = self.get_nested_value(dict_, ".".join(keys))
-                values.append(value)
+                values.append(dict_)
         return values
 
     def format_value(self, key, value):
         column_type = self.get_column_type(key)
-        if column_type == "entity" and key == "id":
-            return {"type": column_type, "value": {
-                "id": value,
-                "display_name": self.ids_display_names()[value]
-            }}
-        elif column_type == "boolean":
+        if column_type == "boolean":
             return {"type": column_type, "value": bool(value)}
         elif column_type == "number":
             return {"type": column_type, "value": value}
@@ -88,14 +98,17 @@ class ResultTable:
         else:
             return {"type": column_type, "value": value}
 
-    def ids_display_names(self):
-        return {row['id']: row['display_name'] for row in self.json_data['results']}
-
     def get_column_type(self, column):
         return property_configs_dict[self.entity][column]["newType"]
 
     def is_list(self, column):
         return property_configs_dict[self.entity][column].get("isList", False)
+
+    def is_external_id(self, column):
+        return property_configs_dict[self.entity][column].get("isExternalId", False)
+
+    def external_id_prefix(self, column):
+        return property_configs_dict[self.entity][column].get("externalIdPrefix", "")
 
     def response(self):
         return {

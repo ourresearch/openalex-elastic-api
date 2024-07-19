@@ -2,8 +2,8 @@
 property_configs = [
     # works: WASPFIC.
     {
-        "key": "ids.openalex",
-        "id": "ids.openalex",
+        "key": "id",
+        "id": "id",
         "entityType": "works",
         "subjectEntity": "works",
         "entityId": "works",
@@ -12,7 +12,7 @@ property_configs = [
         "isSingleWork": True,
         "isId": True,
         "type": "select",
-        "newType": "entity",
+        "newType": "string",
         "category": "ids",
         "actions": [""],
         "icon": "mdi-file-document-outline",
@@ -29,7 +29,7 @@ property_configs = [
         "isSingleWork": True,
         "isId": True,
         "type": "select",
-        "newType": "entity",
+        "newType": "string",
         "category": "ids",
         "actions": [],
         "icon": "mdi-file-document-outline",
@@ -182,8 +182,8 @@ property_configs = [
         "extractFn": "(entity) => entity.grants.map(grant => grant.award_id)",
     },
     {
-        "key": "authorships.institutions.lineage",
-        "id": "authorships.institutions.lineage",
+        "key": "authorships.institutions.id",
+        "id": "authorships.institutions.id",
         "isList": True,
         "entityType": "works",
         "subjectEntity": "works",
@@ -755,22 +755,6 @@ property_configs = [
         "icon": "mdi-tag-outline",
     },
     {
-        "key": "id",
-        "id": "id",
-        "entityType": "works",
-        "subjectEntity": "works",
-        "entityId": "works",
-        "objectEntity": "works",
-        "displayName": "id",
-        "type": "select",
-        "newType": "entity",
-        "category": "other",
-        "actions": ["filter", "column"],
-        "actionsPopular": ["filter", "column"],
-        "icon": "mdi-shape-outline",
-        "extractFn": "(entity) => entity.type",
-    },
-    {
         "key": "type",
         "id": "type",
         "entityType": "works",
@@ -779,6 +763,8 @@ property_configs = [
         "objectEntity": "types",
         "displayName": "type",
         "type": "select",
+        "isExternalId": True,
+        "externalIdPrefix": "work-types",
         "newType": "entity",
         "category": "other",
         "actions": ["filter", "column", "group_by"],
@@ -787,8 +773,8 @@ property_configs = [
         "extractFn": "(entity) => entity.type",
     },
     {
-        "key": "abstract",
-        "id": "abstract",
+        "key": "abstract_inverted_index",
+        "id": "abstract_inverted_index",
         "entityType": "works",
         "subjectEntity": "works",
         "displayName": "Abstract",
@@ -1043,15 +1029,15 @@ property_configs = [
     },
     # authors
     {
-        "key": "ids.openalex",
-        "id": "ids.openalex",
+        "key": "id",
+        "id": "id",
         "entityType": "authors",
         "subjectEntity": "authors",
         "entityId": "authors",
         "objectEntity": "authors",
         "displayName": "author",
         "type": "select",
-        "newType": "entity",
+        "newType": "string",
         "actions": [],
         "actionsPopular": [],
         "isId": True,
@@ -1242,8 +1228,8 @@ property_configs = [
     },
     # sources
     {
-        "key": "ids.openalex",
-        "id": "ids.openalex",
+        "key": "id",
+        "id": "id",
         "entityType": "sources",
         "subjectEntity": "sources",
         "entityId": "sources",
@@ -1251,7 +1237,7 @@ property_configs = [
         "displayName": "Source",
         "isId": True,
         "type": "entity",
-        "newType": "entity",
+        "newType": "string",
         "icon": "mdi-book-open-outline",
     },
     {
@@ -1433,8 +1419,8 @@ property_configs = [
     },
     # publishers
     {
-        "key": "ids.openalex",
-        "id": "ids.openalex",
+        "key": "id",
+        "id": "id",
         "entityType": "publishers",
         "subjectEntity": "publishers",
         "entityId": "publishers",
@@ -1442,7 +1428,7 @@ property_configs = [
         "displayName": "Publisher",
         "isId": True,
         "type": "entity",
-        "newType": "entity",
+        "newType": "string",
         "icon": "mdi-domain",
     },
     {
@@ -1457,8 +1443,8 @@ property_configs = [
     },
     # funders
     {
-        "key": "ids.openalex",
-        "id": "ids.openalex",
+        "key": "id",
+        "id": "id",
         "entityType": "funders",
         "subjectEntity": "funders",
         "entityId": "funders",
@@ -1466,7 +1452,7 @@ property_configs = [
         "displayName": "Funder",
         "isId": True,
         "type": "entity",
-        "newType": "entity",
+        "newType": "string",
         "icon": "mdi-cash-multiple",
     },
     {
@@ -1481,8 +1467,8 @@ property_configs = [
     },
     # institutions
     {
-        "key": "ids.openalex",
-        "id": "ids.openalex",
+        "key": "id",
+        "id": "id",
         "entityType": "institutions",
         "subjectEntity": "institutions",
         "entityId": "institutions",
@@ -1490,7 +1476,7 @@ property_configs = [
         "displayName": "Institution",
         "isId": True,
         "type": "entity",
-        "newType": "entity",
+        "newType": "string",
         "icon": "mdi-town-hall",
     },
     {
@@ -1648,8 +1634,8 @@ property_configs = [
     # none for now.
     # concepts
     {
-        "key": "ids.openalex",
-        "id": "ids.openalex",
+        "key": "id",
+        "id": "id",
         "entityType": "concepts",
         "subjectEntity": "concepts",
         "entityId": "concepts",
@@ -1657,7 +1643,7 @@ property_configs = [
         "displayName": "Concept",
         "isId": True,
         "type": "entity",
-        "newType": "entity",
+        "newType": "string",
         "icon": "mdi-tag-outline",
     },
     {
