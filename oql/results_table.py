@@ -59,14 +59,15 @@ class ResultTable:
         funder_display_name = self.get_nested_value(row, "grants.funder_display_name")
         return {"id": funder_id, "display_name": funder_display_name}
 
-    @staticmethod
-    def get_nested_value(data, path):
+    def get_nested_value(self, data, path):
         keys = path.split(".") if path else []
         for key in keys:
             if isinstance(data, dict):
                 data = data.get(key)
             else:
                 return None
+        if "abstract_inverted_index" in keys and data:
+            data = self.convert_abtract_inverted_index(data)
         return data
 
     def get_nested_values(self, data, path):
@@ -119,6 +120,12 @@ class ResultTable:
 
     def count(self):
         return self.json_data["meta"]["count"]
+
+    def convert_abtract_inverted_index(self, data):
+        positions = [(key, ord) for key, values in data.items() for ord in values]
+        sorted_positions = sorted(positions, key=lambda x: x[1])
+        result = ' '.join(key for key, _ in sorted_positions)
+        return result
 
     def response(self):
         return {

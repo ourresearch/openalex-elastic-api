@@ -255,7 +255,7 @@ property_configs = [
         "displayName": "ORCID",
         "isId": True,
         "type": "entity",
-        "newType": "entity",
+        "newType": "string",
         "category": "ids",
         "actions": [],
         "icon": "mdi-account-outline",
