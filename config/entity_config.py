@@ -24,6 +24,7 @@ entity_configs = [
             {"key": "institutions.is_global_south", "value": True, "displayName": "from the Global South"},
             {"key": "type", "value": "dataset", "displayName": "datasets"},
         ],
+        "idRegex": r"(?i)(?:works\/)?(?:https:\/\/openalex\.org\/)?(w\d+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
@@ -75,6 +76,7 @@ entity_configs = [
             {"key": "has_orcid", "value": True, "displayName": "with ORCIDs"},
             {"key": "last_known_institutions.is_global_south", "value": True, "displayName": "from the Global South"},
         ],
+        "idRegex": r"(?i)(?:authors\/)?(?:https:\/\/openalex\.org\/)?(a\d+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
@@ -96,7 +98,6 @@ entity_configs = [
     {
         "key": "sources",
         "id": "sources",
-        # icon: "mdi-book-outline",
         "icon": "mdi-book-open-outline",
         "name": "sources",
         "entityType": "sources",
@@ -116,6 +117,7 @@ entity_configs = [
         "highlightFilters": [
             {"key": "is_oa", "value": True, "displayName": "that are Open Access"},
         ],
+        "idRegex": r"(?i)(?:sources\/)?(?:https:\/\/openalex\.org\/)?(s\d+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
@@ -123,11 +125,9 @@ entity_configs = [
             "type",
             "publisher",
             "alternate_titles",
-            # None,
             "is_oa",
             "is_in_doaj",
             "apc_usd",
-            # None,
             "summary_stats.2yr_mean_citedness",
             "summary_stats.h_index",
             "summary_stats.i10_index",
@@ -141,7 +141,6 @@ entity_configs = [
     {
         "key": "publishers",
         "id": "publishers",
-        # icon: "mdi-book-outline",
         "icon": "mdi-domain",
         "name": "publishers",
         "entityType": "publishers",
@@ -156,6 +155,7 @@ entity_configs = [
         "color": "pink",
         "hasAutocomplete": True,
         "isNative": True,
+        "idRegex": r"(?i)(?:publishers\/)?(?:https:\/\/openalex\.org\/)?(p\d+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
@@ -164,7 +164,6 @@ entity_configs = [
     {
         "key": "funders",
         "id": "funders",
-        # icon: "mdi-book-outline",
         "icon": "mdi-cash-multiple",
         "name": "funders",
         "entityType": "funders",
@@ -179,6 +178,7 @@ entity_configs = [
         "color": "brown",
         "hasAutocomplete": True,
         "isNative": True,
+        "idRegex": r"(?i)(?:funders\/)?(?:https:\/\/openalex\.org\/)?(f\d+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name"
@@ -212,6 +212,7 @@ entity_configs = [
             "related_institutions",
             "ids.ror",
         ],
+        "idRegex": r"(?i)(?:institutions\/)?(?:https:\/\/openalex\.org\/)?(i\d+)",
         "groupByDefaults": [
             "country_code",
             "type",
@@ -233,6 +234,7 @@ entity_configs = [
         "filterKey": "concepts.id",
         "hasAutocomplete": True,
         "isNative": True,
+        "idRegex": r"(?i)(?:concepts\/)?(?:https:\/\/openalex\.org\/)?(c\d+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
@@ -275,12 +277,12 @@ entity_configs = [
         "descr": "what works are about",
         "eg": "RNA sequencing",
         "placeholder": "Search topics",
-        # hasSerp: True,
         "filterName": "topics",
         "filterKey": "primary_topic.id",
         "hintVerb": ":",
         "hasAutocomplete": True,
         "isNative": True,
+        "idRegex": r"(?i)(?:topics\/)?(?:https:\/\/openalex\.org\/)?(t\d+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
@@ -525,8 +527,6 @@ entity_configs = [
             "display_name"
         ],
     },
-
-
     {
         "key": "licenses",
         "id": "licenses",
@@ -548,7 +548,6 @@ entity_configs = [
             "display_name"
         ],
     },
-
 ]
 
 entity_configs_dict = {config['key']: config for config in entity_configs}
