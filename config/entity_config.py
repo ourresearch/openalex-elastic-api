@@ -84,7 +84,6 @@ entity_configs = [
             "last_known_institutions.id",
             "affiliations.institution.id",
             "ids.orcid",
-            # None,
             "summary_stats.h_index",
             "summary_stats.i10_index",
         ],
@@ -93,7 +92,6 @@ entity_configs = [
             "last_known_institutions.country_code",
             "has_orcid",
         ],
-
     },
     {
         "key": "sources",
@@ -241,7 +239,6 @@ entity_configs = [
             "description",
         ],
     },
-
     {
         "key": "keywords",
         "id": "keywords",
@@ -259,12 +256,12 @@ entity_configs = [
         "hintVerb": ":",
         "hasAutocomplete": True,
         "isNative": False,
+        "idRegex": r"(?:https:\/\/openalex\.org\/keywords\/|keywords\/)([a-zA-Z0-9\-]+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
         ],
     },
-
     {
         "key": "topics",
         "id": "topics",
@@ -309,6 +306,7 @@ entity_configs = [
         "filterKey": "primary_topic.subfield.id",
         "hasAutocomplete": False,
         "isNative": False,
+        "idRegex": r"(?:https:\/\/openalex\.org\/subfields\/|subfields\/)(\d+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
@@ -336,6 +334,7 @@ entity_configs = [
         "filterKey": "primary_topic.field.id",
         "hasAutocomplete": False,
         "isNative": False,
+        "idRegex": r"(?:https:\/\/openalex\.org\/fields\/|fields\/)(\d+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
@@ -362,6 +361,7 @@ entity_configs = [
         "filterKey": "primary_topic.domain.id",
         "hasAutocomplete": False,
         "isNative": False,
+        "idRegex": r"(?:https:\/\/openalex\.org\/domains\/|domains\/)(\d+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
@@ -387,13 +387,12 @@ entity_configs = [
         "filterKey": "sustainable_development_goals.id",
         "hasAutocomplete": False,
         "isNative": False,
+        "idRegex": r"(?:https:\/\/openalex\.org\/sdgs\/|sdgs\/)(\d+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
         ],
     },
-
-
     {
         "key": "countries",
         "id": "countries",
@@ -410,12 +409,12 @@ entity_configs = [
         "filterKey": "authorships.countries",
         "hasAutocomplete": False,
         "isNative": False,
+        "idRegex": r"(?:https:\/\/openalex\.org\/countries\/|countries\/)([a-zA-Z]{2})",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
         ],
     },
-
     {
         "key": "continents",
         "id": "continents",
@@ -432,13 +431,13 @@ entity_configs = [
         "filterKey": "authorships.institutions.continent",
         "hasAutocomplete": False,
         "isNative": False,
+        "idRegex": r"(?i)(?:https:\/\/openalex\.org\/continents\/|continents\/)(q\d+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
             "countries",
         ],
     },
-
     {
         "key": "languages",
         "id": "languages",
@@ -455,12 +454,12 @@ entity_configs = [
         "filterKey": "language",
         "hasAutocomplete": False,
         "isNative": False,
+        "idRegex": r"(?:https:\/\/openalex\.org\/languages\/|languages\/)([a-zA-Z]{2})",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
         ],
     },
-
     {
         "key": "types",
         "id": "types",
@@ -477,6 +476,7 @@ entity_configs = [
         "filterKey": "type",
         "hasAutocomplete": False,
         "isNative": False,
+        "idRegex": r"(?:https:\/\/openalex\.org\/types\/|types\/)([a-zA-Z\-]+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
@@ -500,6 +500,7 @@ entity_configs = [
         "filterKey": "primary_location.source.type",
         "hasAutocomplete": False,
         "isNative": False,
+        "idRegex": r"(?:https:\/\/openalex\.org\/source-types\/|source-types\/)([a-zA-Z\-]+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name",
@@ -522,6 +523,7 @@ entity_configs = [
         "filterKey": "authorships.institutions.type",
         "hasAutocomplete": False,
         "isNative": False,
+        "idRegex": r"(?:https:\/\/openalex\.org\/institution-types\/|institution-types\/)([a-zA-Z\-]+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name"
@@ -543,6 +545,7 @@ entity_configs = [
         "filterKey": "best_oa_location.license",
         "hasAutocomplete": False,
         "isNative": False,
+        "idRegex": r"(?:https:\/\/openalex\.org\/licenses\/|licenses\/)([a-zA-Z0-9\-]+)",
         "rowsToShowOnEntityPage": [
             "id",
             "display_name"
