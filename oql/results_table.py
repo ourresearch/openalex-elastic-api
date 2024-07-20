@@ -25,6 +25,9 @@ class ResultTable:
         result = []
         for column in self.columns:
             value = self.get_column_value(row, column)
+            # if value is a list of dictionaries, remove the duplicates
+            if isinstance(value, list):
+                value = [dict(t) for t in {tuple(d.items()) for d in value if type(d) is dict}]
             result.append(self.format_value(column, value))
         return result
 
