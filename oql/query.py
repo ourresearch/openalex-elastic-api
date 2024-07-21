@@ -13,7 +13,7 @@ class Query:
         self.query_string = query_string
         self.entity = self.detect_entity()
         self.columns = self.detect_columns()
-        self.valid_columns = property_configs_dict[self.entity].keys()
+        self.valid_columns = self.valid_columns()
         self.page = int(page) if page else None
         self.per_page = int(per_page) if per_page else None
 
@@ -123,6 +123,12 @@ class Query:
         url = f"https://api.openalex.org/{self.old_query()}"
         r = requests.get(url)
         return r.json()
+
+    def valid_columns(self):
+        if self.entity and self.entity in entity_configs_dict:
+            return property_configs_dict[self.entity].keys()
+        else:
+            return []
 
     def to_dict(self):
         return {
