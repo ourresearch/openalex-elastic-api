@@ -18,7 +18,7 @@ class Query:
         self.per_page = int(per_page) if per_page else None
 
     def detect_entity(self):
-        pattern = re.compile(r'\b(?:using|from|select)\s+(\w+)', re.IGNORECASE)
+        pattern = re.compile(r'\b(?:get)\s+(\w+)', re.IGNORECASE)
 
         match = pattern.search(self.query_string)
 
@@ -42,19 +42,19 @@ class Query:
         if not self.entity:
             return False
 
-        if self.query_string.strip().lower() == f"using {self.entity}":
+        if self.query_string.strip().lower() == f"get {self.entity}":
             if self.entity in valid_entities:
                 return True
 
-        if self.query_string.lower().startswith(f"using {self.entity} return columns"):
+        if self.query_string.lower().startswith(f"get {self.entity} return columns"):
             if self.columns and all(col in self.valid_columns for col in self.columns):
                 return True
 
         return False
 
     @property
-    def use_clause(self):
-        return f"using {self.entity}" if self.entity else None
+    def get_clause(self):
+        return f"get {self.entity}" if self.entity else None
 
     @property
     def columns_clause(self):
@@ -83,10 +83,10 @@ class Query:
         return url
 
     def oql_query(self):
-        if self.use_clause and self.columns_clause:
-            return f"{self.use_clause} {self.columns_clause}" if self.is_valid() else None
-        elif self.use_clause:
-            return self.use_clause if self.is_valid() else None
+        if self.get_clause and self.columns_clause:
+            return f"{self.get_clause} {self.columns_clause}" if self.is_valid() else None
+        elif self.get_clause:
+            return self.get_clause if self.is_valid() else None
         else:
             return None
 
@@ -96,7 +96,7 @@ class Query:
         if not query_lower or len(query_lower) < 5:
             return self.suggest_verbs()
 
-        if query_lower.startswith("using"):
+        if query_lower.startswith("get"):
             parts = query_lower.split()
             if len(parts) == 1:
                 return self.suggest_entities()
@@ -118,7 +118,7 @@ class Query:
         return {"type": "unknown", "suggestions": []}
 
     def suggest_verbs(self):
-        return {"type": "verb", "suggestions": ["using"]}
+        return {"type": "verb", "suggestions": ["get"]}
 
     def suggest_entities(self):
         return {"type": "entity", "suggestions": valid_entities}
