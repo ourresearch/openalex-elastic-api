@@ -13,7 +13,7 @@ class Query:
         self.query_string = query_string
         self.entity = self.detect_entity()
         self.columns = self.detect_columns()
-        self.valid_columns = self.valid_columns()
+        self.valid_columns = self.get_valid_columns()
         self.page = int(page) if page else None
         self.per_page = int(per_page) if per_page else None
 
@@ -91,40 +91,87 @@ class Query:
             return None
 
     def autocomplete(self):
-        query_lower = self.query_string.lower().strip()
+        query_lower = self.query_string.lower().replace('%20', ' ').strip()
 
         if not query_lower or len(query_lower) < 5:
-            return {"type": "verb", "suggestions": ["using"]}
+            return self.suggest_verbs()
 
         if query_lower.startswith("using"):
             parts = query_lower.split()
             if len(parts) == 1:
-                return {"type": "entity", "suggestions": valid_entities}
+                return self.suggest_entities()
             elif len(parts) == 2:
-                if parts[1] in valid_entities:
-                    return {"type": "verb", "suggestions": ["return columns"]}
-                else:
-                    partial_entity = parts[1]
-                    filtered_suggestions = [entity for entity in valid_entities if entity.startswith(partial_entity)]
-                    return {"type": "entity", "suggestions": filtered_suggestions}
+                return self.handle_entity_part(parts)
             elif len(parts) > 2:
-                if len(parts) == 3 or (len(parts) == 4 and parts[3] != "columns"):
-                    return {"type": "verb", "suggestions": ["return columns"]}
-                elif len(parts) >= 4 and parts[3] == "columns" and self.is_valid():
-                    return {"type": "none", "suggestions": []}
-                elif len(parts) >= 4 and parts[3] == "columns":
-                    partial_column = " ".join(parts[4:])
-                    filtered_suggestions = [column for column in self.valid_columns if column.startswith(partial_column)]
-                    return {"type": "column", "suggestions": filtered_suggestions}
+                if self.match_partial_command(parts, 2, "return", ["columns"]):
+                    if len(parts) == 3:
+                        return {"type": "verb", "suggestions": ["return columns"]}
+                    elif len(parts) == 4:
+                        if parts[3] == "columns":
+                            return self.suggest_columns(parts)
+                        else:
+                            return {"type": "verb", "suggestions": ["columns"]}
+                    elif len(parts) > 4 and parts[3] == "columns":
+                        return self.suggest_columns(parts)
+                return self.handle_columns_part(parts)
 
         return {"type": "unknown", "suggestions": []}
+
+    def suggest_verbs(self):
+        return {"type": "verb", "suggestions": ["using"]}
+
+    def suggest_entities(self):
+        return {"type": "entity", "suggestions": valid_entities}
+
+    def handle_entity_part(self, parts):
+        if parts[1] in valid_entities:
+            return {"type": "verb", "suggestions": ["return columns"]}
+        else:
+            partial_entity = parts[1]
+            filtered_suggestions = [entity for entity in valid_entities if entity.startswith(partial_entity)]
+            return {"type": "entity", "suggestions": filtered_suggestions}
+
+    def handle_columns_part(self, parts):
+        if len(parts) >= 3 and parts[2].startswith("return"):
+            if len(parts) == 3 or (len(parts) == 4 and parts[3] != "columns"):
+                return {"type": "verb", "suggestions": ["columns"]}
+            elif len(parts) >= 4 and parts[3] == "columns":
+                return self.suggest_columns(parts)
+        return {"type": "unknown", "suggestions": []}
+
+    def suggest_columns(self, parts):
+        if self.entity in valid_entities:
+            valid_cols = self.get_valid_columns()
+            columns_part = " ".join(parts[4:])
+            typed_columns = [convert_to_snake_case(col.strip()) for col in columns_part.split(',') if col.strip()]
+            available_columns = [col for col in valid_cols if col not in typed_columns]
+
+            if ',' in columns_part:
+                last_comma_index = columns_part.rindex(',')
+                partial_column = columns_part[last_comma_index + 1:].strip()
+                filtered_suggestions = [column for column in available_columns if column.startswith(partial_column)]
+            else:
+                partial_column = columns_part
+                filtered_suggestions = [column for column in available_columns if column.startswith(partial_column)]
+            return {"type": "column", "suggestions": filtered_suggestions}
+        return {"type": "unknown", "suggestions": []}
+
+    def match_partial_command(self, parts, index, command, next_options):
+        if parts[index].startswith(command[:len(parts[index])]):
+            if len(parts) == index + 1 or (
+                    len(parts) > index + 1 and any(parts[index + 1].startswith(option) for option in next_options)):
+                return True
+        return False
+
+    def convert_to_snake_case(name):
+        return name.strip().replace(' ', '_').lower()
 
     def execute(self):
         url = f"https://api.openalex.org/{self.old_query()}"
         r = requests.get(url)
         return r.json()
 
-    def valid_columns(self):
+    def get_valid_columns(self):
         if self.entity and self.entity in entity_configs_dict:
             return property_configs_dict[self.entity].keys()
         else:
