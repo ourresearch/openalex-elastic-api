@@ -93,7 +93,7 @@ class Query:
     def autocomplete(self):
         query_lower = self.query_string.lower().replace('%20', ' ').strip()
 
-        if not query_lower or len(query_lower) < 5:
+        if not query_lower or len(query_lower) < 3:
             return self.suggest_verbs()
 
         if query_lower.startswith("get"):
