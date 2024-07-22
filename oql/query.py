@@ -1,4 +1,5 @@
 import re
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 import requests
 
@@ -18,7 +19,7 @@ class Query:
         self.per_page = int(per_page) if per_page else None
 
     def detect_entity(self):
-        pattern = re.compile(r'\b(?:get)\s+(\w+)', re.IGNORECASE)
+        pattern = re.compile(r"\b(?:get)\s+(\w+)", re.IGNORECASE)
 
         match = pattern.search(self.query_string)
 
@@ -29,12 +30,14 @@ class Query:
             return None
 
     def detect_columns(self):
-        pattern = re.compile(r'\b(?:return|from|select)\s+columns\s+(.+)', re.IGNORECASE)
+        pattern = re.compile(
+            r"\b(?:return|from|select)\s+columns\s+(.+)", re.IGNORECASE
+        )
 
         match = pattern.search(self.query_string)
         if match:
             columns = match.group(1)
-            return [convert_to_snake_case(col.strip()) for col in columns.split(',')]
+            return [convert_to_snake_case(col.strip()) for col in columns.split(",")]
         else:
             return None
 
@@ -63,9 +66,13 @@ class Query:
     def old_query(self):
         url = None
         if self.entity and self.columns:
-            split_columns = [col.split('.')[0] for col in self.columns]
-            columns_formatted = ','.join(split_columns)
-            url = f"/{self.entity}?select={columns_formatted}" if self.is_valid() else None
+            split_columns = [col.split(".")[0] for col in self.columns]
+            columns_formatted = ",".join(split_columns)
+            url = (
+                f"/{self.entity}?select={columns_formatted}"
+                if self.is_valid()
+                else None
+            )
         elif self.entity:
             url = f"/{self.entity}" if self.is_valid() else None
 
@@ -76,22 +83,24 @@ class Query:
             if self.per_page:
                 params.append(f"per_page={self.per_page}")
             if params:
-                if '?' in url:
-                    url += '&' + '&'.join(params)
+                if "?" in url:
+                    url += "&" + "&".join(params)
                 else:
-                    url += '?' + '&'.join(params)
+                    url += "?" + "&".join(params)
         return url
 
     def oql_query(self):
         if self.get_clause and self.columns_clause:
-            return f"{self.get_clause} {self.columns_clause}" if self.is_valid() else None
+            return (
+                f"{self.get_clause} {self.columns_clause}" if self.is_valid() else None
+            )
         elif self.get_clause:
             return self.get_clause if self.is_valid() else None
         else:
             return None
 
     def autocomplete(self):
-        query_lower = self.query_string.lower().replace('%20', ' ').strip()
+        query_lower = self.query_string.lower().replace("%20", " ").strip()
 
         if not query_lower or len(query_lower) < 3:
             return self.suggest_verbs()
@@ -128,7 +137,9 @@ class Query:
             return {"type": "verb", "suggestions": ["return columns"]}
         else:
             partial_entity = parts[1]
-            filtered_suggestions = [entity for entity in valid_entities if entity.startswith(partial_entity)]
+            filtered_suggestions = [
+                entity for entity in valid_entities if entity.startswith(partial_entity)
+            ]
             return {"type": "entity", "suggestions": filtered_suggestions}
 
     def handle_columns_part(self, parts):
@@ -143,32 +154,72 @@ class Query:
         if self.entity in valid_entities:
             valid_cols = self.get_valid_columns()
             columns_part = " ".join(parts[4:])
-            typed_columns = [convert_to_snake_case(col.strip()) for col in columns_part.split(',') if col.strip()]
+            typed_columns = [
+                convert_to_snake_case(col.strip())
+                for col in columns_part.split(",")
+                if col.strip()
+            ]
             available_columns = [col for col in valid_cols if col not in typed_columns]
 
-            if ',' in columns_part:
-                last_comma_index = columns_part.rindex(',')
-                partial_column = columns_part[last_comma_index + 1:].strip()
-                filtered_suggestions = [column for column in available_columns if column.startswith(partial_column)]
+            if "," in columns_part:
+                last_comma_index = columns_part.rindex(",")
+                partial_column = columns_part[last_comma_index + 1 :].strip()
+                filtered_suggestions = [
+                    column
+                    for column in available_columns
+                    if column.startswith(partial_column)
+                ]
             else:
                 partial_column = columns_part
-                filtered_suggestions = [column for column in available_columns if column.startswith(partial_column)]
+                filtered_suggestions = [
+                    column
+                    for column in available_columns
+                    if column.startswith(partial_column)
+                ]
             return {"type": "column", "suggestions": filtered_suggestions}
         return {"type": "unknown", "suggestions": []}
 
     def match_partial_command(self, parts, index, command, next_options):
-        if parts[index].startswith(command[:len(parts[index])]):
+        if parts[index].startswith(command[: len(parts[index])]):
             if len(parts) == index + 1 or (
-                    len(parts) > index + 1 and any(parts[index + 1].startswith(option) for option in next_options)):
+                len(parts) > index + 1
+                and any(parts[index + 1].startswith(option) for option in next_options)
+            ):
                 return True
         return False
 
     def convert_to_snake_case(name):
-        return name.strip().replace(' ', '_').lower()
+        return name.strip().replace(" ", "_").lower()
 
     def execute(self):
         url = f"https://api.openalex.org/{self.old_query()}"
-        r = requests.get(url)
+
+        # add id to select if not present
+        parsed_url = urlparse(url)
+        query_params = parse_qs(parsed_url.query)
+        select_params = (
+            query_params.get("select", [""])[0].split(",")
+            if "select" in query_params
+            else []
+        )
+
+        if select_params and "id" not in select_params:
+            select_params.append("id")
+            query_params["select"] = ",".join(select_params)
+
+        new_query_string = urlencode(query_params, doseq=True)
+        new_url = urlunparse(
+            (
+                parsed_url.scheme,
+                parsed_url.netloc,
+                parsed_url.path,
+                parsed_url.params,
+                new_query_string,
+                parsed_url.fragment,
+            )
+        )
+
+        r = requests.get(new_url)
         return r.json()
 
     def get_valid_columns(self):
@@ -182,12 +233,12 @@ class Query:
             "query": {
                 "original": self.query_string,
                 "oql": self.oql_query(),
-                "v1": self.old_query()
+                "v1": self.old_query(),
             },
             "is_valid": self.is_valid(),
-            "autocomplete": self.autocomplete()
+            "autocomplete": self.autocomplete(),
         }
 
 
 def convert_to_snake_case(name):
-    return name.strip().replace(' ', '_').lower()
+    return name.strip().replace(" ", "_").lower()

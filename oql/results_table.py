@@ -7,7 +7,11 @@ from config.property_config import property_configs_dict
 class ResultTable:
     def __init__(self, entity, columns, json_data):
         self.entity = entity
-        self.columns = columns if columns else entity_configs_dict[entity]['rowsToShowOnEntityPage']
+        self.columns = (
+            columns
+            if columns
+            else entity_configs_dict[entity]["rowsToShowOnEntityPage"]
+        )
         self.json_data = json_data
         self.config = entity_configs_dict[entity]
 
@@ -15,20 +19,25 @@ class ResultTable:
         return [
             property_configs_dict[self.entity][column]
             for column in self.columns
-            if self.entity in property_configs_dict and column in property_configs_dict[self.entity]
+            if self.entity in property_configs_dict
+            and column in property_configs_dict[self.entity]
         ]
 
     def body(self):
-        return [self.format_row(row) for row in self.json_data['results']]
+        return [self.format_row(row) for row in self.json_data["results"]]
 
     def format_row(self, row):
-        result = []
+        row_id = row.get("id")
+        result = {"id": row_id, "cells": []}
         for column in self.columns:
             value = self.get_column_value(row, column)
             # if value is a list of dictionaries, remove the duplicates
             if isinstance(value, list):
-                value = [dict(t) for t in {tuple(d.items()) for d in value if type(d) is dict}]
-            result.append(self.format_value(column, value))
+                value = [
+                    dict(t)
+                    for t in {tuple(d.items()) for d in value if type(d) is dict}
+                ]
+            result["cells"].append(self.format_value(column, value))
         return result
 
     def get_column_value(self, row, column):
@@ -83,13 +92,17 @@ class ResultTable:
             if remaining_keys:
                 nested_key = remaining_keys[0]
                 if isinstance(dict_.get(nested_key), list):
-                    nested_values = self.get_nested_values(dict_, ".".join(remaining_keys))
+                    nested_values = self.get_nested_values(
+                        dict_, ".".join(remaining_keys)
+                    )
                     values.extend(nested_values)
                 else:
                     if remaining_keys[-1] == "id":
                         modified_keys = remaining_keys[:-1] + ["display_name"]
                         value = self.get_nested_value(dict_, ".".join(remaining_keys))
-                        display_name = self.get_nested_value(dict_, ".".join(modified_keys))
+                        display_name = self.get_nested_value(
+                            dict_, ".".join(modified_keys)
+                        )
                         values.append({"id": value, "display_name": display_name})
                     else:
                         value = self.get_nested_value(dict_, ".".join(remaining_keys))
@@ -127,22 +140,8 @@ class ResultTable:
     def convert_abtract_inverted_index(self, data):
         positions = [(key, ord) for key, values in data.items() for ord in values]
         sorted_positions = sorted(positions, key=lambda x: x[1])
-        result = ' '.join(key for key, _ in sorted_positions)
+        result = " ".join(key for key, _ in sorted_positions)
         return result
 
     def response(self):
-        return {
-            "results": {
-                "header": self.header(),
-                "body": self.body()
-            }
-        }
-
-
-if __name__ == "__main__":
-    entity = "works"
-    columns = []
-    json_data = requests.get(f"https://api.openalex.org/works").json()
-    rt = ResultTable(entity, columns, json_data)
-    rt.header()
-    rt.body()
+        return {"results": {"header": self.header(), "body": self.body()}}
