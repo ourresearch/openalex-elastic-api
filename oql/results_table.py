@@ -1,5 +1,3 @@
-import requests
-
 from config.entity_config import entity_configs_dict
 from config.property_config import property_configs_dict
 
