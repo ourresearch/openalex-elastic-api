@@ -45,12 +45,6 @@ entity_configs = [
             "grants.funder",
             "grants.award_id",
         ],
-        "sortByColumns": [
-            "display_name",
-            "publication_year",
-            "cited_by_count",
-            "apc_paid.value_usd",
-        ],
         "groupByDefaults": [
             "publication_year",
             "open_access.is_oa",

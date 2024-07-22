@@ -364,6 +364,27 @@ property_configs = [
         "extractFn": "(entity) => entity.display_name",
     },
     {
+        "key": "title",
+        "id": "title",
+        "isColumnMandatory": False,
+        "entityType": "works",
+        "subjectEntity": "works",
+        "displayName": "title",
+        "type": "search",
+        "newType": "string",
+        "actions": [
+            "sort",
+            "column",
+        ],
+        "actionsPopular": [
+            "sort",
+            "column",
+        ],
+        "category": "other",
+        "icon": "mdi-file-document-outline",
+        "extractFn": "(entity) => entity.display_name",
+    },
+    {
         "key": "has_abstract",
         "id": "has_abstract",
         "entityType": "works",
