@@ -44,6 +44,12 @@ class TestQueryAutocomplete(unittest.TestCase):
         suggestions = query.autocomplete()['suggestions']
         assert "return columns" in suggestions
 
+    def test_works_return_columns_extended_2(self):
+        query_string = "get works return co"
+        query = Query(query_string=query_string)
+        suggestions = query.autocomplete()['suggestions']
+        assert "columns" in suggestions
+
     def test_works_sort_by_autocomplete_1(self):
         query_string = "get works"
         query = Query(query_string=query_string)

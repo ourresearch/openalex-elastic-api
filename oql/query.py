@@ -167,7 +167,7 @@ class Query:
 
     def handle_sort_part(self, parts):
         if len(parts) >= 3 and "sort".startswith(parts[2]):
-            if len(parts) == 3 or (len(parts) == 4 and "by".startswith(parts[3])):
+            if len(parts) == 3 or (len(parts) == 4 and "by".startswith(parts[3]) and parts[3] != "by"):
                 return {"type": "verb", "suggestions": ["sort by"]}
             elif len(parts) >= 4 and parts[3] == "by":
                 if len(parts) == 4:
