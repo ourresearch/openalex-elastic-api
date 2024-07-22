@@ -54,7 +54,7 @@ class TestQueryAutocomplete(unittest.TestCase):
         query_string = "get works sort"
         query = Query(query_string=query_string)
         suggestions = query.autocomplete()['suggestions']
-        assert "by" in suggestions
+        assert "sort by" in suggestions
 
     def test_works_sort_by_autocomplete_3(self):
         query_string = "get works sort by"
