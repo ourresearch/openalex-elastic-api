@@ -57,6 +57,15 @@ class TestQueryEntity(unittest.TestCase):
         self.assertFalse(query.is_valid())
 
 
+class TestQueryFilter(unittest.TestCase):
+    def test_filter_publication_year(self):
+        query_string = "get works where publication_year is 2020"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/works?page=1&per_page=25&filter=publication_year:2020")
+        self.assertEqual(query.oql_query(), "get works where publication_year is 2020")
+        self.assertTrue(query.is_valid())
+
+
 class TestQueryReturnColumns(unittest.TestCase):
     def test_valid_works_return_columns(self):
         query_string = "get works return columns doi, title"

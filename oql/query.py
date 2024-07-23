@@ -13,7 +13,8 @@ class Query:
     def __init__(self, query_string, page=1, per_page=25):
         self.query_string = query_string
         self.entity = self.detect_entity()
-        self.columns = self.detect_columns()
+        self.filter_by = self.detect_filter_by()
+        self.columns = self.detect_return_columns()
         self.sort_by = self.detect_sort_by()
         self.valid_columns = self.get_valid_columns()
         self.valid_sort_columns = self.get_valid_sort_columns()
@@ -24,7 +25,10 @@ class Query:
     def detect_entity(self):
         return self._detect_pattern(r"\b(?:get)\s+(\w+)", group=1)
 
-    def detect_columns(self):
+    def detect_filter_by(self):
+        return self._detect_pattern(r"\b(?:where)\s+(.+)", group=1)
+
+    def detect_return_columns(self):
         columns = self._detect_pattern(r"\b(?:return)\s+columns\s+(.+)", group=1)
         if columns:
             return [convert_to_snake_case(col.strip()) for col in columns.split(",")]
@@ -45,6 +49,7 @@ class Query:
         return any(
             [
                 self._is_valid_simple_get(),
+                self._is_valid_get_with_filter_by(),
                 self._is_valid_get_with_columns(),
                 self._is_valid_get_with_sort(),
                 self._is_valid_get_with_sort_and_columns(),
@@ -55,6 +60,13 @@ class Query:
         return (
             self.query_string.strip().lower() == f"get {self.entity}"
             and self.entity in valid_entities
+        )
+
+    def _is_valid_get_with_filter_by(self):
+        return (
+            self.query_string.lower().startswith(f"get {self.entity} where")
+            and self.filter_by
+            and self.query_string.lower() == f"get {self.entity} where {self.filter_by}"
         )
 
     def _is_valid_get_with_columns(self):
@@ -86,13 +98,23 @@ class Query:
             == f"get {self.entity} sort by {self.sort_by} return columns {', '.join(self.columns)}"
         )
 
+    # conversion methods
+    def convert_filter_by(self):
+        parts = self.filter_by.split()
+        if len(parts) == 3 and parts[1] == "is":
+            return f"{parts[0]}:{parts[2]}"
+
     # clause properties
     @property
     def get_clause(self):
         return f"get {self.entity}" if self.entity else None
 
     @property
-    def columns_clause(self):
+    def filter_by_clause(self):
+        return f"where {self.filter_by}" if self.filter_by else None
+
+    @property
+    def return_columns_clause(self):
         return f"return columns {', '.join(self.columns)}" if self.columns else None
 
     @property
@@ -116,6 +138,8 @@ class Query:
             params.append(f"per_page={self.per_page}")
         if self.sort_by:
             params.append(f"sort={self.sort_by}")
+        if self.filter_by:
+            params.append(f"filter={self.convert_filter_by()}")
 
         if params:
             url += "&" + "&".join(params) if "?" in url else "?" + "&".join(params)
@@ -127,7 +151,13 @@ class Query:
             return None
 
         clauses = filter(
-            None, [self.get_clause, self.sort_by_clause, self.columns_clause]
+            None,
+            [
+                self.get_clause,
+                self.filter_by_clause,
+                self.sort_by_clause,
+                self.return_columns_clause,
+            ],
         )
         return " ".join(clauses)
 
