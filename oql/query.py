@@ -248,6 +248,8 @@ class Query:
         return property_configs_dict[self.entity].keys() if self.entity and self.entity in entity_configs_dict else []
 
     def get_valid_sort_columns(self):
+        if not self.entity or self.entity and self.entity not in entity_configs_dict:
+            return []
         return [key for key, values in property_configs_dict[self.entity].items() if "sort" in values.get("actions", [])]
 
     def to_dict(self):

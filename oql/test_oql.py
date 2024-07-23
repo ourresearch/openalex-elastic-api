@@ -8,12 +8,63 @@ python -m unittest discover oql
 
 
 class TestQueryEntity(unittest.TestCase):
-    def test_get_entity(self):
+    def test_get_works_valid(self):
         query_string = "get works"
         query = Query(query_string=query_string)
         self.assertTrue(query.is_valid())
         self.assertEqual(query.old_query(), "/works?page=1&per_page=25")
         self.assertEqual(query.oql_query(), "get works")
+        self.assertTrue(query.is_valid())
+
+    def test_publishers_valid(self):
+        query_string = "get publishers"
+        query = Query(query_string=query_string)
+        self.assertTrue(query.is_valid())
+        self.assertEqual(query.old_query(), "/publishers?page=1&per_page=25")
+        self.assertEqual(query.oql_query(), "get publishers")
+        self.assertTrue(query.is_valid())
+
+    def test_authors_valid(self):
+        query_string = "get authors"
+        query = Query(query_string=query_string)
+        self.assertTrue(query.is_valid())
+        self.assertEqual(query.old_query(), "/authors?page=1&per_page=25")
+        self.assertEqual(query.oql_query(), "get authors")
+        self.assertTrue(query.is_valid())
+
+    def test_entitiy_invalid(self):
+        query_string = "get invalid"
+        query = Query(query_string=query_string)
+        self.assertFalse(query.is_valid())
+        self.assertEqual(query.old_query(), None)
+        self.assertEqual(query.oql_query(), None)
+        self.assertFalse(query.is_valid())
+
+
+class TestQueryReturnColumns(unittest.TestCase):
+    def test_valid_works_return_columns(self):
+        query_string = "get works return columns doi, title"
+        query = Query(query_string=query_string)
+        self.assertTrue(query.is_valid())
+        self.assertEqual(query.old_query(), "/works?select=doi,title&page=1&per_page=25")
+        self.assertEqual(query.oql_query(), "get works return columns doi, title")
+        self.assertTrue(query.is_valid())
+
+    def test_valid_authors_return_columns(self):
+        query_string = "get authors return columns id, display_name"
+        query = Query(query_string=query_string)
+        self.assertTrue(query.is_valid())
+        self.assertEqual(query.old_query(), "/authors?select=id,display_name&page=1&per_page=25")
+        self.assertEqual(query.oql_query(), "get authors return columns id, display_name")
+        self.assertTrue(query.is_valid())
+
+    def test_works_invalid_return_columns(self):
+        query_string = "get works return columns invalid"
+        query = Query(query_string=query_string)
+        self.assertFalse(query.is_valid())
+        self.assertEqual(query.old_query(), None)
+        self.assertEqual(query.oql_query(), None)
+        self.assertFalse(query.is_valid())
 
 
 class TestQueryAutocomplete(unittest.TestCase):
@@ -37,55 +88,6 @@ class TestQueryAutocomplete(unittest.TestCase):
         query = Query(query_string=query_string)
         suggestions = query.autocomplete()['suggestions']
         assert "return columns" in suggestions
-
-    def test_works_return_columns_extended(self):
-        query_string = "get works return"
-        query = Query(query_string=query_string)
-        suggestions = query.autocomplete()['suggestions']
-        assert "return columns" in suggestions
-
-    def test_works_return_columns_extended_2(self):
-        query_string = "get works return co"
-        query = Query(query_string=query_string)
-        suggestions = query.autocomplete()['suggestions']
-        assert "columns" in suggestions
-
-    def test_works_sort_by_autocomplete_1(self):
-        query_string = "get works"
-        query = Query(query_string=query_string)
-        suggestions = query.autocomplete()['suggestions']
-        assert "sort by" in suggestions
-
-    def test_works_sort_by_autocomplete_2(self):
-        query_string = "get works sort"
-        query = Query(query_string=query_string)
-        suggestions = query.autocomplete()['suggestions']
-        assert "sort by" in suggestions
-
-    def test_works_sort_by_autocomplete_3(self):
-        query_string = "get works sort by"
-        query = Query(query_string=query_string)
-        suggestions = query.autocomplete()['suggestions']
-        assert "publication_year" in suggestions
-
-    def test_works_sort_by_autocomplete_4(self):
-        query_string = "get works sort by pub"
-        query = Query(query_string=query_string)
-        suggestions = query.autocomplete()['suggestions']
-        assert "publication_year" in suggestions and len(suggestions) == 1
-
-    def test_works_sort_by_valid(self):
-        query_string = "get works sort by publication_year"
-        query = Query(query_string=query_string)
-        self.assertTrue(query.is_valid())
-        self.assertEqual(query.oql_query(), "get works sort by publication_year")
-
-    def test_works_sort_by_query(self):
-        query_string = "get works sort by publication_year"
-        query = Query(query_string=query_string)
-        self.assertTrue(query.is_valid())
-        self.assertEqual(query.oql_query(), "get works sort by publication_year")
-        self.assertEqual(query.old_query(), "/works?page=1&per_page=25&sort=publication_year")
 
 
 if __name__ == "__main__":
