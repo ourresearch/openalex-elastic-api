@@ -32,7 +32,7 @@ class TestQueryEntity(unittest.TestCase):
         self.assertEqual(query.oql_query(), "get authors")
         self.assertTrue(query.is_valid())
 
-    def test_entitiy_invalid(self):
+    def test_entity_invalid(self):
         query_string = "get invalid"
         query = Query(query_string=query_string)
         self.assertFalse(query.is_valid())
@@ -60,6 +60,40 @@ class TestQueryReturnColumns(unittest.TestCase):
 
     def test_works_invalid_return_columns(self):
         query_string = "get works return columns invalid"
+        query = Query(query_string=query_string)
+        self.assertFalse(query.is_valid())
+        self.assertEqual(query.old_query(), None)
+        self.assertEqual(query.oql_query(), None)
+        self.assertFalse(query.is_valid())
+
+
+class TestQuerySortBy(unittest.TestCase):
+    def test_works_sort_by(self):
+        query_string = "get works sort by title"
+        query = Query(query_string=query_string)
+        self.assertTrue(query.is_valid())
+        self.assertEqual(query.old_query(), "/works?page=1&per_page=25&sort=title")
+        self.assertEqual(query.oql_query(), "get works sort by title")
+        self.assertTrue(query.is_valid())
+
+    def test_works_sort_by_invalid(self):
+        query_string = "get works sort by invalid"
+        query = Query(query_string=query_string)
+        self.assertFalse(query.is_valid())
+        self.assertEqual(query.old_query(), None)
+        self.assertEqual(query.oql_query(), None)
+        self.assertFalse(query.is_valid())
+
+    def test_works_sort_by_before_return_columns(self):
+        query_string = "get works sort by title return columns doi, title"
+        query = Query(query_string=query_string)
+        self.assertTrue(query.is_valid())
+        self.assertEqual(query.old_query(), "/works?select=doi,title&page=1&per_page=25&sort=title")
+        self.assertEqual(query.oql_query(), "get works sort by title return columns doi, title")
+        self.assertTrue(query.is_valid())
+
+    def test_works_sort_by_invalid_columns(self):
+        query_string = "get works sort by title return columns invalid"
         query = Query(query_string=query_string)
         self.assertFalse(query.is_valid())
         self.assertEqual(query.old_query(), None)
