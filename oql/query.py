@@ -63,10 +63,12 @@ class Query:
         )
 
     def _is_valid_get_with_filter_by(self):
+        columns = self.convert_filter_by().keys() if self.filter_by else []
         return (
             self.query_string.lower().startswith(f"get {self.entity} where")
             and self.filter_by
             and self.query_string.lower() == f"get {self.entity} where {self.filter_by}"
+            and all(col in self.valid_columns for col in columns)
         )
 
     def _is_valid_get_with_columns(self):
@@ -100,9 +102,17 @@ class Query:
 
     # conversion methods
     def convert_filter_by(self):
-        parts = self.filter_by.split()
-        if len(parts) == 3 and parts[1] == "is":
-            return f"{parts[0]}:{parts[2]}"
+        filters_dict = {}
+        filters = self.filter_by.split(",")
+
+        for filter_condition in filters:
+            parts = filter_condition.strip().split()
+            if len(parts) == 3 and parts[1].lower() == "is":
+                key = parts[0]
+                value = parts[2]
+                filters_dict[key] = value
+
+        return filters_dict
 
     # clause properties
     @property
@@ -139,7 +149,12 @@ class Query:
         if self.sort_by:
             params.append(f"sort={self.sort_by}")
         if self.filter_by:
-            params.append(f"filter={self.convert_filter_by()}")
+            filter_string = ""
+            for key, value in self.convert_filter_by().items():
+                # create comma separated list but do not include the last comma
+                filter_string += f"{key}:{value},"
+            filter_string = filter_string[:-1]
+            params.append(f"filter={filter_string}")
 
         if params:
             url += "&" + "&".join(params) if "?" in url else "?" + "&".join(params)

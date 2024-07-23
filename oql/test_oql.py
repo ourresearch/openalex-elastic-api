@@ -65,6 +65,20 @@ class TestQueryFilter(unittest.TestCase):
         self.assertEqual(query.oql_query(), "get works where publication_year is 2020")
         self.assertTrue(query.is_valid())
 
+    def test_filter_invalid(self):
+        query_string = "get works where pub is 2020"
+        query = Query(query_string=query_string)
+        self.assertIsNone(query.old_query())
+        self.assertIsNone(query.oql_query())
+        self.assertFalse(query.is_valid())
+
+    def test_multiple_filters(self):
+        query_string = "get works where publication_year is 2020, doi is 10.1234/abc"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/works?page=1&per_page=25&filter=publication_year:2020,doi:10.1234/abc")
+        self.assertEqual(query.oql_query(), "get works where publication_year is 2020, doi is 10.1234/abc")
+        self.assertTrue(query.is_valid())
+
 
 class TestQueryReturnColumns(unittest.TestCase):
     def test_valid_works_return_columns(self):
