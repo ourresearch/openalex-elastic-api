@@ -36,8 +36,24 @@ class TestQueryEntity(unittest.TestCase):
         query_string = "get invalid"
         query = Query(query_string=query_string)
         self.assertFalse(query.is_valid())
-        self.assertEqual(query.old_query(), None)
-        self.assertEqual(query.oql_query(), None)
+        self.assertIsNone(query.old_query())
+        self.assertIsNone(query.oql_query())
+        self.assertFalse(query.is_valid())
+
+    def test_entity_invalid_verb(self):
+        query_string = "inva"
+        query = Query(query_string=query_string)
+        self.assertFalse(query.is_valid())
+        self.assertIsNone(query.old_query())
+        self.assertIsNone(query.oql_query())
+        self.assertFalse(query.is_valid())
+
+    def test_entity_partial_very_short(self):
+        query_string = "g"
+        query = Query(query_string=query_string)
+        self.assertFalse(query.is_valid())
+        self.assertIsNone(query.old_query())
+        self.assertIsNone(query.oql_query())
         self.assertFalse(query.is_valid())
 
 
@@ -62,8 +78,24 @@ class TestQueryReturnColumns(unittest.TestCase):
         query_string = "get works return columns invalid"
         query = Query(query_string=query_string)
         self.assertFalse(query.is_valid())
-        self.assertEqual(query.old_query(), None)
-        self.assertEqual(query.oql_query(), None)
+        self.assertIsNone(query.old_query())
+        self.assertIsNone(query.oql_query())
+        self.assertFalse(query.is_valid())
+
+    def test_authors_valid_sort_and_return_columns(self):
+        query_string = "get authors sort by display_name return columns id, display_name"
+        query = Query(query_string=query_string)
+        self.assertTrue(query.is_valid())
+        self.assertEqual(query.old_query(), "/authors?select=id,display_name&page=1&per_page=25&sort=display_name")
+        self.assertEqual(query.oql_query(), "get authors sort by display_name return columns id, display_name")
+        self.assertTrue(query.is_valid())
+
+    def test_work_invalid_sort_and_valid_return_columns(self):
+        query_string = "get works sort by invalid return columns doi, title"
+        query = Query(query_string=query_string)
+        self.assertFalse(query.is_valid())
+        self.assertIsNone(query.old_query())
+        self.assertIsNone(query.oql_query())
         self.assertFalse(query.is_valid())
 
 
@@ -80,8 +112,8 @@ class TestQuerySortBy(unittest.TestCase):
         query_string = "get works sort by invalid"
         query = Query(query_string=query_string)
         self.assertFalse(query.is_valid())
-        self.assertEqual(query.old_query(), None)
-        self.assertEqual(query.oql_query(), None)
+        self.assertIsNone(query.old_query())
+        self.assertIsNone(query.oql_query())
         self.assertFalse(query.is_valid())
 
     def test_works_sort_by_before_return_columns(self):
@@ -96,8 +128,8 @@ class TestQuerySortBy(unittest.TestCase):
         query_string = "get works sort by title return columns invalid"
         query = Query(query_string=query_string)
         self.assertFalse(query.is_valid())
-        self.assertEqual(query.old_query(), None)
-        self.assertEqual(query.oql_query(), None)
+        self.assertIsNone(query.old_query())
+        self.assertIsNone(query.oql_query())
         self.assertFalse(query.is_valid())
 
 
