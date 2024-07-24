@@ -26,7 +26,9 @@ class Query:
         return self._detect_pattern(r"\b(?:get)\s+(\w+)", group=1)
 
     def detect_filter_by(self):
-        return self._detect_pattern(r"\b(?:where)\s+(.+)", group=1)
+        return self._detect_pattern(
+            r"\b(?:where)\s+((?:(?!\b(?:return columns|sort by)\b).)+)", group=1
+        )
 
     def detect_return_columns(self):
         columns = self._detect_pattern(r"\b(?:return)\s+columns\s+(.+)", group=1)
@@ -42,7 +44,7 @@ class Query:
 
     def _detect_pattern(self, pattern, group=0):
         match = re.search(pattern, self.query_string, re.IGNORECASE)
-        return match.group(group) if match else None
+        return match.group(group).strip() if match else None
 
     # validation methods
     def is_valid(self):
@@ -50,6 +52,7 @@ class Query:
             [
                 self._is_valid_simple_get(),
                 self._is_valid_get_with_filter_by(),
+                self._is_valid_get_with_filter_by_and_columns(),
                 self._is_valid_get_with_columns(),
                 self._is_valid_get_with_sort(),
                 self._is_valid_get_with_sort_and_columns(),
@@ -68,6 +71,18 @@ class Query:
             self.query_string.lower().startswith(f"get {self.entity} where")
             and self.filter_by
             and self.query_string.lower() == f"get {self.entity} where {self.filter_by}"
+            and all(col in self.valid_columns for col in columns)
+        )
+
+    def _is_valid_get_with_filter_by_and_columns(self):
+        columns = self.convert_filter_by().keys() if self.filter_by else []
+        return (
+            self.query_string.lower().startswith(f"get {self.entity} where")
+            and self.filter_by
+            and self.columns
+            and all(col in self.valid_columns for col in self.columns)
+            and self.query_string.lower()
+            == f"get {self.entity} where {self.filter_by} return columns {', '.join(self.columns)}"
             and all(col in self.valid_columns for col in columns)
         )
 
