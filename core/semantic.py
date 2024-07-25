@@ -35,7 +35,7 @@ def knn_query(embedding, k=10):
         },
         "_source": ["work_id"],  # Specify the source fields to be returned
     }
-    response = es.search(index="work-embeddings-v1", body=query)
+    response = es.search(index="work-embeddings-v2", body=query)
     work_ids_with_scores = [
         (hit["_source"]["work_id"], hit["_score"]) for hit in response["hits"]["hits"]
     ]
@@ -45,7 +45,7 @@ def knn_query(embedding, k=10):
 
 def total_record_count():
     es = Elasticsearch([os.getenv("ELASTIC_SEMANTIC_URL")])
-    response = es.count(index="work-embeddings-v1", body={"query": {"match_all": {}}})
+    response = es.count(index="work-embeddings-v2", body={"query": {"match_all": {}}})
     return response["count"]
 
 
