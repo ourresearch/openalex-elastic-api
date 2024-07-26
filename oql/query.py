@@ -11,6 +11,9 @@ valid_entities = list(entity_configs_dict.keys())
 
 class Query:
     def __init__(self, query_string, page=1, per_page=25):
+        self.verbs = {
+            "select": "list",
+        }
         self.query_string = query_string
         self.entity = self.detect_entity()
         self.filter_by = self.detect_filter_by()
@@ -23,7 +26,7 @@ class Query:
 
     # detection methods
     def detect_entity(self):
-        return self._detect_pattern(r"\b(?:get)\s+(\w+)", group=1)
+        return self._detect_pattern(r"\b(?:list)\s+(\w+)", group=1)
 
     def detect_filter_by(self):
         return self._detect_pattern(
@@ -61,58 +64,70 @@ class Query:
 
     def _is_valid_simple_get(self):
         return (
-            self.query_string.strip().lower() == f"get {self.entity}"
+            self.query_string.strip().lower() == f"{self.verbs['select']} {self.entity}"
             and self.entity in valid_entities
         )
 
     def _is_valid_get_with_filter_by(self):
         columns = self.convert_filter_by().keys() if self.filter_by else []
         return (
-            self.query_string.lower().startswith(f"get {self.entity} where")
+            self.query_string.lower().startswith(
+                f"{self.verbs['select']} {self.entity} where"
+            )
             and self.filter_by
-            and self.query_string.lower() == f"get {self.entity} where {self.filter_by}"
+            and self.query_string.lower()
+            == f"{self.verbs['select']} {self.entity} where {self.filter_by}"
             and all(col in self.valid_columns for col in columns)
         )
 
     def _is_valid_get_with_filter_by_and_columns(self):
         columns = self.convert_filter_by().keys() if self.filter_by else []
         return (
-            self.query_string.lower().startswith(f"get {self.entity} where")
+            self.query_string.lower().startswith(
+                f"{self.verbs['select']} {self.entity} where"
+            )
             and self.filter_by
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
             and self.query_string.lower()
-            == f"get {self.entity} where {self.filter_by} return columns {', '.join(self.columns)}"
+            == f"{self.verbs['select']} {self.entity} where {self.filter_by} return columns {', '.join(self.columns)}"
             and all(col in self.valid_columns for col in columns)
         )
 
     def _is_valid_get_with_columns(self):
         return (
-            self.query_string.lower().startswith(f"get {self.entity} return columns")
+            self.query_string.lower().startswith(
+                f"{self.verbs['select']} {self.entity} return columns"
+            )
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
             and self.query_string.lower()
-            == f"get {self.entity} return columns {', '.join(self.columns)}"
+            == f"{self.verbs['select']} {self.entity} return columns {', '.join(self.columns)}"
         )
 
     def _is_valid_get_with_sort(self):
         return (
-            self.query_string.lower().startswith(f"get {self.entity} sort by")
+            self.query_string.lower().startswith(
+                f"{self.verbs['select']} {self.entity} sort by"
+            )
             and self.sort_by
             and self.sort_by in self.valid_sort_columns
             and not self.columns
-            and self.query_string.lower() == f"get {self.entity} sort by {self.sort_by}"
+            and self.query_string.lower()
+            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by}"
         )
 
     def _is_valid_get_with_sort_and_columns(self):
         return (
-            self.query_string.lower().startswith(f"get {self.entity} sort by")
+            self.query_string.lower().startswith(
+                f"{self.verbs['select']} {self.entity} sort by"
+            )
             and self.sort_by
             and self.sort_by in self.valid_sort_columns
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
             and self.query_string.lower()
-            == f"get {self.entity} sort by {self.sort_by} return columns {', '.join(self.columns)}"
+            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by} return columns {', '.join(self.columns)}"
         )
 
     # conversion methods
@@ -132,7 +147,7 @@ class Query:
     # clause properties
     @property
     def get_clause(self):
-        return f"get {self.entity}" if self.entity else None
+        return f"{self.verbs['select']} {self.entity}" if self.entity else None
 
     @property
     def filter_by_clause(self):
@@ -198,7 +213,7 @@ class Query:
         if not query_lower or len(query_lower) < 3:
             return self.suggest_verbs()
 
-        if query_lower.startswith("get"):
+        if query_lower.startswith(self.verbs["select"]):
             parts = query_lower.split()
             if len(parts) == 1:
                 return self.suggest_entities()
@@ -229,7 +244,7 @@ class Query:
             return {"type": "verb", "suggestions": ["columns"]}
 
     def suggest_verbs(self):
-        return {"type": "verb", "suggestions": ["get"]}
+        return {"type": "verb", "suggestions": [self.verbs["select"]]}
 
     def suggest_entities(self):
         return {"type": "entity", "suggestions": valid_entities}
