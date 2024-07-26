@@ -76,7 +76,7 @@ class Query:
             )
             and self.filter_by
             and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} where {self.filter_by}"
+            == f"{self.verbs['select']} {self.entity} where {self.filter_by.lower()}"
             and all(col in self.valid_columns for col in columns)
         )
 
