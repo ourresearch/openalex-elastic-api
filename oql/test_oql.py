@@ -76,6 +76,15 @@ class TestQueryFilter(unittest.TestCase):
         self.assertEqual(query.oql_query(), "list institutions where country_code is CA")
         self.assertTrue(query.is_valid())
 
+    def test_filter_institution_by_id_return_works_count(self):
+        query_string = "list institutions where id is I27837315 return columns works_count"
+        query = Query(query_string=query_string)
+        self.assertEqual(
+            query.old_query(), "/institutions?select=works_count&page=1&per_page=25&filter=id:I27837315"
+        )
+        self.assertEqual(query.oql_query(), "list institutions where id is I27837315 return columns works_count")
+        self.assertTrue(query.is_valid())
+
     def test_filter_invalid(self):
         query_string = "list works where pub is 2020"
         query = Query(query_string=query_string)

@@ -90,7 +90,7 @@ class Query:
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
             and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} where {self.filter_by} return columns {', '.join(self.columns)}"
+            == f"{self.verbs['select']} {self.entity} where {self.filter_by.lower()} return columns {', '.join(self.columns)}"
             and all(col in self.valid_columns for col in columns)
         )
 
