@@ -250,6 +250,19 @@ class TestExamples(unittest.TestCase):
         )
         self.assertTrue(query.is_valid())
 
+    def test_example_2(self):
+        query_string = "get authors where id is A5022654839"
+        query = Query(query_string=query_string)
+        self.assertEqual(
+            query.old_query(),
+            "/authors?page=1&per_page=25&filter=id:A5022654839",
+        )
+        self.assertEqual(
+            query.oql_query(),
+            "get authors where id is A5022654839",
+        )
+        self.assertTrue(query.is_valid())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -59,6 +59,10 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("concept", None),
     ),
     OpenAlexIDField(
+        param="id",
+        custom_es_field="ids.openalex",
+    ),
+    OpenAlexIDField(
         param="concepts.id",
         custom_es_field="x_concepts.id",
         docstring=DOCSTRINGS["concept"],
