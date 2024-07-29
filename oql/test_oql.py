@@ -237,7 +237,7 @@ class TestQueryAutocomplete(unittest.TestCase):
 class TestExamples(unittest.TestCase):
     def test_example_1(self):
         query_string = (
-            "get institutions where id is I27837315 return count(works)"
+            "get institutions where institution is I27837315 return count(works)"
         )
         query = Query(query_string=query_string)
         self.assertEqual(
@@ -246,7 +246,7 @@ class TestExamples(unittest.TestCase):
         )
         self.assertEqual(
             query.oql_query(),
-            "get institutions where id is I27837315 return count(works)",
+            "get institutions where institution is I27837315 return count(works)",
         )
         self.assertTrue(query.is_valid())
 

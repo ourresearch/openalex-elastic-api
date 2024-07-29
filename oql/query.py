@@ -159,6 +159,8 @@ class Query:
             parts = filter_condition.strip().split()
             if len(parts) == 3 and parts[1].lower() == "is":
                 key = parts[0]
+                if key == "institution":
+                    key = "id"
                 value = parts[2]
                 filters_dict[key] = value
 
