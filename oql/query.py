@@ -12,7 +12,7 @@ valid_entities = list(entity_configs_dict.keys())
 class Query:
     def __init__(self, query_string, page=1, per_page=25):
         self.verbs = {
-            "select": "list",
+            "select": "get",
         }
         self.query_string = query_string
         self.entity = self.detect_entity()
@@ -26,7 +26,7 @@ class Query:
 
     # detection methods
     def detect_entity(self):
-        return self._detect_pattern(r"\b(?:list)\s+(\w+)", group=1)
+        return self._detect_pattern(r"\b(?:get)\s+(\w+)", group=1)
 
     def detect_filter_by(self):
         return self._detect_pattern(
