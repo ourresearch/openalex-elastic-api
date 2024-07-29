@@ -30,11 +30,12 @@ class Query:
 
     def detect_filter_by(self):
         return self._detect_pattern(
-            r"\b(?:where)\s+((?:(?!\b(?:return columns|sort by)\b).)+)", group=1
+            r"\b(?:where)\s+((?:(?!\b(?:return|sort by)\b).)+)", group=1
         )
 
     def detect_return_columns(self):
-        columns = self._detect_pattern(r"\b(?:return)\s+columns\s+(.+)", group=1)
+        pattern = r"\breturn\s+(.+)"
+        columns = self._detect_pattern(pattern, group=1)
         if columns:
             return [convert_to_snake_case(col.strip()) for col in columns.split(",")]
         return None
@@ -90,19 +91,19 @@ class Query:
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
             and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} where {self.filter_by.lower()} return columns {', '.join(self.columns)}"
+            == f"{self.verbs['select']} {self.entity} where {self.filter_by.lower()} return {', '.join(self.columns)}"
             and all(col in self.valid_columns for col in columns)
         )
 
     def _is_valid_get_with_columns(self):
         return (
             self.query_string.lower().startswith(
-                f"{self.verbs['select']} {self.entity} return columns"
+                f"{self.verbs['select']} {self.entity} return"
             )
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
             and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} return columns {', '.join(self.columns)}"
+            == f"{self.verbs['select']} {self.entity} return {', '.join(self.columns)}"
         )
 
     def _is_valid_get_with_sort(self):
@@ -127,7 +128,7 @@ class Query:
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
             and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by} return columns {', '.join(self.columns)}"
+            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by} return {', '.join(self.columns)}"
         )
 
     # conversion methods
@@ -155,7 +156,7 @@ class Query:
 
     @property
     def return_columns_clause(self):
-        return f"return columns {', '.join(self.columns)}" if self.columns else None
+        return f"return {', '.join(self.columns)}" if self.columns else None
 
     @property
     def sort_by_clause(self):
@@ -235,7 +236,7 @@ class Query:
 
     def _handle_return_columns(self, parts):
         if len(parts) == 3:
-            return {"type": "verb", "suggestions": ["return columns"]}
+            return {"type": "verb", "suggestions": ["return"]}
         elif len(parts) == 4 and parts[3] == "columns":
             return self.suggest_columns(parts)
         elif len(parts) > 4 and parts[3] == "columns":
@@ -251,7 +252,7 @@ class Query:
 
     def handle_entity_part(self, parts):
         if parts[1] in valid_entities:
-            return {"type": "verb", "suggestions": ["return columns", "sort by"]}
+            return {"type": "verb", "suggestions": ["return", "sort by"]}
         else:
             partial_entity = parts[1]
             filtered_suggestions = [
@@ -276,9 +277,9 @@ class Query:
                     if sort_suggestions["suggestions"]:
                         return sort_suggestions
                     else:
-                        return {"type": "verb", "suggestions": ["return columns"]}
+                        return {"type": "verb", "suggestions": ["return"]}
                 elif len(parts) > 5:
-                    return {"type": "verb", "suggestions": ["return columns"]}
+                    return {"type": "verb", "suggestions": ["return"]}
         return {"type": "unknown", "suggestions": []}
 
     def handle_columns_part(self, parts):
