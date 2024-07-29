@@ -18,6 +18,7 @@ class Query:
         self.entity = self.detect_entity()
         self.filter_by = self.detect_filter_by()
         self.columns = self.detect_return_columns()
+        self.display_columns = self.detect_display_columns()
         self.sort_by = self.detect_sort_by()
         self.valid_columns = self.get_valid_columns()
         self.valid_sort_columns = self.get_valid_sort_columns()
@@ -37,8 +38,26 @@ class Query:
         pattern = r"\breturn\s+(.+)"
         columns = self._detect_pattern(pattern, group=1)
         if columns:
+            columns = [convert_to_snake_case(col.strip()) for col in columns.split(",")]
+            columns = self.convert_stat_columns(columns)
+            return columns
+        return None
+
+    def detect_display_columns(self):
+        pattern = r"\breturn\s+(.+)"
+        columns = self._detect_pattern(pattern, group=1)
+        if columns:
             return [convert_to_snake_case(col.strip()) for col in columns.split(",")]
         return None
+
+    def convert_stat_columns(self, columns):
+        new_columns = []
+        for col in columns:
+            if col == "count(works)":
+                new_columns.append("works_count")
+            else:
+                new_columns.append(col)
+        return new_columns
 
     def detect_sort_by(self):
         sort_by = self._detect_pattern(r"\b(?:sort by)\s+(\w+)", group=1)
@@ -91,7 +110,7 @@ class Query:
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
             and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} where {self.filter_by.lower()} return {', '.join(self.columns)}"
+            == f"{self.verbs['select']} {self.entity} where {self.filter_by.lower()} return {', '.join(self.display_columns)}"
             and all(col in self.valid_columns for col in columns)
         )
 
@@ -103,7 +122,7 @@ class Query:
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
             and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} return {', '.join(self.columns)}"
+            == f"{self.verbs['select']} {self.entity} return {', '.join(self.display_columns)}"
         )
 
     def _is_valid_get_with_sort(self):
@@ -156,7 +175,7 @@ class Query:
 
     @property
     def return_columns_clause(self):
-        return f"return {', '.join(self.columns)}" if self.columns else None
+        return f"return {', '.join(self.display_columns)}" if self.display_columns else None
 
     @property
     def sort_by_clause(self):
