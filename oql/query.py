@@ -65,6 +65,9 @@ class Query:
             return convert_to_snake_case(sort_by)
         return None
 
+    def detect_using(self):
+        return self._detect_pattern(r"\b(?:using)\s+(\w+)", group=1)
+
     def _detect_pattern(self, pattern, group=0):
         match = re.search(pattern, self.query_string, re.IGNORECASE)
         return match.group(group).strip() if match else None
@@ -177,7 +180,11 @@ class Query:
 
     @property
     def return_columns_clause(self):
-        return f"return {', '.join(self.display_columns)}" if self.display_columns else None
+        return (
+            f"return {', '.join(self.display_columns)}"
+            if self.display_columns
+            else None
+        )
 
     @property
     def sort_by_clause(self):
@@ -186,6 +193,9 @@ class Query:
     # query methods
     def old_query(self):
         if not self.is_valid():
+            return None
+
+        if "using" in self.query_string:
             return None
 
         url = f"/{self.entity}"
@@ -214,6 +224,9 @@ class Query:
         return url
 
     def oql_query(self):
+        if "using" in self.query_string:
+            return self.query_string
+
         if not self.is_valid():
             return None
 

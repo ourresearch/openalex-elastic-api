@@ -263,6 +263,19 @@ class TestExamples(unittest.TestCase):
         )
         self.assertTrue(query.is_valid())
 
+    def test_example_3(self):
+        query_string = "using works where institution is i33213144 get type return count"
+        query = Query(query_string=query_string)
+        self.assertEqual(
+            query.old_query(),
+            "/works?page=1&per_page=25&filter=authorships.institution.id:i33213144",
+        )
+        self.assertEqual(
+            query.oql_query(),
+            "get works where publication_year is 2020 return doi, title",
+        )
+        self.assertTrue(query.is_valid())
+
 
 if __name__ == "__main__":
     unittest.main()

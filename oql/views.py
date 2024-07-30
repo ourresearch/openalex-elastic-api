@@ -5,6 +5,7 @@ from config.property_config import property_configs_dict
 from oql.query import Query
 from oql.schemas import QuerySchema
 from oql.results_table import ResultTable
+from oql.redshift import build_redshift_query, execute_redshift_query
 
 
 blueprint = Blueprint("oql", __name__)
@@ -42,7 +43,38 @@ def results():
             "results": [],
         }
     query = Query(query_string, page, per_page)
-    if query.is_valid():
+    if query.detect_using():
+        print(f"Detected using in query: {query_string}")
+        redshift_query = build_redshift_query(query_string)
+        redshift_results = execute_redshift_query(redshift_query)
+        json_data = {"results": []}
+        for r in redshift_results:
+            json_data["results"].append(
+                {
+                    "id": f"https://openalex.org/types/{r[0]}",
+                    "display_name": r[0],
+                    "works_count": r[1],
+                }
+            )
+        results_table = ResultTable(
+            "types", ["id", "display_name", "works_count"], json_data
+        )
+        results_table_response = results_table.response()
+        results_table_response["meta"] = {
+            "count": len(redshift_results),
+            "page": query.page,
+            "per_page": query.per_page,
+            "q": query_string,
+            "oql": query.oql_query(),
+            "v1": query.old_query(),
+        }
+        # reorder the dictionary
+        results_table_response = {
+            "meta": results_table_response.pop("meta"),
+            "results": results_table_response.pop("results"),
+        }
+        return jsonify(results_table_response)
+    elif query.is_valid():
         json_data = query.execute()
     else:
         return jsonify({"error": "Invalid query"}), 400
@@ -51,7 +83,7 @@ def results():
         columns = query.columns
         results_table = ResultTable(entity, columns, json_data)
         results_table_response = results_table.response()
-        results_table_response['meta'] = {
+        results_table_response["meta"] = {
             "count": results_table.count(),
             "page": query.page,
             "per_page": query.per_page,
