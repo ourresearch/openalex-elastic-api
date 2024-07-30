@@ -18,14 +18,32 @@ REDSHIFT_SCHEMA = {
         ("affiliation_id", "BIGINT"),
         ("author_sequence_number", "INTEGER"),
         ("original_author", "VARCHAR(65535)"),
-        ("original_orcid", "VARCHAR(500)"),
+        ("original_orcid", "VARCHAR(500)")
     ],
     "author": [
         ("author_id", "BIGINT"),
         ("display_name", "VARCHAR(65535)"),
-        ("merge_into_id", "BIGINT"),
+        ("merge_into_id", "BIGINT")
     ],
-    "citation": [("paper_id", "BIGINT"), ("paper_reference_id", "BIGINT")],
+    "citation": [
+        ("paper_id", "BIGINT"),
+        ("paper_reference_id", "BIGINT")
+    ],
+    "subfield": [
+        ("subfield_id", "INTEGER"),
+        ("display_name", "VARCHAR(65535)"),
+        ("description", "VARCHAR(65535)"),
+    ],
+    "topic": [
+        ("topic_id", "INTEGER"),
+        ("display_name", "VARCHAR(65535)"),
+        ("summary", "VARCHAR(65535)"),
+        ("keywords", "VARCHAR(65535)"),
+        ("subfield_id", "INTEGER"),
+        ("field_id", "INTEGER"),
+        ("domain_id", "INTEGER"),
+        ("wikipedia_url", "VARCHAR(65535)"),
+    ],
     "work": [
         ("paper_id", "BIGINT"),
         ("original_title", "VARCHAR(65535)"),
@@ -43,9 +61,18 @@ REDSHIFT_SCHEMA = {
         ("type", "VARCHAR(500)"),
         ("type_crossref", "VARCHAR(500)"),
         ("year", "INTEGER"),
-        ("created_date", "VARCHAR(500)"),
+        ("created_date", "VARCHAR(500)")
     ],
-    "work_concept": [("paper_id", "BIGINT"), ("field_of_study", "BIGINT")],
+    "work_concept": [
+        ("paper_id", "BIGINT"),
+        ("field_of_study", "BIGINT")
+    ],
+    "work_topic": [
+        ("paper_id", "BIGINT"),
+        ("topic_id", "INTEGER"),
+        ("score", "FLOAT")
+    ],
+
 }
 
 
@@ -75,8 +102,13 @@ def build_redshift_query(oql_query):
         f"given a redshift schema with tables in the following schema: {REDSHIFT_SCHEMA}"
         f" convert the following query to a redshift query: {clean_query} and only return the redshift query that is"
         f" needed to get results, formatted as a single string with no other context. Order by count desc if count"
-        f" is one of the columns."
+        f" is one of the columns. An institution and affiliation are the same thing."
     )
+    if "subfield" in oql_query:
+        print(f"adding more context for subfield query: {oql_query}")
+        subfield_context = ("To get subfields, join work_topic.paper_id to work.paper_id, then use the topic_id to get the subfield from the topic table. "
+                            "When grouping by a subfield, return the subfield display_name and subfield id in the group by.")
+        context = f"{context} {subfield_context}"
     response = call_openai_chatgpt(context)
     redshift_query = format_chatgpt_response(response)
     return redshift_query
@@ -109,7 +141,7 @@ def call_openai_chatgpt(prompt):
     data = {
         "model": "gpt-4o",
         "messages": messages,
-        "max_tokens": 100,
+        "max_tokens": 200,
         "temperature": 0.5,
     }
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
