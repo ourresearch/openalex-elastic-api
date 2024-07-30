@@ -82,7 +82,8 @@ def results():
             "per_page": query.per_page,
             "q": query_string,
             "oql": query.oql_query(),
-            "v1": query.old_query(),
+            "v1": None,
+            "redshift_query": redshift_query,
         }
         # reorder the dictionary
         results_table_response = {
