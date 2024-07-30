@@ -107,7 +107,7 @@ def build_redshift_query(oql_query):
     if "subfield" in oql_query:
         print(f"adding more context for subfield query: {oql_query}")
         subfield_context = ("To get subfields, join work_topic.paper_id to work.paper_id, then use the topic_id to get the subfield from the topic table. "
-                            "When grouping by a subfield, return the subfield display_name and subfield id in the group by.")
+                            "When grouping by a subfield, return in order: subfield_id, display_name, count, and share.")
         context = f"{context} {subfield_context}"
     response = call_openai_chatgpt(context)
     redshift_query = format_chatgpt_response(response)
@@ -176,6 +176,6 @@ def validate_redshift_query(query):
 
 
 if __name__ == "__main__":
-    oql_query = "using works where institution is 33213144 get type return count"
+    oql_query = "using works where institution is i33213144 and type is article and publication_year is >= 2004 get subfields return count, share_of(count)"
     query = build_redshift_query(oql_query)
     print(query)

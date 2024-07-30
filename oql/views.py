@@ -49,16 +49,32 @@ def results():
         redshift_results = execute_redshift_query(redshift_query)
         json_data = {"results": []}
         for r in redshift_results:
-            json_data["results"].append(
-                {
-                    "id": f"https://openalex.org/types/{r[0]}",
-                    "display_name": r[0],
-                    "works_count": r[1],
-                }
+            if "get subfields" in query_string:
+                json_data["results"].append(
+                    {
+                        "id": f"https://openalex.org/subfields/{r[0]}",
+                        "display_name": r[1],
+                        "works_count": r[2],
+                        "share": r[3],
+                    }
+                )
+            else:
+                json_data["results"].append(
+                    {
+                        "id": f"https://openalex.org/types/{r[0]}",
+                        "display_name": r[0],
+                        "works_count": r[1],
+                    }
+                )
+        print(json_data)
+        if "get subfields" in query_string:
+            results_table = ResultTable(
+                "subfields", ["id", "display_name", "works_count", "share"], json_data
             )
-        results_table = ResultTable(
-            "types", ["id", "display_name", "works_count"], json_data
-        )
+        else:
+            results_table = ResultTable(
+                "types", ["id", "display_name", "works_count"], json_data
+            )
         results_table_response = results_table.response()
         results_table_response["meta"] = {
             "count": len(redshift_results),

@@ -2512,6 +2512,28 @@ property_configs = [
         "isDisplayedAsCount": True,
         "extractFn": "(entity) => entity.works_count",
     },
+{
+        "key": "share",
+        "id": "share",
+        "entityType": "subfields",
+        "subjectEntity": "subfields",
+        "displayName": "share",
+        "type": "range",
+        "newType": "number",
+        "sortByValue": True,
+        "actions": [
+            "filter",
+            "sort",
+            "column",
+        ],
+        "actionsPopular": [
+            "sort",
+            "column",
+        ],
+        "icon": "mdi-file-document-multiple-outline",
+        "isDisplayedAsCount": True,
+        "extractFn": "(entity) => entity.works_count",
+    },
     {
         "key": "cited_by_count",
         "id": "cited_by_count",
