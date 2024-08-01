@@ -15,7 +15,7 @@ id_mapping = {
     "f": "funders",
     "p": "publishers",
     "s": "sources",
-    "t": "topics"
+    "t": "topics",
 }
 
 
@@ -46,7 +46,9 @@ def format_as_ui(entity, data):
     data = json.loads(data)
     for column in columns:
         config = property_configs_dict[entity].get(column)
-        is_list = column in property_configs_dict[entity] and property_configs_dict[entity][column].get("isList")
+        is_list = column in property_configs_dict[entity] and property_configs_dict[
+            entity
+        ][column].get("isList")
         if "." not in column:
             if column == "type":
                 value = f"/types/{data['type']}"
@@ -94,6 +96,19 @@ def format_as_ui(entity, data):
                     "config": config,
                 }
             )
+        elif column == "affiliations.institution.id":
+            results.append(
+                {
+                    "value": [
+                        {
+                            "id": convert_openalex_id(affiliation["institution"]["id"]),
+                            "display_name": affiliation["institution"]["display_name"],
+                        }
+                        for affiliation in data["affiliations"]
+                    ],
+                    "config": config,
+                }
+            )
         elif len(column.split(".")) == 2 and column.endswith(".id") and not is_list:
             first_key = column.split(".")[0]
             results.append(
@@ -111,7 +126,9 @@ def format_as_ui(entity, data):
             results.append(
                 {
                     "value": {
-                        "id": convert_openalex_id(data[first_key][second_key]["id"]) if data.get(first_key) else None,
+                        "id": convert_openalex_id(data[first_key][second_key]["id"])
+                        if data.get(first_key)
+                        else None,
                         "display_name": data[first_key][second_key]["display_name"],
                     },
                     "config": config,
@@ -121,7 +138,9 @@ def format_as_ui(entity, data):
             first_key = column.split(".")[0]
             results.append(
                 {
-                    "value": data[first_key][column.split(".")[1]] if data.get(first_key) else None,
+                    "value": data[first_key][column.split(".")[1]]
+                    if data.get(first_key)
+                    else None,
                     "config": config,
                 }
             )
@@ -144,7 +163,9 @@ def format_as_ui(entity, data):
                 {
                     "value": [
                         {
-                            "id": convert_openalex_id(item["id"]) if item.get("id") else None,
+                            "id": convert_openalex_id(item["id"])
+                            if item.get("id")
+                            else None,
                             "display_name": item["display_name"],
                         }
                         for item in data[first_key]

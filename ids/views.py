@@ -230,6 +230,19 @@ def authors_id_get(id):
     authors_schema = AuthorsSchema(
         context={"display_relevance": False}, only=only_fields
     )
+    if is_ui_format():
+        json_output = json.dumps(dict(authors_schema.dump(response[0])))
+        ui_format = format_as_ui("authors", json_output)
+        return jsonify(
+            {
+                "meta": {
+                    "count": 1,
+                    "page": 1,
+                    "per_page": 1,
+                },
+                "props": ui_format,
+            }
+        )
     return authors_schema.dump(response[0])
 
 
