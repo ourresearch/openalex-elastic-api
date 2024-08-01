@@ -478,6 +478,19 @@ def funders_id_get(id):
     funders_schema = FundersSchema(
         context={"display_relevance": False}, only=only_fields
     )
+    if is_ui_format():
+        json_output = json.dumps(dict(funders_schema.dump(response[0])))
+        ui_format = format_as_ui("funders", json_output)
+        return jsonify(
+            {
+                "meta": {
+                    "count": 1,
+                    "page": 1,
+                    "per_page": 1,
+                },
+                "props": ui_format,
+            }
+        )
     return funders_schema.dump(response[0])
 
 
@@ -522,6 +535,19 @@ def publishers_id_get(id):
     publishers_schema = PublishersSchema(
         context={"display_relevance": False}, only=only_fields
     )
+    if is_ui_format():
+        json_output = json.dumps(dict(publishers_schema.dump(response[0])))
+        ui_format = format_as_ui("publishers", json_output)
+        return jsonify(
+            {
+                "meta": {
+                    "count": 1,
+                    "page": 1,
+                    "per_page": 1,
+                },
+                "props": ui_format,
+            }
+        )
     return publishers_schema.dump(response[0])
 
 
@@ -620,6 +646,19 @@ def sources_id_get(id):
     sources_schema = SourcesSchema(
         context={"display_relevance": False}, only=only_fields
     )
+    if is_ui_format():
+        json_output = json.dumps(dict(sources_schema.dump(response[0])))
+        ui_format = format_as_ui("sources", json_output)
+        return jsonify(
+            {
+                "meta": {
+                    "count": 1,
+                    "page": 1,
+                    "per_page": 1,
+                },
+                "props": ui_format,
+            }
+        )
     return sources_schema.dump(response[0])
 
 

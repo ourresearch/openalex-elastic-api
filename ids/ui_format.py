@@ -117,9 +117,24 @@ def format_as_ui(entity, data):
                     "config": config,
                 }
             )
+        elif column == "publisher":
+            results.append(
+                {
+                    "value": {
+                        "id": convert_openalex_id(data["host_organization"])
+                        if data.get("host_organization")
+                        else None,
+                        "display_name": data.get("host_organization_name"),
+                    },
+                    "config": config,
+                }
+            )
+        # normal columns
         elif "." not in column:
-            if column == "type":
+            if column == "type" and entity == "works":
                 value = f"/types/{data['type']}"
+            elif column == "type" and entity == "sources":
+                value = f"/source-types/{data['type']}"
             elif column == "id":
                 value = convert_openalex_id(data["id"])
             else:
@@ -157,10 +172,11 @@ def format_as_ui(entity, data):
             )
         elif (len(column.split(".")) == 2) and not is_list:
             first_key = column.split(".")[0]
+            second_key = column.split(".")[1]
             results.append(
                 {
-                    "value": data[first_key][column.split(".")[1]]
-                    if data.get(first_key)
+                    "value": data[first_key][second_key]
+                    if first_key and data[first_key].get(second_key)
                     else None,
                     "config": config,
                 }
