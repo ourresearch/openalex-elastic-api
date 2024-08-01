@@ -313,6 +313,19 @@ def institutions_id_get(id):
     institutions_schema = InstitutionsSchema(
         context={"display_relevance": False}, only=only_fields
     )
+    if is_ui_format():
+        json_output = json.dumps(dict(institutions_schema.dump(response[0])))
+        ui_format = format_as_ui("institutions", json_output)
+        return jsonify(
+            {
+                "meta": {
+                    "count": 1,
+                    "page": 1,
+                    "per_page": 1,
+                },
+                "props": ui_format,
+            }
+        )
     return institutions_schema.dump(response[0])
 
 

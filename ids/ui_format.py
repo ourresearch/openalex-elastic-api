@@ -43,26 +43,15 @@ def convert_openalex_id(old_id):
 def format_as_ui(entity, data):
     results = []
     columns = entity_configs_dict[entity]["rowsToShowOnEntityPage"]
+    print(f"columns to process: {columns}")
     data = json.loads(data)
     for column in columns:
         config = property_configs_dict[entity].get(column)
         is_list = column in property_configs_dict[entity] and property_configs_dict[
             entity
         ][column].get("isList")
-        if "." not in column:
-            if column == "type":
-                value = f"/types/{data['type']}"
-            elif column == "id":
-                value = convert_openalex_id(data["id"])
-            else:
-                value = data[column]
-            results.append(
-                {
-                    "value": value,
-                    "config": config,
-                }
-            )
-        elif column == "grants.award_id":
+        # unique columns
+        if column == "grants.award_id":
             results.append(
                 {
                     "value": [grant["award_id"] for grant in data["grants"]],
@@ -106,6 +95,38 @@ def format_as_ui(entity, data):
                         }
                         for affiliation in data["affiliations"]
                     ],
+                    "config": config,
+                }
+            )
+        elif (
+            column == "parent_institutions"
+            or column == "child_institutions"
+            or column == "related_institutions"
+        ):
+            relationship = column.split("_")[0]
+            results.append(
+                {
+                    "value": [
+                        {
+                            "id": convert_openalex_id(institution["id"]),
+                            "display_name": institution["display_name"],
+                        }
+                        for institution in data["associated_institutions"]
+                        if institution["relationship"] == relationship
+                    ],
+                    "config": config,
+                }
+            )
+        elif "." not in column:
+            if column == "type":
+                value = f"/types/{data['type']}"
+            elif column == "id":
+                value = convert_openalex_id(data["id"])
+            else:
+                value = data[column]
+            results.append(
+                {
+                    "value": value,
                     "config": config,
                 }
             )
