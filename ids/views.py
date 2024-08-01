@@ -1,7 +1,8 @@
+import json
 import random
 
 from elasticsearch_dsl import Q, Search
-from flask import Blueprint, abort, redirect, request, url_for
+from flask import Blueprint, abort, redirect, request, url_for, jsonify
 
 import settings
 from authors.schemas import AuthorsSchema
@@ -11,6 +12,7 @@ from countries.schemas import CountriesSchema
 from domains.schemas import DomainsSchema
 from fields.schemas import FieldsSchema
 from funders.schemas import FundersSchema
+from ids.ui_format import format_as_ui, is_ui_format
 from ids.utils import (
     get_merged_id,
     is_author_openalex_id,
@@ -136,6 +138,19 @@ def works_id_get(id):
     works_schema = WorksSchema(
         context={"display_relevance": False, "single_record": True}, only=only_fields
     )
+    if is_ui_format():
+        json_output = json.dumps(dict(works_schema.dump(response[0])))
+        ui_format = format_as_ui("works", json_output)
+        return jsonify(
+            {
+                "meta": {
+                    "count": 1,
+                    "page": 1,
+                    "per_page": 1,
+                },
+                "props": ui_format,
+            }
+        )
     return works_schema.dump(response[0])
 
 
