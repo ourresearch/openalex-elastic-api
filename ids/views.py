@@ -387,6 +387,19 @@ def concepts_id_get(id):
     concepts_schema = ConceptsSchema(
         context={"display_relevance": False}, only=only_fields
     )
+    if is_ui_format():
+        json_output = json.dumps(dict(concepts_schema.dump(response[0])))
+        ui_format = format_as_ui("concepts", json_output)
+        return jsonify(
+            {
+                "meta": {
+                    "count": 1,
+                    "page": 1,
+                    "per_page": 1,
+                },
+                "props": ui_format,
+            }
+        )
     return concepts_schema.dump(response[0])
 
 
