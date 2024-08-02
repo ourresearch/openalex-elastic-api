@@ -24,6 +24,15 @@ def is_ui_format():
     return format_param == "ui"
 
 
+def convert_abtract_inverted_index(abstract_inverted_index):
+    if not abstract_inverted_index:
+        return None
+    positions = [(key, ord) for key, values in abstract_inverted_index.items() for ord in values]
+    sorted_positions = sorted(positions, key=lambda x: x[1])
+    result = " ".join(key for key, _ in sorted_positions)
+    return result
+
+
 def convert_openalex_id(old_id):
     if OPENALEX_URL in old_id:
         old_id = old_id.replace(f"https://{OPENALEX_URL}/", "")
@@ -37,6 +46,9 @@ def convert_openalex_id(old_id):
         elif len(parts) == 2:
             # External IDs
             return f"/{parts[-2]}/{parts[-1]}"
+    elif "metadata.un.org" in old_id:
+        parts = old_id.split("/")
+        return f"/sdgs/{parts[-1]}"
     return old_id
 
 
@@ -55,6 +67,13 @@ def format_as_ui(entity, data):
             results.append(
                 {
                     "value": [grant["award_id"] for grant in data["grants"]],
+                    "config": config,
+                }
+            )
+        elif column == "abstract_inverted_index":
+            results.append(
+                {
+                    "value": convert_abtract_inverted_index(data["abstract_inverted_index"]),
                     "config": config,
                 }
             )
