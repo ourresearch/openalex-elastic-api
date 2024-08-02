@@ -40,12 +40,15 @@ class ResultTable:
         return result
 
     def get_column_value(self, row, column):
-        if self.is_list(column) and "." in column:
+        if column == "grants.funder":
+            return self.get_funder_with_display_name(row, column)
+        elif column in ["child_institutions", "parent_institutions", "related_institutions"]:
+            return self.get_related_institutions_with_display_name(row, column)
+        elif self.is_list(column) and "." in column:
             return self.get_nested_values(row, column)
         elif self.is_list(column):
             return self.get_values(row, column)
-
-        if self.is_external_id(column):
+        elif self.is_external_id(column):
             value = self.get_nested_value(row, column)
             prefix = self.external_id_prefix(column)
             formatted_id = f"{prefix}/{value}"
@@ -53,12 +56,8 @@ class ResultTable:
                 "id": formatted_id,
                 "display_name": value,
             }
-
-        if column.endswith(".id") and not self.is_list(column):
+        elif column.endswith(".id") and not self.is_list(column):
             return self.get_entity_with_display_name(row, column)
-        elif column == "grants.funder":
-            return self.get_funder_with_display_name(row, column)
-
         return self.get_nested_value(row, column)
 
     def get_entity_with_display_name(self, data, path):
@@ -74,6 +73,18 @@ class ResultTable:
             "id": convert_openalex_id(funder_id),
             "display_name": funder_display_name,
         }
+
+    def get_related_institutions_with_display_name(self, row, column):
+        relationship = column.split("_")[0]
+        institutions = row.get("associated_institutions", [])
+        return [
+            {
+                "id": convert_openalex_id(institution["id"]),
+                "display_name": institution["display_name"],
+            }
+            for institution in institutions
+            if institution["relationship"] == relationship
+        ]
 
     def get_nested_value(self, data, path):
         keys = path.split(".") if path else []
