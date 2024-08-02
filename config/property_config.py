@@ -2265,6 +2265,36 @@ property_configs = [
         "extractFn": "(entity) => entity.display_name",
     },
     {
+        "key": "id",
+        "id": "id",
+        "entityType": "continents",
+        "subjectEntity": "continents",
+        "entityId": "continents",
+        "objectEntity": "continents",
+        "displayName": "Continent id",
+        "type": "select",
+        "newType": "entity",
+        "actions": ["filter"],
+        "actionsPopular": ["filter"],
+        "icon": "mdi-shape-outline",
+        "extractFn": "(e) => e.type",
+    },
+    {
+        "key": "display_name",
+        "id": "display_name",
+        "entityType": "continents",
+        "subjectEntity": "continents",
+        "entityId": "continents",
+        "objectEntity": "continents",
+        "displayName": "Continent name",
+        "type": "select",
+        "newType": "entity",
+        "actions": ["filter"],
+        "actionsPopular": ["filter"],
+        "icon": "mdi-shape-outline",
+        "extractFn": "(e) => e.type",
+    },
+    {
         "key": "countries",
         "id": "countries",
         "isList": True,
@@ -2278,7 +2308,6 @@ property_configs = [
         "icon": "mdi-earth",
         "extractFn": "(e) => e.countries",
     },
-
     # keywords
     {
         "key": "id",
@@ -2308,9 +2337,8 @@ property_configs = [
         "icon": "mdi-account-outline",
         "extractFn": "(entity) => entity.display_name",
     },
-
     # languages
-{
+    {
         "key": "id",
         "id": "id",
         "entityType": "languages",
@@ -2338,9 +2366,8 @@ property_configs = [
         "icon": "mdi-account-outline",
         "extractFn": "(entity) => entity.display_name",
     },
-
     # licenses
-{
+    {
         "key": "id",
         "id": "id",
         "entityType": "licenses",
@@ -2368,9 +2395,8 @@ property_configs = [
         "icon": "mdi-account-outline",
         "extractFn": "(entity) => entity.display_name",
     },
-
     # institution types
-{
+    {
         "key": "id",
         "id": "id",
         "entityType": "institution-types",
@@ -2398,9 +2424,8 @@ property_configs = [
         "icon": "mdi-account-outline",
         "extractFn": "(entity) => entity.display_name",
     },
-
     # sdgs
-{
+    {
         "key": "id",
         "id": "id",
         "entityType": "sdgs",
@@ -2429,7 +2454,6 @@ property_configs = [
         "icon": "mdi-account-outline",
         "extractFn": "(entity) => entity.display_name",
     },
-
     # works_count and cited_by_count for authors
     {
         "key": "works_count",
@@ -2570,7 +2594,7 @@ property_configs = [
         "isDisplayedAsCount": True,
         "extractFn": "(entity) => entity.works_count",
     },
-{
+    {
         "key": "share",
         "id": "share",
         "entityType": "subfields",
@@ -3198,8 +3222,8 @@ property_configs = [
 property_configs_dict = {}
 
 for config in property_configs:
-    entity_type = config['entityType']
-    key = config['key']
+    entity_type = config["entityType"]
+    key = config["key"]
 
     if entity_type not in property_configs_dict:
         property_configs_dict[entity_type] = {}

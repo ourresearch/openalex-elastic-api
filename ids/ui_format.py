@@ -129,15 +129,15 @@ def format_as_ui(entity, data):
                     "config": config,
                 }
             )
-        elif column == "siblings":
+        elif column == "siblings" or column == "countries":
             results.append(
                 {
                     "value": [
                         {
-                            "id": convert_openalex_id(sibling["id"]),
-                            "display_name": sibling["display_name"],
+                            "id": convert_openalex_id(row["id"]),
+                            "display_name": row["display_name"],
                         }
-                        for sibling in data["siblings"]
+                        for row in data[column]
                     ],
                     "config": config,
                 }
