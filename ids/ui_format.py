@@ -153,7 +153,7 @@ def format_as_ui(entity, data):
             else:
                 value = data[column]
 
-            if value and "id" in value and "display_name" in value:
+            if value and not isinstance(value, int) and "id" in value and "display_name" in value:
                 # override value since the result has id, display_name
                 id_and_display_name = dict(value)
                 value = {
@@ -197,7 +197,7 @@ def format_as_ui(entity, data):
             results.append(
                 {
                     "value": data[first_key][second_key]
-                    if first_key and data[first_key].get(second_key)
+                    if first_key and data[first_key] and data[first_key].get(second_key)
                     else None,
                     "config": config,
                 }
