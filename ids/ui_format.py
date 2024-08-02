@@ -129,8 +129,21 @@ def format_as_ui(entity, data):
                     "config": config,
                 }
             )
+        elif column == "siblings":
+            results.append(
+                {
+                    "value": [
+                        {
+                            "id": convert_openalex_id(sibling["id"]),
+                            "display_name": sibling["display_name"],
+                        }
+                        for sibling in data["siblings"]
+                    ],
+                    "config": config,
+                }
+            )
         # normal columns
-        elif "." not in column:
+        elif "." not in column and not is_list:
             if column == "type" and entity == "works":
                 value = f"/types/{data['type']}"
             elif column == "type" and entity == "sources":
@@ -139,6 +152,14 @@ def format_as_ui(entity, data):
                 value = convert_openalex_id(data["id"])
             else:
                 value = data[column]
+
+            if "id" in value and "display_name" in value:
+                # override value since the result has id, display_name
+                id_and_display_name = dict(value)
+                value = {
+                    "id": convert_openalex_id(id_and_display_name["id"]),
+                    "display_name": id_and_display_name["display_name"],
+                }
             results.append(
                 {
                     "value": value,

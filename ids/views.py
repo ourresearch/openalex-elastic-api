@@ -697,6 +697,19 @@ def topics_id_get(id):
     if not response:
         abort(404)
     topics_schema = TopicsSchema(context={"display_relevance": False}, only=only_fields)
+    if is_ui_format():
+        json_output = json.dumps(dict(topics_schema.dump(response[0])))
+        ui_format = format_as_ui("topics", json_output)
+        return jsonify(
+            {
+                "meta": {
+                    "count": 1,
+                    "page": 1,
+                    "per_page": 1,
+                },
+                "props": ui_format,
+            }
+        )
     return topics_schema.dump(response[0])
 
 
