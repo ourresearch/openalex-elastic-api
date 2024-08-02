@@ -153,7 +153,7 @@ def format_as_ui(entity, data):
             else:
                 value = data[column]
 
-            if "id" in value and "display_name" in value:
+            if value and "id" in value and "display_name" in value:
                 # override value since the result has id, display_name
                 id_and_display_name = dict(value)
                 value = {

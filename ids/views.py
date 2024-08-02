@@ -736,6 +736,19 @@ def get_by_openalex_external_id(index, schema, id):
         abort(404, description=f"No {endpoint_name} found matching the ID.")
 
     schema_instance = schema(context={"display_relevance": False}, only=only_fields)
+    if is_ui_format():
+        json_output = json.dumps(dict(schema_instance.dump(response[0])))
+        ui_format = format_as_ui(endpoint_name, json_output)
+        return jsonify(
+            {
+                "meta": {
+                    "count": 1,
+                    "page": 1,
+                    "per_page": 1,
+                },
+                "props": ui_format,
+            }
+        )
     return schema_instance.dump(response[0])
 
 
