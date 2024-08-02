@@ -31,7 +31,7 @@ class ResultTable:
         for column in self.columns:
             value = self.get_column_value(row, column)
             # if value is a list of dictionaries, remove the duplicates
-            if isinstance(value, list):
+            if isinstance(value, list) and value and isinstance(value[0], dict):
                 value = [
                     dict(t)
                     for t in {tuple(d.items()) for d in value if type(d) is dict}
@@ -40,8 +40,10 @@ class ResultTable:
         return result
 
     def get_column_value(self, row, column):
-        if self.is_list(column):
+        if self.is_list(column) and "." in column:
             return self.get_nested_values(row, column)
+        elif self.is_list(column):
+            return self.get_values(row, column)
 
         if self.is_external_id(column):
             value = self.get_nested_value(row, column)
@@ -83,6 +85,9 @@ class ResultTable:
         if "abstract_inverted_index" in keys and data:
             data = self.convert_abtract_inverted_index(data)
         return convert_openalex_id(data)
+
+    def get_values(self, data, path):
+        return [convert_openalex_id(value) for value in data.get(path, [])]
 
     def get_nested_values(self, data, path):
         keys = path.split(".")
