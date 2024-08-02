@@ -212,13 +212,15 @@ def format_as_ui(entity, data):
         elif len(column.split(".")) == 3 and column.endswith(".id") and not is_list:
             first_key = column.split(".")[0]
             second_key = column.split(".")[1]
+            id_value = data[first_key][second_key].get("id") if data.get(first_key) and data[first_key].get(second_key) else None
+            display_name = data[first_key][second_key].get("display_name") if data.get(first_key) and data[first_key].get(second_key) else None
             results.append(
                 {
                     "value": {
-                        "id": convert_openalex_id(data[first_key][second_key]["id"])
+                        "id": convert_openalex_id(id_value)
                         if data.get(first_key)
                         else None,
-                        "display_name": data[first_key][second_key]["display_name"],
+                        "display_name": display_name,
                     },
                     "config": config,
                 }
