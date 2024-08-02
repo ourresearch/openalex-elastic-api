@@ -1,5 +1,6 @@
 from config.entity_config import entity_configs_dict
 from config.property_config import property_configs_dict
+from ids.ui_format import convert_openalex_id
 
 
 class ResultTable:
@@ -26,7 +27,7 @@ class ResultTable:
 
     def format_row(self, row):
         row_id = row.get("id")
-        result = {"id": row_id, "cells": []}
+        result = {"id": convert_openalex_id(row_id), "cells": []}
         for column in self.columns:
             value = self.get_column_value(row, column)
             # if value is a list of dictionaries, remove the duplicates
@@ -45,7 +46,7 @@ class ResultTable:
         if self.is_external_id(column):
             value = self.get_nested_value(row, column)
             prefix = self.external_id_prefix(column)
-            formatted_id = f"https://openalex.org/{prefix}/{value}"
+            formatted_id = f"{prefix}/{value}"
             return {
                 "id": formatted_id,
                 "display_name": value,
@@ -62,12 +63,15 @@ class ResultTable:
         base_path = path.rsplit(".", 1)[0]
         id_value = self.get_nested_value(data, path)
         display_name = self.get_nested_value(data, f"{base_path}.display_name")
-        return {"id": id_value, "display_name": display_name}
+        return {"id": convert_openalex_id(id_value), "display_name": display_name}
 
     def get_funder_with_display_name(self, row, column):
         funder_id = self.get_nested_value(row, column)
         funder_display_name = self.get_nested_value(row, "grants.funder_display_name")
-        return {"id": funder_id, "display_name": funder_display_name}
+        return {
+            "id": convert_openalex_id(funder_id),
+            "display_name": funder_display_name,
+        }
 
     def get_nested_value(self, data, path):
         keys = path.split(".") if path else []
@@ -78,7 +82,7 @@ class ResultTable:
                 return None
         if "abstract_inverted_index" in keys and data:
             data = self.convert_abtract_inverted_index(data)
-        return data
+        return convert_openalex_id(data)
 
     def get_nested_values(self, data, path):
         keys = path.split(".")
@@ -101,7 +105,12 @@ class ResultTable:
                         display_name = self.get_nested_value(
                             dict_, ".".join(modified_keys)
                         )
-                        values.append({"id": value, "display_name": display_name})
+                        values.append(
+                            {
+                                "id": convert_openalex_id(value),
+                                "display_name": display_name,
+                            }
+                        )
                     else:
                         value = self.get_nested_value(dict_, ".".join(remaining_keys))
                         values.append(value)

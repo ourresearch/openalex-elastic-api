@@ -27,13 +27,19 @@ def is_ui_format():
 def convert_abtract_inverted_index(abstract_inverted_index):
     if not abstract_inverted_index:
         return None
-    positions = [(key, ord) for key, values in abstract_inverted_index.items() for ord in values]
+    positions = [
+        (key, ord) for key, values in abstract_inverted_index.items() for ord in values
+    ]
     sorted_positions = sorted(positions, key=lambda x: x[1])
     result = " ".join(key for key, _ in sorted_positions)
     return result
 
 
 def convert_openalex_id(old_id):
+    if not old_id:
+        return None
+    if not isinstance(old_id, str):
+        return old_id
     if OPENALEX_URL in old_id:
         old_id = old_id.replace(f"https://{OPENALEX_URL}/", "")
         parts = old_id.split("/")
@@ -45,10 +51,10 @@ def convert_openalex_id(old_id):
                     return f"{entity}/{short_id}"
         elif len(parts) == 2:
             # External IDs
-            return f"/{parts[-2]}/{parts[-1]}"
+            return f"{parts[-2]}/{parts[-1]}"
     elif "metadata.un.org" in old_id:
         parts = old_id.split("/")
-        return f"/sdgs/{parts[-1]}"
+        return f"sdgs/{parts[-1]}"
     return old_id
 
 
@@ -73,7 +79,9 @@ def format_as_ui(entity, data):
         elif column == "abstract_inverted_index":
             results.append(
                 {
-                    "value": convert_abtract_inverted_index(data["abstract_inverted_index"]),
+                    "value": convert_abtract_inverted_index(
+                        data["abstract_inverted_index"]
+                    ),
                     "config": config,
                 }
             )
@@ -164,15 +172,20 @@ def format_as_ui(entity, data):
         # normal columns
         elif "." not in column and not is_list:
             if column == "type" and entity == "works":
-                value = f"/types/{data['type']}"
+                value = f"types/{data['type']}"
             elif column == "type" and entity == "sources":
-                value = f"/source-types/{data['type']}"
+                value = f"source-types/{data['type']}"
             elif column == "id":
                 value = convert_openalex_id(data["id"])
             else:
                 value = data[column]
 
-            if value and not isinstance(value, int) and "id" in value and "display_name" in value:
+            if (
+                value
+                and not isinstance(value, int)
+                and "id" in value
+                and "display_name" in value
+            ):
                 # override value since the result has id, display_name
                 id_and_display_name = dict(value)
                 value = {
