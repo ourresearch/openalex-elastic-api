@@ -1,7 +1,6 @@
 # based on https://github.com/ourresearch/openalex-gui/blob/f30c0e8b0c858914c1c79cbcd6d31f6e7b1e0ecf/src/entityConfigs.js#L0-L1
 entity_configs = [
     {
-        "key": "works",
         "id": "works",
         "icon": "mdi-file-document-outline",
         "name": "works",
@@ -53,7 +52,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "authors",
         "id": "authors",
         "icon": "mdi-account-outline",
         "name": "authors",
@@ -92,7 +90,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "sources",
         "id": "sources",
         "icon": "mdi-book-open-outline",
         "name": "sources",
@@ -134,7 +131,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "publishers",
         "id": "publishers",
         "icon": "mdi-domain",
         "name": "publishers",
@@ -156,7 +152,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "funders",
         "id": "funders",
         "icon": "mdi-cash-multiple",
         "name": "funders",
@@ -178,7 +173,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "institutions",
         "id": "institutions",
         "icon": "mdi-town-hall",
         "name": "institutions",
@@ -211,7 +205,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "concepts",
         "id": "concepts",
         "icon": "mdi-tag-outline",
         "name": "concepts",
@@ -233,7 +226,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "keywords",
         "id": "keywords",
         "icon": "mdi-tag-outline",
         "name": "keywords",
@@ -255,7 +247,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "topics",
         "id": "topics",
         "icon": "mdi-tag-outline",
         "name": "topics",
@@ -282,7 +273,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "subfields",
         "id": "subfields",
         "icon": "mdi-tag-outline",
         "name": "subfields",
@@ -309,7 +299,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "fields",
         "id": "fields",
         "icon": "mdi-tag-outline",
         "name": "fields",
@@ -335,7 +324,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "domains",
         "id": "domains",
         "icon": "mdi-tag-outline",
         "name": "domains",
@@ -360,7 +348,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "sdgs",
         "id": "sdgs",
         "icon": "mdi-sprout-outline",
         "name": "sdgs",
@@ -381,7 +368,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "countries",
         "id": "countries",
         "icon": "mdi-earth",
         "name": "countries",
@@ -402,7 +388,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "continents",
         "id": "continents",
         "icon": "mdi-earth",
         "name": "continents",
@@ -424,7 +409,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "languages",
         "id": "languages",
         "icon": "mdi-translate",
         "name": "languages",
@@ -445,7 +429,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "types",
         "id": "types",
         "icon": "mdi-shape-outline",
         "name": "types",
@@ -468,7 +451,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "source-types",
         "id": "source-types",
         "icon": "mdi-shape-outline",
         "name": "source-types",
@@ -490,7 +472,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "institution-types",
         "id": "institution-types",
         "icon": "mdi-shape-outline",
         "name": "institution-types",
@@ -511,7 +492,6 @@ entity_configs = [
         ],
     },
     {
-        "key": "licenses",
         "id": "licenses",
         "icon": "mdi-lock-open-outline",
         "name": "licenses",
@@ -533,4 +513,4 @@ entity_configs = [
     },
 ]
 
-entity_configs_dict = {config['key']: config for config in entity_configs}
+entity_configs_dict = {config['id']: config for config in entity_configs}

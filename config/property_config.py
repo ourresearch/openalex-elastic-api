@@ -2204,8 +2204,8 @@ property_configs = [
 property_configs_dict = {}
 
 for config in property_configs:
-    entity_type = config["entityType"]
-    key = config["key"]
+    entity_type = config["subjectEntity"]
+    key = config["id"]
 
     if entity_type not in property_configs_dict:
         property_configs_dict[entity_type] = {}
