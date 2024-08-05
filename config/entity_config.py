@@ -32,7 +32,6 @@ entity_configs = [
             "primary_location.source.id",
             "authorships.author.id",
             "authorships.institutions.id",
-            "cited_by_count",
             "primary_topic.id",
             "primary_topic.subfield.id",
             "primary_topic.field.id",
@@ -80,8 +79,6 @@ entity_configs = [
             "last_known_institutions.id",
             "affiliations.institution.id",
             "ids.orcid",
-            "summary_stats.h_index",
-            "summary_stats.i10_index",
         ],
         "groupByDefaults": [
             "last_known_institutions.id",
@@ -120,9 +117,6 @@ entity_configs = [
             "is_oa",
             "is_in_doaj",
             "apc_usd",
-            "summary_stats.2yr_mean_citedness",
-            "summary_stats.h_index",
-            "summary_stats.i10_index",
         ],
         "groupByDefaults": [
             "type",

@@ -1,5 +1,6 @@
 from config.entity_config import entity_configs_dict
 from config.property_config import property_configs_dict
+from config.stats_config import stats_config_dict
 from ids.ui_format import convert_openalex_id
 
 
@@ -66,6 +67,8 @@ class ResultTable:
             )
         elif column.endswith(".id") and not self.is_list(column):
             return self.get_entity_with_display_name(row, column)
+        elif column in stats_config_dict.keys():
+            return self.get_stats_value(row, column)
         return self.get_nested_value(row, column)
 
     def get_entity_with_display_name(self, data, path):
@@ -147,6 +150,12 @@ class ResultTable:
             else:
                 values.append(dict_)
         return values
+
+    def get_stats_value(self, data, path):
+        stats = stats_config_dict[path]
+        if stats["type"] == "count":
+            value = data.get("works_count", 0)
+            return value
 
     def format_value(self, key, value):
         column_type = self.get_column_type(key)
