@@ -67,7 +67,7 @@ class ResultTable:
             )
         elif column.endswith(".id") and not self.is_list(column):
             return self.get_entity_with_display_name(row, column)
-        elif column in stats_config_dict.keys():
+        elif column and column.startswith("count("):
             return self.get_stats_value(row, column)
         return self.get_nested_value(row, column)
 
@@ -152,10 +152,11 @@ class ResultTable:
         return values
 
     def get_stats_value(self, data, path):
-        stats = stats_config_dict[path]
-        if stats["type"] == "count":
-            value = data.get("works_count", 0)
-            return value
+        method, column = self.parse_count_expression(path)
+        if method not in stats_config_dict.keys():
+            raise ValueError(f"Invalid method: {method}")
+        if column not in property_configs_dict[self.entity]:
+            raise ValueError(f"Invalid column: {column}")
 
     def format_value(self, key, value):
         column_type = self.get_column_type(key)
@@ -179,6 +180,17 @@ class ResultTable:
 
     def external_id_prefix(self, column):
         return property_configs_dict[self.entity][column].get("externalIdPrefix", "")
+
+    def parse_count_expression(self, column):
+        column = column.strip()
+        if column.startswith('count(') and column.endswith(')'):
+            # Extract the column name
+            column_name = column[len('count('):-1].strip()
+            # Return the parsed method and column as a dictionary
+            return "count", column_name
+        else:
+            # Handle cases where the expression format is unexpected
+            raise ValueError(f"Unexpected expression format: {column}")
 
     def count(self):
         return self.json_data["meta"]["count"]
