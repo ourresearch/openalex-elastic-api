@@ -42,7 +42,11 @@ class ResultTable:
     def get_column_value(self, row, column):
         if column == "grants.funder":
             return self.get_funder_with_display_name(row, column)
-        elif column in ["child_institutions", "parent_institutions", "related_institutions"]:
+        elif column in [
+            "child_institutions",
+            "parent_institutions",
+            "related_institutions",
+        ]:
             return self.get_related_institutions_with_display_name(row, column)
         elif self.is_list(column) and "." in column:
             return self.get_nested_values(row, column)
@@ -52,10 +56,14 @@ class ResultTable:
             value = self.get_nested_value(row, column)
             prefix = self.external_id_prefix(column)
             formatted_id = f"{prefix}/{value}"
-            return {
-                "id": formatted_id,
-                "display_name": value,
-            }
+            return (
+                {
+                    "id": formatted_id,
+                    "display_name": value,
+                }
+                if formatted_id and value
+                else None
+            )
         elif column.endswith(".id") and not self.is_list(column):
             return self.get_entity_with_display_name(row, column)
         return self.get_nested_value(row, column)
@@ -69,10 +77,14 @@ class ResultTable:
     def get_funder_with_display_name(self, row, column):
         funder_id = self.get_nested_value(row, column)
         funder_display_name = self.get_nested_value(row, "grants.funder_display_name")
-        return {
-            "id": convert_openalex_id(funder_id),
-            "display_name": funder_display_name,
-        }
+        return (
+            {
+                "id": convert_openalex_id(funder_id),
+                "display_name": funder_display_name,
+            }
+            if funder_id and funder_display_name
+            else None
+        )
 
     def get_related_institutions_with_display_name(self, row, column):
         relationship = column.split("_")[0]
@@ -91,6 +103,8 @@ class ResultTable:
         for key in keys:
             if isinstance(data, dict):
                 data = data.get(key)
+                if path == "grants.funder":
+                    print(data)
             else:
                 return None
         if "abstract_inverted_index" in keys and data:
