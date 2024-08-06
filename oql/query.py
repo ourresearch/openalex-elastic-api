@@ -213,8 +213,13 @@ class Query:
 
     def _is_valid_get_with_columns(self):
         return (
-            self.query_string.lower().startswith(
-                f"{self.verbs['select']} {self.entity} return"
+            (
+                self.query_string.lower().startswith(
+                    f"{self.verbs['select']} {self.entity} return"
+                )
+                or self.query_string.lower().startswith(
+                    f"using works {self.verbs['select']} {self.entity} return"
+                )
             )
             and self.columns
             and all(col in self.valid_columns for col in self.columns)

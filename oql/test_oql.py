@@ -96,12 +96,50 @@ class TestWorks(unittest.TestCase):
 
 
 class TestAuthors(unittest.TestCase):
-    def test_authors_valid(self):
+    def test_authors_simple_valid(self):
         query_string = "get authors"
         query = Query(query_string=query_string)
         self.assertEqual(query.old_query(), "/authors?page=1&per_page=25&sort=display_name:asc")
         self.assertEqual(query.oql_query(), "using works\nget authors\nsort by display_name asc\nreturn display_name, display_name_alternatives, last_known_institutions.id, ids.orcid")
         self.assertTrue(query.is_valid())
+
+    def test_authors_sort_by(self):
+        query_string = "using works get authors sort by display_name"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/authors?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget authors\nsort by display_name asc\nreturn display_name, display_name_alternatives, last_known_institutions.id, ids.orcid")
+        self.assertTrue(query.is_valid())
+
+    def test_authors_get_authors_return_columns(self):
+        query_string = "get authors return display_name, ids.orcid"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/authors?select=display_name,ids&page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget authors\nsort by display_name asc\nreturn display_name, ids.orcid")
+        self.assertTrue(query.is_valid())
+
+    def test_authors_using_works_get_authors_return_columns(self):
+        query_string = "using works\nget authors\nreturn display_name, ids.orcid"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/authors?select=display_name,ids&page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget authors\nsort by display_name asc\nreturn display_name, ids.orcid")
+        self.assertTrue(query.is_valid())
+
+    def test_authors_results_table(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/results?q=using works\nget authors&format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["results"]["header"][0]["id"], "display_name")
+        author_id = data["results"]["body"][0]["id"]
+        self.assertTrue(author_id.startswith("authors/"))
+        self.assertEqual(data["results"]["body"][0]["cells"][0]["type"], "string")
+
+    def test_authors_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/authors/A5014517712?format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("props", data)
+        self.assertEqual(data["props"][0]["value"], "authors/A5014517712")
+        self.assertEqual(data["props"][0]["config"]["id"], "id")
 
 
 class TestInstitutions(unittest.TestCase):
