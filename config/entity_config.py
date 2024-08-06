@@ -38,9 +38,6 @@ entity_configs = [
             "primary_topic.domain.id",
             "sustainable_development_goals.id",
             "open_access.oa_status",
-            "apc_paid.value_usd",
-            "grants.funder",
-            "grants.award_id",
         ],
         "rowsToShowOnTablePage": [
             "display_name",
