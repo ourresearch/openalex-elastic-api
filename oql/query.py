@@ -193,6 +193,13 @@ class Query:
 
     # clause properties
     @property
+    def using_clause(self):
+        if self.detect_using():
+            return f"using {self.detect_using()}"
+        else:
+            return 'using works'
+
+    @property
     def get_clause(self):
         return f"{self.verbs['select']} {self.entity}" if self.entity else None
 
@@ -255,9 +262,10 @@ class Query:
         clauses = filter(
             None,
             [
-                self.get_clause,
-                self.filter_by_clause,
-                self.sort_by_clause,
+                self.using_clause + '\n',
+                self.get_clause + '\n',
+                self.filter_by_clause + '\n',
+                self.sort_by_clause + '\n',
                 self.return_columns_clause,
             ],
         )
