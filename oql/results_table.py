@@ -43,6 +43,8 @@ class ResultTable:
     def get_column_value(self, row, column):
         if column == "grants.funder":
             return self.get_funder_with_display_name(row, column)
+        if column == "host_organization" and self.entity == "sources":
+            return self.get_host_organization(row)
         elif column in [
             "child_institutions",
             "parent_institutions",
@@ -84,6 +86,18 @@ class ResultTable:
                 "display_name": funder_display_name,
             }
             if funder_id and funder_display_name
+            else None
+        )
+
+    def get_host_organization(self, row):
+        host_organization_id = row.get("host_organization")
+        host_organization_display_name = row.get("host_organization_name")
+        return (
+            {
+                "id": convert_openalex_id(host_organization_id),
+                "display_name": host_organization_display_name,
+            }
+            if host_organization_id and host_organization_display_name
             else None
         )
 

@@ -850,7 +850,7 @@ property_configs = [
         "icon": "mdi-account-outline",
     },
     {
-        "id": "publisher",
+        "id": "host_organization",
         "subjectEntity": "sources",
         "entityId": "publishers",
         "objectEntity": "publishers",

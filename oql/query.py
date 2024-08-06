@@ -35,6 +35,7 @@ class Query:
         # remove newlines
         query_string = query_string.replace("\n", " ")
         query_string = query_string.replace("\\n", " ")
+        print(f"cleaned query string: {query_string}")
         return query_string
 
     # detection methods
@@ -350,6 +351,8 @@ class Query:
 
         if params:
             url += "&" + "&".join(params) if "?" in url else "?" + "&".join(params)
+
+        print(f"old query: {url}")
 
         return url
 
