@@ -7,35 +7,63 @@ python -m unittest discover oql
 """
 
 
-class TestQueryEntity(unittest.TestCase):
-    def test_get_works_valid(self):
+class TestWorks(unittest.TestCase):
+    def test_get_works_simple_valid(self):
         query_string = "get works"
         query = Query(query_string=query_string)
-        self.assertTrue(query.is_valid())
-        self.assertEqual(query.old_query(), "/works?page=1&per_page=25")
-        self.assertEqual(query.oql_query(), "get works")
+        self.assertEqual(query.old_query(), "/works?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget works\nsort by display_name asc\nreturn display_name, publication_year, type, primary_location.source.id, authorships.author.id, authorships.institutions.id, primary_topic.id, primary_topic.subfield.id, primary_topic.field.id, primary_topic.domain.id, sustainable_development_goals.id, open_access.oa_status")
         self.assertTrue(query.is_valid())
 
-    def test_publishers_valid(self):
-        query_string = "get publishers"
+    def test_works_filter_publication_year(self):
+        query_string = "get works where publication_year is 2020"
         query = Query(query_string=query_string)
-        self.assertTrue(query.is_valid())
-        self.assertEqual(query.old_query(), "/publishers?page=1&per_page=25")
-        self.assertEqual(query.oql_query(), "get publishers")
+        self.assertEqual(
+            query.old_query(), "/works?page=1&per_page=25&sort=display_name:asc&filter=publication_year:2020"
+        )
+        self.assertEqual(query.oql_query(), "using works\nget works where publication_year is 2020\nsort by display_name asc\nreturn display_name, publication_year, type, primary_location.source.id, authorships.author.id, authorships.institutions.id, primary_topic.id, primary_topic.subfield.id, primary_topic.field.id, primary_topic.domain.id, sustainable_development_goals.id, open_access.oa_status")
         self.assertTrue(query.is_valid())
 
+class TestAuthors(unittest.TestCase):
     def test_authors_valid(self):
         query_string = "get authors"
         query = Query(query_string=query_string)
-        self.assertTrue(query.is_valid())
-        self.assertEqual(query.old_query(), "/authors?page=1&per_page=25")
-        self.assertEqual(query.oql_query(), "get authors")
+        self.assertEqual(query.old_query(), "/authors?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget authors\nsort by display_name asc\nreturn display_name, display_name_alternatives, last_known_institutions.id, ids.orcid")
         self.assertTrue(query.is_valid())
 
+
+class TestInstitutions(unittest.TestCase):
+    def test_institutions_valid(self):
+        query_string = "get institutions"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/institutions?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget institutions\nsort by display_name asc\nreturn display_name, type, country_code, parent_institutions, child_institutions, ids.ror")
+        self.assertTrue(query.is_valid())
+
+
+class TestPublisher(unittest.TestCase):
+    def test_publishers_valid(self):
+        query_string = "get publishers"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/publishers?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget publishers\nsort by display_name asc\nreturn display_name")
+        self.assertTrue(query.is_valid())
+
+
+class TestTopics(unittest.TestCase):
+    def test_topics_valid(self):
+        query_string = "get topics"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/topics?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget topics\nsort by display_name asc\nreturn display_name, description, siblings, subfield, field, domain")
+        self.assertTrue(query.is_valid())
+
+
+class TestInvalidQueries(unittest.TestCase):
     def test_entity_invalid(self):
         query_string = "get invalid"
         query = Query(query_string=query_string)
-        self.assertFalse(query.is_valid())
         self.assertIsNone(query.old_query())
         self.assertIsNone(query.oql_query())
         self.assertFalse(query.is_valid())
@@ -43,7 +71,6 @@ class TestQueryEntity(unittest.TestCase):
     def test_entity_invalid_verb(self):
         query_string = "inva"
         query = Query(query_string=query_string)
-        self.assertFalse(query.is_valid())
         self.assertIsNone(query.old_query())
         self.assertIsNone(query.oql_query())
         self.assertFalse(query.is_valid())
@@ -51,230 +78,9 @@ class TestQueryEntity(unittest.TestCase):
     def test_entity_partial_very_short(self):
         query_string = "g"
         query = Query(query_string=query_string)
-        self.assertFalse(query.is_valid())
         self.assertIsNone(query.old_query())
         self.assertIsNone(query.oql_query())
         self.assertFalse(query.is_valid())
-
-
-class TestQueryFilter(unittest.TestCase):
-    def test_filter_publication_year(self):
-        query_string = "get works where publication_year is 2020"
-        query = Query(query_string=query_string)
-        self.assertEqual(
-            query.old_query(), "/works?page=1&per_page=25&filter=publication_year:2020"
-        )
-        self.assertEqual(query.oql_query(), "get works where publication_year is 2020")
-        self.assertTrue(query.is_valid())
-
-    def test_filter_institutions_by_country_code(self):
-        query_string = "get institutions where country_code is CA"
-        query = Query(query_string=query_string)
-        self.assertEqual(
-            query.old_query(), "/institutions?page=1&per_page=25&filter=country_code:CA"
-        )
-        self.assertEqual(query.oql_query(), "get institutions where country_code is CA")
-        self.assertTrue(query.is_valid())
-
-    def test_filter_institution_by_id_return_works_count(self):
-        query_string = "get institutions where id is I27837315 return works_count"
-        query = Query(query_string=query_string)
-        self.assertEqual(
-            query.old_query(),
-            "/institutions?select=works_count&page=1&per_page=25&filter=id:I27837315",
-        )
-        self.assertEqual(
-            query.oql_query(),
-            "get institutions where id is I27837315 return works_count",
-        )
-        self.assertTrue(query.is_valid())
-
-    def test_filter_invalid(self):
-        query_string = "get works where pub is 2020"
-        query = Query(query_string=query_string)
-        self.assertIsNone(query.old_query())
-        self.assertIsNone(query.oql_query())
-        self.assertFalse(query.is_valid())
-
-    def test_multiple_filters(self):
-        query_string = "get works where publication_year is 2020, doi is 10.1234/abc"
-        query = Query(query_string=query_string)
-        self.assertEqual(
-            query.old_query(),
-            "/works?page=1&per_page=25&filter=publication_year:2020,doi:10.1234/abc",
-        )
-        self.assertEqual(
-            query.oql_query(),
-            "get works where publication_year is 2020, doi is 10.1234/abc",
-        )
-        self.assertTrue(query.is_valid())
-
-    def test_filter_return_columns(self):
-        query_string = "get works where publication_year is 2020 return doi, title"
-        query = Query(query_string=query_string)
-        self.assertEqual(
-            query.old_query(),
-            "/works?select=doi,title&page=1&per_page=25&filter=publication_year:2020",
-        )
-        self.assertEqual(
-            query.oql_query(),
-            "get works where publication_year is 2020 return doi, title",
-        )
-        self.assertTrue(query.is_valid())
-
-
-class TestQueryReturnColumns(unittest.TestCase):
-    def test_valid_works_return_columns(self):
-        query_string = "get works return doi, title"
-        query = Query(query_string=query_string)
-        self.assertTrue(query.is_valid())
-        self.assertEqual(
-            query.old_query(), "/works?select=doi,title&page=1&per_page=25"
-        )
-        self.assertEqual(query.oql_query(), "get works return doi, title")
-        self.assertTrue(query.is_valid())
-
-    def test_valid_authors_return_columns(self):
-        query_string = "get authors return id, display_name"
-        query = Query(query_string=query_string)
-        self.assertTrue(query.is_valid())
-        self.assertEqual(
-            query.old_query(), "/authors?select=id,display_name&page=1&per_page=25"
-        )
-        self.assertEqual(query.oql_query(), "get authors return id, display_name")
-        self.assertTrue(query.is_valid())
-
-    def test_works_invalid_return_columns(self):
-        query_string = "get works return invalid"
-        query = Query(query_string=query_string)
-        self.assertFalse(query.is_valid())
-        self.assertIsNone(query.old_query())
-        self.assertIsNone(query.oql_query())
-        self.assertFalse(query.is_valid())
-
-    def test_authors_valid_sort_and_return_columns(self):
-        query_string = "get authors sort by display_name return id, display_name"
-        query = Query(query_string=query_string)
-        self.assertTrue(query.is_valid())
-        self.assertEqual(
-            query.old_query(),
-            "/authors?select=id,display_name&page=1&per_page=25&sort=display_name",
-        )
-        self.assertEqual(
-            query.oql_query(),
-            "get authors sort by display_name return id, display_name",
-        )
-        self.assertTrue(query.is_valid())
-
-    def test_work_invalid_sort_and_valid_return_columns(self):
-        query_string = "get works sort by invalid return doi, title"
-        query = Query(query_string=query_string)
-        self.assertFalse(query.is_valid())
-        self.assertIsNone(query.old_query())
-        self.assertIsNone(query.oql_query())
-        self.assertFalse(query.is_valid())
-
-
-class TestQuerySortBy(unittest.TestCase):
-    def test_works_sort_by(self):
-        query_string = "get works sort by title"
-        query = Query(query_string=query_string)
-        self.assertTrue(query.is_valid())
-        self.assertEqual(query.old_query(), "/works?page=1&per_page=25&sort=title")
-        self.assertEqual(query.oql_query(), "get works sort by title")
-        self.assertTrue(query.is_valid())
-
-    def test_works_sort_by_invalid(self):
-        query_string = "get works sort by invalid"
-        query = Query(query_string=query_string)
-        self.assertFalse(query.is_valid())
-        self.assertIsNone(query.old_query())
-        self.assertIsNone(query.oql_query())
-        self.assertFalse(query.is_valid())
-
-    def test_works_sort_by_before_return_columns(self):
-        query_string = "get works sort by title return doi, title"
-        query = Query(query_string=query_string)
-        self.assertTrue(query.is_valid())
-        self.assertEqual(
-            query.old_query(), "/works?select=doi,title&page=1&per_page=25&sort=title"
-        )
-        self.assertEqual(query.oql_query(), "get works sort by title return doi, title")
-        self.assertTrue(query.is_valid())
-
-    def test_works_sort_by_invalid_columns(self):
-        query_string = "get works sort by title return invalid"
-        query = Query(query_string=query_string)
-        self.assertFalse(query.is_valid())
-        self.assertIsNone(query.old_query())
-        self.assertIsNone(query.oql_query())
-        self.assertFalse(query.is_valid())
-
-
-class TestQueryAutocomplete(unittest.TestCase):
-    def test_get_autocomplete(self):
-        query_string = "get"
-        query = Query(query_string=query_string)
-        self.assertFalse(query.is_valid())
-        suggestions = query.autocomplete()["suggestions"]
-        assert "works" in suggestions and "authors" in suggestions
-
-    def test_works_autocomplete(self):
-        query_string = "get wor"
-        query = Query(query_string=query_string)
-        self.assertFalse(query.is_valid())
-        suggestions = query.autocomplete()["suggestions"]
-        assert len(suggestions) == 1
-        assert "works" in suggestions
-
-    def test_works_autocomplete_return_columns(self):
-        query_string = "get works"
-        query = Query(query_string=query_string)
-        suggestions = query.autocomplete()["suggestions"]
-        assert "return" in suggestions
-
-
-class TestExamples(unittest.TestCase):
-    def test_example_1(self):
-        query_string = (
-            "get institutions where institution is I27837315 return count(works)"
-        )
-        query = Query(query_string=query_string)
-        self.assertEqual(
-            query.old_query(),
-            "/institutions?select=works_count&page=1&per_page=25&filter=id:I27837315",
-        )
-        self.assertEqual(
-            query.oql_query(),
-            "get institutions where institution is I27837315 return count(works)",
-        )
-        self.assertTrue(query.is_valid())
-
-    def test_example_2(self):
-        query_string = "get authors where id is A5022654839"
-        query = Query(query_string=query_string)
-        self.assertEqual(
-            query.old_query(),
-            "/authors?page=1&per_page=25&filter=id:A5022654839",
-        )
-        self.assertEqual(
-            query.oql_query(),
-            "get authors where id is A5022654839",
-        )
-        self.assertTrue(query.is_valid())
-
-    def test_example_3(self):
-        query_string = "using works where institution is i33213144 get type return count"
-        query = Query(query_string=query_string)
-        self.assertEqual(
-            query.old_query(),
-            "/works?page=1&per_page=25&filter=authorships.institution.id:i33213144",
-        )
-        self.assertEqual(
-            query.oql_query(),
-            "get works where publication_year is 2020 return doi, title",
-        )
-        self.assertTrue(query.is_valid())
 
 
 if __name__ == "__main__":

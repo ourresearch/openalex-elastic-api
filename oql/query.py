@@ -135,6 +135,17 @@ class Query:
 
     # validation methods
     def is_valid(self):
+        for item in [
+            self._is_valid_simple_get,
+            self._is_valid_get_with_filter_by,
+            self._is_valid_get_with_filter_by_and_columns,
+            self._is_valid_get_with_columns,
+            self._is_valid_get_with_sort,
+            self._is_valid_get_with_sort_and_columns,
+            self._is_valid_get_with_filter_sort_and_columns,
+        ]:
+            if item():
+                print(f"function that is valid: {item.__name__}")
         return any(
             [
                 self._is_valid_simple_get(),
@@ -152,17 +163,18 @@ class Query:
             self.query_string.strip().lower() == f"{self.verbs['select']} {self.entity}"
             or self.query_string.strip().lower()
             == f"using works {self.verbs['select']} {self.entity}"
-            and self.entity in valid_entities
-        )
+        ) and self.entity in valid_entities
 
     def _is_valid_get_with_filter_by(self):
         columns = self.convert_filter_by().keys() if self.filter_by else []
         return (
-            self.query_string.lower().startswith(
-                f"{self.verbs['select']} {self.entity} where"
-            )
-            or self.query_string.lower().startswith(
-                f"using works {self.verbs['select']} {self.entity} where"
+            (
+                self.query_string.lower().startswith(
+                    f"{self.verbs['select']} {self.entity} where"
+                )
+                or self.query_string.lower().startswith(
+                    f"using works {self.verbs['select']} {self.entity} where"
+                )
             )
             and self.filter_by
             and (
@@ -172,16 +184,19 @@ class Query:
                 == f"using works {self.verbs['select']} {self.entity} where {self.filter_by.lower()}"
             )
             and all(col in self.valid_columns for col in columns)
+            and self.entity in valid_entities
         )
 
     def _is_valid_get_with_filter_by_and_columns(self):
         columns = self.convert_filter_by().keys() if self.filter_by else []
         return (
-            self.query_string.lower().startswith(
-                f"{self.verbs['select']} {self.entity} where"
-            )
-            or self.query_string.lower().startswith(
-                f"using works {self.verbs['select']} {self.entity} where"
+            (
+                self.query_string.lower().startswith(
+                    f"{self.verbs['select']} {self.entity} where"
+                )
+                or self.query_string.lower().startswith(
+                    f"using works {self.verbs['select']} {self.entity} where"
+                )
             )
             and self.filter_by
             and self.columns
@@ -193,6 +208,7 @@ class Query:
                 == f"using works {self.verbs['select']} {self.entity} where {self.filter_by.lower()} return {', '.join(self.display_columns)}"
             )
             and all(col in self.valid_columns for col in columns)
+            and self.entity in valid_entities
         )
 
     def _is_valid_get_with_columns(self):
@@ -208,6 +224,7 @@ class Query:
                 or self.query_string.lower()
                 == f"using works {self.verbs['select']} {self.entity} return {', '.join(self.display_columns)}"
             )
+            and self.entity in valid_entities
         )
 
     def _is_valid_get_with_sort(self):
@@ -219,6 +236,7 @@ class Query:
             and self.sort_by_column in self.valid_sort_columns
             and self.sort_by_order
             and not self.columns
+            and self.entity in valid_entities
             and (
                 self.query_string.lower()
                 == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column}"
@@ -233,10 +251,13 @@ class Query:
 
     def _is_valid_get_with_sort_and_columns(self):
         return (
-            self.query_string.lower().startswith(
-                f"{self.verbs['select']} {self.entity} sort by"
-            ) or self.query_string.lower().startswith(
-                f"using works {self.verbs['select']} {self.entity} sort by"
+            (
+                self.query_string.lower().startswith(
+                    f"{self.verbs['select']} {self.entity} sort by"
+                )
+                or self.query_string.lower().startswith(
+                    f"using works {self.verbs['select']} {self.entity} sort by"
+                )
             )
             and self.sort_by_column
             and self.sort_by_column in self.valid_sort_columns
@@ -252,15 +273,18 @@ class Query:
                 or self.query_string.lower()
                 == f"using works {self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order} return {', '.join(self.display_columns)}"
             )
+            and self.entity in valid_entities
         )
 
     def _is_valid_get_with_filter_sort_and_columns(self):
         return (
-            self.query_string.lower().startswith(
-                f"{self.verbs['select']} {self.entity} where"
-            )
-            or self.query_string.lower().startswith(
-                f"using works {self.verbs['select']} {self.entity} where"
+            (
+                self.query_string.lower().startswith(
+                    f"{self.verbs['select']} {self.entity} where"
+                )
+                or self.query_string.lower().startswith(
+                    f"using works {self.verbs['select']} {self.entity} where"
+                )
             )
             and self.filter_by
             and self.columns
@@ -275,6 +299,7 @@ class Query:
                 or self.query_string.lower()
                 == f"using works {self.verbs['select']} {self.entity} where {self.filter_by.lower()} sort by {self.sort_by_column} {self.sort_by_order} return {', '.join(self.display_columns)}"
             )
+            and self.entity in valid_entities
         )
 
     # conversion methods
@@ -377,143 +402,6 @@ class Query:
         joined_clauses = "\n".join(clause for clause in clauses if clause)
         return joined_clauses
 
-    # suggestion methods
-    def autocomplete(self):
-        query_lower = self.query_string.lower().replace("%20", " ").strip()
-
-        if not query_lower or len(query_lower) < 3:
-            return self.suggest_verbs()
-
-        if query_lower.startswith(self.verbs["select"]):
-            parts = query_lower.split()
-            if len(parts) == 1:
-                return self.suggest_entities()
-            elif len(parts) == 2:
-                return self.handle_entity_part(parts)
-            elif len(parts) > 2:
-                return self.handle_extended_parts(parts)
-
-        return {"type": "unknown", "suggestions": []}
-
-    def handle_extended_parts(self, parts):
-        if self.match_partial_command(parts, 2, "return", ["columns"]):
-            return self._handle_return_columns(parts)
-        if self.match_partial_command(parts, 2, "sort", ["by"]):
-            return self.handle_sort_part(parts)
-        if len(parts) == 3 and "sort by".startswith(parts[2]):
-            return {"type": "verb", "suggestions": ["sort by"]}
-        return self.handle_columns_part(parts)
-
-    def _handle_return_columns(self, parts):
-        if len(parts) == 3:
-            return {"type": "verb", "suggestions": ["return"]}
-        elif len(parts) == 4 and parts[3] == "columns":
-            return self.suggest_columns(parts)
-        elif len(parts) > 4 and parts[3] == "columns":
-            return self.suggest_columns(parts)
-        else:
-            return {"type": "verb", "suggestions": ["columns"]}
-
-    def suggest_verbs(self):
-        return {"type": "verb", "suggestions": [self.verbs["select"]]}
-
-    def suggest_entities(self):
-        return {"type": "entity", "suggestions": valid_entities}
-
-    def handle_entity_part(self, parts):
-        if parts[1] in valid_entities:
-            return {"type": "verb", "suggestions": ["return", "sort by"]}
-        else:
-            partial_entity = parts[1]
-            filtered_suggestions = [
-                entity for entity in valid_entities if entity.startswith(partial_entity)
-            ]
-            return {"type": "entity", "suggestions": filtered_suggestions}
-
-    def handle_sort_part(self, parts):
-        if len(parts) >= 3 and "sort".startswith(parts[2]):
-            if len(parts) == 3 or (
-                len(parts) == 4 and "by".startswith(parts[3]) and parts[3] != "by"
-            ):
-                return {"type": "verb", "suggestions": ["sort by"]}
-            elif len(parts) >= 4 and parts[3] == "by":
-                if len(parts) == 4:
-                    return {
-                        "type": "sort_column",
-                        "suggestions": self.get_valid_sort_columns(),
-                    }
-                elif len(parts) == 5:
-                    sort_suggestions = self.suggest_sort_columns(parts)
-                    if sort_suggestions["suggestions"]:
-                        return sort_suggestions
-                    else:
-                        return {"type": "verb", "suggestions": ["return"]}
-                elif len(parts) > 5:
-                    return {"type": "verb", "suggestions": ["return"]}
-        return {"type": "unknown", "suggestions": []}
-
-    def handle_columns_part(self, parts):
-        if len(parts) >= 3 and parts[2].startswith("return"):
-            if len(parts) == 3 or (len(parts) == 4 and parts[3] != "columns"):
-                return {"type": "verb", "suggestions": ["columns"]}
-            elif len(parts) >= 4 and parts[3] == "columns":
-                return self.suggest_columns(parts)
-        return {"type": "unknown", "suggestions": []}
-
-    def suggest_columns(self, parts):
-        if self.entity in valid_entities:
-            valid_cols = self.get_valid_columns()
-            columns_part = " ".join(parts[4:])
-            typed_columns = [
-                convert_to_snake_case(col.strip())
-                for col in columns_part.split(",")
-                if col.strip()
-            ]
-            available_columns = [col for col in valid_cols if col not in typed_columns]
-
-            if "," in columns_part:
-                last_comma_index = columns_part.rindex(",")
-                partial_column = columns_part[last_comma_index + 1 :].strip()
-                filtered_suggestions = [
-                    column
-                    for column in available_columns
-                    if column.startswith(partial_column)
-                ]
-            else:
-                partial_column = columns_part
-                filtered_suggestions = [
-                    column
-                    for column in available_columns
-                    if column.startswith(partial_column)
-                ]
-
-            return {"type": "column", "suggestions": filtered_suggestions}
-        return {"type": "unknown", "suggestions": []}
-
-    def suggest_sort_columns(self, parts):
-        if self.entity in valid_entities:
-            valid_sort_cols = self.get_valid_sort_columns()
-            sort_part = " ".join(parts[4:])
-            partial_sort_column = convert_to_snake_case(sort_part.strip())
-            filtered_suggestions = [
-                column
-                for column in valid_sort_cols
-                if column.startswith(partial_sort_column)
-            ]
-            return {"type": "sort_column", "suggestions": filtered_suggestions}
-        return {"type": "unknown", "suggestions": []}
-
-    # utility methods
-    def match_partial_command(self, parts, index, command, next_options):
-        if command.startswith(parts[index]):
-            if len(parts) == index + 1:
-                return True
-            elif len(parts) > index + 1:
-                return any(
-                    option.startswith(parts[index + 1]) for option in next_options
-                )
-        return False
-
     def execute(self):
         url = f"https://api.openalex.org/{self.old_query()}"
         parsed_url = urlparse(url)
@@ -551,7 +439,10 @@ class Query:
         )
 
     def default_columns(self):
-        return entity_configs_dict[self.entity]["rowsToShowOnTablePage"]
+        if self.entity and self.entity in entity_configs_dict:
+            return entity_configs_dict[self.entity]["rowsToShowOnTablePage"]
+        else:
+            return []
 
     def get_valid_sort_columns(self):
         if not self.entity or self.entity and self.entity not in entity_configs_dict:
@@ -580,7 +471,6 @@ class Query:
                 "v1": self.old_query(),
             },
             "is_valid": self.is_valid(),
-            "autocomplete": self.autocomplete(),
         }
 
 
