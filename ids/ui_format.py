@@ -267,7 +267,7 @@ def format_as_ui(entity, data):
             )
 
     # print columns that weren't processed
-    columns_processed = [result["config"]["key"] for result in results]
+    columns_processed = [result["config"]["id"] for result in results]
     columns_not_processed = list(set(columns) - set(columns_processed))
     print(f"columns_not_processed: {columns_not_processed}")
     return results
