@@ -311,23 +311,21 @@ class Query:
         return url
 
     def oql_query(self):
-        if "using" in self.query_string:
-            return self.query_string
-
         if not self.is_valid():
             return None
 
         clauses = filter(
             None,
             [
-                self.using_clause + "\n",
-                self.get_clause + "\n",
-                self.filter_by_clause + "\n" if self.filter_by else None,
-                self.sort_by_clause + "\n",
+                self.using_clause,
+                self.get_clause,
+                self.filter_by_clause,
+                self.sort_by_clause,
                 self.return_columns_clause,
             ],
         )
-        return " ".join(clauses)
+        joined_clauses = "\n".join(clause for clause in clauses if clause)
+        return joined_clauses
 
     # suggestion methods
     def autocomplete(self):
@@ -524,7 +522,6 @@ class Query:
             return True
 
     def to_dict(self):
-        print(self.old_query())
         return {
             "query": {
                 "original": self.query_string,
