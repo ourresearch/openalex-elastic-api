@@ -199,6 +199,44 @@ class TestInstitutions(unittest.TestCase):
         self.assertEqual(query.oql_query(), "using works\nget institutions\nsort by display_name asc\nreturn display_name, type, country_code, parent_institutions, child_institutions, ids.ror")
         self.assertTrue(query.is_valid())
 
+    def test_institutions_where_country_is_france(self):
+        query_string = "get institutions where country_code is countries/fr"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/institutions?page=1&per_page=25&sort=display_name:asc&filter=country_code:countries/fr")
+        self.assertEqual(query.oql_query(), "using works\nget institutions where country_code is countries/fr\nsort by display_name asc\nreturn display_name, type, country_code, parent_institutions, child_institutions, ids.ror")
+        self.assertTrue(query.is_valid())
+
+    def test_institutions_using_where_country_is_france(self):
+        query_string = "using works\nget institutions where country_code is countries/fr"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/institutions?page=1&per_page=25&sort=display_name:asc&filter=country_code:countries/fr")
+        self.assertEqual(query.oql_query(), "using works\nget institutions where country_code is countries/fr\nsort by display_name asc\nreturn display_name, type, country_code, parent_institutions, child_institutions, ids.ror")
+        self.assertTrue(query.is_valid())
+
+    def test_instutions_return_columns(self):
+        query_string = "using works\nget institutions return display_name, type"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/institutions?select=display_name,type&page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget institutions\nsort by display_name asc\nreturn display_name, type")
+        self.assertTrue(query.is_valid())
+
+    def test_institutions_results_table(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/results?q=using works\nget institutions return display_name, type&format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["results"]["header"][0]["id"], "display_name")
+        institution_id = data["results"]["body"][0]["id"]
+        self.assertTrue(institution_id.startswith("institutions/"))
+        self.assertEqual(data["results"]["body"][0]["cells"][0]["type"], "string")
+
+    def test_instutions_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/institutions/I4210158076?format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("props", data)
+        self.assertEqual(data["props"][0]["value"], "institutions/I4210158076")
+        self.assertEqual(data["props"][0]["config"]["id"], "id")
+
 
 class TestPublisher(unittest.TestCase):
     def test_publishers_valid(self):
