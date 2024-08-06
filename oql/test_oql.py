@@ -142,6 +142,38 @@ class TestAuthors(unittest.TestCase):
         self.assertEqual(data["props"][0]["config"]["id"], "id")
 
 
+class TestSources(unittest.TestCase):
+    def test_sources_simple_valid(self):
+        query_string = "using works\nget sources"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/sources?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget sources\nsort by display_name asc\nreturn display_name, ids.issn, type, publisher, is_oa, is_in_doaj")
+        self.assertTrue(query.is_valid())
+
+    def test_sources_filter_by_type(self):
+        query_string = "get sources where type is journal"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/sources?page=1&per_page=25&sort=display_name:asc&filter=type:journal")
+        self.assertEqual(query.oql_query(), "using works\nget sources where type is journal\nsort by display_name asc\nreturn display_name, ids.issn, type, publisher, is_oa, is_in_doaj")
+        self.assertTrue(query.is_valid())
+
+    def test_sources_filter_by_repository(self):
+        query_string = "using works\nget sources where type is repository"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/sources?page=1&per_page=25&sort=display_name:asc&filter=type:repository")
+        self.assertEqual(query.oql_query(), "using works\nget sources where type is repository\nsort by display_name asc\nreturn display_name, ids.issn, type, publisher, is_oa, is_in_doaj")
+        self.assertTrue(query.is_valid())
+
+    def test_sources_results_table(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/results?q=using works\nget sources where type is repository&format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["results"]["header"][0]["id"], "display_name")
+        source_id = data["results"]["body"][0]["id"]
+        self.assertTrue(source_id.startswith("sources/"))
+        self.assertEqual(data["results"]["body"][0]["cells"][0]["type"], "string")
+
+
 class TestInstitutions(unittest.TestCase):
     def test_institutions_valid(self):
         query_string = "get institutions"
