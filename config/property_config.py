@@ -862,7 +862,7 @@ property_configs = [
     },
     {
         "id": "id",
-        "subjectEntity": "sources-types",
+        "subjectEntity": "source-types",
         "entityId": "source-types",
         "objectEntity": "source-types",
         "displayName": "Source Type ID",
@@ -874,7 +874,7 @@ property_configs = [
     },
     {
         "id": "display_name",
-        "subjectEntity": "sources-types",
+        "subjectEntity": "source-types",
         "entityId": "source-types",
         "objectEntity": "source-types",
         "displayName": "Source type name",
@@ -885,7 +885,7 @@ property_configs = [
     },
     {
         "id": "description",
-        "subjectEntity": "sources-types",
+        "subjectEntity": "source-types",
         "entityId": "source-types",
         "objectEntity": "source-types",
         "displayName": "Source type description",
