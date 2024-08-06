@@ -1,18 +1,26 @@
 import unittest
+
+import requests
+
 from oql.query import Query
 
+LOCAL_ENDPOINT = "http://127.0.0.1:5000/"
 
 """
+Start local server first. Then run:
 python -m unittest discover oql
 """
 
 
 class TestWorks(unittest.TestCase):
-    def test_get_works_simple_valid(self):
+    default_response = "using works\nget works\nsort by display_name asc\nreturn display_name, publication_year, type, primary_location.source.id, authorships.author.id, authorships.institutions.id, primary_topic.id, primary_topic.subfield.id, primary_topic.field.id, primary_topic.domain.id, sustainable_development_goals.id, open_access.oa_status"
+    default_old_query = "/works?page=1&per_page=25&sort=display_name:asc"
+
+    def test_get_works_simple_query_valid(self):
         query_string = "get works"
         query = Query(query_string=query_string)
-        self.assertEqual(query.old_query(), "/works?page=1&per_page=25&sort=display_name:asc")
-        self.assertEqual(query.oql_query(), "using works\nget works\nsort by display_name asc\nreturn display_name, publication_year, type, primary_location.source.id, authorships.author.id, authorships.institutions.id, primary_topic.id, primary_topic.subfield.id, primary_topic.field.id, primary_topic.domain.id, sustainable_development_goals.id, open_access.oa_status")
+        self.assertEqual(query.old_query(), self.default_old_query)
+        self.assertEqual(query.oql_query(), self.default_response)
         self.assertTrue(query.is_valid())
 
     def test_works_filter_publication_year(self):
@@ -23,6 +31,52 @@ class TestWorks(unittest.TestCase):
         )
         self.assertEqual(query.oql_query(), "using works\nget works where publication_year is 2020\nsort by display_name asc\nreturn display_name, publication_year, type, primary_location.source.id, authorships.author.id, authorships.institutions.id, primary_topic.id, primary_topic.subfield.id, primary_topic.field.id, primary_topic.domain.id, sustainable_development_goals.id, open_access.oa_status")
         self.assertTrue(query.is_valid())
+
+    def test_works_sort_by_publication_year(self):
+        query_string = "get works sort by publication_year"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/works?page=1&per_page=25&sort=publication_year:desc")
+        self.assertEqual(query.oql_query(), "using works\nget works\nsort by publication_year desc\nreturn display_name, publication_year, type, primary_location.source.id, authorships.author.id, authorships.institutions.id, primary_topic.id, primary_topic.subfield.id, primary_topic.field.id, primary_topic.domain.id, sustainable_development_goals.id, open_access.oa_status")
+        self.assertTrue(query.is_valid())
+
+    def test_works_return_columns(self):
+        query_string = "get works return title, publication_year"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/works?select=title,publication_year&page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget works\nsort by display_name asc\nreturn title, publication_year")
+        self.assertTrue(query.is_valid())
+
+    def test_works_using_clause(self):
+        query_string = "using works\nget works"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), self.default_old_query)
+        self.assertEqual(query.oql_query(), self.default_response)
+        self.assertTrue(query.is_valid())
+
+    def test_works_using_clause_with_filter(self):
+        query_string = "using works\nget works where publication_year is 2020"
+        query = Query(query_string=query_string)
+        self.assertEqual(
+            query.old_query(), "/works?page=1&per_page=25&sort=display_name:asc&filter=publication_year:2020"
+        )
+        self.assertEqual(query.oql_query(), "using works\nget works where publication_year is 2020\nsort by display_name asc\nreturn display_name, publication_year, type, primary_location.source.id, authorships.author.id, authorships.institutions.id, primary_topic.id, primary_topic.subfield.id, primary_topic.field.id, primary_topic.domain.id, sustainable_development_goals.id, open_access.oa_status")
+        self.assertTrue(query.is_valid())
+
+    def test_works_using_clause_with_sort(self):
+        query_string = "using works\nget works\nsort by publication_year asc"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/works?page=1&per_page=25&sort=publication_year:asc")
+        self.assertEqual(query.oql_query(), "using works\nget works\nsort by publication_year asc\nreturn display_name, publication_year, type, primary_location.source.id, authorships.author.id, authorships.institutions.id, primary_topic.id, primary_topic.subfield.id, primary_topic.field.id, primary_topic.domain.id, sustainable_development_goals.id, open_access.oa_status")
+        self.assertTrue(query.is_valid())
+
+    def test_works_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/works/W1991071293?format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("props", data)
+        self.assertEqual(data["props"][0]["value"], "works/W1991071293")
+        self.assertEqual(data["props"][0]["config"]["id"], "id")
+
 
 class TestAuthors(unittest.TestCase):
     def test_authors_valid(self):

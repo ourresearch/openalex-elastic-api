@@ -229,8 +229,13 @@ class Query:
 
     def _is_valid_get_with_sort(self):
         return (
-            self.query_string.lower().startswith(
-                f"{self.verbs['select']} {self.entity} sort by"
+            (
+                self.query_string.lower().startswith(
+                    f"{self.verbs['select']} {self.entity} sort by"
+                )
+                or self.query_string.lower().startswith(
+                    f"using works {self.verbs['select']} {self.entity} sort by"
+                )
             )
             and self.sort_by_column
             and self.sort_by_column in self.valid_sort_columns
