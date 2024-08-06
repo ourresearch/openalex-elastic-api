@@ -69,6 +69,23 @@ class TestWorks(unittest.TestCase):
         self.assertEqual(query.oql_query(), "using works\nget works\nsort by publication_year asc\nreturn display_name, publication_year, type, primary_location.source.id, authorships.author.id, authorships.institutions.id, primary_topic.id, primary_topic.subfield.id, primary_topic.field.id, primary_topic.domain.id, sustainable_development_goals.id, open_access.oa_status")
         self.assertTrue(query.is_valid())
 
+    def test_works_using_clause_with_sort_and_sort_order(self):
+        query_string = "using works\n get works\nsort by display_name desc\n return display_name, publication_year, type"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/works?select=display_name,publication_year,type&page=1&per_page=25&sort=display_name:desc")
+        self.assertEqual(query.oql_query(), "using works\nget works\nsort by display_name desc\nreturn display_name, publication_year, type")
+        self.assertTrue(query.is_valid())
+
+    def test_works_results_table(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/results?q=get works&format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["results"]["header"][0]["id"], "display_name")
+        self.assertEqual(data["results"]["header"][1]["id"], "publication_year")
+        work_id = data["results"]["body"][0]["id"]
+        self.assertTrue(work_id.startswith("works/"))
+        self.assertEqual(data["results"]["body"][0]["cells"][1]["type"], "number")
+
     def test_works_entity(self):
         r = requests.get(f"{LOCAL_ENDPOINT}/works/W1991071293?format=ui")
         self.assertEqual(r.status_code, 200)
