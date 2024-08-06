@@ -37,4 +37,4 @@ stats_configs = [
     }
 ]
 
-stats_config_dict = {stat["id"]: stat for stat in stats_configs}
+stats_configs_dict = {stat["id"]: stat for stat in stats_configs}

@@ -1,6 +1,6 @@
 from config.entity_config import entity_configs_dict
 from config.property_config import property_configs_dict
-from config.stats_config import stats_config_dict
+from config.stats_config import stats_configs_dict
 from ids.ui_format import convert_openalex_id
 
 
@@ -67,8 +67,6 @@ class ResultTable:
             )
         elif column.endswith(".id") and not self.is_list(column):
             return self.get_entity_with_display_name(row, column)
-        elif column and column.startswith("count("):
-            return self.get_stats_value(row, column)
         return self.get_nested_value(row, column)
 
     def get_entity_with_display_name(self, data, path):
@@ -151,13 +149,6 @@ class ResultTable:
                 values.append(dict_)
         return values
 
-    def get_stats_value(self, data, path):
-        method, column = self.parse_count_expression(path)
-        if method not in stats_config_dict.keys():
-            raise ValueError(f"Invalid method: {method}")
-        if column not in property_configs_dict[self.entity]:
-            raise ValueError(f"Invalid column: {column}")
-
     def format_value(self, key, value):
         column_type = self.get_column_type(key)
         if column_type == "boolean":
@@ -180,17 +171,6 @@ class ResultTable:
 
     def external_id_prefix(self, column):
         return property_configs_dict[self.entity][column].get("externalIdPrefix", "")
-
-    def parse_count_expression(self, column):
-        column = column.strip()
-        if column.startswith('count(') and column.endswith(')'):
-            # Extract the column name
-            column_name = column[len('count('):-1].strip()
-            # Return the parsed method and column as a dictionary
-            return "count", column_name
-        else:
-            # Handle cases where the expression format is unexpected
-            raise ValueError(f"Unexpected expression format: {column}")
 
     def count(self):
         return self.json_data["meta"]["count"]

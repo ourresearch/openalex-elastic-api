@@ -5,6 +5,7 @@ import requests
 
 from config.entity_config import entity_configs_dict
 from config.property_config import property_configs_dict
+from config.stats_config import stats_configs_dict
 
 valid_entities = list(entity_configs_dict.keys())
 
@@ -36,11 +37,20 @@ class Query:
 
     def detect_return_columns(self):
         pattern = r"\breturn\s+(.+)"
-        columns = self._detect_pattern(pattern, group=1)
-        if columns:
-            columns = [convert_to_snake_case(col.strip()) for col in columns.split(",")]
-            columns = self.convert_stat_columns(columns)
-            return columns
+        initial_columns = self._detect_pattern(pattern, group=1)
+        if initial_columns:
+            initial_columns = [convert_to_snake_case(col.strip()) for col in initial_columns.split(",")]
+            parsed_columns = [self.parse_column(col) for col in initial_columns]
+            return [col["column"] for col in parsed_columns]
+        return None
+
+    def detect_parsed_columns(self):
+        pattern = r"\breturn\s+(.+)"
+        initial_columns = self._detect_pattern(pattern, group=1)
+        if initial_columns:
+            initial_columns = [convert_to_snake_case(col.strip()) for col in initial_columns.split(",")]
+            parsed_columns = [self.parse_column(col) for col in initial_columns]
+            return parsed_columns
         return None
 
     def detect_display_columns(self):
@@ -50,15 +60,6 @@ class Query:
             return [convert_to_snake_case(col.strip()) for col in columns.split(",")]
         return None
 
-    def convert_stat_columns(self, columns):
-        new_columns = []
-        for col in columns:
-            if col == "count(works)":
-                new_columns.append("works_count")
-            else:
-                new_columns.append(col)
-        return new_columns
-
     def detect_sort_by(self):
         sort_by = self._detect_pattern(r"\b(?:sort by)\s+(\w+)", group=1)
         if sort_by and sort_by in self.get_valid_sort_columns():
@@ -67,6 +68,25 @@ class Query:
 
     def detect_using(self):
         return self._detect_pattern(r"\b(?:using)\s+(\w+)", group=1)
+
+    @staticmethod
+    def parse_column(column):
+        column = column.strip()
+        # parse the column to see if it has a stats method like count(referenced_works) or sum(cited_by_count)
+        if "(" in column and ")" in column:
+            method = column.split("(")[0]
+            column_name = column.split("(")[1].split(")")[0]
+            return {
+                "type": "stats_column",
+                "method": method,
+                "column": column_name,
+            }
+        else:
+            return {
+                "type": "standard_column",
+                "method": None,
+                "column": column,
+            }
 
     def _detect_pattern(self, pattern, group=0):
         match = re.search(pattern, self.query_string, re.IGNORECASE)
