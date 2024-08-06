@@ -360,12 +360,16 @@ class Query:
         if not self.is_valid():
             return None
 
+        if self.get_clause and self.filter_by_clause:
+            combined_get_and_filter = f"{self.get_clause} {self.filter_by_clause}"
+        else:
+            combined_get_and_filter = self.get_clause
+
         clauses = filter(
             None,
             [
                 self.using_clause,
-                self.get_clause,
-                self.filter_by_clause,
+                combined_get_and_filter,
                 self.sort_by_clause,
                 self.return_columns_clause,
             ],
