@@ -43,7 +43,7 @@ def results():
             "results": [],
         }
     query = Query(query_string, page, per_page)
-    if query.detect_using():
+    if query.use_redshift():
         print(f"Detected using in query: {query_string}")
         redshift_query = build_redshift_query(query_string)
         redshift_results = execute_redshift_query(redshift_query)

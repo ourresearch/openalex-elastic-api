@@ -147,6 +147,8 @@ class Query:
     def _is_valid_simple_get(self):
         return (
             self.query_string.strip().lower() == f"{self.verbs['select']} {self.entity}"
+            or self.query_string.strip().lower()
+            == f"using works {self.verbs['select']} {self.entity}"
             and self.entity in valid_entities
         )
 
@@ -155,6 +157,9 @@ class Query:
         return (
             self.query_string.lower().startswith(
                 f"{self.verbs['select']} {self.entity} where"
+            )
+            or self.query_string.lower().startswith(
+                f"using works {self.verbs['select']} {self.entity} where"
             )
             and self.filter_by
             and self.query_string.lower()
@@ -167,6 +172,9 @@ class Query:
         return (
             self.query_string.lower().startswith(
                 f"{self.verbs['select']} {self.entity} where"
+            )
+            or self.query_string.lower().startswith(
+                f"using works {self.verbs['select']} {self.entity} where"
             )
             and self.filter_by
             and self.columns
@@ -200,6 +208,10 @@ class Query:
             == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column}"
             or self.query_string.lower()
             == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order}"
+            or self.query_string.lower()
+            == f"using works {self.verbs['select']} {self.entity} sort by {self.sort_by_column}"
+            or self.query_string.lower()
+            == f"using works {self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order}"
         )
 
     def _is_valid_get_with_sort_and_columns(self):
@@ -212,9 +224,13 @@ class Query:
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
             and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} return {', '.join(self.columns)}"
+            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} return {', '.join(self.display_columns)}"
             or self.query_string.lower()
             == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order} return {', '.join(self.display_columns)}"
+            or self.query_string.lower()
+            == f"using works {self.verbs['select']} {self.entity} sort by {self.sort_by_column} return {', '.join(self.display_columns)}"
+            or self.query_string.lower()
+            == f"using works {self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order} return {', '.join(self.display_columns)}"
         )
 
     # conversion methods
@@ -264,9 +280,6 @@ class Query:
     # query methods
     def old_query(self):
         if not self.is_valid():
-            return None
-
-        if "using" in self.query_string:
             return None
 
         url = f"/{self.entity}"
@@ -506,7 +519,12 @@ class Query:
             if property_config.get("id", "") == column:
                 return property_config.get("newType", "string")
 
+    def use_redshift(self):
+        if self.query_string.startswith("using works where") and self.entity != "works":
+            return True
+
     def to_dict(self):
+        print(self.old_query())
         return {
             "query": {
                 "original": self.query_string,
