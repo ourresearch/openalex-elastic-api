@@ -173,6 +173,23 @@ class TestSources(unittest.TestCase):
         self.assertTrue(source_id.startswith("sources/"))
         self.assertEqual(data["results"]["body"][0]["cells"][0]["type"], "string")
 
+    def test_sources_results_table_type_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/results?q=using works\nget sources where type is repository\nreturn type&format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        result = data["results"]["body"][0]["cells"][0]
+        self.assertEqual(result["type"], "entity")
+        self.assertEqual(result["value"]["id"], "source-types/repository")
+        self.assertEqual(result["value"]["display_name"], "repository")
+
+    def test_sources_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/sources/S65028347?format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("props", data)
+        self.assertEqual(data["props"][0]["value"], "sources/S65028347")
+        self.assertEqual(data["props"][0]["config"]["id"], "id")
+
 
 class TestInstitutions(unittest.TestCase):
     def test_institutions_valid(self):

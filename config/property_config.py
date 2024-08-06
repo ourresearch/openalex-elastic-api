@@ -900,6 +900,8 @@ property_configs = [
         "entityId": "source-types",
         "displayName": "Source type",
         "isId": True,
+        "isExternalId": True,
+        "externalIdPrefix": "source-types",
         "newType": "entity",
         "actions": ["filter"],
         "actionsPopular": ["filter"],
