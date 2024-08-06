@@ -200,6 +200,8 @@ def format_as_ui(entity, data):
             )
         elif len(column.split(".")) == 2 and column.endswith(".id") and not is_list:
             first_key = column.split(".")[0]
+            if not data.get(first_key):
+                continue
             results.append(
                 {
                     "value": {
