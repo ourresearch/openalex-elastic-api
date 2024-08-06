@@ -162,11 +162,12 @@ class Query:
                 f"using works {self.verbs['select']} {self.entity} where"
             )
             and self.filter_by
-            and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} where {self.filter_by.lower()}"
-            and all(col in self.valid_columns for col in columns)
-            or self.query_string.lower()
-            == f"using works {self.verbs['select']} {self.entity} where {self.filter_by.lower()}"
+            and (
+                self.query_string.lower()
+                == f"{self.verbs['select']} {self.entity} where {self.filter_by.lower()}"
+                or self.query_string.lower()
+                == f"using works {self.verbs['select']} {self.entity} where {self.filter_by.lower()}"
+            )
             and all(col in self.valid_columns for col in columns)
         )
 
@@ -182,11 +183,12 @@ class Query:
             and self.filter_by
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
-            and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} where {self.filter_by.lower()} return {', '.join(self.display_columns)}"
-            and all(col in self.valid_columns for col in columns)
-            or self.query_string.lower()
-            == f"using works {self.verbs['select']} {self.entity} where {self.filter_by.lower()} return {', '.join(self.display_columns)}"
+            and (
+                self.query_string.lower()
+                == f"{self.verbs['select']} {self.entity} where {self.filter_by.lower()} return {', '.join(self.display_columns)}"
+                or self.query_string.lower()
+                == f"using works {self.verbs['select']} {self.entity} where {self.filter_by.lower()} return {', '.join(self.display_columns)}"
+            )
             and all(col in self.valid_columns for col in columns)
         )
 
@@ -197,10 +199,12 @@ class Query:
             )
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
-            and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} return {', '.join(self.display_columns)}"
-            or self.query_string.lower()
-            == f"using works {self.verbs['select']} {self.entity} return {', '.join(self.display_columns)}"
+            and (
+                self.query_string.lower()
+                == f"{self.verbs['select']} {self.entity} return {', '.join(self.display_columns)}"
+                or self.query_string.lower()
+                == f"using works {self.verbs['select']} {self.entity} return {', '.join(self.display_columns)}"
+            )
         )
 
     def _is_valid_get_with_sort(self):
@@ -212,14 +216,16 @@ class Query:
             and self.sort_by_column in self.valid_sort_columns
             and self.sort_by_order
             and not self.columns
-            and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column}"
-            or self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order}"
-            or self.query_string.lower()
-            == f"using works {self.verbs['select']} {self.entity} sort by {self.sort_by_column}"
-            or self.query_string.lower()
-            == f"using works {self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order}"
+            and (
+                self.query_string.lower()
+                == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column}"
+                or self.query_string.lower()
+                == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order}"
+                or self.query_string.lower()
+                == f"using works {self.verbs['select']} {self.entity} sort by {self.sort_by_column}"
+                or self.query_string.lower()
+                == f"using works {self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order}"
+            )
         )
 
     def _is_valid_get_with_sort_and_columns(self):
@@ -231,14 +237,16 @@ class Query:
             and self.sort_by_column in self.valid_sort_columns
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
-            and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} return {', '.join(self.display_columns)}"
-            or self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order} return {', '.join(self.display_columns)}"
-            or self.query_string.lower()
-            == f"using works {self.verbs['select']} {self.entity} sort by {self.sort_by_column} return {', '.join(self.display_columns)}"
-            or self.query_string.lower()
-            == f"using works {self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order} return {', '.join(self.display_columns)}"
+            and (
+                self.query_string.lower()
+                == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} return {', '.join(self.display_columns)}"
+                or self.query_string.lower()
+                == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order} return {', '.join(self.display_columns)}"
+                or self.query_string.lower()
+                == f"using works {self.verbs['select']} {self.entity} sort by {self.sort_by_column} return {', '.join(self.display_columns)}"
+                or self.query_string.lower()
+                == f"using works {self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order} return {', '.join(self.display_columns)}"
+            )
         )
 
     # conversion methods
