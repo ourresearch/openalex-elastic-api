@@ -20,7 +20,7 @@ class Query:
         self.filter_by = self.detect_filter_by()
         self.columns = self.detect_return_columns()
         self.display_columns = self.detect_display_columns()
-        self.sort_by = self.detect_sort_by()
+        self.sort_by_column, self.sort_by_order = self.detect_sort_by()
         self.valid_columns = self.get_valid_columns()
         self.valid_sort_columns = self.get_valid_sort_columns()
         self.page = int(page) if page else None
@@ -62,11 +62,28 @@ class Query:
             return self.default_columns()
 
     def detect_sort_by(self):
-        sort_by = self._detect_pattern(r"\b(?:sort by)\s+(\w+)", group=1)
-        if sort_by and sort_by in self.get_valid_sort_columns():
-            return convert_to_snake_case(sort_by)
+        match = re.search(r"\b(?:sort by)\s+(\w+)(?:\s+(asc|desc))?", self.query_string, re.IGNORECASE)
+        if match:
+            sort_by = match.group(1)
+            sort_order = match.group(2)
+
+            # Convert column name to snake_case
+            if sort_by and sort_by in self.get_valid_sort_columns():
+                sort_column = convert_to_snake_case(sort_by)
+            else:
+                sort_column = 'display_name'
+
+            # Determine the sort order, default to 'asc' if not specified
+            if sort_order:
+                sort_order = sort_order.lower()
+                if sort_order not in ['asc', 'desc']:
+                    sort_order = 'asc'
+            else:
+                sort_order = 'asc'
+
+            return sort_column, sort_order
         else:
-            return 'display_name'
+            return 'display_name', 'asc'
 
     def detect_using(self):
         return self._detect_pattern(r"\b(?:using)\s+(\w+)", group=1)
@@ -155,11 +172,11 @@ class Query:
             self.query_string.lower().startswith(
                 f"{self.verbs['select']} {self.entity} sort by"
             )
-            and self.sort_by
-            and self.sort_by in self.valid_sort_columns
+            and self.sort_by_column
+            and self.sort_by_column in self.valid_sort_columns
             and not self.columns
             and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by}"
+            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order}"
         )
 
     def _is_valid_get_with_sort_and_columns(self):
@@ -167,12 +184,12 @@ class Query:
             self.query_string.lower().startswith(
                 f"{self.verbs['select']} {self.entity} sort by"
             )
-            and self.sort_by
-            and self.sort_by in self.valid_sort_columns
+            and self.sort_by_column
+            and self.sort_by_column in self.valid_sort_columns
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
             and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by} return {', '.join(self.columns)}"
+            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order} return {', '.join(self.columns)}"
         )
 
     # conversion methods
@@ -217,7 +234,7 @@ class Query:
 
     @property
     def sort_by_clause(self):
-        return f"sort by {self.sort_by}" if self.sort_by else None
+        return f"sort by {self.sort_by_column} {self.sort_by_order}"
 
     # query methods
     def old_query(self):
@@ -237,8 +254,11 @@ class Query:
             params.append(f"page={self.page}")
         if self.per_page:
             params.append(f"per_page={self.per_page}")
-        if self.sort_by:
-            params.append(f"sort={self.sort_by}")
+        if self.sort_by_column:
+            if self.sort_by_order == "asc":
+                params.append(f"sort={self.sort_by_column}:asc")
+            elif self.sort_by_order == "desc":
+                params.append(f"sort={self.sort_by_column}:desc")
         if self.filter_by:
             filter_string = ""
             for key, value in self.convert_filter_by().items():
