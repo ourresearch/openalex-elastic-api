@@ -15,7 +15,7 @@ class Query:
         self.verbs = {
             "select": "get",
         }
-        self.query_string = query_string
+        self.query_string = self.clean_query_string(query_string)
         self.entity = self.detect_entity()
         self.filter_by = self.detect_filter_by()
         self.columns = self.detect_return_columns()
@@ -25,6 +25,16 @@ class Query:
         self.valid_sort_columns = self.get_valid_sort_columns()
         self.page = int(page) if page else None
         self.per_page = int(per_page) if per_page else None
+
+    @staticmethod
+    def clean_query_string(query_string):
+        # remove double spaces
+        query_string = re.sub(r"\s+", " ", query_string)
+        # remove leading and trailing spaces
+        query_string = query_string.strip()
+        # remove newlines
+        query_string = query_string.replace("\n", " ")
+        return query_string
 
     # detection methods
     def detect_entity(self):
