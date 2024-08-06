@@ -165,6 +165,9 @@ class Query:
             and self.query_string.lower()
             == f"{self.verbs['select']} {self.entity} where {self.filter_by.lower()}"
             and all(col in self.valid_columns for col in columns)
+            or self.query_string.lower()
+            == f"using works {self.verbs['select']} {self.entity} where {self.filter_by.lower()}"
+            and all(col in self.valid_columns for col in columns)
         )
 
     def _is_valid_get_with_filter_by_and_columns(self):
@@ -182,6 +185,9 @@ class Query:
             and self.query_string.lower()
             == f"{self.verbs['select']} {self.entity} where {self.filter_by.lower()} return {', '.join(self.display_columns)}"
             and all(col in self.valid_columns for col in columns)
+            or self.query_string.lower()
+            == f"using works {self.verbs['select']} {self.entity} where {self.filter_by.lower()} return {', '.join(self.display_columns)}"
+            and all(col in self.valid_columns for col in columns)
         )
 
     def _is_valid_get_with_columns(self):
@@ -193,6 +199,8 @@ class Query:
             and all(col in self.valid_columns for col in self.columns)
             and self.query_string.lower()
             == f"{self.verbs['select']} {self.entity} return {', '.join(self.display_columns)}"
+            or self.query_string.lower()
+            == f"using works {self.verbs['select']} {self.entity} return {', '.join(self.display_columns)}"
         )
 
     def _is_valid_get_with_sort(self):
@@ -519,6 +527,7 @@ class Query:
 
     def use_redshift(self):
         if self.query_string.startswith("using works where") and self.entity != "works":
+            print(f"This is a redshift query: {self.query_string}")
             return True
 
     def to_dict(self):
