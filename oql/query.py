@@ -58,13 +58,15 @@ class Query:
         columns = self._detect_pattern(pattern, group=1)
         if columns:
             return [convert_to_snake_case(col.strip()) for col in columns.split(",")]
-        return None
+        else:
+            return self.default_columns()
 
     def detect_sort_by(self):
         sort_by = self._detect_pattern(r"\b(?:sort by)\s+(\w+)", group=1)
         if sort_by and sort_by in self.get_valid_sort_columns():
             return convert_to_snake_case(sort_by)
-        return None
+        else:
+            return 'display_name'
 
     def detect_using(self):
         return self._detect_pattern(r"\b(?:using)\s+(\w+)", group=1)
@@ -433,6 +435,9 @@ class Query:
             if self.entity and self.entity in entity_configs_dict
             else []
         )
+
+    def default_columns(self):
+        return entity_configs_dict[self.entity]["rowsToShowOnTablePage"]
 
     def get_valid_sort_columns(self):
         if not self.entity or self.entity and self.entity not in entity_configs_dict:
