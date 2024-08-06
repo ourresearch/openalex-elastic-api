@@ -264,7 +264,7 @@ class Query:
             [
                 self.using_clause + '\n',
                 self.get_clause + '\n',
-                self.filter_by_clause + '\n',
+                self.filter_by_clause + '\n' if self.filter_by else None,
                 self.sort_by_clause + '\n',
                 self.return_columns_clause,
             ],
