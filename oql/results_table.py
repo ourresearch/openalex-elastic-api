@@ -10,7 +10,7 @@ class ResultTable:
         self.columns = (
             columns
             if columns
-            else entity_configs_dict[entity]["rowsToShowOnEntityPage"]
+            else entity_configs_dict[entity]["rowsToShowOnTablePage"]
         )
         self.json_data = json_data
         self.config = entity_configs_dict[entity]
