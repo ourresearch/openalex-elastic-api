@@ -39,7 +39,9 @@ class Query:
         pattern = r"\breturn\s+(.+)"
         initial_columns = self._detect_pattern(pattern, group=1)
         if initial_columns:
-            initial_columns = [convert_to_snake_case(col.strip()) for col in initial_columns.split(",")]
+            initial_columns = [
+                convert_to_snake_case(col.strip()) for col in initial_columns.split(",")
+            ]
             parsed_columns = [self.parse_column(col) for col in initial_columns]
             return [col["column"] for col in parsed_columns]
         return None
@@ -48,7 +50,9 @@ class Query:
         pattern = r"\breturn\s+(.+)"
         initial_columns = self._detect_pattern(pattern, group=1)
         if initial_columns:
-            initial_columns = [convert_to_snake_case(col.strip()) for col in initial_columns.split(",")]
+            initial_columns = [
+                convert_to_snake_case(col.strip()) for col in initial_columns.split(",")
+            ]
             parsed_columns = [self.parse_column(col) for col in initial_columns]
             return parsed_columns
         return None
@@ -62,7 +66,9 @@ class Query:
             return self.default_columns()
 
     def detect_sort_by(self):
-        match = re.search(r"\b(?:sort by)\s+(\w+)(?:\s+(asc|desc))?", self.query_string, re.IGNORECASE)
+        match = re.search(
+            r"\b(?:sort by)\s+(\w+)(?:\s+(asc|desc))?", self.query_string, re.IGNORECASE
+        )
         if match:
             sort_by = match.group(1)
             sort_order = match.group(2)
@@ -71,19 +77,23 @@ class Query:
             if sort_by and sort_by in self.get_valid_sort_columns():
                 sort_column = convert_to_snake_case(sort_by)
             else:
-                sort_column = 'display_name'
+                sort_column = "display_name"
 
-            # Determine the sort order, default to 'asc' if not specified
+            # Determine the sort order, default to 'asc' if type is string or 'desc' if type is number
             if sort_order:
                 sort_order = sort_order.lower()
-                if sort_order not in ['asc', 'desc']:
-                    sort_order = 'asc'
+                if sort_order not in ["asc", "desc"]:
+                    sort_order = "asc"
             else:
-                sort_order = 'asc'
+                print(self.property_type(sort_column))
+                if self.property_type(sort_column) == "number":
+                    sort_order = "desc"
+                else:
+                    sort_order = "asc"
 
             return sort_column, sort_order
         else:
-            return 'display_name', 'asc'
+            return "display_name", "asc"
 
     def detect_using(self):
         return self._detect_pattern(r"\b(?:using)\s+(\w+)", group=1)
@@ -174,8 +184,11 @@ class Query:
             )
             and self.sort_by_column
             and self.sort_by_column in self.valid_sort_columns
+            and self.sort_by_order
             and not self.columns
             and self.query_string.lower()
+            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column}"
+            or self.query_string.lower()
             == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order}"
         )
 
@@ -189,7 +202,9 @@ class Query:
             and self.columns
             and all(col in self.valid_columns for col in self.columns)
             and self.query_string.lower()
-            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order} return {', '.join(self.columns)}"
+            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} return {', '.join(self.columns)}"
+            or self.query_string.lower()
+            == f"{self.verbs['select']} {self.entity} sort by {self.sort_by_column} {self.sort_by_order} return {', '.join(self.display_columns)}"
         )
 
     # conversion methods
@@ -214,7 +229,7 @@ class Query:
         if self.detect_using():
             return f"using {self.detect_using()}"
         else:
-            return 'using works'
+            return "using works"
 
     @property
     def get_clause(self):
@@ -282,10 +297,10 @@ class Query:
         clauses = filter(
             None,
             [
-                self.using_clause + '\n',
-                self.get_clause + '\n',
-                self.filter_by_clause + '\n' if self.filter_by else None,
-                self.sort_by_clause + '\n',
+                self.using_clause + "\n",
+                self.get_clause + "\n",
+                self.filter_by_clause + "\n" if self.filter_by else None,
+                self.sort_by_clause + "\n",
                 self.return_columns_clause,
             ],
         )
@@ -475,6 +490,11 @@ class Query:
             for key, values in property_configs_dict[self.entity].items()
             if "sort" in values.get("actions", [])
         ]
+
+    def property_type(self, column):
+        for property_config in property_configs_dict.get(self.entity, {}).values():
+            if property_config.get("id", "") == column:
+                return property_config.get("newType", "string")
 
     def to_dict(self):
         return {
