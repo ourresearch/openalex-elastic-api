@@ -147,21 +147,21 @@ class TestSources(unittest.TestCase):
         query_string = "using works\nget sources"
         query = Query(query_string=query_string)
         self.assertEqual(query.old_query(), "/sources?page=1&per_page=25&sort=display_name:asc")
-        self.assertEqual(query.oql_query(), "using works\nget sources\nsort by display_name asc\nreturn display_name, ids.issn, type, publisher, is_oa, is_in_doaj")
+        self.assertEqual(query.oql_query(), "using works\nget sources\nsort by display_name asc\nreturn display_name, ids.issn, type, host_organization, is_oa, is_in_doaj")
         self.assertTrue(query.is_valid())
 
     def test_sources_filter_by_type(self):
         query_string = "get sources where type is journal"
         query = Query(query_string=query_string)
         self.assertEqual(query.old_query(), "/sources?page=1&per_page=25&sort=display_name:asc&filter=type:journal")
-        self.assertEqual(query.oql_query(), "using works\nget sources where type is journal\nsort by display_name asc\nreturn display_name, ids.issn, type, publisher, is_oa, is_in_doaj")
+        self.assertEqual(query.oql_query(), "using works\nget sources where type is journal\nsort by display_name asc\nreturn display_name, ids.issn, type, host_organization, is_oa, is_in_doaj")
         self.assertTrue(query.is_valid())
 
     def test_sources_filter_by_repository(self):
         query_string = "using works\nget sources where type is repository"
         query = Query(query_string=query_string)
         self.assertEqual(query.old_query(), "/sources?page=1&per_page=25&sort=display_name:asc&filter=type:repository")
-        self.assertEqual(query.oql_query(), "using works\nget sources where type is repository\nsort by display_name asc\nreturn display_name, ids.issn, type, publisher, is_oa, is_in_doaj")
+        self.assertEqual(query.oql_query(), "using works\nget sources where type is repository\nsort by display_name asc\nreturn display_name, ids.issn, type, host_organization, is_oa, is_in_doaj")
         self.assertTrue(query.is_valid())
 
     def test_sources_results_table(self):
@@ -390,6 +390,75 @@ class TestDomains(unittest.TestCase):
         data = r.json()
         self.assertIn("props", data)
         self.assertEqual(data["props"][0]["value"], "domains/1")
+        self.assertEqual(data["props"][0]["config"]["id"], "id")
+
+
+# external endpoints
+
+class TestWorkTypes(unittest.TestCase):
+    def test_types_valid(self):
+        query_string = "get types"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/types?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget types\nsort by display_name asc\nreturn display_name, description")
+        self.assertTrue(query.is_valid())
+
+    def test_types_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/types/article?format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("props", data)
+        self.assertEqual(data["props"][0]["value"], "types/article")
+        self.assertEqual(data["props"][0]["config"]["id"], "id")
+
+
+class TestCountries(unittest.TestCase):
+    def test_countries_valid(self):
+        query_string = "using works\n get countries"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/countries?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget countries\nsort by display_name asc\nreturn display_name")
+        self.assertTrue(query.is_valid())
+
+    def test_countries_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/countries/af?format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("props", data)
+        self.assertEqual(data["props"][0]["value"], "countries/AF")
+        self.assertEqual(data["props"][0]["config"]["id"], "id")
+
+class TestSDGs(unittest.TestCase):
+    def test_sdg_valid(self):
+        query_string = "using works\nget sdgs"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/sdgs?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget sdgs\nsort by display_name asc\nreturn display_name")
+        self.assertTrue(query.is_valid())
+
+    def test_sdg_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/sdgs/1?format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("props", data)
+        self.assertEqual(data["props"][0]["value"], "sdgs/1")
+        self.assertEqual(data["props"][0]["config"]["id"], "id")
+
+
+class TestInstitutionTypes(unittest.TestCase):
+    def test_institution_types_valid(self):
+        query_string = "get institution-types"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/institution-types?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget institution-types\nsort by display_name asc\nreturn display_name")
+        self.assertTrue(query.is_valid())
+
+    def test_institution_types_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/institution-types/education?format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("props", data)
+        self.assertEqual(data["props"][0]["value"], "institution-types/education")
         self.assertEqual(data["props"][0]["config"]["id"], "id")
 
 

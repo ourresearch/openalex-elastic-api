@@ -40,7 +40,7 @@ class Query:
 
     # detection methods
     def detect_entity(self):
-        return self._detect_pattern(r"\b(?:get)\s+(\w+)", group=1)
+        return self._detect_pattern(r"\b(?:get)\s+([\w-]+)", group=1)
 
     def detect_filter_by(self):
         return self._detect_pattern(
