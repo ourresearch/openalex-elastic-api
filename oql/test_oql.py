@@ -300,6 +300,99 @@ class TestTopics(unittest.TestCase):
         self.assertEqual(data["props"][0]["config"]["id"], "id")
 
 
+class TestFields(unittest.TestCase):
+    def test_fields_valid(self):
+        query_string = "get fields"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/fields?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget fields\nsort by display_name asc\nreturn display_name, description, subfields, siblings, domain")
+        self.assertTrue(query.is_valid())
+
+    def test_fields_return_columns(self):
+        query_string = "get fields return display_name, description"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/fields?select=display_name,description&page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget fields\nsort by display_name asc\nreturn display_name, description")
+        self.assertTrue(query.is_valid())
+
+    def test_fields_sort_by(self):
+        query_string = "using works\nget fields \nsort by display_name"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/fields?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget fields\nsort by display_name asc\nreturn display_name, description, subfields, siblings, domain")
+        self.assertTrue(query.is_valid())
+
+    def test_fields_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/fields/22?format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("props", data)
+        self.assertEqual(data["props"][0]["value"], "fields/22")
+        self.assertEqual(data["props"][0]["config"]["id"], "id")
+
+
+class TestSubfields(unittest.TestCase):
+    def test_subfields_valid(self):
+        query_string = "using works\nget subfields"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/subfields?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget subfields\nsort by display_name asc\nreturn display_name, description, topics, siblings, field, domain")
+        self.assertTrue(query.is_valid())
+
+    def test_subfields_return_columns(self):
+        query_string = "get subfields return display_name, description"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/subfields?select=display_name,description&page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget subfields\nsort by display_name asc\nreturn display_name, description")
+        self.assertTrue(query.is_valid())
+
+    def test_subfields_sort_by(self):
+        query_string = "using works\nget subfields \nsort by display_name"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/subfields?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget subfields\nsort by display_name asc\nreturn display_name, description, topics, siblings, field, domain")
+        self.assertTrue(query.is_valid())
+
+    def test_subfields_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/subfields/1708?format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("props", data)
+        self.assertEqual(data["props"][0]["value"], "subfields/1708")
+        self.assertEqual(data["props"][0]["config"]["id"], "id")
+
+
+class TestDomains(unittest.TestCase):
+    def test_domains_valid(self):
+        query_string = "using works\nget domains "
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/domains?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget domains\nsort by display_name asc\nreturn display_name, description, fields, siblings")
+        self.assertTrue(query.is_valid())
+
+    def test_domains_return_columns(self):
+        query_string = "get domains return display_name, description"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/domains?select=display_name,description&page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget domains\nsort by display_name asc\nreturn display_name, description")
+        self.assertTrue(query.is_valid())
+
+    def test_domains_sort_by(self):
+        query_string = "using works\nget domains \nsort by display_name desc"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/domains?page=1&per_page=25&sort=display_name:desc")
+        self.assertEqual(query.oql_query(), "using works\nget domains\nsort by display_name desc\nreturn display_name, description, fields, siblings")
+        self.assertTrue(query.is_valid())
+
+    def test_domains_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/domains/1?format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("props", data)
+        self.assertEqual(data["props"][0]["value"], "domains/1")
+        self.assertEqual(data["props"][0]["config"]["id"], "id")
+
+
 class TestInvalidQueries(unittest.TestCase):
     def test_entity_invalid(self):
         query_string = "get invalid"
