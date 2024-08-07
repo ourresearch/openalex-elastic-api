@@ -246,14 +246,58 @@ class TestPublisher(unittest.TestCase):
         self.assertEqual(query.oql_query(), "using works\nget publishers\nsort by display_name asc\nreturn display_name")
         self.assertTrue(query.is_valid())
 
+    def test_publishers_return_columns(self):
+        query_string = "get publishers return display_name"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/publishers?select=display_name&page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget publishers\nsort by display_name asc\nreturn display_name")
+        self.assertTrue(query.is_valid())
+
+    def test_publisher_sort_by(self):
+        query_string = "get publishers sort by display_name"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/publishers?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget publishers\nsort by display_name asc\nreturn display_name")
+        self.assertTrue(query.is_valid())
+
+    def test_publishers_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/publishers/P4310321391?format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("props", data)
+        self.assertEqual(data["props"][0]["value"], "publishers/P4310321391")
+        self.assertEqual(data["props"][0]["config"]["id"], "id")
+
 
 class TestTopics(unittest.TestCase):
     def test_topics_valid(self):
-        query_string = "get topics"
+        query_string = "using works\nget topics"
         query = Query(query_string=query_string)
         self.assertEqual(query.old_query(), "/topics?page=1&per_page=25&sort=display_name:asc")
         self.assertEqual(query.oql_query(), "using works\nget topics\nsort by display_name asc\nreturn display_name, description, siblings, subfield, field, domain")
         self.assertTrue(query.is_valid())
+
+    def test_topics_return_columns(self):
+        query_string = "using works\n get topics return display_name, description"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/topics?select=display_name,description&page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget topics\nsort by display_name asc\nreturn display_name, description")
+        self.assertTrue(query.is_valid())
+
+    def test_topics_sort_by(self):
+        query_string = "using works\n get topics sort by display_name"
+        query = Query(query_string=query_string)
+        self.assertEqual(query.old_query(), "/topics?page=1&per_page=25&sort=display_name:asc")
+        self.assertEqual(query.oql_query(), "using works\nget topics\nsort by display_name asc\nreturn display_name, description, siblings, subfield, field, domain")
+        self.assertTrue(query.is_valid())
+
+    def test_topics_entity(self):
+        r = requests.get(f"{LOCAL_ENDPOINT}/topics/T10912?format=ui")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertIn("props", data)
+        self.assertEqual(data["props"][0]["value"], "topics/T10912")
+        self.assertEqual(data["props"][0]["config"]["id"], "id")
 
 
 class TestInvalidQueries(unittest.TestCase):
