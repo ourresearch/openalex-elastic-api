@@ -6,7 +6,7 @@ from oql.query import Query
 from oql.schemas import QuerySchema
 from oql.results_table import ResultTable
 from oql.redshift import build_redshift_query, execute_redshift_query
-from oql.search import Search, get_existing_search
+from oql.search import Search, get_existing_search, is_cache_expired
 
 
 blueprint = Blueprint("oql", __name__)
@@ -128,7 +128,7 @@ def store_search():
 
     s = Search(q=q)
     existing_search = get_existing_search(s.id)
-    if existing_search:
+    if existing_search and not is_cache_expired(existing_search):
         return jsonify(existing_search), 200
 
     s.save()

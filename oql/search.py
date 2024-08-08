@@ -46,9 +46,5 @@ def get_existing_search(id: str) -> Optional[Dict]:
     existing_search_json = redis_db.get(id)
     if not existing_search_json:
         return None
-
     existing_search = json.loads(existing_search_json)
-    if is_cache_expired(existing_search):
-        return None
-
     return existing_search
