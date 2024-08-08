@@ -12,7 +12,7 @@ from oql.query import Query
 redis_db = redis.Redis.from_url(settings.CACHE_REDIS_URL or "redis://localhost:6379/0")
 
 CACHE_EXPIRATION_MINUTES = 1
-
+search_queue = "search_queue"
 
 @dataclass
 class Search:
@@ -39,6 +39,8 @@ class Search:
     def save(self):
         print(f"Saving search {self.id} to cache with {self.to_dict()}")
         redis_db.set(self.id, json.dumps(self.to_dict()))
+        # add to queue for processing
+        redis_db.rpush(search_queue, self.id)
 
     def to_dict(self):
         return asdict(self)
