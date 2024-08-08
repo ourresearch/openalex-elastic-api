@@ -44,12 +44,15 @@ def fetch_results(query_string):
 
 def process_searches():
     while True:
+        print(f"fhceking for searches in queue {search_queue}")
         search_id = redis_db.lpop(search_queue)
         if not search_id:
             time.sleep(0.1)
-            break
+            continue
 
         search_json = redis_db.get(search_id)
+        if search_json:
+            print(f"found a search_json! {search_json}")
         if not search_json:
             continue
 
@@ -66,6 +69,7 @@ def process_searches():
         search['timestamp'] = datetime.now(timezone.utc).isoformat()
 
         # save updated search object back to Redis
+        print(f"Saving search {search_id} to redis with {search}")
         redis_db.set(search_id, json.dumps(search))
 
         # wait half a second to avoid hammering the Redis server
@@ -73,4 +77,5 @@ def process_searches():
 
 
 if __name__ == "__main__":
+    print(f"Processing searches from queue {search_queue}")
     process_searches()
