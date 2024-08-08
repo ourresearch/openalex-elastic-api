@@ -6,6 +6,7 @@ from oql.query import Query
 from oql.schemas import QuerySchema
 from oql.results_table import ResultTable
 from oql.redshift import build_redshift_query, execute_redshift_query
+from oql.search import Search, get_existing_search
 
 
 blueprint = Blueprint("oql", __name__)
@@ -117,6 +118,31 @@ def results():
         return jsonify(results_table_response)
     else:
         return json_data
+
+
+@blueprint.route("/searches", methods=["POST"])
+def store_search():
+    q = request.json.get("q")
+    if not q:
+        return jsonify({"error": "No query provided"}), 400
+
+    s = Search(q=q)
+    existing_search = get_existing_search(s.id)
+    if existing_search:
+        return jsonify(existing_search), 200
+
+    s.save()
+
+    return jsonify(s.to_dict()), 201
+
+
+@blueprint.route("/searches/<id>", methods=["GET"])
+def get_search(id):
+    search = get_existing_search(id)
+    if not search:
+        return jsonify({"error": "Search not found"}), 404
+
+    return jsonify(search)
 
 
 @blueprint.route("/entities/config", methods=["GET"])
