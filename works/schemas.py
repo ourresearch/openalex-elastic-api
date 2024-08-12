@@ -78,6 +78,15 @@ class ConceptsSchema(Schema):
         ordered = True
 
 
+class CitationNormalizedPercentileSchema(Schema):
+    value = fields.Float()
+    is_in_top_1_percent = fields.Bool()
+    is_in_top_10_percent = fields.Bool()
+
+    class Meta:
+        ordered = True
+
+
 class GrantsSchema(Schema):
     funder = fields.Str()
     funder_display_name = fields.Str()
@@ -214,6 +223,7 @@ class WorksSchema(Schema):
     has_fulltext = fields.Bool()
     fulltext_origin = fields.Str()
     cited_by_count = fields.Int()
+    citation_normalized_percentile = fields.Nested(CitationNormalizedPercentileSchema)
     cited_by_percentile_year = fields.Nested(CitedByPercentileYearSchema)
     biblio = fields.Nested(BiblioSchema)
     is_retracted = fields.Bool()

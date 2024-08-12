@@ -135,6 +135,8 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["is_published"],
         alternate_names=ALTERNATE_NAMES.get("is_published", None),
     ),
+    BooleanField("citation_normalized_percentile.is_in_top_1_percent"),
+    BooleanField("citation_normalized_percentile.is_in_top_10_percent"),
     BooleanField(
         param="has_abstract",
         custom_es_field="abstract",
@@ -521,6 +523,7 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/works/filter-works#authors_count",
         alternate_names=ALTERNATE_NAMES.get("author", None),
     ),
+    RangeField("citation_normalized_percentile.value"),
     RangeField(
         param="cited_by_count",
         docstring="The number of times the work has been cited by another work",
