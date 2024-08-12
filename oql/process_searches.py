@@ -35,16 +35,13 @@ def fetch_results(query_string):
             "results": results_table_response.pop("results"),
         }
     else:
-        results_table_response = {
-            "meta": {},
-            "results": {}
-        }
+        results_table_response = {"meta": {}, "results": {}}
     return results_table_response
 
 
 def process_searches():
     while True:
-        print(f"fhceking for searches in queue {search_queue}")
+        print(f"checking for searches in queue {search_queue}")
         search_id = redis_db.lpop(search_queue)
         if not search_id:
             time.sleep(0.1)
@@ -57,22 +54,28 @@ def process_searches():
             continue
 
         search = json.loads(search_json)
-        if search.get('is_ready'):
+        if search.get("is_ready"):
             continue
 
-        results = fetch_results(search['q'])
+        try:
+            results = fetch_results(search["q"])
 
-        # update the search object
-        search['results'] = results['results']
-        search['meta'] = results['meta']
-        search['is_ready'] = True
-        search['timestamp'] = datetime.now(timezone.utc).isoformat()
+            # update the search object
+            search["results"] = results["results"]
+            search["meta"] = results["meta"]
+            search["is_ready"] = True
+            search["timestamp"] = datetime.now(timezone.utc).isoformat()
+        except Exception as e:
+            print(f"Error processing search {search_id}: {e}")
+            search["error"] = str(e)
+            search["is_ready"] = True
+            search["timestamp"] = datetime.now(timezone.utc).isoformat()
 
         # save updated search object back to Redis
         print(f"Saving search {search_id} to redis with {search}")
         redis_db.set(search_id, json.dumps(search))
 
-        # wait half a second to avoid hammering the Redis server
+        # wait to avoid hammering the Redis server
         time.sleep(0.1)
 
 
