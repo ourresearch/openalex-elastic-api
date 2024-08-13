@@ -56,6 +56,16 @@ entity_configs = [
             "sustainable_development_goals.id",
             "open_access.oa_status",
         ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+            "publication_year",
+            "type",
+            "primary_location",
+            "authors",
+            "institutions",
+            "topic",
+            "oa_status",
+        ],
         "groupByDefaults": [
             "publication_year",
             "open_access.is_oa",

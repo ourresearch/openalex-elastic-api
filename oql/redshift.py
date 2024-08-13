@@ -29,11 +29,24 @@ REDSHIFT_SCHEMA = {
         ("paper_id", "BIGINT"),
         ("paper_reference_id", "BIGINT")
     ],
+    "institution": [
+        ("affiliation_id", "BIGINT"),
+        ("display_name", "VARCHAR(65535)"),
+        ("ror_id", "VARCHAR(500)"),
+        ("iso3166_code", "VARCHAR(500)"),
+    ],
     "subfield": [
         ("subfield_id", "INTEGER"),
         ("display_name", "VARCHAR(65535)"),
         ("description", "VARCHAR(65535)"),
     ],
+    "source": [
+        ("source_id", "BIGINT"),
+        ("display_name", "VARCHAR(65535)"),
+        ("type", "VARCHAR(500)"),
+        ("issn", "VARCHAR(500)"),
+        ("is_in_doaj", "BOOLEAN"),
+        ],
     "topic": [
         ("topic_id", "INTEGER"),
         ("display_name", "VARCHAR(65535)"),

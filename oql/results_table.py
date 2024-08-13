@@ -197,3 +197,70 @@ class ResultTable:
 
     def response(self):
         return {"results": {"header": self.header(), "body": self.body()}}
+
+
+class ResultTableRedshift:
+    def __init__(self, entity, columns, json_data):
+        self.entity = entity
+        self.columns = (
+            columns
+            if columns
+            else entity_configs_dict[entity]["columnsToShowOnTableRedshift"]
+        )
+        self.json_data = json_data
+        self.config = entity_configs_dict[entity]
+
+    def header(self):
+        return [
+            property_configs_dict[self.entity][column]
+            for column in self.columns
+            if self.entity in property_configs_dict
+               and column in property_configs_dict[self.entity]
+        ]
+
+    def body(self):
+        return [self.format_row(row) for row in self.json_data["results"]]
+
+    def format_row(self, row):
+        row_id = row.get("id")
+        result = {"id": row_id, "cells": []}
+        for column in self.columns:
+            # get the value of the column
+            value = row.get(column)
+            result["cells"].append(self.format_value(column, value))
+        return result
+
+    def format_value(self, key, value):
+        column_type = self.get_column_type(key)
+        if column_type == "boolean":
+            return {"type": column_type, "value": bool(value)}
+        elif column_type == "number":
+            return {"type": column_type, "value": value}
+        elif column_type == "entity_list":
+            return {"type": "entity", "isList": True, "value": value}
+        else:
+            return {"type": column_type, "value": value}
+
+    def get_column_type(self, column):
+        return property_configs_dict[self.entity][column]["newType"]
+
+    def is_list(self, column):
+        return property_configs_dict[self.entity][column].get("isList", False)
+
+    def is_external_id(self, column):
+        return property_configs_dict[self.entity][column].get("isExternalId", False)
+
+    def external_id_prefix(self, column):
+        return property_configs_dict[self.entity][column].get("externalIdPrefix", "")
+
+    def count(self):
+        return self.json_data["meta"]["count"]
+
+    def convert_abtract_inverted_index(self, data):
+        positions = [(key, ord) for key, values in data.items() for ord in values]
+        sorted_positions = sorted(positions, key=lambda x: x[1])
+        result = " ".join(key for key, _ in sorted_positions)
+        return result
+
+    def response(self):
+        return {"results": {"header": self.header(), "body": self.body()}}

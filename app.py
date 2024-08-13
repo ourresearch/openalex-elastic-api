@@ -3,6 +3,7 @@ import os
 import sentry_sdk
 from elasticsearch_dsl import connections
 from flask import Flask, jsonify
+
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 import authors
@@ -32,7 +33,7 @@ import topics
 import works
 import work_types
 from core.exceptions import APIError
-from extensions import cache
+from extensions import cache, db
 
 
 def create_app(config_object="settings"):
@@ -81,6 +82,7 @@ def register_blueprints(app):
 
 
 def register_extensions(app):
+    db.init_app(app)
     sentry_sdk.init(dsn=os.environ.get("SENTRY_DSN"), integrations=[FlaskIntegration()])
     connections.create_connection(hosts=[settings.ES_URL], timeout=30)
     cache.init_app(app)

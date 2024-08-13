@@ -8,6 +8,8 @@ ES_URL = os.environ.get("ES_URL_PROD", "http://elastic:testpass@127.0.0.1:9200")
 DEBUG = ENV == "development"
 JSON_SORT_KEYS = False
 SECRET_KEY = os.environ.get("SECRET_KEY")
+SQLALCHEMY_DATABASE_URI = os.environ.get("REDSHIFT_SERVERLESS_URL")
+SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # indexes
 AUTHORS_INDEX = "authors-v13"

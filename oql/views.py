@@ -1,11 +1,12 @@
+from extensions import db
 from flask import Blueprint, request, jsonify
 
 from config.entity_config import entity_configs_dict
 from config.property_config import property_configs_dict
+from oql.models import Work
 from oql.query import Query
 from oql.schemas import QuerySchema
-from oql.results_table import ResultTable
-from oql.redshift import build_redshift_query, execute_redshift_query
+from oql.results_table import ResultTable, ResultTableRedshift
 from oql.search import Search, get_existing_search, is_cache_expired
 
 
@@ -44,47 +45,33 @@ def results():
             "results": [],
         }
     query = Query(query_string, page, per_page)
-    if query.use_redshift():
-        print(f"Detected using in query: {query_string}")
-        redshift_query = build_redshift_query(query_string)
-        redshift_results = execute_redshift_query(redshift_query)
+    if query.use_redshift() and format == "ui":
+        entity = query.entity
+        columns = query.columns or entity_configs_dict[entity]["columnsToShowOnTableRedshift"]
+        results = db.session.query(Work).order_by(Work.original_title).limit(100).all()
         json_data = {"results": []}
-        for r in redshift_results:
-            if "get subfields" in query_string:
-                json_data["results"].append(
-                    {
-                        "id": f"https://openalex.org/subfields/{r[0]}",
-                        "display_name": r[1],
-                        "works_count": r[2],
-                        "share": r[3],
-                    }
-                )
-            else:
-                json_data["results"].append(
-                    {
-                        "id": f"https://openalex.org/types/{r[0]}",
-                        "display_name": r[0],
-                        "works_count": r[1],
-                    }
-                )
+        for r in results:
+            result_data = {}
+            for column in columns:
+                if column == "type":
+                    value = r.type_formatted
+                else:
+                    value = getattr(r, column, None)
+                result_data[column] = value
+            result_data["id"] = r.id
+            json_data["results"].append(result_data)
         print(json_data)
-        if "get subfields" in query_string:
-            results_table = ResultTable(
-                "subfields", ["id", "display_name", "works_count", "share"], json_data
-            )
-        else:
-            results_table = ResultTable(
-                "types", ["id", "display_name", "works_count"], json_data
-            )
+        results_table = ResultTableRedshift(
+            entity, columns, json_data
+        )
         results_table_response = results_table.response()
         results_table_response["meta"] = {
-            "count": len(redshift_results),
+            "count": len(results),
             "page": query.page,
             "per_page": query.per_page,
             "q": query_string,
             "oql": query.oql_query(),
             "v1": None,
-            "redshift_query": redshift_query,
         }
         # reorder the dictionary
         results_table_response = {
