@@ -23,26 +23,30 @@ entity_configs = [
             {"key": "type", "value": "dataset", "displayName": "datasets"},
         ],
         "idRegex": r"(?i)(?:works\/)?(?:https:\/\/openalex\.org\/)?(w\d+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
             "publication_year",
             "type",
             "abstract_inverted_index",
             "primary_location.source.id",
+            "",
             "authorships.author.id",
             "authorships.institutions.id",
+            "",
             "primary_topic.id",
             "primary_topic.subfield.id",
             "primary_topic.field.id",
             "primary_topic.domain.id",
             "sustainable_development_goals.id",
+            "",
             "open_access.oa_status",
             "apc_paid.value_usd",
+            "",
             "grants.funder",
             "grants.award_id",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
             "publication_year",
             "type",
@@ -51,15 +55,16 @@ entity_configs = [
             "authorships.institutions.id",
             "primary_topic.id",
             "primary_topic.subfield.id",
-            "primary_topic.field.id",
-            "primary_topic.domain.id",
             "sustainable_development_goals.id",
             "open_access.oa_status",
+            "cited_by_count",
+            "fwci,"
         ],
         "groupByDefaults": [
             "publication_year",
             "open_access.is_oa",
             "primary_topic.id",
+            "keywords",
             "authorships.institutions.lineage",
             "type",
         ],
@@ -86,19 +91,20 @@ entity_configs = [
             {"key": "last_known_institutions.is_global_south", "value": True, "displayName": "from the Global South"},
         ],
         "idRegex": r"(?i)(?:authors\/)?(?:https:\/\/openalex\.org\/)?(a\d+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
             "display_name_alternatives",
+            "ids.orcid",
+            "",
             "last_known_institutions.id",
             "affiliations.institution.id",
-            "ids.orcid",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
             "display_name_alternatives",
-            "last_known_institutions.id",
             "ids.orcid",
+            "last_known_institutions.id",
         ],
         "groupByDefaults": [
             "last_known_institutions.id",
@@ -127,27 +133,31 @@ entity_configs = [
             {"key": "is_oa", "value": True, "displayName": "that are Open Access"},
         ],
         "idRegex": r"(?i)(?:sources\/)?(?:https:\/\/openalex\.org\/)?(s\d+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
-            "ids.issn",
-            "type",
-            "host_organization",
             "alternate_titles",
+            "",
+            "type",
+            "ids.issn",
+            "host_organization",
+            ""
             "is_oa",
             "is_in_doaj",
             "apc_usd",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
             "ids.issn",
             "type",
             "host_organization",
             "is_oa",
             "is_in_doaj",
+            "apc_usd",
         ],
         "groupByDefaults": [
             "type",
+            "host_organization",
             "is_oa",
             "is_in_doaj",
         ],
@@ -168,11 +178,11 @@ entity_configs = [
         "hasAutocomplete": True,
         "isNative": True,
         "idRegex": r"(?i)(?:publishers\/)?(?:https:\/\/openalex\.org\/)?(p\d+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
         ],
     },
@@ -192,11 +202,11 @@ entity_configs = [
         "hasAutocomplete": True,
         "isNative": True,
         "idRegex": r"(?i)(?:funders\/)?(?:https:\/\/openalex\.org\/)?(f\d+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name"
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name"
         ],
     },
@@ -217,16 +227,16 @@ entity_configs = [
         "hasAutocomplete": True,
         "isNative": True,
         "hasSerp": True,
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
             "display_name_alternatives",
+            "ids.ror",
             "parent_institutions",
             "child_institutions",
             "related_institutions",
-            "ids.ror",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
             "type",
             "country_code",
@@ -256,12 +266,12 @@ entity_configs = [
         "hasAutocomplete": True,
         "isNative": True,
         "idRegex": r"(?i)(?:concepts\/)?(?:https:\/\/openalex\.org\/)?(c\d+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
             "description",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
             "description",
         ],
@@ -282,11 +292,11 @@ entity_configs = [
         "hasAutocomplete": True,
         "isNative": False,
         "idRegex": r"(?:https:\/\/openalex\.org\/keywords\/|keywords\/)([a-zA-Z0-9\-]+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
         ],
     },
@@ -306,16 +316,18 @@ entity_configs = [
         "hasAutocomplete": True,
         "isNative": True,
         "idRegex": r"(?i)(?:topics\/)?(?:https:\/\/openalex\.org\/)?(t\d+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
             "description",
-            "siblings",
-            "subfield",
-            "field",
+            "",
             "domain",
+            "field",
+            "subfield",
+            "",
+            "siblings",    
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
             "description",
             "siblings",
@@ -339,16 +351,19 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "idRegex": r"(?:https:\/\/openalex\.org\/subfields\/|subfields\/)(\d+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
             "description",
-            "topics",
-            "siblings",
-            "field",
+            "",
             "domain",
+            "field",
+            "",
+            "topics",
+            "",
+            "siblings",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
             "description",
             "topics",
@@ -372,16 +387,18 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "idRegex": r"(?:https:\/\/openalex\.org\/fields\/|fields\/)(\d+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
-            "description",
             "display_name_alternatives",
+            "description",
+            "",
+            "domain",
+            "",
             "subfields",
             "siblings",
-            "domain",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
             "description",
             "subfields",
@@ -404,15 +421,17 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "idRegex": r"(?:https:\/\/openalex\.org\/domains\/|domains\/)(\d+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
-            "description",
             "display_name_alternatives",
+            "description",
+            "",
             "fields",
+            "",
             "siblings",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
             "description",
             "fields",
@@ -434,11 +453,11 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "idRegex": r"(?:https:\/\/openalex\.org\/sdgs\/|sdgs\/)(\d+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
         ],
     },
@@ -457,11 +476,11 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "idRegex": r"(?:https:\/\/openalex\.org\/countries\/|countries\/)([a-zA-Z]{2})",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
         ],
     },
@@ -480,12 +499,12 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "idRegex": r"(?i)(?:https:\/\/openalex\.org\/continents\/|continents\/)(q\d+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
             "countries",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
             "countries",
         ],
@@ -505,11 +524,11 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "idRegex": r"(?:https:\/\/openalex\.org\/languages\/|languages\/)([a-zA-Z]{2})",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
         ],
     },
@@ -528,13 +547,13 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "idRegex": r"(?:https:\/\/openalex\.org\/types\/|types\/)([a-zA-Z\-]+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
             "description",
             "crossref_types",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
             "description",
         ],
@@ -554,12 +573,12 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "idRegex": r"(?:https:\/\/openalex\.org\/source-types\/|source-types\/)([a-zA-Z\-]+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name",
             "description",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name",
             "description",
         ],
@@ -579,11 +598,11 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "idRegex": r"(?:https:\/\/openalex\.org\/institution-types\/|institution-types\/)([a-zA-Z\-]+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name"
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name"
         ],
     },
@@ -602,11 +621,12 @@ entity_configs = [
         "hasAutocomplete": False,
         "isNative": False,
         "idRegex": r"(?:https:\/\/openalex\.org\/licenses\/|licenses\/)([a-zA-Z0-9\-]+)",
-        "rowsToShowOnEntityPage": [
+        "ShowOnEntityPage": [
             "id",
             "display_name"
+            "descr",
         ],
-        "rowsToShowOnTablePage": [
+        "ShowOnTablePage": [
             "display_name"
         ],
     },
