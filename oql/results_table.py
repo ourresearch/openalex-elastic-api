@@ -254,7 +254,7 @@ class ResultTableRedshift:
         return property_configs_dict[self.entity][column].get("externalIdPrefix", "")
 
     def count(self):
-        return self.json_data["meta"]["count"]
+        return len(self.json_data["results"])
 
     def convert_abtract_inverted_index(self, data):
         positions = [(key, ord) for key, values in data.items() for ord in values]

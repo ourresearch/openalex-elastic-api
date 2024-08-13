@@ -446,11 +446,12 @@ class Query:
         return r.json()
 
     def execute_redshift(self):
-        results = db.session.query(Work).order_by(Work.original_title).limit(100).all()
         json_data = {"results": []}
+        columns = self.columns or self.default_columns()
+        results = db.session.query(Work).order_by(Work.original_title).limit(100).all()
         for r in results:
             result_data = {}
-            for column in self.columns:
+            for column in columns:
                 if column == "type":
                     value = r.type_formatted
                 else:

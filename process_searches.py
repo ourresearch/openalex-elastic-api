@@ -4,44 +4,46 @@ import redis
 import time
 
 import settings
+from app import create_app
 from config.entity_config import entity_configs_dict
 from oql.query import Query
 from oql.results_table import ResultTable, ResultTableRedshift
 
-
+app = create_app()
 redis_db = redis.Redis.from_url(settings.CACHE_REDIS_URL)
 search_queue = "search_queue"
 
 
 def fetch_results(query_string):
-    query = Query(query_string, 1, 100)
-    if query.is_valid():
-        json_data = query.execute()
-        entity = query.entity
-        columns = query.columns
-        if query.use_redshift():
-            columns = columns or entity_configs_dict[entity]["columnsToShowOnTableRedshift"]
-            results_table = ResultTableRedshift(entity, columns, json_data)
-        else:
-            results_table = ResultTable(entity, columns, json_data)
-        results_table_response = results_table.response()
-        results_table_response["meta"] = {
-            "count": results_table.count(),
-            "page": query.page,
-            "per_page": query.per_page,
-            "q": query_string,
-            "oql": query.oql_query(),
-            "v1": query.old_query(),
-        }
+    with app.app_context():
+        query = Query(query_string, 1, 100)
+        if query.is_valid():
+            json_data = query.execute()
+            entity = query.entity
+            columns = query.columns
+            if query.use_redshift():
+                columns = columns or entity_configs_dict[entity]["columnsToShowOnTableRedshift"]
+                results_table = ResultTableRedshift(entity, columns, json_data)
+            else:
+                results_table = ResultTable(entity, columns, json_data)
+            results_table_response = results_table.response()
+            results_table_response["meta"] = {
+                "count": results_table.count(),
+                "page": query.page,
+                "per_page": query.per_page,
+                "q": query_string,
+                "oql": query.oql_query(),
+                "v1": query.old_query(),
+            }
 
-        # reorder the dictionary
-        results_table_response = {
-            "meta": results_table_response.pop("meta"),
-            "results": results_table_response.pop("results"),
-        }
-    else:
-        results_table_response = {"meta": {}, "results": {}}
-    return results_table_response
+            # reorder the dictionary
+            results_table_response = {
+                "meta": results_table_response.pop("meta"),
+                "results": results_table_response.pop("results"),
+            }
+        else:
+            results_table_response = {"meta": {}, "results": {}}
+        return results_table_response
 
 
 def process_searches():
