@@ -6,6 +6,8 @@ import requests
 from config.entity_config import entity_configs_dict
 from config.property_config import property_configs_dict
 from config.stats_config import stats_configs_dict
+from extensions import db
+from oql.models import Work
 
 valid_entities = list(entity_configs_dict.keys())
 
@@ -413,6 +415,8 @@ class Query:
         return joined_clauses
 
     def execute(self):
+        if self.use_redshift():
+            return self.execute_redshift()
         url = f"https://api.openalex.org/{self.old_query()}"
         parsed_url = urlparse(url)
         query_params = parse_qs(parsed_url.query)
@@ -440,6 +444,21 @@ class Query:
 
         r = requests.get(new_url)
         return r.json()
+
+    def execute_redshift(self):
+        results = db.session.query(Work).order_by(Work.original_title).limit(100).all()
+        json_data = {"results": []}
+        for r in results:
+            result_data = {}
+            for column in self.columns:
+                if column == "type":
+                    value = r.type_formatted
+                else:
+                    value = getattr(r, column, None)
+                result_data[column] = value
+            result_data["id"] = r.id
+            json_data["results"].append(result_data)
+        return json_data
 
     def get_valid_columns(self):
         return (
