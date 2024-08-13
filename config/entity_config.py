@@ -65,6 +65,7 @@ entity_configs = [
             "institutions",
             "topic",
             "oa_status",
+            "cited_by_count"
         ],
         "groupByDefaults": [
             "publication_year",

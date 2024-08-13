@@ -1,13 +1,14 @@
 from extensions import db
-from sqlalchemy import Column, BigInteger, String, Boolean, Integer, Float
+from sqlalchemy import Column, BigInteger, String, Boolean, Integer, Float, ForeignKey
 
 
 class Work(db.Model):
-    __tablename__ = "work"
+    __tablename__ = "work_mv"
 
     paper_id = Column(BigInteger, primary_key=True)
     original_title = Column(String(65535))
     doi_lower = Column(String(500))
+    cited_by_count = Column(Integer)
     journal_id = Column(BigInteger)
     publication_date = Column(String(500))
     is_paratext = Column(Boolean)

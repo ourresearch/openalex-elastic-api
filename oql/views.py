@@ -1,5 +1,6 @@
 from extensions import db
 from flask import Blueprint, request, jsonify
+from sqlalchemy import desc
 
 from config.entity_config import entity_configs_dict
 from config.property_config import property_configs_dict
@@ -48,7 +49,7 @@ def results():
     if query.use_redshift() and format == "ui":
         entity = query.entity
         columns = query.columns or entity_configs_dict[entity]["columnsToShowOnTableRedshift"]
-        results = db.session.query(Work).order_by(Work.original_title).limit(100).all()
+        results = db.session.query(Work).order_by(desc(Work.cited_by_count)).limit(100).all()
         json_data = {"results": []}
         for r in results:
             result_data = {}

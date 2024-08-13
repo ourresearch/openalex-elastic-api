@@ -161,6 +161,16 @@ property_configs = [
         "icon": "mdi-town-hall",
     },
     {
+        "id": "cited_by_count",
+        "isCurrency": True,
+        "subjectEntity": "works",
+        "displayName": "cited by count",
+        "newType": "number",
+        "actions": ["filter"],
+        "actionsPopular": ["filter"],
+        "icon": "mdi-cash",
+    },
+    {
         "id": "institutions",
         "isList": True,
         "subjectEntity": "works",

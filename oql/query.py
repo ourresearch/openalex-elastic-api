@@ -2,6 +2,7 @@ import re
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 import requests
+from sqlalchemy import desc
 
 from config.entity_config import entity_configs_dict
 from config.property_config import property_configs_dict
@@ -448,7 +449,7 @@ class Query:
     def execute_redshift(self):
         json_data = {"results": []}
         columns = self.columns or self.default_columns()
-        results = db.session.query(Work).order_by(Work.original_title).limit(100).all()
+        results = db.session.query(Work).order_by(desc(Work.cited_by_count)).limit(100).all()
         for r in results:
             result_data = {}
             for column in columns:
