@@ -192,6 +192,14 @@ class Source(db.Model):
     issn = Column(String(500), nullable=True)
     is_in_doaj = Column(Boolean, nullable=True)
 
+    @property
+    def id(self):
+        return f"sources/S{self.source_id}"
+
+    @property
+    def type_formatted(self):
+        return {"id": f"source-types/{self.type.lower()}", "display_name": self.type.lower()} if self.type else None
+
     def __repr__(self):
         return f"<Source(source_id={self.source_id}, display_name={self.display_name})>"
 

@@ -921,6 +921,15 @@ property_configs = [
         "icon": "mdi-book-open-outline",
     },
     {
+        "id": "issn",
+        "subjectEntity": "sources",
+        "entityId": "sources",
+        "displayName": "ISSNs",
+        "isId": True,
+        "newType": "string",
+        "icon": "mdi-book-open-outline",
+    },
+    {
         "id": "display_name.search",
         "subjectEntity": "sources",
         "displayName": "Title search",

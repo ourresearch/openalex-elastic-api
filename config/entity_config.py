@@ -162,6 +162,11 @@ entity_configs = [
             "is_oa",
             "is_in_doaj",
         ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+            "type",
+            "issn",
+        ],
         "groupByDefaults": [
             "type",
             "is_oa",
