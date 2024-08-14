@@ -166,8 +166,8 @@ property_configs = [
         "subjectEntity": "works",
         "displayName": "cited by count",
         "newType": "number",
-        "actions": ["filter"],
-        "actionsPopular": ["filter"],
+        "actions": ["sort", "column", "filter"],
+        "actionsPopular": ["sort"],
         "icon": "mdi-file-document-outline",
     },
     {
