@@ -8,7 +8,7 @@ from config.entity_config import entity_configs_dict
 from config.property_config import property_configs_dict
 from config.stats_config import stats_configs_dict
 from extensions import db
-from oql.models import Work
+from oql import models
 
 valid_entities = list(entity_configs_dict.keys())
 
@@ -450,12 +450,12 @@ class Query:
         r = requests.get(new_url)
         return r.json()
 
-    def redshift_apply_sorting(self, query):
+    def redshift_apply_sorting(self, query, entity_class):
         if self.sort_by_column:
             if self.sort_by_column == "publication_year":
-                column = Work.year
+                column = getattr(entity_class, "year")
             else:
-                column = getattr(Work, self.sort_by_column, None)
+                column = getattr(entity_class, self.sort_by_column, None)
 
             if column:
                 if self.sort_by_order == "asc":
@@ -464,30 +464,38 @@ class Query:
                     query = query.order_by(desc(column))
                 else:
                     query = query.order_by(desc(column))
+            elif self.entity == "works":
+                query = query.order_by(
+                    desc(getattr(entity_class, "cited_by_count", None))
+                )
             else:
-                query = query.order_by(desc(Work.cited_by_count))
+                query = query.order_by(
+                    desc(getattr(entity_class, "display_name", None))
+                )
+        elif self.entity == "works":
+            query = query.order_by(desc(getattr(entity_class, "cited_by_count", None)))
         else:
-            query = query.order_by(desc(Work.cited_by_count))
-
+            query = query.order_by(desc(getattr(entity_class, "display_name", None)))
         return query
 
-    def redshift_apply_filtering(self, query):
+    def redshift_apply_filtering(self, query, entity_class):
         if self.filter_by:
             filters = self.convert_filter_by()
             for key, value in filters.items():
                 if key == "id":
-                    query = query.filter(Work.paper_id == value)
+                    query = query.filter(getattr(entity_class, "paper_id") == value)
                 elif key == "publication_year":
-                    query = query.filter(Work.year == value)
+                    query = query.filter(getattr(entity_class, "year") == value)
                 else:
-                    column = getattr(Work, key, None)
+                    column = getattr(entity_class, key, None)
                     query = query.filter(column == value)
         return query
 
     def redshift_query(self):
-        results = db.session.query(Work)
-        results = self.redshift_apply_sorting(results)
-        results = self.redshift_apply_filtering(results)
+        entity_class = getattr(models, self.entity[:-1].capitalize())
+        results = db.session.query(entity_class)
+        results = self.redshift_apply_sorting(results, entity_class)
+        results = self.redshift_apply_filtering(results, entity_class)
         return results.limit(100).all()
 
     def execute_redshift(self):

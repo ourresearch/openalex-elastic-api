@@ -49,18 +49,7 @@ def results():
     if query.use_redshift() and format == "ui":
         entity = query.entity
         columns = query.columns or entity_configs_dict[entity]["columnsToShowOnTableRedshift"]
-        results = db.session.query(Work).order_by(desc(Work.cited_by_count)).limit(100).all()
-        json_data = {"results": []}
-        for r in results:
-            result_data = {}
-            for column in columns:
-                if column == "type":
-                    value = r.type_formatted
-                else:
-                    value = getattr(r, column, None)
-                result_data[column] = value
-            result_data["id"] = r.id
-            json_data["results"].append(result_data)
+        json_data = query.execute()
         print(json_data)
         results_table = ResultTableRedshift(
             entity, columns, json_data
