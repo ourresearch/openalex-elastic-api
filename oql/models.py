@@ -158,6 +158,36 @@ class Author(db.Model):
         return f"<Author(author_id={self.author_id}, display_name={self.display_name})>"
 
 
+class Domain(db.Model):
+    __tablename__ = 'domain'
+
+    domain_id = Column(Integer, primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+    description = Column(String(65535), nullable=True)
+
+    @property
+    def id(self):
+        return f"domains/{self.domain_id}"
+
+    def __repr__(self):
+        return f"<Domain(domain_id={self.domain_id}, display_name={self.display_name})>"
+
+
+class Field(db.Model):
+    __tablename__ = 'field'
+
+    field_id = Column(Integer, primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+    description = Column(String(65535), nullable=True)
+
+    @property
+    def id(self):
+        return f"fields/{self.field_id}"
+
+    def __repr__(self):
+        return f"<Field(field_id={self.field_id}, display_name={self.display_name})>"
+
+
 class Institution(db.Model):
     __tablename__ = "institution_mv"
 
@@ -223,6 +253,21 @@ class Source(db.Model):
         return f"<Source(source_id={self.source_id}, display_name={self.display_name})>"
 
 
+class Subfield(db.Model):
+    __tablename__ = 'subfield'
+
+    subfield_id = Column(Integer, primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+    description = Column(String(65535), nullable=True)
+
+    @property
+    def id(self):
+        return f"subfields/{self.subfield_id}"
+
+    def __repr__(self):
+        return f"<Subfield(subfield_id={self.subfield_id}, display_name={self.display_name})>"
+
+
 class Topic(db.Model):
     __tablename__ = 'topic'
 
@@ -234,6 +279,14 @@ class Topic(db.Model):
     field_id = Column(Integer, nullable=True)
     domain_id = Column(Integer, nullable=True)
     wikipedia_url = Column(String(65535), nullable=True)
+
+    @property
+    def id(self):
+        return f"topics/T{self.topic_id}"
+
+    @property
+    def description(self):
+        return self.summary
 
     def __repr__(self):
         return f"<Topic(topic_id={self.topic_id}, display_name={self.display_name})>"

@@ -353,6 +353,10 @@ entity_configs = [
             "field",
             "domain",
         ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+            "description",
+        ],
     },
     {
         "id": "subfields",
@@ -386,6 +390,10 @@ entity_configs = [
             "field",
             "domain",
         ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+            "description",
+        ],
     },
     {
         "id": "fields",
@@ -418,6 +426,10 @@ entity_configs = [
             "siblings",
             "domain",
         ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+            "description",
+        ],
     },
     {
         "id": "domains",
@@ -447,6 +459,10 @@ entity_configs = [
             "description",
             "fields",
             "siblings",
+        ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+            "description",
         ],
     },
     {
