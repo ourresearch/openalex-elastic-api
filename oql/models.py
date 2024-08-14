@@ -183,6 +183,25 @@ class Institution(db.Model):
         return f"<Institution(affiliation_id={self.affiliation_id}, display_name={self.display_name})>"
 
 
+class Publisher(db.Model):
+    __tablename__ = "publisher"
+
+    publisher_id = Column(BigInteger, primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+    country_code = Column(String(500), nullable=True)
+
+    @property
+    def id(self):
+        return f"publishers/P{self.publisher_id}"
+
+    @property
+    def country_code_formatted(self):
+        return {"id": f"countries/{self.country_code}", "display_name": self.country_code} if self.country_code else None
+
+    def __repr__(self):
+        return f"<Publisher(publisher_id={self.publisher_id}, display_name={self.display_name})>"
+
+
 class Source(db.Model):
     __tablename__ = "source"
 

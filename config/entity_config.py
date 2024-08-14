@@ -196,6 +196,10 @@ entity_configs = [
         "rowsToShowOnTablePage": [
             "display_name",
         ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+            "country_code",
+        ],
     },
     {
         "id": "funders",
