@@ -162,7 +162,6 @@ property_configs = [
     },
     {
         "id": "cited_by_count",
-        "isCurrency": True,
         "subjectEntity": "works",
         "displayName": "cited by count",
         "newType": "number",
