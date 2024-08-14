@@ -452,7 +452,11 @@ class Query:
 
     def redshift_query(self):
         if self.sort_by_column:
-            column = getattr(Work, self.sort_by_column, None)
+            if self.sort_by_column == "publication_year":
+                column = Work.year
+            else:
+                column = getattr(Work, self.sort_by_column, None)
+
             if column:
                 if self.sort_by_order == "asc":
                     results = db.session.query(Work).order_by(column)
