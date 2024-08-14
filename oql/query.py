@@ -91,6 +91,8 @@ class Query:
             # Convert column name to snake_case
             if sort_by and sort_by in self.get_valid_sort_columns():
                 sort_column = convert_to_snake_case(sort_by)
+            elif self.entity and self.entity == "works":
+                sort_column = "cited_by_count"
             else:
                 sort_column = "display_name"
 
@@ -107,6 +109,8 @@ class Query:
                     sort_order = "asc"
 
             return sort_column, sort_order
+        elif self.entity and self.entity == "works":
+            return "cited_by_count", "desc"
         else:
             return "display_name", "asc"
 
@@ -446,10 +450,30 @@ class Query:
         r = requests.get(new_url)
         return r.json()
 
+    def redshift_query(self):
+        if self.sort_by_column:
+            column = getattr(Work, self.sort_by_column, None)
+            if column:
+                if self.sort_by_order == "asc":
+                    results = db.session.query(Work).order_by(column)
+                elif self.sort_by_order == "desc":
+                    results = db.session.query(Work).order_by(desc(column))
+                else:
+                    # default to descending order if order is not specified correctly
+                    results = db.session.query(Work).order_by(desc(column))
+            else:
+                # default sort by cited_by_count if column is not found
+                results = db.session.query(Work).order_by(desc(Work.cited_by_count))
+        else:
+            # default sort by cited_by_count if no column is specified
+            results = db.session.query(Work).order_by(desc(Work.cited_by_count))
+
+        return results.limit(100).all()
+
     def execute_redshift(self):
         json_data = {"results": []}
         columns = self.columns or self.default_columns()
-        results = db.session.query(Work).order_by(desc(Work.cited_by_count)).limit(100).all()
+        results = self.redshift_query()
         for r in results:
             result_data = {}
             for column in columns:

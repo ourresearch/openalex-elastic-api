@@ -168,7 +168,7 @@ property_configs = [
         "newType": "number",
         "actions": ["filter"],
         "actionsPopular": ["filter"],
-        "icon": "mdi-cash",
+        "icon": "mdi-file-document-outline",
     },
     {
         "id": "institutions",
