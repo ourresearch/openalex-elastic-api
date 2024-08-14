@@ -510,6 +510,8 @@ class Query:
             for column in columns:
                 if column == "type":
                     value = r.type_formatted
+                elif column == "country_code":
+                    value = r.country_code_formatted
                 else:
                     value = getattr(r, column, None)
                 result_data[column] = value

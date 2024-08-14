@@ -173,7 +173,11 @@ class Institution(db.Model):
 
     @property
     def type_formatted(self):
-        return {"id": f"institution-types/{self.type}", "display_name": self.type}
+        return {"id": f"institution-types/{self.type.lower()}", "display_name": self.type.lower()} if self.type else None
+
+    @property
+    def country_code_formatted(self):
+        return {"id": f"countries/{self.country_code}", "display_name": self.country_code} if self.country_code else None
 
     def __repr__(self):
         return f"<Institution(affiliation_id={self.affiliation_id}, display_name={self.display_name})>"
