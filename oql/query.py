@@ -450,7 +450,7 @@ class Query:
         r = requests.get(new_url)
         return r.json()
 
-    def redshift_query(self):
+    def redshift_apply_sorting(self, query):
         if self.sort_by_column:
             if self.sort_by_column == "publication_year":
                 column = Work.year
@@ -459,19 +459,35 @@ class Query:
 
             if column:
                 if self.sort_by_order == "asc":
-                    results = db.session.query(Work).order_by(column)
+                    query = query.order_by(column)
                 elif self.sort_by_order == "desc":
-                    results = db.session.query(Work).order_by(desc(column))
+                    query = query.order_by(desc(column))
                 else:
-                    # default to descending order if order is not specified correctly
-                    results = db.session.query(Work).order_by(desc(column))
+                    query = query.order_by(desc(column))
             else:
-                # default sort by cited_by_count if column is not found
-                results = db.session.query(Work).order_by(desc(Work.cited_by_count))
+                query = query.order_by(desc(Work.cited_by_count))
         else:
-            # default sort by cited_by_count if no column is specified
-            results = db.session.query(Work).order_by(desc(Work.cited_by_count))
+            query = query.order_by(desc(Work.cited_by_count))
 
+        return query
+
+    def redshift_apply_filtering(self, query):
+        if self.filter_by:
+            filters = self.convert_filter_by()
+            for key, value in filters.items():
+                if key == "id":
+                    query = query.filter(Work.paper_id == value)
+                elif key == "publication_year":
+                    query = query.filter(Work.year == value)
+                else:
+                    column = getattr(Work, key, None)
+                    query = query.filter(column == value)
+        return query
+
+    def redshift_query(self):
+        results = db.session.query(Work)
+        results = self.redshift_apply_sorting(results)
+        results = self.redshift_apply_filtering(results)
         return results.limit(100).all()
 
     def execute_redshift(self):
