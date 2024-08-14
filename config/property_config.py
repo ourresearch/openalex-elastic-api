@@ -1136,6 +1136,16 @@ property_configs = [
         "icon": "mdi-town-hall",
     },
     {
+        "id": "ror",
+        "subjectEntity": "institutions",
+        "entityId": "institutions",
+        "objectEntity": "institutions",
+        "displayName": "ROR",
+        "isId": True,
+        "newType": "string",
+        "icon": "mdi-town-hall",
+    },
+    {
         "id": "display_name.search",
         "subjectEntity": "institutions",
         "displayName": "Name search",

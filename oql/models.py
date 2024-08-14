@@ -159,12 +159,21 @@ class Author(db.Model):
 
 
 class Institution(db.Model):
-    __tablename__ = "institution"
+    __tablename__ = "institution_mv"
 
     affiliation_id = Column(BigInteger, primary_key=True)
     display_name = Column(String(65535), nullable=False)
-    ror_id = Column(String(500), nullable=True)
-    iso3166_code = Column(String(500), nullable=True)
+    ror = Column(String(500), nullable=True)
+    country_code = Column(String(500), nullable=True)
+    type = Column(String(500), nullable=True)
+
+    @property
+    def id(self):
+        return f"institutions/I{self.affiliation_id}"
+
+    @property
+    def type_formatted(self):
+        return {"id": f"institution-types/{self.type}", "display_name": self.type}
 
     def __repr__(self):
         return f"<Institution(affiliation_id={self.affiliation_id}, display_name={self.display_name})>"
@@ -218,3 +227,20 @@ class AuthorOrcid(db.Model):
 
     def __repr__(self):
         return f"<AuthorOrcid(author_id={self.author_id}, orcid={self.orcid})>"
+
+
+class Ror(db.Model):
+    __tablename__ = "ror"
+
+    ror_id = Column(String(500), primary_key=True)
+    name = Column(String(65535))
+    city = Column(String(65535))
+    state = Column(String(65535))
+    country = Column(String(65535))
+    country_code = Column(String(500))
+    grid_id = Column(String(500))
+    wikipedia_url = Column(String(65535))
+    ror_type = Column(String(500))
+
+    def __repr__(self):
+        return "<Ror ( {} ) {}>".format(self.ror_id, self.name)

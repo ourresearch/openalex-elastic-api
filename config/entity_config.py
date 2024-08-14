@@ -250,7 +250,12 @@ entity_configs = [
             "child_institutions",
             "ids.ror",
         ],
-
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+            "type",
+            "country_code",
+            "ror"
+        ],
         "idRegex": r"(?i)(?:institutions\/)?(?:https:\/\/openalex\.org\/)?(i\d+)",
         "groupByDefaults": [
             "country_code",
