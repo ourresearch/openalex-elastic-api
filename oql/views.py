@@ -56,7 +56,7 @@ def results():
         )
         results_table_response = results_table.response()
         results_table_response["meta"] = {
-            "count": len(results),
+            "count": results_table.count(),
             "page": query.page,
             "per_page": query.per_page,
             "q": query_string,

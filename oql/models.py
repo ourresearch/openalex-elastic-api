@@ -8,7 +8,7 @@ class Work(db.Model):
     paper_id = Column(BigInteger, primary_key=True)
     original_title = Column(String(65535))
     doi_lower = Column(String(500))
-    cited_by_count = Column(Integer)
+    cited_by_count = Column(Integer)  # joined from citation_papers_mv
     journal_id = Column(BigInteger)
     publication_date = Column(String(500))
     is_paratext = Column(Boolean)
@@ -17,9 +17,6 @@ class Work(db.Model):
     type_crossref = Column(String(500))
     year = Column(Integer)
     created_date = Column(String(500))
-
-    def __repr__(self):
-        return f"<Work(paper_id={self.paper_id}, original_title={self.original_title})>"
 
     @property
     def id(self):
@@ -101,6 +98,9 @@ class Work(db.Model):
             for affiliation_id, display_name in unique_institutions.items()
         ]
 
+    def __repr__(self):
+        return f"<Work(paper_id={self.paper_id}, original_title={self.original_title})>"
+
 
 class Affiliation(db.Model):
     __tablename__ = "affiliation"
@@ -117,10 +117,42 @@ class Affiliation(db.Model):
 
 
 class Author(db.Model):
-    __tablename__ = "author"
+    __tablename__ = "author_mv"
 
     author_id = Column(BigInteger, primary_key=True)
     display_name = Column(String(65535))
+    orcid = Column(String(500))  # joined from author_orcid
+
+    @property
+    def id(self):
+        return f"authors/A{self.author_id}"
+
+    @property
+    def last_known_institutions(self):
+        results = (
+            db.session.query(Affiliation.affiliation_id, Institution.display_name)
+            .join(Institution, Affiliation.affiliation_id == Institution.affiliation_id)
+            .filter(Affiliation.author_id == self.author_id)
+            .order_by(Affiliation.author_sequence_number)
+            .limit(10)
+            .all()
+        )
+        seen = set()
+        unique_results = []
+        for result in results:
+            if result.display_name not in seen:
+                seen.add(result.display_name)
+                unique_results.append(result)
+                if len(unique_results) >= 10:
+                    break
+
+        return [
+            {
+                "id": f"institutions/I{result.affiliation_id}",
+                "display_name": result.display_name,
+            }
+            for result in unique_results
+        ]
 
     def __repr__(self):
         return f"<Author(author_id={self.author_id}, display_name={self.display_name})>"
@@ -176,3 +208,13 @@ class WorkTopic(db.Model):
 
     def __repr__(self):
         return f"<WorkTopic(paper_id={self.paper_id}, topic_id={self.topic_id}, score={self.score})>"
+
+
+class AuthorOrcid(db.Model):
+    __tablename__ = "author_orcid"
+
+    author_id = Column(BigInteger, primary_key=True)
+    orcid = Column(String(500), nullable=True)
+
+    def __repr__(self):
+        return f"<AuthorOrcid(author_id={self.author_id}, orcid={self.orcid})>"

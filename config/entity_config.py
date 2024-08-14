@@ -111,6 +111,11 @@ entity_configs = [
             "last_known_institutions.id",
             "ids.orcid",
         ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+            "orcid",
+            "last_known_institutions",
+        ],
         "groupByDefaults": [
             "last_known_institutions.id",
             "last_known_institutions.country_code",

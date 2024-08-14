@@ -525,7 +525,7 @@ class Query:
         )
 
     def default_columns(self):
-        if self.entity == "works":
+        if self.entity in ["authors", "works"]:
             return entity_configs_dict[self.entity]["columnsToShowOnTableRedshift"]
         elif self.entity and self.entity in entity_configs_dict:
             return entity_configs_dict[self.entity]["rowsToShowOnTablePage"]
@@ -547,7 +547,7 @@ class Query:
                 return property_config.get("newType", "string")
 
     def use_redshift(self):
-        if self.entity == "works":
+        if self.entity in ["authors", "works"]:
             print(f"This is a redshift query: {self.query_string}")
             return True
 
