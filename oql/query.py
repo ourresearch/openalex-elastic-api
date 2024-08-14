@@ -495,6 +495,9 @@ class Query:
         columns = self.columns or self.default_columns()
         results = self.redshift_query()
         for r in results:
+            if r.id == "works/W4285719527":
+                # deleted work, skip
+                continue
             result_data = {}
             for column in columns:
                 if column == "type":
