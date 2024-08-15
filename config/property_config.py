@@ -1687,6 +1687,7 @@ property_configs = [
         "category": "other",
         "icon": "mdi-account-outline",
     },
+    # continents
     {
         "id": "id",
         "subjectEntity": "continents",
@@ -1709,16 +1710,6 @@ property_configs = [
         "actions": ["filter"],
         "actionsPopular": ["filter"],
         "icon": "mdi-shape-outline",
-    },
-    {
-        "id": "countries",
-        "isList": True,
-        "subjectEntity": "continents",
-        "entityId": "continents",
-        "objectEntity": "continents",
-        "displayName": "countries",
-        "newType": "entity",
-        "icon": "mdi-earth",
     },
     # keywords
     {
@@ -1785,6 +1776,15 @@ property_configs = [
         "actionsPopular": ["sort", "column"],
         "category": "other",
         "icon": "mdi-account-outline",
+    },
+    {
+        "id": "description",
+        "subjectEntity": "licenses",
+        "entityId": "licenses",
+        "objectEntity": "licenses",
+        "displayName": "description",
+        "newType": "string",
+        "icon": "mdi-shape-outline",
     },
     # institution types
     {

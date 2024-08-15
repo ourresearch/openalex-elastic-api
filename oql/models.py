@@ -188,7 +188,7 @@ class Continent(db.Model):
 
     @property
     def id(self):
-        return f"continents/{self.continent_id}"
+        return f"continents/{self.wikidata_id}"
 
     def __repr__(self):
         return f"<Continent(continent_id={self.continent_id}, display_name={self.display_name})>"
@@ -371,7 +371,7 @@ class Publisher(db.Model):
         return f"<Publisher(publisher_id={self.publisher_id}, display_name={self.display_name})>"
 
 
-class SDG(db.Model):
+class Sdg(db.Model):
     __tablename__ = "sdg"
 
     sdg_id = Column(Integer, primary_key=True)
@@ -489,7 +489,7 @@ class WorkTopic(db.Model):
         return f"<WorkTopic(paper_id={self.paper_id}, topic_id={self.topic_id}, score={self.score})>"
 
 
-class WorkType(db.Model):
+class Type(db.Model):
     __tablename__ = "work_type"
 
     work_type_id = Column(String(500), primary_key=True)

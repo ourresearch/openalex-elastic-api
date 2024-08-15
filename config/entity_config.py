@@ -325,6 +325,9 @@ entity_configs = [
         "rowsToShowOnTablePage": [
             "display_name",
         ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+        ],
     },
     {
         "id": "topics",
@@ -493,6 +496,10 @@ entity_configs = [
         "rowsToShowOnTablePage": [
             "display_name",
         ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+            "description",
+        ],
     },
     {
         "id": "countries",
@@ -514,6 +521,9 @@ entity_configs = [
             "display_name",
         ],
         "rowsToShowOnTablePage": [
+            "display_name",
+        ],
+        "columnsToShowOnTableRedshift": [
             "display_name",
         ],
     },
@@ -541,6 +551,9 @@ entity_configs = [
             "display_name",
             "countries",
         ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+        ],
     },
     {
         "id": "languages",
@@ -563,6 +576,10 @@ entity_configs = [
         ],
         "rowsToShowOnTablePage": [
             "display_name",
+        ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+            "description",
         ],
     },
     {
@@ -587,6 +604,10 @@ entity_configs = [
             "crossref_types",
         ],
         "rowsToShowOnTablePage": [
+            "display_name",
+            "description",
+        ],
+        "columnsToShowOnTableRedshift": [
             "display_name",
             "description",
         ],
@@ -615,6 +636,9 @@ entity_configs = [
             "display_name",
             "description",
         ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+        ],
     },
     {
         "id": "institution-types",
@@ -638,6 +662,9 @@ entity_configs = [
         "rowsToShowOnTablePage": [
             "display_name"
         ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+        ],
     },
     {
         "id": "licenses",
@@ -660,6 +687,10 @@ entity_configs = [
         ],
         "rowsToShowOnTablePage": [
             "display_name"
+        ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+            "description",
         ],
     },
 ]

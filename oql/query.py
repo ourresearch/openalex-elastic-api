@@ -12,7 +12,28 @@ from oql import models
 
 valid_entities = list(entity_configs_dict.keys())
 
-redshift_entities = ["authors", "domains", "fields", "funders", "institutions", "publishers", "sources", "subfields", "topics", "works"]
+redshift_entities = [
+    "authors",
+    "countries",
+    "continents",
+    "domains",
+    "fields",
+    "funders",
+    "institutions",
+    "institution-types",
+    "keywords",
+    "languages",
+    "licenses",
+    "publishers",
+    "sdgs",
+    "sources",
+    "source-types",
+    "subfields",
+    "topics",
+    "types",
+    "works",
+    "work-types",
+]
 
 
 class Query:
@@ -494,7 +515,16 @@ class Query:
         return query
 
     def redshift_query(self):
-        entity_class = getattr(models, self.entity[:-1].capitalize())
+        if self.entity == "countries":
+            entity_class = getattr(models, "Country")
+        elif self.entity == "institution-types":
+            entity_class = getattr(models, "InstitutionType")
+        elif self.entity == "source-types":
+            entity_class = getattr(models, "SourceType")
+        elif self.entity == "work-types":
+            entity_class = getattr(models, "WorkType")
+        else:
+            entity_class = getattr(models, self.entity[:-1].capitalize())
         results = db.session.query(entity_class)
         results = self.redshift_apply_sorting(results, entity_class)
         results = self.redshift_apply_filtering(results, entity_class)
