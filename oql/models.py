@@ -73,7 +73,10 @@ class Work(db.Model):
             .first()
         )
         if result:
-            return {"id": f"topics/T{result.topic_id}", "display_name": result.display_name}
+            return {
+                "id": f"topics/T{result.topic_id}",
+                "display_name": result.display_name,
+            }
 
     @property
     def institutions(self):
@@ -158,8 +161,41 @@ class Author(db.Model):
         return f"<Author(author_id={self.author_id}, display_name={self.display_name})>"
 
 
+class Country(db.Model):
+    __tablename__ = "country"
+
+    country_id = Column(String(500), primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+    description = Column(String(65535), nullable=True)
+    continent_id = Column(Integer, nullable=True)
+    is_global_south = Column(Boolean, nullable=True)
+
+    @property
+    def id(self):
+        return f"countries/{self.country_id}"
+
+    def __repr__(self):
+        return f"<Country(country_code={self.country_code}, display_name={self.display_name})>"
+
+
+class Continent(db.Model):
+    __tablename__ = "continent"
+
+    continent_id = Column(Integer, primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+    description = Column(String(65535), nullable=True)
+    wikidata_id = Column(String(500), nullable=True)
+
+    @property
+    def id(self):
+        return f"continents/{self.continent_id}"
+
+    def __repr__(self):
+        return f"<Continent(continent_id={self.continent_id}, display_name={self.display_name})>"
+
+
 class Domain(db.Model):
-    __tablename__ = 'domain'
+    __tablename__ = "domain"
 
     domain_id = Column(Integer, primary_key=True)
     display_name = Column(String(65535), nullable=False)
@@ -174,7 +210,7 @@ class Domain(db.Model):
 
 
 class Field(db.Model):
-    __tablename__ = 'field'
+    __tablename__ = "field"
 
     field_id = Column(Integer, primary_key=True)
     display_name = Column(String(65535), nullable=False)
@@ -205,7 +241,11 @@ class Funder(db.Model):
 
     @property
     def country_code_formatted(self):
-        return {"id": f"countries/{self.country_code}", "display_name": self.country_code} if self.country_code else None
+        return (
+            {"id": f"countries/{self.country_code}", "display_name": self.country_code}
+            if self.country_code
+            else None
+        )
 
     def __repr__(self):
         return f"<Funder(funder_id={self.funder_id}, display_name={self.display_name})>"
@@ -226,14 +266,86 @@ class Institution(db.Model):
 
     @property
     def type_formatted(self):
-        return {"id": f"institution-types/{self.type.lower()}", "display_name": self.type.lower()} if self.type else None
+        return (
+            {
+                "id": f"institution-types/{self.type.lower()}",
+                "display_name": self.type.lower(),
+            }
+            if self.type
+            else None
+        )
 
     @property
     def country_code_formatted(self):
-        return {"id": f"countries/{self.country_code}", "display_name": self.country_code} if self.country_code else None
+        return (
+            {"id": f"countries/{self.country_code}", "display_name": self.country_code}
+            if self.country_code
+            else None
+        )
 
     def __repr__(self):
         return f"<Institution(affiliation_id={self.affiliation_id}, display_name={self.display_name})>"
+
+
+class InstitutionType(db.Model):
+    __tablename__ = "institution_type"
+
+    institution_type_id = Column(String(500), primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+
+    @property
+    def id(self):
+        return f"institution-types/{self.institution_type_id}"
+
+    def __repr__(self):
+        return f"<InstitutionType(institution_type_id={self.institution_type_id}, display_name={self.display_name})>"
+
+
+class Keyword(db.Model):
+    __tablename__ = "keyword"
+
+    keyword_id = Column(String(500), primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+
+    @property
+    def id(self):
+        return f"keywords/{self.keyword_id}"
+
+    def __repr__(self):
+        return (
+            f"<Keyword(keyword_id={self.keyword_id}, display_name={self.display_name})>"
+        )
+
+
+class Language(db.Model):
+    __tablename__ = "language"
+
+    language_id = Column(String(500), primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+
+    @property
+    def id(self):
+        return f"languages/{self.language_id}"
+
+    def __repr__(self):
+        return f"<Language(language_id={self.language_id}, display_name={self.display_name})>"
+
+
+class License(db.Model):
+    __tablename__ = "license"
+
+    license_id = Column(String(500), primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+    description = Column(String(65535), nullable=True)
+
+    @property
+    def id(self):
+        return f"licenses/{self.license_id}"
+
+    def __repr__(self):
+        return (
+            f"<License(license_id={self.license_id}, display_name={self.display_name})>"
+        )
 
 
 class Publisher(db.Model):
@@ -249,10 +361,29 @@ class Publisher(db.Model):
 
     @property
     def country_code_formatted(self):
-        return {"id": f"countries/{self.country_code}", "display_name": self.country_code} if self.country_code else None
+        return (
+            {"id": f"countries/{self.country_code}", "display_name": self.country_code}
+            if self.country_code
+            else None
+        )
 
     def __repr__(self):
         return f"<Publisher(publisher_id={self.publisher_id}, display_name={self.display_name})>"
+
+
+class SDG(db.Model):
+    __tablename__ = "sdg"
+
+    sdg_id = Column(Integer, primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+    description = Column(String(65535), nullable=True)
+
+    @property
+    def id(self):
+        return f"sdgs/{self.sdg_id}"
+
+    def __repr__(self):
+        return f"<SDG(sdg_id={self.sdg_id}, display_name={self.display_name})>"
 
 
 class Source(db.Model):
@@ -270,14 +401,35 @@ class Source(db.Model):
 
     @property
     def type_formatted(self):
-        return {"id": f"source-types/{self.type.lower()}", "display_name": self.type.lower()} if self.type else None
+        return (
+            {
+                "id": f"source-types/{self.type.lower()}",
+                "display_name": self.type.lower(),
+            }
+            if self.type
+            else None
+        )
 
     def __repr__(self):
         return f"<Source(source_id={self.source_id}, display_name={self.display_name})>"
 
 
+class SourceType(db.Model):
+    __tablename__ = "source_type"
+
+    source_type_id = Column(String(500), primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+
+    @property
+    def id(self):
+        return f"source-types/{self.source_type_id}"
+
+    def __repr__(self):
+        return f"<SourceType(source_type_id={self.source_type_id}, display_name={self.display_name})>"
+
+
 class Subfield(db.Model):
-    __tablename__ = 'subfield'
+    __tablename__ = "subfield"
 
     subfield_id = Column(Integer, primary_key=True)
     display_name = Column(String(65535), nullable=False)
@@ -292,7 +444,7 @@ class Subfield(db.Model):
 
 
 class Topic(db.Model):
-    __tablename__ = 'topic'
+    __tablename__ = "topic"
 
     topic_id = Column(Integer, primary_key=True)
     display_name = Column(String(65535), nullable=False)
@@ -315,8 +467,19 @@ class Topic(db.Model):
         return f"<Topic(topic_id={self.topic_id}, display_name={self.display_name})>"
 
 
+class WorkKeyword(db.Model):
+    __tablename__ = "work_keyword"
+
+    paper_id = Column(BigInteger, primary_key=True)
+    keyword_id = Column(String(500), primary_key=True)
+    score = Column(Float, nullable=True)
+
+    def __repr__(self):
+        return f"<WorkKeyword(paper_id={self.paper_id}, keyword_id={self.keyword_id})>"
+
+
 class WorkTopic(db.Model):
-    __tablename__ = 'work_topic'
+    __tablename__ = "work_topic"
 
     paper_id = Column(BigInteger, primary_key=True)
     topic_id = Column(Integer, primary_key=True)
@@ -324,6 +487,23 @@ class WorkTopic(db.Model):
 
     def __repr__(self):
         return f"<WorkTopic(paper_id={self.paper_id}, topic_id={self.topic_id}, score={self.score})>"
+
+
+class WorkType(db.Model):
+    __tablename__ = "work_type"
+
+    work_type_id = Column(String(500), primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+    description = Column(String(65535), nullable=True)
+
+    @property
+    def id(self):
+        return f"work-types/{self.work_type_id}"
+
+    def __repr__(self):
+        return (
+            f"<WorkType(type_id={self.work_type_id}, display_name={self.display_name})>"
+        )
 
 
 class AuthorOrcid(db.Model):
