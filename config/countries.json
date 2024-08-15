@@ -1,0 +1,55 @@
+{
+    "id": "countries",
+    "icon": "mdi-earth",
+    "name": "countries",
+    "nameSingular": "country",
+    "displayName": "countries",
+    "displayNameSingular": "country",
+    "descr": "Countries",
+    "eg": "Nigeria",
+    "placeholder": "Search countries",
+    "filterName": "countries",
+    "filterKey": "authorships.countries",
+    "hasAutocomplete": false,
+    "isNative": false,
+    "idRegex": "(?:https:\\/\\/openalex\\.org\\/countries\\/|countries\\/)([a-zA-Z]{2})",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "countries",
+            "entityId": "countries",
+            "objectEntity": "countries",
+            "displayName": "Country ID",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "countries",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
+        }
+    }
+}

@@ -1,10 +1,6 @@
-from extensions import db
 from flask import Blueprint, request, jsonify
-from sqlalchemy import desc
 
-from config.entity_config import entity_configs_dict
-from config.property_config import property_configs_dict
-from oql.models import Work
+from combined_config import all_entities_config
 from oql.query import Query
 from oql.schemas import QuerySchema
 from oql.results_table import ResultTable, ResultTableRedshift
@@ -48,7 +44,7 @@ def results():
     query = Query(query_string, page, per_page)
     if query.use_redshift() and format == "ui":
         entity = query.entity
-        columns = query.columns or entity_configs_dict[entity]["columnsToShowOnTableRedshift"]
+        columns = query.columns or all_entities_config[entity]["columnsToShowOnTableRedshift"]
         json_data = query.execute()
         print(json_data)
         results_table = ResultTableRedshift(
@@ -124,18 +120,13 @@ def get_search(id):
 
 @blueprint.route("/entities/config", methods=["GET"])
 def entities_config():
-    config = {}
-    for entity in entity_configs_dict:
-        config[entity] = entity_configs_dict[entity]
-        config[entity]["properties"] = property_configs_dict[entity]
-    return jsonify(config)
+    return jsonify(all_entities_config)
 
 
 @blueprint.route("/entities/<entity>/config", methods=["GET"])
 def entity_config(entity):
-    if entity not in entity_configs_dict:
+    if entity not in all_entities_config:
         return jsonify({"error": "Entity not found"}), 404
 
-    config = entity_configs_dict[entity]
-    config["properties"] = property_configs_dict[entity]
+    config = all_entities_config[entity]
     return jsonify(config)

@@ -1,0 +1,77 @@
+{
+    "id": "types",
+    "icon": "mdi-shape-outline",
+    "name": "types",
+    "nameSingular": "type",
+    "displayName": "types",
+    "displayNameSingular": "type",
+    "descr": "Work type",
+    "eg": "article",
+    "placeholder": "Search work types",
+    "filterName": "type",
+    "filterKey": "type",
+    "hasAutocomplete": false,
+    "isNative": false,
+    "idRegex": "(?:https:\\/\\/openalex\\.org\\/types\\/|types\\/)([a-zA-Z\\-]+)",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name",
+        "description",
+        "crossref_types"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name",
+        "description"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name",
+        "description"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "types",
+            "entityId": "types",
+            "objectEntity": "types",
+            "displayName": "Type ID",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "types",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
+        },
+        "description": {
+            "id": "description",
+            "subjectEntity": "types",
+            "entityId": "types",
+            "objectEntity": "types",
+            "displayName": "description",
+            "newType": "string",
+            "icon": "mdi-shape-outline"
+        },
+        "crossref_types": {
+            "id": "crossref_types",
+            "isList": true,
+            "subjectEntity": "types",
+            "entityId": "types",
+            "displayName": "alternate names (Crossref)",
+            "newType": "string",
+            "icon": "mdi-shape-outline"
+        }
+    }
+}

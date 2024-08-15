@@ -1,0 +1,113 @@
+{
+    "id": "fields",
+    "icon": "mdi-tag-outline",
+    "name": "fields",
+    "nameSingular": "field",
+    "displayName": "fields",
+    "displayNameSingular": "field",
+    "descr": "what works are about",
+    "eg": "Computer science",
+    "placeholder": "Search fields",
+    "filterName": "fields",
+    "filterKey": "primary_topic.field.id",
+    "hasAutocomplete": false,
+    "isNative": false,
+    "idRegex": "(?:https:\\/\\/openalex\\.org\\/fields\\/|fields\\/)(\\d+)",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name",
+        "description",
+        "display_name_alternatives",
+        "subfields",
+        "siblings",
+        "domain"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name",
+        "description",
+        "subfields",
+        "siblings",
+        "domain"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name",
+        "description"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "fields",
+            "entityId": "fields",
+            "objectEntity": "fields",
+            "displayName": "OpenAlex ID",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "fields",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
+        },
+        "description": {
+            "id": "description",
+            "subjectEntity": "fields",
+            "entityId": "fields",
+            "objectEntity": "fields",
+            "displayName": "description",
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "display_name_alternatives": {
+            "id": "display_name_alternatives",
+            "isList": true,
+            "subjectEntity": "fields",
+            "entityId": "fields",
+            "objectEntity": "fields",
+            "displayName": "alternate names",
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "siblings": {
+            "id": "siblings",
+            "isList": true,
+            "subjectEntity": "fields",
+            "entityId": "fields",
+            "objectEntity": "fields",
+            "displayName": "related fields (siblings)",
+            "newType": "entity",
+            "icon": "mdi-tag-outline"
+        },
+        "subfields": {
+            "id": "subfields",
+            "isList": true,
+            "subjectEntity": "fields",
+            "entityId": "subfields",
+            "objectEntity": "subfields",
+            "displayName": "subfields (children)",
+            "newType": "entity",
+            "icon": "mdi-tag-outline"
+        },
+        "domain": {
+            "id": "domain",
+            "subjectEntity": "fields",
+            "entityId": "domains",
+            "objectEntity": "domains",
+            "displayName": "domain (parent)",
+            "newType": "entity",
+            "icon": "mdi-tag-outline"
+        }
+    }
+}

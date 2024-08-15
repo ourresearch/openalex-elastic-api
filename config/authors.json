@@ -1,0 +1,257 @@
+{
+    "id": "authors",
+    "icon": "mdi-account-outline",
+    "name": "authors",
+    "nameSingular": "author",
+    "displayName": "authors",
+    "displayNameSingular": "author",
+    "descr": "Creators of scholarly works",
+    "eg": "Albert Einstein",
+    "placeholder": "Search scholarly authors",
+    "filterName": "author",
+    "filterKey": "authorships.author.id",
+    "hintVerb": "at",
+    "color": "green",
+    "hasAutocomplete": true,
+    "isNative": true,
+    "hasSerp": true,
+    "highlightFilters": [
+        {
+            "key": "has_orcid",
+            "value": true,
+            "displayName": "with ORCIDs"
+        },
+        {
+            "key": "last_known_institutions.is_global_south",
+            "value": true,
+            "displayName": "from the Global South"
+        }
+    ],
+    "idRegex": "(?i)(?:authors\\/)?(?:https:\\/\\/openalex\\.org\\/)?(a\\d+)",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name",
+        "display_name_alternatives",
+        "last_known_institutions.id",
+        "affiliations.institution.id",
+        "ids.orcid"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name",
+        "display_name_alternatives",
+        "last_known_institutions.id",
+        "ids.orcid"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name",
+        "orcid",
+        "last_known_institutions"
+    ],
+    "groupByDefaults": [
+        "last_known_institutions.id",
+        "last_known_institutions.country_code",
+        "has_orcid"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "authors",
+            "entityId": "authors",
+            "objectEntity": "authors",
+            "displayName": "OpenAlex ID",
+            "newType": "string",
+            "actions": [],
+            "actionsPopular": [],
+            "isId": true,
+            "icon": "mdi-account-outline"
+        },
+        "ids.orcid": {
+            "id": "ids.orcid",
+            "subjectEntity": "authors",
+            "entityId": "authors",
+            "objectEntity": "authors",
+            "displayName": "ORCID",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-account-outline"
+        },
+        "orcid": {
+            "id": "orcid",
+            "subjectEntity": "authors",
+            "entityId": "authors",
+            "objectEntity": "authors",
+            "displayName": "ORCID",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-account-outline"
+        },
+        "default.search": {
+            "id": "default.search",
+            "subjectEntity": "authors",
+            "entityId": "authors",
+            "objectEntity": "authors",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-magnify"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "authors",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
+        },
+        "affiliations.institution.id": {
+            "id": "affiliations.institution.id",
+            "isList": true,
+            "subjectEntity": "authors",
+            "displayName": "Past institutions",
+            "entityId": "institutions",
+            "objectEntity": "institutions",
+            "newType": "entity",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-town-hall"
+        },
+        "affiliations.institution.type": {
+            "id": "affiliations.institution.type",
+            "isList": true,
+            "isId": true,
+            "subjectEntity": "authors",
+            "entityId": "institution-types",
+            "objectEntity": "institution-types",
+            "displayName": "Past institutions type",
+            "newType": "entity",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-shape-outline"
+        },
+        "last_known_institutions.id": {
+            "id": "last_known_institutions.id",
+            "isList": true,
+            "subjectEntity": "authors",
+            "displayName": "institution",
+            "entityId": "institutions",
+            "objectEntity": "institutions",
+            "newType": "entity",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-town-hall"
+        },
+        "last_known_institutions": {
+            "id": "last_known_institutions",
+            "isList": true,
+            "subjectEntity": "authors",
+            "displayName": "institution",
+            "entityId": "institutions",
+            "objectEntity": "institutions",
+            "newType": "entity",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-town-hall"
+        },
+        "last_known_institutions.country_code": {
+            "id": "last_known_institutions.country_code",
+            "isList": true,
+            "subjectEntity": "authors",
+            "entityId": "countries",
+            "isId": true,
+            "displayName": "institution country",
+            "newType": "entity",
+            "isCountry": true,
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-earth"
+        },
+        "last_known_institutions.type": {
+            "id": "last_known_institutions.type",
+            "isList": true,
+            "subjectEntity": "authors",
+            "entityId": "institution-types",
+            "displayName": "Institution type",
+            "isId": true,
+            "newType": "entity",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-shape-outline"
+        },
+        "has_orcid": {
+            "id": "has_orcid",
+            "subjectEntity": "authors",
+            "entityId": "authors",
+            "objectEntity": "authors",
+            "displayName": "Has an ORCID",
+            "newType": "boolean",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-tag-outline"
+        },
+        "display_name_alternatives": {
+            "id": "display_name_alternatives",
+            "isList": true,
+            "subjectEntity": "authors",
+            "entityId": "authors",
+            "objectEntity": "authors",
+            "displayName": "alternate names",
+            "newType": "string",
+            "actions": [],
+            "actionsPopular": [],
+            "icon": "mdi-town-hall"
+        }
+    }
+}

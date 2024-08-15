@@ -4,13 +4,11 @@ from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 import requests
 from sqlalchemy import desc
 
-from config.entity_config import entity_configs_dict
-from config.property_config import property_configs_dict
-from config.stats_config import stats_configs_dict
+from combined_config import all_entities_config
 from extensions import db
 from oql import models
 
-valid_entities = list(entity_configs_dict.keys())
+valid_entities = list(all_entities_config.keys())
 
 redshift_entities = [
     "authors",
@@ -553,30 +551,30 @@ class Query:
 
     def get_valid_columns(self):
         return (
-            property_configs_dict[self.entity].keys()
-            if self.entity and self.entity in entity_configs_dict
+            all_entities_config[self.entity].keys()
+            if self.entity and self.entity in all_entities_config
             else []
         )
 
     def default_columns(self):
         if self.entity in redshift_entities:
-            return entity_configs_dict[self.entity]["columnsToShowOnTableRedshift"]
-        elif self.entity and self.entity in entity_configs_dict:
-            return entity_configs_dict[self.entity]["rowsToShowOnTablePage"]
+            return all_entities_config[self.entity]["columnsToShowOnTableRedshift"]
+        elif self.entity and self.entity in all_entities_config:
+            return all_entities_config[self.entity]["rowsToShowOnTablePage"]
         else:
             return []
 
     def get_valid_sort_columns(self):
-        if not self.entity or self.entity and self.entity not in entity_configs_dict:
+        if not self.entity or self.entity and self.entity not in all_entities_config:
             return []
         return [
             key
-            for key, values in property_configs_dict[self.entity].items()
+            for key, values in all_entities_config[self.entity]['properties'].items()
             if "sort" in values.get("actions", [])
         ]
 
     def property_type(self, column):
-        for property_config in property_configs_dict.get(self.entity, {}).values():
+        for property_config in all_entities_config.get(self.entity, {}).get('properties').values():
             if property_config.get("id", "") == column:
                 return property_config.get("newType", "string")
 

@@ -1,0 +1,59 @@
+{
+    "id": "sdgs",
+    "icon": "mdi-sprout-outline",
+    "name": "sdgs",
+    "nameSingular": "sdg",
+    "displayName": "Sustainable Development Goals",
+    "displayNameSingular": "Sustainable Development Goal",
+    "descr": "Relevant UN SDGs",
+    "eg": "Clean water and sanitation",
+    "placeholder": "Search SDGs",
+    "filterName": "Sustainable Development Goals",
+    "filterKey": "sustainable_development_goals.id",
+    "hasAutocomplete": false,
+    "isNative": false,
+    "idRegex": "(?:https:\\/\\/openalex\\.org\\/sdgs\\/|sdgs\\/)(\\d+)",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name",
+        "description"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "sdgs",
+            "entityId": "sdgs",
+            "objectEntity": "sdgs",
+            "displayName": "SDG ID",
+            "isId": true,
+            "actions": [
+                "sort"
+            ],
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "sdgs",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
+        }
+    }
+}

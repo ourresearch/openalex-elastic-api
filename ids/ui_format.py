@@ -2,8 +2,7 @@ import json
 
 from flask import request
 
-from config.entity_config import entity_configs_dict
-from config.property_config import property_configs_dict
+from combined_config import all_entities_config
 
 OPENALEX_URL = "openalex.org"
 
@@ -60,14 +59,14 @@ def convert_openalex_id(old_id):
 
 def format_as_ui(entity, data):
     results = []
-    columns = entity_configs_dict[entity]["rowsToShowOnEntityPage"]
+    columns = all_entities_config[entity]["rowsToShowOnEntityPage"]
     print(f"columns to process: {columns}")
     data = json.loads(data)
     for column in columns:
-        config = property_configs_dict[entity].get(column)
-        is_list = column in property_configs_dict[entity] and property_configs_dict[
+        config = all_entities_config[entity]['properties'].get(column)
+        is_list = column in all_entities_config[entity]['properties'] and all_entities_config[
             entity
-        ][column].get("isList")
+        ]['properties'][column].get("isList")
         # unique columns
         if column == "grants.award_id":
             results.append(
@@ -267,9 +266,4 @@ def format_as_ui(entity, data):
                     "config": config,
                 }
             )
-
-    # print columns that weren't processed
-    # columns_processed = [result["config"]["id"] for result in results]
-    # columns_not_processed = list(set(columns) - set(columns_processed))
-    # print(f"columns_not_processed: {columns_not_processed}")
     return results

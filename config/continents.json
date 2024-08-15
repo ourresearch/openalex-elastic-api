@@ -1,0 +1,61 @@
+{
+    "id": "continents",
+    "icon": "mdi-earth",
+    "name": "continents",
+    "nameSingular": "continent",
+    "displayName": "continents",
+    "displayNameSingular": "continent",
+    "descr": "Continents",
+    "eg": "Africa",
+    "placeholder": "Search continents",
+    "filterName": "continent",
+    "filterKey": "authorships.institutions.continent",
+    "hasAutocomplete": false,
+    "isNative": false,
+    "idRegex": "(?i)(?:https:\\/\\/openalex\\.org\\/continents\\/|continents\\/)(q\\d+)",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name",
+        "countries"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name",
+        "countries"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "continents",
+            "entityId": "continents",
+            "isId": true,
+            "objectEntity": "continents",
+            "displayName": "Continent ID",
+            "newType": "string",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-shape-outline"
+        },
+        "display_name": {
+            "id": "display_name",
+            "subjectEntity": "continents",
+            "entityId": "continents",
+            "objectEntity": "continents",
+            "displayName": "Continent name",
+            "newType": "string",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-shape-outline"
+        }
+    }
+}

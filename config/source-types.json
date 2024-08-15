@@ -1,0 +1,76 @@
+{
+    "id": "source-types",
+    "icon": "mdi-shape-outline",
+    "name": "source-types",
+    "nameSingular": "source type",
+    "displayName": "source types",
+    "displayNameSingular": "source type",
+    "descr": "Source type",
+    "eg": "journal",
+    "placeholder": "Search source types",
+    "filterName": "source type",
+    "filterKey": "primary_location.source.type",
+    "hasAutocomplete": false,
+    "isNative": false,
+    "idRegex": "(?:https:\\/\\/openalex\\.org\\/source-types\\/|source-types\\/)([a-zA-Z\\-]+)",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name",
+        "description"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name",
+        "description"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "source-types",
+            "entityId": "source-types",
+            "objectEntity": "source-types",
+            "displayName": "Source Type ID",
+            "isId": true,
+            "newType": "string",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-shape-outline"
+        },
+        "display_name": {
+            "id": "display_name",
+            "subjectEntity": "source-types",
+            "entityId": "source-types",
+            "objectEntity": "source-types",
+            "displayName": "Source type name",
+            "newType": "entity",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-shape-outline"
+        },
+        "description": {
+            "id": "description",
+            "subjectEntity": "source-types",
+            "entityId": "source-types",
+            "objectEntity": "source-types",
+            "displayName": "Source type description",
+            "newType": "entity",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-shape-outline"
+        }
+    }
+}

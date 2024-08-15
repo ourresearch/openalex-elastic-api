@@ -2,8 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from authors.fields import fields_dict
 from authors.schemas import AuthorsSchema, MessageSchema
-from config.entity_config import entity_configs_dict
-from config.property_config import property_configs_dict
+from combined_config import all_entities_config
 from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
@@ -14,28 +13,6 @@ from extensions import cache
 from settings import AUTHORS_INDEX
 
 blueprint = Blueprint("authors", __name__)
-
-
-# Old Author IDs are fully deprecated, so the below is commented out
-# def is_query_for_old_authors():
-#     # backwards compatability check. returns True if all of the author IDs requested are old authors
-#     from core.utils import get_index_name_by_id, map_filter_params
-
-#     filter_params = map_filter_params(request.args.get("filter"))
-#     if filter_params:
-#         fields_to_check = ["openalex", "openalex_id"]
-#         index_list = []
-#         for filter in filter_params:
-#             for key, value in filter.items():
-#                 if key in fields_to_check:
-#                     openalex_ids = value.split("|")
-#                     for openalex_id in openalex_ids:
-#                         index_list.append(get_index_name_by_id(openalex_id))
-#         if index_list and all(
-#             [index_name == AUTHORS_INDEX_OLD for index_name in index_list]
-#         ):
-#             return True
-#     return False
 
 
 @blueprint.route("/authors")
@@ -96,6 +73,4 @@ def authors_filters_doctrings():
 
 @blueprint.route("/authors/config")
 def authors_config():
-    result = entity_configs_dict["authors"]
-    result["properties"] = property_configs_dict["authors"]
-    return jsonify(result)
+    return jsonify(all_entities_config["authors"])

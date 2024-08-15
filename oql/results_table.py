@@ -1,6 +1,4 @@
-from config.entity_config import entity_configs_dict
-from config.property_config import property_configs_dict
-from config.stats_config import stats_configs_dict
+from combined_config import all_entities_config
 from ids.ui_format import convert_openalex_id
 
 
@@ -10,17 +8,16 @@ class ResultTable:
         self.columns = (
             columns
             if columns
-            else entity_configs_dict[entity]["rowsToShowOnTablePage"]
+            else all_entities_config[entity]["rowsToShowOnTablePage"]
         )
         self.json_data = json_data
-        self.config = entity_configs_dict[entity]
+        self.config = all_entities_config[entity]
 
     def header(self):
         return [
-            property_configs_dict[self.entity][column]
+            all_entities_config[self.entity]['properties'][column]
             for column in self.columns
-            if self.entity in property_configs_dict
-            and column in property_configs_dict[self.entity]
+            if column in all_entities_config[self.entity]['properties'][column]
         ]
 
     def body(self):
@@ -175,16 +172,16 @@ class ResultTable:
             return {"type": column_type, "value": value}
 
     def get_column_type(self, column):
-        return property_configs_dict[self.entity][column]["newType"]
+        return all_entities_config[self.entity]['properties'][column]["newType"]
 
     def is_list(self, column):
-        return property_configs_dict[self.entity][column].get("isList", False)
+        return all_entities_config[self.entity]['properties'][column].get("isList", False)
 
     def is_external_id(self, column):
-        return property_configs_dict[self.entity][column].get("isExternalId", False)
+        return all_entities_config[self.entity]['properties'][column].get("isExternalId", False)
 
     def external_id_prefix(self, column):
-        return property_configs_dict[self.entity][column].get("externalIdPrefix", "")
+        return all_entities_config[self.entity]['properties'][column].get("externalIdPrefix", "")
 
     def count(self):
         return self.json_data["meta"]["count"]
@@ -205,17 +202,16 @@ class ResultTableRedshift:
         self.columns = (
             columns
             if columns
-            else entity_configs_dict[entity]["columnsToShowOnTableRedshift"]
+            else all_entities_config[entity]["columnsToShowOnTableRedshift"]
         )
         self.json_data = json_data
-        self.config = entity_configs_dict[entity]
+        self.config = all_entities_config[entity]
 
     def header(self):
         return [
-            property_configs_dict[self.entity][column]
+            all_entities_config[self.entity]['properties'][column]
             for column in self.columns
-            if self.entity in property_configs_dict
-               and column in property_configs_dict[self.entity]
+            if column in all_entities_config[self.entity]['properties']
         ]
 
     def body(self):
@@ -242,16 +238,16 @@ class ResultTableRedshift:
             return {"type": column_type, "value": value}
 
     def get_column_type(self, column):
-        return property_configs_dict[self.entity][column]["newType"]
+        return all_entities_config[self.entity]['properties'][column]["newType"]
 
     def is_list(self, column):
-        return property_configs_dict[self.entity][column].get("isList", False)
+        return all_entities_config[self.entity]['properties'][column].get("isList", False)
 
     def is_external_id(self, column):
-        return property_configs_dict[self.entity][column].get("isExternalId", False)
+        return all_entities_config[self.entity]['properties'][column].get("isExternalId", False)
 
     def external_id_prefix(self, column):
-        return property_configs_dict[self.entity][column].get("externalIdPrefix", "")
+        return all_entities_config[self.entity]['properties'][column].get("externalIdPrefix", "")
 
     def count(self):
         return len(self.json_data["results"])

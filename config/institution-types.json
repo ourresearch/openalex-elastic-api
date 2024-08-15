@@ -1,0 +1,55 @@
+{
+    "id": "institution-types",
+    "icon": "mdi-shape-outline",
+    "name": "institution-types",
+    "nameSingular": "institution type",
+    "displayName": "institution types",
+    "displayNameSingular": "institution type",
+    "descr": "institution type",
+    "eg": "company",
+    "placeholder": "Search institution types",
+    "filterName": "institution type",
+    "filterKey": "authorships.institutions.type",
+    "hasAutocomplete": false,
+    "isNative": false,
+    "idRegex": "(?:https:\\/\\/openalex\\.org\\/institution-types\\/|institution-types\\/)([a-zA-Z\\-]+)",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "institution-types",
+            "entityId": "institution-types",
+            "objectEntity": "institution-types",
+            "displayName": "Institution ID",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "institution-types",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
+        }
+    }
+}

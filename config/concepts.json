@@ -1,0 +1,78 @@
+{
+    "id": "concepts",
+    "icon": "mdi-tag-outline",
+    "name": "concepts",
+    "nameSingular": "concept",
+    "displayName": "concepts",
+    "displayNameSingular": "concept",
+    "descr": "Topics and fields of study",
+    "eg": "History",
+    "placeholder": "Search topics",
+    "filterName": "concepts",
+    "filterKey": "concepts.id",
+    "hasAutocomplete": true,
+    "isNative": true,
+    "idRegex": "(?i)(?:concepts\\/)?(?:https:\\/\\/openalex\\.org\\/)?(c\\d+)",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name",
+        "description"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name",
+        "description"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "concepts",
+            "entityId": "concepts",
+            "objectEntity": "concepts",
+            "displayName": "OpenAlex ID",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "concepts",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
+        },
+        "description": {
+            "id": "description",
+            "subjectEntity": "concepts",
+            "entityId": "concepts",
+            "objectEntity": "concepts",
+            "displayName": "description",
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "display_name.search": {
+            "id": "display_name.search",
+            "subjectEntity": "concepts",
+            "displayName": "Name search",
+            "newType": "string",
+            "icon": "mdi-magnify"
+        },
+        "level": {
+            "id": "level",
+            "subjectEntity": "concepts",
+            "displayName": "Level",
+            "maxPotentialFiltersToShow": 10,
+            "newType": "number",
+            "icon": "mdi-tag-outline"
+        }
+    }
+}

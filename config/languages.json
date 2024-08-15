@@ -1,0 +1,55 @@
+{
+    "id": "languages",
+    "icon": "mdi-translate",
+    "name": "languages",
+    "nameSingular": "language",
+    "displayName": "languages",
+    "displayNameSingular": "language",
+    "descr": "Languages",
+    "eg": "Swahili",
+    "placeholder": "Search languages",
+    "filterName": "languages",
+    "filterKey": "language",
+    "hasAutocomplete": false,
+    "isNative": false,
+    "idRegex": "(?:https:\\/\\/openalex\\.org\\/languages\\/|languages\\/)([a-zA-Z]{2})",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "languages",
+            "entityId": "languages",
+            "objectEntity": "languages",
+            "displayName": "Language ID",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "languages",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
+        }
+    }
+}

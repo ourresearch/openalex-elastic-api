@@ -1,0 +1,56 @@
+{
+    "id": "keywords",
+    "icon": "mdi-tag-outline",
+    "name": "keywords",
+    "nameSingular": "keyword",
+    "displayName": "keywords",
+    "displayNameSingular": "keyword",
+    "descr": "what works are about",
+    "eg": "Cardiac imaging",
+    "placeholder": "Search keywords",
+    "filterName": "keywords",
+    "filterKey": "keywords.id",
+    "hintVerb": ":",
+    "hasAutocomplete": true,
+    "isNative": false,
+    "idRegex": "(?:https:\\/\\/openalex\\.org\\/keywords\\/|keywords\\/)([a-zA-Z0-9\\-]+)",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "keywords",
+            "entityId": "keywords",
+            "objectEntity": "keywords",
+            "displayName": "Keyword ID",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "keywords",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
+        }
+    }
+}

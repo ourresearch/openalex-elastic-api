@@ -1,0 +1,65 @@
+{
+    "id": "licenses",
+    "icon": "mdi-lock-open-outline",
+    "name": "licenses",
+    "nameSingular": "license",
+    "displayName": "licenses",
+    "displayNameSingular": "license",
+    "descr": "license of best open copy",
+    "eg": "CC-BY",
+    "placeholder": "Search licenses",
+    "filterName": "institution type",
+    "filterKey": "best_oa_location.license",
+    "hasAutocomplete": false,
+    "isNative": false,
+    "idRegex": "(?:https:\\/\\/openalex\\.org\\/licenses\\/|licenses\\/)([a-zA-Z0-9\\-]+)",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name",
+        "description"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "licenses",
+            "entityId": "licenses",
+            "objectEntity": "licenses",
+            "displayName": "License ID",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "licenses",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
+        },
+        "description": {
+            "id": "description",
+            "subjectEntity": "licenses",
+            "entityId": "licenses",
+            "objectEntity": "licenses",
+            "displayName": "description",
+            "newType": "string",
+            "icon": "mdi-shape-outline"
+        }
+    }
+}

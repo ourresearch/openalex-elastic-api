@@ -1,0 +1,205 @@
+{
+    "id": "institutions",
+    "icon": "mdi-town-hall",
+    "name": "institutions",
+    "nameSingular": "institution",
+    "displayName": "institutions",
+    "displayNameSingular": "institution",
+    "descr": "Universities and research centers",
+    "eg": "Harvard University",
+    "placeholder": "Search academic institutions",
+    "filterName": "institutions",
+    "filterKey": "authorships.institutions.lineage",
+    "hintVerb": "in",
+    "color": "purple",
+    "hasAutocomplete": true,
+    "isNative": true,
+    "hasSerp": true,
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name",
+        "display_name_alternatives",
+        "parent_institutions",
+        "child_institutions",
+        "related_institutions",
+        "ids.ror"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name",
+        "type",
+        "country_code",
+        "parent_institutions",
+        "child_institutions",
+        "ids.ror"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name",
+        "type",
+        "country_code",
+        "ror"
+    ],
+    "idRegex": "(?i)(?:institutions\\/)?(?:https:\\/\\/openalex\\.org\\/)?(i\\d+)",
+    "groupByDefaults": [
+        "country_code",
+        "type"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "institutions",
+            "entityId": "institutions",
+            "objectEntity": "institutions",
+            "displayName": "OpenAlex ID",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-town-hall"
+        },
+        "default.search": {
+            "id": "default.search",
+            "subjectEntity": "institutions",
+            "entityId": "institutions",
+            "objectEntity": "institutions",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-magnify"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "institutions",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
+        },
+        "ids.ror": {
+            "id": "ids.ror",
+            "subjectEntity": "institutions",
+            "entityId": "institutions",
+            "objectEntity": "institutions",
+            "displayName": "ROR",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-town-hall"
+        },
+        "ror": {
+            "id": "ror",
+            "subjectEntity": "institutions",
+            "entityId": "institutions",
+            "objectEntity": "institutions",
+            "displayName": "ROR",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-town-hall"
+        },
+        "display_name.search": {
+            "id": "display_name.search",
+            "subjectEntity": "institutions",
+            "displayName": "Name search",
+            "newType": "string",
+            "icon": "mdi-magnify"
+        },
+        "country_code": {
+            "id": "country_code",
+            "subjectEntity": "institutions",
+            "entityId": "countries",
+            "displayName": "Country",
+            "isId": true,
+            "newType": "entity",
+            "isExternalId": true,
+            "externalIdPrefix": "countries",
+            "isCountry": true,
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-earth"
+        },
+        "type": {
+            "id": "type",
+            "subjectEntity": "institutions",
+            "entityId": "institution-types",
+            "displayName": "Institution type",
+            "isExternalId": true,
+            "externalIdPrefix": "institution-types",
+            "isId": true,
+            "newType": "entity",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-shape-outline"
+        },
+        "x_concepts.id": {
+            "id": "x_concepts.id",
+            "isList": true,
+            "subjectEntity": "institutions",
+            "displayName": "Concepts",
+            "entityId": "concepts",
+            "objectEntity": "concepts",
+            "newType": "entity",
+            "icon": "mdi-tag-outline"
+        },
+        "display_name_alternatives": {
+            "id": "display_name_alternatives",
+            "isList": true,
+            "subjectEntity": "institutions",
+            "displayName": "alternate names",
+            "newType": "string",
+            "actions": [],
+            "actionsPopular": [],
+            "icon": "mdi-town-hall"
+        },
+        "parent_institutions": {
+            "id": "parent_institutions",
+            "isList": true,
+            "subjectEntity": "institutions",
+            "objectEntity": "institutions",
+            "displayName": "parent institutions",
+            "newType": "entity",
+            "actions": [],
+            "actionsPopular": [],
+            "icon": "mdi-town-hall"
+        },
+        "child_institutions": {
+            "id": "child_institutions",
+            "isList": true,
+            "subjectEntity": "institutions",
+            "objectEntity": "institutions",
+            "displayName": "child institutions",
+            "newType": "entity",
+            "actions": [],
+            "actionsPopular": [],
+            "icon": "mdi-town-hall"
+        },
+        "related_institutions": {
+            "id": "related_institutions",
+            "isList": true,
+            "subjectEntity": "institutions",
+            "objectEntity": "institutions",
+            "displayName": "related institutions",
+            "newType": "entity",
+            "actions": [],
+            "actionsPopular": [],
+            "icon": "mdi-town-hall"
+        }
+    }
+}

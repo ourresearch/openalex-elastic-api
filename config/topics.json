@@ -1,0 +1,113 @@
+{
+    "id": "topics",
+    "icon": "mdi-tag-outline",
+    "name": "topics",
+    "nameSingular": "topic",
+    "displayName": "topics",
+    "displayNameSingular": "topics",
+    "descr": "what works are about",
+    "eg": "RNA sequencing",
+    "placeholder": "Search topics",
+    "filterName": "topics",
+    "filterKey": "primary_topic.id",
+    "hintVerb": ":",
+    "hasAutocomplete": true,
+    "isNative": true,
+    "idRegex": "(?i)(?:topics\\/)?(?:https:\\/\\/openalex\\.org\\/)?(t\\d+)",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name",
+        "description",
+        "siblings",
+        "subfield",
+        "field",
+        "domain"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name",
+        "description",
+        "siblings",
+        "subfield",
+        "field",
+        "domain"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name",
+        "description"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "topics",
+            "entityId": "topics",
+            "objectEntity": "topics",
+            "displayName": "OpenAlex ID",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "topics",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
+        },
+        "description": {
+            "id": "description",
+            "subjectEntity": "topics",
+            "entityId": "topics",
+            "objectEntity": "topics",
+            "displayName": "description",
+            "newType": "string",
+            "icon": "mdi-tag-outline"
+        },
+        "siblings": {
+            "id": "siblings",
+            "isList": true,
+            "subjectEntity": "topics",
+            "entityId": "topics",
+            "objectEntity": "topics",
+            "displayName": "related topics (siblings)",
+            "newType": "entity",
+            "icon": "mdi-tag-outline"
+        },
+        "subfield": {
+            "id": "subfield",
+            "subjectEntity": "topics",
+            "entityId": "subfields",
+            "objectEntity": "subfields",
+            "displayName": "subfield (parent)",
+            "newType": "entity",
+            "icon": "mdi-tag-outline"
+        },
+        "field": {
+            "id": "field",
+            "subjectEntity": "topics",
+            "entityId": "fields",
+            "objectEntity": "fields",
+            "displayName": "field",
+            "newType": "entity",
+            "icon": "mdi-tag-outline"
+        },
+        "domain": {
+            "id": "domain",
+            "subjectEntity": "topics",
+            "entityId": "domains",
+            "objectEntity": "domains",
+            "displayName": "domain",
+            "newType": "entity",
+            "icon": "mdi-tag-outline"
+        }
+    }
+}

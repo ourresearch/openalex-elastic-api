@@ -1,0 +1,202 @@
+{
+    "id": "sources",
+    "icon": "mdi-book-open-outline",
+    "name": "sources",
+    "nameSingular": "source",
+    "displayName": "sources",
+    "displayNameSingular": "source",
+    "descr": "Journals, conferences, and repositories",
+    "eg": "The New England Journal of Medicine",
+    "placeholder": "Search academic journals & repositories",
+    "filterName": "primary_location.source",
+    "filterKey": "primary_location.source.id",
+    "hintVerb": "published by",
+    "color": "orange",
+    "hasAutocomplete": true,
+    "isNative": true,
+    "hasSerp": true,
+    "highlightFilters": [
+        {
+            "key": "is_oa",
+            "value": true,
+            "displayName": "that are Open Access"
+        }
+    ],
+    "idRegex": "(?i)(?:sources\\/)?(?:https:\\/\\/openalex\\.org\\/)?(s\\d+)",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name",
+        "ids.issn",
+        "type",
+        "host_organization",
+        "alternate_titles",
+        "is_oa",
+        "is_in_doaj",
+        "apc_usd"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name",
+        "ids.issn",
+        "type",
+        "host_organization",
+        "is_oa",
+        "is_in_doaj"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name",
+        "type",
+        "issn"
+    ],
+    "groupByDefaults": [
+        "type",
+        "is_oa",
+        "is_in_doaj"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "sources",
+            "entityId": "sources",
+            "objectEntity": "sources",
+            "displayName": "OpenAlex ID",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-book-open-outline"
+        },
+        "default.search": {
+            "id": "default.search",
+            "subjectEntity": "sources",
+            "entityId": "sources",
+            "objectEntity": "sources",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-magnify"
+        },
+        "ids.issn": {
+            "id": "ids.issn",
+            "subjectEntity": "sources",
+            "entityId": "sources",
+            "displayName": "ISSNs",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-book-open-outline"
+        },
+        "issn": {
+            "id": "issn",
+            "subjectEntity": "sources",
+            "entityId": "sources",
+            "displayName": "ISSNs",
+            "isId": true,
+            "newType": "string",
+            "icon": "mdi-book-open-outline"
+        },
+        "display_name.search": {
+            "id": "display_name.search",
+            "subjectEntity": "sources",
+            "displayName": "Title search",
+            "newType": "string",
+            "icon": "mdi-magnify"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "sources",
+            "displayName": "name",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
+        },
+        "host_organization": {
+            "id": "host_organization",
+            "subjectEntity": "sources",
+            "entityId": "publishers",
+            "objectEntity": "publishers",
+            "displayName": "Publisher",
+            "newType": "entity",
+            "actions": [],
+            "actionsPopular": [],
+            "icon": "mdi-domain"
+        },
+        "type": {
+            "id": "type",
+            "subjectEntity": "sources",
+            "entityId": "source-types",
+            "displayName": "Source type",
+            "isId": true,
+            "isExternalId": true,
+            "externalIdPrefix": "source-types",
+            "newType": "entity",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-shape-outline"
+        },
+        "apc_usd": {
+            "id": "apc_usd",
+            "isCurrency": true,
+            "subjectEntity": "sources",
+            "displayName": "Article Processing Charge",
+            "newType": "number",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-cash"
+        },
+        "is_oa": {
+            "id": "is_oa",
+            "subjectEntity": "sources",
+            "displayName": "Fully open access",
+            "newType": "boolean",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-lock-open-outline"
+        },
+        "is_in_doaj": {
+            "id": "is_in_doaj",
+            "subjectEntity": "sources",
+            "displayName": "In DOAJ",
+            "newType": "boolean",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-lock-open-outline"
+        },
+        "alternate_titles": {
+            "id": "alternate_titles",
+            "isList": true,
+            "subjectEntity": "sources",
+            "displayName": "alternate names",
+            "newType": "string",
+            "actions": [],
+            "actionsPopular": [],
+            "icon": "mdi-book-open-outline"
+        }
+    }
+}

@@ -1,7 +1,6 @@
 from flask import Blueprint, jsonify, request
 
-from config.entity_config import entity_configs_dict
-from config.property_config import property_configs_dict
+from combined_config import all_entities_config
 from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.histogram import shared_histogram_view
@@ -81,6 +80,4 @@ def languages_filters_doctrings():
 
 @blueprint.route("/languages/config")
 def languages_config():
-    result = entity_configs_dict["languages"]
-    result["properties"] = property_configs_dict["languages"]
-    return jsonify(result)
+    return jsonify(all_entities_config["languages"])

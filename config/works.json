@@ -1,0 +1,1070 @@
+{
+    "id": "works",
+    "icon": "mdi-file-document-outline",
+    "name": "works",
+    "nameSingular": "work",
+    "displayName": "works",
+    "displayNameSingular": "work",
+    "descr": "Scholarly papers, books, datasets, etc.",
+    "eg": "On the Electrodynamics of Moving Bodies",
+    "placeholder": "Search scholarly papers, books, and more",
+    "filterName": "work",
+    "filterKey": "ids.openalex",
+    "hintVerb": "by",
+    "color": "blue",
+    "hasAutocomplete": true,
+    "isNative": true,
+    "hasSerp": true,
+    "highlightFilters": [
+        {
+            "key": "open_access.is_oa",
+            "value": true,
+            "displayName": "Open Access works"
+        },
+        {
+            "key": "institutions.is_global_south",
+            "value": true,
+            "displayName": "from the Global South"
+        },
+        {
+            "key": "type",
+            "value": "dataset",
+            "displayName": "datasets"
+        }
+    ],
+    "idRegex": "(?i)(?:works\\/)?(?:https:\\/\\/openalex\\.org\\/)?(w\\d+)",
+    "rowsToShowOnEntityPage": [
+        "id",
+        "display_name",
+        "publication_year",
+        "type",
+        "abstract_inverted_index",
+        "primary_location.source.id",
+        "authorships.author.id",
+        "authorships.institutions.id",
+        "primary_topic.id",
+        "primary_topic.subfield.id",
+        "primary_topic.field.id",
+        "primary_topic.domain.id",
+        "sustainable_development_goals.id",
+        "open_access.oa_status",
+        "apc_paid.value_usd",
+        "grants.funder",
+        "grants.award_id"
+    ],
+    "rowsToShowOnTablePage": [
+        "display_name",
+        "publication_year",
+        "type",
+        "primary_location.source.id",
+        "authorships.author.id",
+        "authorships.institutions.id",
+        "primary_topic.id",
+        "primary_topic.subfield.id",
+        "primary_topic.field.id",
+        "primary_topic.domain.id",
+        "sustainable_development_goals.id",
+        "open_access.oa_status"
+    ],
+    "columnsToShowOnTableRedshift": [
+        "display_name",
+        "publication_year",
+        "type",
+        "primary_location",
+        "authors",
+        "institutions",
+        "topic",
+        "oa_status",
+        "cited_by_count"
+    ],
+    "groupByDefaults": [
+        "publication_year",
+        "open_access.is_oa",
+        "primary_topic.id",
+        "authorships.institutions.lineage",
+        "type"
+    ],
+    "properties": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "works",
+            "entityId": "works",
+            "objectEntity": "works",
+            "displayName": "OpenAlex ID",
+            "isSingleWork": true,
+            "isId": true,
+            "newType": "string",
+            "category": "ids",
+            "actions": [
+                ""
+            ],
+            "icon": "mdi-file-document-outline"
+        },
+        "works": {
+            "id": "works",
+            "subjectEntity": "works",
+            "entityId": "works",
+            "objectEntity": "works",
+            "displayName": "OpenAlex ID",
+            "isSingleWork": true,
+            "isId": true,
+            "newType": "string",
+            "category": "ids",
+            "actions": [
+                ""
+            ],
+            "icon": "mdi-file-document-outline"
+        },
+        "doi": {
+            "id": "doi",
+            "subjectEntity": "works",
+            "entityId": "works",
+            "objectEntity": "works",
+            "displayName": "DOI",
+            "isSingleWork": true,
+            "isId": true,
+            "newType": "string",
+            "category": "ids",
+            "actions": [],
+            "icon": "mdi-file-document-outline"
+        },
+        "concepts.id": {
+            "id": "concepts.id",
+            "isList": true,
+            "subjectEntity": "works",
+            "displayName": "concept",
+            "entityId": "concepts",
+            "objectEntity": "concepts",
+            "newType": "entity",
+            "category": "other",
+            "actions": [],
+            "actionsPopular": [],
+            "icon": "mdi-tag-outline"
+        },
+        "primary_topic.id": {
+            "id": "primary_topic.id",
+            "subjectEntity": "works",
+            "displayName": "topic",
+            "entityId": "topics",
+            "objectEntity": "topics",
+            "newType": "entity",
+            "category": "other",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-tag-outline"
+        },
+        "topic": {
+            "id": "topic",
+            "subjectEntity": "works",
+            "displayName": "topic",
+            "entityId": "topics",
+            "objectEntity": "topics",
+            "newType": "entity",
+            "category": "other",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-tag-outline"
+        },
+        "keywords.id": {
+            "id": "keywords.id",
+            "isList": true,
+            "subjectEntity": "works",
+            "displayName": "keyword",
+            "entityId": "keywords",
+            "objectEntity": "keywords",
+            "newType": "entity",
+            "category": "other",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-tag-outline"
+        },
+        "primary_topic.subfield.id": {
+            "id": "primary_topic.subfield.id",
+            "subjectEntity": "works",
+            "displayName": "subfield",
+            "entityId": "subfields",
+            "objectEntity": "subfields",
+            "newType": "entity",
+            "category": "other",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [],
+            "icon": "mdi-tag-outline"
+        },
+        "primary_topic.field.id": {
+            "id": "primary_topic.field.id",
+            "subjectEntity": "works",
+            "displayName": "field",
+            "entityId": "fields",
+            "objectEntity": "fields",
+            "newType": "entity",
+            "category": "other",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [],
+            "icon": "mdi-tag-outline"
+        },
+        "primary_topic.domain.id": {
+            "id": "primary_topic.domain.id",
+            "subjectEntity": "works",
+            "displayName": "domain",
+            "entityId": "domains",
+            "objectEntity": "domains",
+            "newType": "entity",
+            "category": "other",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [],
+            "icon": "mdi-tag-outline"
+        },
+        "grants.funder": {
+            "id": "grants.funder",
+            "isList": true,
+            "subjectEntity": "works",
+            "displayName": "funder",
+            "entityId": "funders",
+            "objectEntity": "funders",
+            "newType": "entity",
+            "category": "other",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-cash-multiple"
+        },
+        "grants.award_id": {
+            "id": "grants.award_id",
+            "isList": true,
+            "subjectEntity": "works",
+            "displayName": "grant ID",
+            "newType": "string",
+            "category": "other",
+            "actions": [],
+            "icon": "mdi-cash-multiple"
+        },
+        "authorships.institutions.id": {
+            "id": "authorships.institutions.id",
+            "isList": true,
+            "subjectEntity": "works",
+            "displayName": "institutions",
+            "entityId": "institutions",
+            "objectEntity": "institutions",
+            "newType": "entity",
+            "category": "institution",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-town-hall"
+        },
+        "cited_by_count": {
+            "id": "cited_by_count",
+            "subjectEntity": "works",
+            "displayName": "cited by count",
+            "newType": "number",
+            "actions": [
+                "sort",
+                "column",
+                "filter"
+            ],
+            "actionsPopular": [
+                "sort"
+            ],
+            "icon": "mdi-file-document-outline"
+        },
+        "institutions": {
+            "id": "institutions",
+            "isList": true,
+            "subjectEntity": "works",
+            "displayName": "institutions",
+            "entityId": "institutions",
+            "objectEntity": "institutions",
+            "newType": "entity",
+            "category": "institution",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-town-hall"
+        },
+        "authorships.institutions.ror": {
+            "id": "authorships.institutions.ror",
+            "isList": true,
+            "subjectEntity": "works",
+            "entityId": "institutions",
+            "objectEntity": "institutions",
+            "displayName": "ROR ID",
+            "isId": true,
+            "newType": "string",
+            "category": "ids",
+            "actions": [],
+            "icon": "mdi-town-hall"
+        },
+        "authorships.author.id": {
+            "id": "authorships.author.id",
+            "isList": true,
+            "subjectEntity": "works",
+            "displayName": "authors",
+            "entityId": "authors",
+            "objectEntity": "authors",
+            "newType": "entity",
+            "category": "author",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-account-outline"
+        },
+        "authors": {
+            "id": "authors",
+            "isList": true,
+            "subjectEntity": "works",
+            "displayName": "authors",
+            "entityId": "authors",
+            "objectEntity": "authors",
+            "newType": "entity",
+            "category": "author",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-account-outline"
+        },
+        "authorships.author.orcid": {
+            "id": "authorships.author.orcid",
+            "isList": true,
+            "subjectEntity": "works",
+            "entityId": "authors",
+            "objectEntity": "authors",
+            "displayName": "ORCID",
+            "isId": true,
+            "newType": "string",
+            "category": "ids",
+            "actions": [],
+            "icon": "mdi-account-outline"
+        },
+        "default.search": {
+            "id": "default.search",
+            "subjectEntity": "works",
+            "displayName": "fulltext",
+            "newType": "string",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "category": "other",
+            "icon": "mdi-magnify"
+        },
+        "title_and_abstract.search": {
+            "id": "title_and_abstract.search",
+            "subjectEntity": "works",
+            "displayName": "title & abstract",
+            "newType": "string",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [],
+            "category": "other",
+            "icon": "mdi-magnify"
+        },
+        "display_name.search": {
+            "id": "display_name.search",
+            "subjectEntity": "works",
+            "displayName": "title",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [],
+            "newType": "string",
+            "icon": "mdi-magnify"
+        },
+        "raw_affiliation_strings.search": {
+            "id": "raw_affiliation_strings.search",
+            "subjectEntity": "works",
+            "displayName": "raw affiliation string",
+            "newType": "string",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                ""
+            ],
+            "category": "other",
+            "icon": "mdi-magnify"
+        },
+        "doi_starts_with": {
+            "id": "doi_starts_with",
+            "subjectEntity": "works",
+            "displayName": "DOI prefix",
+            "newType": "string",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [],
+            "category": "other",
+            "icon": "mdi-magnify",
+            "verb": "starts with"
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "works",
+            "displayName": "title",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-file-document-outline"
+        },
+        "title": {
+            "id": "title",
+            "isColumnMandatory": false,
+            "subjectEntity": "works",
+            "displayName": "title",
+            "newType": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-file-document-outline"
+        },
+        "has_abstract": {
+            "id": "has_abstract",
+            "subjectEntity": "works",
+            "displayName": "Abstract available",
+            "newType": "boolean",
+            "actions": [
+                "filter"
+            ],
+            "icon": "mdi-file-document-outline"
+        },
+        "authors_count": {
+            "id": "authors_count",
+            "subjectEntity": "works",
+            "displayName": "authors count",
+            "newType": "number",
+            "sortByValue": true,
+            "category": "author",
+            "actions": [
+                "filter",
+                "sort",
+                "column"
+            ],
+            "icon": "mdi-account-outline"
+        },
+        "corresponding_author_ids": {
+            "id": "corresponding_author_ids",
+            "isList": true,
+            "subjectEntity": "works",
+            "entityId": "authors",
+            "objectEntity": "authors",
+            "displayName": "corresponding author",
+            "newType": "entity",
+            "category": "author",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-email-outline"
+        },
+        "open_access.is_oa": {
+            "id": "open_access.is_oa",
+            "subjectEntity": "works",
+            "displayName": "open access",
+            "newType": "boolean",
+            "actions": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "category": "open access",
+            "icon": "mdi-lock-open-outline"
+        },
+        "best_oa_location.license": {
+            "id": "best_oa_location.license",
+            "subjectEntity": "works",
+            "entityId": "licenses",
+            "displayName": "license",
+            "isId": true,
+            "newType": "entity",
+            "actions": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "category": "open access",
+            "icon": "mdi-lock-open-outline",
+            "displayNullAs": "All rights reserved"
+        },
+        "open_access.oa_status": {
+            "id": "open_access.oa_status",
+            "subjectEntity": "works",
+            "displayName": "oa status",
+            "newType": "string",
+            "actions": [],
+            "category": "open access",
+            "icon": "mdi-lock-open-outline"
+        },
+        "oa_status": {
+            "id": "oa_status",
+            "subjectEntity": "works",
+            "displayName": "oa status",
+            "newType": "string",
+            "actions": [],
+            "category": "open access",
+            "icon": "mdi-lock-open-outline"
+        },
+        "best_oa_location.is_accepted": {
+            "id": "best_oa_location.is_accepted",
+            "subjectEntity": "works",
+            "displayName": "open access accepted",
+            "newType": "boolean",
+            "actions": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "category": "open access",
+            "icon": "mdi-lock-open-outline"
+        },
+        "best_oa_location.is_published": {
+            "id": "best_oa_location.is_published",
+            "subjectEntity": "works",
+            "displayName": "open access published",
+            "newType": "boolean",
+            "actions": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "category": "open access",
+            "icon": "mdi-lock-open-outline"
+        },
+        "apc_paid.value_usd": {
+            "id": "apc_paid.value_usd",
+            "isCurrency": true,
+            "subjectEntity": "works",
+            "displayName": "APC paid (est)",
+            "newType": "number",
+            "sortByValue": true,
+            "actions": [
+                "filter"
+            ],
+            "icon": "mdi-cash"
+        },
+        "authorships.countries": {
+            "id": "authorships.countries",
+            "isList": true,
+            "subjectEntity": "works",
+            "entityId": "countries",
+            "objectEntity": "countries",
+            "displayName": "Country",
+            "newType": "entity",
+            "isCountry": true,
+            "actions": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "group_by"
+            ],
+            "category": "institution",
+            "icon": "mdi-earth"
+        },
+        "countries_distinct_count": {
+            "id": "countries_distinct_count",
+            "subjectEntity": "works",
+            "displayName": "countries count",
+            "newType": "number",
+            "sortByValue": true,
+            "examples": [
+                "1",
+                "2-",
+                "2-10"
+            ],
+            "actions": [
+                "filter",
+                "sort",
+                "column"
+            ],
+            "category": "institution",
+            "icon": "mdi-earth"
+        },
+        "institutions_distinct_count": {
+            "id": "institutions_distinct_count",
+            "subjectEntity": "works",
+            "displayName": "institutions count",
+            "newType": "number",
+            "sortByValue": true,
+            "examples": [
+                "1",
+                "2-",
+                "2-10"
+            ],
+            "actions": [
+                "filter",
+                "sort",
+                "column"
+            ],
+            "category": "institution",
+            "icon": "mdi-earth"
+        },
+        "authorships.institutions.continent": {
+            "id": "authorships.institutions.continent",
+            "isList": true,
+            "subjectEntity": "works",
+            "entityId": "continents",
+            "displayName": "Continent",
+            "isId": true,
+            "newType": "entity",
+            "actions": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "actionsPopular": [],
+            "icon": "mdi-earth"
+        },
+        "institutions.is_global_south": {
+            "id": "institutions.is_global_south",
+            "subjectEntity": "works",
+            "displayName": "from Global South",
+            "newType": "boolean",
+            "actions": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "category": "institution",
+            "icon": "mdi-earth"
+        },
+        "authorships.institutions.type": {
+            "id": "authorships.institutions.type",
+            "isList": true,
+            "subjectEntity": "works",
+            "entityId": "institution-types",
+            "displayName": "institution type",
+            "isId": true,
+            "category": "institution",
+            "newType": "entity",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-town-hall"
+        },
+        "corresponding_institution_ids": {
+            "id": "corresponding_institution_ids",
+            "isList": true,
+            "subjectEntity": "works",
+            "entityId": "institutions",
+            "objectEntity": "institutions",
+            "displayName": "corresponding institution",
+            "category": "institution",
+            "newType": "entity",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-email-outline"
+        },
+        "primary_location.source.id": {
+            "id": "primary_location.source.id",
+            "subjectEntity": "works",
+            "displayName": "source",
+            "entityId": "sources",
+            "objectEntity": "sources",
+            "newType": "entity",
+            "category": "source",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-book-open-outline"
+        },
+        "primary_location": {
+            "id": "primary_location",
+            "subjectEntity": "works",
+            "displayName": "source",
+            "entityId": "sources",
+            "objectEntity": "sources",
+            "newType": "entity",
+            "category": "source",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-book-open-outline"
+        },
+        "primary_location.source.issn": {
+            "id": "primary_location.source.issn",
+            "subjectEntity": "works",
+            "entityId": "sources",
+            "objectEntity": "sources",
+            "displayName": "ISSN",
+            "isId": true,
+            "newType": "string",
+            "category": "ids",
+            "actions": [],
+            "icon": "mdi-book-open-outline"
+        },
+        "primary_location.source.type": {
+            "id": "primary_location.source.type",
+            "subjectEntity": "works",
+            "entityId": "source-types",
+            "displayName": "source type",
+            "isId": true,
+            "newType": "entity",
+            "category": "source",
+            "actions": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "icon": "mdi-book-open-outline"
+        },
+        "primary_location.source.is_in_doaj": {
+            "id": "primary_location.source.is_in_doaj",
+            "subjectEntity": "works",
+            "displayName": "indexed by DOAJ",
+            "newType": "boolean",
+            "category": "source",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-book-open-outline"
+        },
+        "primary_location.source.is_oa": {
+            "id": "primary_location.source.is_oa",
+            "subjectEntity": "works",
+            "displayName": "in OA source",
+            "newType": "boolean",
+            "category": "source",
+            "actions": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "icon": "mdi-book-open-outline"
+        },
+        "primary_location.source.publisher_lineage": {
+            "id": "primary_location.source.publisher_lineage",
+            "subjectEntity": "works",
+            "entityId": "publishers",
+            "objectEntity": "publishers",
+            "displayName": "publisher",
+            "newType": "entity",
+            "category": "source",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-domain"
+        },
+        "repository": {
+            "id": "repository",
+            "subjectEntity": "works",
+            "displayName": "repository",
+            "entityId": "sources",
+            "objectEntity": "sources",
+            "newType": "entity",
+            "category": "source",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-book-open-outline"
+        },
+        "open_access.any_repository_has_fulltext": {
+            "id": "open_access.any_repository_has_fulltext",
+            "subjectEntity": "works",
+            "displayName": "has repository fulltext",
+            "newType": "boolean",
+            "category": "source",
+            "actions": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "icon": "mdi-tag-outline"
+        },
+        "type": {
+            "id": "type",
+            "subjectEntity": "works",
+            "entityId": "types",
+            "displayName": "type",
+            "isExternalId": true,
+            "isId": true,
+            "externalIdPrefix": "work-types",
+            "newType": "entity",
+            "category": "other",
+            "actions": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "icon": "mdi-shape-outline"
+        },
+        "abstract_inverted_index": {
+            "id": "abstract_inverted_index",
+            "subjectEntity": "works",
+            "displayName": "Abstract",
+            "newType": "string",
+            "actions": [],
+            "icon": "mdi-text"
+        },
+        "publication_year": {
+            "id": "publication_year",
+            "isYear": true,
+            "subjectEntity": "works",
+            "displayName": "year",
+            "isDate": true,
+            "newType": "number",
+            "sortByValue": true,
+            "examples": [
+                "1999",
+                "1999-",
+                "1999-2020"
+            ],
+            "category": "other",
+            "actions": [
+                "filter",
+                "sort",
+                "column",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "sort",
+                "column",
+                "group_by"
+            ],
+            "icon": "mdi-calendar-range"
+        },
+        "apc_sum": {
+            "id": "apc_sum",
+            "isCurrency": true,
+            "subjectEntity": "works",
+            "displayName": "APC sum",
+            "newType": "sum",
+            "category": "other",
+            "actions": [
+                "group_by"
+            ],
+            "actionsPopular": [
+                "group_by"
+            ],
+            "icon": "mdi-cash"
+        },
+        "publication_date": {
+            "id": "publication_date",
+            "subjectEntity": "works",
+            "displayName": "date",
+            "isDate": true,
+            "newType": "number",
+            "actions": [
+                "sort"
+            ],
+            "sortByValue": true,
+            "category": "other",
+            "examples": [
+                "1999",
+                "1999-",
+                "1999-2020"
+            ],
+            "icon": "mdi-calendar-range"
+        },
+        "has_doi": {
+            "id": "has_doi",
+            "subjectEntity": "works",
+            "displayName": "indexed by Crossref",
+            "newType": "boolean",
+            "category": "ids",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-tag-outline"
+        },
+        "mag_only": {
+            "id": "mag_only",
+            "subjectEntity": "works",
+            "displayName": "indexed by MAG only",
+            "newType": "boolean",
+            "category": "ids",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-tag-outline"
+        },
+        "has_orcid": {
+            "id": "has_orcid",
+            "subjectEntity": "works",
+            "displayName": "indexed by ORCID",
+            "newType": "boolean",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-tag-outline"
+        },
+        "has_pmid": {
+            "id": "has_pmid",
+            "subjectEntity": "works",
+            "displayName": "indexed by PubMed",
+            "newType": "boolean",
+            "category": "ids",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-tag-outline"
+        },
+        "is_retracted": {
+            "id": "is_retracted",
+            "subjectEntity": "works",
+            "displayName": "retracted",
+            "newType": "boolean",
+            "category": "other",
+            "actions": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "icon": "mdi-close-octagon"
+        },
+        "language": {
+            "id": "language",
+            "entityId": "languages",
+            "subjectEntity": "works",
+            "displayName": "language",
+            "isId": true,
+            "newType": "entity",
+            "displayNullAs": "Unknown",
+            "category": "other",
+            "actions": [
+                "filter",
+                "column",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "column",
+                "group_by"
+            ],
+            "icon": "mdi-translate"
+        },
+        "sustainable_development_goals.id": {
+            "id": "sustainable_development_goals.id",
+            "isList": true,
+            "entityId": "sdgs",
+            "objectEntity": "sdgs",
+            "subjectEntity": "works",
+            "displayName": "sdgs",
+            "newType": "entity",
+            "displayNullAs": "Unknown",
+            "category": "other",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-sprout-outline"
+        },
+        "referenced_works": {
+            "id": "referenced_works",
+            "subjectEntity": "works",
+            "entityId": "works",
+            "isList": true,
+            "isId": true,
+            "objectEntity": "works",
+            "displayName": "cites",
+            "newType": "string",
+            "category": "citation",
+            "actions": [],
+            "icon": "mdi-format-quote-close",
+            "isDisplayedAsCount": true
+        },
+        "related_works": {
+            "id": "related_works",
+            "subjectEntity": "works",
+            "entityId": "works",
+            "objectEntity": "works",
+            "displayName": "related to",
+            "isList": true,
+            "isId": true,
+            "newType": "string",
+            "category": "other",
+            "actions": [
+                "filter"
+            ],
+            "isHidden": true,
+            "icon": "mdi-book-open-outline",
+            "isDisplayedAsCount": true
+        }
+    }
+}
