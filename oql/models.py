@@ -188,6 +188,29 @@ class Field(db.Model):
         return f"<Field(field_id={self.field_id}, display_name={self.display_name})>"
 
 
+class Funder(db.Model):
+    __tablename__ = "funder"
+
+    funder_id = Column(BigInteger, primary_key=True)
+    display_name = Column(String(65535), nullable=False)
+    description = Column(String(65535), nullable=True)
+    country_code = Column(String(500), nullable=True)
+    doi = Column(String(500), nullable=True)
+    ror_id = Column(String(500), nullable=True)
+    crossref_id = Column(String(500), nullable=True)
+
+    @property
+    def id(self):
+        return f"funders/F{self.funder_id}"
+
+    @property
+    def country_code_formatted(self):
+        return {"id": f"countries/{self.country_code}", "display_name": self.country_code} if self.country_code else None
+
+    def __repr__(self):
+        return f"<Funder(funder_id={self.funder_id}, display_name={self.display_name})>"
+
+
 class Institution(db.Model):
     __tablename__ = "institution_mv"
 

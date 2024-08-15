@@ -224,6 +224,12 @@ entity_configs = [
         "rowsToShowOnTablePage": [
             "display_name"
         ],
+        "columnsToShowOnTableRedshift": [
+            "display_name",
+            "doi",
+            "country_code",
+            "description",
+        ],
     },
     {
         "id": "institutions",

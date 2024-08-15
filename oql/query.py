@@ -12,6 +12,8 @@ from oql import models
 
 valid_entities = list(entity_configs_dict.keys())
 
+redshift_entities = ["authors", "domains", "fields", "funders", "institutions", "publishers", "sources", "subfields", "topics", "works"]
+
 
 class Query:
     def __init__(self, query_string, page=1, per_page=25):
@@ -527,7 +529,7 @@ class Query:
         )
 
     def default_columns(self):
-        if self.entity in ["authors", "domains", "fields", "institutions", "publishers", "sources", "subfields", "topics", "works"]:
+        if self.entity in redshift_entities:
             return entity_configs_dict[self.entity]["columnsToShowOnTableRedshift"]
         elif self.entity and self.entity in entity_configs_dict:
             return entity_configs_dict[self.entity]["rowsToShowOnTablePage"]
@@ -549,7 +551,7 @@ class Query:
                 return property_config.get("newType", "string")
 
     def use_redshift(self):
-        if self.entity in ["authors", "domains", "fields", "institutions", "publishers", "sources", "subfields", "topics", "works"]:
+        if self.entity in redshift_entities:
             print(f"This is a redshift query: {self.query_string}")
             return True
 
