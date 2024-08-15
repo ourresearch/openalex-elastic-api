@@ -1,7 +1,5 @@
 import re
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
-import requests
 from sqlalchemy import desc
 
 from combined_config import all_entities_config
@@ -9,29 +7,6 @@ from extensions import db
 from oql import models
 
 valid_entities = list(all_entities_config.keys())
-
-redshift_entities = [
-    "authors",
-    "countries",
-    "continents",
-    "domains",
-    "fields",
-    "funders",
-    "institutions",
-    "institution-types",
-    "keywords",
-    "languages",
-    "licenses",
-    "publishers",
-    "sdgs",
-    "sources",
-    "source-types",
-    "subfields",
-    "topics",
-    "types",
-    "works",
-    "work-types",
-]
 
 
 class Query:
@@ -442,37 +417,6 @@ class Query:
         joined_clauses = "\n".join(clause for clause in clauses if clause)
         return joined_clauses
 
-    def execute(self):
-        if self.use_redshift():
-            return self.execute_redshift()
-        url = f"https://api.openalex.org/{self.old_query()}"
-        parsed_url = urlparse(url)
-        query_params = parse_qs(parsed_url.query)
-        select_params = (
-            query_params.get("select", [""])[0].split(",")
-            if "select" in query_params
-            else []
-        )
-
-        if select_params and "id" not in select_params:
-            select_params.append("id")
-            query_params["select"] = ",".join(select_params)
-
-        new_query_string = urlencode(query_params, doseq=True)
-        new_url = urlunparse(
-            (
-                parsed_url.scheme,
-                parsed_url.netloc,
-                parsed_url.path,
-                parsed_url.params,
-                new_query_string,
-                parsed_url.fragment,
-            )
-        )
-
-        r = requests.get(new_url)
-        return r.json()
-
     def redshift_apply_sorting(self, query, entity_class):
         if self.sort_by_column:
             if self.sort_by_column == "publication_year":
@@ -530,7 +474,7 @@ class Query:
         results = self.redshift_apply_filtering(results, entity_class)
         return results.limit(100).all()
 
-    def execute_redshift(self):
+    def execute(self):
         json_data = {"results": []}
         columns = self.columns or self.default_columns()
         results = self.redshift_query()
@@ -559,10 +503,8 @@ class Query:
         )
 
     def default_columns(self):
-        if self.entity in redshift_entities:
+        if self.entity and self.entity in all_entities_config:
             return all_entities_config[self.entity]["columnsToShowOnTableRedshift"]
-        elif self.entity and self.entity in all_entities_config:
-            return all_entities_config[self.entity]["rowsToShowOnTablePage"]
         else:
             return []
 
@@ -579,11 +521,6 @@ class Query:
         for property_config in all_entities_config.get(self.entity, {}).get('properties').values():
             if property_config.get("id", "") == column:
                 return property_config.get("newType", "string")
-
-    def use_redshift(self):
-        if self.entity in redshift_entities:
-            print(f"This is a redshift query: {self.query_string}")
-            return True
 
     def to_dict(self):
         return {

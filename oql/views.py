@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify
 from combined_config import all_entities_config
 from oql.query import Query
 from oql.schemas import QuerySchema
-from oql.results_table import ResultTable, ResultTableRedshift
+from oql.results_table import ResultTable
 from oql.search import Search, get_existing_search, is_cache_expired
 
 
@@ -42,12 +42,12 @@ def results():
             "results": [],
         }
     query = Query(query_string, page, per_page)
-    if query.use_redshift() and format == "ui":
+    if format == "ui":
         entity = query.entity
         columns = query.columns or all_entities_config[entity]["columnsToShowOnTableRedshift"]
         json_data = query.execute()
         print(json_data)
-        results_table = ResultTableRedshift(
+        results_table = ResultTable(
             entity, columns, json_data
         )
         results_table_response = results_table.response()
@@ -65,32 +65,6 @@ def results():
             "results": results_table_response.pop("results"),
         }
         return jsonify(results_table_response)
-    elif query.is_valid():
-        json_data = query.execute()
-    else:
-        return jsonify({"error": "Invalid query"}), 400
-    if format == "ui":
-        entity = query.entity
-        columns = query.columns
-        results_table = ResultTable(entity, columns, json_data)
-        results_table_response = results_table.response()
-        results_table_response["meta"] = {
-            "count": results_table.count(),
-            "page": query.page,
-            "per_page": query.per_page,
-            "q": query_string,
-            "oql": query.oql_query(),
-            "v1": query.old_query(),
-        }
-
-        # reorder the dictionary
-        results_table_response = {
-            "meta": results_table_response.pop("meta"),
-            "results": results_table_response.pop("results"),
-        }
-        return jsonify(results_table_response)
-    else:
-        return json_data
 
 
 @blueprint.route("/searches", methods=["POST"])

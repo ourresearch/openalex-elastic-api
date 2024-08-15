@@ -7,7 +7,7 @@ import settings
 from app import create_app
 from combined_config import all_entities_config
 from oql.query import Query
-from oql.results_table import ResultTable, ResultTableRedshift
+from oql.results_table import ResultTable
 
 app = create_app()
 redis_db = redis.Redis.from_url(settings.CACHE_REDIS_URL)
@@ -21,11 +21,8 @@ def fetch_results(query_string):
             json_data = query.execute()
             entity = query.entity
             columns = query.columns
-            if query.use_redshift():
-                columns = columns or all_entities_config[entity]["columnsToShowOnTableRedshift"]
-                results_table = ResultTableRedshift(entity, columns, json_data)
-            else:
-                results_table = ResultTable(entity, columns, json_data)
+            columns = columns or all_entities_config[entity]["columnsToShowOnTableRedshift"]
+            results_table = ResultTable(entity, columns, json_data)
             results_table_response = results_table.response()
             results_table_response["meta"] = {
                 "count": results_table.count(),
