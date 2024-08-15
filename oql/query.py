@@ -415,8 +415,6 @@ class Query:
         return joined_clauses
 
     def execute(self):
-        json_data = {"results": []}
-        columns = self.columns or self.default_columns()
         redshift_handler = RedshiftQueryHandler(
             entity=self.entity,
             sort_by_column=self.sort_by_column,
@@ -425,6 +423,12 @@ class Query:
             valid_columns=self.valid_columns
         )
         results = redshift_handler.redshift_query()
+        json_data = self.format_results_as_json(results)
+        return json_data
+
+    def format_results_as_json(self, results):
+        json_data = {"results": []}
+        columns = self.columns or self.default_columns()
         for r in results:
             if r.id == "works/W4285719527":
                 # deleted work, skip
