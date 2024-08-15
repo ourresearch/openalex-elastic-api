@@ -13,17 +13,14 @@
     "hasAutocomplete": false,
     "isNative": false,
     "idRegex": "(?:https:\\/\\/openalex\\.org\\/institution-types\\/|institution-types\\/)([a-zA-Z\\-]+)",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name"
     ],
-    "rowsToShowOnTablePage": [
+    "showOnTablePage": [
         "display_name"
     ],
-    "columnsToShowOnTableRedshift": [
-        "display_name"
-    ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "institution-types",
@@ -31,7 +28,7 @@
             "objectEntity": "institution-types",
             "displayName": "Institution ID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-tag-outline"
         },
         "display_name": {
@@ -39,7 +36,7 @@
             "isColumnMandatory": true,
             "subjectEntity": "institution-types",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"

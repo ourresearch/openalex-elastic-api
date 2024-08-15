@@ -13,19 +13,15 @@
     "hasAutocomplete": false,
     "isNative": false,
     "idRegex": "(?:https:\\/\\/openalex\\.org\\/source-types\\/|source-types\\/)([a-zA-Z\\-]+)",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name",
         "description"
     ],
-    "rowsToShowOnTablePage": [
-        "display_name",
-        "description"
-    ],
-    "columnsToShowOnTableRedshift": [
+    "showOnTablePage": [
         "display_name"
     ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "source-types",
@@ -33,7 +29,7 @@
             "objectEntity": "source-types",
             "displayName": "Source Type ID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "filter"
             ],
@@ -48,7 +44,7 @@
             "entityId": "source-types",
             "objectEntity": "source-types",
             "displayName": "Source type name",
-            "newType": "entity",
+            "type": "entity",
             "actions": [
                 "filter"
             ],
@@ -63,7 +59,7 @@
             "entityId": "source-types",
             "objectEntity": "source-types",
             "displayName": "Source type description",
-            "newType": "entity",
+            "type": "entity",
             "actions": [
                 "filter"
             ],

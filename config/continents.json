@@ -13,19 +13,15 @@
     "hasAutocomplete": false,
     "isNative": false,
     "idRegex": "(?i)(?:https:\\/\\/openalex\\.org\\/continents\\/|continents\\/)(q\\d+)",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name",
         "countries"
     ],
-    "rowsToShowOnTablePage": [
-        "display_name",
-        "countries"
-    ],
-    "columnsToShowOnTableRedshift": [
+    "showOnTablePage": [
         "display_name"
     ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "continents",
@@ -33,7 +29,7 @@
             "isId": true,
             "objectEntity": "continents",
             "displayName": "Continent ID",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "filter"
             ],
@@ -48,7 +44,7 @@
             "entityId": "continents",
             "objectEntity": "continents",
             "displayName": "Continent name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "filter"
             ],

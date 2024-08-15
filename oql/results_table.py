@@ -7,16 +7,16 @@ class ResultTable:
         self.columns = (
             columns
             if columns
-            else all_entities_config[entity]["columnsToShowOnTableRedshift"]
+            else all_entities_config[entity]["showOnTablePage"]
         )
         self.json_data = json_data
         self.config = all_entities_config[entity]
 
     def header(self):
         return [
-            all_entities_config[self.entity]['properties'][column]
+            all_entities_config[self.entity]['columns'][column]
             for column in self.columns
-            if column in all_entities_config[self.entity]['properties']
+            if column in all_entities_config[self.entity]['columns']
         ]
 
     def body(self):
@@ -43,16 +43,16 @@ class ResultTable:
             return {"type": column_type, "value": value}
 
     def get_column_type(self, column):
-        return all_entities_config[self.entity]['properties'][column]["newType"]
+        return all_entities_config[self.entity]['columns'][column]["type"]
 
     def is_list(self, column):
-        return all_entities_config[self.entity]['properties'][column].get("isList", False)
+        return all_entities_config[self.entity]['columns'][column].get("isList", False)
 
     def is_external_id(self, column):
-        return all_entities_config[self.entity]['properties'][column].get("isExternalId", False)
+        return all_entities_config[self.entity]['columns'][column].get("isExternalId", False)
 
     def external_id_prefix(self, column):
-        return all_entities_config[self.entity]['properties'][column].get("externalIdPrefix", "")
+        return all_entities_config[self.entity]['columns'][column].get("externalIdPrefix", "")
 
     def count(self):
         return len(self.json_data["results"])

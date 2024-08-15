@@ -13,21 +13,17 @@
     "hasAutocomplete": false,
     "isNative": false,
     "idRegex": "(?:https:\\/\\/openalex\\.org\\/types\\/|types\\/)([a-zA-Z\\-]+)",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name",
         "description",
         "crossref_types"
     ],
-    "rowsToShowOnTablePage": [
+    "showOnTablePage": [
         "display_name",
         "description"
     ],
-    "columnsToShowOnTableRedshift": [
-        "display_name",
-        "description"
-    ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "types",
@@ -35,7 +31,7 @@
             "objectEntity": "types",
             "displayName": "Type ID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-tag-outline"
         },
         "display_name": {
@@ -43,7 +39,7 @@
             "isColumnMandatory": true,
             "subjectEntity": "types",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"
@@ -61,7 +57,7 @@
             "entityId": "types",
             "objectEntity": "types",
             "displayName": "description",
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-shape-outline"
         },
         "crossref_types": {
@@ -70,7 +66,7 @@
             "subjectEntity": "types",
             "entityId": "types",
             "displayName": "alternate names (Crossref)",
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-shape-outline"
         }
     }

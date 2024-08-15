@@ -14,20 +14,17 @@
     "hasAutocomplete": true,
     "isNative": true,
     "idRegex": "(?i)(?:funders\\/)?(?:https:\\/\\/openalex\\.org\\/)?(f\\d+)",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name"
     ],
-    "rowsToShowOnTablePage": [
-        "display_name"
-    ],
-    "columnsToShowOnTableRedshift": [
+    "showOnTablePage": [
         "display_name",
         "doi",
         "country_code",
         "description"
     ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "funders",
@@ -35,7 +32,7 @@
             "objectEntity": "funders",
             "displayName": "OpenAlex ID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-cash-multiple"
         },
         "display_name": {
@@ -43,7 +40,7 @@
             "isColumnMandatory": true,
             "subjectEntity": "funders",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"
@@ -59,7 +56,7 @@
             "id": "display_name.search",
             "subjectEntity": "funders",
             "displayName": "Name search",
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-magnify"
         },
         "country_code": {
@@ -68,7 +65,7 @@
             "entityId": "countries",
             "displayName": "Country",
             "isId": true,
-            "newType": "entity",
+            "type": "entity",
             "isExternalId": true,
             "externalIdPrefix": "countries",
             "isCountry": true,
@@ -87,7 +84,7 @@
             "objectEntity": "works",
             "displayName": "DOI",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "category": "ids",
             "actions": [],
             "icon": "mdi-file-document-outline"
@@ -97,7 +94,7 @@
             "subjectEntity": "funders",
             "displayName": "crossref id",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "category": "ids",
             "actions": [],
             "icon": "mdi-file-document-outline"
@@ -107,7 +104,7 @@
             "subjectEntity": "funders",
             "displayName": "description",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "category": "ids",
             "actions": [],
             "icon": "mdi-file-document-outline"

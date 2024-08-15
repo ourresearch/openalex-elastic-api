@@ -15,7 +15,7 @@
     "hasAutocomplete": true,
     "isNative": true,
     "hasSerp": true,
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name",
         "display_name_alternatives",
@@ -24,15 +24,7 @@
         "related_institutions",
         "ids.ror"
     ],
-    "rowsToShowOnTablePage": [
-        "display_name",
-        "type",
-        "country_code",
-        "parent_institutions",
-        "child_institutions",
-        "ids.ror"
-    ],
-    "columnsToShowOnTableRedshift": [
+    "showOnTablePage": [
         "display_name",
         "type",
         "country_code",
@@ -43,7 +35,7 @@
         "country_code",
         "type"
     ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "institutions",
@@ -51,7 +43,7 @@
             "objectEntity": "institutions",
             "displayName": "OpenAlex ID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-town-hall"
         },
         "default.search": {
@@ -60,7 +52,7 @@
             "entityId": "institutions",
             "objectEntity": "institutions",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "filter"
             ],
@@ -74,7 +66,7 @@
             "isColumnMandatory": true,
             "subjectEntity": "institutions",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"
@@ -93,7 +85,7 @@
             "objectEntity": "institutions",
             "displayName": "ROR",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-town-hall"
         },
         "ror": {
@@ -103,14 +95,14 @@
             "objectEntity": "institutions",
             "displayName": "ROR",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-town-hall"
         },
         "display_name.search": {
             "id": "display_name.search",
             "subjectEntity": "institutions",
             "displayName": "Name search",
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-magnify"
         },
         "country_code": {
@@ -119,7 +111,7 @@
             "entityId": "countries",
             "displayName": "Country",
             "isId": true,
-            "newType": "entity",
+            "type": "entity",
             "isExternalId": true,
             "externalIdPrefix": "countries",
             "isCountry": true,
@@ -139,7 +131,7 @@
             "isExternalId": true,
             "externalIdPrefix": "institution-types",
             "isId": true,
-            "newType": "entity",
+            "type": "entity",
             "actions": [
                 "filter"
             ],
@@ -155,7 +147,7 @@
             "displayName": "Concepts",
             "entityId": "concepts",
             "objectEntity": "concepts",
-            "newType": "entity",
+            "type": "entity",
             "icon": "mdi-tag-outline"
         },
         "display_name_alternatives": {
@@ -163,7 +155,7 @@
             "isList": true,
             "subjectEntity": "institutions",
             "displayName": "alternate names",
-            "newType": "string",
+            "type": "string",
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-town-hall"
@@ -174,7 +166,7 @@
             "subjectEntity": "institutions",
             "objectEntity": "institutions",
             "displayName": "parent institutions",
-            "newType": "entity",
+            "type": "entity",
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-town-hall"
@@ -185,7 +177,7 @@
             "subjectEntity": "institutions",
             "objectEntity": "institutions",
             "displayName": "child institutions",
-            "newType": "entity",
+            "type": "entity",
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-town-hall"
@@ -196,7 +188,7 @@
             "subjectEntity": "institutions",
             "objectEntity": "institutions",
             "displayName": "related institutions",
-            "newType": "entity",
+            "type": "entity",
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-town-hall"

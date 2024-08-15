@@ -13,7 +13,7 @@
     "hasAutocomplete": false,
     "isNative": false,
     "idRegex": "(?:https:\\/\\/openalex\\.org\\/fields\\/|fields\\/)(\\d+)",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name",
         "description",
@@ -22,18 +22,11 @@
         "siblings",
         "domain"
     ],
-    "rowsToShowOnTablePage": [
-        "display_name",
-        "description",
-        "subfields",
-        "siblings",
-        "domain"
-    ],
-    "columnsToShowOnTableRedshift": [
+    "showOnTablePage": [
         "display_name",
         "description"
     ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "fields",
@@ -41,7 +34,7 @@
             "objectEntity": "fields",
             "displayName": "OpenAlex ID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-tag-outline"
         },
         "display_name": {
@@ -49,7 +42,7 @@
             "isColumnMandatory": true,
             "subjectEntity": "fields",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"
@@ -67,7 +60,7 @@
             "entityId": "fields",
             "objectEntity": "fields",
             "displayName": "description",
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-tag-outline"
         },
         "display_name_alternatives": {
@@ -77,7 +70,7 @@
             "entityId": "fields",
             "objectEntity": "fields",
             "displayName": "alternate names",
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-tag-outline"
         },
         "siblings": {
@@ -87,7 +80,7 @@
             "entityId": "fields",
             "objectEntity": "fields",
             "displayName": "related fields (siblings)",
-            "newType": "entity",
+            "type": "entity",
             "icon": "mdi-tag-outline"
         },
         "subfields": {
@@ -97,7 +90,7 @@
             "entityId": "subfields",
             "objectEntity": "subfields",
             "displayName": "subfields (children)",
-            "newType": "entity",
+            "type": "entity",
             "icon": "mdi-tag-outline"
         },
         "domain": {
@@ -106,7 +99,7 @@
             "entityId": "domains",
             "objectEntity": "domains",
             "displayName": "domain (parent)",
-            "newType": "entity",
+            "type": "entity",
             "icon": "mdi-tag-outline"
         }
     }

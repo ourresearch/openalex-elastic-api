@@ -28,7 +28,7 @@
         }
     ],
     "idRegex": "(?i)(?:authors\\/)?(?:https:\\/\\/openalex\\.org\\/)?(a\\d+)",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name",
         "display_name_alternatives",
@@ -36,13 +36,7 @@
         "affiliations.institution.id",
         "ids.orcid"
     ],
-    "rowsToShowOnTablePage": [
-        "display_name",
-        "display_name_alternatives",
-        "last_known_institutions.id",
-        "ids.orcid"
-    ],
-    "columnsToShowOnTableRedshift": [
+    "showOnTablePage": [
         "display_name",
         "orcid",
         "last_known_institutions"
@@ -52,14 +46,14 @@
         "last_known_institutions.country_code",
         "has_orcid"
     ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "authors",
             "entityId": "authors",
             "objectEntity": "authors",
             "displayName": "OpenAlex ID",
-            "newType": "string",
+            "type": "string",
             "actions": [],
             "actionsPopular": [],
             "isId": true,
@@ -72,7 +66,7 @@
             "objectEntity": "authors",
             "displayName": "ORCID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-account-outline"
         },
         "orcid": {
@@ -82,7 +76,7 @@
             "objectEntity": "authors",
             "displayName": "ORCID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-account-outline"
         },
         "default.search": {
@@ -91,7 +85,7 @@
             "entityId": "authors",
             "objectEntity": "authors",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "filter"
             ],
@@ -105,7 +99,7 @@
             "isColumnMandatory": true,
             "subjectEntity": "authors",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"
@@ -124,7 +118,7 @@
             "displayName": "Past institutions",
             "entityId": "institutions",
             "objectEntity": "institutions",
-            "newType": "entity",
+            "type": "entity",
             "actions": [
                 "filter",
                 "group_by"
@@ -142,7 +136,7 @@
             "entityId": "institution-types",
             "objectEntity": "institution-types",
             "displayName": "Past institutions type",
-            "newType": "entity",
+            "type": "entity",
             "actions": [
                 "filter",
                 "group_by"
@@ -159,7 +153,7 @@
             "displayName": "institution",
             "entityId": "institutions",
             "objectEntity": "institutions",
-            "newType": "entity",
+            "type": "entity",
             "actions": [
                 "filter",
                 "group_by"
@@ -177,7 +171,7 @@
             "displayName": "institution",
             "entityId": "institutions",
             "objectEntity": "institutions",
-            "newType": "entity",
+            "type": "entity",
             "actions": [
                 "filter",
                 "group_by"
@@ -195,7 +189,7 @@
             "entityId": "countries",
             "isId": true,
             "displayName": "institution country",
-            "newType": "entity",
+            "type": "entity",
             "isCountry": true,
             "actions": [
                 "filter",
@@ -214,7 +208,7 @@
             "entityId": "institution-types",
             "displayName": "Institution type",
             "isId": true,
-            "newType": "entity",
+            "type": "entity",
             "actions": [
                 "filter",
                 "group_by"
@@ -230,7 +224,7 @@
             "entityId": "authors",
             "objectEntity": "authors",
             "displayName": "Has an ORCID",
-            "newType": "boolean",
+            "type": "boolean",
             "actions": [
                 "filter",
                 "group_by"
@@ -248,7 +242,7 @@
             "entityId": "authors",
             "objectEntity": "authors",
             "displayName": "alternate names",
-            "newType": "string",
+            "type": "string",
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-town-hall"

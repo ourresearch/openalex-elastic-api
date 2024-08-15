@@ -21,7 +21,7 @@ def fetch_results(query_string):
             json_data = query.execute()
             entity = query.entity
             columns = query.columns
-            columns = columns or all_entities_config[entity]["columnsToShowOnTableRedshift"]
+            columns = columns or all_entities_config[entity]["showOnTablePage"]
             results_table = ResultTable(entity, columns, json_data)
             results_table_response = results_table.response()
             results_table_response["meta"] = {

@@ -33,7 +33,7 @@
         }
     ],
     "idRegex": "(?i)(?:works\\/)?(?:https:\\/\\/openalex\\.org\\/)?(w\\d+)",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name",
         "publication_year",
@@ -52,21 +52,7 @@
         "grants.funder",
         "grants.award_id"
     ],
-    "rowsToShowOnTablePage": [
-        "display_name",
-        "publication_year",
-        "type",
-        "primary_location.source.id",
-        "authorships.author.id",
-        "authorships.institutions.id",
-        "primary_topic.id",
-        "primary_topic.subfield.id",
-        "primary_topic.field.id",
-        "primary_topic.domain.id",
-        "sustainable_development_goals.id",
-        "open_access.oa_status"
-    ],
-    "columnsToShowOnTableRedshift": [
+    "showOnTablePage": [
         "display_name",
         "publication_year",
         "type",
@@ -84,7 +70,7 @@
         "authorships.institutions.lineage",
         "type"
     ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "works",
@@ -93,7 +79,7 @@
             "displayName": "OpenAlex ID",
             "isSingleWork": true,
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "category": "ids",
             "actions": [
                 ""
@@ -108,7 +94,7 @@
             "displayName": "OpenAlex ID",
             "isSingleWork": true,
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "category": "ids",
             "actions": [
                 ""
@@ -123,7 +109,7 @@
             "displayName": "DOI",
             "isSingleWork": true,
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "category": "ids",
             "actions": [],
             "icon": "mdi-file-document-outline"
@@ -135,7 +121,7 @@
             "displayName": "concept",
             "entityId": "concepts",
             "objectEntity": "concepts",
-            "newType": "entity",
+            "type": "entity",
             "category": "other",
             "actions": [],
             "actionsPopular": [],
@@ -147,7 +133,7 @@
             "displayName": "topic",
             "entityId": "topics",
             "objectEntity": "topics",
-            "newType": "entity",
+            "type": "entity",
             "category": "other",
             "actions": [
                 "filter",
@@ -165,7 +151,7 @@
             "displayName": "topic",
             "entityId": "topics",
             "objectEntity": "topics",
-            "newType": "entity",
+            "type": "entity",
             "category": "other",
             "actions": [
                 "filter",
@@ -184,7 +170,7 @@
             "displayName": "keyword",
             "entityId": "keywords",
             "objectEntity": "keywords",
-            "newType": "entity",
+            "type": "entity",
             "category": "other",
             "actions": [
                 "filter",
@@ -202,7 +188,7 @@
             "displayName": "subfield",
             "entityId": "subfields",
             "objectEntity": "subfields",
-            "newType": "entity",
+            "type": "entity",
             "category": "other",
             "actions": [
                 "filter",
@@ -217,7 +203,7 @@
             "displayName": "field",
             "entityId": "fields",
             "objectEntity": "fields",
-            "newType": "entity",
+            "type": "entity",
             "category": "other",
             "actions": [
                 "filter",
@@ -232,7 +218,7 @@
             "displayName": "domain",
             "entityId": "domains",
             "objectEntity": "domains",
-            "newType": "entity",
+            "type": "entity",
             "category": "other",
             "actions": [
                 "filter",
@@ -248,7 +234,7 @@
             "displayName": "funder",
             "entityId": "funders",
             "objectEntity": "funders",
-            "newType": "entity",
+            "type": "entity",
             "category": "other",
             "actions": [
                 "filter",
@@ -261,7 +247,7 @@
             "isList": true,
             "subjectEntity": "works",
             "displayName": "grant ID",
-            "newType": "string",
+            "type": "string",
             "category": "other",
             "actions": [],
             "icon": "mdi-cash-multiple"
@@ -273,7 +259,7 @@
             "displayName": "institutions",
             "entityId": "institutions",
             "objectEntity": "institutions",
-            "newType": "entity",
+            "type": "entity",
             "category": "institution",
             "actions": [
                 "filter",
@@ -289,7 +275,7 @@
             "id": "cited_by_count",
             "subjectEntity": "works",
             "displayName": "cited by count",
-            "newType": "number",
+            "type": "number",
             "actions": [
                 "sort",
                 "column",
@@ -307,7 +293,7 @@
             "displayName": "institutions",
             "entityId": "institutions",
             "objectEntity": "institutions",
-            "newType": "entity",
+            "type": "entity",
             "category": "institution",
             "actions": [
                 "filter",
@@ -327,7 +313,7 @@
             "objectEntity": "institutions",
             "displayName": "ROR ID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "category": "ids",
             "actions": [],
             "icon": "mdi-town-hall"
@@ -339,7 +325,7 @@
             "displayName": "authors",
             "entityId": "authors",
             "objectEntity": "authors",
-            "newType": "entity",
+            "type": "entity",
             "category": "author",
             "actions": [
                 "filter",
@@ -358,7 +344,7 @@
             "displayName": "authors",
             "entityId": "authors",
             "objectEntity": "authors",
-            "newType": "entity",
+            "type": "entity",
             "category": "author",
             "actions": [
                 "filter",
@@ -378,7 +364,7 @@
             "objectEntity": "authors",
             "displayName": "ORCID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "category": "ids",
             "actions": [],
             "icon": "mdi-account-outline"
@@ -387,7 +373,7 @@
             "id": "default.search",
             "subjectEntity": "works",
             "displayName": "fulltext",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "filter"
             ],
@@ -401,7 +387,7 @@
             "id": "title_and_abstract.search",
             "subjectEntity": "works",
             "displayName": "title & abstract",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "filter"
             ],
@@ -417,14 +403,14 @@
                 "filter"
             ],
             "actionsPopular": [],
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-magnify"
         },
         "raw_affiliation_strings.search": {
             "id": "raw_affiliation_strings.search",
             "subjectEntity": "works",
             "displayName": "raw affiliation string",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "filter"
             ],
@@ -438,7 +424,7 @@
             "id": "doi_starts_with",
             "subjectEntity": "works",
             "displayName": "DOI prefix",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "filter"
             ],
@@ -452,7 +438,7 @@
             "isColumnMandatory": true,
             "subjectEntity": "works",
             "displayName": "title",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"
@@ -469,7 +455,7 @@
             "isColumnMandatory": false,
             "subjectEntity": "works",
             "displayName": "title",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"
@@ -485,7 +471,7 @@
             "id": "has_abstract",
             "subjectEntity": "works",
             "displayName": "Abstract available",
-            "newType": "boolean",
+            "type": "boolean",
             "actions": [
                 "filter"
             ],
@@ -495,7 +481,7 @@
             "id": "authors_count",
             "subjectEntity": "works",
             "displayName": "authors count",
-            "newType": "number",
+            "type": "number",
             "sortByValue": true,
             "category": "author",
             "actions": [
@@ -512,7 +498,7 @@
             "entityId": "authors",
             "objectEntity": "authors",
             "displayName": "corresponding author",
-            "newType": "entity",
+            "type": "entity",
             "category": "author",
             "actions": [
                 "filter",
@@ -524,7 +510,7 @@
             "id": "open_access.is_oa",
             "subjectEntity": "works",
             "displayName": "open access",
-            "newType": "boolean",
+            "type": "boolean",
             "actions": [
                 "filter",
                 "column",
@@ -544,7 +530,7 @@
             "entityId": "licenses",
             "displayName": "license",
             "isId": true,
-            "newType": "entity",
+            "type": "entity",
             "actions": [
                 "filter",
                 "column",
@@ -558,7 +544,7 @@
             "id": "open_access.oa_status",
             "subjectEntity": "works",
             "displayName": "oa status",
-            "newType": "string",
+            "type": "string",
             "actions": [],
             "category": "open access",
             "icon": "mdi-lock-open-outline"
@@ -567,7 +553,7 @@
             "id": "oa_status",
             "subjectEntity": "works",
             "displayName": "oa status",
-            "newType": "string",
+            "type": "string",
             "actions": [],
             "category": "open access",
             "icon": "mdi-lock-open-outline"
@@ -576,7 +562,7 @@
             "id": "best_oa_location.is_accepted",
             "subjectEntity": "works",
             "displayName": "open access accepted",
-            "newType": "boolean",
+            "type": "boolean",
             "actions": [
                 "filter",
                 "column",
@@ -589,7 +575,7 @@
             "id": "best_oa_location.is_published",
             "subjectEntity": "works",
             "displayName": "open access published",
-            "newType": "boolean",
+            "type": "boolean",
             "actions": [
                 "filter",
                 "column",
@@ -603,7 +589,7 @@
             "isCurrency": true,
             "subjectEntity": "works",
             "displayName": "APC paid (est)",
-            "newType": "number",
+            "type": "number",
             "sortByValue": true,
             "actions": [
                 "filter"
@@ -617,7 +603,7 @@
             "entityId": "countries",
             "objectEntity": "countries",
             "displayName": "Country",
-            "newType": "entity",
+            "type": "entity",
             "isCountry": true,
             "actions": [
                 "filter",
@@ -634,7 +620,7 @@
             "id": "countries_distinct_count",
             "subjectEntity": "works",
             "displayName": "countries count",
-            "newType": "number",
+            "type": "number",
             "sortByValue": true,
             "examples": [
                 "1",
@@ -653,7 +639,7 @@
             "id": "institutions_distinct_count",
             "subjectEntity": "works",
             "displayName": "institutions count",
-            "newType": "number",
+            "type": "number",
             "sortByValue": true,
             "examples": [
                 "1",
@@ -675,7 +661,7 @@
             "entityId": "continents",
             "displayName": "Continent",
             "isId": true,
-            "newType": "entity",
+            "type": "entity",
             "actions": [
                 "filter",
                 "column",
@@ -688,7 +674,7 @@
             "id": "institutions.is_global_south",
             "subjectEntity": "works",
             "displayName": "from Global South",
-            "newType": "boolean",
+            "type": "boolean",
             "actions": [
                 "filter",
                 "column",
@@ -705,7 +691,7 @@
             "displayName": "institution type",
             "isId": true,
             "category": "institution",
-            "newType": "entity",
+            "type": "entity",
             "actions": [
                 "filter",
                 "group_by"
@@ -720,7 +706,7 @@
             "objectEntity": "institutions",
             "displayName": "corresponding institution",
             "category": "institution",
-            "newType": "entity",
+            "type": "entity",
             "actions": [
                 "filter",
                 "group_by"
@@ -733,7 +719,7 @@
             "displayName": "source",
             "entityId": "sources",
             "objectEntity": "sources",
-            "newType": "entity",
+            "type": "entity",
             "category": "source",
             "actions": [
                 "filter",
@@ -747,7 +733,7 @@
             "displayName": "source",
             "entityId": "sources",
             "objectEntity": "sources",
-            "newType": "entity",
+            "type": "entity",
             "category": "source",
             "actions": [
                 "filter",
@@ -762,7 +748,7 @@
             "objectEntity": "sources",
             "displayName": "ISSN",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "category": "ids",
             "actions": [],
             "icon": "mdi-book-open-outline"
@@ -773,7 +759,7 @@
             "entityId": "source-types",
             "displayName": "source type",
             "isId": true,
-            "newType": "entity",
+            "type": "entity",
             "category": "source",
             "actions": [
                 "filter",
@@ -786,7 +772,7 @@
             "id": "primary_location.source.is_in_doaj",
             "subjectEntity": "works",
             "displayName": "indexed by DOAJ",
-            "newType": "boolean",
+            "type": "boolean",
             "category": "source",
             "actions": [
                 "filter",
@@ -798,7 +784,7 @@
             "id": "primary_location.source.is_oa",
             "subjectEntity": "works",
             "displayName": "in OA source",
-            "newType": "boolean",
+            "type": "boolean",
             "category": "source",
             "actions": [
                 "filter",
@@ -813,7 +799,7 @@
             "entityId": "publishers",
             "objectEntity": "publishers",
             "displayName": "publisher",
-            "newType": "entity",
+            "type": "entity",
             "category": "source",
             "actions": [
                 "filter",
@@ -827,7 +813,7 @@
             "displayName": "repository",
             "entityId": "sources",
             "objectEntity": "sources",
-            "newType": "entity",
+            "type": "entity",
             "category": "source",
             "actions": [
                 "filter",
@@ -839,7 +825,7 @@
             "id": "open_access.any_repository_has_fulltext",
             "subjectEntity": "works",
             "displayName": "has repository fulltext",
-            "newType": "boolean",
+            "type": "boolean",
             "category": "source",
             "actions": [
                 "filter",
@@ -856,7 +842,7 @@
             "isExternalId": true,
             "isId": true,
             "externalIdPrefix": "work-types",
-            "newType": "entity",
+            "type": "entity",
             "category": "other",
             "actions": [
                 "filter",
@@ -874,7 +860,7 @@
             "id": "abstract_inverted_index",
             "subjectEntity": "works",
             "displayName": "Abstract",
-            "newType": "string",
+            "type": "string",
             "actions": [],
             "icon": "mdi-text"
         },
@@ -884,7 +870,7 @@
             "subjectEntity": "works",
             "displayName": "year",
             "isDate": true,
-            "newType": "number",
+            "type": "number",
             "sortByValue": true,
             "examples": [
                 "1999",
@@ -911,7 +897,7 @@
             "isCurrency": true,
             "subjectEntity": "works",
             "displayName": "APC sum",
-            "newType": "sum",
+            "type": "sum",
             "category": "other",
             "actions": [
                 "group_by"
@@ -926,7 +912,7 @@
             "subjectEntity": "works",
             "displayName": "date",
             "isDate": true,
-            "newType": "number",
+            "type": "number",
             "actions": [
                 "sort"
             ],
@@ -943,7 +929,7 @@
             "id": "has_doi",
             "subjectEntity": "works",
             "displayName": "indexed by Crossref",
-            "newType": "boolean",
+            "type": "boolean",
             "category": "ids",
             "actions": [
                 "filter",
@@ -955,7 +941,7 @@
             "id": "mag_only",
             "subjectEntity": "works",
             "displayName": "indexed by MAG only",
-            "newType": "boolean",
+            "type": "boolean",
             "category": "ids",
             "actions": [
                 "filter",
@@ -967,7 +953,7 @@
             "id": "has_orcid",
             "subjectEntity": "works",
             "displayName": "indexed by ORCID",
-            "newType": "boolean",
+            "type": "boolean",
             "actions": [
                 "filter",
                 "group_by"
@@ -978,7 +964,7 @@
             "id": "has_pmid",
             "subjectEntity": "works",
             "displayName": "indexed by PubMed",
-            "newType": "boolean",
+            "type": "boolean",
             "category": "ids",
             "actions": [
                 "filter",
@@ -990,7 +976,7 @@
             "id": "is_retracted",
             "subjectEntity": "works",
             "displayName": "retracted",
-            "newType": "boolean",
+            "type": "boolean",
             "category": "other",
             "actions": [
                 "filter",
@@ -1005,7 +991,7 @@
             "subjectEntity": "works",
             "displayName": "language",
             "isId": true,
-            "newType": "entity",
+            "type": "entity",
             "displayNullAs": "Unknown",
             "category": "other",
             "actions": [
@@ -1026,7 +1012,7 @@
             "objectEntity": "sdgs",
             "subjectEntity": "works",
             "displayName": "sdgs",
-            "newType": "entity",
+            "type": "entity",
             "displayNullAs": "Unknown",
             "category": "other",
             "actions": [
@@ -1043,7 +1029,7 @@
             "isId": true,
             "objectEntity": "works",
             "displayName": "cites",
-            "newType": "string",
+            "type": "string",
             "category": "citation",
             "actions": [],
             "icon": "mdi-format-quote-close",
@@ -1057,7 +1043,7 @@
             "displayName": "related to",
             "isList": true,
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "category": "other",
             "actions": [
                 "filter"

@@ -59,14 +59,14 @@ def convert_openalex_id(old_id):
 
 def format_as_ui(entity, data):
     results = []
-    columns = all_entities_config[entity]["rowsToShowOnEntityPage"]
+    columns = all_entities_config[entity]["showOnEntityPage"]
     print(f"columns to process: {columns}")
     data = json.loads(data)
     for column in columns:
-        config = all_entities_config[entity]['properties'].get(column)
-        is_list = column in all_entities_config[entity]['properties'] and all_entities_config[
+        config = all_entities_config[entity]['columns'].get(column)
+        is_list = column in all_entities_config[entity]['columns'] and all_entities_config[
             entity
-        ]['properties'][column].get("isList")
+        ]['columns'][column].get("isList")
         # unique columns
         if column == "grants.award_id":
             results.append(

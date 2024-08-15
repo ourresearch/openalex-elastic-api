@@ -13,18 +13,15 @@
     "hasAutocomplete": false,
     "isNative": false,
     "idRegex": "(?:https:\\/\\/openalex\\.org\\/licenses\\/|licenses\\/)([a-zA-Z0-9\\-]+)",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name"
     ],
-    "rowsToShowOnTablePage": [
-        "display_name"
-    ],
-    "columnsToShowOnTableRedshift": [
+    "showOnTablePage": [
         "display_name",
         "description"
     ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "licenses",
@@ -32,7 +29,7 @@
             "objectEntity": "licenses",
             "displayName": "License ID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-tag-outline"
         },
         "display_name": {
@@ -40,7 +37,7 @@
             "isColumnMandatory": true,
             "subjectEntity": "licenses",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"
@@ -58,7 +55,7 @@
             "entityId": "licenses",
             "objectEntity": "licenses",
             "displayName": "description",
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-shape-outline"
         }
     }

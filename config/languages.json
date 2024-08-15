@@ -13,17 +13,14 @@
     "hasAutocomplete": false,
     "isNative": false,
     "idRegex": "(?:https:\\/\\/openalex\\.org\\/languages\\/|languages\\/)([a-zA-Z]{2})",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name"
     ],
-    "rowsToShowOnTablePage": [
+    "showOnTablePage": [
         "display_name"
     ],
-    "columnsToShowOnTableRedshift": [
-        "display_name"
-    ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "languages",
@@ -31,7 +28,7 @@
             "objectEntity": "languages",
             "displayName": "Language ID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-tag-outline"
         },
         "display_name": {
@@ -39,7 +36,7 @@
             "isColumnMandatory": true,
             "subjectEntity": "languages",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"

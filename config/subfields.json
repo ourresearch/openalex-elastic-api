@@ -13,7 +13,7 @@
     "hasAutocomplete": false,
     "isNative": false,
     "idRegex": "(?:https:\\/\\/openalex\\.org\\/subfields\\/|subfields\\/)(\\d+)",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name",
         "description",
@@ -22,19 +22,11 @@
         "field",
         "domain"
     ],
-    "rowsToShowOnTablePage": [
-        "display_name",
-        "description",
-        "topics",
-        "siblings",
-        "field",
-        "domain"
-    ],
-    "columnsToShowOnTableRedshift": [
+    "showOnTablePage": [
         "display_name",
         "description"
     ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "subfields",
@@ -42,7 +34,7 @@
             "objectEntity": "subfields",
             "displayName": "OpenAlex ID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-tag-outline"
         },
         "display_name": {
@@ -50,7 +42,7 @@
             "isColumnMandatory": true,
             "subjectEntity": "subfields",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"
@@ -68,7 +60,7 @@
             "entityId": "subfields",
             "objectEntity": "subfields",
             "displayName": "description",
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-tag-outline"
         },
         "display_name_alternatives": {
@@ -78,7 +70,7 @@
             "entityId": "subfields",
             "objectEntity": "subfields",
             "displayName": "alternate names",
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-tag-outline"
         },
         "topics": {
@@ -88,7 +80,7 @@
             "entityId": "topics",
             "objectEntity": "topics",
             "displayName": "topics (children)",
-            "newType": "entity",
+            "type": "entity",
             "icon": "mdi-tag-outline"
         },
         "siblings": {
@@ -98,7 +90,7 @@
             "entityId": "subfields",
             "objectEntity": "subfields",
             "displayName": "related subfields (siblings)",
-            "newType": "entity",
+            "type": "entity",
             "icon": "mdi-tag-outline"
         },
         "field": {
@@ -107,7 +99,7 @@
             "entityId": "fields",
             "objectEntity": "fields",
             "displayName": "field (parent)",
-            "newType": "entity",
+            "type": "entity",
             "icon": "mdi-tag-outline"
         },
         "domain": {
@@ -116,7 +108,7 @@
             "entityId": "domains",
             "objectEntity": "domains",
             "displayName": "domain",
-            "newType": "entity",
+            "type": "entity",
             "icon": "mdi-tag-outline"
         }
     }

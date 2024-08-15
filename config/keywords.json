@@ -14,17 +14,14 @@
     "hasAutocomplete": true,
     "isNative": false,
     "idRegex": "(?:https:\\/\\/openalex\\.org\\/keywords\\/|keywords\\/)([a-zA-Z0-9\\-]+)",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name"
     ],
-    "rowsToShowOnTablePage": [
+    "showOnTablePage": [
         "display_name"
     ],
-    "columnsToShowOnTableRedshift": [
-        "display_name"
-    ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "keywords",
@@ -32,7 +29,7 @@
             "objectEntity": "keywords",
             "displayName": "Keyword ID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-tag-outline"
         },
         "display_name": {
@@ -40,7 +37,7 @@
             "isColumnMandatory": true,
             "subjectEntity": "keywords",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"

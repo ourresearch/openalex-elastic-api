@@ -44,7 +44,7 @@ def results():
     query = Query(query_string, page, per_page)
     if format == "ui":
         entity = query.entity
-        columns = query.columns or all_entities_config[entity]["columnsToShowOnTableRedshift"]
+        columns = query.columns or all_entities_config[entity]["showOnTablePage"]
         json_data = query.execute()
         print(json_data)
         results_table = ResultTable(

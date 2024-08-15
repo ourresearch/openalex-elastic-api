@@ -497,14 +497,14 @@ class Query:
 
     def get_valid_columns(self):
         return (
-            all_entities_config[self.entity]['properties'].keys()
+            all_entities_config[self.entity]['columns'].keys()
             if self.entity and self.entity in all_entities_config
             else []
         )
 
     def default_columns(self):
         if self.entity and self.entity in all_entities_config:
-            return all_entities_config[self.entity]["columnsToShowOnTableRedshift"]
+            return all_entities_config[self.entity]["showOnTablePage"]
         else:
             return []
 
@@ -513,14 +513,14 @@ class Query:
             return []
         return [
             key
-            for key, values in all_entities_config[self.entity]['properties'].items()
+            for key, values in all_entities_config[self.entity]['columns'].items()
             if "sort" in values.get("actions", [])
         ]
 
     def property_type(self, column):
-        for property_config in all_entities_config.get(self.entity, {}).get('properties').values():
+        for property_config in all_entities_config.get(self.entity, {}).get('columns').values():
             if property_config.get("id", "") == column:
-                return property_config.get("newType", "string")
+                return property_config.get("type", "string")
 
     def to_dict(self):
         return {

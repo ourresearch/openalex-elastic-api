@@ -14,18 +14,15 @@
     "hasAutocomplete": true,
     "isNative": true,
     "idRegex": "(?i)(?:publishers\\/)?(?:https:\\/\\/openalex\\.org\\/)?(p\\d+)",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name"
     ],
-    "rowsToShowOnTablePage": [
-        "display_name"
-    ],
-    "columnsToShowOnTableRedshift": [
+    "showOnTablePage": [
         "display_name",
         "country_code"
     ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "publishers",
@@ -33,7 +30,7 @@
             "objectEntity": "publishers",
             "displayName": "OpenAlex ID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-domain"
         },
         "display_name": {
@@ -41,7 +38,7 @@
             "isColumnMandatory": true,
             "subjectEntity": "publishers",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"
@@ -59,7 +56,7 @@
             "entityId": "countries",
             "displayName": "Country",
             "isId": true,
-            "newType": "entity",
+            "type": "entity",
             "isExternalId": true,
             "externalIdPrefix": "countries",
             "isCountry": true,
@@ -75,7 +72,7 @@
             "id": "display_name.search",
             "subjectEntity": "publishers",
             "displayName": "Name search",
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-magnify"
         }
     }

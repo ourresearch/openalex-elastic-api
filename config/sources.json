@@ -23,7 +23,7 @@
         }
     ],
     "idRegex": "(?i)(?:sources\\/)?(?:https:\\/\\/openalex\\.org\\/)?(s\\d+)",
-    "rowsToShowOnEntityPage": [
+    "showOnEntityPage": [
         "id",
         "display_name",
         "ids.issn",
@@ -34,15 +34,7 @@
         "is_in_doaj",
         "apc_usd"
     ],
-    "rowsToShowOnTablePage": [
-        "display_name",
-        "ids.issn",
-        "type",
-        "host_organization",
-        "is_oa",
-        "is_in_doaj"
-    ],
-    "columnsToShowOnTableRedshift": [
+    "showOnTablePage": [
         "display_name",
         "type",
         "issn"
@@ -52,7 +44,7 @@
         "is_oa",
         "is_in_doaj"
     ],
-    "properties": {
+    "columns": {
         "id": {
             "id": "id",
             "subjectEntity": "sources",
@@ -60,7 +52,7 @@
             "objectEntity": "sources",
             "displayName": "OpenAlex ID",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-book-open-outline"
         },
         "default.search": {
@@ -69,7 +61,7 @@
             "entityId": "sources",
             "objectEntity": "sources",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "filter"
             ],
@@ -84,7 +76,7 @@
             "entityId": "sources",
             "displayName": "ISSNs",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-book-open-outline"
         },
         "issn": {
@@ -93,14 +85,14 @@
             "entityId": "sources",
             "displayName": "ISSNs",
             "isId": true,
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-book-open-outline"
         },
         "display_name.search": {
             "id": "display_name.search",
             "subjectEntity": "sources",
             "displayName": "Title search",
-            "newType": "string",
+            "type": "string",
             "icon": "mdi-magnify"
         },
         "display_name": {
@@ -108,7 +100,7 @@
             "isColumnMandatory": true,
             "subjectEntity": "sources",
             "displayName": "name",
-            "newType": "string",
+            "type": "string",
             "actions": [
                 "sort",
                 "column"
@@ -126,7 +118,7 @@
             "entityId": "publishers",
             "objectEntity": "publishers",
             "displayName": "Publisher",
-            "newType": "entity",
+            "type": "entity",
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-domain"
@@ -139,7 +131,7 @@
             "isId": true,
             "isExternalId": true,
             "externalIdPrefix": "source-types",
-            "newType": "entity",
+            "type": "entity",
             "actions": [
                 "filter"
             ],
@@ -153,7 +145,7 @@
             "isCurrency": true,
             "subjectEntity": "sources",
             "displayName": "Article Processing Charge",
-            "newType": "number",
+            "type": "number",
             "actions": [
                 "filter"
             ],
@@ -166,7 +158,7 @@
             "id": "is_oa",
             "subjectEntity": "sources",
             "displayName": "Fully open access",
-            "newType": "boolean",
+            "type": "boolean",
             "actions": [
                 "filter"
             ],
@@ -179,7 +171,7 @@
             "id": "is_in_doaj",
             "subjectEntity": "sources",
             "displayName": "In DOAJ",
-            "newType": "boolean",
+            "type": "boolean",
             "actions": [
                 "filter"
             ],
@@ -193,7 +185,7 @@
             "isList": true,
             "subjectEntity": "sources",
             "displayName": "alternate names",
-            "newType": "string",
+            "type": "string",
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-book-open-outline"
