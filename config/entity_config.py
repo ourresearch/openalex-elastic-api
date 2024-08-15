@@ -579,7 +579,6 @@ entity_configs = [
         ],
         "columnsToShowOnTableRedshift": [
             "display_name",
-            "description",
         ],
     },
     {
