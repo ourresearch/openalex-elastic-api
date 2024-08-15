@@ -5,7 +5,7 @@ import time
 
 import settings
 from app import create_app
-from config.entity_config import entity_configs_dict
+from combined_config import all_entities_config
 from oql.query import Query
 from oql.results_table import ResultTable, ResultTableRedshift
 
@@ -22,7 +22,7 @@ def fetch_results(query_string):
             entity = query.entity
             columns = query.columns
             if query.use_redshift():
-                columns = columns or entity_configs_dict[entity]["columnsToShowOnTableRedshift"]
+                columns = columns or all_entities_config[entity]["columnsToShowOnTableRedshift"]
                 results_table = ResultTableRedshift(entity, columns, json_data)
             else:
                 results_table = ResultTable(entity, columns, json_data)
