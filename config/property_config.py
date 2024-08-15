@@ -1706,7 +1706,7 @@ property_configs = [
         "entityId": "continents",
         "objectEntity": "continents",
         "displayName": "Continent name",
-        "newType": "entity",
+        "newType": "string",
         "actions": ["filter"],
         "actionsPopular": ["filter"],
         "icon": "mdi-shape-outline",
