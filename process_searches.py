@@ -47,16 +47,22 @@ def fetch_results(query_string):
 
 
 def process_searches():
+    last_log_time = 0
+
     while True:
-        print(f"checking for searches in queue {search_queue}")
         search_id = redis_db.lpop(search_queue)
         if not search_id:
+            current_time = time.time()
+            if current_time - last_log_time >= 60:
+                print(f"Waiting for searches from queue {search_queue}")
+                last_log_time = current_time
+
             time.sleep(0.1)
             continue
 
         search_json = redis_db.get(search_id)
         if search_json:
-            print(f"found a search_json! {search_json}")
+            print(f"found a search_json!")
         if not search_json:
             continue
 
@@ -72,6 +78,7 @@ def process_searches():
             search["meta"] = results["meta"]
             search["is_ready"] = True
             search["timestamp"] = datetime.now(timezone.utc).isoformat()
+            print(f"Processed search {search_id} with {search}")
         except Exception as e:
             print(f"Error processing search {search_id}: {e}")
             search["error"] = str(e)

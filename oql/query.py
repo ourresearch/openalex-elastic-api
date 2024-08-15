@@ -50,6 +50,8 @@ class Query:
         self.page = int(page) if page else None
         self.per_page = int(per_page) if per_page else None
 
+        print(self.valid_columns)
+
     @staticmethod
     def clean_query_string(query_string):
         # remove double spaces
@@ -551,7 +553,7 @@ class Query:
 
     def get_valid_columns(self):
         return (
-            all_entities_config[self.entity].keys()
+            all_entities_config[self.entity]['properties'].keys()
             if self.entity and self.entity in all_entities_config
             else []
         )
