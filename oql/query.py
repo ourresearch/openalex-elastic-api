@@ -1,10 +1,7 @@
 import re
 
-from sqlalchemy import desc
-
 from combined_config import all_entities_config
-from extensions import db
-from oql import models
+from oql.redshift import RedshiftQueryHandler
 
 valid_entities = list(all_entities_config.keys())
 
@@ -320,7 +317,7 @@ class Query:
     # conversion methods
     def convert_filter_by(self):
         filters_dict = {}
-        filters = self.filter_by.split(",")
+        filters = self.filter_by.split(",") if self.filter_by else []
 
         for filter_condition in filters:
             parts = filter_condition.strip().split()
@@ -417,67 +414,17 @@ class Query:
         joined_clauses = "\n".join(clause for clause in clauses if clause)
         return joined_clauses
 
-    def redshift_apply_sorting(self, query, entity_class):
-        if self.sort_by_column:
-            if self.sort_by_column == "publication_year":
-                column = getattr(entity_class, "year")
-            else:
-                column = getattr(entity_class, self.sort_by_column, None)
-
-            if column:
-                if self.sort_by_order == "asc":
-                    query = query.order_by(column)
-                elif self.sort_by_order == "desc":
-                    query = query.order_by(desc(column))
-                else:
-                    query = query.order_by(desc(column))
-            elif self.entity == "works":
-                query = query.order_by(
-                    desc(getattr(entity_class, "cited_by_count", None))
-                )
-            else:
-                query = query.order_by(
-                    desc(getattr(entity_class, "display_name", None))
-                )
-        elif self.entity == "works":
-            query = query.order_by(desc(getattr(entity_class, "cited_by_count", None)))
-        else:
-            query = query.order_by(desc(getattr(entity_class, "display_name", None)))
-        return query
-
-    def redshift_apply_filtering(self, query, entity_class):
-        if self.filter_by:
-            filters = self.convert_filter_by()
-            for key, value in filters.items():
-                if key == "id":
-                    query = query.filter(getattr(entity_class, "paper_id") == value)
-                elif key == "publication_year":
-                    query = query.filter(getattr(entity_class, "year") == value)
-                else:
-                    column = getattr(entity_class, key, None)
-                    query = query.filter(column == value)
-        return query
-
-    def redshift_query(self):
-        if self.entity == "countries":
-            entity_class = getattr(models, "Country")
-        elif self.entity == "institution-types":
-            entity_class = getattr(models, "InstitutionType")
-        elif self.entity == "source-types":
-            entity_class = getattr(models, "SourceType")
-        elif self.entity == "work-types":
-            entity_class = getattr(models, "WorkType")
-        else:
-            entity_class = getattr(models, self.entity[:-1].capitalize())
-        results = db.session.query(entity_class)
-        results = self.redshift_apply_sorting(results, entity_class)
-        results = self.redshift_apply_filtering(results, entity_class)
-        return results.limit(100).all()
-
     def execute(self):
         json_data = {"results": []}
         columns = self.columns or self.default_columns()
-        results = self.redshift_query()
+        redshift_handler = RedshiftQueryHandler(
+            entity=self.entity,
+            sort_by_column=self.sort_by_column,
+            sort_by_order=self.sort_by_order,
+            filter_by=self.convert_filter_by(),
+            valid_columns=self.valid_columns
+        )
+        results = redshift_handler.redshift_query()
         for r in results:
             if r.id == "works/W4285719527":
                 # deleted work, skip

@@ -1,139 +1,77 @@
 import os
-import re
-from urllib.parse import urlparse
 
-import psycopg2
+from sqlalchemy import desc
+from extensions import db
+from oql import models
 import requests
 
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-REDSHIFT_URL = os.getenv("REDSHIFT_SERVERLESS_URL")
-redshift = urlparse(REDSHIFT_URL)
 
 
-REDSHIFT_SCHEMA = {
-    "affiliation": [
-        ("paper_id", "BIGINT"),
-        ("author_id", "BIGINT"),
-        ("affiliation_id", "BIGINT"),
-        ("author_sequence_number", "INTEGER"),
-        ("original_author", "VARCHAR(65535)"),
-        ("original_orcid", "VARCHAR(500)")
-    ],
-    "author": [
-        ("author_id", "BIGINT"),
-        ("display_name", "VARCHAR(65535)"),
-        ("merge_into_id", "BIGINT")
-    ],
-    "citation": [
-        ("paper_id", "BIGINT"),
-        ("paper_reference_id", "BIGINT")
-    ],
-    "institution": [
-        ("affiliation_id", "BIGINT"),
-        ("display_name", "VARCHAR(65535)"),
-        ("ror_id", "VARCHAR(500)"),
-        ("iso3166_code", "VARCHAR(500)"),
-    ],
-    "subfield": [
-        ("subfield_id", "INTEGER"),
-        ("display_name", "VARCHAR(65535)"),
-        ("description", "VARCHAR(65535)"),
-    ],
-    "source": [
-        ("source_id", "BIGINT"),
-        ("display_name", "VARCHAR(65535)"),
-        ("type", "VARCHAR(500)"),
-        ("issn", "VARCHAR(500)"),
-        ("is_in_doaj", "BOOLEAN"),
-        ],
-    "topic": [
-        ("topic_id", "INTEGER"),
-        ("display_name", "VARCHAR(65535)"),
-        ("summary", "VARCHAR(65535)"),
-        ("keywords", "VARCHAR(65535)"),
-        ("subfield_id", "INTEGER"),
-        ("field_id", "INTEGER"),
-        ("domain_id", "INTEGER"),
-        ("wikipedia_url", "VARCHAR(65535)"),
-    ],
-    "work": [
-        ("paper_id", "BIGINT"),
-        ("original_title", "VARCHAR(65535)"),
-        ("doi_lower", "VARCHAR(500)"),
-        ("journal_id", "BIGINT"),
-        ("merge_into_id", "BIGINT"),
-        ("publication_date", "VARCHAR(500)"),
-        ("doc_type", "VARCHAR(500)"),
-        ("genre", "VARCHAR(500)"),
-        ("arxiv_id", "VARCHAR(500)"),
-        ("is_paratext", "BOOLEAN"),
-        ("best_url", "VARCHAR(65535)"),
-        ("best_free_url", "VARCHAR(65535)"),
-        ("oa_status", "VARCHAR(500)"),
-        ("type", "VARCHAR(500)"),
-        ("type_crossref", "VARCHAR(500)"),
-        ("year", "INTEGER"),
-        ("created_date", "VARCHAR(500)")
-    ],
-    "work_concept": [
-        ("paper_id", "BIGINT"),
-        ("field_of_study", "BIGINT")
-    ],
-    "work_topic": [
-        ("paper_id", "BIGINT"),
-        ("topic_id", "INTEGER"),
-        ("score", "FLOAT")
-    ],
+class RedshiftQueryHandler:
+    def __init__(self, entity, sort_by_column, sort_by_order, filter_by, valid_columns):
+        self.entity = entity
+        self.sort_by_column = sort_by_column
+        self.sort_by_order = sort_by_order
+        self.filter_by = filter_by
+        self.valid_columns = valid_columns
 
-}
+    def redshift_query(self):
+        entity_class = self.get_entity_class()
 
+        results = db.session.query(entity_class)
+        results = self.apply_sort(results, entity_class)
+        results = self.apply_filter(results, entity_class)
+        return results.limit(100).all()
 
-def get_redshift_connection():
-    conn = psycopg2.connect(
-        dbname=redshift.path[1:],
-        user=redshift.username,
-        password=redshift.password,
-        host=redshift.hostname,
-        port=redshift.port,
-    )
-    return conn
+    def get_entity_class(self):
+        if self.entity == "countries":
+            entity_class = getattr(models, "Country")
+        elif self.entity == "institution-types":
+            entity_class = getattr(models, "InstitutionType")
+        elif self.entity == "source-types":
+            entity_class = getattr(models, "SourceType")
+        elif self.entity == "work-types":
+            entity_class = getattr(models, "WorkType")
+        else:
+            entity_class = getattr(models, self.entity[:-1].capitalize())
+        return entity_class
 
+    def apply_sort(self, query, entity_class):
+        if self.sort_by_column:
+            if self.sort_by_column == "publication_year":
+                model_column = getattr(entity_class, "year")
+            else:
+                model_column = getattr(entity_class, self.sort_by_column, None)
 
-def execute_redshift_query(query):
-    validate_redshift_query(query)
-    conn = get_redshift_connection()
-    cursor = conn.cursor()
-    cursor.execute(query)
-    return cursor.fetchall()
+            if model_column:
+                query = query.order_by(model_column) if self.sort_by_order == "asc" else query.order_by(desc(model_column))
+            else:
+                query = self.default_sort(query, entity_class)
+        else:
+            query = self.default_sort(query, entity_class)
 
+        return query
 
-def build_redshift_query(oql_query):
-    # call openai chatgpt to generate a redshift query
-    clean_query = clean_oql_query(oql_query)
-    context = (
-        f"given a redshift schema with tables in the following schema: {REDSHIFT_SCHEMA}"
-        f" convert the following query to a redshift query: {clean_query} and only return the redshift query that is"
-        f" needed to get results, formatted as a single string with no other context. Order by count desc if count"
-        f" is one of the columns. An institution and affiliation are the same thing."
-    )
-    if "subfield" in oql_query:
-        print(f"adding more context for subfield query: {oql_query}")
-        subfield_context = ("To get subfields, join work_topic.paper_id to work.paper_id, then use the topic_id to get the subfield from the topic table. "
-                            "When grouping by a subfield, return in order: subfield_id, display_name, count, and share.")
-        context = f"{context} {subfield_context}"
-    response = call_openai_chatgpt(context)
-    redshift_query = format_chatgpt_response(response)
-    return redshift_query
+    def default_sort(self, query, entity_class):
+        default_sort_column = "cited_by_count" if self.entity == "works" else "display_name"
+        return query.order_by(desc(getattr(entity_class, default_sort_column, None)))
 
+    def apply_filter(self, query, entity_class):
+        if not self.filter_by:
+            return query
 
-def clean_oql_query(oql_query):
-    # detect integer in I1234 and replace with the integer
-    print(oql_query)
-    oql_query = re.sub(r"\bI(\d+)\b", r"\1", oql_query)
-    # remove the word "using" and replace with "from"
-    oql_query = re.sub(r"\busing\b", "from", oql_query)
-    return oql_query
+        filters = self.filter_by
+        for key, value in filters.items():
+            if key == "id":
+                query = query.filter(getattr(entity_class, "paper_id") == value)
+            elif key == "publication_year":
+                query = query.filter(getattr(entity_class, "year") == value)
+            else:
+                column = getattr(entity_class, key, None)
+                query = query.filter(column == value)
+        return query
 
 
 def call_openai_chatgpt(prompt):
@@ -176,19 +114,3 @@ def format_chatgpt_response(response):
         .strip()
     )
     return clean_content
-
-
-def validate_redshift_query(query):
-    print(f"Validating Redshift query: {query}")
-    if "select" not in query.lower():
-        raise ValueError("Redshift query must contain a SELECT statement.")
-    if "delete" in query.lower():
-        raise ValueError("Redshift query cannot contain a DELETE statement.")
-    if "drop" in query.lower():
-        raise ValueError("Redshift query cannot contain a DROP statement.")
-
-
-if __name__ == "__main__":
-    oql_query = "using works where institution is i33213144 and type is article and publication_year is >= 2004 get subfields return count, share_of(count)"
-    query = build_redshift_query(oql_query)
-    print(query)
