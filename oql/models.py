@@ -1,5 +1,7 @@
 from extensions import db
-from sqlalchemy import Column, BigInteger, String, Boolean, Integer, Float, ForeignKey
+from sqlalchemy import Column, BigInteger, String, Boolean, Integer, Float, func
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.hybrid import hybrid_property
 
 
 class Work(db.Model):
@@ -126,9 +128,13 @@ class Author(db.Model):
     display_name = Column(String(65535))
     orcid = Column(String(500))  # joined from author_orcid
 
-    @property
+    @hybrid_property
     def id(self):
         return f"authors/A{self.author_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('authors/A', cls.author_id)
 
     @property
     def last_known_institutions(self):

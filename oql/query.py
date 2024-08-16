@@ -22,8 +22,6 @@ class Query:
         self.page = int(page) if page else None
         self.per_page = int(per_page) if per_page else None
 
-        print(self.valid_columns)
-
     @staticmethod
     def clean_query_string(query_string):
         # remove double spaces
@@ -47,24 +45,12 @@ class Query:
 
     def detect_return_columns(self):
         pattern = r"\breturn\s+(.+)"
-        initial_columns = self._detect_pattern(pattern, group=1)
-        if initial_columns:
-            initial_columns = [
-                convert_to_snake_case(col.strip()) for col in initial_columns.split(",")
+        return_columns = self._detect_pattern(pattern, group=1)
+        if return_columns:
+            return_columns = [
+                convert_to_snake_case(col.strip()) for col in return_columns.split(",")
             ]
-            parsed_columns = [self.parse_column(col) for col in initial_columns]
-            return [col["column"] for col in parsed_columns]
-        return None
-
-    def detect_parsed_columns(self):
-        pattern = r"\breturn\s+(.+)"
-        initial_columns = self._detect_pattern(pattern, group=1)
-        if initial_columns:
-            initial_columns = [
-                convert_to_snake_case(col.strip()) for col in initial_columns.split(",")
-            ]
-            parsed_columns = [self.parse_column(col) for col in initial_columns]
-            return parsed_columns
+            return return_columns
         return None
 
     def detect_display_columns(self):
@@ -77,7 +63,7 @@ class Query:
 
     def detect_sort_by(self):
         match = re.search(
-            r"\b(?:sort by)\s+(\w+)(?:\s+(asc|desc))?", self.query_string, re.IGNORECASE
+            r"\b(?:sort by)\s+(\w+(?:\([\w]+\))?)(?:\s+(asc|desc))?", self.query_string, re.IGNORECASE
         )
         if match:
             sort_by = match.group(1)
@@ -111,25 +97,6 @@ class Query:
 
     def detect_using(self):
         return self._detect_pattern(r"\b(?:using)\s+(\w+)", group=1)
-
-    @staticmethod
-    def parse_column(column):
-        column = column.strip()
-        # parse the column to see if it has a stats method like count(referenced_works) or sum(cited_by_count)
-        if "(" in column and ")" in column:
-            method = column.split("(")[0]
-            column_name = column.split("(")[1].split(")")[0]
-            return {
-                "type": "stats_column",
-                "method": method,
-                "column": column_name,
-            }
-        else:
-            return {
-                "type": "standard_column",
-                "method": None,
-                "column": column,
-            }
 
     def _detect_pattern(self, pattern, group=0):
         match = re.search(pattern, self.query_string, re.IGNORECASE)
@@ -420,6 +387,7 @@ class Query:
             sort_by_column=self.sort_by_column,
             sort_by_order=self.sort_by_order,
             filter_by=self.convert_filter_by(),
+            return_columns=self.columns,
             valid_columns=self.valid_columns
         )
         results = redshift_handler.redshift_query()

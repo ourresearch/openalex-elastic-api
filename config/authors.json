@@ -246,6 +246,23 @@
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-town-hall"
+        },
+        "count(works)": {
+            "id": "count(works)",
+            "subjectEntity": "authors",
+            "entityId": "works",
+            "objectEntity": "authors",
+            "displayName": "Works",
+            "type": "number",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "icon": "mdi-book-open-variant"
         }
     }
 }
