@@ -4,8 +4,10 @@ from combined_config import all_entities_config
 from oql.query import Query
 from oql.schemas import QuerySchema
 from oql.results_table import ResultTable
-from oql.search import Search, get_existing_search, is_cache_expired
-
+from oql.search import Search, is_cache_expired, get_existing_search
+from oql.searchv2 import SearchV2, get_existing_search_v2, \
+    QueryParameters, update_existing_search_v2
+from oql.util import from_dict
 
 blueprint = Blueprint("oql", __name__)
 
@@ -90,6 +92,77 @@ def get_search(id):
         return jsonify({"error": "Search not found"}), 404
 
     return jsonify(search)
+
+
+@blueprint.route("/searches-v2", methods=["POST"])
+def store_search():
+    query_params = from_dict(QueryParameters, request.json)
+    if not query_params.is_valid():
+        return jsonify({'error': 'Search invalid'}), 400
+    existing_search = get_existing_search_v2(query_params.id_hash())
+    if existing_search and not existing_search.is_cache_expired():
+        return jsonify(existing_search), 200
+
+    s = SearchV2(query_params=query_params)
+    s.save(enqueue=True)
+
+    return jsonify(s.to_dict()), 201
+
+
+@blueprint.route("/searches-v2/<id>", methods=["GET"])
+def get_search(id):
+    search = get_existing_search_v2(id)
+    if not search:
+        return jsonify({"error": "Search not found"}), 404
+
+    return jsonify(search)
+
+
+@blueprint.route("/searches-v2/<id>/update", methods=["PUT"])
+def update_search(id):
+    query_params = from_dict(QueryParameters, request.json)
+    if not query_params.is_valid():
+        return jsonify({'error': 'Search invalid'}), 400
+    search = update_existing_search_v2(id, query_params)
+    if not search:
+        return jsonify({"error": "Search not found"}), 404
+    return jsonify(search.to_dict()), 204
+
+
+@blueprint.route("/searches-v2/<id>/return_columns/<column>", methods=["PATCH"])
+def add_search_query_column(id, column):
+    search = get_existing_search_v2(id)
+    if not search:
+        return jsonify({"error": "Search not found"}), 404
+    if not search.query_params.add_return_column(column):
+        return jsonify({"error": f"Invalid column: {column}"}), 400
+    search.save()
+    return jsonify(search.to_dict()), 204
+
+
+@blueprint.route("/searches-v2/<id>/return_columns/<column>",
+                 methods=["DELETE"])
+def delete_search_query_column(id, column):
+    search = get_existing_search_v2(id)
+    if not search:
+        return jsonify({"error": "Search not found"}), 404
+    if not search.query_params.remove_return_column(column):
+        return jsonify({"error": f"Column not present: \"{column}\""}), 400
+    search.save()
+    return jsonify(search.to_dict()), 204
+
+
+# TODO
+# @blueprint.route("/searches-v2/<id>/get_works_where/<clause>", methods=["PATCH"])
+# def update_search_query_get_works_where(id, clause):
+#     search = get_existing_search(id)
+#     if not search:
+#         return jsonify({"error": "Search not found"}), 404
+#     if not gww.is_valid():
+#         return jsonify({"error": "Invalid clause"}), 400
+#     search.query_params.get_works_where = gww
+#     search.save()
+#     return jsonify(search.to_dict()), 204
 
 
 @blueprint.route("/entities/config", methods=["GET"])
