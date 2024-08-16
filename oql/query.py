@@ -23,7 +23,7 @@ class Query:
         self.valid_sort_columns = self.get_valid_sort_columns()
         self.page = int(page) if page else None
         self.per_page = int(per_page) if per_page else None
-        self.oql_json = self.parse_oql_to_json()i
+        self.oql_json = self.parse_oql_to_json()
 
     @staticmethod
     def clean_query_string(query_string):
@@ -567,9 +567,9 @@ class Query:
                                                        "direction": self.sort_by_order}
 
             final_json["json_query"]["return"] = [x.replace(";", "") for x in self.display_columns]
-            print(final_json)
         else:
             final_json = None
+        return final_json
 
     def to_dict(self):
         return {
@@ -577,8 +577,8 @@ class Query:
                 "original": self.query_string,
                 "oql": self.oql_query(),
                 "v1": self.old_query(),
+                "jsonQuery": self.oql_json,
             },
-            "jsonQuery": self.oql_json,
             "is_valid": self.is_valid(),
         }
 

@@ -5,6 +5,7 @@ class QueryStringSchema(Schema):
     original = fields.Str()
     oql = fields.Str()
     v1 = fields.Str()
+    jsonQuery = fields.Dict()
 
     class Meta:
         ordered = True
