@@ -12,6 +12,8 @@ class Query:
             "select": "get",
         }
         self.query_string = self.clean_query_string(query_string)
+        self.split_string = self.split_raw_string()
+        self.oql_query_parts = self.get_oql_query_parts
         self.entity = self.detect_entity()
         self.filter_by = self.detect_filter_by()
         self.columns = self.detect_return_columns()
@@ -21,6 +23,7 @@ class Query:
         self.valid_sort_columns = self.get_valid_sort_columns()
         self.page = int(page) if page else None
         self.per_page = int(per_page) if per_page else None
+        self.oql_json = self.parse_oql_to_json()i
 
     @staticmethod
     def clean_query_string(query_string):
@@ -443,6 +446,131 @@ class Query:
             if property_config.get("id", "") == column:
                 return property_config.get("type", "string")
 
+    def split_raw_string(self):
+        split_string = [self.clean_query_string(x).lower() for x in self.query_string.split(";")]
+
+        return [x for x in split_string if x]
+
+    @property
+    def get_oql_query_parts(self):
+        oql_parts = []
+        for query_part in self.split_string:
+            if query_part.startswith("get works"):
+                oql_parts.append("get works")
+                continue
+            elif query_part.startswith("summarize"):
+                oql_parts.append("summarize")
+                continue
+            elif query_part.startswith("sort by"):
+                oql_parts.append("sort by")
+                continue
+            elif query_part.startswith("return"):
+                oql_parts.append("return")
+                continue
+        return oql_parts
+
+    @property
+    def quick_validate_oql(self):
+
+        if len(set(self.oql_query_parts)) == len(self.split_string) and "get works" in self.oql_query_parts:
+            return True
+        else:
+            return False
+
+    def return_as_expression_list(self, all_where_clauses):
+        expression_list = []
+        for where_clause in all_where_clauses:
+            if " is " in where_clause:
+                split_where_clause = where_clause.split(" is ")
+
+                expression_list.append({
+                    "expression_type": "rule",
+                    "prop_id": split_where_clause[0],
+                    "operator": "is",
+                    "value": split_where_clause[1]
+                })
+        return expression_list
+
+
+    def get_works_where_json(self):
+        get_works_clause = [x for x in self.split_string if x.startswith("get works")][0]
+
+        works_where_json = {
+            "expressions": {
+                "expression_type": "list",
+                "operator": "and",
+                "expressions": []
+            },
+            "as_string": get_works_clause
+        }
+
+        if " where " in get_works_clause:
+            where_clauses = get_works_clause.split(" where ")[1].split(" and ")
+
+            works_where_json["expressions"]["expressions"] = self.return_as_expression_list(where_clauses)
+
+
+        return works_where_json
+
+
+    def get_summary_json_parts(self):
+        summarize_clause = [x for x in self.split_string if x.startswith("summarize")][0]
+
+        summarize_by = None
+
+        summarize_by_where = {
+            "expressions": {
+                "expression_type": "list",
+                "operator": "and",
+                "expressions": []
+            }, 
+            "as_string": summarize_clause
+        }
+
+        if "summarize by " in summarize_clause:
+            summarize_by_clause = summarize_clause.split("summarize by ")[1]
+
+            if " where " in summarize_by_clause:
+                summarize_by_where_clause = summarize_by_clause.split(" where ")
+
+                # first part is entity to summarize by, second part is filter
+                summarize_by = summarize_by_where_clause[0]
+                where_clauses = summarize_by_where_clause[1].split(" and ")
+
+                # get all expressions
+                summarize_by_where["expressions"]["expressions"] = self.return_as_expression_list(where_clauses)
+
+            else:
+                summarize_by = summarize_by_clause
+
+        return summarize_by, summarize_by_where
+
+
+    def parse_oql_to_json(self):
+        if self.quick_validate_oql:
+            final_json = {
+              "json_query": {
+                "get_works_where": self.get_works_where_json()},
+                "oql": "; ".join(self.split_string) + ";",
+                "old_style": "string"
+            }
+            if "summarize" in self.oql_query_parts:
+                summary_json_parts = self.get_summary_json_parts()
+                final_json["json_query"]["summarize"] = True
+
+                if summary_json_parts[0]:
+                    final_json["json_query"]["summarize_by"] = summary_json_parts[0].strip()
+                    final_json["json_query"]["summarize_by_where"] = summary_json_parts[1]
+
+            if 'sort by' in self.oql_query_parts:
+                final_json["json_query"]["sort_by"] = {"column_id": self.sort_by_column,
+                                                       "direction": self.sort_by_order}
+
+            final_json["json_query"]["return"] = [x.replace(";", "") for x in self.display_columns]
+            print(final_json)
+        else:
+            final_json = None
+
     def to_dict(self):
         return {
             "query": {
@@ -450,6 +578,7 @@ class Query:
                 "oql": self.oql_query(),
                 "v1": self.old_query(),
             },
+            "jsonQuery": self.oql_json,
             "is_valid": self.is_valid(),
         }
 
