@@ -192,6 +192,21 @@
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-town-hall"
+        },
+        "mean(fwci)": {
+            "id": "mean(fwci)",
+            "subjectEntity": "institutions",
+            "displayName": "mean fwci",
+            "type": "number",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "icon": "mdi-book-open-variant"
         }
     }
 }

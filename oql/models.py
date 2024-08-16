@@ -1,5 +1,5 @@
 from extensions import db
-from sqlalchemy import Column, BigInteger, String, Boolean, Integer, Float, func
+from sqlalchemy import Column, BigInteger, String, Boolean, Integer, Float, func, select
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 
@@ -18,6 +18,7 @@ class Work(db.Model):
     type = Column(String(500))
     type_crossref = Column(String(500))
     year = Column(Integer)
+    fwci = Column(Float)
     created_date = Column(String(500))
 
     @property
@@ -266,9 +267,13 @@ class Institution(db.Model):
     country_code = Column(String(500), nullable=True)
     type = Column(String(500), nullable=True)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"institutions/I{self.affiliation_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('institutions/I', cls.affiliation_id)
 
     @property
     def type_formatted(self):
@@ -279,6 +284,25 @@ class Institution(db.Model):
             }
             if self.type
             else None
+        )
+
+    @hybrid_property
+    def mean_fwci(self):
+        return (
+            db.session.query(func.avg(Work.fwci))
+            .join(Affiliation, Work.paper_id == Affiliation.paper_id)
+            .filter(Affiliation.affiliation_id == self.affiliation_id)
+            .scalar()
+        )
+
+    @mean_fwci.expression
+    def mean_fwci(cls):
+        # This is the expression form
+        return (
+            select([func.avg(Work.fwci)])
+            .select_from(Work.join(Affiliation, Work.paper_id == Affiliation.paper_id))
+            .where(Affiliation.affiliation_id == cls.affiliation_id)
+            .scalar_subquery()
         )
 
     @property

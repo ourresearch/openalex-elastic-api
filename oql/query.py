@@ -410,6 +410,8 @@ class Query:
                     value = r.type_formatted
                 elif column == "country_code":
                     value = r.country_code_formatted
+                elif column == "mean(fwci)":
+                    value = r.mean_fwci
                 else:
                     value = getattr(r, column, None)
                 result_data[column] = value
