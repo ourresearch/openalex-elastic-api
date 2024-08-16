@@ -95,7 +95,7 @@ def get_search(id):
 
 
 @blueprint.route("/searches-v2", methods=["POST"])
-def store_search():
+def store_search_v2():
     query_params = from_dict(QueryParameters, request.json)
     if not query_params.is_valid():
         return jsonify({'error': 'Search invalid'}), 400
@@ -110,7 +110,7 @@ def store_search():
 
 
 @blueprint.route("/searches-v2/<id>", methods=["GET"])
-def get_search(id):
+def get_search_v2(id):
     search = get_existing_search_v2(id)
     if not search:
         return jsonify({"error": "Search not found"}), 404

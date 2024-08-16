@@ -101,3 +101,8 @@ def register_errorhandlers(app):
         return jsonify(response), err.code
 
     app.errorhandler(APIError)(handle_exception)
+
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run()
