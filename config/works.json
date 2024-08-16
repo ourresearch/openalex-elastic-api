@@ -70,6 +70,8 @@
         "authorships.institutions.lineage",
         "type"
     ],
+    "sortByDefault": "cited_by_count",
+    "sortDirDefault": "desc",
     "columns": {
         "id": {
             "id": "id",
