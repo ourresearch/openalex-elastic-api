@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from extensions import db
 from oql import models
 import requests
@@ -10,11 +10,12 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 class RedshiftQueryHandler:
-    def __init__(self, entity, sort_by_column, sort_by_order, filter_by, valid_columns):
+    def __init__(self, entity, sort_by_column, sort_by_order, filter_by, return_columns, valid_columns):
         self.entity = entity
         self.sort_by_column = sort_by_column
         self.sort_by_order = sort_by_order
         self.filter_by = filter_by
+        self.return_columns = return_columns
         self.valid_columns = valid_columns
 
     def redshift_query(self):
@@ -23,6 +24,7 @@ class RedshiftQueryHandler:
         results = db.session.query(entity_class)
         results = self.apply_sort(results, entity_class)
         results = self.apply_filter(results, entity_class)
+        results = self.apply_stats(results, entity_class)
         return results.limit(100).all()
 
     def get_entity_class(self):
@@ -40,6 +42,8 @@ class RedshiftQueryHandler:
 
     def apply_sort(self, query, entity_class):
         if self.sort_by_column:
+            if self.sort_by_column.startswith("count"):
+                return query
             if self.sort_by_column == "publication_year":
                 model_column = getattr(entity_class, "year")
             else:
@@ -72,6 +76,50 @@ class RedshiftQueryHandler:
                 column = getattr(entity_class, key, None)
                 query = query.filter(column == value)
         return query
+
+    def apply_stats(self, query, entity_class):
+        if self.return_columns:
+            for column in self.return_columns:
+                if column.startswith("count"):
+                    stat, related_entity = parse_stats_column(column)
+
+                    if related_entity == "works":
+                        affiliation_class = getattr(models, "Affiliation")
+
+                        # join
+                        query = query.outerjoin(affiliation_class, affiliation_class.author_id == entity_class.author_id)
+
+                        # group by
+                        query = query.group_by(
+                            entity_class.id,
+                            entity_class.author_id,
+                            entity_class.display_name,
+                            entity_class.orcid,
+                        )
+
+                        # add columns
+                        query = query.add_columns(entity_class.id)
+                        query = query.add_columns(entity_class.display_name)
+                        query = query.add_columns(entity_class.orcid)
+                        query = query.add_columns(
+                            func.count(affiliation_class.paper_id).label(f"{stat}({related_entity})"))
+
+                        # sort here instead of in sort function
+                        if self.sort_by_column == column:
+                            if self.sort_by_order == "desc":
+                                query = query.order_by(func.count(affiliation_class.paper_id).desc())
+                            else:
+                                query = query.order_by(func.count(affiliation_class.paper_id).asc())
+
+        return query
+
+
+def parse_stats_column(column):
+    # use format like count(works) to get stat and entity
+    stat = column.split("(")[0]
+    entity = column.split("(")[1].split(")")[0]
+    return stat, entity
+
 
 
 def call_openai_chatgpt(prompt):
