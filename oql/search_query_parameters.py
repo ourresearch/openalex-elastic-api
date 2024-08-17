@@ -117,7 +117,7 @@ class QueryParameters:
 
     def is_valid(self):
         return all([self.return_columns_valid(),
-                    self.sort_by.is_valid()])
+                    self.sort_by.is_valid(self.return_columns)])
 
     def add_return_column(self, column: str):
         if column not in all_entities_config['works']['showOnTablePage']:
