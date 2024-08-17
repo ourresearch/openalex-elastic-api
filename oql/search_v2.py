@@ -41,6 +41,7 @@ def get_existing_search_v2(id: str) -> SearchV2 | None:
     if not existing_search_json:
         return None
     existing_search = json.loads(existing_search_json)
+    print('EXISTING SEARCH - ' + json.dumps(existing_search, indent=4))
     s = from_dict(SearchV2, existing_search)
     return s
 
