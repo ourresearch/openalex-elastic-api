@@ -1,4 +1,6 @@
 import hashlib
+import random
+import string
 from dataclasses import fields, is_dataclass, MISSING, asdict
 from typing import Type, Any
 
@@ -44,3 +46,9 @@ def parse_bool(value: str) -> bool:
 
 def dataclass_id_hash(obj: Any) -> str:
     return hashlib.md5(str(asdict(obj)).encode()).hexdigest()
+
+
+def random_md5(length: int = 12) -> str:
+    random_string = ''.join(
+        random.choices(string.ascii_letters + string.digits, k=length))
+    return hashlib.md5(random_string.encode()).hexdigest()

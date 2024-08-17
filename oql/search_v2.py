@@ -18,11 +18,7 @@ class SearchV2:
     timestamp: str = field(init=False)
 
     def __post_init__(self):
-        self.id = self.id if self.id else self.id_hash()
         self.timestamp = datetime.now(timezone.utc).isoformat()
-
-    def id_hash(self) -> str:
-        return self.query_params.id_hash()
 
     def save(self, enqueue=False):
         print(f"Saving search {self.id} to cache with {self.to_dict()}")

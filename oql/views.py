@@ -9,7 +9,7 @@ from oql.search_v2 import SearchV2, get_existing_search_v2, \
     QueryParameters, update_existing_search_v2
 
 from oql.search_query_parameters import Clause
-from oql.util import from_dict, parse_bool
+from oql.util import from_dict, parse_bool, random_md5
 
 blueprint = Blueprint("oql", __name__)
 
@@ -102,11 +102,12 @@ def store_search_v2():
     query_params = from_dict(QueryParameters, request.json)
     if not query_params.is_valid():
         return jsonify({'error': 'Search invalid'}), 400
-    existing_search = get_existing_search_v2(query_params.id_hash())
-    if existing_search and not existing_search.is_cache_expired():
-        return jsonify(existing_search), 200
+    # existing_search = get_existing_search_v2(query_params.id_hash())
+    # if existing_search and not existing_search.is_cache_expired():
+    #     return jsonify(existing_search), 200
 
     s = SearchV2(query_params=query_params)
+    s.id = random_md5()
     s.save(enqueue=True)
 
     return jsonify(s.to_dict()), 201
