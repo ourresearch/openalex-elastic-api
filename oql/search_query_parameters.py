@@ -94,18 +94,17 @@ class SortBy:
     column: str = all_entities_config['works']['sortByDefault']
     direction: str = all_entities_config['works']['sortDirDefault']
 
-    def is_valid(self):
-        return self.column in all_entities_config['works'][
-            'showOnTablePage'] and self.direction.lower() in {'asc', 'desc'}
+    def is_valid(self, return_cols):
+        return self.column in return_cols and self.direction.lower() in {'asc', 'desc'}
 
 
 @dataclass
 class QueryParameters:
     summarize_by: str
-    summarize_by_where: Clause = field(default_factory=Clause)
+    summarize_by_where: Dict = field(default_factory=dict)
     sort_by: SortBy = field(default_factory=SortBy)
     return_columns: List[str] = field(default_factory=list)
-    get_works_where: Clause = field(default_factory=Clause)
+    get_works_where: Dict = field(default_factory=dict)
     summarize: bool = False
 
     def id_hash(self) -> str:
@@ -118,9 +117,7 @@ class QueryParameters:
 
     def is_valid(self):
         return all([self.return_columns_valid(),
-                    self.sort_by.is_valid(),
-                    self.get_works_where.is_valid(),
-                    self.summarize_by_where.is_valid()])
+                    self.sort_by.is_valid()])
 
     def add_return_column(self, column: str):
         if column not in all_entities_config['works']['showOnTablePage']:
