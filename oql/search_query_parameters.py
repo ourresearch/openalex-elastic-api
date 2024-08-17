@@ -1,8 +1,9 @@
 import hashlib
 from dataclasses import dataclass, field, asdict
-from typing import Any, List, Union
+from typing import Any, List, Union, Dict
 
 from combined_config import all_entities_config
+from oql.util import dataclass_id_hash
 
 
 @dataclass
@@ -13,17 +14,27 @@ class ExpressionList:
 @dataclass
 class ExpressionRule:
     value: Any
-    expression_type: str = ""
+    expression_type: str = "rule"
     operator: str = ""
     prop_id: str = ""
+
+    def is_valid(self):
+        operator_valid = self.expression_type in {'is', 'is not', 'is in',
+                                                  'is not in', 'includes',
+                                                  'does not include'}
+        return operator_valid
 
 
 @dataclass
 class ExpressionList:
-    expression_type: str = ""
-    operator: str = ""
+    expression_type: str = "list"
+    operator: str = "AND"
     expressions: List[Union['ExpressionList', ExpressionRule]] = field(
         default_factory=list)
+
+    def is_valid(self):
+        operator_valid = self.operator in {'AND', 'OR'}
+        return operator_valid
 
 
 @dataclass
@@ -49,6 +60,36 @@ class SummarizeByWhere:
 
 
 @dataclass
+class Clause:
+    pass
+
+
+@dataclass
+class Clause:
+    id: str
+    column_name: str
+    value: Any
+    parent: 'Clause'
+
+    def __post_init__(self):
+        self.id = self.id if self.id else dataclass_id_hash(self)
+
+    def is_valid(self):
+        return self.column_name in all_entities_config['works']['showOnTablePage']
+
+    def update_clause(self, _id: str, new_clause: Clause):
+        current = self
+        while current is not None:
+            if current.id == _id:
+                current.parent = new_clause.parent
+                current.column_name = new_clause.column_name
+                current.value = new_clause.value
+                return True
+            current = current.parent
+        return False
+
+
+@dataclass
 class SortBy:
     column: str = all_entities_config['works']['sortByDefault']
     direction: str = all_entities_config['works']['sortDirDefault']
@@ -61,15 +102,14 @@ class SortBy:
 @dataclass
 class QueryParameters:
     summarize_by: str
-    summarize_by_where: SummarizeByWhere = field(
-        default_factory=SummarizeByWhere)
+    summarize_by_where: Clause = field(default_factory=Clause)
     sort_by: SortBy = field(default_factory=SortBy)
     return_columns: List[str] = field(default_factory=list)
-    get_works_where: GetWorksWhere = field(default_factory=GetWorksWhere)
+    get_works_where: Clause = field(default_factory=Clause)
     summarize: bool = False
 
     def id_hash(self) -> str:
-        return hashlib.md5(str(asdict(self)).encode()).hexdigest()
+        return dataclass_id_hash(self)
 
     def return_columns_valid(self):
         return all(
