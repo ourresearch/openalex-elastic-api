@@ -165,7 +165,7 @@ def set_search_query_sort_by_column(id, column):
     search.query_params.sort_by.column = column
     if not search.query_params.sort_by.is_valid(search.query_params.return_columns):
         return jsonify(
-            {"error": f"Sort by column not valid: \"{column}\""}), 400
+            {"error": f"Sort by column not currently in return columns: \"{column}\""}), 400
     search.save()
     return jsonify(search.to_dict()), 200
 
