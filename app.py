@@ -1,6 +1,4 @@
-import logging
 import os
-import sys
 
 import sentry_sdk
 from elasticsearch_dsl import connections
@@ -36,15 +34,6 @@ import works
 import work_types
 from core.exceptions import APIError
 from extensions import cache, db
-
-
-logging.basicConfig(
-    stream=sys.stdout,
-    level=logging.INFO,
-    format='%(thread)d: %(message)s'
-)
-
-logger = logging.getLogger("openalex-elastic-api")
 
 
 def create_app(config_object="settings"):
