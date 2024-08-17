@@ -1,4 +1,5 @@
-from dataclasses import fields, is_dataclass, MISSING
+import hashlib
+from dataclasses import fields, is_dataclass, MISSING, asdict
 from typing import Type, Any
 
 
@@ -29,3 +30,17 @@ def from_dict(cls: Type[Any], data: dict) -> Any:
                 kwargs[f.name] = field_value
 
     return cls(**kwargs)
+
+
+def parse_bool(value: str) -> bool:
+    value = value.strip().lower()
+    if value in ['true', '1', 'yes', 'y', 'on']:
+        return True
+    elif value in ['false', '0', 'no', 'n', 'off']:
+        return False
+    else:
+        raise ValueError(f"Cannot parse boolean from {value}")
+
+
+def dataclass_id_hash(obj: Any) -> str:
+    return hashlib.md5(str(asdict(obj)).encode()).hexdigest()
