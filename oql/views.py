@@ -5,9 +5,11 @@ from oql.query import Query
 from oql.schemas import QuerySchema
 from oql.results_table import ResultTable
 from oql.search import Search, is_cache_expired, get_existing_search
-from oql.searchv2 import SearchV2, get_existing_search_v2, \
+from oql.search_v2 import SearchV2, get_existing_search_v2, \
     QueryParameters, update_existing_search_v2
-from oql.util import from_dict
+
+from oql.search_query_parameters import Clause
+from oql.util import from_dict, parse_bool
 
 blueprint = Blueprint("oql", __name__)
 
@@ -46,7 +48,8 @@ def results():
     query = Query(query_string, page, per_page)
     if format == "ui":
         entity = query.entity
-        columns = query.columns or all_entities_config[entity]["showOnTablePage"]
+        columns = query.columns or all_entities_config[entity][
+            "showOnTablePage"]
         json_data = query.execute()
         print(json_data)
         results_table = ResultTable(
@@ -115,7 +118,7 @@ def get_search_v2(id):
     if not search:
         return jsonify({"error": "Search not found"}), 404
 
-    return jsonify(search)
+    return jsonify(search.to_dict()), 200
 
 
 @blueprint.route("/searches-v2/<id>/update", methods=["PUT"])
@@ -152,17 +155,77 @@ def delete_search_query_column(id, column):
     return jsonify(search.to_dict()), 204
 
 
-# TODO
-# @blueprint.route("/searches-v2/<id>/get_works_where/<clause>", methods=["PATCH"])
-# def update_search_query_get_works_where(id, clause):
-#     search = get_existing_search(id)
-#     if not search:
-#         return jsonify({"error": "Search not found"}), 404
-#     if not gww.is_valid():
-#         return jsonify({"error": "Invalid clause"}), 400
-#     search.query_params.get_works_where = gww
-#     search.save()
-#     return jsonify(search.to_dict()), 204
+@blueprint.route("/searches-v2/<id>/sort_by/column/<column>",
+                 methods=["PATCH"])
+def set_search_query_sort_by_column(id, column):
+    search = get_existing_search_v2(id)
+    if not search:
+        return jsonify({"error": "Search not found"}), 404
+    search.query_params.sort_by.column = column
+    if not search.query_params.sort_by.is_valid():
+        return jsonify(
+            {"error": f"Sort by column not valid: \"{column}\""}), 400
+    search.save()
+    return jsonify(search.to_dict()), 204
+
+
+@blueprint.route("/searches-v2/<id>/sort_by/dir/<dir>",
+                 methods=["PATCH"])
+def set_search_query_sort_by_dir(id, dir):
+    search = get_existing_search_v2(id)
+    if not search:
+        return jsonify({"error": "Search not found"}), 404
+    search.query_params.sort_by.direction = dir
+    if not search.query_params.sort_by.is_valid():
+        return jsonify(
+            {"error": f"Sort by direction not valid: \"{dir}\""}), 400
+    search.save()
+    return jsonify(search.to_dict()), 204
+
+
+@blueprint.route("/searches-v2/<id>/summarize/<bool_str>",
+                 methods=["PATCH"])
+def set_search_query_summarize(id, bool_str):
+    search = get_existing_search_v2(id)
+    if not search:
+        return jsonify({"error": "Search not found"}), 404
+    try:
+        summarize = parse_bool(bool_str)
+    except ValueError:
+        return jsonify({"error": f"Invalid boolean string: \"{bool_str}\""}), 400
+    search.query_params.summarize = summarize
+    search.save()
+    return jsonify(search.to_dict()), 204
+
+
+@blueprint.route("/searches-v2/<id>/get_works_where/<clause_id>", methods=["PATCH"])
+def update_search_query_get_works_where(id, clause_id):
+    search = get_existing_search_v2(id)
+    if not search:
+        return jsonify({"error": "Search not found"}), 404
+    new_clause = from_dict(Clause, request.json)
+    if not new_clause.is_valid():
+        return jsonify({"error": f"Invalid clause"}), 400
+    updated = search.query_params.get_works_where.update_clause(clause_id, new_clause)
+    if not updated:
+        return jsonify({"error": "Unable to update clause"}), 400
+    search.save()
+    return jsonify(search.to_dict()), 204
+
+
+@blueprint.route("/searches-v2/<id>/summarize_by_where/<clause_id>", methods=["PATCH"])
+def update_search_query_summarize_by_where(id, clause_id):
+    search = get_existing_search_v2(id)
+    if not search:
+        return jsonify({"error": "Search not found"}), 404
+    new_clause = from_dict(Clause, request.json)
+    if not new_clause.is_valid():
+        return jsonify({"error": f"Invalid clause"}), 400
+    updated = search.query_params.summarize_by_where.update_clause(clause_id, new_clause)
+    if not updated:
+        return jsonify({"error": "Unable to update clause"}), 400
+    search.save()
+    return jsonify(search.to_dict()), 204
 
 
 @blueprint.route("/entities/config", methods=["GET"])
