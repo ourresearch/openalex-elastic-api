@@ -100,15 +100,16 @@ class SortBy:
 
 @dataclass
 class QueryParameters:
-    summarize_by: str
-    summarize_by_where: Dict = field(default_factory=dict)
+    summarize_by_where: Any = None
+    get_works_where: Any = None
+    summarize: bool = False
+    summarize_by: str = ""
     sort_by: SortBy = field(default_factory=SortBy)
     return_columns: List[str] = field(default_factory=list)
-    get_works_where: Dict = field(default_factory=dict)
-    summarize: bool = False
 
-    def id_hash(self) -> str:
-        return dataclass_id_hash(self)
+    def __post_init__(self):
+        if not self.return_columns:
+            self.return_columns = [self.sort_by.column]
 
     def return_columns_valid(self):
         return all(
