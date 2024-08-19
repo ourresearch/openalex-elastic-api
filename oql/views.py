@@ -4,11 +4,10 @@ from combined_config import all_entities_config
 from oql.query import Query
 from oql.schemas import QuerySchema
 from oql.results_table import ResultTable
-from oql.search import Search, is_cache_expired, get_existing_search
+from oql.search import Search, get_existing_search
 from oql.search_v2 import SearchV2, get_existing_search_v2, \
     QueryParameters, update_existing_search_v2
 
-from oql.search_query_parameters import Clause
 from oql.util import from_dict, parse_bool, random_md5
 
 blueprint = Blueprint("oql", __name__)
@@ -74,17 +73,12 @@ def results():
 
 @blueprint.route("/searches", methods=["POST"])
 def store_search():
-    q = request.json.get("q")
-    if not q:
+    query = request.json.get("query")
+    if not query:
         return jsonify({"error": "No query provided"}), 400
 
-    s = Search(q=q)
-    existing_search = get_existing_search(s.id)
-    if existing_search and not is_cache_expired(existing_search):
-        return jsonify(existing_search), 200
-
+    s = Search(query=query)
     s.save()
-
     return jsonify(s.to_dict()), 201
 
 

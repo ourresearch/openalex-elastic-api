@@ -12,4 +12,5 @@ psycopg2==2.9.9
 redis==4.3.1
 requests==2.31.0
 sentry-sdk[flask]==1.10.1
+shortuuid==1.0.13
 sqlalchemy-redshift==0.8.14
