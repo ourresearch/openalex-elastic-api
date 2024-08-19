@@ -36,7 +36,7 @@ class SearchV2:
         )
 
 
-def get_existing_search_v2(id: str) -> SearchV2 | None:
+def get_existing_search_v2(id: str) -> SearchV2:
     existing_search_json = redis_db.get(id)
     if not existing_search_json:
         return None
@@ -47,7 +47,7 @@ def get_existing_search_v2(id: str) -> SearchV2 | None:
 
 
 def update_existing_search_v2(id: str,
-                              query_params: QueryParameters) -> SearchV2 | None:
+                              query_params: QueryParameters) -> SearchV2:
     existing_search_json = redis_db.get(id)
     if not existing_search_json:
         return None

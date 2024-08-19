@@ -412,6 +412,8 @@ class Query:
                     value = r.country_code_formatted
                 elif column == "mean(fwci)":
                     value = r.mean_fwci
+                elif column == "count(works)":
+                    value = r.count
                 else:
                     value = getattr(r, column, None)
                 result_data[column] = value

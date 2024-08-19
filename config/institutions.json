@@ -207,6 +207,21 @@
                 "column"
             ],
             "icon": "mdi-book-open-variant"
+        },
+        "count(works)": {
+            "id": "count",
+            "subjectEntity": "institutions",
+            "displayName": "count",
+            "type": "number",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "icon": "mdi-book-open-variant"
         }
     }
 }

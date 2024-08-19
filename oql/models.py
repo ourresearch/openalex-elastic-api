@@ -168,6 +168,18 @@ class Author(db.Model):
         return f"<Author(author_id={self.author_id}, display_name={self.display_name})>"
 
 
+class InstitutionCounts(db.Model):
+    __tablename__ = "citation_institutions_mv"
+
+    affiliation_id = Column(BigInteger, primary_key=True)
+    paper_count = Column(Integer)
+    oa_paper_count = Column(Integer)
+    citation_count = Column(Integer)
+
+    def __repr__(self):
+        return f"<InstitutionCounts(affiliation_id={self.affiliation_id}, paper_count={self.paper_count})>"
+
+
 class Country(db.Model):
     __tablename__ = "country"
 
@@ -266,6 +278,9 @@ class Institution(db.Model):
     ror = Column(String(500), nullable=True)
     country_code = Column(String(500), nullable=True)
     type = Column(String(500), nullable=True)
+    count = Column(Integer)
+    citations = Column(Integer)
+    oa_paper_count = Column(Integer)
 
     @hybrid_property
     def id(self):

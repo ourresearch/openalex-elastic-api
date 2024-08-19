@@ -42,15 +42,18 @@ class RedshiftQueryHandler:
 
     def apply_sort(self, query, entity_class):
         if self.sort_by_column:
-            if self.sort_by_column.startswith("count"):
+            if self.sort_by_column == "count(works)" and self.entity == "authors":
                 return query
             if self.sort_by_column == "publication_year":
                 model_column = getattr(entity_class, "year")
+            elif self.sort_by_column == "count(works)":
+                print(f"sorting by count(works) for {self.entity}")
+                model_column = getattr(entity_class, "count")
             else:
                 model_column = getattr(entity_class, self.sort_by_column, None)
 
             if model_column:
-                query = query.order_by(model_column) if self.sort_by_order == "asc" else query.order_by(desc(model_column))
+                query = query.order_by(model_column.nulls_last()) if self.sort_by_order == "asc" else query.order_by(desc(model_column).nulls_last())
             else:
                 query = self.default_sort(query, entity_class)
         else:
@@ -80,7 +83,7 @@ class RedshiftQueryHandler:
     def apply_stats(self, query, entity_class):
         if self.return_columns:
             for column in self.return_columns:
-                if column.startswith("count"):
+                if column == "count(works)" and self.entity == "authors":
                     stat, related_entity = parse_stats_column(column)
 
                     if related_entity == "works":
