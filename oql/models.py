@@ -508,6 +508,30 @@ class Topic(db.Model):
     def description(self):
         return self.summary
 
+    @hybrid_property
+    def domain(self):
+        return self.domain_id
+
+    @domain.expression
+    def domain(cls):
+        return cls.domain_id
+
+    @hybrid_property
+    def field(self):
+        return self.field_id
+
+    @field.expression
+    def field(cls):
+        return cls.field_id
+
+    @hybrid_property
+    def subfield(self):
+        return self.subfield_id
+
+    @subfield.expression
+    def subfield(cls):
+        return cls.subfield_id
+
     def __repr__(self):
         return f"<Topic(topic_id={self.topic_id}, display_name={self.display_name})>"
 
