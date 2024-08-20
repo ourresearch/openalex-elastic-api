@@ -2,16 +2,13 @@ from combined_config import all_entities_config
 
 
 class ResultTable:
-    def __init__(self, query, json_data):
-        self.query = query
-        self.entity = query.entity
-        self.columns = (
-            query.columns
-            if query.columns
-            else all_entities_config[self.entity]["showOnTablePage"]
-        )
+    def __init__(self, entity, columns, json_data, query_metadata=None, page=1, per_page=100):
+        self.entity = entity
+        self.columns = columns or all_entities_config[self.entity]["showOnTablePage"]
         self.json_data = json_data
-        self.config = all_entities_config[self.entity]
+        self.query_metadata = query_metadata or {}
+        self.page = page
+        self.per_page = per_page
 
     def header(self):
         return [
@@ -67,9 +64,9 @@ class ResultTable:
     def meta(self):
         return {
             "count": self.count(),
-            "page": 1,
-            "per_page": 100,
-            "query": self.query.to_dict() if self.query else {},
+            "page": self.page,
+            "per_page": self.per_page,
+            "query": self.query_metadata,  # Pass in pre-processed query metadata
             "oql": None,
             "v1": None,
         }

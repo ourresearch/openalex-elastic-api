@@ -37,6 +37,7 @@ def results():
     if columns:
         columns = columns.split(",")
 
+    # query object
     query = QueryNew(
         entity=entity,
         columns=columns,
@@ -44,8 +45,19 @@ def results():
         sort_by_column=sort_by_column,
         sort_by_order=sort_by_order,
     )
+
     json_data = query.execute()
-    results_table = ResultTable(query, json_data)
+    query_metadata = query.to_dict()
+
+    # results table
+    results_table = ResultTable(
+        entity=entity,
+        columns=columns,
+        json_data=json_data,
+        query_metadata=query_metadata,
+        page=1,
+        per_page=100,
+    )
     results_table_response = results_table.response()
     return jsonify(results_table_response)
 

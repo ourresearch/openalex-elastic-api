@@ -5,7 +5,6 @@ import time
 
 import settings
 from app import create_app
-from combined_config import all_entities_config
 from oql.query import QueryNew
 from oql.results_table import ResultTable
 
@@ -32,8 +31,17 @@ def fetch_results(query):
         )
 
         json_data = query.execute()
+        query_metadata = query.to_dict()
 
-        results_table = ResultTable(query, json_data)
+        # results table
+        results_table = ResultTable(
+            entity=entity,
+            columns=columns,
+            json_data=json_data,
+            query_metadata=query_metadata,
+            page=1,
+            per_page=100,
+        )
         results_table_response = results_table.response()
         return results_table_response
 
