@@ -665,7 +665,7 @@ class QueryNew:
     def to_dict(self):
         return {
             "summarize_by": self.entity,
-            "columns": self.columns,
+            "return": self.columns,
             "filter_by": self.filter_by,
             "sort_by_column": self.sort_by_column,
             "sort_by_order": self.sort_by_order,
