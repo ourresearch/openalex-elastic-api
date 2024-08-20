@@ -31,14 +31,12 @@ def fetch_results(query):
         )
 
         json_data = query.execute()
-        query_metadata = query.to_dict()
 
         # results table
         results_table = ResultTable(
             entity=entity,
             columns=columns,
             json_data=json_data,
-            query_metadata=query_metadata,
             page=1,
             per_page=100,
         )

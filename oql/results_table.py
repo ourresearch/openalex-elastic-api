@@ -2,11 +2,10 @@ from combined_config import all_entities_config
 
 
 class ResultTable:
-    def __init__(self, entity, columns, json_data, query_metadata=None, page=1, per_page=100):
+    def __init__(self, entity, columns, json_data, page=1, per_page=100):
         self.entity = entity
         self.columns = columns or all_entities_config[self.entity]["showOnTablePage"]
         self.json_data = json_data
-        self.query_metadata = query_metadata or {}
         self.page = page
         self.per_page = per_page
 
@@ -66,7 +65,6 @@ class ResultTable:
             "count": self.count(),
             "page": self.page,
             "per_page": self.per_page,
-            "query": self.query_metadata,  # Pass in pre-processed query metadata
             "oql": None,
             "v1": None,
         }

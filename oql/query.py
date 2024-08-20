@@ -662,14 +662,6 @@ class QueryNew:
             if property_config.get("id", "") == column:
                 return property_config.get("type", "string")
 
-    def to_dict(self):
-        return {
-            "summarize_by": self.entity,
-            "return": self.columns,
-            "filter_by": self.filter_by,
-            "sort_by_column": self.sort_by_column,
-            "sort_by_order": self.sort_by_order,
-        }
 
 
 def convert_to_snake_case(name):
