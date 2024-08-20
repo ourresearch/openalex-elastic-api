@@ -6,7 +6,7 @@ import time
 import settings
 from app import create_app
 from combined_config import all_entities_config
-from oql.query import Query
+from oql.query import QueryNew
 from oql.results_table import ResultTable
 
 app = create_app()
@@ -14,32 +14,30 @@ redis_db = redis.Redis.from_url(settings.CACHE_REDIS_URL)
 search_queue = "search_queue"
 
 
-def fetch_results(query_string):
+def fetch_results(query):
     with app.app_context():
-        query = Query(query_string, 1, 100)
-        if query.is_valid():
-            json_data = query.execute()
-            entity = query.entity
-            columns = query.columns
-            columns = columns or all_entities_config[entity]["showOnTablePage"]
-            results_table = ResultTable(entity, columns, json_data)
-            results_table_response = results_table.response()
-            results_table_response["meta"] = {
-                "count": results_table.count(),
-                "page": query.page,
-                "per_page": query.per_page,
-                "q": query_string,
-                "oql": query.oql_query(),
-                "v1": query.old_query(),
-            }
+        query = QueryNew(query)
+        json_data = query.execute()
+        entity = query.entity
+        columns = query.columns
+        columns = columns or all_entities_config[entity]["showOnTablePage"]
+        print(query.entity)
+        results_table = ResultTable(entity, columns, json_data)
+        results_table_response = results_table.response()
+        results_table_response["meta"] = {
+            "count": results_table.count(),
+            "page": 1,
+            "per_page": 100,
+            "query": query.query,
+            "oql": None,
+            "v1": None,
+        }
 
-            # reorder the dictionary
-            results_table_response = {
-                "meta": results_table_response.pop("meta"),
-                "results": results_table_response.pop("results"),
-            }
-        else:
-            results_table_response = {"meta": {}, "results": {}}
+        # reorder the dictionary
+        results_table_response = {
+            "meta": results_table_response.pop("meta"),
+            "results": results_table_response.pop("results"),
+        }
         return results_table_response
 
 
@@ -68,7 +66,7 @@ def process_searches():
             continue
 
         try:
-            results = fetch_results(search["q"])
+            results = fetch_results(search["query"])
 
             # update the search object
             search["results"] = results["results"]

@@ -25,9 +25,13 @@ class Work(db.Model):
     def id(self):
         return f"works/W{self.paper_id}"
 
-    @property
+    @hybrid_property
     def display_name(self):
         return self.original_title
+
+    @display_name.expression
+    def display_name(cls):
+        return cls.original_title
 
     @property
     def publication_year(self):

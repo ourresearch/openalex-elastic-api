@@ -42,7 +42,7 @@ class RedshiftQueryHandler:
 
     def apply_sort(self, query, entity_class):
         if self.sort_by_column:
-            if self.sort_by_column == "count(works)" and self.entity == "authors":
+            if self.sort_by_column.startswith("count"):
                 return query
             if self.sort_by_column == "publication_year":
                 model_column = getattr(entity_class, "year")
@@ -53,7 +53,7 @@ class RedshiftQueryHandler:
                 model_column = getattr(entity_class, self.sort_by_column, None)
 
             if model_column:
-                query = query.order_by(model_column.nulls_last()) if self.sort_by_order == "asc" else query.order_by(desc(model_column).nulls_last())
+                query = query.order_by(model_column) if self.sort_by_order == "asc" else query.order_by(desc(model_column))
             else:
                 query = self.default_sort(query, entity_class)
         else:

@@ -585,5 +585,89 @@ class Query:
         }
 
 
+class QueryNew:
+    def __init__(self, query):
+        self.query = query
+        self.entity = self.query.get("summarize_by", "works")
+        self.filter_by = self.get_filter_by()
+        self.columns = self.query.get("return", None)
+        self.sort_by_column = self.query.get("sort_by", {}).get("column_id", "display_name")
+        self.sort_by_order = self.query.get("sort_by", {}).get("direction", "asc")
+        self.valid_columns = self.get_valid_columns()
+        self.valid_sort_columns = self.get_valid_sort_columns()
+
+    def get_filter_by(self):
+        return []
+
+    def execute(self):
+        redshift_handler = RedshiftQueryHandler(
+            entity=self.entity,
+            sort_by_column=self.sort_by_column,
+            sort_by_order=self.sort_by_order,
+            filter_by=self.filter_by,
+            return_columns=self.columns,
+            valid_columns=self.valid_columns
+        )
+        results = redshift_handler.redshift_query()
+        json_data = self.format_results_as_json(results)
+        return json_data
+
+    def format_results_as_json(self, results):
+        json_data = {"results": []}
+        columns = self.columns or self.default_columns()
+        for r in results:
+            if r.id == "works/W4285719527":
+                # deleted work, skip
+                continue
+            result_data = {}
+            for column in columns:
+                if column == "type":
+                    value = r.type_formatted
+                elif column == "country_code":
+                    value = r.country_code_formatted
+                elif column == "mean(fwci)":
+                    value = r.mean_fwci
+                elif column == "count(works)":
+                    value = r.count
+                else:
+                    value = getattr(r, column, None)
+                result_data[column] = value
+            result_data["id"] = r.id
+            json_data["results"].append(result_data)
+        return json_data
+
+    def get_valid_columns(self):
+        return (
+            all_entities_config[self.entity]['columns'].keys()
+            if self.entity and self.entity in all_entities_config
+            else []
+        )
+
+    def default_columns(self):
+        if self.entity and self.entity in all_entities_config:
+            return all_entities_config[self.entity]["showOnTablePage"]
+        else:
+            return []
+
+    def get_valid_sort_columns(self):
+        if not self.entity or self.entity and self.entity not in all_entities_config:
+            return []
+        return [
+            key
+            for key, values in all_entities_config[self.entity]['columns'].items()
+            if "sort" in values.get("actions", [])
+        ]
+
+    def property_type(self, column):
+        for property_config in all_entities_config.get(self.entity, {}).get('columns').values():
+            if property_config.get("id", "") == column:
+                return property_config.get("type", "string")
+
+    def to_dict(self):
+        return {
+            "query": { self.query }
+        }
+
+
 def convert_to_snake_case(name):
     return name.strip().replace(" ", "_").lower()
