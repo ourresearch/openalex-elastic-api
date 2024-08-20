@@ -36,6 +36,7 @@ def results():
     # parse lists
     if columns:
         columns = columns.split(",")
+        columns = [column.strip() for column in columns]
 
     # query object
     query = QueryNew(
