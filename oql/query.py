@@ -588,7 +588,7 @@ class Query:
 class QueryNew:
     def __init__(self, query):
         self.query = query
-        self.entity = self.query.get("summarize_by", "works")
+        self.entity = self.query.get("summarize_by") or "works"
         self.filter_by = self.get_filter_by()
         self.columns = self.query.get("return", None)
         self.sort_by_column = self.query.get("sort_by", {}).get("column_id", "display_name")
