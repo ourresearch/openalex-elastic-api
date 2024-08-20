@@ -592,9 +592,9 @@ class Query:
 
 
 class QueryNew:
-    def __init__(self, entity, filter_by, columns, sort_by_column, sort_by_order):
+    def __init__(self, entity, filters, columns, sort_by_column, sort_by_order):
         self.entity = entity or "works"
-        self.filter_by = filter_by
+        self.filters = filters
         self.columns = columns
         self.sort_by_column = sort_by_column
         self.sort_by_order = sort_by_order
@@ -609,7 +609,7 @@ class QueryNew:
             entity=self.entity,
             sort_by_column=self.sort_by_column,
             sort_by_order=self.sort_by_order,
-            filter_by=self.filter_by,
+            filters=self.filters,
             return_columns=self.columns,
             valid_columns=self.valid_columns
         )

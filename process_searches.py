@@ -17,6 +17,7 @@ def fetch_results(query):
     with app.app_context():
         # params
         entity = query.get("summarize_by") or "works"
+        filters = query.get("filters")
         columns = query.get("return")
         sort_by_column = query.get("sort_by", {}).get("column_id", "display_name")
         sort_by_order = query.get("sort_by", {}).get("direction", "asc")
@@ -25,7 +26,7 @@ def fetch_results(query):
         query = QueryNew(
             entity=entity,
             columns=columns,
-            filter_by=[],
+            filters=filters,
             sort_by_column=sort_by_column,
             sort_by_order=sort_by_order,
         )

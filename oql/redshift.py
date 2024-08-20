@@ -6,11 +6,11 @@ from sqlalchemy.ext.hybrid import hybrid_property
 
 
 class RedshiftQueryHandler:
-    def __init__(self, entity, sort_by_column, sort_by_order, filter_by, return_columns, valid_columns):
+    def __init__(self, entity, sort_by_column, sort_by_order, filters, return_columns, valid_columns):
         self.entity = entity
         self.sort_by_column = sort_by_column
         self.sort_by_order = sort_by_order
-        self.filter_by = filter_by
+        self.filters = filters
         self.return_columns = return_columns
         self.valid_columns = valid_columns
         self.model_return_columns = []
@@ -20,7 +20,7 @@ class RedshiftQueryHandler:
 
         query = self.set_columns(entity_class)
         query = self.apply_sort(query, entity_class)
-        query = self.apply_filter(query, entity_class)
+        query = self.apply_filters(query, entity_class)
         query = self.apply_stats(query, entity_class)
         return query.limit(100).all()
 
@@ -99,12 +99,16 @@ class RedshiftQueryHandler:
         default_sort_column = "cited_by_count" if self.entity == "works" else "display_name"
         return query.order_by(desc(getattr(entity_class, default_sort_column, None)))
 
-    def apply_filter(self, query, entity_class):
-        if not self.filter_by:
+    def apply_filters(self, query, entity_class):
+        if not self.filters:
             return query
 
-        filters = self.filter_by
-        for key, value in filters.items():
+        for filter in self.filters:
+            if "column_id" not in filter or "value" not in filter:
+                continue
+            key = filter.get("column_id")
+            value = filter.get("value")
+
             if key == "id":
                 query = query.filter(getattr(entity_class, "paper_id") == value)
             elif key == "publication_year":
