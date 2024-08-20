@@ -33,22 +33,8 @@ def fetch_results(query):
 
         json_data = query.execute()
 
-        results_table = ResultTable(entity, columns, json_data)
+        results_table = ResultTable(query, json_data)
         results_table_response = results_table.response()
-        results_table_response["meta"] = {
-            "count": results_table.count(),
-            "page": 1,
-            "per_page": 100,
-            "query": query.to_dict(),
-            "oql": None,
-            "v1": None,
-        }
-
-        # reorder the dictionary
-        results_table_response = {
-            "meta": results_table_response.pop("meta"),
-            "results": results_table_response.pop("results"),
-        }
         return results_table_response
 
 
