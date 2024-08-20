@@ -393,7 +393,7 @@ class Query:
             return_columns=self.columns or self.default_columns(),
             valid_columns=self.valid_columns
         )
-        results = redshift_handler.redshift_query()
+        results = redshift_handler.execute()
         json_data = self.format_results_as_json(results)
         return json_data
 
@@ -613,7 +613,7 @@ class QueryNew:
             return_columns=self.columns,
             valid_columns=self.valid_columns
         )
-        results = redshift_handler.redshift_query()
+        results = redshift_handler.execute()
         json_data = self.format_results_as_json(results)
         return json_data
 

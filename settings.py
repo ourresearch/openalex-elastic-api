@@ -9,7 +9,7 @@ DEBUG = ENV == "development"
 JSON_SORT_KEYS = False
 SECRET_KEY = os.environ.get("SECRET_KEY")
 SQLALCHEMY_DATABASE_URI = os.environ.get("REDSHIFT_SERVERLESS_URL")
-SQLALCHEMY_TRACK_MODIFICATIONS = False
+SQLALCHEMY_ECHO = False
 
 # indexes
 AUTHORS_INDEX = "authors-v13"

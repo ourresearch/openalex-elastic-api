@@ -1,7 +1,6 @@
-import os
-
 from sqlalchemy import desc, func
 from extensions import db
+
 from oql import models
 from sqlalchemy.ext.hybrid import hybrid_property
 
@@ -16,14 +15,14 @@ class RedshiftQueryHandler:
         self.valid_columns = valid_columns
         self.model_return_columns = []
 
-    def redshift_query(self):
+    def execute(self):
         entity_class = self.get_entity_class()
 
-        results = self.set_columns(entity_class)
-        results = self.apply_sort(results, entity_class)
-        results = self.apply_filter(results, entity_class)
-        results = self.apply_stats(results, entity_class)
-        return results.limit(100).all()
+        query = self.set_columns(entity_class)
+        query = self.apply_sort(query, entity_class)
+        query = self.apply_filter(query, entity_class)
+        query = self.apply_stats(query, entity_class)
+        return query.limit(100).all()
 
     def get_entity_class(self):
         if self.entity == "countries":
@@ -56,8 +55,8 @@ class RedshiftQueryHandler:
                 columns_to_select.append(getattr(entity_class, column, None))
         # columns_to_select.append(getattr(entity_class, "id", None))  # always set id
         self.model_return_columns = columns_to_select
-        results = db.session.query(*columns_to_select)
-        return results
+        query = db.session.query(*columns_to_select)
+        return query
 
     def is_model_property(self, column, entity_class):
         attr = getattr(entity_class, column, None)
