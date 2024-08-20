@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 
 from combined_config import all_entities_config
-from oql.query import Query
+from oql.query import Query, QueryNew
 from oql.schemas import QuerySchema
 from oql.results_table import ResultTable
 from oql.search import Search, get_existing_search
@@ -26,49 +26,28 @@ def query():
 
 
 @blueprint.route("/results", methods=["GET"])
-@blueprint.route("/entities", methods=["GET"])
 def results():
-    query_string = request.args.get("q")
-    page = request.args.get("page")
-    per_page = request.args.get("per-page")
-    format = request.args.get("format")
-    if not query_string:
-        return {
-            "meta": {
-                "count": 0,
-                "page": 1,
-                "per_page": 10,
-                "q": "",
-                "oql": "",
-                "v1": "",
-            },
-            "results": [],
-        }
-    query = Query(query_string, page, per_page)
-    if format == "ui":
-        entity = query.entity
-        columns = query.columns or all_entities_config[entity][
-            "showOnTablePage"]
-        json_data = query.execute()
-        print(json_data)
-        results_table = ResultTable(
-            entity, columns, json_data
-        )
-        results_table_response = results_table.response()
-        results_table_response["meta"] = {
-            "count": results_table.count(),
-            "page": query.page,
-            "per_page": query.per_page,
-            "q": query_string,
-            "oql": query.oql_query(),
-            "v1": None,
-        }
-        # reorder the dictionary
-        results_table_response = {
-            "meta": results_table_response.pop("meta"),
-            "results": results_table_response.pop("results"),
-        }
-        return jsonify(results_table_response)
+    # params
+    entity = request.args.get("summarize_by")
+    columns = request.args.get("return")
+    sort_by_column = request.args.get("sort_by_column")
+    sort_by_order = request.args.get("sort_by_order")
+
+    # parse lists
+    if columns:
+        columns = columns.split(",")
+
+    query = QueryNew(
+        entity=entity,
+        columns=columns,
+        filter_by=[],
+        sort_by_column=sort_by_column,
+        sort_by_order=sort_by_order,
+    )
+    json_data = query.execute()
+    results_table = ResultTable(query, json_data)
+    results_table_response = results_table.response()
+    return jsonify(results_table_response)
 
 
 @blueprint.route("/searches", methods=["POST"])

@@ -2,15 +2,16 @@ from combined_config import all_entities_config
 
 
 class ResultTable:
-    def __init__(self, entity, columns, json_data):
-        self.entity = entity
+    def __init__(self, query, json_data):
+        self.query = query
+        self.entity = query.entity
         self.columns = (
-            columns
-            if columns
-            else all_entities_config[entity]["showOnTablePage"]
+            query.columns
+            if query.columns
+            else all_entities_config[self.entity]["showOnTablePage"]
         )
         self.json_data = json_data
-        self.config = all_entities_config[entity]
+        self.config = all_entities_config[self.entity]
 
     def header(self):
         return [
@@ -63,5 +64,22 @@ class ResultTable:
         result = " ".join(key for key, _ in sorted_positions)
         return result
 
+    def meta(self):
+        return {
+            "count": self.count(),
+            "page": 1,
+            "per_page": 100,
+            "query": self.query.to_dict() if self.query else {},
+            "oql": None,
+            "v1": None,
+        }
+
     def response(self):
-        return {"results": {"header": self.header(), "body": self.body()}}
+        # Build the full response, including metadata and results
+        return {
+            "meta": self.meta(),
+            "results": {
+                "header": self.header(),
+                "body": self.body(),
+            }
+        }

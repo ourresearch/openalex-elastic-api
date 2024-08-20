@@ -586,13 +586,12 @@ class Query:
 
 
 class QueryNew:
-    def __init__(self, query):
-        self.query = query
-        self.entity = self.query.get("summarize_by") or "works"
-        self.filter_by = self.get_filter_by()
-        self.columns = self.query.get("return", None)
-        self.sort_by_column = self.query.get("sort_by", {}).get("column_id", "display_name")
-        self.sort_by_order = self.query.get("sort_by", {}).get("direction", "asc")
+    def __init__(self, entity, filter_by, columns, sort_by_column, sort_by_order):
+        self.entity = entity or "works"
+        self.filter_by = filter_by
+        self.columns = columns
+        self.sort_by_column = sort_by_column
+        self.sort_by_order = sort_by_order
         self.valid_columns = self.get_valid_columns()
         self.valid_sort_columns = self.get_valid_sort_columns()
 
@@ -665,7 +664,11 @@ class QueryNew:
 
     def to_dict(self):
         return {
-            "query": { self.query }
+            "summarize_by": self.entity,
+            "columns": self.columns,
+            "filter_by": self.filter_by,
+            "sort_by_column": self.sort_by_column,
+            "sort_by_order": self.sort_by_order,
         }
 
 

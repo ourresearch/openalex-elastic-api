@@ -16,19 +16,30 @@ search_queue = "search_queue"
 
 def fetch_results(query):
     with app.app_context():
-        query = QueryNew(query)
+        # params
+        entity = query.get("summarize_by") or "works"
+        columns = query.get("return")
+        sort_by_column = query.get("sort_by", {}).get("column_id", "display_name")
+        sort_by_order = query.get("sort_by", {}).get("direction", "asc")
+
+        # object
+        query = QueryNew(
+            entity=entity,
+            columns=columns,
+            filter_by=[],
+            sort_by_column=sort_by_column,
+            sort_by_order=sort_by_order,
+        )
+
         json_data = query.execute()
-        entity = query.entity
-        columns = query.columns
-        columns = columns or all_entities_config[entity]["showOnTablePage"]
-        print(query.entity)
+
         results_table = ResultTable(entity, columns, json_data)
         results_table_response = results_table.response()
         results_table_response["meta"] = {
             "count": results_table.count(),
             "page": 1,
             "per_page": 100,
-            "query": query.query,
+            "query": query.to_dict(),
             "oql": None,
             "v1": None,
         }
