@@ -3,11 +3,7 @@ import os
 from sqlalchemy import desc, func
 from extensions import db
 from oql import models
-import requests
 from sqlalchemy.ext.hybrid import hybrid_property
-
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 class RedshiftQueryHandler:
@@ -260,46 +256,3 @@ def parse_stats_column(column):
     stat = column.split("(")[0]
     entity = column.split("(")[1].split(")")[0]
     return stat, entity
-
-
-
-def call_openai_chatgpt(prompt):
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError(
-            "OpenAI API key is missing. Set it as an environment variable."
-        )
-
-    url = "https://api.openai.com/v1/chat/completions"
-    messages = [
-        {
-            "role": "system",
-            "content": "You are a database administrator for a company that uses Redshift.",
-        },
-        {"role": "user", "content": prompt},
-    ]
-    data = {
-        "model": "gpt-4o",
-        "messages": messages,
-        "max_tokens": 200,
-        "temperature": 0.5,
-    }
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    r = requests.post(url, json=data, headers=headers)
-
-    if r.status_code == 200:
-        return r.json()
-    else:
-        raise Exception(f"Error: {r.status_code} - {r.text}")
-
-
-def format_chatgpt_response(response):
-    content = response["choices"][0]["message"]["content"]
-    clean_content = (
-        content.replace("\n", " ")
-        .replace("  ", " ")
-        .replace("sql", "")
-        .replace("`", "")
-        .strip()
-    )
-    return clean_content
