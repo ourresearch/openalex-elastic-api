@@ -48,6 +48,22 @@
             ],
             "category": "other",
             "icon": "mdi-account-outline"
+        },
+        "count(works)": {
+            "id": "count(works)",
+            "subjectEntity": "keywords",
+            "displayName": "works count",
+            "type": "number",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline"
         }
     }
 }

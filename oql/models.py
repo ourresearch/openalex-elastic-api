@@ -1,6 +1,5 @@
 from extensions import db
 from sqlalchemy import Column, BigInteger, String, Boolean, Integer, Float, func, select
-from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 
 
@@ -33,9 +32,13 @@ class Work(db.Model):
     def display_name(cls):
         return cls.original_title
 
-    @property
+    @hybrid_property
     def publication_year(self):
         return self.year
+
+    @publication_year.expression
+    def publication_year(cls):
+        return cls.year
 
     @property
     def type_formatted(self):
@@ -193,9 +196,13 @@ class Country(db.Model):
     continent_id = Column(Integer, nullable=True)
     is_global_south = Column(Boolean, nullable=True)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"countries/{self.country_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('countries/', cls.country_id)
 
     def __repr__(self):
         return f"<Country(country_code={self.country_code}, display_name={self.display_name})>"
@@ -282,7 +289,7 @@ class Institution(db.Model):
     ror = Column(String(500), nullable=True)
     country_code = Column(String(500), nullable=True)
     type = Column(String(500), nullable=True)
-    count = Column(Integer)
+    # count = Column(Integer)
     citations = Column(Integer)
     oa_paper_count = Column(Integer)
 
@@ -294,7 +301,7 @@ class Institution(db.Model):
     def id(cls):
         return func.concat('institutions/I', cls.affiliation_id)
 
-    @property
+    @hybrid_property
     def type_formatted(self):
         return (
             {
@@ -303,6 +310,14 @@ class Institution(db.Model):
             }
             if self.type
             else None
+        )
+
+    @type_formatted.expression
+    def type_formatted(cls):
+        return (
+            select([InstitutionType.display_name])
+            .where(InstitutionType.institution_type_id == cls.type)
+            .scalar_subquery()
         )
 
     @hybrid_property
@@ -356,9 +371,13 @@ class Keyword(db.Model):
     keyword_id = Column(String(500), primary_key=True)
     display_name = Column(String(65535), nullable=False)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"keywords/{self.keyword_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('keywords/', cls.keyword_id)
 
     def __repr__(self):
         return (
@@ -443,10 +462,15 @@ class Source(db.Model):
     type = Column(String(500), nullable=True)
     issn = Column(String(500), nullable=True)
     is_in_doaj = Column(Boolean, nullable=True)
+    journal_id = Column(BigInteger, nullable=True)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"sources/S{self.source_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('sources/S', cls.source_id)
 
     @property
     def type_formatted(self):
@@ -504,9 +528,13 @@ class Topic(db.Model):
     domain_id = Column(Integer, nullable=True)
     wikipedia_url = Column(String(65535), nullable=True)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"topics/T{self.topic_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('topics/T', cls.topic_id)
 
     @property
     def description(self):
@@ -519,22 +547,6 @@ class Topic(db.Model):
     @domain.expression
     def domain(cls):
         return cls.domain_id
-
-    @hybrid_property
-    def field(self):
-        return self.field_id
-
-    @field.expression
-    def field(cls):
-        return cls.field_id
-
-    @hybrid_property
-    def subfield(self):
-        return self.subfield_id
-
-    @subfield.expression
-    def subfield(cls):
-        return cls.subfield_id
 
     def __repr__(self):
         return f"<Topic(topic_id={self.topic_id}, display_name={self.display_name})>"
@@ -556,6 +568,7 @@ class WorkTopic(db.Model):
 
     paper_id = Column(BigInteger, primary_key=True)
     topic_id = Column(Integer, primary_key=True)
+    topic_rank = Column(Integer, nullable=False)
     score = Column(Float, nullable=True)
 
     def __repr__(self):

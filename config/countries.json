@@ -47,6 +47,20 @@
             ],
             "category": "other",
             "icon": "mdi-account-outline"
+        },
+        "count(works)": {
+            "id": "count(works)",
+            "subjectEntity": "countries",
+            "displayName": "works count",
+            "type": "number",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ]
         }
     }
 }

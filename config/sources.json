@@ -189,6 +189,21 @@
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-book-open-outline"
+        },
+        "count(works)": {
+            "id": "count(works)",
+            "subjectEntity": "sources",
+            "displayName": "works count",
+            "type": "number",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "icon": "mdi-book-open-variant"
         }
     }
 }

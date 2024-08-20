@@ -100,6 +100,15 @@
             "displayName": "domain",
             "type": "entity",
             "icon": "mdi-tag-outline"
+        },
+        "count(works)": {
+            "id": "count(works)",
+            "subjectEntity": "topics",
+            "entityId": "works",
+            "objectEntity": "topics",
+            "displayName": "works count",
+            "type": "number",
+            "icon": "mdi-tag-outline"
         }
     }
 }

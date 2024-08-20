@@ -252,7 +252,7 @@
             "subjectEntity": "authors",
             "entityId": "works",
             "objectEntity": "authors",
-            "displayName": "Works",
+            "displayName": "works count",
             "type": "number",
             "actions": [
                 "sort",

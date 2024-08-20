@@ -211,7 +211,7 @@
         "count(works)": {
             "id": "count",
             "subjectEntity": "institutions",
-            "displayName": "count",
+            "displayName": "works count",
             "type": "number",
             "actions": [
                 "sort",

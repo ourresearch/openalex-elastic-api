@@ -390,7 +390,7 @@ class Query:
             sort_by_column=self.sort_by_column,
             sort_by_order=self.sort_by_order,
             filter_by=self.convert_filter_by(),
-            return_columns=self.columns,
+            return_columns=self.columns or self.default_columns(),
             valid_columns=self.valid_columns
         )
         results = redshift_handler.redshift_query()
@@ -400,25 +400,31 @@ class Query:
     def format_results_as_json(self, results):
         json_data = {"results": []}
         columns = self.columns or self.default_columns()
+
         for r in results:
-            if r.id == "works/W4285719527":
+            model_instance = r[0]
+
+            if model_instance.id == "works/W4285719527":
                 # deleted work, skip
                 continue
+
             result_data = {}
             for column in columns:
-                if column == "type":
-                    value = r.type_formatted
-                elif column == "country_code":
-                    value = r.country_code_formatted
-                elif column == "mean(fwci)":
-                    value = r.mean_fwci
-                elif column == "count(works)":
-                    value = r.count
+                if hasattr(model_instance, column):
+                    value = getattr(model_instance, column)
+
+                    # if the value is callable (i.e., it's a property method), call it
+                    if callable(value):
+                        value = value()
                 else:
-                    value = getattr(r, column, None)
+                    # otherwise, look for the value in the result set
+                    value = r[column] if column in r.keys() else None
+
                 result_data[column] = value
-            result_data["id"] = r.id
+
+            result_data["id"] = model_instance.id
             json_data["results"].append(result_data)
+
         return json_data
 
     def get_valid_columns(self):
@@ -614,25 +620,31 @@ class QueryNew:
     def format_results_as_json(self, results):
         json_data = {"results": []}
         columns = self.columns or self.default_columns()
+
         for r in results:
-            if r.id == "works/W4285719527":
+            model_instance = r[0]
+
+            if model_instance.id == "works/W4285719527":
                 # deleted work, skip
                 continue
+
             result_data = {}
             for column in columns:
-                if column == "type":
-                    value = r.type_formatted
-                elif column == "country_code":
-                    value = r.country_code_formatted
-                elif column == "mean(fwci)":
-                    value = r.mean_fwci
-                elif column == "count(works)":
-                    value = r.count
+                if hasattr(model_instance, column):
+                    value = getattr(model_instance, column)
+
+                    # if the value is callable (i.e., it's a property method), call it
+                    if callable(value):
+                        value = value()
                 else:
-                    value = getattr(r, column, None)
+                    # otherwise, look for the value in the result set
+                    value = r[column] if column in r.keys() else None
+
                 result_data[column] = value
-            result_data["id"] = r.id
+
+            result_data["id"] = model_instance.id
             json_data["results"].append(result_data)
+
         return json_data
 
     def get_valid_columns(self):
