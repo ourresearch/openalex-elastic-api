@@ -107,27 +107,31 @@ class RedshiftQueryHandler:
             if "column_id" not in filter or "value" not in filter:
                 continue
             key = filter.get("column_id")
-            value = filter.get("value")
+            values = filter.get("value")
 
             if key == "id":
-                query = query.filter(getattr(entity_class, "paper_id") == value)
+                query = query.filter(getattr(entity_class, "paper_id") == values[0])
             elif key == "topic":
-                value = value.replace("https://openalex.org/T", "")
-                query = query.filter(getattr(entity_class, "topic_id") == value)
+                for value in values:
+                    value = value.replace("https://openalex.org/T", "")
+                    query = query.filter(getattr(entity_class, "topic_id") == value)
             elif key == "primary_topic.domain.id":
-                value = value.replace("https://openalex.org/domains/", "")
-                query = query.filter(getattr(entity_class, "domain_id") == int(value))
+                for value in values:
+                    value = value.replace("https://openalex.org/domains/", "")
+                    query = query.filter(getattr(entity_class, "domain_id") == value)
             elif key == "primary_topic.subfield.id":
-                value = value.replace("https://openalex.org/subfields/", "")
-                query = query.filter(getattr(entity_class, "subfield_id") == int(value))
+                for value in values:
+                    value = value.replace("https://openalex.org/subfields/", "")
+                    query = query.filter(getattr(entity_class, "subfield_id") == value)
             elif key == "primary_topic.field.id":
-                value = value.replace("https://openalex.org/fields/", "")
-                query = query.filter(getattr(entity_class, "field_id") == int(value))
+                for value in values:
+                    value = value.replace("https://openalex.org/fields/", "")
+                    query = query.filter(getattr(entity_class, "field_id") == value)
             elif key == "publication_year":
-                query = query.filter(getattr(entity_class, "year") == value)
+                query = query.filter(getattr(entity_class, "year") == values[0])
             else:
                 column = getattr(entity_class, key, None)
-                query = query.filter(column == value)
+                query = query.filter(column == values[0])
         return query
 
     def apply_stats(self, query, entity_class):
