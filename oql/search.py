@@ -26,9 +26,6 @@ class Search:
     def __post_init__(self):
         self.id = self.short_uuid()
         self.timestamp = datetime.now(timezone.utc).isoformat()
-        self.meta = {
-            "query": self.query,
-        }
 
     def short_uuid(self) -> str:
         return shortuuid.uuid()
