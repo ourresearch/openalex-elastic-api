@@ -51,35 +51,35 @@
   },
   "values": [
     {
-      "id": "https://openalex.org/institution-types/education",
+      "id": "institution-types/education",
       "display_name": "education"
     },
     {
-      "id": "https://openalex.org/institution-types/healthcare",
+      "id": "institution-types/healthcare",
       "display_name": "healthcare"
     },
     {
-      "id": "https://openalex.org/institution-types/facility",
+      "id": "institution-types/facility",
       "display_name": "facility"
     },
     {
-      "id": "https://openalex.org/institution-types/government",
+      "id": "institution-types/government",
       "display_name": "government"
     },
     {
-      "id": "https://openalex.org/institution-types/company",
+      "id": "institution-types/company",
       "display_name": "company"
     },
     {
-      "id": "https://openalex.org/institution-types/nonprofit",
+      "id": "institution-types/nonprofit",
       "display_name": "nonprofit"
     },
     {
-      "id": "https://openalex.org/institution-types/other",
+      "id": "institution-types/other",
       "display_name": "other"
     },
     {
-      "id": "https://openalex.org/institution-types/archive",
+      "id": "institution-types/archive",
       "display_name": "archive"
     }
   ]

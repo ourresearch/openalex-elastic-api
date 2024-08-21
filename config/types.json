@@ -72,75 +72,75 @@
   },
   "values": [
     {
-      "id": "https://openalex.org/types/article",
+      "id": "types/article",
       "display_name": "article"
     },
     {
-      "id": "https://openalex.org/types/book-chapter",
+      "id": "types/book-chapter",
       "display_name": "book-chapter"
     },
     {
-      "id": "https://openalex.org/types/dataset",
+      "id": "types/dataset",
       "display_name": "dataset"
     },
     {
-      "id": "https://openalex.org/types/preprint",
+      "id": "types/preprint",
       "display_name": "preprint"
     },
     {
-      "id": "https://openalex.org/types/dissertation",
+      "id": "types/dissertation",
       "display_name": "dissertation"
     },
     {
-      "id": "https://openalex.org/types/book",
+      "id": "types/book",
       "display_name": "book"
     },
     {
-      "id": "https://openalex.org/types/review",
+      "id": "types/review",
       "display_name": "review"
     },
     {
-      "id": "https://openalex.org/types/paratext",
+      "id": "types/paratext",
       "display_name": "paratext"
     },
     {
-      "id": "https://openalex.org/types/letter",
+      "id": "types/letter",
       "display_name": "letter"
     },
     {
-      "id": "https://openalex.org/types/other",
+      "id": "types/other",
       "display_name": "other"
     },
     {
-      "id": "https://openalex.org/types/reference-entry",
+      "id": "types/reference-entry",
       "display_name": "reference-entry"
     },
     {
-      "id": "https://openalex.org/types/report",
+      "id": "types/report",
       "display_name": "report"
     },
     {
-      "id": "https://openalex.org/types/editorial",
+      "id": "types/editorial",
       "display_name": "editorial"
     },
     {
-      "id": "https://openalex.org/types/peer-review",
+      "id": "types/peer-review",
       "display_name": "peer-review"
     },
     {
-      "id": "https://openalex.org/types/standard",
+      "id": "types/standard",
       "display_name": "standard"
     },
     {
-      "id": "https://openalex.org/types/erratum",
+      "id": "types/erratum",
       "display_name": "erratum"
     },
     {
-      "id": "https://openalex.org/types/grant",
+      "id": "types/grant",
       "display_name": "grant"
     },
     {
-      "id": "https://openalex.org/types/supplementary-materials",
+      "id": "types/supplementary-materials",
       "display_name": "supplementary-materials"
     }
   ]

@@ -95,19 +95,19 @@
   },
   "values": [
     {
-      "id": "https://openalex.org/domains/3",
+      "id": "domains/3",
       "display_name": "Physical Sciences"
     },
     {
-      "id": "https://openalex.org/domains/2",
+      "id": "domains/2",
       "display_name": "Social Sciences"
     },
     {
-      "id": "https://openalex.org/domains/4",
+      "id": "domains/4",
       "display_name": "Health Sciences"
     },
     {
-      "id": "https://openalex.org/domains/1",
+      "id": "domains/1",
       "display_name": "Life Sciences"
     }
   ]

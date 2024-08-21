@@ -56,31 +56,31 @@
   },
   "values": [
     {
-      "id": "https://openalex.org/continents/Q15",
+      "id": "continents/Q15",
       "display_name": "Africa"
     },
     {
-      "id": "https://openalex.org/continents/Q18",
+      "id": "continents/Q18",
       "display_name": "South America"
     },
     {
-      "id": "https://openalex.org/continents/Q46",
+      "id": "continents/Q46",
       "display_name": "Europe"
     },
     {
-      "id": "https://openalex.org/continents/Q48",
+      "id": "continents/Q48",
       "display_name": "Asia"
     },
     {
-      "id": "https://openalex.org/continents/Q49",
+      "id": "continents/Q49",
       "display_name": "North America"
     },
     {
-      "id": "https://openalex.org/continents/Q51",
+      "id": "continents/Q51",
       "display_name": "Antarctica"
     },
     {
-      "id": "https://openalex.org/continents/Q55643",
+      "id": "continents/Q55643",
       "display_name": "Oceania"
     }
   ]

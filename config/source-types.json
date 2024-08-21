@@ -71,27 +71,27 @@
   },
   "values": [
     {
-      "id": "https://openalex.org/source-types/journal",
+      "id": "source-types/journal",
       "display_name": "journal"
     },
     {
-      "id": "https://openalex.org/source-types/repository",
+      "id": "source-types/repository",
       "display_name": "repository"
     },
     {
-      "id": "https://openalex.org/source-types/ebook platform",
+      "id": "source-types/ebook platform",
       "display_name": "ebook platform"
     },
     {
-      "id": "https://openalex.org/source-types/book series",
+      "id": "source-types/book series",
       "display_name": "book series"
     },
     {
-      "id": "https://openalex.org/source-types/conference",
+      "id": "source-types/conference",
       "display_name": "conference"
     },
     {
-      "id": "https://openalex.org/source-types/other",
+      "id": "source-types/other",
       "display_name": "other"
     }
   ]
