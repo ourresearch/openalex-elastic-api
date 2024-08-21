@@ -19,6 +19,10 @@ class Work(db.Model):
     year = Column(Integer)
     fwci = Column(Float)
     created_date = Column(String(500))
+    topic_id = Column(Integer)  # joined from work_topic
+    subfield_id = Column(Integer)  # joined rom work_topic
+    field_id = Column(Integer)  # joined from work_topic
+    domain_id = Column(Integer)  # joined from work_topic
 
     @property
     def id(self):

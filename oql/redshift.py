@@ -111,6 +111,18 @@ class RedshiftQueryHandler:
 
             if key == "id":
                 query = query.filter(getattr(entity_class, "paper_id") == value)
+            elif key == "topic":
+                value = value.replace("https://openalex.org/T", "")
+                query = query.filter(getattr(entity_class, "topic_id") == value)
+            elif key == "primary_topic.domain.id":
+                value = value.replace("https://openalex.org/domains/", "")
+                query = query.filter(getattr(entity_class, "domain_id") == int(value))
+            elif key == "primary_topic.subfield.id":
+                value = value.replace("https://openalex.org/subfields/", "")
+                query = query.filter(getattr(entity_class, "subfield_id") == int(value))
+            elif key == "primary_topic.field.id":
+                value = value.replace("https://openalex.org/fields/", "")
+                query = query.filter(getattr(entity_class, "field_id") == int(value))
             elif key == "publication_year":
                 query = query.filter(getattr(entity_class, "year") == value)
             else:
