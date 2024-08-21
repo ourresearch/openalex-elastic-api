@@ -1,6 +1,7 @@
 from sqlalchemy import desc, func
 from extensions import db
 
+from combined_config import all_entities_config
 from oql import models
 from sqlalchemy.ext.hybrid import hybrid_property
 
@@ -14,6 +15,7 @@ class RedshiftQueryHandler:
         self.return_columns = return_columns
         self.valid_columns = valid_columns
         self.model_return_columns = []
+        self.config = all_entities_config.get(entity).get("columns")
 
     def execute(self):
         entity_class = self.get_entity_class()
@@ -40,20 +42,18 @@ class RedshiftQueryHandler:
     def set_columns(self, entity_class):
         columns_to_select = [entity_class]
         for column in self.return_columns:
+            column = self.config.get(column).get("redshiftDisplayColumn")
             if column.startswith("count("):
                 # set with stats function
                 continue
+            elif column == "mean(fwci)":
+                columns_to_select.append(getattr(entity_class, "mean_fwci", None))
             elif self.is_model_property(column, entity_class):
                 print(f"column {column} is a model property")
                 # continue if column is a model property
                 continue
-            elif column == "publication_year":
-                columns_to_select.append(getattr(entity_class, "year", None))
-            elif column == "mean(fwci)":
-                columns_to_select.append(getattr(entity_class, "mean_fwci", None))
             else:
                 columns_to_select.append(getattr(entity_class, column, None))
-        # columns_to_select.append(getattr(entity_class, "id", None))  # always set id
         self.model_return_columns = columns_to_select
         query = db.session.query(*columns_to_select)
         return query

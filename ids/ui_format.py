@@ -60,7 +60,6 @@ def convert_openalex_id(old_id):
 def format_as_ui(entity, data):
     results = []
     columns = all_entities_config[entity]["showOnEntityPage"]
-    print(f"columns to process: {columns}")
     data = json.loads(data)
     for column in columns:
         config = all_entities_config[entity]['columns'].get(column)

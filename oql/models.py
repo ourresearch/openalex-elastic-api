@@ -41,14 +41,6 @@ class Work(db.Model):
     def display_name(cls):
         return cls.original_title
 
-    @hybrid_property
-    def publication_year(self):
-        return self.year
-
-    @publication_year.expression
-    def publication_year(cls):
-        return cls.year
-
     @property
     def type_formatted(self):
         return {"id": f"types/{self.type}", "display_name": self.type}

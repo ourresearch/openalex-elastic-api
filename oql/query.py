@@ -1,5 +1,7 @@
 import re
 
+from sqlalchemy.engine.row import Row
+
 from combined_config import all_entities_config
 from oql.redshift import RedshiftQueryHandler
 
@@ -622,7 +624,7 @@ class QueryNew:
         columns = self.columns or self.default_columns()
 
         for r in results:
-            model_instance = r[0]
+            model_instance = r[0] if isinstance(r, Row) else r
 
             if model_instance.id == "works/W4285719527":
                 # deleted work, skip
@@ -630,15 +632,18 @@ class QueryNew:
 
             result_data = {}
             for column in columns:
-                if hasattr(model_instance, column):
-                    value = getattr(model_instance, column)
+                # use the redshift display column from config
+                redshift_column = all_entities_config[self.entity]['columns'][column]["redshiftDisplayColumn"]
+
+                if hasattr(model_instance, redshift_column):
+                    value = getattr(model_instance, redshift_column)
 
                     # if the value is callable (i.e., it's a property method), call it
                     if callable(value):
                         value = value()
                 else:
                     # otherwise, look for the value in the result set
-                    value = r[column] if column in r.keys() else None
+                    value = r[redshift_column] if redshift_column in r.keys() else None
 
                 result_data[column] = value
 
