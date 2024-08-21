@@ -1,106 +1,212 @@
 {
-    "id": "fields",
-    "icon": "mdi-tag-outline",
-    "name": "fields",
-    "nameSingular": "field",
-    "displayName": "fields",
-    "displayNameSingular": "field",
-    "descr": "what works are about",
-    "eg": "Computer science",
-    "placeholder": "Search fields",
-    "filterName": "fields",
-    "filterKey": "primary_topic.field.id",
-    "hasAutocomplete": false,
-    "isNative": false,
-    "idRegex": "(?:https:\\/\\/openalex\\.org\\/fields\\/|fields\\/)(\\d+)",
-    "showOnEntityPage": [
-        "id",
-        "display_name",
-        "description",
-        "display_name_alternatives",
-        "subfields",
-        "siblings",
-        "domain"
-    ],
-    "showOnTablePage": [
-        "display_name",
-        "description"
-    ],
-    "columns": {
-        "id": {
-            "id": "id",
-            "subjectEntity": "fields",
-            "entityId": "fields",
-            "objectEntity": "fields",
-            "displayName": "OpenAlex ID",
-            "isId": true,
-            "type": "string",
-            "icon": "mdi-tag-outline"
-        },
-        "display_name": {
-            "id": "display_name",
-            "isColumnMandatory": true,
-            "subjectEntity": "fields",
-            "displayName": "name",
-            "type": "string",
-            "actions": [
-                "sort",
-                "column"
-            ],
-            "actionsPopular": [
-                "sort",
-                "column"
-            ],
-            "category": "other",
-            "icon": "mdi-account-outline"
-        },
-        "description": {
-            "id": "description",
-            "subjectEntity": "fields",
-            "entityId": "fields",
-            "objectEntity": "fields",
-            "displayName": "description",
-            "type": "string",
-            "icon": "mdi-tag-outline"
-        },
-        "display_name_alternatives": {
-            "id": "display_name_alternatives",
-            "isList": true,
-            "subjectEntity": "fields",
-            "entityId": "fields",
-            "objectEntity": "fields",
-            "displayName": "alternate names",
-            "type": "string",
-            "icon": "mdi-tag-outline"
-        },
-        "siblings": {
-            "id": "siblings",
-            "isList": true,
-            "subjectEntity": "fields",
-            "entityId": "fields",
-            "objectEntity": "fields",
-            "displayName": "related fields (siblings)",
-            "type": "entity",
-            "icon": "mdi-tag-outline"
-        },
-        "subfields": {
-            "id": "subfields",
-            "isList": true,
-            "subjectEntity": "fields",
-            "entityId": "subfields",
-            "objectEntity": "subfields",
-            "displayName": "subfields (children)",
-            "type": "entity",
-            "icon": "mdi-tag-outline"
-        },
-        "domain": {
-            "id": "domain",
-            "subjectEntity": "fields",
-            "entityId": "domains",
-            "objectEntity": "domains",
-            "displayName": "domain (parent)",
-            "type": "entity",
-            "icon": "mdi-tag-outline"
-        }
+  "id": "fields",
+  "icon": "mdi-tag-outline",
+  "name": "fields",
+  "nameSingular": "field",
+  "displayName": "fields",
+  "displayNameSingular": "field",
+  "descr": "what works are about",
+  "eg": "Computer science",
+  "placeholder": "Search fields",
+  "filterName": "fields",
+  "filterKey": "primary_topic.field.id",
+  "hasAutocomplete": false,
+  "isNative": false,
+  "idRegex": "(?:https:\\/\\/openalex\\.org\\/fields\\/|fields\\/)(\\d+)",
+  "showOnEntityPage": [
+    "id",
+    "display_name",
+    "description",
+    "display_name_alternatives",
+    "subfields",
+    "siblings",
+    "domain"
+  ],
+  "showOnTablePage": [
+    "display_name",
+    "description"
+  ],
+  "columns": {
+    "id": {
+      "id": "id",
+      "subjectEntity": "fields",
+      "entityId": "fields",
+      "objectEntity": "fields",
+      "displayName": "OpenAlex ID",
+      "isId": true,
+      "type": "string",
+      "icon": "mdi-tag-outline"
+    },
+    "display_name": {
+      "id": "display_name",
+      "isColumnMandatory": true,
+      "subjectEntity": "fields",
+      "displayName": "name",
+      "type": "string",
+      "actions": [
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "category": "other",
+      "icon": "mdi-account-outline"
+    },
+    "description": {
+      "id": "description",
+      "subjectEntity": "fields",
+      "entityId": "fields",
+      "objectEntity": "fields",
+      "displayName": "description",
+      "type": "string",
+      "icon": "mdi-tag-outline"
+    },
+    "display_name_alternatives": {
+      "id": "display_name_alternatives",
+      "isList": true,
+      "subjectEntity": "fields",
+      "entityId": "fields",
+      "objectEntity": "fields",
+      "displayName": "alternate names",
+      "type": "string",
+      "icon": "mdi-tag-outline"
+    },
+    "siblings": {
+      "id": "siblings",
+      "isList": true,
+      "subjectEntity": "fields",
+      "entityId": "fields",
+      "objectEntity": "fields",
+      "displayName": "related fields (siblings)",
+      "type": "entity",
+      "icon": "mdi-tag-outline"
+    },
+    "subfields": {
+      "id": "subfields",
+      "isList": true,
+      "subjectEntity": "fields",
+      "entityId": "subfields",
+      "objectEntity": "subfields",
+      "displayName": "subfields (children)",
+      "type": "entity",
+      "icon": "mdi-tag-outline"
+    },
+    "domain": {
+      "id": "domain",
+      "subjectEntity": "fields",
+      "entityId": "domains",
+      "objectEntity": "domains",
+      "displayName": "domain (parent)",
+      "type": "entity",
+      "icon": "mdi-tag-outline"
     }
+  },
+  "values": [
+    {
+      "id": "https://openalex.org/fields/27",
+      "display_name": "Medicine"
+    },
+    {
+      "id": "https://openalex.org/fields/33",
+      "display_name": "Social Sciences"
+    },
+    {
+      "id": "https://openalex.org/fields/22",
+      "display_name": "Engineering"
+    },
+    {
+      "id": "https://openalex.org/fields/12",
+      "display_name": "Arts and Humanities"
+    },
+    {
+      "id": "https://openalex.org/fields/17",
+      "display_name": "Computer Science"
+    },
+    {
+      "id": "https://openalex.org/fields/13",
+      "display_name": "Biochemistry, Genetics and Molecular Biology"
+    },
+    {
+      "id": "https://openalex.org/fields/11",
+      "display_name": "Agricultural and Biological Sciences"
+    },
+    {
+      "id": "https://openalex.org/fields/23",
+      "display_name": "Environmental Science"
+    },
+    {
+      "id": "https://openalex.org/fields/31",
+      "display_name": "Physics and Astronomy"
+    },
+    {
+      "id": "https://openalex.org/fields/25",
+      "display_name": "Materials Science"
+    },
+    {
+      "id": "https://openalex.org/fields/14",
+      "display_name": "Business, Management and Accounting"
+    },
+    {
+      "id": "https://openalex.org/fields/20",
+      "display_name": "Economics, Econometrics and Finance"
+    },
+    {
+      "id": "https://openalex.org/fields/36",
+      "display_name": "Health Professions"
+    },
+    {
+      "id": "https://openalex.org/fields/32",
+      "display_name": "Psychology"
+    },
+    {
+      "id": "https://openalex.org/fields/16",
+      "display_name": "Chemistry"
+    },
+    {
+      "id": "https://openalex.org/fields/19",
+      "display_name": "Earth and Planetary Sciences"
+    },
+    {
+      "id": "https://openalex.org/fields/28",
+      "display_name": "Neuroscience"
+    },
+    {
+      "id": "https://openalex.org/fields/26",
+      "display_name": "Mathematics"
+    },
+    {
+      "id": "https://openalex.org/fields/24",
+      "display_name": "Immunology and Microbiology"
+    },
+    {
+      "id": "https://openalex.org/fields/18",
+      "display_name": "Decision Sciences"
+    },
+    {
+      "id": "https://openalex.org/fields/21",
+      "display_name": "Energy"
+    },
+    {
+      "id": "https://openalex.org/fields/29",
+      "display_name": "Nursing"
+    },
+    {
+      "id": "https://openalex.org/fields/30",
+      "display_name": "Pharmacology, Toxicology and Pharmaceutics"
+    },
+    {
+      "id": "https://openalex.org/fields/35",
+      "display_name": "Dentistry"
+    },
+    {
+      "id": "https://openalex.org/fields/15",
+      "display_name": "Chemical Engineering"
+    },
+    {
+      "id": "https://openalex.org/fields/34",
+      "display_name": "Veterinary"
+    }
+  ]
 }

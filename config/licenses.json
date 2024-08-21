@@ -1,62 +1,116 @@
 {
-    "id": "licenses",
-    "icon": "mdi-lock-open-outline",
-    "name": "licenses",
-    "nameSingular": "license",
-    "displayName": "licenses",
-    "displayNameSingular": "license",
-    "descr": "license of best open copy",
-    "eg": "CC-BY",
-    "placeholder": "Search licenses",
-    "filterName": "institution type",
-    "filterKey": "best_oa_location.license",
-    "hasAutocomplete": false,
-    "isNative": false,
-    "idRegex": "(?:https:\\/\\/openalex\\.org\\/licenses\\/|licenses\\/)([a-zA-Z0-9\\-]+)",
-    "showOnEntityPage": [
-        "id",
-        "display_name"
-    ],
-    "showOnTablePage": [
-        "display_name",
-        "description"
-    ],
-    "columns": {
-        "id": {
-            "id": "id",
-            "subjectEntity": "licenses",
-            "entityId": "licenses",
-            "objectEntity": "licenses",
-            "displayName": "License ID",
-            "isId": true,
-            "type": "string",
-            "icon": "mdi-tag-outline"
-        },
-        "display_name": {
-            "id": "display_name",
-            "isColumnMandatory": true,
-            "subjectEntity": "licenses",
-            "displayName": "name",
-            "type": "string",
-            "actions": [
-                "sort",
-                "column"
-            ],
-            "actionsPopular": [
-                "sort",
-                "column"
-            ],
-            "category": "other",
-            "icon": "mdi-account-outline"
-        },
-        "description": {
-            "id": "description",
-            "subjectEntity": "licenses",
-            "entityId": "licenses",
-            "objectEntity": "licenses",
-            "displayName": "description",
-            "type": "string",
-            "icon": "mdi-shape-outline"
-        }
+  "id": "licenses",
+  "icon": "mdi-lock-open-outline",
+  "name": "licenses",
+  "nameSingular": "license",
+  "displayName": "licenses",
+  "displayNameSingular": "license",
+  "descr": "license of best open copy",
+  "eg": "CC-BY",
+  "placeholder": "Search licenses",
+  "filterName": "institution type",
+  "filterKey": "best_oa_location.license",
+  "hasAutocomplete": false,
+  "isNative": false,
+  "idRegex": "(?:https:\\/\\/openalex\\.org\\/licenses\\/|licenses\\/)([a-zA-Z0-9\\-]+)",
+  "showOnEntityPage": [
+    "id",
+    "display_name"
+  ],
+  "showOnTablePage": [
+    "display_name",
+    "description"
+  ],
+  "columns": {
+    "id": {
+      "id": "id",
+      "subjectEntity": "licenses",
+      "entityId": "licenses",
+      "objectEntity": "licenses",
+      "displayName": "License ID",
+      "isId": true,
+      "type": "string",
+      "icon": "mdi-tag-outline"
+    },
+    "display_name": {
+      "id": "display_name",
+      "isColumnMandatory": true,
+      "subjectEntity": "licenses",
+      "displayName": "name",
+      "type": "string",
+      "actions": [
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "category": "other",
+      "icon": "mdi-account-outline"
+    },
+    "description": {
+      "id": "description",
+      "subjectEntity": "licenses",
+      "entityId": "licenses",
+      "objectEntity": "licenses",
+      "displayName": "description",
+      "type": "string",
+      "icon": "mdi-shape-outline"
     }
+  },
+  "values": [
+    {
+      "id": "https://openalex.org/licenses/cc-by",
+      "display_name": "CC BY"
+    },
+    {
+      "id": "https://openalex.org/licenses/other-oa",
+      "display_name": "other open access"
+    },
+    {
+      "id": "https://openalex.org/licenses/cc-by-nc-nd",
+      "display_name": "CC BY-NC-ND"
+    },
+    {
+      "id": "https://openalex.org/licenses/cc-by-nc",
+      "display_name": "CC BY-NC"
+    },
+    {
+      "id": "https://openalex.org/licenses/cc-by-nc-sa",
+      "display_name": "CC BY-NC-SA"
+    },
+    {
+      "id": "https://openalex.org/licenses/publisher-specific-oa",
+      "display_name": "publisher specific open access"
+    },
+    {
+      "id": "https://openalex.org/licenses/public-domain",
+      "display_name": "public domain (CC0)"
+    },
+    {
+      "id": "https://openalex.org/licenses/cc-by-sa",
+      "display_name": "CC BY-SA"
+    },
+    {
+      "id": "https://openalex.org/licenses/mit",
+      "display_name": "MIT"
+    },
+    {
+      "id": "https://openalex.org/licenses/cc-by-nd",
+      "display_name": "CC BY-ND"
+    },
+    {
+      "id": "https://openalex.org/licenses/gpl-v3",
+      "display_name": "GNU GPLv3"
+    },
+    {
+      "id": "https://openalex.org/licenses/apache-2-0",
+      "display_name": "Apache License 2.0"
+    },
+    {
+      "id": "https://openalex.org/licenses/isc",
+      "display_name": "ISC License"
+    }
+  ]
 }

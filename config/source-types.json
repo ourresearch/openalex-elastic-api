@@ -1,72 +1,98 @@
 {
-    "id": "source-types",
-    "icon": "mdi-shape-outline",
-    "name": "source-types",
-    "nameSingular": "source type",
-    "displayName": "source types",
-    "displayNameSingular": "source type",
-    "descr": "Source type",
-    "eg": "journal",
-    "placeholder": "Search source types",
-    "filterName": "source type",
-    "filterKey": "primary_location.source.type",
-    "hasAutocomplete": false,
-    "isNative": false,
-    "idRegex": "(?:https:\\/\\/openalex\\.org\\/source-types\\/|source-types\\/)([a-zA-Z\\-]+)",
-    "showOnEntityPage": [
-        "id",
-        "display_name",
-        "description"
-    ],
-    "showOnTablePage": [
-        "display_name"
-    ],
-    "columns": {
-        "id": {
-            "id": "id",
-            "subjectEntity": "source-types",
-            "entityId": "source-types",
-            "objectEntity": "source-types",
-            "displayName": "Source Type ID",
-            "isId": true,
-            "type": "string",
-            "actions": [
-                "filter"
-            ],
-            "actionsPopular": [
-                "filter"
-            ],
-            "icon": "mdi-shape-outline"
-        },
-        "display_name": {
-            "id": "display_name",
-            "subjectEntity": "source-types",
-            "entityId": "source-types",
-            "objectEntity": "source-types",
-            "displayName": "Source type name",
-            "type": "entity",
-            "actions": [
-                "filter"
-            ],
-            "actionsPopular": [
-                "filter"
-            ],
-            "icon": "mdi-shape-outline"
-        },
-        "description": {
-            "id": "description",
-            "subjectEntity": "source-types",
-            "entityId": "source-types",
-            "objectEntity": "source-types",
-            "displayName": "Source type description",
-            "type": "entity",
-            "actions": [
-                "filter"
-            ],
-            "actionsPopular": [
-                "filter"
-            ],
-            "icon": "mdi-shape-outline"
-        }
+  "id": "source-types",
+  "icon": "mdi-shape-outline",
+  "name": "source-types",
+  "nameSingular": "source type",
+  "displayName": "source types",
+  "displayNameSingular": "source type",
+  "descr": "Source type",
+  "eg": "journal",
+  "placeholder": "Search source types",
+  "filterName": "source type",
+  "filterKey": "primary_location.source.type",
+  "hasAutocomplete": false,
+  "isNative": false,
+  "idRegex": "(?:https:\\/\\/openalex\\.org\\/source-types\\/|source-types\\/)([a-zA-Z\\-]+)",
+  "showOnEntityPage": [
+    "id",
+    "display_name",
+    "description"
+  ],
+  "showOnTablePage": [
+    "display_name"
+  ],
+  "columns": {
+    "id": {
+      "id": "id",
+      "subjectEntity": "source-types",
+      "entityId": "source-types",
+      "objectEntity": "source-types",
+      "displayName": "Source Type ID",
+      "isId": true,
+      "type": "string",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [
+        "filter"
+      ],
+      "icon": "mdi-shape-outline"
+    },
+    "display_name": {
+      "id": "display_name",
+      "subjectEntity": "source-types",
+      "entityId": "source-types",
+      "objectEntity": "source-types",
+      "displayName": "Source type name",
+      "type": "entity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [
+        "filter"
+      ],
+      "icon": "mdi-shape-outline"
+    },
+    "description": {
+      "id": "description",
+      "subjectEntity": "source-types",
+      "entityId": "source-types",
+      "objectEntity": "source-types",
+      "displayName": "Source type description",
+      "type": "entity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [
+        "filter"
+      ],
+      "icon": "mdi-shape-outline"
     }
+  },
+  "values": [
+    {
+      "id": "https://openalex.org/source-types/journal",
+      "display_name": "journal"
+    },
+    {
+      "id": "https://openalex.org/source-types/repository",
+      "display_name": "repository"
+    },
+    {
+      "id": "https://openalex.org/source-types/ebook platform",
+      "display_name": "ebook platform"
+    },
+    {
+      "id": "https://openalex.org/source-types/book series",
+      "display_name": "book series"
+    },
+    {
+      "id": "https://openalex.org/source-types/conference",
+      "display_name": "conference"
+    },
+    {
+      "id": "https://openalex.org/source-types/other",
+      "display_name": "other"
+    }
+  ]
 }

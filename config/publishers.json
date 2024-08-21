@@ -75,5 +75,6 @@
             "type": "string",
             "icon": "mdi-magnify"
         }
-    }
+    },
+    "values": null
 }

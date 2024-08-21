@@ -74,5 +74,6 @@
             "type": "number",
             "icon": "mdi-tag-outline"
         }
-    }
+    },
+    "values": null
 }

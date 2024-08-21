@@ -1,73 +1,147 @@
 {
-    "id": "types",
-    "icon": "mdi-shape-outline",
-    "name": "types",
-    "nameSingular": "type",
-    "displayName": "types",
-    "displayNameSingular": "type",
-    "descr": "Work type",
-    "eg": "article",
-    "placeholder": "Search work types",
-    "filterName": "type",
-    "filterKey": "type",
-    "hasAutocomplete": false,
-    "isNative": false,
-    "idRegex": "(?:https:\\/\\/openalex\\.org\\/types\\/|types\\/)([a-zA-Z\\-]+)",
-    "showOnEntityPage": [
-        "id",
-        "display_name",
-        "description",
-        "crossref_types"
-    ],
-    "showOnTablePage": [
-        "display_name",
-        "description"
-    ],
-    "columns": {
-        "id": {
-            "id": "id",
-            "subjectEntity": "types",
-            "entityId": "types",
-            "objectEntity": "types",
-            "displayName": "Type ID",
-            "isId": true,
-            "type": "string",
-            "icon": "mdi-tag-outline"
-        },
-        "display_name": {
-            "id": "display_name",
-            "isColumnMandatory": true,
-            "subjectEntity": "types",
-            "displayName": "name",
-            "type": "string",
-            "actions": [
-                "sort",
-                "column"
-            ],
-            "actionsPopular": [
-                "sort",
-                "column"
-            ],
-            "category": "other",
-            "icon": "mdi-account-outline"
-        },
-        "description": {
-            "id": "description",
-            "subjectEntity": "types",
-            "entityId": "types",
-            "objectEntity": "types",
-            "displayName": "description",
-            "type": "string",
-            "icon": "mdi-shape-outline"
-        },
-        "crossref_types": {
-            "id": "crossref_types",
-            "isList": true,
-            "subjectEntity": "types",
-            "entityId": "types",
-            "displayName": "alternate names (Crossref)",
-            "type": "string",
-            "icon": "mdi-shape-outline"
-        }
+  "id": "types",
+  "icon": "mdi-shape-outline",
+  "name": "types",
+  "nameSingular": "type",
+  "displayName": "types",
+  "displayNameSingular": "type",
+  "descr": "Work type",
+  "eg": "article",
+  "placeholder": "Search work types",
+  "filterName": "type",
+  "filterKey": "type",
+  "hasAutocomplete": false,
+  "isNative": false,
+  "idRegex": "(?:https:\\/\\/openalex\\.org\\/types\\/|types\\/)([a-zA-Z\\-]+)",
+  "showOnEntityPage": [
+    "id",
+    "display_name",
+    "description",
+    "crossref_types"
+  ],
+  "showOnTablePage": [
+    "display_name",
+    "description"
+  ],
+  "columns": {
+    "id": {
+      "id": "id",
+      "subjectEntity": "types",
+      "entityId": "types",
+      "objectEntity": "types",
+      "displayName": "Type ID",
+      "isId": true,
+      "type": "string",
+      "icon": "mdi-tag-outline"
+    },
+    "display_name": {
+      "id": "display_name",
+      "isColumnMandatory": true,
+      "subjectEntity": "types",
+      "displayName": "name",
+      "type": "string",
+      "actions": [
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "category": "other",
+      "icon": "mdi-account-outline"
+    },
+    "description": {
+      "id": "description",
+      "subjectEntity": "types",
+      "entityId": "types",
+      "objectEntity": "types",
+      "displayName": "description",
+      "type": "string",
+      "icon": "mdi-shape-outline"
+    },
+    "crossref_types": {
+      "id": "crossref_types",
+      "isList": true,
+      "subjectEntity": "types",
+      "entityId": "types",
+      "displayName": "alternate names (Crossref)",
+      "type": "string",
+      "icon": "mdi-shape-outline"
     }
+  },
+  "values": [
+    {
+      "id": "https://openalex.org/types/article",
+      "display_name": "article"
+    },
+    {
+      "id": "https://openalex.org/types/book-chapter",
+      "display_name": "book-chapter"
+    },
+    {
+      "id": "https://openalex.org/types/dataset",
+      "display_name": "dataset"
+    },
+    {
+      "id": "https://openalex.org/types/preprint",
+      "display_name": "preprint"
+    },
+    {
+      "id": "https://openalex.org/types/dissertation",
+      "display_name": "dissertation"
+    },
+    {
+      "id": "https://openalex.org/types/book",
+      "display_name": "book"
+    },
+    {
+      "id": "https://openalex.org/types/review",
+      "display_name": "review"
+    },
+    {
+      "id": "https://openalex.org/types/paratext",
+      "display_name": "paratext"
+    },
+    {
+      "id": "https://openalex.org/types/letter",
+      "display_name": "letter"
+    },
+    {
+      "id": "https://openalex.org/types/other",
+      "display_name": "other"
+    },
+    {
+      "id": "https://openalex.org/types/reference-entry",
+      "display_name": "reference-entry"
+    },
+    {
+      "id": "https://openalex.org/types/report",
+      "display_name": "report"
+    },
+    {
+      "id": "https://openalex.org/types/editorial",
+      "display_name": "editorial"
+    },
+    {
+      "id": "https://openalex.org/types/peer-review",
+      "display_name": "peer-review"
+    },
+    {
+      "id": "https://openalex.org/types/standard",
+      "display_name": "standard"
+    },
+    {
+      "id": "https://openalex.org/types/erratum",
+      "display_name": "erratum"
+    },
+    {
+      "id": "https://openalex.org/types/grant",
+      "display_name": "grant"
+    },
+    {
+      "id": "https://openalex.org/types/supplementary-materials",
+      "display_name": "supplementary-materials"
+    }
+  ]
 }

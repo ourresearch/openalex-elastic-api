@@ -1,56 +1,126 @@
 {
-    "id": "sdgs",
-    "icon": "mdi-sprout-outline",
-    "name": "sdgs",
-    "nameSingular": "sdg",
-    "displayName": "Sustainable Development Goals",
-    "displayNameSingular": "Sustainable Development Goal",
-    "descr": "Relevant UN SDGs",
-    "eg": "Clean water and sanitation",
-    "placeholder": "Search SDGs",
-    "filterName": "Sustainable Development Goals",
-    "filterKey": "sustainable_development_goals.id",
-    "hasAutocomplete": false,
-    "isNative": false,
-    "idRegex": "(?:https:\\/\\/openalex\\.org\\/sdgs\\/|sdgs\\/)(\\d+)",
-    "showOnEntityPage": [
-        "id",
-        "display_name"
-    ],
-    "showOnTablePage": [
-        "display_name",
-        "description"
-    ],
-    "columns": {
-        "id": {
-            "id": "id",
-            "subjectEntity": "sdgs",
-            "entityId": "sdgs",
-            "objectEntity": "sdgs",
-            "displayName": "SDG ID",
-            "isId": true,
-            "actions": [
-                "sort"
-            ],
-            "type": "string",
-            "icon": "mdi-tag-outline"
-        },
-        "display_name": {
-            "id": "display_name",
-            "isColumnMandatory": true,
-            "subjectEntity": "sdgs",
-            "displayName": "name",
-            "type": "string",
-            "actions": [
-                "sort",
-                "column"
-            ],
-            "actionsPopular": [
-                "sort",
-                "column"
-            ],
-            "category": "other",
-            "icon": "mdi-account-outline"
-        }
+  "id": "sdgs",
+  "icon": "mdi-sprout-outline",
+  "name": "sdgs",
+  "nameSingular": "sdg",
+  "displayName": "Sustainable Development Goals",
+  "displayNameSingular": "Sustainable Development Goal",
+  "descr": "Relevant UN SDGs",
+  "eg": "Clean water and sanitation",
+  "placeholder": "Search SDGs",
+  "filterName": "Sustainable Development Goals",
+  "filterKey": "sustainable_development_goals.id",
+  "hasAutocomplete": false,
+  "isNative": false,
+  "idRegex": "(?:https:\\/\\/openalex\\.org\\/sdgs\\/|sdgs\\/)(\\d+)",
+  "showOnEntityPage": [
+    "id",
+    "display_name"
+  ],
+  "showOnTablePage": [
+    "display_name",
+    "description"
+  ],
+  "columns": {
+    "id": {
+      "id": "id",
+      "subjectEntity": "sdgs",
+      "entityId": "sdgs",
+      "objectEntity": "sdgs",
+      "displayName": "SDG ID",
+      "isId": true,
+      "actions": [
+        "sort"
+      ],
+      "type": "string",
+      "icon": "mdi-tag-outline"
+    },
+    "display_name": {
+      "id": "display_name",
+      "isColumnMandatory": true,
+      "subjectEntity": "sdgs",
+      "displayName": "name",
+      "type": "string",
+      "actions": [
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "category": "other",
+      "icon": "mdi-account-outline"
     }
+  },
+  "values": [
+    {
+      "id": "https://openalex.org/sdgs/3",
+      "display_name": "Good health and well-being"
+    },
+    {
+      "id": "https://openalex.org/sdgs/2",
+      "display_name": "Zero hunger"
+    },
+    {
+      "id": "https://openalex.org/sdgs/4",
+      "display_name": "Quality education"
+    },
+    {
+      "id": "https://openalex.org/sdgs/7",
+      "display_name": "Affordable and clean energy"
+    },
+    {
+      "id": "https://openalex.org/sdgs/10",
+      "display_name": "Reduced inequalities"
+    },
+    {
+      "id": "https://openalex.org/sdgs/16",
+      "display_name": "Peace, justice, and strong institutions"
+    },
+    {
+      "id": "https://openalex.org/sdgs/8",
+      "display_name": "Decent work and economic growth"
+    },
+    {
+      "id": "https://openalex.org/sdgs/11",
+      "display_name": "Sustainable cities and communities"
+    },
+    {
+      "id": "https://openalex.org/sdgs/6",
+      "display_name": "Clean water and sanitation"
+    },
+    {
+      "id": "https://openalex.org/sdgs/5",
+      "display_name": "Gender equality"
+    },
+    {
+      "id": "https://openalex.org/sdgs/14",
+      "display_name": "Life below water"
+    },
+    {
+      "id": "https://openalex.org/sdgs/15",
+      "display_name": "Life on land"
+    },
+    {
+      "id": "https://openalex.org/sdgs/13",
+      "display_name": "Climate action"
+    },
+    {
+      "id": "https://openalex.org/sdgs/9",
+      "display_name": "Industry, innovation and infrastructure"
+    },
+    {
+      "id": "https://openalex.org/sdgs/17",
+      "display_name": "Partnerships for the goals"
+    },
+    {
+      "id": "https://openalex.org/sdgs/1",
+      "display_name": "No poverty"
+    },
+    {
+      "id": "https://openalex.org/sdgs/12",
+      "display_name": "Responsible consumption and production"
+    }
+  ]
 }

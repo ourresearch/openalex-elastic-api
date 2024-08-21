@@ -1,52 +1,790 @@
 {
-    "id": "languages",
-    "icon": "mdi-translate",
-    "name": "languages",
-    "nameSingular": "language",
-    "displayName": "languages",
-    "displayNameSingular": "language",
-    "descr": "Languages",
-    "eg": "Swahili",
-    "placeholder": "Search languages",
-    "filterName": "languages",
-    "filterKey": "language",
-    "hasAutocomplete": false,
-    "isNative": false,
-    "idRegex": "(?:https:\\/\\/openalex\\.org\\/languages\\/|languages\\/)([a-zA-Z]{2})",
-    "showOnEntityPage": [
-        "id",
-        "display_name"
-    ],
-    "showOnTablePage": [
-        "display_name"
-    ],
-    "columns": {
-        "id": {
-            "id": "id",
-            "subjectEntity": "languages",
-            "entityId": "languages",
-            "objectEntity": "languages",
-            "displayName": "Language ID",
-            "isId": true,
-            "type": "string",
-            "icon": "mdi-tag-outline"
-        },
-        "display_name": {
-            "id": "display_name",
-            "isColumnMandatory": true,
-            "subjectEntity": "languages",
-            "displayName": "name",
-            "type": "string",
-            "actions": [
-                "sort",
-                "column"
-            ],
-            "actionsPopular": [
-                "sort",
-                "column"
-            ],
-            "category": "other",
-            "icon": "mdi-account-outline"
-        }
+  "id": "languages",
+  "icon": "mdi-translate",
+  "name": "languages",
+  "nameSingular": "language",
+  "displayName": "languages",
+  "displayNameSingular": "language",
+  "descr": "Languages",
+  "eg": "Swahili",
+  "placeholder": "Search languages",
+  "filterName": "languages",
+  "filterKey": "language",
+  "hasAutocomplete": false,
+  "isNative": false,
+  "idRegex": "(?:https:\\/\\/openalex\\.org\\/languages\\/|languages\\/)([a-zA-Z]{2})",
+  "showOnEntityPage": [
+    "id",
+    "display_name"
+  ],
+  "showOnTablePage": [
+    "display_name"
+  ],
+  "columns": {
+    "id": {
+      "id": "id",
+      "subjectEntity": "languages",
+      "entityId": "languages",
+      "objectEntity": "languages",
+      "displayName": "Language ID",
+      "isId": true,
+      "type": "string",
+      "icon": "mdi-tag-outline"
+    },
+    "display_name": {
+      "id": "display_name",
+      "isColumnMandatory": true,
+      "subjectEntity": "languages",
+      "displayName": "name",
+      "type": "string",
+      "actions": [
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "category": "other",
+      "icon": "mdi-account-outline"
     }
+  },
+  "values": [
+    {
+      "id": "https://openalex.org/languages/en",
+      "display_name": "English"
+    },
+    {
+      "id": "https://openalex.org/languages/ja",
+      "display_name": "Japanese"
+    },
+    {
+      "id": "https://openalex.org/languages/es",
+      "display_name": "Spanish"
+    },
+    {
+      "id": "https://openalex.org/languages/de",
+      "display_name": "German"
+    },
+    {
+      "id": "https://openalex.org/languages/fr",
+      "display_name": "French"
+    },
+    {
+      "id": "https://openalex.org/languages/ko",
+      "display_name": "Korean"
+    },
+    {
+      "id": "https://openalex.org/languages/pt",
+      "display_name": "Portuguese"
+    },
+    {
+      "id": "https://openalex.org/languages/id",
+      "display_name": "Indonesian"
+    },
+    {
+      "id": "https://openalex.org/languages/ru",
+      "display_name": "Russian"
+    },
+    {
+      "id": "https://openalex.org/languages/it",
+      "display_name": "Italian"
+    },
+    {
+      "id": "https://openalex.org/languages/pl",
+      "display_name": "Polish"
+    },
+    {
+      "id": "https://openalex.org/languages/nl",
+      "display_name": "Dutch"
+    },
+    {
+      "id": "https://openalex.org/languages/tr",
+      "display_name": "Turkish"
+    },
+    {
+      "id": "https://openalex.org/languages/ca",
+      "display_name": "Catalan"
+    },
+    {
+      "id": "https://openalex.org/languages/ar",
+      "display_name": "Arabic"
+    },
+    {
+      "id": "https://openalex.org/languages/fa",
+      "display_name": "Persian"
+    },
+    {
+      "id": "https://openalex.org/languages/sv",
+      "display_name": "Swedish"
+    },
+    {
+      "id": "https://openalex.org/languages/uk",
+      "display_name": "Ukrainian"
+    },
+    {
+      "id": "https://openalex.org/languages/cs",
+      "display_name": "Czech"
+    },
+    {
+      "id": "https://openalex.org/languages/ro",
+      "display_name": "Romanian"
+    },
+    {
+      "id": "https://openalex.org/languages/hr",
+      "display_name": "Croatian"
+    },
+    {
+      "id": "https://openalex.org/languages/no",
+      "display_name": "Norwegian"
+    },
+    {
+      "id": "https://openalex.org/languages/da",
+      "display_name": "Danish"
+    },
+    {
+      "id": "https://openalex.org/languages/af",
+      "display_name": "Afrikaans"
+    },
+    {
+      "id": "https://openalex.org/languages/fi",
+      "display_name": "Finnish"
+    },
+    {
+      "id": "https://openalex.org/languages/el",
+      "display_name": "Modern Greek (1453-)"
+    },
+    {
+      "id": "https://openalex.org/languages/vi",
+      "display_name": "Vietnamese"
+    },
+    {
+      "id": "https://openalex.org/languages/et",
+      "display_name": "Estonian"
+    },
+    {
+      "id": "https://openalex.org/languages/hu",
+      "display_name": "Hungarian"
+    },
+    {
+      "id": "https://openalex.org/languages/tl",
+      "display_name": "Tagalog"
+    },
+    {
+      "id": "https://openalex.org/languages/sl",
+      "display_name": "Slovenian"
+    },
+    {
+      "id": "https://openalex.org/languages/lt",
+      "display_name": "Lithuanian"
+    },
+    {
+      "id": "https://openalex.org/languages/cy",
+      "display_name": "Welsh"
+    },
+    {
+      "id": "https://openalex.org/languages/th",
+      "display_name": "Thai"
+    },
+    {
+      "id": "https://openalex.org/languages/sk",
+      "display_name": "Slovak"
+    },
+    {
+      "id": "https://openalex.org/languages/bg",
+      "display_name": "Bulgarian"
+    },
+    {
+      "id": "https://openalex.org/languages/lv",
+      "display_name": "Latvian"
+    },
+    {
+      "id": "https://openalex.org/languages/sw",
+      "display_name": "Swahili (macrolanguage)"
+    },
+    {
+      "id": "https://openalex.org/languages/so",
+      "display_name": "Somali"
+    },
+    {
+      "id": "https://openalex.org/languages/mk",
+      "display_name": "Macedonian"
+    },
+    {
+      "id": "https://openalex.org/languages/sq",
+      "display_name": "Albanian"
+    },
+    {
+      "id": "https://openalex.org/languages/hi",
+      "display_name": "Hindi"
+    },
+    {
+      "id": "https://openalex.org/languages/he",
+      "display_name": "Hebrew"
+    },
+    {
+      "id": "https://openalex.org/languages/ur",
+      "display_name": "Urdu"
+    },
+    {
+      "id": "https://openalex.org/languages/ne",
+      "display_name": "Nepali (macrolanguage)"
+    },
+    {
+      "id": "https://openalex.org/languages/mr",
+      "display_name": "Marathi"
+    },
+    {
+      "id": "https://openalex.org/languages/ta",
+      "display_name": "Tamil"
+    },
+    {
+      "id": "https://openalex.org/languages/bn",
+      "display_name": "Bengali"
+    },
+    {
+      "id": "https://openalex.org/languages/gu",
+      "display_name": "Gujarati"
+    },
+    {
+      "id": "https://openalex.org/languages/ml",
+      "display_name": "Malayalam"
+    },
+    {
+      "id": "https://openalex.org/languages/kn",
+      "display_name": "Kannada"
+    },
+    {
+      "id": "https://openalex.org/languages/te",
+      "display_name": "Telugu"
+    },
+    {
+      "id": "https://openalex.org/languages/pa",
+      "display_name": "Panjabi"
+    },
+    {
+      "id": "https://openalex.org/languages/aa",
+      "display_name": "Afar"
+    },
+    {
+      "id": "https://openalex.org/languages/ab",
+      "display_name": "Abkhazian"
+    },
+    {
+      "id": "https://openalex.org/languages/ae",
+      "display_name": "Avestan"
+    },
+    {
+      "id": "https://openalex.org/languages/ak",
+      "display_name": "Akan"
+    },
+    {
+      "id": "https://openalex.org/languages/am",
+      "display_name": "Amharic"
+    },
+    {
+      "id": "https://openalex.org/languages/an",
+      "display_name": "Aragonese"
+    },
+    {
+      "id": "https://openalex.org/languages/as",
+      "display_name": "Assamese"
+    },
+    {
+      "id": "https://openalex.org/languages/av",
+      "display_name": "Avaric"
+    },
+    {
+      "id": "https://openalex.org/languages/ay",
+      "display_name": "Aymara"
+    },
+    {
+      "id": "https://openalex.org/languages/az",
+      "display_name": "Azerbaijani"
+    },
+    {
+      "id": "https://openalex.org/languages/ba",
+      "display_name": "Bashkir"
+    },
+    {
+      "id": "https://openalex.org/languages/be",
+      "display_name": "Belarusian"
+    },
+    {
+      "id": "https://openalex.org/languages/bi",
+      "display_name": "Bislama"
+    },
+    {
+      "id": "https://openalex.org/languages/bm",
+      "display_name": "Bambara"
+    },
+    {
+      "id": "https://openalex.org/languages/bo",
+      "display_name": "Tibetan"
+    },
+    {
+      "id": "https://openalex.org/languages/br",
+      "display_name": "Breton"
+    },
+    {
+      "id": "https://openalex.org/languages/bs",
+      "display_name": "Bosnian"
+    },
+    {
+      "id": "https://openalex.org/languages/ce",
+      "display_name": "Chechen"
+    },
+    {
+      "id": "https://openalex.org/languages/ch",
+      "display_name": "Chamorro"
+    },
+    {
+      "id": "https://openalex.org/languages/co",
+      "display_name": "Corsican"
+    },
+    {
+      "id": "https://openalex.org/languages/cr",
+      "display_name": "Cree"
+    },
+    {
+      "id": "https://openalex.org/languages/cu",
+      "display_name": "Church Slavic"
+    },
+    {
+      "id": "https://openalex.org/languages/cv",
+      "display_name": "Chuvash"
+    },
+    {
+      "id": "https://openalex.org/languages/dv",
+      "display_name": "Dhivehi"
+    },
+    {
+      "id": "https://openalex.org/languages/dz",
+      "display_name": "Dzongkha"
+    },
+    {
+      "id": "https://openalex.org/languages/ee",
+      "display_name": "Ewe"
+    },
+    {
+      "id": "https://openalex.org/languages/eo",
+      "display_name": "Esperanto"
+    },
+    {
+      "id": "https://openalex.org/languages/eu",
+      "display_name": "Basque"
+    },
+    {
+      "id": "https://openalex.org/languages/ff",
+      "display_name": "Fulah"
+    },
+    {
+      "id": "https://openalex.org/languages/fj",
+      "display_name": "Fijian"
+    },
+    {
+      "id": "https://openalex.org/languages/fo",
+      "display_name": "Faroese"
+    },
+    {
+      "id": "https://openalex.org/languages/fy",
+      "display_name": "Western Frisian"
+    },
+    {
+      "id": "https://openalex.org/languages/ga",
+      "display_name": "Irish"
+    },
+    {
+      "id": "https://openalex.org/languages/gd",
+      "display_name": "Scottish Gaelic"
+    },
+    {
+      "id": "https://openalex.org/languages/gl",
+      "display_name": "Galician"
+    },
+    {
+      "id": "https://openalex.org/languages/gn",
+      "display_name": "Guarani"
+    },
+    {
+      "id": "https://openalex.org/languages/gv",
+      "display_name": "Manx"
+    },
+    {
+      "id": "https://openalex.org/languages/ha",
+      "display_name": "Hausa"
+    },
+    {
+      "id": "https://openalex.org/languages/ho",
+      "display_name": "Hiri Motu"
+    },
+    {
+      "id": "https://openalex.org/languages/ht",
+      "display_name": "Haitian"
+    },
+    {
+      "id": "https://openalex.org/languages/hy",
+      "display_name": "Armenian"
+    },
+    {
+      "id": "https://openalex.org/languages/hz",
+      "display_name": "Herero"
+    },
+    {
+      "id": "https://openalex.org/languages/ia",
+      "display_name": "Interlingua (International Auxiliary Language Association)"
+    },
+    {
+      "id": "https://openalex.org/languages/ie",
+      "display_name": "Interlingue"
+    },
+    {
+      "id": "https://openalex.org/languages/ig",
+      "display_name": "Igbo"
+    },
+    {
+      "id": "https://openalex.org/languages/ii",
+      "display_name": "Sichuan Yi"
+    },
+    {
+      "id": "https://openalex.org/languages/ik",
+      "display_name": "Inupiaq"
+    },
+    {
+      "id": "https://openalex.org/languages/io",
+      "display_name": "Ido"
+    },
+    {
+      "id": "https://openalex.org/languages/is",
+      "display_name": "Icelandic"
+    },
+    {
+      "id": "https://openalex.org/languages/iu",
+      "display_name": "Inuktitut"
+    },
+    {
+      "id": "https://openalex.org/languages/jv",
+      "display_name": "Javanese"
+    },
+    {
+      "id": "https://openalex.org/languages/ka",
+      "display_name": "Georgian"
+    },
+    {
+      "id": "https://openalex.org/languages/kg",
+      "display_name": "Kongo"
+    },
+    {
+      "id": "https://openalex.org/languages/ki",
+      "display_name": "Kikuyu"
+    },
+    {
+      "id": "https://openalex.org/languages/kj",
+      "display_name": "Kuanyama"
+    },
+    {
+      "id": "https://openalex.org/languages/kk",
+      "display_name": "Kazakh"
+    },
+    {
+      "id": "https://openalex.org/languages/kl",
+      "display_name": "Kalaallisut"
+    },
+    {
+      "id": "https://openalex.org/languages/km",
+      "display_name": "Central Khmer"
+    },
+    {
+      "id": "https://openalex.org/languages/kr",
+      "display_name": "Kanuri"
+    },
+    {
+      "id": "https://openalex.org/languages/ks",
+      "display_name": "Kashmiri"
+    },
+    {
+      "id": "https://openalex.org/languages/ku",
+      "display_name": "Kurdish"
+    },
+    {
+      "id": "https://openalex.org/languages/kv",
+      "display_name": "Komi"
+    },
+    {
+      "id": "https://openalex.org/languages/kw",
+      "display_name": "Cornish"
+    },
+    {
+      "id": "https://openalex.org/languages/ky",
+      "display_name": "Kirghiz"
+    },
+    {
+      "id": "https://openalex.org/languages/la",
+      "display_name": "Latin"
+    },
+    {
+      "id": "https://openalex.org/languages/lb",
+      "display_name": "Luxembourgish"
+    },
+    {
+      "id": "https://openalex.org/languages/lg",
+      "display_name": "Ganda"
+    },
+    {
+      "id": "https://openalex.org/languages/li",
+      "display_name": "Limburgan"
+    },
+    {
+      "id": "https://openalex.org/languages/ln",
+      "display_name": "Lingala"
+    },
+    {
+      "id": "https://openalex.org/languages/lo",
+      "display_name": "Lao"
+    },
+    {
+      "id": "https://openalex.org/languages/lu",
+      "display_name": "Luba-Katanga"
+    },
+    {
+      "id": "https://openalex.org/languages/mg",
+      "display_name": "Malagasy"
+    },
+    {
+      "id": "https://openalex.org/languages/mh",
+      "display_name": "Marshallese"
+    },
+    {
+      "id": "https://openalex.org/languages/mi",
+      "display_name": "Maori"
+    },
+    {
+      "id": "https://openalex.org/languages/mn",
+      "display_name": "Mongolian"
+    },
+    {
+      "id": "https://openalex.org/languages/ms",
+      "display_name": "Malay (macrolanguage)"
+    },
+    {
+      "id": "https://openalex.org/languages/mt",
+      "display_name": "Maltese"
+    },
+    {
+      "id": "https://openalex.org/languages/my",
+      "display_name": "Burmese"
+    },
+    {
+      "id": "https://openalex.org/languages/na",
+      "display_name": "Nauru"
+    },
+    {
+      "id": "https://openalex.org/languages/nb",
+      "display_name": "Norwegian Bokmål"
+    },
+    {
+      "id": "https://openalex.org/languages/nd",
+      "display_name": "North Ndebele"
+    },
+    {
+      "id": "https://openalex.org/languages/ng",
+      "display_name": "Ndonga"
+    },
+    {
+      "id": "https://openalex.org/languages/nn",
+      "display_name": "Norwegian Nynorsk"
+    },
+    {
+      "id": "https://openalex.org/languages/nr",
+      "display_name": "South Ndebele"
+    },
+    {
+      "id": "https://openalex.org/languages/nv",
+      "display_name": "Navajo"
+    },
+    {
+      "id": "https://openalex.org/languages/ny",
+      "display_name": "Nyanja"
+    },
+    {
+      "id": "https://openalex.org/languages/oc",
+      "display_name": "Occitan (post 1500)"
+    },
+    {
+      "id": "https://openalex.org/languages/oj",
+      "display_name": "Ojibwa"
+    },
+    {
+      "id": "https://openalex.org/languages/om",
+      "display_name": "Oromo"
+    },
+    {
+      "id": "https://openalex.org/languages/or",
+      "display_name": "Oriya (macrolanguage)"
+    },
+    {
+      "id": "https://openalex.org/languages/os",
+      "display_name": "Ossetian"
+    },
+    {
+      "id": "https://openalex.org/languages/pi",
+      "display_name": "Pali"
+    },
+    {
+      "id": "https://openalex.org/languages/ps",
+      "display_name": "Pushto"
+    },
+    {
+      "id": "https://openalex.org/languages/qu",
+      "display_name": "Quechua"
+    },
+    {
+      "id": "https://openalex.org/languages/rm",
+      "display_name": "Romansh"
+    },
+    {
+      "id": "https://openalex.org/languages/rn",
+      "display_name": "Rundi"
+    },
+    {
+      "id": "https://openalex.org/languages/rw",
+      "display_name": "Kinyarwanda"
+    },
+    {
+      "id": "https://openalex.org/languages/sa",
+      "display_name": "Sanskrit"
+    },
+    {
+      "id": "https://openalex.org/languages/sc",
+      "display_name": "Sardinian"
+    },
+    {
+      "id": "https://openalex.org/languages/sd",
+      "display_name": "Sindhi"
+    },
+    {
+      "id": "https://openalex.org/languages/se",
+      "display_name": "Northern Sami"
+    },
+    {
+      "id": "https://openalex.org/languages/sg",
+      "display_name": "Sango"
+    },
+    {
+      "id": "https://openalex.org/languages/sh",
+      "display_name": "Serbo-Croatian"
+    },
+    {
+      "id": "https://openalex.org/languages/si",
+      "display_name": "Sinhala"
+    },
+    {
+      "id": "https://openalex.org/languages/sm",
+      "display_name": "Samoan"
+    },
+    {
+      "id": "https://openalex.org/languages/sn",
+      "display_name": "Shona"
+    },
+    {
+      "id": "https://openalex.org/languages/sr",
+      "display_name": "Serbian"
+    },
+    {
+      "id": "https://openalex.org/languages/ss",
+      "display_name": "Swati"
+    },
+    {
+      "id": "https://openalex.org/languages/st",
+      "display_name": "Southern Sotho"
+    },
+    {
+      "id": "https://openalex.org/languages/su",
+      "display_name": "Sundanese"
+    },
+    {
+      "id": "https://openalex.org/languages/tg",
+      "display_name": "Tajik"
+    },
+    {
+      "id": "https://openalex.org/languages/ti",
+      "display_name": "Tigrinya"
+    },
+    {
+      "id": "https://openalex.org/languages/tk",
+      "display_name": "Turkmen"
+    },
+    {
+      "id": "https://openalex.org/languages/tn",
+      "display_name": "Tswana"
+    },
+    {
+      "id": "https://openalex.org/languages/to",
+      "display_name": "Tonga (Tonga Islands)"
+    },
+    {
+      "id": "https://openalex.org/languages/ts",
+      "display_name": "Tsonga"
+    },
+    {
+      "id": "https://openalex.org/languages/tt",
+      "display_name": "Tatar"
+    },
+    {
+      "id": "https://openalex.org/languages/tw",
+      "display_name": "Twi"
+    },
+    {
+      "id": "https://openalex.org/languages/ty",
+      "display_name": "Tahitian"
+    },
+    {
+      "id": "https://openalex.org/languages/ug",
+      "display_name": "Uighur"
+    },
+    {
+      "id": "https://openalex.org/languages/uz",
+      "display_name": "Uzbek"
+    },
+    {
+      "id": "https://openalex.org/languages/ve",
+      "display_name": "Venda"
+    },
+    {
+      "id": "https://openalex.org/languages/vo",
+      "display_name": "Volapük"
+    },
+    {
+      "id": "https://openalex.org/languages/wa",
+      "display_name": "Walloon"
+    },
+    {
+      "id": "https://openalex.org/languages/wo",
+      "display_name": "Wolof"
+    },
+    {
+      "id": "https://openalex.org/languages/xh",
+      "display_name": "Xhosa"
+    },
+    {
+      "id": "https://openalex.org/languages/yi",
+      "display_name": "Yiddish"
+    },
+    {
+      "id": "https://openalex.org/languages/yo",
+      "display_name": "Yoruba"
+    },
+    {
+      "id": "https://openalex.org/languages/za",
+      "display_name": "Zhuang"
+    },
+    {
+      "id": "https://openalex.org/languages/zh",
+      "display_name": "Chinese"
+    },
+    {
+      "id": "https://openalex.org/languages/zu",
+      "display_name": "Zulu"
+    }
+  ]
 }

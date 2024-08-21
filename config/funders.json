@@ -109,5 +109,6 @@
             "actions": [],
             "icon": "mdi-file-document-outline"
         }
-    }
+    },
+    "values": null
 }

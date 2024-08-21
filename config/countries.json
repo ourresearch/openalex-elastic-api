@@ -1,66 +1,1056 @@
 {
-    "id": "countries",
-    "icon": "mdi-earth",
-    "name": "countries",
-    "nameSingular": "country",
-    "displayName": "countries",
-    "displayNameSingular": "country",
-    "descr": "Countries",
-    "eg": "Nigeria",
-    "placeholder": "Search countries",
-    "filterName": "countries",
-    "filterKey": "authorships.countries",
-    "hasAutocomplete": false,
-    "isNative": false,
-    "idRegex": "(?:https:\\/\\/openalex\\.org\\/countries\\/|countries\\/)([a-zA-Z]{2})",
-    "showOnEntityPage": [
-        "id",
-        "display_name"
-    ],
-    "showOnTablePage": [
-        "display_name"
-    ],
-    "columns": {
-        "id": {
-            "id": "id",
-            "subjectEntity": "countries",
-            "entityId": "countries",
-            "objectEntity": "countries",
-            "displayName": "Country ID",
-            "isId": true,
-            "type": "string",
-            "icon": "mdi-tag-outline"
-        },
-        "display_name": {
-            "id": "display_name",
-            "isColumnMandatory": true,
-            "subjectEntity": "countries",
-            "displayName": "name",
-            "type": "string",
-            "actions": [
-                "sort",
-                "column"
-            ],
-            "actionsPopular": [
-                "sort",
-                "column"
-            ],
-            "category": "other",
-            "icon": "mdi-account-outline"
-        },
-        "count(works)": {
-            "id": "count(works)",
-            "subjectEntity": "countries",
-            "displayName": "works count",
-            "type": "number",
-            "actions": [
-                "sort",
-                "column"
-            ],
-            "actionsPopular": [
-                "sort",
-                "column"
-            ]
-        }
+  "id": "countries",
+  "icon": "mdi-earth",
+  "name": "countries",
+  "nameSingular": "country",
+  "displayName": "countries",
+  "displayNameSingular": "country",
+  "descr": "Countries",
+  "eg": "Nigeria",
+  "placeholder": "Search countries",
+  "filterName": "countries",
+  "filterKey": "authorships.countries",
+  "hasAutocomplete": false,
+  "isNative": false,
+  "idRegex": "(?:https:\\/\\/openalex\\.org\\/countries\\/|countries\\/)([a-zA-Z]{2})",
+  "showOnEntityPage": [
+    "id",
+    "display_name"
+  ],
+  "showOnTablePage": [
+    "display_name"
+  ],
+  "columns": {
+    "id": {
+      "id": "id",
+      "subjectEntity": "countries",
+      "entityId": "countries",
+      "objectEntity": "countries",
+      "displayName": "Country ID",
+      "isId": true,
+      "type": "string",
+      "icon": "mdi-tag-outline"
+    },
+    "display_name": {
+      "id": "display_name",
+      "isColumnMandatory": true,
+      "subjectEntity": "countries",
+      "displayName": "name",
+      "type": "string",
+      "actions": [
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "category": "other",
+      "icon": "mdi-account-outline"
+    },
+    "count(works)": {
+      "id": "count(works)",
+      "subjectEntity": "countries",
+      "displayName": "works count",
+      "type": "number",
+      "actions": [
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ]
     }
+  },
+  "values": [
+    {
+      "id": "https://openalex.org/countries/US",
+      "display_name": "United States of America"
+    },
+    {
+      "id": "https://openalex.org/countries/CN",
+      "display_name": "China"
+    },
+    {
+      "id": "https://openalex.org/countries/GB",
+      "display_name": "United Kingdom of Great Britain and Northern Ireland"
+    },
+    {
+      "id": "https://openalex.org/countries/DE",
+      "display_name": "Germany"
+    },
+    {
+      "id": "https://openalex.org/countries/JP",
+      "display_name": "Japan"
+    },
+    {
+      "id": "https://openalex.org/countries/FR",
+      "display_name": "France"
+    },
+    {
+      "id": "https://openalex.org/countries/IN",
+      "display_name": "India"
+    },
+    {
+      "id": "https://openalex.org/countries/CA",
+      "display_name": "Canada"
+    },
+    {
+      "id": "https://openalex.org/countries/IT",
+      "display_name": "Italy"
+    },
+    {
+      "id": "https://openalex.org/countries/BR",
+      "display_name": "Brazil"
+    },
+    {
+      "id": "https://openalex.org/countries/AU",
+      "display_name": "Australia"
+    },
+    {
+      "id": "https://openalex.org/countries/ES",
+      "display_name": "Spain"
+    },
+    {
+      "id": "https://openalex.org/countries/RU",
+      "display_name": "Russian Federation"
+    },
+    {
+      "id": "https://openalex.org/countries/ID",
+      "display_name": "Indonesia"
+    },
+    {
+      "id": "https://openalex.org/countries/NL",
+      "display_name": "Netherlands"
+    },
+    {
+      "id": "https://openalex.org/countries/KR",
+      "display_name": "Korea, Republic of"
+    },
+    {
+      "id": "https://openalex.org/countries/PL",
+      "display_name": "Poland"
+    },
+    {
+      "id": "https://openalex.org/countries/CH",
+      "display_name": "Switzerland"
+    },
+    {
+      "id": "https://openalex.org/countries/TR",
+      "display_name": "Turkey"
+    },
+    {
+      "id": "https://openalex.org/countries/SE",
+      "display_name": "Sweden"
+    },
+    {
+      "id": "https://openalex.org/countries/BE",
+      "display_name": "Belgium"
+    },
+    {
+      "id": "https://openalex.org/countries/IR",
+      "display_name": "Iran, Islamic Republic of"
+    },
+    {
+      "id": "https://openalex.org/countries/TW",
+      "display_name": "Taiwan, Province of China"
+    },
+    {
+      "id": "https://openalex.org/countries/MX",
+      "display_name": "Mexico"
+    },
+    {
+      "id": "https://openalex.org/countries/DK",
+      "display_name": "Denmark"
+    },
+    {
+      "id": "https://openalex.org/countries/AT",
+      "display_name": "Austria"
+    },
+    {
+      "id": "https://openalex.org/countries/IL",
+      "display_name": "Israel"
+    },
+    {
+      "id": "https://openalex.org/countries/PT",
+      "display_name": "Portugal"
+    },
+    {
+      "id": "https://openalex.org/countries/NO",
+      "display_name": "Norway"
+    },
+    {
+      "id": "https://openalex.org/countries/CZ",
+      "display_name": "Czechia"
+    },
+    {
+      "id": "https://openalex.org/countries/FI",
+      "display_name": "Finland"
+    },
+    {
+      "id": "https://openalex.org/countries/ZA",
+      "display_name": "South Africa"
+    },
+    {
+      "id": "https://openalex.org/countries/MY",
+      "display_name": "Malaysia"
+    },
+    {
+      "id": "https://openalex.org/countries/EG",
+      "display_name": "Egypt"
+    },
+    {
+      "id": "https://openalex.org/countries/GR",
+      "display_name": "Greece"
+    },
+    {
+      "id": "https://openalex.org/countries/AR",
+      "display_name": "Argentina"
+    },
+    {
+      "id": "https://openalex.org/countries/SG",
+      "display_name": "Singapore"
+    },
+    {
+      "id": "https://openalex.org/countries/UA",
+      "display_name": "Ukraine"
+    },
+    {
+      "id": "https://openalex.org/countries/SA",
+      "display_name": "Saudi Arabia"
+    },
+    {
+      "id": "https://openalex.org/countries/NZ",
+      "display_name": "New Zealand"
+    },
+    {
+      "id": "https://openalex.org/countries/PK",
+      "display_name": "Pakistan"
+    },
+    {
+      "id": "https://openalex.org/countries/CO",
+      "display_name": "Colombia"
+    },
+    {
+      "id": "https://openalex.org/countries/IE",
+      "display_name": "Ireland"
+    },
+    {
+      "id": "https://openalex.org/countries/HU",
+      "display_name": "Hungary"
+    },
+    {
+      "id": "https://openalex.org/countries/CL",
+      "display_name": "Chile"
+    },
+    {
+      "id": "https://openalex.org/countries/HK",
+      "display_name": "Hong Kong"
+    },
+    {
+      "id": "https://openalex.org/countries/NG",
+      "display_name": "Nigeria"
+    },
+    {
+      "id": "https://openalex.org/countries/RO",
+      "display_name": "Romania"
+    },
+    {
+      "id": "https://openalex.org/countries/TH",
+      "display_name": "Thailand"
+    },
+    {
+      "id": "https://openalex.org/countries/HR",
+      "display_name": "Croatia"
+    },
+    {
+      "id": "https://openalex.org/countries/SK",
+      "display_name": "Slovakia"
+    },
+    {
+      "id": "https://openalex.org/countries/BD",
+      "display_name": "Bangladesh"
+    },
+    {
+      "id": "https://openalex.org/countries/RS",
+      "display_name": "Serbia"
+    },
+    {
+      "id": "https://openalex.org/countries/VN",
+      "display_name": "Viet Nam"
+    },
+    {
+      "id": "https://openalex.org/countries/IQ",
+      "display_name": "Iraq"
+    },
+    {
+      "id": "https://openalex.org/countries/MA",
+      "display_name": "Morocco"
+    },
+    {
+      "id": "https://openalex.org/countries/BG",
+      "display_name": "Bulgaria"
+    },
+    {
+      "id": "https://openalex.org/countries/PE",
+      "display_name": "Peru"
+    },
+    {
+      "id": "https://openalex.org/countries/SI",
+      "display_name": "Slovenia"
+    },
+    {
+      "id": "https://openalex.org/countries/TN",
+      "display_name": "Tunisia"
+    },
+    {
+      "id": "https://openalex.org/countries/DZ",
+      "display_name": "Algeria"
+    },
+    {
+      "id": "https://openalex.org/countries/CU",
+      "display_name": "Cuba"
+    },
+    {
+      "id": "https://openalex.org/countries/AE",
+      "display_name": "United Arab Emirates"
+    },
+    {
+      "id": "https://openalex.org/countries/PA",
+      "display_name": "Panama"
+    },
+    {
+      "id": "https://openalex.org/countries/EC",
+      "display_name": "Ecuador"
+    },
+    {
+      "id": "https://openalex.org/countries/PH",
+      "display_name": "Philippines"
+    },
+    {
+      "id": "https://openalex.org/countries/KE",
+      "display_name": "Kenya"
+    },
+    {
+      "id": "https://openalex.org/countries/ET",
+      "display_name": "Ethiopia"
+    },
+    {
+      "id": "https://openalex.org/countries/VE",
+      "display_name": "Venezuela, Bolivarian Republic of"
+    },
+    {
+      "id": "https://openalex.org/countries/JO",
+      "display_name": "Jordan"
+    },
+    {
+      "id": "https://openalex.org/countries/LT",
+      "display_name": "Lithuania"
+    },
+    {
+      "id": "https://openalex.org/countries/GH",
+      "display_name": "Ghana"
+    },
+    {
+      "id": "https://openalex.org/countries/NP",
+      "display_name": "Nepal"
+    },
+    {
+      "id": "https://openalex.org/countries/KZ",
+      "display_name": "Kazakhstan"
+    },
+    {
+      "id": "https://openalex.org/countries/QA",
+      "display_name": "Qatar"
+    },
+    {
+      "id": "https://openalex.org/countries/EE",
+      "display_name": "Estonia"
+    },
+    {
+      "id": "https://openalex.org/countries/BY",
+      "display_name": "Belarus"
+    },
+    {
+      "id": "https://openalex.org/countries/CR",
+      "display_name": "Costa Rica"
+    },
+    {
+      "id": "https://openalex.org/countries/LB",
+      "display_name": "Lebanon"
+    },
+    {
+      "id": "https://openalex.org/countries/CY",
+      "display_name": "Cyprus"
+    },
+    {
+      "id": "https://openalex.org/countries/LK",
+      "display_name": "Sri Lanka"
+    },
+    {
+      "id": "https://openalex.org/countries/LU",
+      "display_name": "Luxembourg"
+    },
+    {
+      "id": "https://openalex.org/countries/UZ",
+      "display_name": "Uzbekistan"
+    },
+    {
+      "id": "https://openalex.org/countries/LV",
+      "display_name": "Latvia"
+    },
+    {
+      "id": "https://openalex.org/countries/UY",
+      "display_name": "Uruguay"
+    },
+    {
+      "id": "https://openalex.org/countries/PR",
+      "display_name": "Puerto Rico"
+    },
+    {
+      "id": "https://openalex.org/countries/TZ",
+      "display_name": "Tanzania, United Republic of"
+    },
+    {
+      "id": "https://openalex.org/countries/UG",
+      "display_name": "Uganda"
+    },
+    {
+      "id": "https://openalex.org/countries/CM",
+      "display_name": "Cameroon"
+    },
+    {
+      "id": "https://openalex.org/countries/KW",
+      "display_name": "Kuwait"
+    },
+    {
+      "id": "https://openalex.org/countries/OM",
+      "display_name": "Oman"
+    },
+    {
+      "id": "https://openalex.org/countries/MO",
+      "display_name": "Macao"
+    },
+    {
+      "id": "https://openalex.org/countries/AZ",
+      "display_name": "Azerbaijan"
+    },
+    {
+      "id": "https://openalex.org/countries/IS",
+      "display_name": "Iceland"
+    },
+    {
+      "id": "https://openalex.org/countries/BA",
+      "display_name": "Bosnia and Herzegovina"
+    },
+    {
+      "id": "https://openalex.org/countries/TJ",
+      "display_name": "Tajikistan"
+    },
+    {
+      "id": "https://openalex.org/countries/AM",
+      "display_name": "Armenia"
+    },
+    {
+      "id": "https://openalex.org/countries/GE",
+      "display_name": "Georgia"
+    },
+    {
+      "id": "https://openalex.org/countries/BO",
+      "display_name": "Bolivia, Plurinational State of"
+    },
+    {
+      "id": "https://openalex.org/countries/SD",
+      "display_name": "Sudan"
+    },
+    {
+      "id": "https://openalex.org/countries/MN",
+      "display_name": "Mongolia"
+    },
+    {
+      "id": "https://openalex.org/countries/ZW",
+      "display_name": "Zimbabwe"
+    },
+    {
+      "id": "https://openalex.org/countries/MK",
+      "display_name": "North Macedonia"
+    },
+    {
+      "id": "https://openalex.org/countries/SN",
+      "display_name": "Senegal"
+    },
+    {
+      "id": "https://openalex.org/countries/MD",
+      "display_name": "Moldova, Republic of"
+    },
+    {
+      "id": "https://openalex.org/countries/CI",
+      "display_name": "Côte d'Ivoire"
+    },
+    {
+      "id": "https://openalex.org/countries/YE",
+      "display_name": "Yemen"
+    },
+    {
+      "id": "https://openalex.org/countries/ZM",
+      "display_name": "Zambia"
+    },
+    {
+      "id": "https://openalex.org/countries/SS",
+      "display_name": "South Sudan"
+    },
+    {
+      "id": "https://openalex.org/countries/MZ",
+      "display_name": "Mozambique"
+    },
+    {
+      "id": "https://openalex.org/countries/KH",
+      "display_name": "Cambodia"
+    },
+    {
+      "id": "https://openalex.org/countries/PS",
+      "display_name": "Palestine, State of"
+    },
+    {
+      "id": "https://openalex.org/countries/BJ",
+      "display_name": "Benin"
+    },
+    {
+      "id": "https://openalex.org/countries/MT",
+      "display_name": "Malta"
+    },
+    {
+      "id": "https://openalex.org/countries/PY",
+      "display_name": "Paraguay"
+    },
+    {
+      "id": "https://openalex.org/countries/BH",
+      "display_name": "Bahrain"
+    },
+    {
+      "id": "https://openalex.org/countries/GT",
+      "display_name": "Guatemala"
+    },
+    {
+      "id": "https://openalex.org/countries/AL",
+      "display_name": "Albania"
+    },
+    {
+      "id": "https://openalex.org/countries/BF",
+      "display_name": "Burkina Faso"
+    },
+    {
+      "id": "https://openalex.org/countries/MW",
+      "display_name": "Malawi"
+    },
+    {
+      "id": "https://openalex.org/countries/ML",
+      "display_name": "Mali"
+    },
+    {
+      "id": "https://openalex.org/countries/JM",
+      "display_name": "Jamaica"
+    },
+    {
+      "id": "https://openalex.org/countries/MM",
+      "display_name": "Myanmar"
+    },
+    {
+      "id": "https://openalex.org/countries/SY",
+      "display_name": "Syrian Arab Republic"
+    },
+    {
+      "id": "https://openalex.org/countries/CD",
+      "display_name": "Congo, Democratic Republic of the"
+    },
+    {
+      "id": "https://openalex.org/countries/BW",
+      "display_name": "Botswana"
+    },
+    {
+      "id": "https://openalex.org/countries/NE",
+      "display_name": "Niger"
+    },
+    {
+      "id": "https://openalex.org/countries/LY",
+      "display_name": "Libya"
+    },
+    {
+      "id": "https://openalex.org/countries/RE",
+      "display_name": "Réunion"
+    },
+    {
+      "id": "https://openalex.org/countries/BN",
+      "display_name": "Brunei Darussalam"
+    },
+    {
+      "id": "https://openalex.org/countries/BI",
+      "display_name": "Burundi"
+    },
+    {
+      "id": "https://openalex.org/countries/VG",
+      "display_name": "Virgin Islands, British"
+    },
+    {
+      "id": "https://openalex.org/countries/RW",
+      "display_name": "Rwanda"
+    },
+    {
+      "id": "https://openalex.org/countries/ME",
+      "display_name": "Montenegro"
+    },
+    {
+      "id": "https://openalex.org/countries/SV",
+      "display_name": "El Salvador"
+    },
+    {
+      "id": "https://openalex.org/countries/XK",
+      "display_name": "Kosovo"
+    },
+    {
+      "id": "https://openalex.org/countries/CG",
+      "display_name": "Congo"
+    },
+    {
+      "id": "https://openalex.org/countries/TT",
+      "display_name": "Trinidad and Tobago"
+    },
+    {
+      "id": "https://openalex.org/countries/NI",
+      "display_name": "Nicaragua"
+    },
+    {
+      "id": "https://openalex.org/countries/KG",
+      "display_name": "Kyrgyzstan"
+    },
+    {
+      "id": "https://openalex.org/countries/MG",
+      "display_name": "Madagascar"
+    },
+    {
+      "id": "https://openalex.org/countries/HN",
+      "display_name": "Honduras"
+    },
+    {
+      "id": "https://openalex.org/countries/DO",
+      "display_name": "Dominican Republic"
+    },
+    {
+      "id": "https://openalex.org/countries/NA",
+      "display_name": "Namibia"
+    },
+    {
+      "id": "https://openalex.org/countries/FJ",
+      "display_name": "Fiji"
+    },
+    {
+      "id": "https://openalex.org/countries/MU",
+      "display_name": "Mauritius"
+    },
+    {
+      "id": "https://openalex.org/countries/GP",
+      "display_name": "Guadeloupe"
+    },
+    {
+      "id": "https://openalex.org/countries/AF",
+      "display_name": "Afghanistan"
+    },
+    {
+      "id": "https://openalex.org/countries/PG",
+      "display_name": "Papua New Guinea"
+    },
+    {
+      "id": "https://openalex.org/countries/AO",
+      "display_name": "Angola"
+    },
+    {
+      "id": "https://openalex.org/countries/TG",
+      "display_name": "Togo"
+    },
+    {
+      "id": "https://openalex.org/countries/GM",
+      "display_name": "Gambia"
+    },
+    {
+      "id": "https://openalex.org/countries/ST",
+      "display_name": "Sao Tome and Principe"
+    },
+    {
+      "id": "https://openalex.org/countries/GA",
+      "display_name": "Gabon"
+    },
+    {
+      "id": "https://openalex.org/countries/GD",
+      "display_name": "Grenada"
+    },
+    {
+      "id": "https://openalex.org/countries/LA",
+      "display_name": "Lao People's Democratic Republic"
+    },
+    {
+      "id": "https://openalex.org/countries/GN",
+      "display_name": "Guinea"
+    },
+    {
+      "id": "https://openalex.org/countries/SL",
+      "display_name": "Sierra Leone"
+    },
+    {
+      "id": "https://openalex.org/countries/MC",
+      "display_name": "Monaco"
+    },
+    {
+      "id": "https://openalex.org/countries/BB",
+      "display_name": "Barbados"
+    },
+    {
+      "id": "https://openalex.org/countries/LI",
+      "display_name": "Liechtenstein"
+    },
+    {
+      "id": "https://openalex.org/countries/NC",
+      "display_name": "New Caledonia"
+    },
+    {
+      "id": "https://openalex.org/countries/GW",
+      "display_name": "Guinea-Bissau"
+    },
+    {
+      "id": "https://openalex.org/countries/PF",
+      "display_name": "French Polynesia"
+    },
+    {
+      "id": "https://openalex.org/countries/MQ",
+      "display_name": "Martinique"
+    },
+    {
+      "id": "https://openalex.org/countries/GL",
+      "display_name": "Greenland"
+    },
+    {
+      "id": "https://openalex.org/countries/GF",
+      "display_name": "French Guiana"
+    },
+    {
+      "id": "https://openalex.org/countries/BT",
+      "display_name": "Bhutan"
+    },
+    {
+      "id": "https://openalex.org/countries/AG",
+      "display_name": "Antigua and Barbuda"
+    },
+    {
+      "id": "https://openalex.org/countries/GU",
+      "display_name": "Guam"
+    },
+    {
+      "id": "https://openalex.org/countries/SZ",
+      "display_name": "Eswatini"
+    },
+    {
+      "id": "https://openalex.org/countries/HT",
+      "display_name": "Haiti"
+    },
+    {
+      "id": "https://openalex.org/countries/TD",
+      "display_name": "Chad"
+    },
+    {
+      "id": "https://openalex.org/countries/GY",
+      "display_name": "Guyana"
+    },
+    {
+      "id": "https://openalex.org/countries/SO",
+      "display_name": "Somalia"
+    },
+    {
+      "id": "https://openalex.org/countries/KN",
+      "display_name": "Saint Kitts and Nevis"
+    },
+    {
+      "id": "https://openalex.org/countries/MF",
+      "display_name": "Saint Martin (French part)"
+    },
+    {
+      "id": "https://openalex.org/countries/LS",
+      "display_name": "Lesotho"
+    },
+    {
+      "id": "https://openalex.org/countries/BS",
+      "display_name": "Bahamas"
+    },
+    {
+      "id": "https://openalex.org/countries/CW",
+      "display_name": "Curaçao"
+    },
+    {
+      "id": "https://openalex.org/countries/LR",
+      "display_name": "Liberia"
+    },
+    {
+      "id": "https://openalex.org/countries/TM",
+      "display_name": "Turkmenistan"
+    },
+    {
+      "id": "https://openalex.org/countries/MV",
+      "display_name": "Maldives"
+    },
+    {
+      "id": "https://openalex.org/countries/BM",
+      "display_name": "Bermuda"
+    },
+    {
+      "id": "https://openalex.org/countries/FO",
+      "display_name": "Faroe Islands"
+    },
+    {
+      "id": "https://openalex.org/countries/VI",
+      "display_name": "Virgin Islands, U.S."
+    },
+    {
+      "id": "https://openalex.org/countries/SR",
+      "display_name": "Suriname"
+    },
+    {
+      "id": "https://openalex.org/countries/BZ",
+      "display_name": "Belize"
+    },
+    {
+      "id": "https://openalex.org/countries/CF",
+      "display_name": "Central African Republic"
+    },
+    {
+      "id": "https://openalex.org/countries/MR",
+      "display_name": "Mauritania"
+    },
+    {
+      "id": "https://openalex.org/countries/ER",
+      "display_name": "Eritrea"
+    },
+    {
+      "id": "https://openalex.org/countries/CV",
+      "display_name": "Cabo Verde"
+    },
+    {
+      "id": "https://openalex.org/countries/DM",
+      "display_name": "Dominica"
+    },
+    {
+      "id": "https://openalex.org/countries/KY",
+      "display_name": "Cayman Islands"
+    },
+    {
+      "id": "https://openalex.org/countries/KP",
+      "display_name": "Korea, Democratic People's Republic of"
+    },
+    {
+      "id": "https://openalex.org/countries/GI",
+      "display_name": "Gibraltar"
+    },
+    {
+      "id": "https://openalex.org/countries/SC",
+      "display_name": "Seychelles"
+    },
+    {
+      "id": "https://openalex.org/countries/VA",
+      "display_name": "Vatican City"
+    },
+    {
+      "id": "https://openalex.org/countries/TL",
+      "display_name": "Timor-Leste"
+    },
+    {
+      "id": "https://openalex.org/countries/SM",
+      "display_name": "San Marino"
+    },
+    {
+      "id": "https://openalex.org/countries/AD",
+      "display_name": "Andorra"
+    },
+    {
+      "id": "https://openalex.org/countries/AI",
+      "display_name": "Anguilla"
+    },
+    {
+      "id": "https://openalex.org/countries/AQ",
+      "display_name": "Antarctica"
+    },
+    {
+      "id": "https://openalex.org/countries/AS",
+      "display_name": "American Samoa"
+    },
+    {
+      "id": "https://openalex.org/countries/AW",
+      "display_name": "Aruba"
+    },
+    {
+      "id": "https://openalex.org/countries/AX",
+      "display_name": "Åland Islands"
+    },
+    {
+      "id": "https://openalex.org/countries/BL",
+      "display_name": "Saint Barthélemy"
+    },
+    {
+      "id": "https://openalex.org/countries/BQ",
+      "display_name": "Bonaire, Sint Eustatius and Saba"
+    },
+    {
+      "id": "https://openalex.org/countries/BV",
+      "display_name": "Bouvet Island"
+    },
+    {
+      "id": "https://openalex.org/countries/CC",
+      "display_name": "Cocos (Keeling) Islands"
+    },
+    {
+      "id": "https://openalex.org/countries/CK",
+      "display_name": "Cook Islands"
+    },
+    {
+      "id": "https://openalex.org/countries/CX",
+      "display_name": "Christmas Island"
+    },
+    {
+      "id": "https://openalex.org/countries/DJ",
+      "display_name": "Djibouti"
+    },
+    {
+      "id": "https://openalex.org/countries/FK",
+      "display_name": "Falkland Islands (Malvinas)"
+    },
+    {
+      "id": "https://openalex.org/countries/FM",
+      "display_name": "Micronesia, Federated States of"
+    },
+    {
+      "id": "https://openalex.org/countries/GG",
+      "display_name": "Guernsey"
+    },
+    {
+      "id": "https://openalex.org/countries/GQ",
+      "display_name": "Equatorial Guinea"
+    },
+    {
+      "id": "https://openalex.org/countries/GS",
+      "display_name": "South Georgia and the South Sandwich Islands"
+    },
+    {
+      "id": "https://openalex.org/countries/HM",
+      "display_name": "Heard Island and McDonald Islands"
+    },
+    {
+      "id": "https://openalex.org/countries/IM",
+      "display_name": "Isle of Man"
+    },
+    {
+      "id": "https://openalex.org/countries/IO",
+      "display_name": "British Indian Ocean Territory"
+    },
+    {
+      "id": "https://openalex.org/countries/JE",
+      "display_name": "Jersey"
+    },
+    {
+      "id": "https://openalex.org/countries/KI",
+      "display_name": "Kiribati"
+    },
+    {
+      "id": "https://openalex.org/countries/KM",
+      "display_name": "Comoros"
+    },
+    {
+      "id": "https://openalex.org/countries/LC",
+      "display_name": "Saint Lucia"
+    },
+    {
+      "id": "https://openalex.org/countries/MH",
+      "display_name": "Marshall Islands"
+    },
+    {
+      "id": "https://openalex.org/countries/MP",
+      "display_name": "Northern Mariana Islands"
+    },
+    {
+      "id": "https://openalex.org/countries/MS",
+      "display_name": "Montserrat"
+    },
+    {
+      "id": "https://openalex.org/countries/NF",
+      "display_name": "Norfolk Island"
+    },
+    {
+      "id": "https://openalex.org/countries/NR",
+      "display_name": "Nauru"
+    },
+    {
+      "id": "https://openalex.org/countries/NU",
+      "display_name": "Niue"
+    },
+    {
+      "id": "https://openalex.org/countries/PM",
+      "display_name": "Saint Pierre and Miquelon"
+    },
+    {
+      "id": "https://openalex.org/countries/PN",
+      "display_name": "Pitcairn"
+    },
+    {
+      "id": "https://openalex.org/countries/PW",
+      "display_name": "Palau"
+    },
+    {
+      "id": "https://openalex.org/countries/SB",
+      "display_name": "Solomon Islands"
+    },
+    {
+      "id": "https://openalex.org/countries/SH",
+      "display_name": "Saint Helena, Ascension and Tristan da Cunha"
+    },
+    {
+      "id": "https://openalex.org/countries/SJ",
+      "display_name": "Svalbard and Jan Mayen"
+    },
+    {
+      "id": "https://openalex.org/countries/SX",
+      "display_name": "Sint Maarten"
+    },
+    {
+      "id": "https://openalex.org/countries/TC",
+      "display_name": "Turks and Caicos Islands"
+    },
+    {
+      "id": "https://openalex.org/countries/TK",
+      "display_name": "Tokelau"
+    },
+    {
+      "id": "https://openalex.org/countries/TO",
+      "display_name": "Tonga"
+    },
+    {
+      "id": "https://openalex.org/countries/TV",
+      "display_name": "Tuvalu"
+    },
+    {
+      "id": "https://openalex.org/countries/VC",
+      "display_name": "Saint Vincent and the Grenadines"
+    },
+    {
+      "id": "https://openalex.org/countries/VU",
+      "display_name": "Vanuatu"
+    },
+    {
+      "id": "https://openalex.org/countries/WF",
+      "display_name": "Wallis and Futuna"
+    },
+    {
+      "id": "https://openalex.org/countries/WS",
+      "display_name": "Samoa"
+    },
+    {
+      "id": "https://openalex.org/countries/YT",
+      "display_name": "Mayotte"
+    }
+  ]
 }

@@ -1,96 +1,114 @@
 {
-    "id": "domains",
-    "icon": "mdi-tag-outline",
-    "name": "domains",
-    "nameSingular": "domain",
-    "displayName": "domains",
-    "displayNameSingular": "domain",
-    "descr": "what works are about",
-    "eg": "Life sciences",
-    "placeholder": "Search domains",
-    "filterName": "domains",
-    "filterKey": "primary_topic.domain.id",
-    "hasAutocomplete": false,
-    "isNative": false,
-    "idRegex": "(?:https:\\/\\/openalex\\.org\\/domains\\/|domains\\/)(\\d+)",
-    "showOnEntityPage": [
-        "id",
-        "display_name",
-        "description",
-        "display_name_alternatives",
-        "fields",
-        "siblings"
-    ],
-    "showOnTablePage": [
-        "display_name",
-        "description"
-    ],
-    "columns": {
-        "id": {
-            "id": "id",
-            "subjectEntity": "domains",
-            "entityId": "domains",
-            "objectEntity": "domains",
-            "displayName": "OpenAlex ID",
-            "isId": true,
-            "type": "string",
-            "icon": "mdi-tag-outline"
-        },
-        "display_name": {
-            "id": "display_name",
-            "isColumnMandatory": true,
-            "subjectEntity": "domains",
-            "displayName": "name",
-            "type": "string",
-            "actions": [
-                "sort",
-                "column"
-            ],
-            "actionsPopular": [
-                "sort",
-                "column"
-            ],
-            "category": "other",
-            "icon": "mdi-account-outline"
-        },
-        "description": {
-            "id": "description",
-            "subjectEntity": "domains",
-            "entityId": "domains",
-            "objectEntity": "domains",
-            "displayName": "description",
-            "type": "string",
-            "icon": "mdi-tag-outline"
-        },
-        "display_name_alternatives": {
-            "id": "display_name_alternatives",
-            "isList": true,
-            "subjectEntity": "domains",
-            "entityId": "domains",
-            "objectEntity": "domains",
-            "displayName": "alternate names",
-            "type": "string",
-            "icon": "mdi-tag-outline"
-        },
-        "fields": {
-            "id": "fields",
-            "isList": true,
-            "subjectEntity": "domains",
-            "entityId": "fields",
-            "objectEntity": "fields",
-            "displayName": "fields (children)",
-            "type": "entity",
-            "icon": "mdi-tag-outline"
-        },
-        "siblings": {
-            "id": "siblings",
-            "isList": true,
-            "subjectEntity": "domains",
-            "entityId": "domains",
-            "objectEntity": "domains",
-            "displayName": "other domains (siblings)",
-            "type": "entity",
-            "icon": "mdi-tag-outline"
-        }
+  "id": "domains",
+  "icon": "mdi-tag-outline",
+  "name": "domains",
+  "nameSingular": "domain",
+  "displayName": "domains",
+  "displayNameSingular": "domain",
+  "descr": "what works are about",
+  "eg": "Life sciences",
+  "placeholder": "Search domains",
+  "filterName": "domains",
+  "filterKey": "primary_topic.domain.id",
+  "hasAutocomplete": false,
+  "isNative": false,
+  "idRegex": "(?:https:\\/\\/openalex\\.org\\/domains\\/|domains\\/)(\\d+)",
+  "showOnEntityPage": [
+    "id",
+    "display_name",
+    "description",
+    "display_name_alternatives",
+    "fields",
+    "siblings"
+  ],
+  "showOnTablePage": [
+    "display_name",
+    "description"
+  ],
+  "columns": {
+    "id": {
+      "id": "id",
+      "subjectEntity": "domains",
+      "entityId": "domains",
+      "objectEntity": "domains",
+      "displayName": "OpenAlex ID",
+      "isId": true,
+      "type": "string",
+      "icon": "mdi-tag-outline"
+    },
+    "display_name": {
+      "id": "display_name",
+      "isColumnMandatory": true,
+      "subjectEntity": "domains",
+      "displayName": "name",
+      "type": "string",
+      "actions": [
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "category": "other",
+      "icon": "mdi-account-outline"
+    },
+    "description": {
+      "id": "description",
+      "subjectEntity": "domains",
+      "entityId": "domains",
+      "objectEntity": "domains",
+      "displayName": "description",
+      "type": "string",
+      "icon": "mdi-tag-outline"
+    },
+    "display_name_alternatives": {
+      "id": "display_name_alternatives",
+      "isList": true,
+      "subjectEntity": "domains",
+      "entityId": "domains",
+      "objectEntity": "domains",
+      "displayName": "alternate names",
+      "type": "string",
+      "icon": "mdi-tag-outline"
+    },
+    "fields": {
+      "id": "fields",
+      "isList": true,
+      "subjectEntity": "domains",
+      "entityId": "fields",
+      "objectEntity": "fields",
+      "displayName": "fields (children)",
+      "type": "entity",
+      "icon": "mdi-tag-outline"
+    },
+    "siblings": {
+      "id": "siblings",
+      "isList": true,
+      "subjectEntity": "domains",
+      "entityId": "domains",
+      "objectEntity": "domains",
+      "displayName": "other domains (siblings)",
+      "type": "entity",
+      "icon": "mdi-tag-outline"
     }
+  },
+  "values": [
+    {
+      "id": "https://openalex.org/domains/3",
+      "display_name": "Physical Sciences"
+    },
+    {
+      "id": "https://openalex.org/domains/2",
+      "display_name": "Social Sciences"
+    },
+    {
+      "id": "https://openalex.org/domains/4",
+      "display_name": "Health Sciences"
+    },
+    {
+      "id": "https://openalex.org/domains/1",
+      "display_name": "Life Sciences"
+    }
+  ]
 }

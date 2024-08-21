@@ -1,52 +1,86 @@
 {
-    "id": "institution-types",
-    "icon": "mdi-shape-outline",
-    "name": "institution-types",
-    "nameSingular": "institution type",
-    "displayName": "institution types",
-    "displayNameSingular": "institution type",
-    "descr": "institution type",
-    "eg": "company",
-    "placeholder": "Search institution types",
-    "filterName": "institution type",
-    "filterKey": "authorships.institutions.type",
-    "hasAutocomplete": false,
-    "isNative": false,
-    "idRegex": "(?:https:\\/\\/openalex\\.org\\/institution-types\\/|institution-types\\/)([a-zA-Z\\-]+)",
-    "showOnEntityPage": [
-        "id",
-        "display_name"
-    ],
-    "showOnTablePage": [
-        "display_name"
-    ],
-    "columns": {
-        "id": {
-            "id": "id",
-            "subjectEntity": "institution-types",
-            "entityId": "institution-types",
-            "objectEntity": "institution-types",
-            "displayName": "Institution ID",
-            "isId": true,
-            "type": "string",
-            "icon": "mdi-tag-outline"
-        },
-        "display_name": {
-            "id": "display_name",
-            "isColumnMandatory": true,
-            "subjectEntity": "institution-types",
-            "displayName": "name",
-            "type": "string",
-            "actions": [
-                "sort",
-                "column"
-            ],
-            "actionsPopular": [
-                "sort",
-                "column"
-            ],
-            "category": "other",
-            "icon": "mdi-account-outline"
-        }
+  "id": "institution-types",
+  "icon": "mdi-shape-outline",
+  "name": "institution-types",
+  "nameSingular": "institution type",
+  "displayName": "institution types",
+  "displayNameSingular": "institution type",
+  "descr": "institution type",
+  "eg": "company",
+  "placeholder": "Search institution types",
+  "filterName": "institution type",
+  "filterKey": "authorships.institutions.type",
+  "hasAutocomplete": false,
+  "isNative": false,
+  "idRegex": "(?:https:\\/\\/openalex\\.org\\/institution-types\\/|institution-types\\/)([a-zA-Z\\-]+)",
+  "showOnEntityPage": [
+    "id",
+    "display_name"
+  ],
+  "showOnTablePage": [
+    "display_name"
+  ],
+  "columns": {
+    "id": {
+      "id": "id",
+      "subjectEntity": "institution-types",
+      "entityId": "institution-types",
+      "objectEntity": "institution-types",
+      "displayName": "Institution ID",
+      "isId": true,
+      "type": "string",
+      "icon": "mdi-tag-outline"
+    },
+    "display_name": {
+      "id": "display_name",
+      "isColumnMandatory": true,
+      "subjectEntity": "institution-types",
+      "displayName": "name",
+      "type": "string",
+      "actions": [
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "category": "other",
+      "icon": "mdi-account-outline"
     }
+  },
+  "values": [
+    {
+      "id": "https://openalex.org/institution-types/education",
+      "display_name": "education"
+    },
+    {
+      "id": "https://openalex.org/institution-types/healthcare",
+      "display_name": "healthcare"
+    },
+    {
+      "id": "https://openalex.org/institution-types/facility",
+      "display_name": "facility"
+    },
+    {
+      "id": "https://openalex.org/institution-types/government",
+      "display_name": "government"
+    },
+    {
+      "id": "https://openalex.org/institution-types/company",
+      "display_name": "company"
+    },
+    {
+      "id": "https://openalex.org/institution-types/nonprofit",
+      "display_name": "nonprofit"
+    },
+    {
+      "id": "https://openalex.org/institution-types/other",
+      "display_name": "other"
+    },
+    {
+      "id": "https://openalex.org/institution-types/archive",
+      "display_name": "archive"
+    }
+  ]
 }

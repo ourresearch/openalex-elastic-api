@@ -1054,5 +1054,6 @@
             "icon": "mdi-book-open-outline",
             "isDisplayedAsCount": true
         }
-    }
+    },
+    "values": null
 }

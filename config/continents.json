@@ -1,57 +1,87 @@
 {
-    "id": "continents",
-    "icon": "mdi-earth",
-    "name": "continents",
-    "nameSingular": "continent",
-    "displayName": "continents",
-    "displayNameSingular": "continent",
-    "descr": "Continents",
-    "eg": "Africa",
-    "placeholder": "Search continents",
-    "filterName": "continent",
-    "filterKey": "authorships.institutions.continent",
-    "hasAutocomplete": false,
-    "isNative": false,
-    "idRegex": "(?i)(?:https:\\/\\/openalex\\.org\\/continents\\/|continents\\/)(q\\d+)",
-    "showOnEntityPage": [
-        "id",
-        "display_name",
-        "countries"
-    ],
-    "showOnTablePage": [
-        "display_name"
-    ],
-    "columns": {
-        "id": {
-            "id": "id",
-            "subjectEntity": "continents",
-            "entityId": "continents",
-            "isId": true,
-            "objectEntity": "continents",
-            "displayName": "Continent ID",
-            "type": "string",
-            "actions": [
-                "filter"
-            ],
-            "actionsPopular": [
-                "filter"
-            ],
-            "icon": "mdi-shape-outline"
-        },
-        "display_name": {
-            "id": "display_name",
-            "subjectEntity": "continents",
-            "entityId": "continents",
-            "objectEntity": "continents",
-            "displayName": "Continent name",
-            "type": "string",
-            "actions": [
-                "filter"
-            ],
-            "actionsPopular": [
-                "filter"
-            ],
-            "icon": "mdi-shape-outline"
-        }
+  "id": "continents",
+  "icon": "mdi-earth",
+  "name": "continents",
+  "nameSingular": "continent",
+  "displayName": "continents",
+  "displayNameSingular": "continent",
+  "descr": "Continents",
+  "eg": "Africa",
+  "placeholder": "Search continents",
+  "filterName": "continent",
+  "filterKey": "authorships.institutions.continent",
+  "hasAutocomplete": false,
+  "isNative": false,
+  "idRegex": "(?i)(?:https:\\/\\/openalex\\.org\\/continents\\/|continents\\/)(q\\d+)",
+  "showOnEntityPage": [
+    "id",
+    "display_name",
+    "countries"
+  ],
+  "showOnTablePage": [
+    "display_name"
+  ],
+  "columns": {
+    "id": {
+      "id": "id",
+      "subjectEntity": "continents",
+      "entityId": "continents",
+      "isId": true,
+      "objectEntity": "continents",
+      "displayName": "Continent ID",
+      "type": "string",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [
+        "filter"
+      ],
+      "icon": "mdi-shape-outline"
+    },
+    "display_name": {
+      "id": "display_name",
+      "subjectEntity": "continents",
+      "entityId": "continents",
+      "objectEntity": "continents",
+      "displayName": "Continent name",
+      "type": "string",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [
+        "filter"
+      ],
+      "icon": "mdi-shape-outline"
     }
+  },
+  "values": [
+    {
+      "id": "https://openalex.org/continents/Q15",
+      "display_name": "Africa"
+    },
+    {
+      "id": "https://openalex.org/continents/Q18",
+      "display_name": "South America"
+    },
+    {
+      "id": "https://openalex.org/continents/Q46",
+      "display_name": "Europe"
+    },
+    {
+      "id": "https://openalex.org/continents/Q48",
+      "display_name": "Asia"
+    },
+    {
+      "id": "https://openalex.org/continents/Q49",
+      "display_name": "North America"
+    },
+    {
+      "id": "https://openalex.org/continents/Q51",
+      "display_name": "Antarctica"
+    },
+    {
+      "id": "https://openalex.org/continents/Q55643",
+      "display_name": "Oceania"
+    }
+  ]
 }
