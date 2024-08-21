@@ -8,6 +8,7 @@ class Work(db.Model):
 
     paper_id = Column(BigInteger, primary_key=True)
     original_title = Column(String(65535))
+    doi = Column(String(500))
     doi_lower = Column(String(500))
     cited_by_count = Column(Integer)  # joined from citation_papers_mv
     journal_id = Column(BigInteger)
@@ -18,11 +19,15 @@ class Work(db.Model):
     type_crossref = Column(String(500))
     year = Column(Integer)
     fwci = Column(Float)
-    created_date = Column(String(500))
     topic_id = Column(Integer)  # joined from work_topic
     subfield_id = Column(Integer)  # joined rom work_topic
     field_id = Column(Integer)  # joined from work_topic
     domain_id = Column(Integer)  # joined from work_topic
+    primary_source_display_name = Column(String(65535))
+    primary_source_type = Column(String(500))
+    primary_source_issn = Column(String(500))
+    primary_source_is_in_doaj = Column(Boolean)
+    created_date = Column(String(500))
 
     @property
     def id(self):

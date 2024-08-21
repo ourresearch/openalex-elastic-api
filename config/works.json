@@ -344,6 +344,7 @@
             "displayName": "APC paid (est)",
             "type": "number",
             "sortByValue": true,
+            "api-only": true,
             "actions": [
                 "filter"
             ],
@@ -511,6 +512,33 @@
             ],
             "icon": "mdi-shape-outline"
         },
+        "grants.funder": {
+            "id": "grants.funder",
+            "isList": true,
+            "subjectEntity": "works",
+            "displayName": "funder",
+            "entityId": "funders",
+            "objectEntity": "funders",
+            "type": "entity",
+            "category": "other",
+            "api-only": true,
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-cash-multiple"
+        },
+        "grants.award_id": {
+            "id": "grants.award_id",
+            "isList": true,
+            "subjectEntity": "works",
+            "displayName": "grant ID",
+            "type": "string",
+            "category": "other",
+            "api-only": true,
+            "actions": [],
+            "icon": "mdi-cash-multiple"
+        },
         "publication_year": {
             "id": "publication_year",
             "isYear": true,
@@ -546,6 +574,7 @@
             "displayName": "APC sum",
             "type": "sum",
             "category": "other",
+            "api-only": true,
             "actions": [
                 "group_by"
             ],
