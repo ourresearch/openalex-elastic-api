@@ -67,7 +67,6 @@
         "publication_year",
         "open_access.is_oa",
         "primary_topic.id",
-        "authorships.institutions.lineage",
         "type"
     ],
     "sortByDefault": "cited_by_count",
@@ -83,8 +82,9 @@
             "isId": true,
             "type": "string",
             "category": "ids",
-            "redshift_display_column": "id",
-            "redshift_filter_column": "id",
+            "apiField": "id",
+            "redshiftDisplayColumn": "id",
+            "redshiftFilterColumn": "id",
             "actions": [
                 ""
             ],
@@ -100,8 +100,9 @@
             "isId": true,
             "type": "string",
             "category": "ids",
-            "redshift_display_column": "doi",
-            "redshift_filter_column": "doi_lower",
+            "apiField": "doi",
+            "redshiftDisplayColumn": "doi",
+            "redshiftFilterColumn": "doi_lower",
             "actions": [
                 "filter",
                 "return"
@@ -116,8 +117,9 @@
             "objectEntity": "topics",
             "type": "entity",
             "category": "other",
-            "redshift_display_column": "topic",
-            "redshift_filter_column": "topic_id",
+            "apiField": "primary_topic.id",
+            "redshiftDisplayColumn": "topic",
+            "redshiftFilterColumn": "topic_id",
             "actions": [
                 "filter",
                 "group_by"
@@ -137,6 +139,7 @@
             "objectEntity": "keywords",
             "type": "entity",
             "category": "other",
+            "apiField": "keywords.id",
             "actions": [
                 "filter",
                 "group_by"
@@ -155,8 +158,9 @@
             "objectEntity": "subfields",
             "type": "entity",
             "category": "other",
-            "redshift_display_column": "subfield",
-            "redshift_filter_column": "subfield_id",
+            "apiField": "primary_topic.subfield.id",
+            "redshiftDisplayColumn": "subfield",
+            "redshiftFilterColumn": "subfield_id",
             "actions": [
                 "filter",
                 "group_by"
@@ -172,8 +176,9 @@
             "objectEntity": "fields",
             "type": "entity",
             "category": "other",
-            "redshift_display_column": "field",
-            "redshift_filter_column": "field_id",
+            "apiField": "primary_topic.field.id",
+            "redshiftDisplayColumn": "field",
+            "redshiftFilterColumn": "field_id",
             "actions": [
                 "filter",
                 "group_by"
@@ -189,8 +194,9 @@
             "objectEntity": "domains",
             "type": "entity",
             "category": "other",
-            "redshift_display_column": "domain",
-            "redshift_filter_column": "domain_id",
+            "apiField": "primary_topic.domain.id",
+            "redshiftDisplayColumn": "domain",
+            "redshiftFilterColumn": "domain_id",
             "actions": [
                 "filter",
                 "group_by"
@@ -207,8 +213,9 @@
             "objectEntity": "institutions",
             "type": "entity",
             "category": "institution",
-            "redshift_display_column": "institutions",
-            "redshift_filter_column": "institution_id",
+            "apiField": "authorships.institutions.id",
+            "redshiftDisplayColumn": "institutions",
+            "redshiftFilterColumn": "institution_id",
             "actions": [
                 "filter",
                 "group_by"
@@ -224,8 +231,9 @@
             "subjectEntity": "works",
             "displayName": "cited by count",
             "type": "number",
-            "redshift_display_column": "cited_by_count",
-            "redshift_filter_column": "cited_by_count",
+            "apiField": "cited_by_count",
+            "redshiftDisplayColumn": "cited_by_count",
+            "redshiftFilterColumn": "cited_by_count",
             "actions": [
                 "sort",
                 "column",
@@ -246,8 +254,9 @@
             "isId": true,
             "type": "string",
             "category": "ids",
-            "redshift_display_column": "ror",
-            "redshift_filter_column": "ror",
+            "apiField": "authorships.institutions.ror",
+            "redshiftDisplayColumn": "ror",
+            "redshiftFilterColumn": "ror",
             "actions": [],
             "icon": "mdi-town-hall"
         },
@@ -260,8 +269,9 @@
             "objectEntity": "authors",
             "type": "entity",
             "category": "author",
-            "redshift_display_column": "authors",
-            "redshift_filter_column": "author_id",
+            "apiField": "authorships.author.id",
+            "redshiftDisplayColumn": "authors",
+            "redshiftFilterColumn": "author_id",
             "actions": [
                 "filter",
                 "group_by"
@@ -282,8 +292,9 @@
             "isId": true,
             "type": "string",
             "category": "ids",
-            "redshift_display_column": "orcid",
-            "redshift_filter_column": "orcid",
+            "apiField": "authorships.author.orcid",
+            "redshiftDisplayColumn": "orcid",
+            "redshiftFilterColumn": "orcid",
             "actions": [],
             "icon": "mdi-account-outline"
         },
@@ -302,8 +313,9 @@
                 "column"
             ],
             "category": "other",
-            "redshift_display_column": "display_name",
-            "redshift_filter_column": "display_name",
+            "apiField": "display_name",
+            "redshiftDisplayColumn": "display_name",
+            "redshiftReturnColumn": "display_name",
             "icon": "mdi-file-document-outline"
         },
         "open_access.is_oa": {
@@ -322,8 +334,9 @@
                 "group_by"
             ],
             "category": "open access",
-            "redshift_display_column": "is_oa",
-            "redshift_filter_column": "is_oa",
+            "apiField": "open_access.is_oa",
+            "redshiftDisplayColumn": "is_oa",
+            "redshiftFilterColumn": "is_oa",
             "icon": "mdi-lock-open-outline"
         },
         "open_access.oa_status": {
@@ -333,8 +346,9 @@
             "type": "string",
             "actions": [],
             "category": "open access",
-            "redshift_display_column": "oa_status",
-            "redshift_filter_column": "oa_status",
+            "apiField": "open_access.oa_status",
+            "redshiftDisplayColumn": "oa_status",
+            "redshiftFilterColumn": "oa_status",
             "icon": "mdi-lock-open-outline"
         },
         "apc_paid.value_usd": {
@@ -344,7 +358,9 @@
             "displayName": "APC paid (est)",
             "type": "number",
             "sortByValue": true,
-            "api-only": true,
+            "apiField": "apc_paid.value_usd",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
                 "filter"
             ],
@@ -368,8 +384,9 @@
                 "group_by"
             ],
             "category": "institution",
-            "redshift_display_column": "countries",
-            "redshift_filter_column": "country_id",
+            "apiField": "authorships.countries",
+            "redshiftDisplayColumn": "countries",
+            "redshiftFilterColumn": "country_id",
             "icon": "mdi-earth"
         },
         "authorships.institutions.continent": {
@@ -386,8 +403,9 @@
                 "group_by"
             ],
             "actionsPopular": [],
-            "redshift_display_column": "continents",
-            "redshift_filter_column": "continent_id",
+            "apiField": "authorships.institutions.continent",
+            "redshiftDisplayColumn": "continents",
+            "redshiftFilterColumn": "continent_id",
             "icon": "mdi-earth"
         },
         "institutions.is_global_south": {
@@ -401,8 +419,9 @@
                 "group_by"
             ],
             "category": "institution",
-            "redshift_display_column": "is_global_south",
-            "redshift_filter_column": "is_global_south",
+            "apiField": "institutions.is_global_south",
+            "redshiftDisplayColumn": "is_global_south",
+            "redshiftReturnColumn": "is_global_south",
             "icon": "mdi-earth"
         },
         "authorships.institutions.type": {
@@ -413,8 +432,9 @@
             "displayName": "institution type",
             "isId": true,
             "category": "institution",
-            "redshift_display_column": "institution_types",
-            "redshift_filter_column": "institution_type_id",
+            "apiField": "authorships.institutions.type",
+            "redshiftDisplayColumn": "institution_types",
+            "redshiftFilterColumn": "institution_type_id",
             "type": "entity",
             "actions": [
                 "filter",
@@ -430,8 +450,9 @@
             "objectEntity": "sources",
             "type": "entity",
             "category": "source",
-            "redshift_display_column": "primary_location",
-            "redshift_filter_column": "journal_id",
+            "apiField": "primary_location.source.id",
+            "redshiftDisplayColumn": "primary_location",
+            "redshiftFilterColumn": "journal_id",
             "actions": [
                 "filter",
                 "group_by"
@@ -447,6 +468,9 @@
             "isId": true,
             "type": "string",
             "category": "ids",
+            "apiField": "primary_location.source.issn",
+            "redshiftDisplayColumn": "issn",
+            "redshiftFilterColumn": "issn",
             "actions": [],
             "icon": "mdi-book-open-outline"
         },
@@ -458,6 +482,9 @@
             "isId": true,
             "type": "entity",
             "category": "source",
+            "apiField": "primary_location.source.type",
+            "redshiftDisplayColumn": "primary_source_type",
+            "redshiftFilterColumn": "primary_source_type",
             "actions": [
                 "filter",
                 "column",
@@ -471,6 +498,9 @@
             "displayName": "indexed by DOAJ",
             "type": "boolean",
             "category": "source",
+            "apiField": "primary_location.source.is_in_doaj",
+            "redshiftDisplayColumn": "is_in_doaj",
+            "redshiftFilterColumn": "is_in_doaj",
             "actions": [
                 "filter",
                 "group_by"
@@ -483,6 +513,9 @@
             "displayName": "in OA source",
             "type": "boolean",
             "category": "source",
+            "apiField": "primary_location.source.is_oa",
+            "redshiftDisplayColumn": "primary_source_is_oa",
+            "redshiftFilterColumn": "primary_source_is_oa",
             "actions": [
                 "filter",
                 "column",
@@ -500,6 +533,9 @@
             "externalIdPrefix": "work-types",
             "type": "entity",
             "category": "other",
+            "apiField": "type",
+            "redshiftDisplayColumn": "type_formatted",
+            "redshiftFilterColumn": "type",
             "actions": [
                 "filter",
                 "column",
@@ -521,7 +557,9 @@
             "objectEntity": "funders",
             "type": "entity",
             "category": "other",
-            "api-only": true,
+            "apiField": "grants.funder",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
                 "filter",
                 "group_by"
@@ -535,7 +573,9 @@
             "displayName": "grant ID",
             "type": "string",
             "category": "other",
-            "api-only": true,
+            "apiField": "grants.award_id",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [],
             "icon": "mdi-cash-multiple"
         },
@@ -553,6 +593,9 @@
                 "1999-2020"
             ],
             "category": "other",
+            "apiField": "publication_year",
+            "redshiftDisplayColumn": "year",
+            "redshiftFilterColumn": "year",
             "actions": [
                 "filter",
                 "sort",
@@ -574,7 +617,9 @@
             "displayName": "APC sum",
             "type": "sum",
             "category": "other",
-            "api-only": true,
+            "apiField": "apc_paid.value_usd",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
                 "group_by"
             ],
@@ -582,29 +627,6 @@
                 "group_by"
             ],
             "icon": "mdi-cash"
-        },
-        "has_doi": {
-            "id": "has_doi",
-            "subjectEntity": "works",
-            "displayName": "indexed by Crossref",
-            "type": "boolean",
-            "category": "ids",
-            "actions": [
-                "filter",
-                "group_by"
-            ],
-            "icon": "mdi-tag-outline"
-        },
-        "has_orcid": {
-            "id": "has_orcid",
-            "subjectEntity": "works",
-            "displayName": "indexed by ORCID",
-            "type": "boolean",
-            "actions": [
-                "filter",
-                "group_by"
-            ],
-            "icon": "mdi-tag-outline"
         },
         "language": {
             "id": "language",
@@ -615,6 +637,9 @@
             "type": "entity",
             "displayNullAs": "Unknown",
             "category": "other",
+            "apiField": "language",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
                 "filter",
                 "column",
@@ -636,6 +661,9 @@
             "type": "entity",
             "displayNullAs": "Unknown",
             "category": "other",
+            "apiField": "sustainable_development_goals.id",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
                 "filter",
                 "group_by"
@@ -652,6 +680,9 @@
             "displayName": "cites",
             "type": "string",
             "category": "citation",
+            "apiField": "referenced_works",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [],
             "icon": "mdi-format-quote-close",
             "isDisplayedAsCount": true
