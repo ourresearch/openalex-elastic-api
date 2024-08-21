@@ -120,7 +120,7 @@ class Work(db.Model):
 
 
 class Affiliation(db.Model):
-    __tablename__ = "affiliation"
+    __tablename__ = "affiliation_mv"
 
     paper_id = Column(BigInteger, primary_key=True)
     author_id = Column(BigInteger, primary_key=True)
@@ -128,6 +128,13 @@ class Affiliation(db.Model):
     author_sequence_number = Column(Integer)
     original_author = Column(String(65535))
     original_orcid = Column(String(500))
+    institution_display_name = Column(String(65535))
+    ror = Column(String(500))
+    type = Column(String(500))
+    country_id = Column(String(500))
+    country_display_name = Column(String(65535))
+    continent_id = Column(Integer)
+    is_global_south = Column(Boolean)
 
     def __repr__(self):
         return f"<Affiliation(paper_id={self.paper_id}, author_id={self.author_id}, affiliation_id={self.affiliation_id})>"
