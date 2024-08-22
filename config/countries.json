@@ -25,16 +25,19 @@
       "id": "id",
       "subjectEntity": "countries",
       "entityId": "countries",
-      "objectEntity": "countries",
+      "objectEntity": null,
       "displayName": "Country ID",
       "isId": true,
       "type": "string",
+      "redshiftDisplayColumn": "id",
+      "redshiftFilterColumn": "id",
       "icon": "mdi-tag-outline"
     },
     "display_name": {
       "id": "display_name",
       "isColumnMandatory": true,
       "subjectEntity": "countries",
+      "objectEntity": null,
       "displayName": "name",
       "type": "string",
       "actions": [
@@ -46,21 +49,9 @@
         "column"
       ],
       "category": "other",
+      "redshiftDisplayColumn": "display_name",
+      "redshiftFilterColumn": null,
       "icon": "mdi-account-outline"
-    },
-    "count(works)": {
-      "id": "count(works)",
-      "subjectEntity": "countries",
-      "displayName": "works count",
-      "type": "number",
-      "actions": [
-        "sort",
-        "column"
-      ],
-      "actionsPopular": [
-        "sort",
-        "column"
-      ]
     }
   },
   "values": [

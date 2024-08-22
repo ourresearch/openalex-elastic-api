@@ -26,10 +26,12 @@
       "id": "id",
       "subjectEntity": "continents",
       "entityId": "continents",
+      "objectEntity": null,
       "isId": true,
-      "objectEntity": "continents",
       "displayName": "Continent ID",
       "type": "string",
+      "redshiftDisplayColumn": "id",
+      "redshiftFilterColumn": "id",
       "actions": [
         "filter"
       ],
@@ -42,14 +44,15 @@
       "id": "display_name",
       "subjectEntity": "continents",
       "entityId": "continents",
-      "objectEntity": "continents",
+      "objectEntity": null,
       "displayName": "Continent name",
       "type": "string",
+      "redshiftDisplayColumn": "display_name",
+      "redshiftFilterColumn": null,
       "actions": [
-        "filter"
+        "column"
       ],
       "actionsPopular": [
-        "filter"
       ],
       "icon": "mdi-shape-outline"
     }
