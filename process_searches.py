@@ -18,7 +18,7 @@ def fetch_results(query):
         # params
         entity = query.get("summarize_by") or "works"
         filters = query.get("filters")
-        columns = query.get("return")
+        columns = query.get("return_columns")
         sort_by_column = query.get("sort_by", {}).get("column_id", "display_name")
         sort_by_order = query.get("sort_by", {}).get("direction", "asc")
 

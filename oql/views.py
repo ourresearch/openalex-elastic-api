@@ -26,7 +26,7 @@ def results():
     # params
     entity = request.args.get("summarize_by")
     filters = request.args.get("filters")
-    columns = request.args.get("return")
+    columns = request.args.get("return_columns")
     sort_by_column = request.args.get("sort_by_column")
     sort_by_order = request.args.get("sort_by_order")
 
