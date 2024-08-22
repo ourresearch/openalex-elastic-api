@@ -76,15 +76,11 @@ class RedshiftQueryHandler:
 
     def apply_sort(self, query, entity_class):
         if self.sort_by_column:
+            sort_column = self.config.get(self.sort_by_column).get("redshiftDisplayColumn")
             if self.sort_by_column == "count(works)":
                 return query
-            if self.sort_by_column == "publication_year":
-                model_column = getattr(entity_class, "year")
-            elif self.sort_by_column == "count(works)":
-                print(f"sorting by count(works) for {self.entity}")
-                model_column = getattr(entity_class, "count")
             else:
-                model_column = getattr(entity_class, self.sort_by_column, None)
+                model_column = getattr(entity_class, sort_column, None)
 
             if model_column:
                 query = query.order_by(model_column) if self.sort_by_order == "asc" else query.order_by(desc(model_column))
