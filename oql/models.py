@@ -260,13 +260,29 @@ class Author(db.Model):
         return func.concat('authors/A', cls.author_id)
 
     @property
+    def affiliations(self):
+        results = (
+            db.session.query(Affiliation.affiliation_id, Institution.display_name)
+            .join(Institution, Affiliation.affiliation_id == Institution.affiliation_id)
+            .filter(Affiliation.author_id == self.author_id)
+            .limit(10)
+            .all()
+        )
+        return [
+            {
+                "id": f"institutions/I{result.affiliation_id}",
+                "display_name": result.display_name,
+            }
+            for result in results
+        ]
+
+    @property
     def last_known_institutions(self):
         results = (
             db.session.query(Affiliation.affiliation_id, Institution.display_name)
             .join(Institution, Affiliation.affiliation_id == Institution.affiliation_id)
             .filter(Affiliation.author_id == self.author_id)
-            .order_by(Affiliation.author_sequence_number)
-            .limit(10)
+            .limit(2)
             .all()
         )
         seen = set()

@@ -38,8 +38,8 @@
     ],
     "showOnTablePage": [
         "display_name",
-        "orcid",
-        "last_known_institutions"
+        "ids.orcid",
+        "last_known_institutions.id"
     ],
     "groupByDefaults": [
         "last_known_institutions.id",
@@ -54,6 +54,8 @@
             "objectEntity": "authors",
             "displayName": "OpenAlex ID",
             "type": "string",
+            "redshiftDisplayColumn": "id",
+            "redshiftFilterColumn": "id",
             "actions": [],
             "actionsPopular": [],
             "isId": true,
@@ -63,41 +65,23 @@
             "id": "ids.orcid",
             "subjectEntity": "authors",
             "entityId": "authors",
-            "objectEntity": "authors",
+            "objectEntity": null,
             "displayName": "ORCID",
             "isId": true,
-            "type": "string",
-            "icon": "mdi-account-outline"
-        },
-        "orcid": {
-            "id": "orcid",
-            "subjectEntity": "authors",
-            "entityId": "authors",
-            "objectEntity": "authors",
-            "displayName": "ORCID",
-            "isId": true,
-            "type": "string",
-            "icon": "mdi-account-outline"
-        },
-        "default.search": {
-            "id": "default.search",
-            "subjectEntity": "authors",
-            "entityId": "authors",
-            "objectEntity": "authors",
-            "displayName": "name",
-            "type": "string",
+            "redshiftDisplayColumn": "orcid",
+            "redshiftFilterColumn": "orcid",
             "actions": [
+                "column",
                 "filter"
             ],
-            "actionsPopular": [
-                "filter"
-            ],
-            "icon": "mdi-magnify"
+            "type": "string",
+            "icon": "mdi-account-outline"
         },
         "display_name": {
             "id": "display_name",
             "isColumnMandatory": true,
             "subjectEntity": "authors",
+            "objectEntity": null,
             "displayName": "name",
             "type": "string",
             "actions": [
@@ -109,6 +93,8 @@
                 "column"
             ],
             "category": "other",
+            "redshiftDisplayColumn": "display_name",
+            "redshiftFilterColumn": null,
             "icon": "mdi-account-outline"
         },
         "affiliations.institution.id": {
@@ -118,13 +104,13 @@
             "displayName": "Past institutions",
             "entityId": "institutions",
             "objectEntity": "institutions",
-            "type": "entity",
+            "type": "array",
+            "redshiftDisplayColumn": "affiliations",
+            "redshiftFilterColumn": null,
             "actions": [
-                "filter",
-                "group_by"
+                "column"
             ],
             "actionsPopular": [
-                "filter"
             ],
             "icon": "mdi-town-hall"
         },
@@ -136,7 +122,9 @@
             "entityId": "institution-types",
             "objectEntity": "institution-types",
             "displayName": "Past institutions type",
-            "type": "entity",
+            "type": "array",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
                 "filter",
                 "group_by"
@@ -153,32 +141,15 @@
             "displayName": "institution",
             "entityId": "institutions",
             "objectEntity": "institutions",
-            "type": "entity",
+            "type": "array",
+            "redshiftDisplayColumn": "last_known_institutions",
+            "redshiftFilterColumn": null,
             "actions": [
-                "filter",
-                "group_by"
+                "column",
+                "filter"
             ],
             "actionsPopular": [
-                "filter",
-                "group_by"
-            ],
-            "icon": "mdi-town-hall"
-        },
-        "last_known_institutions": {
-            "id": "last_known_institutions",
-            "isList": true,
-            "subjectEntity": "authors",
-            "displayName": "institution",
-            "entityId": "institutions",
-            "objectEntity": "institutions",
-            "type": "entity",
-            "actions": [
-                "filter",
-                "group_by"
-            ],
-            "actionsPopular": [
-                "filter",
-                "group_by"
+                "filter"
             ],
             "icon": "mdi-town-hall"
         },
@@ -187,10 +158,13 @@
             "isList": true,
             "subjectEntity": "authors",
             "entityId": "countries",
+            "objectEntity": null,
             "isId": true,
             "displayName": "institution country",
-            "type": "entity",
+            "type": "array",
             "isCountry": true,
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
                 "filter",
                 "group_by"
@@ -206,9 +180,12 @@
             "isList": true,
             "subjectEntity": "authors",
             "entityId": "institution-types",
+            "objectEntity": null,
             "displayName": "Institution type",
             "isId": true,
-            "type": "entity",
+            "type": "array",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
                 "filter",
                 "group_by"
@@ -222,9 +199,11 @@
             "id": "has_orcid",
             "subjectEntity": "authors",
             "entityId": "authors",
-            "objectEntity": "authors",
+            "objectEntity": null,
             "displayName": "Has an ORCID",
             "type": "boolean",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
                 "filter",
                 "group_by"
@@ -240,9 +219,11 @@
             "isList": true,
             "subjectEntity": "authors",
             "entityId": "authors",
-            "objectEntity": "authors",
+            "objectEntity": null,
             "displayName": "alternate names",
-            "type": "string",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "type": "array",
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-town-hall"
@@ -251,9 +232,11 @@
             "id": "count(works)",
             "subjectEntity": "authors",
             "entityId": "works",
-            "objectEntity": "authors",
+            "objectEntity": null,
             "displayName": "works count",
             "type": "number",
+            "redshiftDisplayColumn": "count(works)",
+            "redshiftFilterColumn": null,
             "actions": [
                 "sort",
                 "column"
