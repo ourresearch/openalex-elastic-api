@@ -26,18 +26,25 @@
       "id": "id",
       "subjectEntity": "licenses",
       "entityId": "licenses",
-      "objectEntity": "licenses",
+      "objectEntity": null,
       "displayName": "License ID",
       "isId": true,
       "type": "string",
+      "redshiftDisplayColumn": "id",
+      "redshiftFilterColumn": "id",
+      "actions": [
+      ],
       "icon": "mdi-tag-outline"
     },
     "display_name": {
       "id": "display_name",
       "isColumnMandatory": true,
       "subjectEntity": "licenses",
+      "objectEntity": null,
       "displayName": "name",
       "type": "string",
+      "redshiftDisplayColumn": "display_name",
+      "redshiftFilterColumn": "display_name",
       "actions": [
         "sort",
         "column"
@@ -53,9 +60,14 @@
       "id": "description",
       "subjectEntity": "licenses",
       "entityId": "licenses",
-      "objectEntity": "licenses",
+      "objectEntity": null,
       "displayName": "description",
       "type": "string",
+      "redshiftDisplayColumn": "description",
+      "redshiftFilterColumn": "description",
+      "actions": [
+          "column"
+      ],
       "icon": "mdi-shape-outline"
     }
   },

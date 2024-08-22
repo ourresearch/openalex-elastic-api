@@ -27,18 +27,25 @@
             "id": "id",
             "subjectEntity": "publishers",
             "entityId": "publishers",
-            "objectEntity": "publishers",
+            "objectEntity": null,
             "displayName": "OpenAlex ID",
             "isId": true,
             "type": "string",
+            "redshiftDisplayColumn": "id",
+            "redshiftFilterColumn": "id",
+            "actions": [
+            ],
             "icon": "mdi-domain"
         },
         "display_name": {
             "id": "display_name",
             "isColumnMandatory": true,
             "subjectEntity": "publishers",
+            "objectEntity": null,
             "displayName": "name",
             "type": "string",
+            "redshiftDisplayColumn": "display_name",
+            "redshiftFilterColumn": "display_name",
             "actions": [
                 "sort",
                 "column"
@@ -54,9 +61,12 @@
             "id": "country_code",
             "subjectEntity": "publishers",
             "entityId": "countries",
+            "objectEntity": "countries",
             "displayName": "Country",
             "isId": true,
-            "type": "entity",
+            "type": "object",
+            "redshiftDisplayColumn": "country_code_formatted",
+            "redshiftFilterColumn": "country_code",
             "isExternalId": true,
             "externalIdPrefix": "countries",
             "isCountry": true,
@@ -67,13 +77,6 @@
                 "filter"
             ],
             "icon": "mdi-earth"
-        },
-        "display_name.search": {
-            "id": "display_name.search",
-            "subjectEntity": "publishers",
-            "displayName": "Name search",
-            "type": "string",
-            "icon": "mdi-magnify"
         }
     },
     "values": null
