@@ -50,10 +50,8 @@ class Work(db.Model):
         source = db.session.query(Source).filter_by(source_id=self.journal_id).first()
         if source:
             return {
-                "source": {
-                    "id": f"sources/S{source.source_id}",
-                    "display_name": source.display_name,
-                },
+                "id": f"sources/S{source.source_id}",
+                "display_name": source.display_name,
             }
         else:
             return None
