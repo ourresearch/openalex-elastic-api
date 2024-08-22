@@ -112,10 +112,23 @@ class RedshiftQueryHandler:
             if "/" in value and (column_type == "object" or column_type == "array"):
                 if key == "keywords.id":
                     value = value.split("/")[-1].lower()
-                    work_class = getattr(models, "Work")
                     work_keyword_class = getattr(models, "WorkKeyword")
-                    query = query.join(work_keyword_class, work_keyword_class.paper_id == work_class.paper_id)
+                    query = query.join(work_keyword_class, work_keyword_class.paper_id == entity_class.paper_id)
                     query = query.filter(work_keyword_class.keyword_id == value)
+                elif key == "authorships.institutions.id":
+                    value = value.split("/")[-1].lower()
+                    value = re.sub(r'[a-zA-Z]', '', value)
+                    value = int(value)
+                    affiliation_class = getattr(models, "Affiliation")
+                    query = query.join(affiliation_class, affiliation_class.paper_id == entity_class.paper_id)
+                    query = query.filter(affiliation_class.affiliation_id == value)
+                elif key == "authorships.author.id":
+                    value = value.split("/")[-1].lower()
+                    value = re.sub(r'[a-zA-Z]', '', value)
+                    value = int(value)
+                    affiliation_class = getattr(models, "Affiliation")
+                    query = query.join(affiliation_class, affiliation_class.paper_id == entity_class.paper_id)
+                    query = query.filter(affiliation_class.author_id == value)
                 else:
                     # get the last part of the URL and convert to number
                     value = value.split("/")[-1].lower()
