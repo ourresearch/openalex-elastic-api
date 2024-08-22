@@ -8,6 +8,7 @@ from settings import WORKS_INDEX
 
 class AutoCompleteSchema(Schema):
     id = fields.Method("get_id")
+    short_id = fields.Method("get_short_id")
     display_name = fields.Str()
     hint = fields.Method("get_hint", dump_default=None)
     cited_by_count = fields.Int()
@@ -182,6 +183,11 @@ class AutoCompleteSchema(Schema):
 
     def get_id(self, obj):
         return obj.id
+
+    def get_short_id(self, obj):
+        index = self.get_entity_type(obj)
+        short_id = obj.id.split("/")[-1]
+        return f"{index}s/{short_id}"
 
     class Meta:
         ordered = True
