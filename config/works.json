@@ -387,7 +387,7 @@
             ],
             "category": "institution",
             "apiField": "authorships.countries",
-            "redshiftDisplayColumn": "countries",
+            "redshiftDisplayColumn": "authorships_countries",
             "redshiftFilterColumn": "country_id",
             "icon": "mdi-earth"
         },
@@ -410,7 +410,7 @@
             "redshiftFilterColumn": "continent_id",
             "icon": "mdi-earth"
         },
-        "institutions.is_global_south": {
+        "authorships.institutions.is_global_south": {
             "id": "institutions.is_global_south",
             "subjectEntity": "works",
             "displayName": "from Global South",
@@ -471,8 +471,8 @@
             "type": "string",
             "category": "ids",
             "apiField": "primary_location.source.issn",
-            "redshiftDisplayColumn": "issn",
-            "redshiftFilterColumn": "issn",
+            "redshiftDisplayColumn": "primary_source_issn",
+            "redshiftFilterColumn": "primary_source_issn",
             "actions": [],
             "icon": "mdi-book-open-outline"
         },
@@ -501,8 +501,8 @@
             "type": "boolean",
             "category": "source",
             "apiField": "primary_location.source.is_in_doaj",
-            "redshiftDisplayColumn": "is_in_doaj",
-            "redshiftFilterColumn": "is_in_doaj",
+            "redshiftDisplayColumn": "primary_source_is_in_doaj",
+            "redshiftFilterColumn": "primary_source_is_in_doaj",
             "actions": [
                 "filter",
                 "group_by"
@@ -516,8 +516,8 @@
             "type": "boolean",
             "category": "source",
             "apiField": "primary_location.source.is_oa",
-            "redshiftDisplayColumn": "primary_source_is_oa",
-            "redshiftFilterColumn": "primary_source_is_oa",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
                 "filter",
                 "column",

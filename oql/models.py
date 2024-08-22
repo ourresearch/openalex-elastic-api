@@ -167,6 +167,60 @@ class Work(db.Model):
         )
         return list(set([result.orcid for result in results if result.orcid]))
 
+    @property
+    def is_oa(self):
+        return self.oa_status != "closed"
+
+    @property
+    def authorships_countries(self):
+        results = (
+            db.session.query(Affiliation.country_id, Affiliation.country_display_name)
+            .join(Author, Affiliation.author_id == Author.author_id)
+            .filter(Affiliation.paper_id == self.paper_id)
+            .limit(10)
+            .all()
+        )
+        return [
+            {"id": f"countries/{result.country_id}", "display_name": result.country_display_name}
+            for result in results if result.country_id
+        ]
+
+    @property
+    def authorships_continents(self):
+        results = (
+            db.session.query(Affiliation.continent_id, Affiliation.contintent_display_name)
+            .join(Author, Affiliation.author_id == Author.author_id)
+            .filter(Affiliation.paper_id == self.paper_id)
+            .limit(10)
+            .all()
+        )
+        return [
+            {"id": f"continents/{result.continent_id, result.contintent_display_name}"}
+            for result in results if result.continent_id
+        ]
+
+    @property
+    def is_global_south(self):
+        results = (
+            db.session.query(Affiliation.is_global_south)
+            .join(Author, Affiliation.author_id == Author.author_id)
+            .filter(Affiliation.paper_id == self.paper_id)
+            .limit(10)
+            .all()
+        )
+        return any(result.is_global_south for result in results)
+
+    @property
+    def institution_types(self):
+        results = (
+            db.session.query(Institution.type)
+            .join(Affiliation, Affiliation.affiliation_id == Institution.affiliation_id)
+            .filter(Affiliation.paper_id == self.paper_id)
+            .limit(10)
+            .all()
+        )
+        return list(set([result.type for result in results]))
+
     def __repr__(self):
         return f"<Work(paper_id={self.paper_id}, original_title={self.original_title})>"
 
