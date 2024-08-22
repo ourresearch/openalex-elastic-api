@@ -28,18 +28,25 @@
       "id": "id",
       "subjectEntity": "types",
       "entityId": "types",
-      "objectEntity": "types",
+      "objectEntity": null,
       "displayName": "Type ID",
       "isId": true,
       "type": "string",
+      "redshiftDisplayColumn": "id",
+      "redshiftFilterColumn": "id",
+      "actions": [
+      ],
       "icon": "mdi-tag-outline"
     },
     "display_name": {
       "id": "display_name",
       "isColumnMandatory": true,
       "subjectEntity": "types",
+      "objectEntity": null,
       "displayName": "name",
       "type": "string",
+      "redshiftDisplayColumn": "display_name",
+      "redshiftFilterColumn": null,
       "actions": [
         "sort",
         "column"
@@ -55,9 +62,12 @@
       "id": "description",
       "subjectEntity": "types",
       "entityId": "types",
-      "objectEntity": "types",
+      "objectEntity": null,
       "displayName": "description",
       "type": "string",
+      "redshiftDisplayColumn": "description",
+      "redshiftFilterColumn": null,
+      "actions": ["column"],
       "icon": "mdi-shape-outline"
     },
     "crossref_types": {
@@ -65,8 +75,12 @@
       "isList": true,
       "subjectEntity": "types",
       "entityId": "types",
+      "objectEntity": null,
       "displayName": "alternate names (Crossref)",
-      "type": "string",
+      "type": "array",
+      "redshiftDisplayColumn": null,
+      "redshiftFilterColumn": null,
+      "actions": [],
       "icon": "mdi-shape-outline"
     }
   },

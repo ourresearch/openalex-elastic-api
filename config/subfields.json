@@ -31,18 +31,25 @@
       "id": "id",
       "subjectEntity": "subfields",
       "entityId": "subfields",
-      "objectEntity": "subfields",
+      "objectEntity": null,
       "displayName": "OpenAlex ID",
       "isId": true,
       "type": "string",
+      "redshiftDisplayColumn": "id",
+      "redshiftFilterColumn": "id",
+      "actions": [
+      ],
       "icon": "mdi-tag-outline"
     },
     "display_name": {
       "id": "display_name",
       "isColumnMandatory": true,
       "subjectEntity": "subfields",
+      "objectEntity": null,
       "displayName": "name",
       "type": "string",
+      "redshiftDisplayColumn": "display_name",
+      "redshiftFilterColumn": null,
       "actions": [
         "sort",
         "column"
@@ -58,19 +65,14 @@
       "id": "description",
       "subjectEntity": "subfields",
       "entityId": "subfields",
-      "objectEntity": "subfields",
+      "objectEntity": null,
       "displayName": "description",
       "type": "string",
-      "icon": "mdi-tag-outline"
-    },
-    "display_name_alternatives": {
-      "id": "display_name_alternatives",
-      "isList": true,
-      "subjectEntity": "subfields",
-      "entityId": "subfields",
-      "objectEntity": "subfields",
-      "displayName": "alternate names",
-      "type": "string",
+      "redshiftDisplayColumn": "description",
+      "redshiftFilterColumn": "description",
+      "actions": [
+        "column"
+      ],
       "icon": "mdi-tag-outline"
     },
     "topics": {
@@ -80,7 +82,11 @@
       "entityId": "topics",
       "objectEntity": "topics",
       "displayName": "topics (children)",
-      "type": "entity",
+      "type": "array",
+      "redshiftDisplayColumn": null,
+      "redshiftFilterColumn": null,
+      "actions": [
+      ],
       "icon": "mdi-tag-outline"
     },
     "siblings": {
@@ -90,7 +96,11 @@
       "entityId": "subfields",
       "objectEntity": "subfields",
       "displayName": "related subfields (siblings)",
-      "type": "entity",
+      "type": "array",
+      "redshiftDisplayColumn": null,
+      "redshiftFilterColumn": null,
+      "actions": [
+      ],
       "icon": "mdi-tag-outline"
     },
     "field": {
@@ -99,7 +109,11 @@
       "entityId": "fields",
       "objectEntity": "fields",
       "displayName": "field (parent)",
-      "type": "entity",
+      "type": "object",
+      "redshiftDisplayColumn": null,
+      "redshiftFilterColumn": null,
+      "actions": [
+      ],
       "icon": "mdi-tag-outline"
     },
     "domain": {
@@ -108,7 +122,11 @@
       "entityId": "domains",
       "objectEntity": "domains",
       "displayName": "domain",
-      "type": "entity",
+      "type": "object",
+      "redshiftDisplayColumn": null,
+      "redshiftFilterColumn": null,
+      "actions": [
+      ],
       "icon": "mdi-tag-outline"
     }
   },

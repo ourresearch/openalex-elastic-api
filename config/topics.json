@@ -32,18 +32,23 @@
             "id": "id",
             "subjectEntity": "topics",
             "entityId": "topics",
-            "objectEntity": "topics",
+            "objectEntity": null,
             "displayName": "OpenAlex ID",
             "isId": true,
             "type": "string",
+            "redshiftDisplayColumn": "id",
+            "redshiftFilterColumn": "id",
             "icon": "mdi-tag-outline"
         },
         "display_name": {
             "id": "display_name",
             "isColumnMandatory": true,
             "subjectEntity": "topics",
+            "objectEntity": null,
             "displayName": "name",
             "type": "string",
+            "redshiftDisplayColumn": "display_name",
+            "redshiftFilterColumn": "display_name",
             "actions": [
                 "sort",
                 "column"
@@ -59,9 +64,14 @@
             "id": "description",
             "subjectEntity": "topics",
             "entityId": "topics",
-            "objectEntity": "topics",
+            "objectEntity": null,
             "displayName": "description",
             "type": "string",
+            "redshiftDisplayColumn": "description",
+            "redshiftFilterColumn": "description",
+            "actions": [
+                "column"
+            ],
             "icon": "mdi-tag-outline"
         },
         "siblings": {
@@ -71,7 +81,11 @@
             "entityId": "topics",
             "objectEntity": "topics",
             "displayName": "related topics (siblings)",
-            "type": "entity",
+            "type": "array",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "actions": [
+            ],
             "icon": "mdi-tag-outline"
         },
         "subfield": {
@@ -80,7 +94,11 @@
             "entityId": "subfields",
             "objectEntity": "subfields",
             "displayName": "subfield (parent)",
-            "type": "entity",
+            "type": "object",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "actions": [
+            ],
             "icon": "mdi-tag-outline"
         },
         "field": {
@@ -89,7 +107,11 @@
             "entityId": "fields",
             "objectEntity": "fields",
             "displayName": "field",
-            "type": "entity",
+            "type": "object",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "actions": [
+            ],
             "icon": "mdi-tag-outline"
         },
         "domain": {
@@ -98,16 +120,22 @@
             "entityId": "domains",
             "objectEntity": "domains",
             "displayName": "domain",
-            "type": "entity",
+            "type": "object",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "actions": [
+            ],
             "icon": "mdi-tag-outline"
         },
         "count(works)": {
             "id": "count(works)",
             "subjectEntity": "topics",
             "entityId": "works",
-            "objectEntity": "topics",
+            "objectEntity": null,
             "displayName": "works count",
             "type": "number",
+            "redshiftDisplayColumn": "count(works)",
+            "redshiftFilterColumn": null,
             "icon": "mdi-tag-outline"
         }
     },
