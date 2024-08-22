@@ -25,18 +25,25 @@
       "id": "id",
       "subjectEntity": "languages",
       "entityId": "languages",
-      "objectEntity": "languages",
+      "objectEntity": null,
       "displayName": "Language ID",
       "isId": true,
       "type": "string",
+      "redshiftDisplayColumn": "id",
+      "redshiftFilterColumn": "id",
+      "actions": [
+      ],
       "icon": "mdi-tag-outline"
     },
     "display_name": {
       "id": "display_name",
       "isColumnMandatory": true,
       "subjectEntity": "languages",
+      "objectEntity": null,
       "displayName": "name",
       "type": "string",
+      "redshiftDisplayColumn": "display_name",
+      "redshiftFilterColumn": "display_name",
       "actions": [
         "sort",
         "column"

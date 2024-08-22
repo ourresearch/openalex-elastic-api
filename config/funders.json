@@ -29,18 +29,24 @@
             "id": "id",
             "subjectEntity": "funders",
             "entityId": "funders",
-            "objectEntity": "funders",
+            "objectEntity": null,
             "displayName": "OpenAlex ID",
             "isId": true,
             "type": "string",
+            "redshiftDisplayColumn": "id",
+            "redshiftFilterColumn": "id",
+            "actions": [],
             "icon": "mdi-cash-multiple"
         },
         "display_name": {
             "id": "display_name",
             "isColumnMandatory": true,
             "subjectEntity": "funders",
+            "objectEntity": null,
             "displayName": "name",
             "type": "string",
+            "redshiftDisplayColumn": "display_name",
+            "redshiftFilterColumn": "display_name",
             "actions": [
                 "sort",
                 "column"
@@ -52,24 +58,21 @@
             "category": "other",
             "icon": "mdi-account-outline"
         },
-        "display_name.search": {
-            "id": "display_name.search",
-            "subjectEntity": "funders",
-            "displayName": "Name search",
-            "type": "string",
-            "icon": "mdi-magnify"
-        },
         "country_code": {
             "id": "country_code",
             "subjectEntity": "funders",
             "entityId": "countries",
+            "objectEntity": "countries",
             "displayName": "Country",
             "isId": true,
-            "type": "entity",
+            "type": "object",
             "isExternalId": true,
             "externalIdPrefix": "countries",
             "isCountry": true,
+            "redshiftDisplayColumn": "country_code_formatted",
+            "redshiftFilterColumn": "country_code",
             "actions": [
+                "column",
                 "filter"
             ],
             "actionsPopular": [
@@ -81,32 +84,45 @@
             "id": "doi",
             "subjectEntity": "funders",
             "entityId": "works",
-            "objectEntity": "works",
+            "objectEntity": null,
             "displayName": "DOI",
             "isId": true,
             "type": "string",
+            "redshiftDisplayColumn": "doi",
+            "redshiftFilterColumn": "doi",
             "category": "ids",
-            "actions": [],
+            "actions": [
+                "column",
+                "filter"
+            ],
             "icon": "mdi-file-document-outline"
         },
         "crossref_id": {
             "id": "crossref_id",
             "subjectEntity": "funders",
+            "objectEntity": null,
             "displayName": "crossref id",
             "isId": true,
             "type": "string",
+            "redshiftDisplayColumn": "crossref_id",
+            "redshiftFilterColumn": "crossref_id",
             "category": "ids",
-            "actions": [],
+            "actions": ["column"],
             "icon": "mdi-file-document-outline"
         },
         "description": {
             "id": "description",
             "subjectEntity": "funders",
+            "objectEntity": null,
             "displayName": "description",
             "isId": true,
             "type": "string",
+            "redshiftDisplayColumn": "description",
+            "redshiftFilterColumn": "description",
             "category": "ids",
-            "actions": [],
+            "actions": [
+                "column"
+            ],
             "icon": "mdi-file-document-outline"
         }
     },

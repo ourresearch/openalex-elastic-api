@@ -26,18 +26,25 @@
             "id": "id",
             "subjectEntity": "keywords",
             "entityId": "keywords",
-            "objectEntity": "keywords",
+            "objectEntity": null,
             "displayName": "Keyword ID",
             "isId": true,
             "type": "string",
+            "redshiftDisplayColumn": "id",
+            "redshiftFilterColumn": "id",
+            "actions": [
+            ],
             "icon": "mdi-tag-outline"
         },
         "display_name": {
             "id": "display_name",
             "isColumnMandatory": true,
             "subjectEntity": "keywords",
+            "objectEntity": null,
             "displayName": "name",
             "type": "string",
+            "redshiftDisplayColumn": "display_name",
+            "redshiftFilterColumn": null,
             "actions": [
                 "sort",
                 "column"
@@ -52,8 +59,11 @@
         "count(works)": {
             "id": "count(works)",
             "subjectEntity": "keywords",
+            "objectEntity": null,
             "displayName": "works count",
             "type": "number",
+            "redshiftDisplayColumn": "count(works)",
+            "redshiftFilterColumn": "count(works)",
             "actions": [
                 "sort",
                 "column"
