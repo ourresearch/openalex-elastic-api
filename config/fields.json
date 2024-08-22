@@ -31,18 +31,23 @@
       "id": "id",
       "subjectEntity": "fields",
       "entityId": "fields",
-      "objectEntity": "fields",
+      "objectEntity": null,
       "displayName": "OpenAlex ID",
       "isId": true,
       "type": "string",
+      "redshiftDisplayColumn": "id",
+      "redshiftFilterColumn": "id",
       "icon": "mdi-tag-outline"
     },
     "display_name": {
       "id": "display_name",
       "isColumnMandatory": true,
       "subjectEntity": "fields",
+      "objectEntity": null,
       "displayName": "name",
       "type": "string",
+      "redshiftDisplayColumn": "display_name",
+      "redshiftFilterColumn": "display_name",
       "actions": [
         "sort",
         "column"
@@ -58,9 +63,14 @@
       "id": "description",
       "subjectEntity": "fields",
       "entityId": "fields",
-      "objectEntity": "fields",
+      "objectEntity": null,
       "displayName": "description",
       "type": "string",
+      "redshiftDisplayColumn": "description",
+      "redshiftFilterColumn": "description",
+      "actions": [
+        "column"
+      ],
       "icon": "mdi-tag-outline"
     },
     "display_name_alternatives": {
@@ -68,9 +78,13 @@
       "isList": true,
       "subjectEntity": "fields",
       "entityId": "fields",
-      "objectEntity": "fields",
+      "objectEntity": null,
       "displayName": "alternate names",
-      "type": "string",
+      "type": "array",
+      "redshiftDisplayColumn": null,
+      "redshiftFilterColumn": null,
+      "actions": [
+      ],
       "icon": "mdi-tag-outline"
     },
     "siblings": {
@@ -80,7 +94,11 @@
       "entityId": "fields",
       "objectEntity": "fields",
       "displayName": "related fields (siblings)",
-      "type": "entity",
+      "type": "array",
+      "redshiftDisplayColumn": null,
+      "redshiftFilterColumn": null,
+      "actions": [
+      ],
       "icon": "mdi-tag-outline"
     },
     "subfields": {
@@ -90,7 +108,11 @@
       "entityId": "subfields",
       "objectEntity": "subfields",
       "displayName": "subfields (children)",
-      "type": "entity",
+      "type": "array",
+      "redshiftDisplayColumn": null,
+      "redshiftFilterColumn": null,
+      "actions": [
+      ],
       "icon": "mdi-tag-outline"
     },
     "domain": {
@@ -99,7 +121,11 @@
       "entityId": "domains",
       "objectEntity": "domains",
       "displayName": "domain (parent)",
-      "type": "entity",
+      "type": "object",
+      "redshiftDisplayColumn": null,
+      "redshiftFilterColumn": null,
+      "actions": [
+      ],
       "icon": "mdi-tag-outline"
     }
   },

@@ -30,18 +30,23 @@
       "id": "id",
       "subjectEntity": "domains",
       "entityId": "domains",
-      "objectEntity": "domains",
+      "objectEntity": null,
       "displayName": "OpenAlex ID",
       "isId": true,
       "type": "string",
+      "redshiftDisplayColumn": "id",
+      "redshiftFilterColumn": "id",
       "icon": "mdi-tag-outline"
     },
     "display_name": {
       "id": "display_name",
       "isColumnMandatory": true,
       "subjectEntity": "domains",
+      "objectEntity": null,
       "displayName": "name",
       "type": "string",
+      "redshiftDisplayColumn": "display_name",
+      "redshiftFilterColumn": null,
       "actions": [
         "sort",
         "column"
@@ -57,19 +62,14 @@
       "id": "description",
       "subjectEntity": "domains",
       "entityId": "domains",
-      "objectEntity": "domains",
+      "objectEntity": null,
       "displayName": "description",
       "type": "string",
-      "icon": "mdi-tag-outline"
-    },
-    "display_name_alternatives": {
-      "id": "display_name_alternatives",
-      "isList": true,
-      "subjectEntity": "domains",
-      "entityId": "domains",
-      "objectEntity": "domains",
-      "displayName": "alternate names",
-      "type": "string",
+      "redshiftDisplayColumn": "description",
+      "redshiftFilterColumn": null,
+      "actions": [
+        "column"
+      ],
       "icon": "mdi-tag-outline"
     },
     "fields": {
@@ -77,9 +77,13 @@
       "isList": true,
       "subjectEntity": "domains",
       "entityId": "fields",
-      "objectEntity": "fields",
+      "objectEntity": null,
       "displayName": "fields (children)",
-      "type": "entity",
+      "type": "array",
+      "redshiftDisplayColumn": null,
+      "redshiftFilterColumn": null,
+      "actions": [
+      ],
       "icon": "mdi-tag-outline"
     },
     "siblings": {
@@ -89,7 +93,11 @@
       "entityId": "domains",
       "objectEntity": "domains",
       "displayName": "other domains (siblings)",
-      "type": "entity",
+      "type": "array",
+      "redshiftDisplayColumn": null,
+      "redshiftFilterColumn": null,
+      "actions": [
+        ],
       "icon": "mdi-tag-outline"
     }
   },
