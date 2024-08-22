@@ -140,6 +140,8 @@
             "type": "entity",
             "category": "other",
             "apiField": "keywords.id",
+            "redshiftDisplayColumn": "keywords",
+            "redshiftFilterColumn": "keyword_id",
             "actions": [
                 "filter",
                 "group_by"
@@ -255,8 +257,8 @@
             "type": "string",
             "category": "ids",
             "apiField": "authorships.institutions.ror",
-            "redshiftDisplayColumn": "ror",
-            "redshiftFilterColumn": "ror",
+            "redshiftDisplayColumn": "ror_ids",
+            "redshiftFilterColumn": "ror_id",
             "actions": [],
             "icon": "mdi-town-hall"
         },
@@ -293,8 +295,8 @@
             "type": "string",
             "category": "ids",
             "apiField": "authorships.author.orcid",
-            "redshiftDisplayColumn": "orcid",
-            "redshiftFilterColumn": "orcid",
+            "redshiftDisplayColumn": "orcid_ids",
+            "redshiftFilterColumn": "orcid_id",
             "actions": [],
             "icon": "mdi-account-outline"
         },

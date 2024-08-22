@@ -75,19 +75,53 @@ class Work(db.Model):
 
     @property
     def topic(self):
-        # get the topic using the top scoring topic from the work_topic table
-        result = (
-            db.session.query(WorkTopic.topic_id, Topic.display_name)
-            .join(Topic, WorkTopic.topic_id == Topic.topic_id)
-            .filter(WorkTopic.paper_id == self.paper_id)
-            .order_by(WorkTopic.score.desc())
-            .first()
-        )
+        result = db.session.query(Topic).filter_by(topic_id=self.topic_id).first()
         if result:
             return {
                 "id": f"topics/T{result.topic_id}",
                 "display_name": result.display_name,
             }
+
+    @property
+    def subfield(self):
+        result = db.session.query(Subfield).filter_by(subfield_id=self.subfield_id).first()
+        if result:
+            return {
+                "id": f"subfields/{result.subfield_id}",
+                "display_name": result.display_name,
+            }
+
+    @property
+    def field(self):
+        result = db.session.query(Field).filter_by(field_id=self.field_id).first()
+        if result:
+            return {
+                "id": f"fields/{result.field_id}",
+                "display_name": result.display_name,
+            }
+
+    @property
+    def domain(self):
+        result = db.session.query(Domain).filter_by(domain_id=self.domain_id).first()
+        if result:
+            return {
+                "id": f"domains/{result.domain_id}",
+                "display_name": result.display_name,
+            }
+
+    @property
+    def keywords(self):
+        results = (
+            db.session.query(WorkKeyword.keyword_id, Keyword.display_name)
+            .join(Keyword, WorkKeyword.keyword_id == Keyword.keyword_id)
+            .filter(WorkKeyword.paper_id == self.paper_id)
+            .limit(10)
+            .all()
+        )
+        return [
+            {"id": f"keywords/{keyword_id}", "display_name": display_name}
+            for keyword_id, display_name in results
+        ]
 
     @property
     def institutions(self):
@@ -111,6 +145,27 @@ class Work(db.Model):
             }
             for affiliation_id, display_name in unique_institutions.items()
         ]
+
+    @property
+    def ror_ids(self):
+        results = (
+            db.session.query(Affiliation.ror)
+            .filter(Affiliation.paper_id == self.paper_id)
+            .limit(10)
+            .all()
+        )
+        return list(set([result.ror for result in results]))
+
+    @property
+    def orcid_ids(self):
+        results = (
+            db.session.query(Author.orcid)
+            .join(Affiliation, Affiliation.author_id == Author.author_id)
+            .filter(Affiliation.paper_id == self.paper_id)
+            .limit(10)
+            .all()
+        )
+        return list(set([result.orcid for result in results if result.orcid]))
 
     def __repr__(self):
         return f"<Work(paper_id={self.paper_id}, original_title={self.original_title})>"
