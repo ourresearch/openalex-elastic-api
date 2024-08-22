@@ -595,7 +595,7 @@ class Query:
 
 class QueryNew:
     def __init__(self, entity, filters, columns, sort_by_column, sort_by_order):
-        self.entity = entity or "works"
+        self.entity = entity
         self.filters = filters
         self.columns = columns
         self.sort_by_column = sort_by_column

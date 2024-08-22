@@ -21,17 +21,24 @@ def query():
     return query_schema.dump(query_result)
 
 
-@blueprint.route("/results", methods=["GET"])
+@blueprint.route("/results", methods=["GET", "POST"])
 def results():
     # params
-    entity = request.args.get("summarize_by")
-    filters = request.args.get("filters")
-    columns = request.args.get("return_columns")
-    sort_by_column = request.args.get("sort_by_column")
-    sort_by_order = request.args.get("sort_by_order")
+    if request.method == "GET":
+        entity = request.args.get("summarize_by") or "works"
+        filters = request.args.get("filters")
+        columns = request.args.get("return_columns")
+        sort_by_column = request.args.get("sort_by_column")
+        sort_by_order = request.args.get("sort_by_order")
+    else:
+        entity = request.json.get("summarize_by") or "works"
+        filters = request.json.get("filters")
+        columns = request.json.get("return_columns")
+        sort_by_column = request.json.get("sort_by_column")
+        sort_by_order = request.json.get("sort_by_order")
 
     # parse lists
-    if columns:
+    if request.method == "GET" and columns:
         columns = columns.split(",")
         columns = [column.strip() for column in columns]
 

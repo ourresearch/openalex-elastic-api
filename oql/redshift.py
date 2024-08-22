@@ -1,4 +1,4 @@
-from tokenize import group
+import re
 
 from sqlalchemy import desc, func
 from extensions import db
@@ -105,25 +105,34 @@ class RedshiftQueryHandler:
             key = filter.get("column_id")
             value = filter.get("value")
 
-            if key == "id":
-                query = query.filter(getattr(entity_class, "paper_id") == value)
-            elif key == "primary_topic.id":
-                value = value.split("/")[-1]
-                query = query.filter(getattr(entity_class, "topic_id") == value)
-            elif key == "primary_topic.domain.id":
-                value = value.split("/")[-1]
-                query = query.filter(getattr(entity_class, "domain_id") == int(value))
-            elif key == "primary_topic.subfield.id":
-                value = value.split("/")[-1]
-                query = query.filter(getattr(entity_class, "subfield_id") == int(value))
-            elif key == "primary_topic.field.id":
-                value = value.split("/")[-1]
-                query = query.filter(getattr(entity_class, "field_id") == int(value))
-            elif key == "publication_year":
-                query = query.filter(getattr(entity_class, "year") == int(value))
+            # get redshift column
+            redshift_column = self.config.get(key).get("redshiftFilterColumn")
+            column_type = self.config.get(key).get("type")
+
+            if "/" in value and (column_type == "object" or column_type == "array"):
+                if key == "keywords.id":
+                    value = value.split("/")[-1].lower()
+                    work_class = getattr(models, "Work")
+                    work_keyword_class = getattr(models, "WorkKeyword")
+                    query = query.join(work_keyword_class, work_keyword_class.paper_id == work_class.paper_id)
+                    query = query.filter(work_keyword_class.keyword_id == value)
+                else:
+                    # get the last part of the URL and convert to number
+                    value = value.split("/")[-1].lower()
+                    value = re.sub(r'[a-zA-Z]', '', value)
+                    value = int(value)
+                    query = query.filter(getattr(entity_class, redshift_column) == value)
+            elif column_type == "number":
+                query = query.filter(getattr(entity_class, redshift_column) == int(value))
+            elif column_type == "boolean":
+                if value.lower() == "true":
+                    query = query.filter(getattr(entity_class, redshift_column) == True)
+                elif value.lower() == "false":
+                    query = query.filter(getattr(entity_class, redshift_column) == False)
             else:
-                column = getattr(entity_class, key, None)
+                column = getattr(entity_class, redshift_column, None)
                 query = query.filter(column == value)
+
         return query
 
     def apply_stats(self, query, entity_class):
