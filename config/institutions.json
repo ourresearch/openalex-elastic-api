@@ -28,7 +28,7 @@
         "display_name",
         "type",
         "country_code",
-        "ror"
+        "ids.ror"
     ],
     "idRegex": "(?i)(?:institutions\\/)?(?:https:\\/\\/openalex\\.org\\/)?(i\\d+)",
     "groupByDefaults": [
@@ -40,33 +40,23 @@
             "id": "id",
             "subjectEntity": "institutions",
             "entityId": "institutions",
-            "objectEntity": "institutions",
+            "objectEntity": null,
             "displayName": "OpenAlex ID",
+            "redshiftDisplayColumn": "id",
+            "redshiftFilterColumn": "id",
             "isId": true,
             "type": "string",
             "icon": "mdi-town-hall"
-        },
-        "default.search": {
-            "id": "default.search",
-            "subjectEntity": "institutions",
-            "entityId": "institutions",
-            "objectEntity": "institutions",
-            "displayName": "name",
-            "type": "string",
-            "actions": [
-                "filter"
-            ],
-            "actionsPopular": [
-                "filter"
-            ],
-            "icon": "mdi-magnify"
         },
         "display_name": {
             "id": "display_name",
             "isColumnMandatory": true,
             "subjectEntity": "institutions",
+            "objectEntity": null,
             "displayName": "name",
             "type": "string",
+            "redshiftDisplayColumn": "display_name",
+            "redshiftFilterColumn": null,
             "actions": [
                 "sort",
                 "column"
@@ -82,39 +72,27 @@
             "id": "ids.ror",
             "subjectEntity": "institutions",
             "entityId": "institutions",
-            "objectEntity": "institutions",
+            "objectEntity": null,
             "displayName": "ROR",
             "isId": true,
             "type": "string",
+            "redshiftDisplayColumn": "ror",
+            "redshiftFilterColumn": "ror",
             "icon": "mdi-town-hall"
-        },
-        "ror": {
-            "id": "ror",
-            "subjectEntity": "institutions",
-            "entityId": "institutions",
-            "objectEntity": "institutions",
-            "displayName": "ROR",
-            "isId": true,
-            "type": "string",
-            "icon": "mdi-town-hall"
-        },
-        "display_name.search": {
-            "id": "display_name.search",
-            "subjectEntity": "institutions",
-            "displayName": "Name search",
-            "type": "string",
-            "icon": "mdi-magnify"
         },
         "country_code": {
             "id": "country_code",
             "subjectEntity": "institutions",
             "entityId": "countries",
+            "objectEntity": "countries",
             "displayName": "Country",
             "isId": true,
-            "type": "entity",
+            "type": "object",
             "isExternalId": true,
             "externalIdPrefix": "countries",
             "isCountry": true,
+            "redshiftDisplayColumn": "country_code",
+            "redshiftFilterColumn": "country_code",
             "actions": [
                 "filter"
             ],
