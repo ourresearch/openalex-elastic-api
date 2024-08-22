@@ -19,37 +19,41 @@
     "description"
   ],
   "showOnTablePage": [
-    "display_name"
+    "display_name",
+    "description"
   ],
   "columns": {
     "id": {
       "id": "id",
       "subjectEntity": "source-types",
       "entityId": "source-types",
-      "objectEntity": "source-types",
+      "objectEntity": null,
       "displayName": "Source Type ID",
       "isId": true,
       "type": "string",
+      "redshiftDisplayColumn": "id",
+      "redshiftFilterColumn": "id",
       "actions": [
-        "filter"
       ],
       "actionsPopular": [
-        "filter"
       ],
       "icon": "mdi-shape-outline"
     },
     "display_name": {
       "id": "display_name",
       "subjectEntity": "source-types",
+      "objectEntity": null,
       "entityId": "source-types",
-      "objectEntity": "source-types",
       "displayName": "Source type name",
-      "type": "entity",
+      "type": "string",
+      "redshiftDisplayColumn": "display_name",
+      "redshiftFilterColumn": "display_name",
       "actions": [
-        "filter"
+        "column",
+        "sort"
       ],
       "actionsPopular": [
-        "filter"
+        "column"
       ],
       "icon": "mdi-shape-outline"
     },
@@ -57,14 +61,15 @@
       "id": "description",
       "subjectEntity": "source-types",
       "entityId": "source-types",
-      "objectEntity": "source-types",
+      "objectEntity": null,
       "displayName": "Source type description",
-      "type": "entity",
+      "type": "string",
+      "redshiftDisplayColumn": null,
+      "redshiftFilterColumn": null,
       "actions": [
-        "filter"
       ],
       "actionsPopular": [
-        "filter"
+        "column"
       ],
       "icon": "mdi-shape-outline"
     }

@@ -26,11 +26,12 @@
       "id": "id",
       "subjectEntity": "sdgs",
       "entityId": "sdgs",
-      "objectEntity": "sdgs",
+      "objectEntity": null,
       "displayName": "SDG ID",
       "isId": true,
+      "redshiftDisplayColumn": "id",
+      "redshiftFilterColumn": "id",
       "actions": [
-        "sort"
       ],
       "type": "string",
       "icon": "mdi-tag-outline"
@@ -39,8 +40,11 @@
       "id": "display_name",
       "isColumnMandatory": true,
       "subjectEntity": "sdgs",
+      "objectEntity": null,
       "displayName": "name",
       "type": "string",
+      "redshiftDisplayColumn": "display_name",
+      "redshiftFilterColumn": "display_name",
       "actions": [
         "sort",
         "column"
