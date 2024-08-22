@@ -91,7 +91,7 @@
             "isExternalId": true,
             "externalIdPrefix": "countries",
             "isCountry": true,
-            "redshiftDisplayColumn": "country_code",
+            "redshiftDisplayColumn": "country_code_formatted",
             "redshiftFilterColumn": "country_code",
             "actions": [
                 "filter"
