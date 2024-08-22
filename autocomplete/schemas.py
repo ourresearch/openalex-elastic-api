@@ -186,6 +186,8 @@ class AutoCompleteSchema(Schema):
 
     def get_short_id(self, obj):
         index = self.get_entity_type(obj)
+        if index == "country":
+            index = "countrie"
         short_id = obj.id.split("/")[-1]
         return f"{index}s/{short_id}"
 
