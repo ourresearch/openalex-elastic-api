@@ -105,12 +105,16 @@
             "id": "type",
             "subjectEntity": "institutions",
             "entityId": "institution-types",
+            "objectEntity": "institution-types",
             "displayName": "Institution type",
+            "redshiftDisplayColumn": "type_formatted",
+            "redshiftFilterColumn": "type",
             "isExternalId": true,
             "externalIdPrefix": "institution-types",
             "isId": true,
-            "type": "entity",
+            "type": "object",
             "actions": [
+                "column",
                 "filter"
             ],
             "actionsPopular": [
@@ -118,21 +122,14 @@
             ],
             "icon": "mdi-shape-outline"
         },
-        "x_concepts.id": {
-            "id": "x_concepts.id",
-            "isList": true,
-            "subjectEntity": "institutions",
-            "displayName": "Concepts",
-            "entityId": "concepts",
-            "objectEntity": "concepts",
-            "type": "entity",
-            "icon": "mdi-tag-outline"
-        },
         "display_name_alternatives": {
             "id": "display_name_alternatives",
             "isList": true,
             "subjectEntity": "institutions",
+            "objectEntity": null,
             "displayName": "alternate names",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
             "type": "string",
             "actions": [],
             "actionsPopular": [],
@@ -144,7 +141,9 @@
             "subjectEntity": "institutions",
             "objectEntity": "institutions",
             "displayName": "parent institutions",
-            "type": "entity",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "type": "array",
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-town-hall"
@@ -155,7 +154,9 @@
             "subjectEntity": "institutions",
             "objectEntity": "institutions",
             "displayName": "child institutions",
-            "type": "entity",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "type": "array",
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-town-hall"
@@ -166,7 +167,9 @@
             "subjectEntity": "institutions",
             "objectEntity": "institutions",
             "displayName": "related institutions",
-            "type": "entity",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "type": "array",
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-town-hall"
@@ -174,8 +177,11 @@
         "mean(fwci)": {
             "id": "mean(fwci)",
             "subjectEntity": "institutions",
+            "objectEntity": null,
             "displayName": "mean fwci",
             "type": "number",
+            "redshiftDisplayColumn": "mean_fwci",
+            "redshiftFilterColumn": null,
             "actions": [
                 "sort",
                 "column"
@@ -189,8 +195,11 @@
         "count(works)": {
             "id": "count",
             "subjectEntity": "institutions",
+            "objectEntity": null,
             "displayName": "works count",
             "type": "number",
+            "redshiftDisplayColumn": "count(works)",
+            "redshiftFilterColumn": "count(works)",
             "actions": [
                 "sort",
                 "column"

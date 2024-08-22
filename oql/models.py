@@ -420,7 +420,6 @@ class Institution(db.Model):
     ror = Column(String(500), nullable=True)
     country_code = Column(String(500), nullable=True)
     type = Column(String(500), nullable=True)
-    # count = Column(Integer)
     citations = Column(Integer)
     oa_paper_count = Column(Integer)
 

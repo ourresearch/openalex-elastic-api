@@ -1,3 +1,5 @@
+from tokenize import group
+
 from sqlalchemy import desc, func
 from extensions import db
 
@@ -46,8 +48,6 @@ class RedshiftQueryHandler:
             if column.startswith("count("):
                 # set with stats function
                 continue
-            elif column == "mean(fwci)":
-                columns_to_select.append(getattr(entity_class, "mean_fwci", None))
             elif self.is_model_property(column, entity_class):
                 print(f"column {column} is a model property")
                 # continue if column is a model property
@@ -185,7 +185,12 @@ class RedshiftQueryHandler:
                     query = query.group_by(
                         entity_class.id,
                         entity_class.affiliation_id,
-                        entity_class.display_name
+                        entity_class.display_name,
+                        entity_class.ror,
+                        entity_class.country_code,
+                        entity_class.type,
+                        entity_class.citations,
+                        entity_class.oa_paper_count
                     )
 
                     # add columns
