@@ -104,6 +104,8 @@ class RedshiftQueryHandler:
                 continue
             key = filter.get("column_id")
             value = filter.get("value")
+            if key is None or value is None:
+                continue
 
             # get redshift column
             redshift_column = self.config.get(key).get("redshiftFilterColumn")
