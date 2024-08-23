@@ -275,6 +275,19 @@ class AffiliationDistinct(db.Model):
         return f"<AffiliationDistinct(paper_id={self.paper_id}, author_id={self.author_id}, affiliation_id={self.affiliation_id})>"
 
 
+class AffiliationCountryDistinct(db.Model):
+    __tablename__ = "paper_country_distinct_mv"
+
+    paper_id = Column(BigInteger, primary_key=True)
+    country_id = Column(String(500))
+    country_display_name = Column(String(65535))
+    continent_id = Column(Integer)
+    is_global_south = Column(Boolean)
+
+    def __repr__(self):
+        return f"<Affiliation(paper_id={self.paper_id}>"
+
+
 class Author(db.Model):
     __tablename__ = "author_mv"
 

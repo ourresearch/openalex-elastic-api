@@ -134,6 +134,11 @@ class RedshiftQueryHandler:
                     affiliation_class = getattr(models, "Affiliation")
                     query = query.join(affiliation_class, affiliation_class.paper_id == entity_class.paper_id)
                     query = query.filter(affiliation_class.author_id == value)
+                elif key == "authorships.countries":
+                    value = value.split("/")[-1].upper()
+                    affiliation_country_class = getattr(models, "AffiliationCountryDistinct")
+                    query = query.join(affiliation_country_class, affiliation_country_class.paper_id == entity_class.paper_id)
+                    query = query.filter(affiliation_country_class.country_id == value)
                 else:
                     # get the last part of the URL and convert to number
                     value = value.split("/")[-1].lower()
