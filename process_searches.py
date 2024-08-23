@@ -1,6 +1,10 @@
 import json
 from datetime import datetime, timezone
+import os
+
 import redis
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
 import time
 
 import settings
@@ -11,6 +15,12 @@ from oql.results_table import ResultTable
 app = create_app()
 redis_db = redis.Redis.from_url(settings.CACHE_REDIS_URL)
 search_queue = "search_queue"
+
+# enable sentry
+sentry_sdk.init(
+    dsn=os.environ.get("SENTRY_DSN"),
+    integrations=[FlaskIntegration()]
+)
 
 
 def fetch_results(query):
