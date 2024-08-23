@@ -119,10 +119,12 @@ class RedshiftQueryHandler:
                     value = value.split("/")[-1].lower()
                     query = query.filter(getattr(entity_class, redshift_column) == value)
                 elif key == "authorships.institutions.id":
+                    # value
                     value = value.split("/")[-1].lower()
                     value = re.sub(r'[a-zA-Z]', '', value)
                     value = int(value)
-                    affiliation_class = getattr(models, "Affiliation")
+                    # query
+                    affiliation_class = getattr(models, "AffiliationDistinct")
                     query = query.join(affiliation_class, affiliation_class.paper_id == entity_class.paper_id)
                     query = query.filter(affiliation_class.affiliation_id == value)
                 elif key == "authorships.author.id":
