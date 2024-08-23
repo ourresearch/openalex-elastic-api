@@ -110,11 +110,14 @@ class RedshiftQueryHandler:
             column_type = self.config.get(key).get("type")
 
             if "/" in value and (column_type == "object" or column_type == "array"):
-                if key == "keywords.id" or key == "type":
+                if key == "keywords.id":
                     value = value.split("/")[-1].lower()
                     work_keyword_class = getattr(models, "WorkKeyword")
                     query = query.join(work_keyword_class, work_keyword_class.paper_id == entity_class.paper_id)
                     query = query.filter(work_keyword_class.keyword_id == value)
+                elif key == "type":
+                    value = value.split("/")[-1].lower()
+                    query = query.filter(getattr(entity_class, redshift_column) == value)
                 elif key == "authorships.institutions.id":
                     value = value.split("/")[-1].lower()
                     value = re.sub(r'[a-zA-Z]', '', value)
