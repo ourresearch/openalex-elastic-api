@@ -380,7 +380,7 @@
             "isCountry": true,
             "actions": [
                 "filter",
-                "column",
+                "column"
             ],
             "actionsPopular": [
                 "group_by"
@@ -402,7 +402,7 @@
             "type": "array",
             "actions": [
                 "filter",
-                "column",
+                "column"
             ],
             "actionsPopular": [],
             "apiField": "authorships.institutions.continent",
@@ -418,7 +418,7 @@
             "type": "boolean",
             "actions": [
                 "filter",
-                "column",
+                "column"
             ],
             "category": "institution",
             "apiField": "institutions.is_global_south",
@@ -539,11 +539,11 @@
             "redshiftFilterColumn": "type",
             "actions": [
                 "filter",
-                "column",
+                "column"
             ],
             "actionsPopular": [
                 "filter",
-                "column",
+                "column"
             ],
             "icon": "mdi-shape-outline"
         },
