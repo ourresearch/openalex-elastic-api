@@ -639,7 +639,7 @@
             "redshiftFilterColumn": null,
             "actions": [
                 "filter",
-                "column",
+                "column"
             ],
             "actionsPopular": [],
             "icon": "mdi-translate"
