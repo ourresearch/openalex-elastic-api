@@ -56,11 +56,6 @@
         "display_name",
         "publication_year",
         "type",
-        "primary_location.source.id",
-        "authorships.author.id",
-        "authorships.institutions.id",
-        "primary_topic.id",
-        "open_access.oa_status",
         "cited_by_count"
     ],
     "groupByDefaults": [
@@ -105,7 +100,7 @@
             "redshiftFilterColumn": "doi_lower",
             "actions": [
                 "filter",
-                "return"
+                "column"
             ],
             "icon": "mdi-file-document-outline"
         },
@@ -122,7 +117,7 @@
             "redshiftFilterColumn": "topic_id",
             "actions": [
                 "filter",
-                "group_by"
+                "column"
             ],
             "actionsPopular": [
                 "filter",
@@ -144,7 +139,7 @@
             "redshiftFilterColumn": "keyword_id",
             "actions": [
                 "filter",
-                "group_by"
+                "column"
             ],
             "actionsPopular": [
                 "filter",
@@ -165,7 +160,7 @@
             "redshiftFilterColumn": "subfield_id",
             "actions": [
                 "filter",
-                "group_by"
+                "column"
             ],
             "actionsPopular": [],
             "icon": "mdi-tag-outline"
@@ -183,7 +178,7 @@
             "redshiftFilterColumn": "field_id",
             "actions": [
                 "filter",
-                "group_by"
+                "column"
             ],
             "actionsPopular": [],
             "icon": "mdi-tag-outline"
@@ -201,7 +196,7 @@
             "redshiftFilterColumn": "domain_id",
             "actions": [
                 "filter",
-                "group_by"
+                "column"
             ],
             "actionsPopular": [],
             "icon": "mdi-tag-outline"
@@ -220,11 +215,11 @@
             "redshiftFilterColumn": "institution_id",
             "actions": [
                 "filter",
-                "group_by"
+                "return"
             ],
             "actionsPopular": [
                 "filter",
-                "group_by"
+                "column"
             ],
             "icon": "mdi-town-hall"
         },
@@ -277,7 +272,7 @@
             "redshiftFilterColumn": "author_id",
             "actions": [
                 "filter",
-                "group_by"
+                "column"
             ],
             "actionsPopular": [
                 "filter",
@@ -350,7 +345,10 @@
             "displayName": "oa status",
             "objectEntity": null,
             "type": "string",
-            "actions": [],
+            "actions": [
+                "column",
+                "filter"
+            ],
             "category": "open access",
             "apiField": "open_access.oa_status",
             "redshiftDisplayColumn": "oa_status",
@@ -368,9 +366,7 @@
             "apiField": "apc_paid.value_usd",
             "redshiftDisplayColumn": null,
             "redshiftFilterColumn": null,
-            "actions": [
-                "filter"
-            ],
+            "actions": [],
             "icon": "mdi-cash"
         },
         "authorships.countries": {
@@ -385,7 +381,6 @@
             "actions": [
                 "filter",
                 "column",
-                "group_by"
             ],
             "actionsPopular": [
                 "group_by"
@@ -408,7 +403,6 @@
             "actions": [
                 "filter",
                 "column",
-                "group_by"
             ],
             "actionsPopular": [],
             "apiField": "authorships.institutions.continent",
@@ -425,7 +419,6 @@
             "actions": [
                 "filter",
                 "column",
-                "group_by"
             ],
             "category": "institution",
             "apiField": "institutions.is_global_south",
@@ -447,8 +440,7 @@
             "redshiftFilterColumn": "institution_type_id",
             "type": "object",
             "actions": [
-                "filter",
-                "group_by"
+                "filter"
             ],
             "icon": "mdi-town-hall"
         },
@@ -465,7 +457,7 @@
             "redshiftFilterColumn": "journal_id",
             "actions": [
                 "filter",
-                "group_by"
+                "column"
             ],
             "icon": "mdi-book-open-outline"
         },
@@ -498,8 +490,7 @@
             "redshiftFilterColumn": "primary_source_type",
             "actions": [
                 "filter",
-                "column",
-                "group_by"
+                "column"
             ],
             "icon": "mdi-book-open-outline"
         },
@@ -515,7 +506,7 @@
             "redshiftFilterColumn": "primary_source_is_in_doaj",
             "actions": [
                 "filter",
-                "group_by"
+                "column"
             ],
             "icon": "mdi-book-open-outline"
         },
@@ -529,11 +520,7 @@
             "apiField": "primary_location.source.is_oa",
             "redshiftDisplayColumn": null,
             "redshiftFilterColumn": null,
-            "actions": [
-                "filter",
-                "column",
-                "group_by"
-            ],
+            "actions": [],
             "icon": "mdi-book-open-outline"
         },
         "type": {
@@ -553,12 +540,10 @@
             "actions": [
                 "filter",
                 "column",
-                "group_by"
             ],
             "actionsPopular": [
                 "filter",
                 "column",
-                "group_by"
             ],
             "icon": "mdi-shape-outline"
         },
@@ -574,10 +559,7 @@
             "apiField": "grants.funder",
             "redshiftDisplayColumn": null,
             "redshiftFilterColumn": null,
-            "actions": [
-                "filter",
-                "group_by"
-            ],
+            "actions": [],
             "icon": "mdi-cash-multiple"
         },
         "grants.award_id": {
@@ -615,8 +597,7 @@
             "actions": [
                 "filter",
                 "sort",
-                "column",
-                "group_by"
+                "column"
             ],
             "actionsPopular": [
                 "filter",
@@ -637,9 +618,7 @@
             "apiField": "apc_paid.value_usd",
             "redshiftDisplayColumn": null,
             "redshiftFilterColumn": null,
-            "actions": [
-                "group_by"
-            ],
+            "actions": [],
             "actionsPopular": [
                 "group_by"
             ],
@@ -661,12 +640,8 @@
             "actions": [
                 "filter",
                 "column",
-                "group_by"
             ],
-            "actionsPopular": [
-                "column",
-                "group_by"
-            ],
+            "actionsPopular": [],
             "icon": "mdi-translate"
         },
         "sustainable_development_goals.id": {
@@ -682,10 +657,7 @@
             "apiField": "sustainable_development_goals.id",
             "redshiftDisplayColumn": null,
             "redshiftFilterColumn": null,
-            "actions": [
-                "filter",
-                "group_by"
-            ],
+            "actions": [],
             "icon": "mdi-sprout-outline"
         },
         "referenced_works": {

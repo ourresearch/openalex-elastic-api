@@ -247,6 +247,9 @@ class Affiliation(db.Model):
 class AffiliationDistinct(db.Model):
     __tablename__ = "affiliation_distinct_mv"
 
+    # This is a view that has unique paper_id, affiliation_id pairs to support filtering by institution
+    # So when multiple authors from the same institution are on the same paper, we only get the paper_id returned once
+
     paper_id = Column(BigInteger, primary_key=True)
     author_id = Column(BigInteger, primary_key=True)
     affiliation_id = Column(BigInteger, primary_key=True)
