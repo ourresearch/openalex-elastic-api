@@ -178,9 +178,16 @@ class Work(db.Model):
             .limit(10)
             .all()
         )
+
+        # unique countries
+        unique_countries = {}
+        for result in results:
+            if result.country_id and result.country_id not in unique_countries:
+                unique_countries[result.country_id] = result.country_display_name
+
         return [
-            {"id": f"countries/{result.country_id}", "display_name": result.country_display_name}
-            for result in results if result.country_id
+            {"id": f"countries/{country_id}", "display_name": display_name}
+            for country_id, display_name in unique_countries.items()
         ]
 
     @property
