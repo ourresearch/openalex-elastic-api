@@ -109,7 +109,14 @@ class RedshiftQueryHandler:
             redshift_column = self.config.get(key).get("redshiftFilterColumn")
             column_type = self.config.get(key).get("type")
 
-            if "/" in value and (column_type == "object" or column_type == "array"):
+            if column_type == "number":
+                query = query.filter(getattr(entity_class, redshift_column) == int(value))
+            elif column_type == "boolean":
+                if value.lower() == "true":
+                    query = query.filter(getattr(entity_class, redshift_column) == True)
+                elif value.lower() == "false":
+                    query = query.filter(getattr(entity_class, redshift_column) == False)
+            elif "/" in value and (column_type == "object" or column_type == "array"):
                 if key == "keywords.id":
                     value = value.split("/")[-1].lower()
                     work_keyword_class = getattr(models, "WorkKeyword")
@@ -145,13 +152,6 @@ class RedshiftQueryHandler:
                     value = re.sub(r'[a-zA-Z]', '', value)
                     value = int(value)
                     query = query.filter(getattr(entity_class, redshift_column) == value)
-            elif column_type == "number":
-                query = query.filter(getattr(entity_class, redshift_column) == int(value))
-            elif column_type == "boolean":
-                if value.lower() == "true":
-                    query = query.filter(getattr(entity_class, redshift_column) == True)
-                elif value.lower() == "false":
-                    query = query.filter(getattr(entity_class, redshift_column) == False)
             else:
                 column = getattr(entity_class, redshift_column, None)
                 query = query.filter(column == value)

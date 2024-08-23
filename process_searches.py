@@ -93,6 +93,7 @@ def process_searches():
             search["error"] = str(e)
             search["is_ready"] = True
             search["timestamp"] = datetime.now(timezone.utc).isoformat()
+            sentry_sdk.capture_exception(e)
 
         # save updated search object back to Redis
         print(f"Saving search {search_id} to redis with {search}")
