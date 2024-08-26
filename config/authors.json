@@ -10,6 +10,7 @@
     "placeholder": "Search scholarly authors",
     "filterName": "author",
     "filterKey": "authorships.author.id",
+    "descrFull": "These are the creators of scholarly works. They can be affiliated with institutions, have ORCIDs, and have published works. Each author has a unique OpenAlex ID.",
     "hintVerb": "at",
     "color": "green",
     "hasAutocomplete": true,
@@ -59,7 +60,8 @@
             "actions": [],
             "actionsPopular": [],
             "isId": true,
-            "icon": "mdi-account-outline"
+            "icon": "mdi-account-outline",
+            "descr": "A unique identifier for each author that can be used for filtering works by author."
         },
         "ids.orcid": {
             "id": "ids.orcid",
@@ -75,7 +77,8 @@
                 "filter"
             ],
             "type": "string",
-            "icon": "mdi-account-outline"
+            "icon": "mdi-account-outline",
+            "descr": "A common identifier for researchers that can be used to link their works across databases."
         },
         "display_name": {
             "id": "display_name",
@@ -95,7 +98,8 @@
             "category": "other",
             "redshiftDisplayColumn": "display_name",
             "redshiftFilterColumn": null,
-            "icon": "mdi-account-outline"
+            "icon": "mdi-account-outline",
+            "descr": "The name of the author."
         },
         "affiliations.institution.id": {
             "id": "affiliations.institution.id",
@@ -112,7 +116,8 @@
             ],
             "actionsPopular": [
             ],
-            "icon": "mdi-town-hall"
+            "icon": "mdi-town-hall",
+            "descr": "The institutions that the author has been affiliated with."
         },
         "affiliations.institution.type": {
             "id": "affiliations.institution.type",
@@ -132,7 +137,8 @@
             "actionsPopular": [
                 "filter"
             ],
-            "icon": "mdi-shape-outline"
+            "icon": "mdi-shape-outline",
+            "descr": "The type of institutions that the author has been affiliated with which are taking from ROR."
         },
         "last_known_institutions.id": {
             "id": "last_known_institutions.id",
@@ -151,7 +157,8 @@
             "actionsPopular": [
                 "filter"
             ],
-            "icon": "mdi-town-hall"
+            "icon": "mdi-town-hall",
+            "descr": "The latest institution that the author has been affiliated with in OpenAlex."
         },
         "last_known_institutions.country_code": {
             "id": "last_known_institutions.country_code",
@@ -173,7 +180,8 @@
                 "filter",
                 "group_by"
             ],
-            "icon": "mdi-earth"
+            "icon": "mdi-earth",
+            "descr": "The country of the latest institution that the author has been affiliated with in OpenAlex."
         },
         "last_known_institutions.type": {
             "id": "last_known_institutions.type",
@@ -193,7 +201,8 @@
             "actionsPopular": [
                 "filter"
             ],
-            "icon": "mdi-shape-outline"
+            "icon": "mdi-shape-outline",
+            "descr": "The type of the latest institution that the author has been affiliated with in OpenAlex."
         },
         "has_orcid": {
             "id": "has_orcid",
@@ -212,7 +221,8 @@
                 "filter",
                 "group_by"
             ],
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "Whether the author has an ORCID."
         },
         "display_name_alternatives": {
             "id": "display_name_alternatives",
@@ -226,7 +236,8 @@
             "type": "array",
             "actions": [],
             "actionsPopular": [],
-            "icon": "mdi-town-hall"
+            "icon": "mdi-town-hall",
+            "descr": "Alternate names of the author which are determined from the raw author name of all works associated with an author."
         },
         "count(works)": {
             "id": "count(works)",
@@ -245,7 +256,8 @@
                 "sort",
                 "column"
             ],
-            "icon": "mdi-book-open-variant"
+            "icon": "mdi-book-open-variant",
+            "descr": "The number of works that the author has created."
         }
     },
     "values": null

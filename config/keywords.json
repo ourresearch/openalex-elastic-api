@@ -10,6 +10,7 @@
     "placeholder": "Search keywords",
     "filterName": "keywords",
     "filterKey": "keywords.id",
+    "descrFull": "Keywords are the lowest level of categorization for works. They are used to specifically describe a work.",
     "hintVerb": ":",
     "hasAutocomplete": true,
     "isNative": false,
@@ -34,7 +35,8 @@
             "redshiftFilterColumn": "id",
             "actions": [
             ],
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "The unique identifier for the keyword in OpenAlex"
         },
         "display_name": {
             "id": "display_name",
@@ -54,7 +56,8 @@
                 "column"
             ],
             "category": "other",
-            "icon": "mdi-account-outline"
+            "icon": "mdi-account-outline",
+            "descr": "The name of the keyword"
         },
         "count(works)": {
             "id": "count(works)",
@@ -73,7 +76,8 @@
                 "column"
             ],
             "category": "other",
-            "icon": "mdi-account-outline"
+            "icon": "mdi-account-outline",
+            "descr": "The number of works that have this keyword"
         }
     },
     "values": null

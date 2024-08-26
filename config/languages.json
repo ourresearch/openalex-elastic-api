@@ -10,6 +10,7 @@
   "placeholder": "Search languages",
   "filterName": "languages",
   "filterKey": "language",
+  "descrFull": "Language that has been assigned to this work by OpenAlex. Languages are assigned to works based on the language of the work title or abstract.",
   "hasAutocomplete": false,
   "isNative": false,
   "idRegex": "(?:https:\\/\\/openalex\\.org\\/languages\\/|languages\\/)([a-zA-Z]{2})",
@@ -33,7 +34,8 @@
       "redshiftFilterColumn": "id",
       "actions": [
       ],
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "The unique identifier for the language in OpenAlex"
     },
     "display_name": {
       "id": "display_name",
@@ -53,7 +55,8 @@
         "column"
       ],
       "category": "other",
-      "icon": "mdi-account-outline"
+      "icon": "mdi-account-outline",
+      "descr": "The name of the language"
     }
   },
   "values": [

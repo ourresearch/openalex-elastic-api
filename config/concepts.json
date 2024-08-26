@@ -5,11 +5,12 @@
     "nameSingular": "concept",
     "displayName": "concepts",
     "displayNameSingular": "concept",
-    "descr": "Topics and fields of study",
+    "descr": "Concepts and fields of study",
     "eg": "History",
     "placeholder": "Search topics",
     "filterName": "concepts",
     "filterKey": "concepts.id",
+    "descrFull": "These are concepts or fields of study that were inherited from MAG (Microsoft Academic Graph). Each concept has a unique OpenAlex ID.",
     "hasAutocomplete": true,
     "isNative": true,
     "idRegex": "(?i)(?:concepts\\/)?(?:https:\\/\\/openalex\\.org\\/)?(c\\d+)",
@@ -31,7 +32,8 @@
             "displayName": "OpenAlex ID",
             "isId": true,
             "type": "string",
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "Unique identifier for this concept"
         },
         "display_name": {
             "id": "display_name",
@@ -48,7 +50,8 @@
                 "column"
             ],
             "category": "other",
-            "icon": "mdi-account-outline"
+            "icon": "mdi-account-outline",
+            "descr": "The name of this concept or field of study"
         },
         "description": {
             "id": "description",
@@ -57,14 +60,16 @@
             "objectEntity": "concepts",
             "displayName": "description",
             "type": "string",
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "A description of this concept or field of study"
         },
         "display_name.search": {
             "id": "display_name.search",
             "subjectEntity": "concepts",
             "displayName": "Name search",
             "type": "string",
-            "icon": "mdi-magnify"
+            "icon": "mdi-magnify",
+            "descr": "Display name for search"
         },
         "level": {
             "id": "level",
@@ -72,7 +77,8 @@
             "displayName": "Level",
             "maxPotentialFiltersToShow": 10,
             "type": "number",
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "The level of this concept in the hierarchy of concepts from level 0 to level 6"
         }
     },
     "values": null
