@@ -10,9 +10,9 @@ class QueryNew:
     def __init__(self, entity, filters, columns, sort_by_column, sort_by_order):
         self.entity = entity
         self.filters = filters
-        self.columns = columns
-        self.sort_by_column = sort_by_column
-        self.sort_by_order = sort_by_order
+        self.columns = columns or ["display_name", "publication_year", "type", "cited_by_count"]
+        self.sort_by_column = sort_by_column or "cited_by_count" if "cited_by_count" in self.columns else "display_name"
+        self.sort_by_order = sort_by_order or "desc"
         self.valid_columns = self.get_valid_columns()
         self.valid_sort_columns = self.get_valid_sort_columns()
 
