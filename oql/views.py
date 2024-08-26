@@ -1,24 +1,11 @@
 from flask import Blueprint, request, jsonify
 
 from combined_config import all_entities_config
-from oql.query import Query, QueryNew
-from oql.schemas import QuerySchema
+from oql.query import QueryNew
 from oql.results_table import ResultTable
 from oql.search import Search, get_existing_search
 
 blueprint = Blueprint("oql", __name__)
-
-
-@blueprint.route("/query", methods=["GET", "POST"])
-def query():
-    if request.method == "GET":
-        query_string = request.args.get("q")
-    else:
-        query_string = request.json.get("q")
-
-    query_result = Query(query_string).to_dict()
-    query_schema = QuerySchema()
-    return query_schema.dump(query_result)
 
 
 @blueprint.route("/results", methods=["GET", "POST"])
