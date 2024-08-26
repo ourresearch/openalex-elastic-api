@@ -4,6 +4,9 @@ __pycache__/
 .pytest_cache/
 dump.rdb
 venv/
+.ipynb_checkpoints/
+*.ipynb
+*nohup.out
 
 scripts/logs
 localdata/

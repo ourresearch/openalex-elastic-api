@@ -10,6 +10,7 @@
   "placeholder": "Search continents",
   "filterName": "continent",
   "filterKey": "authorships.institutions.continent",
+  "descrFull": "These are the continents of the world. Each continent has a unique OpenAlex ID.",
   "hasAutocomplete": false,
   "isNative": false,
   "idRegex": "(?i)(?:https:\\/\\/openalex\\.org\\/continents\\/|continents\\/)(q\\d+)",
@@ -38,7 +39,8 @@
       "actionsPopular": [
         "filter"
       ],
-      "icon": "mdi-shape-outline"
+      "icon": "mdi-shape-outline",
+      "descr": "Unique identifier for the continent"
     },
     "display_name": {
       "id": "display_name",
@@ -54,7 +56,8 @@
       ],
       "actionsPopular": [
       ],
-      "icon": "mdi-shape-outline"
+      "icon": "mdi-shape-outline",
+      "descr": "The name of the continent"
     }
   },
   "values": [
