@@ -119,63 +119,68 @@ class RedshiftQueryHandler:
             value = filter.get("value")
             operator = filter.get("operator")
 
+            # ensure is valid filter
             if key is None or value is None or operator is None:
                 continue
 
-            # get redshift column and type
+            # setup
             redshift_column = self.config.get(key).get("redshiftFilterColumn")
             column_type = self.config.get(key).get("type")
+            is_object_entity = self.config.get(key).get("objectEntity")
             model_column = getattr(
                 entity_class, redshift_column, None
             )  # primary column to filter against
 
+            # filters
             if column_type == "number":
                 query = self.filter_by_number(model_column, operator, query, value)
             elif column_type == "boolean":
                 query = self.filter_by_boolean(model_column, query, value)
-            elif "/" in value and (column_type == "object" or column_type == "array"):
-                if key == "keywords.id":
-                    value = self.get_short_id_text(value)
-                    work_keyword_class = getattr(models, "WorkKeyword")
-                    query = query.join(
-                        work_keyword_class,
-                        work_keyword_class.paper_id == entity_class.paper_id,
-                    )
-                    query = query.filter(work_keyword_class.keyword_id == value)
-                elif key == "type":
-                    value = self.get_short_id_text(value)
-                    query = query.filter(model_column == value)
-                elif key == "authorships.institutions.id":
-                    # value
-                    value = self.get_short_id_integer(value)
-                    # query
-                    affiliation_class = getattr(models, "AffiliationDistinct")
-                    query = query.join(
-                        affiliation_class,
-                        affiliation_class.paper_id == entity_class.paper_id,
-                    )
-                    query = query.filter(affiliation_class.affiliation_id == value)
-                elif key == "authorships.author.id":
-                    value = self.get_short_id_integer(value)
-                    affiliation_class = getattr(models, "Affiliation")
-                    query = query.join(
-                        affiliation_class,
-                        affiliation_class.paper_id == entity_class.paper_id,
-                    )
-                    query = query.filter(affiliation_class.author_id == value)
-                elif key == "authorships.countries":
-                    value = value.split("/")[-1].upper()
-                    affiliation_country_class = getattr(
-                        models, "AffiliationCountryDistinct"
-                    )
-                    query = query.join(
-                        affiliation_country_class,
-                        affiliation_country_class.paper_id == entity_class.paper_id,
-                    )
-                    query = query.filter(affiliation_country_class.country_id == value)
-                else:
-                    value = self.get_short_id_integer(value)
-                    query = query.filter(model_column == value)
+            elif column_type == "string":
+                query = query.filter(model_column == value)
+            # specialized filters
+            elif key == "keywords.id":
+                value = self.get_short_id_text(value)
+                work_keyword_class = getattr(models, "WorkKeyword")
+                query = query.join(
+                    work_keyword_class,
+                    work_keyword_class.paper_id == entity_class.paper_id,
+                )
+                query = query.filter(work_keyword_class.keyword_id == value)
+            elif key == "type":
+                value = self.get_short_id_text(value)
+                query = query.filter(model_column == value)
+            elif key == "authorships.institutions.id":
+                value = self.get_short_id_integer(value)
+                affiliation_class = getattr(models, "AffiliationDistinct")
+                query = query.join(
+                    affiliation_class,
+                    affiliation_class.paper_id == entity_class.paper_id,
+                )
+                query = query.filter(affiliation_class.affiliation_id == value)
+            elif key == "authorships.author.id":
+                value = self.get_short_id_integer(value)
+                affiliation_class = getattr(models, "Affiliation")
+                query = query.join(
+                    affiliation_class,
+                    affiliation_class.paper_id == entity_class.paper_id,
+                )
+                query = query.filter(affiliation_class.author_id == value)
+            elif key == "authorships.countries":
+                value = self.get_short_id_text(value)
+                affiliation_country_class = getattr(
+                    models, "AffiliationCountryDistinct"
+                )
+                query = query.join(
+                    affiliation_country_class,
+                    affiliation_country_class.paper_id == entity_class.paper_id,
+                )
+                query = query.filter(affiliation_country_class.country_id == value.upper())
+            # id filters
+            elif (column_type == "object" or column_type == "array") and is_object_entity:
+                value = self.get_short_id_integer(value)
+                query = query.filter(model_column == value)
+            # array of string filters
             else:
                 query = query.filter(model_column == value)
 
