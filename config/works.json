@@ -710,6 +710,22 @@
             "icon": "mdi-format-quote-close",
             "isDisplayedAsCount": true,
             "descr": "The works cited by the work."
+        },
+        "display_name.search": {
+            "id": "display_name.search",
+            "subjectEntity": "works",
+            "displayName": "search display_name",
+            "objectEntity": null,
+            "type": "search",
+            "category": "search",
+            "apiField": "display_name",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": "original_title",
+            "actions": [
+                "filter"
+            ],
+            "icon": "mdi-file-document-outline",
+            "descr": "Searches the title of the work."
         }
     },
     "values": null

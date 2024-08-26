@@ -138,6 +138,8 @@ class RedshiftQueryHandler:
                 query = self.filter_by_boolean(model_column, query, value)
             elif column_type == "string":
                 query = self.do_operator_query(model_column, operator, query, value)
+            elif column_type == "search":
+                query = query.filter(model_column.ilike(f"%{value}%"))
             # specialized filters
             elif key == "keywords.id":
                 value = self.get_short_id_text(value)
