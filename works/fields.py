@@ -189,13 +189,6 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["has_references"],
         alternate_names=ALTERNATE_NAMES.get("has_references", None),
     ),
-    BooleanField(
-        param="has_ngrams",
-        custom_es_field="fulltext",
-        docstring=DOCSTRINGS["has_fulltext"],
-        documentation_link=DOCUMENTATION_LINKS["has_fulltext"],
-        alternate_names=ALTERNATE_NAMES.get("has_fulltext", None),
-    ),
     BooleanField(param="has_oa_accepted_or_published_version"),
     BooleanField(param="has_oa_submitted_version"),
     BooleanField(
