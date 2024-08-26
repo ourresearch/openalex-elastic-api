@@ -137,7 +137,7 @@ class RedshiftQueryHandler:
             elif column_type == "boolean":
                 query = self.filter_by_boolean(model_column, query, value)
             elif column_type == "string":
-                query = query.filter(model_column == value)
+                query = self.do_operator_query(model_column, operator, query, value)
             # specialized filters
             elif key == "keywords.id":
                 value = self.get_short_id_text(value)
@@ -146,10 +146,11 @@ class RedshiftQueryHandler:
                     work_keyword_class,
                     work_keyword_class.paper_id == entity_class.paper_id,
                 )
-                query = query.filter(work_keyword_class.keyword_id == value)
+                column = work_keyword_class.keyword_id
+                query = self.do_operator_query(column, operator, query, value)
             elif key == "type":
                 value = self.get_short_id_text(value)
-                query = query.filter(model_column == value)
+                query = self.do_operator_query(model_column, operator, query, value)
             elif key == "authorships.institutions.id":
                 value = self.get_short_id_integer(value)
                 affiliation_class = getattr(models, "AffiliationDistinct")
@@ -157,7 +158,8 @@ class RedshiftQueryHandler:
                     affiliation_class,
                     affiliation_class.paper_id == entity_class.paper_id,
                 )
-                query = query.filter(affiliation_class.affiliation_id == value)
+                column = affiliation_class.affiliation_id
+                query = self.do_operator_query(column, operator, query, value)
             elif key == "authorships.author.id":
                 value = self.get_short_id_integer(value)
                 affiliation_class = getattr(models, "Affiliation")
@@ -165,9 +167,11 @@ class RedshiftQueryHandler:
                     affiliation_class,
                     affiliation_class.paper_id == entity_class.paper_id,
                 )
-                query = query.filter(affiliation_class.author_id == value)
+                column = affiliation_class.author_id
+                query = self.do_operator_query(column, operator, query, value)
             elif key == "authorships.countries":
                 value = self.get_short_id_text(value)
+                value = value.upper()  # country code needs to be uppercase
                 affiliation_country_class = getattr(
                     models, "AffiliationCountryDistinct"
                 )
@@ -175,15 +179,26 @@ class RedshiftQueryHandler:
                     affiliation_country_class,
                     affiliation_country_class.paper_id == entity_class.paper_id,
                 )
-                query = query.filter(affiliation_country_class.country_id == value.upper())
+                column = affiliation_country_class.country_id
+                query = self.do_operator_query(column, operator, query, value)
             # id filters
-            elif (column_type == "object" or column_type == "array") and is_object_entity:
+            elif (
+                column_type == "object" or column_type == "array"
+            ) and is_object_entity:
                 value = self.get_short_id_integer(value)
-                query = query.filter(model_column == value)
+                query = self.do_operator_query(model_column, operator, query, value)
             # array of string filters
             else:
-                query = query.filter(model_column == value)
+                query = self.do_operator_query(model_column, operator, query, value)
 
+        return query
+
+    @staticmethod
+    def do_operator_query(column, operator, query, value):
+        if operator == "is":
+            query = query.filter(column == value)
+        elif operator == "is not":
+            query = query.filter(column != value)
         return query
 
     def get_short_id_text(self, value):
