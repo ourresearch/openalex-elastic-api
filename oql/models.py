@@ -127,7 +127,7 @@ class Work(db.Model):
             db.session.query(Affiliation.affiliation_id, Institution.display_name)
             .join(Institution, Affiliation.affiliation_id == Institution.affiliation_id)
             .filter(Affiliation.paper_id == self.paper_id)
-            .limit(10)
+            .limit(20)
             .all()
         )
         # get unique institutions
