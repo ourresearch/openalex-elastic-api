@@ -100,24 +100,30 @@ class RedshiftQueryHandler:
             return query
 
         for filter in self.filters:
-            if "column_id" not in filter or "value" not in filter:
-                continue
             key = filter.get("column_id")
             value = filter.get("value")
-            if key is None or value is None:
+            operator = filter.get("operator")
+
+            if key is None or value is None or operator is None:
                 continue
 
-            # get redshift column
+            # get redshift column and type
             redshift_column = self.config.get(key).get("redshiftFilterColumn")
             column_type = self.config.get(key).get("type")
+            model_column = getattr(entity_class, redshift_column, None)  # primary column to filter against
 
             if column_type == "number":
-                query = query.filter(getattr(entity_class, redshift_column) == int(value))
+                if operator == "is greater than":
+                    query = query.filter(model_column > int(value))
+                elif operator == "is less than":
+                    query = query.filter(model_column < int(value))
+                elif operator == "is not":
+                    query = query.filter(model_column != int(value))
+                else:
+                    query = query.filter(model_column == int(value))
             elif column_type == "boolean":
-                if value.lower() == "true":
-                    query = query.filter(getattr(entity_class, redshift_column) == True)
-                elif value.lower() == "false":
-                    query = query.filter(getattr(entity_class, redshift_column) == False)
+                value = self.get_boolean_value(value)
+                query = query.filter(model_column == value)
             elif "/" in value and (column_type == "object" or column_type == "array"):
                 if key == "keywords.id":
                     value = value.split("/")[-1].lower()
@@ -153,12 +159,20 @@ class RedshiftQueryHandler:
                     value = value.split("/")[-1].lower()
                     value = re.sub(r'[a-zA-Z]', '', value)
                     value = int(value)
-                    query = query.filter(getattr(entity_class, redshift_column) == value)
+                    query = query.filter(model_column == value)
             else:
-                column = getattr(entity_class, redshift_column, None)
-                query = query.filter(column == value)
+                query = query.filter(model_column == value)
 
         return query
+
+    @staticmethod
+    def get_boolean_value(value):
+        if isinstance(value, bool):
+            return value
+        elif value.lower() == "true":
+            return True
+        elif value.lower() == "false":
+            return False
 
     def apply_stats(self, query, entity_class):
         if self.return_columns:
