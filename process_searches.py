@@ -1,11 +1,12 @@
 import json
 from datetime import datetime, timezone
 import os
+import time
 
+from oqo_validate.validate import validate_oqo
 import redis
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
-import time
 
 import settings
 from app import create_app
@@ -27,12 +28,24 @@ def fetch_results(query):
     with app.app_context():
         # params
         entity = query.get("summarize_by") or "works"
-        filters = query.get("filters")
+        filters = query.get("filters") or []
         columns = query.get("return_columns")
         sort_by_column = query.get("sort_by", {}).get("column_id", "display_name")
         sort_by_order = query.get("sort_by", {}).get("direction", "asc")
 
-        # object
+        # validate the query
+        ok, error = validate_oqo({
+            "summarize_by": entity,
+            "filters": filters,
+            "return_columns": columns,
+            "sort_by_column": sort_by_column,
+            "sort_by_order": sort_by_order,
+        })
+
+        if not ok:
+            return {"invalid query error": error}
+
+        # query object
         query = QueryNew(
             entity=entity,
             columns=columns,
@@ -82,15 +95,22 @@ def process_searches():
         try:
             results = fetch_results(search["query"])
 
-            # update the search object
-            search["results"] = results["results"]
-            search["meta"] = results["meta"]
-            search["is_ready"] = True
-            search["timestamp"] = datetime.now(timezone.utc).isoformat()
+            if "invalid_query_error" in results:
+                # invalid query
+                search["invalid_query_error"] = results["invalid_query_error"]
+                search["is_ready"] = True
+                search["timestamp"] = datetime.now(timezone.utc).isoformat()
+            else:
+                # valid results
+                search["results"] = results["results"]
+                search["meta"] = results["meta"]
+                search["is_ready"] = True
+                search["timestamp"] = datetime.now(timezone.utc).isoformat()
             print(f"Processed search {search_id} with {search}")
         except Exception as e:
+            # backend error
             print(f"Error processing search {search_id}: {e}")
-            search["error"] = str(e)
+            search["backend_error"] = str(e)
             search["is_ready"] = True
             search["timestamp"] = datetime.now(timezone.utc).isoformat()
             sentry_sdk.capture_exception(e)

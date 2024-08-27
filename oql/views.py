@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from oqo_validate.validate import validate_oqo
 
 from combined_config import all_entities_config
 from oql.query import QueryNew
@@ -10,24 +11,24 @@ blueprint = Blueprint("oql", __name__)
 
 @blueprint.route("/results", methods=["GET", "POST"])
 def results():
-    # params
-    if request.method == "GET":
-        entity = request.args.get("summarize_by") or "works"
-        filters = request.args.get("filters")
-        columns = request.args.get("return_columns")
-        sort_by_column = request.args.get("sort_by_column")
-        sort_by_order = request.args.get("sort_by_order")
-    else:
-        entity = request.json.get("summarize_by") or "works"
-        filters = request.json.get("filters")
-        columns = request.json.get("return_columns")
-        sort_by_column = request.json.get("sort_by", {}).get("column_id", "display_name")
-        sort_by_order = request.json.get("sort_by", {}).get("direction", "asc")
+    # set results from json
+    entity = request.json.get("summarize_by") or "works"
+    filters = request.json.get("filters") or []
+    columns = request.json.get("return_columns")
+    sort_by_column = request.json.get("sort_by", {}).get("column_id", "display_name")
+    sort_by_order = request.json.get("sort_by", {}).get("direction", "asc")
 
-    # parse lists
-    if request.method == "GET" and columns:
-        columns = columns.split(",")
-        columns = [column.strip() for column in columns]
+    # validate the query
+    ok, error = validate_oqo({
+        "summarize_by": entity,
+        "filters": filters,
+        "return_columns": columns,
+        "sort_by_column": sort_by_column,
+        "sort_by_order": sort_by_order,
+    })
+
+    if not ok:
+        return jsonify({"invalid query error": error}), 400
 
     # query object
     query = QueryNew(
