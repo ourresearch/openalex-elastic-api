@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from oqo_validate import OQOValidator
+from oqo_validate.validate import OQOValidator
 
 from combined_config import all_entities_config
 from oql.query import QueryNew

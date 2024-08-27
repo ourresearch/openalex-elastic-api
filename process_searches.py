@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import os
 import time
 
-from oqo_validate import OQOValidator
+from oqo_validate.validate import OQOValidator
 import redis
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
