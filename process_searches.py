@@ -36,13 +36,7 @@ def fetch_results(query):
 
         # validate the query
         oqo = OQOValidator(all_entities_config)
-        ok, error = oqo.validate({
-            "summarize_by": entity,
-            "filters": filters,
-            "return_columns": columns,
-            "sort_by_column": sort_by_column,
-            "sort_by_order": sort_by_order,
-        })
+        ok, error = oqo.validate(query)
 
         if not ok:
             return {"invalid query error": error}
