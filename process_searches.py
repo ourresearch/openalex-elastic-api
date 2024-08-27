@@ -39,7 +39,7 @@ def fetch_results(query):
         ok, error = oqo.validate(query)
 
         if not ok:
-            return {"invalid query error": error}
+            return {"invalid_query_error": error}
 
         # query object
         query = QueryNew(
@@ -91,7 +91,7 @@ def process_searches():
         try:
             results = fetch_results(search["query"])
 
-            if results.get("invalid_query_error"):
+            if "invalid_query_error" in results:
                 # invalid query
                 search["invalid_query_error"] = results["invalid_query_error"]
                 search["is_ready"] = True
