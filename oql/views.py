@@ -21,8 +21,8 @@ def results():
         entity = request.json.get("summarize_by") or "works"
         filters = request.json.get("filters")
         columns = request.json.get("return_columns")
-        sort_by_column = request.json.get("sort_by_column")
-        sort_by_order = request.json.get("sort_by_order")
+        sort_by_column = request.json.get("sort_by", {}).get("column_id", "display_name")
+        sort_by_order = request.json.get("sort_by", {}).get("direction", "asc")
 
     # parse lists
     if request.method == "GET" and columns:
