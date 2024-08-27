@@ -91,7 +91,7 @@ def process_searches():
         try:
             results = fetch_results(search["query"])
 
-            if "invalid_query_error" in results:
+            if results.get("invalid_query_error"):
                 # invalid query
                 search["invalid_query_error"] = results["invalid_query_error"]
                 search["is_ready"] = True
