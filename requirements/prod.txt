@@ -2,6 +2,7 @@ elasticsearch-dsl==8.9.0
 flask==2.1.2
 flask-caching==2.0.0
 flask-sqlalchemy==2.5.1
+git+https://github.com/ourresearch/oqo-validate
 gunicorn==20.1.0
 iso3166==2.0.2
 iso4217==1.11.20220401
