@@ -3,13 +3,14 @@ from datetime import datetime, timezone
 import os
 import time
 
-from oqo_validate.validate import validate_oqo
+from oqo_validate import OQOValidator
 import redis
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 import settings
 from app import create_app
+from combined_config import all_entities_config
 from oql.query import QueryNew
 from oql.results_table import ResultTable
 
@@ -34,7 +35,8 @@ def fetch_results(query):
         sort_by_order = query.get("sort_by", {}).get("direction", "asc")
 
         # validate the query
-        ok, error = validate_oqo({
+        oqo = OQOValidator(all_entities_config)
+        ok, error = oqo.validate({
             "summarize_by": entity,
             "filters": filters,
             "return_columns": columns,

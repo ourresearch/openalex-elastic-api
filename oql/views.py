@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from oqo_validate.validate import validate_oqo
+from oqo_validate import OQOValidator
 
 from combined_config import all_entities_config
 from oql.query import QueryNew
@@ -19,7 +19,8 @@ def results():
     sort_by_order = request.json.get("sort_by", {}).get("direction", "asc")
 
     # validate the query
-    ok, error = validate_oqo({
+    oqo = OQOValidator(all_entities_config)
+    ok, error = oqo.validate({
         "summarize_by": entity,
         "filters": filters,
         "return_columns": columns,
