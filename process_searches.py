@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 import os
 import time
 
-from oqo_validate.validate import OQOValidator
 import redis
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
@@ -13,6 +12,7 @@ from app import create_app
 from combined_config import all_entities_config
 from oql.query import QueryNew
 from oql.results_table import ResultTable
+from oql.validate import OQOValidator
 
 app = create_app()
 redis_db = redis.Redis.from_url(settings.CACHE_REDIS_URL)

@@ -1,10 +1,10 @@
 from flask import Blueprint, request, jsonify
-from oqo_validate.validate import OQOValidator
 
 from combined_config import all_entities_config
 from oql.query import QueryNew
 from oql.results_table import ResultTable
 from oql.search import Search, get_existing_search
+from oql.validate import OQOValidator
 
 blueprint = Blueprint("oql", __name__)
 
