@@ -29,7 +29,7 @@ class RedshiftQueryHandler:
         self.works_config = all_entities_config.get("works").get("columns")
 
     def execute(self):
-        entity_class = get_entity_class(self.entity)
+        entity_class = get_entity_class(self.entity)  # from summarize_by
 
         query = self.build_joins(entity_class)
         query = self.set_columns(query, entity_class)
@@ -42,21 +42,26 @@ class RedshiftQueryHandler:
     def build_joins(self, entity_class):
         columns_to_select = [entity_class]
 
-        if self.entity != "works" and self.entity == "institutions":
-            work_class = getattr(models, "Work")
-            affiliation_class = getattr(models, "Affiliation")
-            institution_class = getattr(models, "Institution")
-
-            # Join affiliation_mv, work_mv, and institution_mv
+        if self.entity == "institutions":
             query = (
                 db.session.query(*columns_to_select)
                 .distinct()
                 .join(
-                    affiliation_class,
-                    affiliation_class.affiliation_id
-                    == institution_class.affiliation_id,
+                    models.Affiliation,
+                    models.Affiliation.affiliation_id
+                    == models.Institution.affiliation_id,
                 )
-                .join(work_class, work_class.paper_id == affiliation_class.paper_id)
+                .join(models.Work, models.Work.paper_id == models.Affiliation.paper_id)
+            )
+        elif self.entity == "authors":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(
+                    models.Affiliation,
+                    models.Affiliation.author_id == models.Author.author_id,
+                )
+                .join(models.Work, models.Work.paper_id == models.Affiliation.paper_id)
             )
         else:
             query = db.session.query(*columns_to_select)
