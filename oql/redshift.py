@@ -313,20 +313,10 @@ class RedshiftQueryHandler:
                         )
                     )
 
-                    # sort here instead of in sort function
                     if self.sort_by_column == column:
-                        if self.sort_by_order == "desc":
-                            query = query.order_by(
-                                func.count(
-                                    func.distinct(affiliation_class.paper_id)
-                                ).desc()
-                            )
-                        else:
-                            query = query.order_by(
-                                func.count(
-                                    func.distinct(affiliation_class.paper_id)
-                                ).asc()
-                            )
+                        sort_func = func.count(func.distinct(affiliation_class.paper_id))
+                        query = self.sort_from_stat(query, self.sort_by_order, sort_func)
+
                 elif column == "mean(fwci)" and self.entity == "institutions":
                     # use the existing join to calculate mean_fwci
                     work_class = getattr(models, "Work")
@@ -338,14 +328,8 @@ class RedshiftQueryHandler:
                     query = query.group_by(*self.model_return_columns)
 
                     if self.sort_by_column == column:
-                        if self.sort_by_order == "desc":
-                            query = query.order_by(
-                                func.avg(work_class.fwci).desc().nulls_last()
-                            )
-                        else:
-                            query = query.order_by(
-                                func.avg(work_class.fwci).asc().nulls_last()
-                            )
+                        sort_func = func.avg(work_class.fwci)
+                        query = self.sort_from_stat(query, self.sort_by_order, sort_func)
 
                 elif column == "count(works)" and self.entity == "topics":
                     stat, related_entity = parse_stats_column(column)
@@ -372,14 +356,8 @@ class RedshiftQueryHandler:
                     )
 
                     if self.sort_by_column == column:
-                        if self.sort_by_order == "desc":
-                            query = query.order_by(
-                                func.count(work_topic_class.paper_id).desc()
-                            )
-                        else:
-                            query = query.order_by(
-                                func.count(work_topic_class.paper_id).asc()
-                            )
+                        sort_func = func.count(func.distinct(work_topic_class.paper_id))
+                        query = self.sort_from_stat(query, self.sort_by_order, sort_func)
 
                 elif column == "count(works)" and self.entity == "sources":
                     stat, related_entity = parse_stats_column(column)
@@ -401,14 +379,8 @@ class RedshiftQueryHandler:
                     )
 
                     if self.sort_by_column == column:
-                        if self.sort_by_order == "desc":
-                            query = query.order_by(
-                                func.count(work_class.paper_id).desc()
-                            )
-                        else:
-                            query = query.order_by(
-                                func.count(work_class.paper_id).asc()
-                            )
+                        sort_func = func.count(work_class.paper_id)
+                        query = self.sort_from_stat(query, self.sort_by_order, sort_func)
 
                 elif column == "count(works)" and self.entity == "keywords":
                     stat, related_entity = parse_stats_column(column)
@@ -431,14 +403,8 @@ class RedshiftQueryHandler:
                     )
 
                     if self.sort_by_column == column:
-                        if self.sort_by_order == "desc":
-                            query = query.order_by(
-                                func.count(work_keyword_class.paper_id).desc()
-                            )
-                        else:
-                            query = query.order_by(
-                                func.count(work_keyword_class.paper_id).asc()
-                            )
+                        sort_func = func.count(work_keyword_class.paper_id)
+                        query = self.sort_from_stat(query, self.sort_by_order, sort_func)
 
                 elif column == "count(works)" and self.entity == "countries":
                     stat, related_entity = parse_stats_column(column)
@@ -464,18 +430,17 @@ class RedshiftQueryHandler:
                     )
 
                     if self.sort_by_column == column:
-                        if self.sort_by_order == "desc":
-                            query = query.order_by(
-                                func.count(
-                                    func.distinct(affiliation_class.paper_id)
-                                ).desc()
-                            )
-                        else:
-                            query = query.order_by(
-                                func.count(
-                                    func.distinct(affiliation_class.paper_id)
-                                ).asc()
-                            )
+                        sort_func = func.count(func.distinct(affiliation_class.paper_id))
+                        query = self.sort_from_stat(query, self.sort_by_order, sort_func)
+        return query
+
+    @staticmethod
+    def sort_from_stat(query, sort_by_order, sort_func):
+        if sort_by_order:
+            if sort_by_order == "desc":
+                query = query.order_by(sort_func.desc().nulls_last())
+            else:
+                query = query.order_by(sort_func.asc().nulls_last())
         return query
 
 
