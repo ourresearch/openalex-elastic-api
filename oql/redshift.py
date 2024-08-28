@@ -268,8 +268,8 @@ class RedshiftQueryHandler:
                 "redshiftDisplayColumn"
             )
             if (
-                    self.sort_by_column == "count(works)"
-                    or self.sort_by_column == "mean(fwci)"
+                self.sort_by_column == "count(works)"
+                or self.sort_by_column == "mean(fwci)"
             ):
                 return query
             else:
@@ -297,39 +297,46 @@ class RedshiftQueryHandler:
     def apply_stats(self, query, entity_class):
         if self.return_columns:
             for column in self.return_columns:
-                if column == "count(works)" and (self.entity == "authors" or self.entity == "institutions"):
+                if column == "count(works)" and (
+                    self.entity == "authors" or self.entity == "institutions"
+                ):
                     stat, related_entity = parse_stats_column(column)
 
                     # use the existing join to calculate count_works
                     affiliation_class = getattr(models, "Affiliation")
+
+                    # stat function
+                    stat_function = func.count(
+                        func.distinct(affiliation_class.paper_id)
+                    )
 
                     # group by
                     query = query.group_by(*self.model_return_columns)
 
                     # add stat column
                     query = query.add_columns(
-                        func.count(func.distinct(affiliation_class.paper_id)).label(
-                            f"{stat}({related_entity})"
-                        )
+                        stat_function.label(f"{stat}({related_entity})")
                     )
 
                     if self.sort_by_column == column:
-                        sort_func = func.count(func.distinct(affiliation_class.paper_id))
-                        query = self.sort_from_stat(query, self.sort_by_order, sort_func)
+                        query = self.sort_from_stat(
+                            query, self.sort_by_order, stat_function
+                        )
 
                 elif column == "mean(fwci)" and self.entity == "institutions":
                     # use the existing join to calculate mean_fwci
                     work_class = getattr(models, "Work")
 
-                    query = query.add_columns(
-                        func.avg(work_class.fwci).label("mean_fwci")
-                    )
+                    stat_function = func.avg(work_class.fwci)
+
+                    query = query.add_columns(stat_function.label("mean_fwci"))
 
                     query = query.group_by(*self.model_return_columns)
 
                     if self.sort_by_column == column:
-                        sort_func = func.avg(work_class.fwci)
-                        query = self.sort_from_stat(query, self.sort_by_order, sort_func)
+                        query = self.sort_from_stat(
+                            query, self.sort_by_order, stat_function
+                        )
 
                 elif column == "count(works)" and self.entity == "topics":
                     stat, related_entity = parse_stats_column(column)
@@ -349,15 +356,16 @@ class RedshiftQueryHandler:
                         work_topic_class.topic_rank == 1
                     )  # only take the first topic
 
+                    stat_function = func.count(func.distinct(work_topic_class.paper_id))
+
                     query = query.add_columns(
-                        func.count(func.distinct(work_topic_class.paper_id)).label(
-                            f"{stat}({related_entity})"
-                        )
+                        stat_function.label(f"{stat}({related_entity})")
                     )
 
                     if self.sort_by_column == column:
-                        sort_func = func.count(func.distinct(work_topic_class.paper_id))
-                        query = self.sort_from_stat(query, self.sort_by_order, sort_func)
+                        query = self.sort_from_stat(
+                            query, self.sort_by_order, stat_function
+                        )
 
                 elif column == "count(works)" and self.entity == "sources":
                     stat, related_entity = parse_stats_column(column)
@@ -372,15 +380,16 @@ class RedshiftQueryHandler:
                         *self.model_return_columns + [entity_class.source_id]
                     )
 
+                    stat_function = func.count(work_class.paper_id)
+
                     query = query.add_columns(
-                        func.count(work_class.paper_id).label(
-                            f"{stat}({related_entity})"
-                        )
+                        stat_function.label(f"{stat}({related_entity})")
                     )
 
                     if self.sort_by_column == column:
-                        sort_func = func.count(work_class.paper_id)
-                        query = self.sort_from_stat(query, self.sort_by_order, sort_func)
+                        query = self.sort_from_stat(
+                            query, self.sort_by_order, stat_function
+                        )
 
                 elif column == "count(works)" and self.entity == "keywords":
                     stat, related_entity = parse_stats_column(column)
@@ -396,15 +405,16 @@ class RedshiftQueryHandler:
                         *self.model_return_columns + [entity_class.keyword_id]
                     )
 
+                    stat_function = func.count(work_keyword_class.paper_id)
+
                     query = query.add_columns(
-                        func.count(work_keyword_class.paper_id).label(
-                            f"{stat}({related_entity})"
-                        )
+                        stat_function.label(f"{stat}({related_entity})")
                     )
 
                     if self.sort_by_column == column:
-                        sort_func = func.count(work_keyword_class.paper_id)
-                        query = self.sort_from_stat(query, self.sort_by_order, sort_func)
+                        query = self.sort_from_stat(
+                            query, self.sort_by_order, stat_function
+                        )
 
                 elif column == "count(works)" and self.entity == "countries":
                     stat, related_entity = parse_stats_column(column)
@@ -422,16 +432,19 @@ class RedshiftQueryHandler:
                         *self.model_return_columns + [institution_class.country_code]
                     )
 
+                    stat_function = func.count(
+                        func.distinct(affiliation_class.paper_id)
+                    )
+
                     query = query.add_columns(
                         institution_class.country_code,
-                        func.count(func.distinct(affiliation_class.paper_id)).label(
-                            f"{stat}({related_entity})"
-                        ),
+                        stat_function.label(f"{stat}({related_entity})"),
                     )
 
                     if self.sort_by_column == column:
-                        sort_func = func.count(func.distinct(affiliation_class.paper_id))
-                        query = self.sort_from_stat(query, self.sort_by_order, sort_func)
+                        query = self.sort_from_stat(
+                            query, self.sort_by_order, stat_function
+                        )
         return query
 
     @staticmethod
@@ -477,6 +490,7 @@ def is_model_property(column, entity_class):
 def get_short_id_text(value):
     value = value.split("/")[-1].lower()
     return value
+
 
 def get_short_id_integer(value):
     value = get_short_id_text(value)
