@@ -138,7 +138,7 @@ class RedshiftQueryHandler:
                 )
                 column = work_keyword_class.keyword_id
                 query = self.do_operator_query(column, operator, query, value)
-            elif key == "type":
+            elif key == "type" or key == "primary_location.source.type":
                 value = get_short_id_text(value)
                 query = self.do_operator_query(model_column, operator, query, value)
             elif key == "authorships.institutions.id":
