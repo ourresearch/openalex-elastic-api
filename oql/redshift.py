@@ -29,47 +29,44 @@ class RedshiftQueryHandler:
         self.works_config = all_entities_config.get("works").get("columns")
 
     def execute(self):
-        entity_class = self.get_entity_class()
+        entity_class = get_entity_class(self.entity)
 
-        query = self.set_columns(entity_class)
+        query = self.build_joins(entity_class)
+        query = self.set_columns(query, entity_class)
         query = self.apply_sort(query, entity_class)
-        query = self.apply_work_filters(query, entity_class)
+        query = self.apply_work_filters(query)
         query = self.apply_entity_filters(query, entity_class)
         query = self.apply_stats(query, entity_class)
         return query.limit(100).all()
 
-    def get_entity_class(self):
-        if self.entity == "countries":
-            entity_class = getattr(models, "Country")
-        elif self.entity == "institution-types":
-            entity_class = getattr(models, "InstitutionType")
-        elif self.entity == "source-types":
-            entity_class = getattr(models, "SourceType")
-        elif self.entity == "work-types":
-            entity_class = getattr(models, "WorkType")
-        else:
-            entity_class = getattr(models, self.entity[:-1].capitalize())
-        return entity_class
-
-    def set_columns(self, entity_class):
+    def build_joins(self, entity_class):
         columns_to_select = [entity_class]
 
-        # check if we need to join works and affiliations
         if self.entity != "works" and self.entity == "institutions":
             work_class = getattr(models, "Work")
             affiliation_class = getattr(models, "Affiliation")
             institution_class = getattr(models, "Institution")
 
-            # start by querying affiliation_mv, then join work_mv and institution_mv
-            query = db.session.query(*columns_to_select).distinct().join(
-                affiliation_class, affiliation_class.affiliation_id == institution_class.affiliation_id
-            ).join(
-                work_class, work_class.paper_id == affiliation_class.paper_id
+            # Join affiliation_mv, work_mv, and institution_mv
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(
+                    affiliation_class,
+                    affiliation_class.affiliation_id
+                    == institution_class.affiliation_id,
+                )
+                .join(work_class, work_class.paper_id == affiliation_class.paper_id)
             )
         else:
             query = db.session.query(*columns_to_select)
 
-        # add columns for selection based on return_columns
+        self.model_return_columns = columns_to_select
+        return query
+
+    def set_columns(self, query, entity_class):
+        columns_to_select = [entity_class]
+
         for column in self.return_columns:
             column_info = self.entity_config.get(column)
             if not column_info:
@@ -77,41 +74,26 @@ class RedshiftQueryHandler:
 
             redshift_column = column_info.get("redshiftDisplayColumn")
             if redshift_column.startswith("count("):
-                # handle aggregate columns in the apply_stats method
+                # Handle aggregate columns elsewhere
                 continue
 
-            if self.is_model_property(redshift_column, entity_class):
-                # continue if this is a model property
+            if is_model_property(redshift_column, entity_class):
+                # Skip model properties
                 continue
 
-            # add the relevant column to the select statement
             if hasattr(entity_class, redshift_column):
                 columns_to_select.append(getattr(entity_class, redshift_column))
-
-        self.model_return_columns = columns_to_select
         return query
-
-    def is_model_property(self, column, entity_class):
-        attr = getattr(entity_class, column, None)
-
-        # check if it's a standard Python property
-        if isinstance(attr, property):
-            return True
-
-        if isinstance(attr, hybrid_property):
-            return False  # Do not skip, we want to add hybrid properties
-
-        if hasattr(attr, "expression"):
-            return False  # Do not skip, this is likely a hybrid property
-
-        return False
 
     def apply_sort(self, query, entity_class):
         if self.sort_by_column:
             sort_column = self.entity_config.get(self.sort_by_column).get(
                 "redshiftDisplayColumn"
             )
-            if self.sort_by_column == "count(works)" or self.sort_by_column == "mean(fwci)":
+            if (
+                self.sort_by_column == "count(works)"
+                or self.sort_by_column == "mean(fwci)"
+            ):
                 return query
             else:
                 model_column = getattr(entity_class, sort_column, None)
@@ -135,7 +117,7 @@ class RedshiftQueryHandler:
         )
         return query.order_by(desc(getattr(entity_class, default_sort_column, None)))
 
-    def apply_work_filters(self, query, entity_class):
+    def apply_work_filters(self, query):
         if not self.filters:
             return query
 
@@ -250,9 +232,7 @@ class RedshiftQueryHandler:
             redshift_column = self.entity_config.get(key).get("redshiftFilterColumn")
             column_type = self.entity_config.get(key).get("type")
             is_object_entity = self.entity_config.get(key).get("objectEntity")
-            model_column = getattr(
-                entity_class, redshift_column, None
-            )
+            model_column = getattr(entity_class, redshift_column, None)
 
             # filters
             if column_type == "number":
@@ -552,6 +532,36 @@ class RedshiftQueryHandler:
                                 ).asc()
                             )
         return query
+
+
+def get_entity_class(entity):
+    if entity == "countries":
+        entity_class = getattr(models, "Country")
+    elif entity == "institution-types":
+        entity_class = getattr(models, "InstitutionType")
+    elif entity == "source-types":
+        entity_class = getattr(models, "SourceType")
+    elif entity == "work-types":
+        entity_class = getattr(models, "WorkType")
+    else:
+        entity_class = getattr(models, entity[:-1].capitalize())
+    return entity_class
+
+
+def is_model_property(column, entity_class):
+    attr = getattr(entity_class, column, None)
+
+    # check if it's a standard Python property
+    if isinstance(attr, property):
+        return True
+
+    if isinstance(attr, hybrid_property):
+        return False  # do not skip, we want to add hybrid properties
+
+    if hasattr(attr, "expression"):
+        return False  # do not skip, this is likely a hybrid property
+
+    return False
 
 
 def parse_stats_column(column):
