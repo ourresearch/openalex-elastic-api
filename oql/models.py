@@ -494,25 +494,6 @@ class Institution(db.Model):
             .scalar_subquery()
         )
 
-    @hybrid_property
-    def mean_fwci(self):
-        return (
-            db.session.query(func.avg(Work.fwci))
-            .join(Affiliation, Work.paper_id == Affiliation.paper_id)
-            .filter(Affiliation.affiliation_id == self.affiliation_id)
-            .scalar()
-        )
-
-    @mean_fwci.expression
-    def mean_fwci(cls):
-        # This is the expression form
-        return (
-            select([func.avg(Work.fwci)])
-            .select_from(Work.join(Affiliation, Work.paper_id == Affiliation.paper_id))
-            .where(Affiliation.affiliation_id == cls.affiliation_id)
-            .scalar_subquery()
-        )
-
     @property
     def country_code_formatted(self):
         return (

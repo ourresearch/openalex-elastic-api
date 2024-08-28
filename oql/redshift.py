@@ -25,14 +25,16 @@ class RedshiftQueryHandler:
         self.return_columns = return_columns
         self.valid_columns = valid_columns
         self.model_return_columns = []
-        self.config = all_entities_config.get(entity).get("columns")
+        self.entity_config = all_entities_config.get(entity).get("columns")
+        self.works_config = all_entities_config.get("works").get("columns")
 
     def execute(self):
         entity_class = self.get_entity_class()
 
         query = self.set_columns(entity_class)
         query = self.apply_sort(query, entity_class)
-        query = self.apply_filters(query, entity_class)
+        query = self.apply_work_filters(query, entity_class)
+        query = self.apply_entity_filters(query, entity_class)
         query = self.apply_stats(query, entity_class)
         return query.limit(100).all()
 
@@ -51,19 +53,42 @@ class RedshiftQueryHandler:
 
     def set_columns(self, entity_class):
         columns_to_select = [entity_class]
+
+        # check if we need to join works and affiliations
+        if self.entity != "works" and self.entity == "institutions":
+            work_class = getattr(models, "Work")
+            affiliation_class = getattr(models, "Affiliation")
+            institution_class = getattr(models, "Institution")
+
+            # start by querying affiliation_mv, then join work_mv and institution_mv
+            query = db.session.query(*columns_to_select).distinct().join(
+                affiliation_class, affiliation_class.affiliation_id == institution_class.affiliation_id
+            ).join(
+                work_class, work_class.paper_id == affiliation_class.paper_id
+            )
+        else:
+            query = db.session.query(*columns_to_select)
+
+        # add columns for selection based on return_columns
         for column in self.return_columns:
-            column = self.config.get(column).get("redshiftDisplayColumn")
-            if column.startswith("count("):
-                # set with stats function
+            column_info = self.entity_config.get(column)
+            if not column_info:
                 continue
-            elif self.is_model_property(column, entity_class):
-                print(f"column {column} is a model property")
-                # continue if column is a model property
+
+            redshift_column = column_info.get("redshiftDisplayColumn")
+            if redshift_column.startswith("count("):
+                # handle aggregate columns in the apply_stats method
                 continue
-            else:
-                columns_to_select.append(getattr(entity_class, column, None))
+
+            if self.is_model_property(redshift_column, entity_class):
+                # continue if this is a model property
+                continue
+
+            # add the relevant column to the select statement
+            if hasattr(entity_class, redshift_column):
+                columns_to_select.append(getattr(entity_class, redshift_column))
+
         self.model_return_columns = columns_to_select
-        query = db.session.query(*columns_to_select)
         return query
 
     def is_model_property(self, column, entity_class):
@@ -83,10 +108,10 @@ class RedshiftQueryHandler:
 
     def apply_sort(self, query, entity_class):
         if self.sort_by_column:
-            sort_column = self.config.get(self.sort_by_column).get(
+            sort_column = self.entity_config.get(self.sort_by_column).get(
                 "redshiftDisplayColumn"
             )
-            if self.sort_by_column == "count(works)":
+            if self.sort_by_column == "count(works)" or self.sort_by_column == "mean(fwci)":
                 return query
             else:
                 model_column = getattr(entity_class, sort_column, None)
@@ -110,11 +135,14 @@ class RedshiftQueryHandler:
         )
         return query.order_by(desc(getattr(entity_class, default_sort_column, None)))
 
-    def apply_filters(self, query, entity_class):
+    def apply_work_filters(self, query, entity_class):
         if not self.filters:
             return query
 
+        work_class = getattr(models, "Work")
+
         for filter in self.filters:
+            subject_entity = filter.get("subjectEntity")
             key = filter.get("column_id")
             value = filter.get("value")
             operator = filter.get("operator")
@@ -123,16 +151,21 @@ class RedshiftQueryHandler:
             if key is None or value is None or operator is None:
                 continue
 
+            # only filter by works
+            if subject_entity != "works":
+                continue
+
             # setup
-            redshift_column = self.config.get(key).get("redshiftFilterColumn")
-            column_type = self.config.get(key).get("type")
-            is_object_entity = self.config.get(key).get("objectEntity")
+            redshift_column = self.works_config.get(key).get("redshiftFilterColumn")
+            column_type = self.works_config.get(key).get("type")
+            is_object_entity = self.works_config.get(key).get("objectEntity")
             model_column = getattr(
-                entity_class, redshift_column, None
+                work_class, redshift_column, None
             )  # primary column to filter against
 
             # filters
             if column_type == "number":
+                print(f"filtering by number {model_column}")
                 query = self.filter_by_number(model_column, operator, query, value)
             elif column_type == "boolean":
                 query = self.filter_by_boolean(model_column, query, value)
@@ -146,7 +179,7 @@ class RedshiftQueryHandler:
                 work_keyword_class = getattr(models, "WorkKeyword")
                 query = query.join(
                     work_keyword_class,
-                    work_keyword_class.paper_id == entity_class.paper_id,
+                    work_keyword_class.paper_id == work_class.paper_id,
                 )
                 column = work_keyword_class.keyword_id
                 query = self.do_operator_query(column, operator, query, value)
@@ -158,7 +191,7 @@ class RedshiftQueryHandler:
                 affiliation_class = getattr(models, "AffiliationDistinct")
                 query = query.join(
                     affiliation_class,
-                    affiliation_class.paper_id == entity_class.paper_id,
+                    affiliation_class.paper_id == work_class.paper_id,
                 )
                 column = affiliation_class.affiliation_id
                 query = self.do_operator_query(column, operator, query, value)
@@ -167,7 +200,7 @@ class RedshiftQueryHandler:
                 affiliation_class = getattr(models, "Affiliation")
                 query = query.join(
                     affiliation_class,
-                    affiliation_class.paper_id == entity_class.paper_id,
+                    affiliation_class.paper_id == work_class.paper_id,
                 )
                 column = affiliation_class.author_id
                 query = self.do_operator_query(column, operator, query, value)
@@ -179,7 +212,7 @@ class RedshiftQueryHandler:
                 )
                 query = query.join(
                     affiliation_country_class,
-                    affiliation_country_class.paper_id == entity_class.paper_id,
+                    affiliation_country_class.paper_id == work_class.paper_id,
                 )
                 column = affiliation_country_class.country_id
                 query = self.do_operator_query(column, operator, query, value)
@@ -193,6 +226,53 @@ class RedshiftQueryHandler:
             else:
                 query = self.do_operator_query(model_column, operator, query, value)
 
+        return query
+
+    def apply_entity_filters(self, query, entity_class):
+        if not self.filters:
+            return query
+
+        for filter in self.filters:
+            subject_entity = filter.get("subjectEntity")
+            key = filter.get("column_id")
+            value = filter.get("value")
+            operator = filter.get("operator")
+
+            # ensure is valid filter
+            if key is None or value is None or operator is None:
+                continue
+
+            # only filter by entities
+            if subject_entity == "works":
+                continue
+
+            # setup
+            redshift_column = self.entity_config.get(key).get("redshiftFilterColumn")
+            column_type = self.entity_config.get(key).get("type")
+            is_object_entity = self.entity_config.get(key).get("objectEntity")
+            model_column = getattr(
+                entity_class, redshift_column, None
+            )
+
+            # filters
+            if column_type == "number":
+                query = self.filter_by_number(model_column, operator, query, value)
+            elif column_type == "boolean":
+                query = self.filter_by_boolean(model_column, query, value)
+            elif column_type == "string":
+                query = self.do_operator_query(model_column, operator, query, value)
+            elif column_type == "search":
+                query = query.filter(model_column.ilike(f"%{value}%"))
+            elif (
+                column_type == "object" or column_type == "array"
+            ) and is_object_entity:
+                value = self.get_short_id_text(value)
+                value = value.upper()
+                print(f"filtering by object {model_column} with value {value}")
+                query = self.do_operator_query(model_column, operator, query, value)
+            # array of string filters
+            else:
+                query = self.do_operator_query(model_column, operator, query, value)
         return query
 
     @staticmethod
@@ -276,6 +356,25 @@ class RedshiftQueryHandler:
                                 func.count(
                                     func.distinct(affiliation_class.paper_id)
                                 ).asc()
+                            )
+                elif column == "mean(fwci)" and self.entity == "institutions":
+                    # use the existing join to calculate mean_fwci
+                    work_class = getattr(models, "Work")
+
+                    query = query.add_columns(
+                        func.avg(work_class.fwci).label("mean_fwci")
+                    )
+
+                    query = query.group_by(*self.model_return_columns)
+
+                    if self.sort_by_column == column:
+                        if self.sort_by_order == "desc":
+                            query = query.order_by(
+                                func.avg(work_class.fwci).desc().nulls_last()
+                            )
+                        else:
+                            query = query.order_by(
+                                func.avg(work_class.fwci).asc().nulls_last()
                             )
 
                 elif column == "count(works)" and self.entity == "topics":
