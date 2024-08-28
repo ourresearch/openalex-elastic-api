@@ -63,6 +63,15 @@ class RedshiftQueryHandler:
                 )
                 .join(models.Work, models.Work.paper_id == models.Affiliation.paper_id)
             )
+        elif self.entity == "sources":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(
+                    models.Work,
+                    models.Work.journal_id == models.Source.source_id,
+                )
+            )
         else:
             query = db.session.query(*columns_to_select)
 
@@ -220,8 +229,7 @@ class RedshiftQueryHandler:
                 column_type == "object" or column_type == "array"
             ) and is_object_entity:
                 value = get_short_id_text(value)
-                value = value.upper()
-                print(f"filtering by object {model_column} with value {value}")
+                value = value.upper() if "country_code" in key else value
                 query = self.do_operator_query(model_column, operator, query, value)
             # array of string filters
             else:
@@ -371,10 +379,6 @@ class RedshiftQueryHandler:
                     stat, related_entity = parse_stats_column(column)
 
                     work_class = getattr(models, "Work")
-
-                    query = query.outerjoin(
-                        work_class, work_class.journal_id == entity_class.source_id
-                    )
 
                     query = query.group_by(
                         *self.model_return_columns + [entity_class.source_id]

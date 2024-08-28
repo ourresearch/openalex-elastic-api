@@ -55,7 +55,7 @@
             "isId": true,
             "type": "string",
             "redshiftDisplayColumn": "id",
-            "redshiftSortColumn": "id",
+            "redshiftFilterColumn": "id",
             "actions": [
             ],
             "icon": "mdi-book-open-outline",
@@ -70,7 +70,7 @@
             "isId": true,
             "type": "string",
             "redshiftDisplayColumn": "issn",
-            "redshiftSortColumn": "issn",
+            "redshiftFilterColumn": "issn",
             "actions": [
                 "column",
                 "filter"
@@ -86,7 +86,7 @@
             "displayName": "name",
             "type": "string",
             "redshiftDisplayColumn": "display_name",
-            "redshiftSortColumn": "display_name",
+            "redshiftFilterColumn": "display_name",
             "actions": [
                 "sort",
                 "column"
@@ -107,7 +107,7 @@
             "displayName": "Publisher",
             "type": "object",
             "redshiftDisplayColumn": null,
-            "redshiftSortColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-domain",
@@ -124,7 +124,7 @@
             "externalIdPrefix": "source-types",
             "type": "object",
             "redshiftDisplayColumn": "type_formatted",
-            "redshiftSortColumn": "type",
+            "redshiftFilterColumn": "type",
             "actions": [
                 "column",
                 "filter"
@@ -143,7 +143,7 @@
             "displayName": "Article Processing Charge",
             "type": "number",
             "redshiftDisplayColumn": null,
-            "redshiftSortColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
             ],
             "actionsPopular": [
@@ -158,7 +158,7 @@
             "displayName": "Fully open access",
             "type": "boolean",
             "redshiftDisplayColumn": null,
-            "redshiftSortColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
             ],
             "actionsPopular": [
@@ -173,7 +173,7 @@
             "displayName": "In DOAJ",
             "type": "boolean",
             "redshiftDisplayColumn": "is_in_doaj",
-            "redshiftSortColumn": "is_in_doaj",
+            "redshiftFilterColumn": "is_in_doaj",
             "actions": [
                 "column",
                 "filter"
@@ -192,7 +192,7 @@
             "displayName": "alternate names",
             "type": "array",
             "redshiftDisplayColumn": null,
-            "redshiftSortColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [],
             "actionsPopular": [],
             "icon": "mdi-book-open-outline",
