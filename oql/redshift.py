@@ -33,9 +33,9 @@ class RedshiftQueryHandler:
 
         query = self.build_joins(entity_class)
         query = self.set_columns(query, entity_class)
-        query = self.apply_sort(query, entity_class)
         query = self.apply_work_filters(query)
         query = self.apply_entity_filters(query, entity_class)
+        query = self.apply_sort(query, entity_class)
         query = self.apply_stats(query, entity_class)
         return query.limit(100).all()
 
@@ -90,38 +90,6 @@ class RedshiftQueryHandler:
                 columns_to_select.append(getattr(entity_class, redshift_column))
         return query
 
-    def apply_sort(self, query, entity_class):
-        if self.sort_by_column:
-            sort_column = self.entity_config.get(self.sort_by_column).get(
-                "redshiftDisplayColumn"
-            )
-            if (
-                self.sort_by_column == "count(works)"
-                or self.sort_by_column == "mean(fwci)"
-            ):
-                return query
-            else:
-                model_column = getattr(entity_class, sort_column, None)
-
-            if model_column:
-                query = (
-                    query.order_by(model_column)
-                    if self.sort_by_order == "asc"
-                    else query.order_by(desc(model_column))
-                )
-            else:
-                query = self.default_sort(query, entity_class)
-        else:
-            query = self.default_sort(query, entity_class)
-
-        return query
-
-    def default_sort(self, query, entity_class):
-        default_sort_column = (
-            "cited_by_count" if self.entity == "works" else "display_name"
-        )
-        return query.order_by(desc(getattr(entity_class, default_sort_column, None)))
-
     def apply_work_filters(self, query):
         if not self.filters:
             return query
@@ -162,7 +130,7 @@ class RedshiftQueryHandler:
                 query = query.filter(model_column.ilike(f"%{value}%"))
             # specialized filters
             elif key == "keywords.id":
-                value = self.get_short_id_text(value)
+                value = get_short_id_text(value)
                 work_keyword_class = getattr(models, "WorkKeyword")
                 query = query.join(
                     work_keyword_class,
@@ -171,10 +139,10 @@ class RedshiftQueryHandler:
                 column = work_keyword_class.keyword_id
                 query = self.do_operator_query(column, operator, query, value)
             elif key == "type":
-                value = self.get_short_id_text(value)
+                value = get_short_id_text(value)
                 query = self.do_operator_query(model_column, operator, query, value)
             elif key == "authorships.institutions.id":
-                value = self.get_short_id_integer(value)
+                value = get_short_id_integer(value)
                 affiliation_class = getattr(models, "AffiliationDistinct")
                 query = query.join(
                     affiliation_class,
@@ -183,7 +151,7 @@ class RedshiftQueryHandler:
                 column = affiliation_class.affiliation_id
                 query = self.do_operator_query(column, operator, query, value)
             elif key == "authorships.author.id":
-                value = self.get_short_id_integer(value)
+                value = get_short_id_integer(value)
                 affiliation_class = getattr(models, "Affiliation")
                 query = query.join(
                     affiliation_class,
@@ -192,7 +160,7 @@ class RedshiftQueryHandler:
                 column = affiliation_class.author_id
                 query = self.do_operator_query(column, operator, query, value)
             elif key == "authorships.countries":
-                value = self.get_short_id_text(value)
+                value = get_short_id_text(value)
                 value = value.upper()  # country code needs to be uppercase
                 affiliation_country_class = getattr(
                     models, "AffiliationCountryDistinct"
@@ -207,7 +175,7 @@ class RedshiftQueryHandler:
             elif (
                 column_type == "object" or column_type == "array"
             ) and is_object_entity:
-                value = self.get_short_id_integer(value)
+                value = get_short_id_integer(value)
                 query = self.do_operator_query(model_column, operator, query, value)
             # array of string filters
             else:
@@ -229,7 +197,7 @@ class RedshiftQueryHandler:
             if key is None or value is None or operator is None:
                 continue
 
-            # only filter by entities
+            # only filter by other entities
             if subject_entity == "works":
                 continue
 
@@ -251,7 +219,7 @@ class RedshiftQueryHandler:
             elif (
                 column_type == "object" or column_type == "array"
             ) and is_object_entity:
-                value = self.get_short_id_text(value)
+                value = get_short_id_text(value)
                 value = value.upper()
                 print(f"filtering by object {model_column} with value {value}")
                 query = self.do_operator_query(model_column, operator, query, value)
@@ -267,16 +235,6 @@ class RedshiftQueryHandler:
         elif operator == "is not":
             query = query.filter(column != value)
         return query
-
-    def get_short_id_text(self, value):
-        value = value.split("/")[-1].lower()
-        return value
-
-    def get_short_id_integer(self, value):
-        value = self.get_short_id_text(value)
-        value = re.sub(r"[a-zA-Z]", "", value)
-        value = int(value)
-        return value
 
     @staticmethod
     def filter_by_number(model_column, operator, query, value):
@@ -304,19 +262,46 @@ class RedshiftQueryHandler:
         elif value.lower() == "false":
             return False
 
+    def apply_sort(self, query, entity_class):
+        if self.sort_by_column:
+            sort_column = self.entity_config.get(self.sort_by_column).get(
+                "redshiftDisplayColumn"
+            )
+            if (
+                    self.sort_by_column == "count(works)"
+                    or self.sort_by_column == "mean(fwci)"
+            ):
+                return query
+            else:
+                model_column = getattr(entity_class, sort_column, None)
+
+            if model_column:
+                query = (
+                    query.order_by(model_column)
+                    if self.sort_by_order == "asc"
+                    else query.order_by(desc(model_column))
+                )
+            else:
+                query = self.default_sort(query, entity_class)
+        else:
+            query = self.default_sort(query, entity_class)
+
+        return query
+
+    def default_sort(self, query, entity_class):
+        default_sort_column = (
+            "cited_by_count" if self.entity == "works" else "display_name"
+        )
+        return query.order_by(desc(getattr(entity_class, default_sort_column, None)))
+
     def apply_stats(self, query, entity_class):
         if self.return_columns:
             for column in self.return_columns:
-                if column == "count(works)" and self.entity == "authors":
+                if column == "count(works)" and (self.entity == "authors" or self.entity == "institutions"):
                     stat, related_entity = parse_stats_column(column)
 
+                    # use the existing join to calculate count_works
                     affiliation_class = getattr(models, "Affiliation")
-
-                    # join
-                    query = query.outerjoin(
-                        affiliation_class,
-                        affiliation_class.author_id == entity_class.author_id,
-                    )
 
                     # group by
                     query = query.group_by(*self.model_return_columns)
@@ -394,51 +379,6 @@ class RedshiftQueryHandler:
                         else:
                             query = query.order_by(
                                 func.count(work_topic_class.paper_id).asc()
-                            )
-
-                elif column == "count(works)" and self.entity == "institutions":
-                    stat, related_entity = parse_stats_column(column)
-
-                    affiliation_class = getattr(models, "Affiliation")
-
-                    # join
-                    query = query.outerjoin(
-                        affiliation_class,
-                        affiliation_class.affiliation_id == entity_class.affiliation_id,
-                    )
-
-                    # group by
-                    query = query.group_by(
-                        entity_class.id,
-                        entity_class.affiliation_id,
-                        entity_class.display_name,
-                        entity_class.ror,
-                        entity_class.country_code,
-                        entity_class.type,
-                        entity_class.citations,
-                        entity_class.oa_paper_count,
-                    )
-
-                    # add columns
-                    query = query.add_columns(
-                        func.count(func.distinct(affiliation_class.paper_id)).label(
-                            f"{stat}({related_entity})"
-                        )
-                    )
-
-                    # sort here instead of in sort function
-                    if self.sort_by_column == column:
-                        if self.sort_by_order == "desc":
-                            query = query.order_by(
-                                func.count(
-                                    func.distinct(affiliation_class.paper_id)
-                                ).desc()
-                            )
-                        else:
-                            query = query.order_by(
-                                func.count(
-                                    func.distinct(affiliation_class.paper_id)
-                                ).asc()
                             )
 
                 elif column == "count(works)" and self.entity == "sources":
@@ -567,6 +507,17 @@ def is_model_property(column, entity_class):
         return False  # do not skip, this is likely a hybrid property
 
     return False
+
+
+def get_short_id_text(value):
+    value = value.split("/")[-1].lower()
+    return value
+
+def get_short_id_integer(value):
+    value = get_short_id_text(value)
+    value = re.sub(r"[a-zA-Z]", "", value)
+    value = int(value)
+    return value
 
 
 def parse_stats_column(column):
