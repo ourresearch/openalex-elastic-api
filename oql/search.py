@@ -28,6 +28,7 @@ class Search:
     def __post_init__(self):
         self.id = self.short_uuid()
         self.timestamps["started"] = datetime.now(timezone.utc).isoformat()
+        self.timestamps["est_completed"] = "not implemented"
 
     def short_uuid(self) -> str:
         return shortuuid.uuid()
