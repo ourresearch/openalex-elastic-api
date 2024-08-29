@@ -100,6 +100,7 @@ def process_searches():
             else:
                 # valid results
                 search["results"] = results["results"]
+                search["results_header"] = results["results_header"]
                 search["meta"] = results["meta"]
                 search["is_ready"] = True
                 search["is_completed"] = True
