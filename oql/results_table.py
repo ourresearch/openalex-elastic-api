@@ -73,8 +73,6 @@ class ResultTable:
         # Build the full response, including metadata and results
         return {
             "meta": self.meta(),
-            "results": {
-                "header": self.header(),
-                "body": self.body(),
-            }
+            "results_header": self.header(),
+            "results": self.body(),
         }

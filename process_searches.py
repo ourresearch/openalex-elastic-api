@@ -95,20 +95,23 @@ def process_searches():
                 # invalid query
                 search["invalid_query_error"] = results["invalid_query_error"]
                 search["is_ready"] = True
-                search["timestamp"] = datetime.now(timezone.utc).isoformat()
+                search["is_completed"] = True
+                search["timestamps"]["completed"] = datetime.now(timezone.utc).isoformat()
             else:
                 # valid results
                 search["results"] = results["results"]
                 search["meta"] = results["meta"]
                 search["is_ready"] = True
-                search["timestamp"] = datetime.now(timezone.utc).isoformat()
+                search["is_completed"] = True
+                search["timestamps"]["completed"] = datetime.now(timezone.utc).isoformat()
             print(f"Processed search {search_id} with {search}")
         except Exception as e:
             # backend error
             print(f"Error processing search {search_id}: {e}")
             search["backend_error"] = str(e)
             search["is_ready"] = True
-            search["timestamp"] = datetime.now(timezone.utc).isoformat()
+            search["is_completed"] = True
+            search["timestamps"]["completed"] = datetime.now(timezone.utc).isoformat()
             sentry_sdk.capture_exception(e)
 
         # save updated search object back to Redis
