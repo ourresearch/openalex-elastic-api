@@ -20,8 +20,7 @@
     "description"
   ],
   "showOnTablePage": [
-    "display_name",
-    "description"
+    "display_name"
   ],
   "columns": {
     "id": {
@@ -59,23 +58,6 @@
       ],
       "icon": "mdi-shape-outline",
       "descr": "The name of the source type."
-    },
-    "description": {
-      "id": "description",
-      "subjectEntity": "source-types",
-      "entityId": "source-types",
-      "objectEntity": null,
-      "displayName": "Source type description",
-      "type": "string",
-      "redshiftDisplayColumn": null,
-      "redshiftFilterColumn": null,
-      "actions": [
-      ],
-      "actionsPopular": [
-        "column"
-      ],
-      "icon": "mdi-shape-outline",
-      "descr": "A description of the source type."
     }
   },
   "values": [
