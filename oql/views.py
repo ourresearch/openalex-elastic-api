@@ -57,9 +57,6 @@ def results():
 @blueprint.route("/searches", methods=["POST"])
 def store_search():
     query = request.json.get("query")
-    if not query:
-        return jsonify({"error": "No query provided"}), 400
-
     s = Search(query=query)
     s.save()
     return jsonify(s.to_dict()), 201
