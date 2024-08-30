@@ -11,7 +11,7 @@ From: https://github.com/ourresearch/oqo-validate/blob/main/oqo_validate/validat
 class OQOValidator:
     BRANCH_OPERATORS = {'and', 'or'}
     LEAF_OPERATORS = {'is', 'is not', 'contains', 'does not contain',
-                      'is greater than', 'is less than', '>', '<'}
+                      'is greater than', 'is less than', '>', '<', 'is in', 'is not in'}
     FILTER_TYPES = {'branch', 'leaf'}
 
     def __init__(self, config: Optional[Dict] = None):
@@ -66,7 +66,7 @@ class OQOValidator:
             value = leaf_filter[
                 'value'] if obj_entity != 'countries' else self._formatted_country_value(
                 leaf_filter['value'])
-            if possible_values and value not in possible_values:
+            if possible_values and self._safe_lower(value) not in possible_values:
                 return False, f'{leaf_filter["value"]} not a valid value for {obj_entity}'
         return True, None
 
@@ -103,10 +103,10 @@ class OQOValidator:
 
     def _validate_summarize_by(self, summarize_by):
         if summarize_by not in self.ENTITIES_CONFIG.keys() and summarize_by != 'all':
-            return False, f'works.{summarize_by} not a valid summary column'
+            return False, f'{summarize_by} is not a valid entity'
         return True, None
 
-    def validate(self, oqo):
+    def _validate(self, oqo):
         for _filter in oqo.get('filters', []):
             ok, error = self._validate_filter(_filter)
             if not ok:
@@ -127,3 +127,11 @@ class OQOValidator:
             if not ok:
                 return False, error
         return True, None
+
+    def validate(self, oqo, return_exc=False):
+        if return_exc:
+            try:
+                return self._validate(oqo)
+            except Exception as e:
+                return False, str(e)
+        return self._validate(oqo)
