@@ -19,8 +19,7 @@
     "display_name"
   ],
   "showOnTablePage": [
-    "display_name",
-    "description"
+    "display_name"
   ],
   "columns": {
     "id": {
@@ -58,6 +57,27 @@
       "category": "other",
       "icon": "mdi-account-outline",
       "descr": "The name of the Sustainable Development Goal (SDG)."
+    },
+    "description": {
+      "id": "description",
+      "isColumnMandatory": true,
+      "subjectEntity": "sdgs",
+      "objectEntity": null,
+      "displayName": "description",
+      "type": "string",
+      "redshiftDisplayColumn": "description",
+      "redshiftFilterColumn": "description",
+      "actions": [
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "category": "other",
+      "icon": "mdi-account-outline",
+      "descr": "The description of the Sustainable Development Goal (SDG)."
     }
   },
   "values": [
