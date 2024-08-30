@@ -223,5 +223,24 @@
             "descr": "The number of works affiliated with the institution in OpenAlex"
         }
     },
+    "count(citations)": {
+            "id": "count(citations)",
+            "subjectEntity": "institutions",
+            "objectEntity": null,
+            "displayName": "citation count",
+            "type": "number",
+            "redshiftDisplayColumn": "count(citations)",
+            "redshiftFilterColumn": "count(citations)",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "icon": "mdi-book-open-variant",
+            "descr": "The count of citations for this institution in OpenAlex"
+        },
     "values": null
 }

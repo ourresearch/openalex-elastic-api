@@ -346,12 +346,14 @@ class RedshiftQueryHandler:
                             query, self.sort_by_order, stat_function
                         )
 
-                elif column == "mean(cited_by_count)" and self.entity == "works":
+                elif column == "count(citations)" and self.entity == "institutions":
                     stat, related_entity = parse_stats_column(column)
+
+                    work_class = getattr(models, "Work")
 
                     query = query.group_by(*self.model_return_columns)
 
-                    stat_function = func.avg(entity_class.cited_by_count)
+                    stat_function = func.sum(work_class.cited_by_count)
 
                     query = query.add_columns(
                         stat_function.label(f"{stat}({related_entity})")
