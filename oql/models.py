@@ -226,6 +226,14 @@ class Work(db.Model):
         )
         return list(set([result.type for result in results]))
 
+    @hybrid_property
+    def is_oa(self):
+        return self.oa_status != "closed"
+
+    @is_oa.expression
+    def is_oa(cls):
+        return cls.oa_status != "closed"
+
     def __repr__(self):
         return f"<Work(paper_id={self.paper_id}, original_title={self.original_title})>"
 
