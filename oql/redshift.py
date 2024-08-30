@@ -178,6 +178,13 @@ class RedshiftQueryHandler:
                 )
                 column = affiliation_country_class.country_id
                 query = self.do_operator_query(column, operator, query, value)
+            elif key == "id":
+                if isinstance(value, str):
+                    value = get_short_id_integer(value)
+                elif isinstance(value, int):
+                    value = int(value)
+                model_column = getattr(work_class, "paper_id", None)
+                query = self.do_operator_query(model_column, operator, query, value)
             # id filters
             elif (
                 column_type == "object" or column_type == "array"
