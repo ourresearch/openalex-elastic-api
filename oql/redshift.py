@@ -178,6 +178,15 @@ class RedshiftQueryHandler:
                 )
                 column = affiliation_country_class.country_id
                 query = self.do_operator_query(column, operator, query, value)
+            elif key == "authorships.institutions.ror":
+                query = query.join(
+                    models.Affiliation,
+                    models.Work.paper_id == models.Affiliation.paper_id
+                ).join(
+                    models.Institution,
+                    models.Affiliation.affiliation_id == models.Institution.affiliation_id
+                )
+                query = query.filter(models.Institution.ror == value)
             elif key == "id":
                 if isinstance(value, str):
                     value = get_short_id_integer(value)
@@ -195,6 +204,7 @@ class RedshiftQueryHandler:
                 query = self.do_operator_query(model_column, operator, query, value)
             # array of string filters
             else:
+                print(f"filtering by string {model_column}")
                 query = self.do_operator_query(model_column, operator, query, value)
 
         return query
