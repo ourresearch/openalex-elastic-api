@@ -194,6 +194,15 @@ class RedshiftQueryHandler:
                     value = int(value)
                 model_column = getattr(work_class, "paper_id", None)
                 query = self.do_operator_query(model_column, operator, query, value)
+            elif key == "authorships.author.orcid":
+                query = query.join(
+                    models.Affiliation,
+                    models.Work.paper_id == models.Affiliation.paper_id
+                ).join(
+                    models.Author,
+                    models.Affiliation.author_id == models.Author.author_id
+                )
+                query = query.filter(models.Author.orcid == value)
             # id filters
             elif (
                 column_type == "object" or column_type == "array"
