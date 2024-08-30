@@ -133,9 +133,7 @@ class RedshiftQueryHandler:
                 query = self.filter_by_number(model_column, operator, query, value)
             elif column_type == "boolean":
                 query = self.filter_by_boolean(model_column, query, value)
-            elif column_type == "string":
-                query = self.do_operator_query(model_column, operator, query, value)
-            elif column_type == "search":
+            elif ".search" in key:
                 query = query.filter(model_column.ilike(f"%{value}%"))
             # specialized filters
             elif key == "keywords.id":
@@ -185,6 +183,8 @@ class RedshiftQueryHandler:
                 column_type == "object" or column_type == "array"
             ) and is_object_entity:
                 value = get_short_id_integer(value)
+                query = self.do_operator_query(model_column, operator, query, value)
+            elif column_type == "string":
                 query = self.do_operator_query(model_column, operator, query, value)
             # array of string filters
             else:
@@ -346,6 +346,21 @@ class RedshiftQueryHandler:
                             query, self.sort_by_order, stat_function
                         )
 
+                elif column == "mean(cited_by_count)" and self.entity == "works":
+                    stat, related_entity = parse_stats_column(column)
+
+                    query = query.group_by(*self.model_return_columns)
+
+                    stat_function = func.avg(entity_class.cited_by_count)
+
+                    query = query.add_columns(
+                        stat_function.label(f"{stat}({related_entity})")
+                    )
+
+                    if self.sort_by_column == column:
+                        query = self.sort_from_stat(
+                            query, self.sort_by_order, stat_function
+                        )
                 elif column == "count(works)" and self.entity == "topics":
                     stat, related_entity = parse_stats_column(column)
 
