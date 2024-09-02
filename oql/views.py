@@ -1,3 +1,7 @@
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import requests
 from flask import Blueprint, request, jsonify
 
 from combined_config import all_entities_config
@@ -97,3 +101,90 @@ def entity_config(entity):
 
     config = all_entities_config[entity]
     return jsonify(config)
+
+
+# bulk natLang test endpoint
+# accepts list of {"test_id": "kj33F", "prompt": "show me works from 2021 from Harvard"}
+@blueprint.route("/bulk_test", methods=["POST"])
+def bulk_test():
+    def process_nat_lang_test(test):
+        params = {'natural_language': test['prompt'],
+                  'mailto': 'team@ourresearch.org'}
+        r = requests.get('https://api.openalex.org/text/oql', params=params)
+        test['oqo'] = r.json()
+        return test
+
+    def process_query_test(test):
+        def create_search(query):
+            params = {
+                'query': query,
+                'mailto': 'team@ourresearch.org'
+            }
+            r = requests.post("https://api.openalex.org/searches",
+                              params=params)
+            r.raise_for_status()
+            return r.json()['id']
+
+        def get_search_state(search_id):
+            url = f"https://api.openalex.org/searches/{search_id}"
+            params = {'mailto': 'team@ourresearch.org'}
+            r = requests.get(url, params=params)
+            r.raise_for_status()
+            return r.json()
+
+        def poll_search_until_ready(search_id, timeout):
+            start_time = time.time()
+            while True:
+                result = get_search_state(search_id)
+                if result['is_ready']:
+                    return result, time.time() - start_time
+
+                if time.time() - start_time >= timeout:
+                    raise TimeoutError("Search timed out")
+
+                time.sleep(1)
+
+        try:
+            search_id = create_search(test['query'])
+            timeout = test.get('searchTimeout',
+                               30)
+            result, elapsed_time = poll_search_until_ready(search_id, timeout)
+
+            test['search_result'] = {
+                'id': search_id,
+                'is_ready': True,
+                'results': result['results'],
+                'elapsed_time': elapsed_time
+            }
+        except Exception as e:
+            test['search_result'] = {
+                'error': str(e)
+            }
+
+        return test
+
+    test_data = request.json
+
+    responses = []
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        futures = {}
+        for test in test_data:
+            if 'prompt' in test:
+                futures[executor.submit(process_nat_lang_test, test)] = test
+            elif 'query' in test:
+                futures[executor.submit(process_query_test, test)] = test
+            else:
+                test['error'] = "Invalid input: missing 'prompt' or 'query'"
+                responses.append(test)
+
+        for future in as_completed(futures):
+            try:
+                result = future.result()
+                responses.append(result)
+            except Exception as exc:
+                test = futures[future]
+                test['error'] = str(exc)
+                responses.append(test)
+
+    return jsonify(responses)
+
