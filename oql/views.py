@@ -1,8 +1,13 @@
+import json
 import time
+import uuid
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from queue import Queue
+from threading import Thread
 
 import requests
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, Response
 
 from combined_config import all_entities_config
 from oql.query import QueryNew
@@ -19,7 +24,8 @@ def results():
     entity = request.json.get("summarize_by") or "works"
     filters = request.json.get("filters") or []
     columns = request.json.get("return_columns")
-    sort_by_column = request.json.get("sort_by", {}).get("column_id", "display_name")
+    sort_by_column = request.json.get("sort_by", {}).get("column_id",
+                                                         "display_name")
     sort_by_order = request.json.get("sort_by", {}).get("direction", "asc")
 
     # validate the query
@@ -89,88 +95,160 @@ def entity_config(entity):
     return jsonify(config)
 
 
-# bulk natLang test endpoint
-# accepts list of {"test_id": "kj33F", "prompt": "show me works from 2021 from Harvard"}
-@blueprint.route("/bulk_test", methods=["POST"])
-def bulk_test():
-    def process_nat_lang_test(test):
-        params = {'natural_language': test['prompt'],
-                  'mailto': 'team@ourresearch.org'}
+# Dictionary to store queue-specific results
+queue_results = {}
+
+# Create a ThreadPoolExecutor with 30 threads
+executor = ThreadPoolExecutor(max_workers=30)
+
+
+def process_query_test(test):
+    def create_search(query):
+        params = {
+            'query': query,
+            'mailto': 'team@ourresearch.org'
+        }
+        r = requests.post("https://api.openalex.org/searches", params=params)
+        r.raise_for_status()
+        return r.json()['id']
+
+    def get_search_state(search_id):
+        url = f"https://api.openalex.org/searches/{search_id}"
+        params = {'mailto': 'team@ourresearch.org'}
+        r = requests.get(url, params=params)
+        r.raise_for_status()
+        return r.json()
+
+    try:
+        search_id = create_search(test['query'])
+        timeout = test.get('searchTimeout', 30)
+        start_time = time.time()
+        while True:
+            result = get_search_state(search_id)
+            if result['is_ready']:
+                elapsed_time = time.time() - start_time
+                return {
+                    'id': test['test_id'],
+                    'case': 'queryToSearch',
+                    'isPassing': len(result['results']) > 0,
+                    'details': {
+                        'searchId': search_id,
+                        'elapsedTime': elapsed_time,
+                        'resultsCount': len(result['results']),
+                    }
+                }
+            if time.time() - start_time >= timeout:
+                return {
+                    'id': test['test_id'],
+                    'case': 'queryToSearch',
+                    'isPassing': False,
+                    'details': {
+                        'error': 'Search timed out',
+                        'test': test
+                    }
+                }
+            time.sleep(1)
+    except Exception as e:
+        return {
+            'id': test['test_id'],
+            'case': 'queryToSearch',
+            'isPassing': False,
+            'details': {
+                'error': str(e),
+                'test': test
+            }
+        }
+
+
+def process_nat_lang_test(test):
+    params = {
+        'natural_language': test['prompt'],
+        'mailto': 'team@ourresearch.org'
+    }
+    try:
         r = requests.get('https://api.openalex.org/text/oql', params=params)
-        test['oqo'] = r.json()
-        return test
+        r.raise_for_status()
+        oqo = r.json()
+        return {
+            'id': test['test_id'],
+            'case': 'natLang',
+            'prompt': test['prompt'],
+            'oqo': oqo
+        }
+    except Exception as e:
+        return {
+            'id': test['test_id'],
+            'case': 'natLang',
+            'prompt': test['prompt'],
+            'error': str(e)
+        }
 
-    def process_query_test(test):
-        def create_search(query):
-            params = {
-                'query': query,
-                'mailto': 'team@ourresearch.org'
-            }
-            r = requests.post("https://api.openalex.org/searches",
-                              params=params)
-            r.raise_for_status()
-            return r.json()['id']
 
-        def get_search_state(search_id):
-            url = f"https://api.openalex.org/searches/{search_id}"
-            params = {'mailto': 'team@ourresearch.org'}
-            r = requests.get(url, params=params)
-            r.raise_for_status()
-            return r.json()
+def process_test(test):
+    if 'query' in test:
+        return process_query_test(test)
+    elif 'prompt' in test:
+        return process_nat_lang_test(test)
+    else:
+        return {'error': 'Invalid test format', 'test': test}
 
-        def poll_search_until_ready(search_id, timeout):
-            start_time = time.time()
-            while True:
-                result = get_search_state(search_id)
-                if result['is_ready']:
-                    return result, time.time() - start_time
 
-                if time.time() - start_time >= timeout:
-                    raise TimeoutError("Search timed out")
+def process_tests(tests, queue_id):
+    futures = []
+    for test in tests:
+        futures.append(executor.submit(process_test, test))
 
-                time.sleep(1)
+    nat_lang_results = defaultdict(list)
 
-        try:
-            search_id = create_search(test['query'])
-            timeout = test.get('searchTimeout',
-                               30)
-            result, elapsed_time = poll_search_until_ready(search_id, timeout)
+    for future in as_completed(futures):
+        result = future.result()
+        if result['case'] == 'natLang':
+            nat_lang_results[result['id']].append(result)
+        else:
+            queue_results[queue_id].put(result)
 
-            test['search_result'] = {
-                'id': search_id,
-                'is_ready': True,
-                'results': result['results'],
-                'elapsed_time': elapsed_time
-            }
-        except Exception as e:
-            test['search_result'] = {
-                'error': str(e)
-            }
+    # Send grouped natLang results
+    for test_id, results in nat_lang_results.items():
+        grouped_result = {
+            'id': test_id,
+            'case': 'natLang',
+            'results': results
+        }
+        queue_results[queue_id].put(grouped_result)
 
-        return test
+    # Signal that all tests are completed
+    queue_results[queue_id].put({'status': 'all_completed'})
 
-    test_data = request.json
 
-    responses = []
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        futures = {}
-        for test in test_data:
-            if 'prompt' in test:
-                futures[executor.submit(process_nat_lang_test, test)] = test
-            elif 'query' in test:
-                futures[executor.submit(process_query_test, test)] = test
+@blueprint.route('/bulk_test', methods=['POST'])
+def bulk_test():
+    tests = json.loads(request.data)
+    queue_id = str(uuid.uuid4())
+    queue_results[queue_id] = Queue()
+
+    executor.submit(process_tests, tests, queue_id)
+    return jsonify({'queue_id': queue_id, 'message': 'Tests started'}), 202
+
+
+@blueprint.route('/stream/<queue_id>')
+def stream(queue_id):
+    def event_stream():
+        while True:
+            if queue_id in queue_results:
+                if not queue_results[queue_id].empty():
+                    result = queue_results[queue_id].get()
+                    yield f"data: {json.dumps(result)}\n\n"
+                    if result.get('status') == 'all_completed':
+                        break
+                else:
+                    yield f"data: {json.dumps({'status': 'processing'})}\n\n"
             else:
-                test['error'] = "Invalid input: missing 'prompt' or 'query'"
-                responses.append(test)
+                yield f"data: {json.dumps({'status': 'error', 'message': 'Invalid queue ID'})}\n\n"
+                break
+            time.sleep(0.5)
 
-        for future in as_completed(futures):
-            try:
-                result = future.result()
-                responses.append(result)
-            except Exception as exc:
-                test = futures[future]
-                test['error'] = str(exc)
-                responses.append(test)
+        # Clean up the queue when done
+        if queue_id in queue_results:
+            del queue_results[queue_id]
 
-    return jsonify(responses)
-
+    return Response(event_stream(), content_type='text/event-stream')
