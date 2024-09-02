@@ -7,7 +7,7 @@ from queue import Queue
 from threading import Thread
 
 import requests
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, request, jsonify, Response, make_response
 
 from combined_config import all_entities_config
 from oql.query import QueryNew
@@ -227,7 +227,10 @@ def bulk_test():
     queue_results[queue_id] = Queue()
 
     executor.submit(process_tests, tests, queue_id)
-    return jsonify({'queue_id': queue_id, 'message': 'Tests started'}), 202
+    resp = make_response(
+        jsonify({'queue_id': queue_id, 'message': 'Tests started'}), 202)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp
 
 
 @blueprint.route('/stream/<queue_id>')
@@ -251,4 +254,7 @@ def stream(queue_id):
         if queue_id in queue_results:
             del queue_results[queue_id]
 
-    return Response(event_stream(), content_type='text/event-stream')
+    resp = make_response(
+        Response(event_stream(), content_type='text/event-stream'))
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp
