@@ -10,6 +10,7 @@
   "placeholder": "Search source types",
   "filterName": "source type",
   "filterKey": "primary_location.source.type",
+  "descrFull": "The type of source, such as a journal, repository, or conference.",
   "hasAutocomplete": false,
   "isNative": false,
   "idRegex": "(?:https:\\/\\/openalex\\.org\\/source-types\\/|source-types\\/)([a-zA-Z\\-]+)",
@@ -19,8 +20,7 @@
     "description"
   ],
   "showOnTablePage": [
-    "display_name",
-    "description"
+    "display_name"
   ],
   "columns": {
     "id": {
@@ -37,7 +37,8 @@
       ],
       "actionsPopular": [
       ],
-      "icon": "mdi-shape-outline"
+      "icon": "mdi-shape-outline",
+      "descr": "The unique identifier for the source type in OpenAlex."
     },
     "display_name": {
       "id": "display_name",
@@ -55,23 +56,8 @@
       "actionsPopular": [
         "column"
       ],
-      "icon": "mdi-shape-outline"
-    },
-    "description": {
-      "id": "description",
-      "subjectEntity": "source-types",
-      "entityId": "source-types",
-      "objectEntity": null,
-      "displayName": "Source type description",
-      "type": "string",
-      "redshiftDisplayColumn": null,
-      "redshiftFilterColumn": null,
-      "actions": [
-      ],
-      "actionsPopular": [
-        "column"
-      ],
-      "icon": "mdi-shape-outline"
+      "icon": "mdi-shape-outline",
+      "descr": "The name of the source type."
     }
   },
   "values": [

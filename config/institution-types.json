@@ -10,6 +10,7 @@
   "placeholder": "Search institution types",
   "filterName": "institution type",
   "filterKey": "authorships.institutions.type",
+  "descrFull": "The type of institution as seen in ROR",
   "hasAutocomplete": false,
   "isNative": false,
   "idRegex": "(?:https:\\/\\/openalex\\.org\\/institution-types\\/|institution-types\\/)([a-zA-Z\\-]+)",
@@ -33,7 +34,8 @@
       "redshiftFilterColumn": "id",
       "actions": [
       ],
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "The unique identifier for the institution type"
     },
     "display_name": {
       "id": "display_name",
@@ -53,7 +55,8 @@
         "column"
       ],
       "category": "other",
-      "icon": "mdi-account-outline"
+      "icon": "mdi-account-outline",
+      "descr": "The name of the institution type"
     }
   },
   "values": [

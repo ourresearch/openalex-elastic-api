@@ -127,7 +127,7 @@ class Work(db.Model):
             db.session.query(Affiliation.affiliation_id, Institution.display_name)
             .join(Institution, Affiliation.affiliation_id == Institution.affiliation_id)
             .filter(Affiliation.paper_id == self.paper_id)
-            .limit(10)
+            .limit(20)
             .all()
         )
         # get unique institutions
@@ -225,6 +225,14 @@ class Work(db.Model):
             .all()
         )
         return list(set([result.type for result in results]))
+
+    @hybrid_property
+    def is_oa(self):
+        return self.oa_status != "closed"
+
+    @is_oa.expression
+    def is_oa(cls):
+        return cls.oa_status != "closed"
 
     def __repr__(self):
         return f"<Work(paper_id={self.paper_id}, original_title={self.original_title})>"
@@ -491,25 +499,6 @@ class Institution(db.Model):
         return (
             select([InstitutionType.display_name])
             .where(InstitutionType.institution_type_id == cls.type)
-            .scalar_subquery()
-        )
-
-    @hybrid_property
-    def mean_fwci(self):
-        return (
-            db.session.query(func.avg(Work.fwci))
-            .join(Affiliation, Work.paper_id == Affiliation.paper_id)
-            .filter(Affiliation.affiliation_id == self.affiliation_id)
-            .scalar()
-        )
-
-    @mean_fwci.expression
-    def mean_fwci(cls):
-        # This is the expression form
-        return (
-            select([func.avg(Work.fwci)])
-            .select_from(Work.join(Affiliation, Work.paper_id == Affiliation.paper_id))
-            .where(Affiliation.affiliation_id == cls.affiliation_id)
             .scalar_subquery()
         )
 

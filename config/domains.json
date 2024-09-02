@@ -10,6 +10,7 @@
   "placeholder": "Search domains",
   "filterName": "domains",
   "filterKey": "primary_topic.domain.id",
+  "descrFull": "These are the domains of scholarly works which are the highest level description for a subject area of a work. Each domain has a unique OpenAlex ID.",
   "hasAutocomplete": false,
   "isNative": false,
   "idRegex": "(?:https:\\/\\/openalex\\.org\\/domains\\/|domains\\/)(\\d+)",
@@ -36,7 +37,8 @@
       "type": "string",
       "redshiftDisplayColumn": "id",
       "redshiftFilterColumn": "id",
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "Unique identifier for the domain"
     },
     "display_name": {
       "id": "display_name",
@@ -56,7 +58,8 @@
         "column"
       ],
       "category": "other",
-      "icon": "mdi-account-outline"
+      "icon": "mdi-account-outline",
+      "descr": "The name of the domain"
     },
     "description": {
       "id": "description",
@@ -70,7 +73,8 @@
       "actions": [
         "column"
       ],
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "A description of the domain"
     },
     "fields": {
       "id": "fields",
@@ -84,7 +88,8 @@
       "redshiftFilterColumn": null,
       "actions": [
       ],
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "The set of fields that are children of this domain"
     },
     "siblings": {
       "id": "siblings",
@@ -98,7 +103,8 @@
       "redshiftFilterColumn": null,
       "actions": [
         ],
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "The set of domains that are siblings of this domain"
     }
   },
   "values": [

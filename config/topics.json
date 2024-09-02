@@ -10,6 +10,7 @@
     "placeholder": "Search topics",
     "filterName": "topics",
     "filterKey": "primary_topic.id",
+    "descrFull": "Topics are the fourth level of description of the subject area of works. Each topic has a unique OpenAlex ID. Topics are above keywords but below domains, fields, and subfields in the hierarchy of research areas in OpenAlex.",
     "hintVerb": ":",
     "hasAutocomplete": true,
     "isNative": true,
@@ -38,7 +39,8 @@
             "type": "string",
             "redshiftDisplayColumn": "id",
             "redshiftFilterColumn": "id",
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "Unique identifier for the topic in OpenAlex."
         },
         "display_name": {
             "id": "display_name",
@@ -58,7 +60,8 @@
                 "column"
             ],
             "category": "other",
-            "icon": "mdi-account-outline"
+            "icon": "mdi-account-outline",
+            "descr": "The name of the topic."
         },
         "description": {
             "id": "description",
@@ -72,7 +75,8 @@
             "actions": [
                 "column"
             ],
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "A description of the topic."
         },
         "siblings": {
             "id": "siblings",
@@ -86,7 +90,8 @@
             "redshiftFilterColumn": null,
             "actions": [
             ],
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "Other topics that are closely related to this topic."
         },
         "subfield": {
             "id": "subfield",
@@ -99,7 +104,8 @@
             "redshiftFilterColumn": null,
             "actions": [
             ],
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "The subfield that this topic belongs to."
         },
         "field": {
             "id": "field",
@@ -112,7 +118,8 @@
             "redshiftFilterColumn": null,
             "actions": [
             ],
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "The field that this topic belongs to."
         },
         "domain": {
             "id": "domain",
@@ -125,7 +132,8 @@
             "redshiftFilterColumn": null,
             "actions": [
             ],
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "The domain that this topic belongs to."
         },
         "count(works)": {
             "id": "count(works)",
@@ -136,7 +144,8 @@
             "type": "number",
             "redshiftDisplayColumn": "count(works)",
             "redshiftFilterColumn": null,
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "The number of works that are tagged with this topic."
         }
     },
     "values": null

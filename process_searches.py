@@ -1,16 +1,18 @@
 import json
 from datetime import datetime, timezone
 import os
+import time
 
 import redis
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
-import time
 
 import settings
 from app import create_app
+from combined_config import all_entities_config
 from oql.query import QueryNew
 from oql.results_table import ResultTable
+from oql.validate import OQOValidator
 
 app = create_app()
 redis_db = redis.Redis.from_url(settings.CACHE_REDIS_URL)
@@ -27,12 +29,19 @@ def fetch_results(query):
     with app.app_context():
         # params
         entity = query.get("summarize_by") or "works"
-        filters = query.get("filters")
+        filters = query.get("filters") or []
         columns = query.get("return_columns")
         sort_by_column = query.get("sort_by", {}).get("column_id", "display_name")
         sort_by_order = query.get("sort_by", {}).get("direction", "asc")
 
-        # object
+        # validate the query
+        oqo = OQOValidator(all_entities_config)
+        ok, error = oqo.validate(query)
+
+        if not ok:
+            return {"invalid_query_error": error}
+
+        # query object
         query = QueryNew(
             entity=entity,
             columns=columns,
@@ -82,17 +91,28 @@ def process_searches():
         try:
             results = fetch_results(search["query"])
 
-            # update the search object
-            search["results"] = results["results"]
-            search["meta"] = results["meta"]
-            search["is_ready"] = True
-            search["timestamp"] = datetime.now(timezone.utc).isoformat()
+            if "invalid_query_error" in results:
+                # invalid query
+                search["invalid_query_error"] = results["invalid_query_error"]
+                search["is_ready"] = True
+                search["is_completed"] = True
+                search["timestamps"]["completed"] = datetime.now(timezone.utc).isoformat()
+            else:
+                # valid results
+                search["results"] = results["results"]
+                search["results_header"] = results["results_header"]
+                search["meta"] = results["meta"]
+                search["is_ready"] = True
+                search["is_completed"] = True
+                search["timestamps"]["completed"] = datetime.now(timezone.utc).isoformat()
             print(f"Processed search {search_id} with {search}")
         except Exception as e:
+            # backend error
             print(f"Error processing search {search_id}: {e}")
-            search["error"] = str(e)
+            search["backend_error"] = str(e)
             search["is_ready"] = True
-            search["timestamp"] = datetime.now(timezone.utc).isoformat()
+            search["is_completed"] = True
+            search["timestamps"]["completed"] = datetime.now(timezone.utc).isoformat()
             sentry_sdk.capture_exception(e)
 
         # save updated search object back to Redis

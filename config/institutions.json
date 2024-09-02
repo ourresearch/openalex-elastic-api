@@ -5,11 +5,12 @@
     "nameSingular": "institution",
     "displayName": "institutions",
     "displayNameSingular": "institution",
-    "descr": "Universities and research centers",
+    "descr": "Institutions (universities and research centers)",
     "eg": "Harvard University",
     "placeholder": "Search academic institutions",
     "filterName": "institutions",
     "filterKey": "authorships.institutions.lineage",
+    "descrFull": "The institution (university or research center) where an author is affiliated. All institutions have a Research Organization Registry (ROR) ID.",
     "hintVerb": "in",
     "color": "purple",
     "hasAutocomplete": true,
@@ -46,7 +47,8 @@
             "redshiftFilterColumn": "id",
             "isId": true,
             "type": "string",
-            "icon": "mdi-town-hall"
+            "icon": "mdi-town-hall",
+            "descr": "The unique identifier for the institution in OpenAlex"
         },
         "display_name": {
             "id": "display_name",
@@ -66,7 +68,8 @@
                 "column"
             ],
             "category": "other",
-            "icon": "mdi-account-outline"
+            "icon": "mdi-account-outline",
+            "descr": "The name of the institution"
         },
         "ids.ror": {
             "id": "ids.ror",
@@ -78,7 +81,8 @@
             "type": "string",
             "redshiftDisplayColumn": "ror",
             "redshiftFilterColumn": "ror",
-            "icon": "mdi-town-hall"
+            "icon": "mdi-town-hall",
+            "descr": "The unique identifier for the institution in the Research Organization Registry (ROR)"
         },
         "country_code": {
             "id": "country_code",
@@ -99,7 +103,8 @@
             "actionsPopular": [
                 "filter"
             ],
-            "icon": "mdi-earth"
+            "icon": "mdi-earth",
+            "descr": "The country where the institution is located"
         },
         "type": {
             "id": "type",
@@ -120,7 +125,8 @@
             "actionsPopular": [
                 "filter"
             ],
-            "icon": "mdi-shape-outline"
+            "icon": "mdi-shape-outline",
+            "descr": "The type of institution as seen in ROR"
         },
         "display_name_alternatives": {
             "id": "display_name_alternatives",
@@ -133,7 +139,8 @@
             "type": "string",
             "actions": [],
             "actionsPopular": [],
-            "icon": "mdi-town-hall"
+            "icon": "mdi-town-hall",
+            "descr": "Alternative names or acronyms for the institution"
         },
         "parent_institutions": {
             "id": "parent_institutions",
@@ -146,7 +153,8 @@
             "type": "array",
             "actions": [],
             "actionsPopular": [],
-            "icon": "mdi-town-hall"
+            "icon": "mdi-town-hall",
+            "descr": "The parent institutions of the institution"
         },
         "child_institutions": {
             "id": "child_institutions",
@@ -159,7 +167,8 @@
             "type": "array",
             "actions": [],
             "actionsPopular": [],
-            "icon": "mdi-town-hall"
+            "icon": "mdi-town-hall",
+            "descr": "The child institutions of the institution"
         },
         "related_institutions": {
             "id": "related_institutions",
@@ -172,7 +181,8 @@
             "type": "array",
             "actions": [],
             "actionsPopular": [],
-            "icon": "mdi-town-hall"
+            "icon": "mdi-town-hall",
+            "descr": "Other institutions that are related to the institution"
         },
         "mean(fwci)": {
             "id": "mean(fwci)",
@@ -190,7 +200,8 @@
                 "sort",
                 "column"
             ],
-            "icon": "mdi-book-open-variant"
+            "icon": "mdi-book-open-variant",
+            "descr": "The mean Field-Weighted Citation Impact (FWCI) of the institution across all works"
         },
         "count(works)": {
             "id": "count",
@@ -208,8 +219,28 @@
                 "sort",
                 "column"
             ],
-            "icon": "mdi-book-open-variant"
+            "icon": "mdi-book-open-variant",
+            "descr": "The number of works affiliated with the institution in OpenAlex"
         }
     },
+    "count(citations)": {
+            "id": "count(citations)",
+            "subjectEntity": "institutions",
+            "objectEntity": null,
+            "displayName": "citation count",
+            "type": "number",
+            "redshiftDisplayColumn": "count(citations)",
+            "redshiftFilterColumn": "count(citations)",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "icon": "mdi-book-open-variant",
+            "descr": "The count of citations for this institution in OpenAlex"
+        },
     "values": null
 }

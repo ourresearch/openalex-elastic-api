@@ -10,6 +10,7 @@
     "placeholder": "Search academic journals & repositories",
     "filterName": "primary_location.source",
     "filterKey": "primary_location.source.id",
+    "descrFull": "The source or location of scholarly articles, such as a journal, conference, or repository.",
     "hintVerb": "published by",
     "color": "orange",
     "hasAutocomplete": true,
@@ -54,10 +55,11 @@
             "isId": true,
             "type": "string",
             "redshiftDisplayColumn": "id",
-            "redshiftSortColumn": "id",
+            "redshiftFilterColumn": "id",
             "actions": [
             ],
-            "icon": "mdi-book-open-outline"
+            "icon": "mdi-book-open-outline",
+            "descr": "The unique identifier for the source in OpenAlex."
         },
         "ids.issn": {
             "id": "ids.issn",
@@ -68,12 +70,13 @@
             "isId": true,
             "type": "string",
             "redshiftDisplayColumn": "issn",
-            "redshiftSortColumn": "issn",
+            "redshiftFilterColumn": "issn",
             "actions": [
                 "column",
                 "filter"
             ],
-            "icon": "mdi-book-open-outline"
+            "icon": "mdi-book-open-outline",
+            "descr": "The International Standard Serial Number (ISSN) of the source."
         },
         "display_name": {
             "id": "display_name",
@@ -83,7 +86,7 @@
             "displayName": "name",
             "type": "string",
             "redshiftDisplayColumn": "display_name",
-            "redshiftSortColumn": "display_name",
+            "redshiftFilterColumn": "display_name",
             "actions": [
                 "sort",
                 "column"
@@ -93,7 +96,8 @@
                 "column"
             ],
             "category": "other",
-            "icon": "mdi-account-outline"
+            "icon": "mdi-account-outline",
+            "descr": "The name of the source."
         },
         "host_organization": {
             "id": "host_organization",
@@ -103,10 +107,11 @@
             "displayName": "Publisher",
             "type": "object",
             "redshiftDisplayColumn": null,
-            "redshiftSortColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [],
             "actionsPopular": [],
-            "icon": "mdi-domain"
+            "icon": "mdi-domain",
+            "descr": "The organization or publisher that publishes the source."
         },
         "type": {
             "id": "type",
@@ -119,7 +124,7 @@
             "externalIdPrefix": "source-types",
             "type": "object",
             "redshiftDisplayColumn": "type_formatted",
-            "redshiftSortColumn": "type",
+            "redshiftFilterColumn": "type",
             "actions": [
                 "column",
                 "filter"
@@ -127,7 +132,8 @@
             "actionsPopular": [
                 "filter"
             ],
-            "icon": "mdi-shape-outline"
+            "icon": "mdi-shape-outline",
+            "descr": "The type of source."
         },
         "apc_usd": {
             "id": "apc_usd",
@@ -137,12 +143,13 @@
             "displayName": "Article Processing Charge",
             "type": "number",
             "redshiftDisplayColumn": null,
-            "redshiftSortColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
             ],
             "actionsPopular": [
             ],
-            "icon": "mdi-cash"
+            "icon": "mdi-cash",
+            "descr": "The Article Processing Charge (APC) in USD for the source."
         },
         "is_oa": {
             "id": "is_oa",
@@ -151,12 +158,13 @@
             "displayName": "Fully open access",
             "type": "boolean",
             "redshiftDisplayColumn": null,
-            "redshiftSortColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [
             ],
             "actionsPopular": [
             ],
-            "icon": "mdi-lock-open-outline"
+            "icon": "mdi-lock-open-outline",
+            "descr": "Whether the source is fully open access."
         },
         "is_in_doaj": {
             "id": "is_in_doaj",
@@ -165,7 +173,7 @@
             "displayName": "In DOAJ",
             "type": "boolean",
             "redshiftDisplayColumn": "is_in_doaj",
-            "redshiftSortColumn": "is_in_doaj",
+            "redshiftFilterColumn": "is_in_doaj",
             "actions": [
                 "column",
                 "filter"
@@ -173,7 +181,8 @@
             "actionsPopular": [
                 "filter"
             ],
-            "icon": "mdi-lock-open-outline"
+            "icon": "mdi-lock-open-outline",
+            "descr": "Whether the source is listed in the Directory of Open Access Journals (DOAJ)."
         },
         "alternate_titles": {
             "id": "alternate_titles",
@@ -183,10 +192,11 @@
             "displayName": "alternate names",
             "type": "array",
             "redshiftDisplayColumn": null,
-            "redshiftSortColumn": null,
+            "redshiftFilterColumn": null,
             "actions": [],
             "actionsPopular": [],
-            "icon": "mdi-book-open-outline"
+            "icon": "mdi-book-open-outline",
+            "descr": "Alternate names for the source."
         },
         "count(works)": {
             "id": "count(works)",
@@ -204,7 +214,8 @@
                 "sort",
                 "column"
             ],
-            "icon": "mdi-book-open-variant"
+            "icon": "mdi-book-open-variant",
+            "descr": "The number of works published by the source."
         }
     },
     "values": null

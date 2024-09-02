@@ -10,6 +10,7 @@
   "placeholder": "Search work types",
   "filterName": "type",
   "filterKey": "type",
+  "descrFull": "The type of work, such as an article, book, or dataset.",
   "hasAutocomplete": false,
   "isNative": false,
   "idRegex": "(?:https:\\/\\/openalex\\.org\\/types\\/|types\\/)([a-zA-Z\\-]+)",
@@ -36,7 +37,8 @@
       "redshiftFilterColumn": "id",
       "actions": [
       ],
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "The unique identifier for the work type in OpenAlex."
     },
     "display_name": {
       "id": "display_name",
@@ -56,7 +58,8 @@
         "column"
       ],
       "category": "other",
-      "icon": "mdi-account-outline"
+      "icon": "mdi-account-outline",
+      "descr": "The name of the work type."
     },
     "description": {
       "id": "description",
@@ -68,7 +71,8 @@
       "redshiftDisplayColumn": "description",
       "redshiftFilterColumn": null,
       "actions": ["column"],
-      "icon": "mdi-shape-outline"
+      "icon": "mdi-shape-outline",
+      "descr": "A description of the work type."
     },
     "crossref_types": {
       "id": "crossref_types",
@@ -81,7 +85,8 @@
       "redshiftDisplayColumn": null,
       "redshiftFilterColumn": null,
       "actions": [],
-      "icon": "mdi-shape-outline"
+      "icon": "mdi-shape-outline",
+      "descr": "Alternate names for the work type from Crossref."
     }
   },
   "values": [

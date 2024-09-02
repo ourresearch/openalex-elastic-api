@@ -10,6 +10,7 @@
     "placeholder": "Search scholarly papers, books, and more",
     "filterName": "work",
     "filterKey": "ids.openalex",
+    "descrFull": "Scholarly papers, books, datasets, and other works in OpenAlex.",
     "hintVerb": "by",
     "color": "blue",
     "hasAutocomplete": true,
@@ -83,7 +84,8 @@
             "actions": [
                 ""
             ],
-            "icon": "mdi-file-document-outline"
+            "icon": "mdi-file-document-outline",
+            "descr": "The unique identifier for the work in OpenAlex."
         },
         "doi": {
             "id": "doi",
@@ -102,7 +104,8 @@
                 "filter",
                 "column"
             ],
-            "icon": "mdi-file-document-outline"
+            "icon": "mdi-file-document-outline",
+            "descr": "The Digital Object Identifier (DOI) of the work."
         },
         "primary_topic.id": {
             "id": "primary_topic.id",
@@ -123,7 +126,8 @@
                 "filter",
                 "group_by"
             ],
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "The primary topic of the work."
         },
         "keywords.id": {
             "id": "keywords.id",
@@ -145,7 +149,8 @@
                 "filter",
                 "group_by"
             ],
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "Keywords associated with the work."
         },
         "primary_topic.subfield.id": {
             "id": "primary_topic.subfield.id",
@@ -163,7 +168,8 @@
                 "column"
             ],
             "actionsPopular": [],
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "The subfield of the primary topic of the work."
         },
         "primary_topic.field.id": {
             "id": "primary_topic.field.id",
@@ -181,7 +187,8 @@
                 "column"
             ],
             "actionsPopular": [],
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "The field of the primary topic of the work."
         },
         "primary_topic.domain.id": {
             "id": "primary_topic.domain.id",
@@ -199,7 +206,8 @@
                 "column"
             ],
             "actionsPopular": [],
-            "icon": "mdi-tag-outline"
+            "icon": "mdi-tag-outline",
+            "descr": "The domain of the primary topic of the work."
         },
         "authorships.institutions.id": {
             "id": "authorships.institutions.id",
@@ -221,7 +229,8 @@
                 "filter",
                 "column"
             ],
-            "icon": "mdi-town-hall"
+            "icon": "mdi-town-hall",
+            "descr": "The OpenAlex institution ID of the institutions associated with the work."
         },
         "cited_by_count": {
             "id": "cited_by_count",
@@ -240,7 +249,8 @@
             "actionsPopular": [
                 "sort"
             ],
-            "icon": "mdi-file-document-outline"
+            "icon": "mdi-file-document-outline",
+            "descr": "The number of times the work has been cited by other works."
         },
         "authorships.institutions.ror": {
             "id": "authorships.institutions.ror",
@@ -256,7 +266,8 @@
             "redshiftDisplayColumn": "ror_ids",
             "redshiftFilterColumn": "ror_id",
             "actions": [],
-            "icon": "mdi-town-hall"
+            "icon": "mdi-town-hall",
+            "descr": "The Research Organization Registry (ROR) ID of the institutions associated with the work."
         },
         "authorships.author.id": {
             "id": "authorships.author.id",
@@ -278,7 +289,8 @@
                 "filter",
                 "group_by"
             ],
-            "icon": "mdi-account-outline"
+            "icon": "mdi-account-outline",
+            "descr": "The OpenAlex author ID of the authors associated with the work."
         },
         "authorships.author.orcid": {
             "id": "authorships.author.orcid",
@@ -294,7 +306,8 @@
             "redshiftDisplayColumn": "orcid_ids",
             "redshiftFilterColumn": "orcid_id",
             "actions": [],
-            "icon": "mdi-account-outline"
+            "icon": "mdi-account-outline",
+            "descr": "The Open Researcher and Contributor ID (ORCID) of the authors associated with the work."
         },
         "display_name": {
             "id": "display_name",
@@ -315,7 +328,8 @@
             "apiField": "display_name",
             "redshiftDisplayColumn": "display_name",
             "redshiftReturnColumn": "display_name",
-            "icon": "mdi-file-document-outline"
+            "icon": "mdi-file-document-outline",
+            "descr": "The title of the work."
         },
         "open_access.is_oa": {
             "id": "open_access.is_oa",
@@ -337,7 +351,8 @@
             "apiField": "open_access.is_oa",
             "redshiftDisplayColumn": "is_oa",
             "redshiftFilterColumn": "is_oa",
-            "icon": "mdi-lock-open-outline"
+            "icon": "mdi-lock-open-outline",
+            "descr": "Whether the work is open access."
         },
         "open_access.oa_status": {
             "id": "open_access.oa_status",
@@ -353,7 +368,8 @@
             "apiField": "open_access.oa_status",
             "redshiftDisplayColumn": "oa_status",
             "redshiftFilterColumn": "oa_status",
-            "icon": "mdi-lock-open-outline"
+            "icon": "mdi-lock-open-outline",
+            "descr": "The open access status of the work."
         },
         "apc_paid.value_usd": {
             "id": "apc_paid.value_usd",
@@ -367,7 +383,8 @@
             "redshiftDisplayColumn": null,
             "redshiftFilterColumn": null,
             "actions": [],
-            "icon": "mdi-cash"
+            "icon": "mdi-cash",
+            "descr": "The Article Processing Charge (APC) paid in USD for the work."
         },
         "authorships.countries": {
             "id": "authorships.countries",
@@ -389,7 +406,8 @@
             "apiField": "authorships.countries",
             "redshiftDisplayColumn": "authorships_countries",
             "redshiftFilterColumn": "country_id",
-            "icon": "mdi-earth"
+            "icon": "mdi-earth",
+            "descr": "The countries of the institutions associated with the work."
         },
         "authorships.institutions.continent": {
             "id": "authorships.institutions.continent",
@@ -408,7 +426,8 @@
             "apiField": "authorships.institutions.continent",
             "redshiftDisplayColumn": null,
             "redshiftFilterColumn": null,
-            "icon": "mdi-earth"
+            "icon": "mdi-earth",
+            "descr": "The continents of the institutions associated with the work."
         },
         "authorships.institutions.is_global_south": {
             "id": "institutions.is_global_south",
@@ -424,7 +443,8 @@
             "apiField": "institutions.is_global_south",
             "redshiftDisplayColumn": "is_global_south",
             "redshiftReturnColumn": "is_global_south",
-            "icon": "mdi-earth"
+            "icon": "mdi-earth",
+            "descr": "Whether the institutions associated with the work are in the Global South."
         },
         "authorships.institutions.type": {
             "id": "authorships.institutions.type",
@@ -442,7 +462,8 @@
             "actions": [
                 "filter"
             ],
-            "icon": "mdi-town-hall"
+            "icon": "mdi-town-hall",
+            "descr": "The institution types associated with the work."
         },
         "primary_location.source.id": {
             "id": "primary_location.source.id",
@@ -459,7 +480,8 @@
                 "filter",
                 "column"
             ],
-            "icon": "mdi-book-open-outline"
+            "icon": "mdi-book-open-outline",
+            "descr": "The primary source or location of the work."
         },
         "primary_location.source.issn": {
             "id": "primary_location.source.issn",
@@ -474,7 +496,8 @@
             "redshiftDisplayColumn": "primary_source_issn",
             "redshiftFilterColumn": "primary_source_issn",
             "actions": [],
-            "icon": "mdi-book-open-outline"
+            "icon": "mdi-book-open-outline",
+            "descr": "The International Standard Serial Number (ISSN) of the primary source of the work."
         },
         "primary_location.source.type": {
             "id": "primary_location.source.type",
@@ -492,7 +515,8 @@
                 "filter",
                 "column"
             ],
-            "icon": "mdi-book-open-outline"
+            "icon": "mdi-book-open-outline",
+            "descr": "The source type of the primary source of the work."
         },
         "primary_location.source.is_in_doaj": {
             "id": "primary_location.source.is_in_doaj",
@@ -508,7 +532,8 @@
                 "filter",
                 "column"
             ],
-            "icon": "mdi-book-open-outline"
+            "icon": "mdi-book-open-outline",
+            "descr": "Whether the primary source of the work is indexed by the Directory of Open Access Journals (DOAJ)."
         },
         "primary_location.source.is_oa": {
             "id": "primary_location.source.is_oa",
@@ -521,7 +546,8 @@
             "redshiftDisplayColumn": null,
             "redshiftFilterColumn": null,
             "actions": [],
-            "icon": "mdi-book-open-outline"
+            "icon": "mdi-book-open-outline",
+            "descr": "Whether the primary source of the work is an open access source."
         },
         "type": {
             "id": "type",
@@ -545,7 +571,8 @@
                 "filter",
                 "column"
             ],
-            "icon": "mdi-shape-outline"
+            "icon": "mdi-shape-outline",
+            "descr": "The OpenAlex work type of the work"
         },
         "grants.funder": {
             "id": "grants.funder",
@@ -560,7 +587,8 @@
             "redshiftDisplayColumn": null,
             "redshiftFilterColumn": null,
             "actions": [],
-            "icon": "mdi-cash-multiple"
+            "icon": "mdi-cash-multiple",
+            "descr": "The OpenAlex funder ID of the funders associated with the work."
         },
         "grants.award_id": {
             "id": "grants.award_id",
@@ -574,7 +602,8 @@
             "redshiftDisplayColumn": null,
             "redshiftFilterColumn": null,
             "actions": [],
-            "icon": "mdi-cash-multiple"
+            "icon": "mdi-cash-multiple",
+            "descr": "The award ID of the grants associated with the work."
         },
         "publication_year": {
             "id": "publication_year",
@@ -605,7 +634,8 @@
                 "column",
                 "group_by"
             ],
-            "icon": "mdi-calendar-range"
+            "icon": "mdi-calendar-range",
+            "descr": "The publication year of the work."
         },
         "apc_sum": {
             "id": "apc_sum",
@@ -622,7 +652,8 @@
             "actionsPopular": [
                 "group_by"
             ],
-            "icon": "mdi-cash"
+            "icon": "mdi-cash",
+            "descr": "The total Article Processing Charges (APC) paid in USD for the work."
         },
         "language": {
             "id": "language",
@@ -642,7 +673,8 @@
                 "column"
             ],
             "actionsPopular": [],
-            "icon": "mdi-translate"
+            "icon": "mdi-translate",
+            "descr": "The language of the work."
         },
         "sustainable_development_goals.id": {
             "id": "sustainable_development_goals.id",
@@ -658,7 +690,8 @@
             "redshiftDisplayColumn": null,
             "redshiftFilterColumn": null,
             "actions": [],
-            "icon": "mdi-sprout-outline"
+            "icon": "mdi-sprout-outline",
+            "descr": "The Sustainable Development Goals (SDGs) associated with the work."
         },
         "referenced_works": {
             "id": "referenced_works",
@@ -675,7 +708,24 @@
             "redshiftFilterColumn": null,
             "actions": [],
             "icon": "mdi-format-quote-close",
-            "isDisplayedAsCount": true
+            "isDisplayedAsCount": true,
+            "descr": "The works cited by the work."
+        },
+        "display_name.search": {
+            "id": "display_name.search",
+            "subjectEntity": "works",
+            "displayName": "search display_name",
+            "objectEntity": null,
+            "type": "string",
+            "category": "search",
+            "apiField": "display_name",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": "original_title",
+            "actions": [
+                "filter"
+            ],
+            "icon": "mdi-file-document-outline",
+            "descr": "Searches the title of the work."
         }
     },
     "values": null

@@ -91,7 +91,6 @@ class BooleanField(Field):
         elif (
             self.param == "has_abstract"
             or self.param == "has_embeddings"
-            or self.param == "has_ngrams"
             or self.param == "has_pdf_url"
             or self.param == "has_raw_affiliation_strings"
             or self.param == "has_references"

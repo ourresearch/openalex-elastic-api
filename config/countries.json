@@ -10,6 +10,7 @@
   "placeholder": "Search countries",
   "filterName": "countries",
   "filterKey": "authorships.countries",
+  "descrFull": "These are countries. Each country has a unique OpenAlex ID.",
   "hasAutocomplete": false,
   "isNative": false,
   "idRegex": "(?:https:\\/\\/openalex\\.org\\/countries\\/|countries\\/)([a-zA-Z]{2})",
@@ -31,7 +32,8 @@
       "type": "string",
       "redshiftDisplayColumn": "id",
       "redshiftFilterColumn": "id",
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "Unique identifier for the country"
     },
     "display_name": {
       "id": "display_name",
@@ -51,7 +53,8 @@
       "category": "other",
       "redshiftDisplayColumn": "display_name",
       "redshiftFilterColumn": null,
-      "icon": "mdi-account-outline"
+      "icon": "mdi-account-outline",
+      "descr": "The name of the country"
     }
   },
   "values": [

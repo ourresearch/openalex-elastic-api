@@ -13,7 +13,7 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 SQLALCHEMY_ECHO = True if ENV == "development" else False
 
 # indexes
-AUTHORS_INDEX = "authors-v13"
+AUTHORS_INDEX = "authors-v14"
 AUTHORS_INDEX_OLD = "authors-v10"
 CONCEPTS_INDEX = "concepts-v8"
 CONTINENTS_INDEX = "continents-v1"
@@ -33,7 +33,7 @@ SOURCE_TYPES_INDEX = "source-types-v1"
 SUBFIELDS_INDEX = "subfields-v2"
 TOPICS_INDEX = "topics-v4"
 WORK_TYPES_INDEX = "work-types-v1"
-WORKS_INDEX = "works-v24-*,-*invalid-data"
+WORKS_INDEX = "works-v25-*,-*invalid-data"
 GROUPBY_VALUES_INDEX = "groupby_values"
 
 DO_NOT_GROUP_BY = [
@@ -65,7 +65,6 @@ EXTERNAL_ID_FIELDS = [
 
 BOOLEAN_TEXT_FIELDS = [
     "has_abstract",
-    "has_ngrams",
     "has_pdf_url",
     "has_raw_affiliation_strings",
     "has_references",

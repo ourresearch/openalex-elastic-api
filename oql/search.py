@@ -19,13 +19,16 @@ class Search:
     id: str = field(init=False)
     query: dict = field(default_factory=dict)
     results: Optional[List] = field(default_factory=list)
+    results_header: Optional[List] = field(default_factory=list)
     meta: Optional[Dict] = field(default_factory=dict)
+    is_completed: bool = False
     is_ready: bool = False
-    timestamp: str = field(init=False)
+    timestamps: Dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
         self.id = self.short_uuid()
-        self.timestamp = datetime.now(timezone.utc).isoformat()
+        self.timestamps["started"] = datetime.now(timezone.utc).isoformat()
+        self.timestamps["est_completed"] = "not implemented"
 
     def short_uuid(self) -> str:
         return shortuuid.uuid()

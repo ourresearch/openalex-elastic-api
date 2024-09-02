@@ -5,46 +5,35 @@ import requests
 from flask import Blueprint, request, jsonify
 
 from combined_config import all_entities_config
-from oql.query import Query, QueryNew
-from oql.schemas import QuerySchema
+from oql.query import QueryNew
 from oql.results_table import ResultTable
 from oql.search import Search, get_existing_search
+from oql.validate import OQOValidator
 
 blueprint = Blueprint("oql", __name__)
 
 
-@blueprint.route("/query", methods=["GET", "POST"])
-def query():
-    if request.method == "GET":
-        query_string = request.args.get("q")
-    else:
-        query_string = request.json.get("q")
-
-    query_result = Query(query_string).to_dict()
-    query_schema = QuerySchema()
-    return query_schema.dump(query_result)
-
-
 @blueprint.route("/results", methods=["GET", "POST"])
 def results():
-    # params
-    if request.method == "GET":
-        entity = request.args.get("summarize_by") or "works"
-        filters = request.args.get("filters")
-        columns = request.args.get("return_columns")
-        sort_by_column = request.args.get("sort_by_column")
-        sort_by_order = request.args.get("sort_by_order")
-    else:
-        entity = request.json.get("summarize_by") or "works"
-        filters = request.json.get("filters")
-        columns = request.json.get("return_columns")
-        sort_by_column = request.json.get("sort_by_column")
-        sort_by_order = request.json.get("sort_by_order")
+    # set results from json
+    entity = request.json.get("summarize_by") or "works"
+    filters = request.json.get("filters") or []
+    columns = request.json.get("return_columns")
+    sort_by_column = request.json.get("sort_by", {}).get("column_id", "display_name")
+    sort_by_order = request.json.get("sort_by", {}).get("direction", "asc")
 
-    # parse lists
-    if request.method == "GET" and columns:
-        columns = columns.split(",")
-        columns = [column.strip() for column in columns]
+    # validate the query
+    oqo = OQOValidator(all_entities_config)
+    ok, error = oqo.validate({
+        "summarize_by": entity,
+        "filters": filters,
+        "return_columns": columns,
+        "sort_by_column": sort_by_column,
+        "sort_by_order": sort_by_order,
+    })
+
+    if not ok:
+        return jsonify({"invalid query error": error}), 400
 
     # query object
     query = QueryNew(
@@ -72,9 +61,6 @@ def results():
 @blueprint.route("/searches", methods=["POST"])
 def store_search():
     query = request.json.get("query")
-    if not query:
-        return jsonify({"error": "No query provided"}), 400
-
     s = Search(query=query)
     s.save()
     return jsonify(s.to_dict()), 201

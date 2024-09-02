@@ -10,6 +10,7 @@
     "placeholder": "Search research funders",
     "filterName": "grants.funder",
     "filterKey": "grants.funder",
+    "descrFull": "These are the organizations that fund research works via grants. Each funder has a unique OpenAlex ID.",
     "color": "brown",
     "hasAutocomplete": true,
     "isNative": true,
@@ -36,7 +37,8 @@
             "redshiftDisplayColumn": "id",
             "redshiftFilterColumn": "id",
             "actions": [],
-            "icon": "mdi-cash-multiple"
+            "icon": "mdi-cash-multiple",
+            "descr": "Unique identifier for the funder"
         },
         "display_name": {
             "id": "display_name",
@@ -56,7 +58,8 @@
                 "column"
             ],
             "category": "other",
-            "icon": "mdi-account-outline"
+            "icon": "mdi-account-outline",
+            "descr": "The name of the funder"
         },
         "country_code": {
             "id": "country_code",
@@ -78,7 +81,8 @@
             "actionsPopular": [
                 "filter"
             ],
-            "icon": "mdi-earth"
+            "icon": "mdi-earth",
+            "descr": "The country in which the funder is based"
         },
         "doi": {
             "id": "doi",
@@ -95,7 +99,8 @@
                 "column",
                 "filter"
             ],
-            "icon": "mdi-file-document-outline"
+            "icon": "mdi-file-document-outline",
+            "descr": "The DOI of the funder"
         },
         "crossref_id": {
             "id": "crossref_id",
@@ -108,7 +113,8 @@
             "redshiftFilterColumn": "crossref_id",
             "category": "ids",
             "actions": ["column"],
-            "icon": "mdi-file-document-outline"
+            "icon": "mdi-file-document-outline",
+            "descr": "The crossref id of the funder"
         },
         "description": {
             "id": "description",
@@ -123,7 +129,8 @@
             "actions": [
                 "column"
             ],
-            "icon": "mdi-file-document-outline"
+            "icon": "mdi-file-document-outline",
+            "descr": "A description of the funder"
         }
     },
     "values": null

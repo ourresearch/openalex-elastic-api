@@ -10,6 +10,7 @@
   "placeholder": "Search subfields",
   "filterName": "subfields",
   "filterKey": "primary_topic.subfield.id",
+  "descrFull": "Subfields are the specific areas of research that a work is about. Subfields are below fields but above topics in the hierarchy of research areas in OpenAlex.",
   "hasAutocomplete": false,
   "isNative": false,
   "idRegex": "(?:https:\\/\\/openalex\\.org\\/subfields\\/|subfields\\/)(\\d+)",
@@ -39,7 +40,8 @@
       "redshiftFilterColumn": "id",
       "actions": [
       ],
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "The unique identifier for the subfield in OpenAlex."
     },
     "display_name": {
       "id": "display_name",
@@ -59,7 +61,8 @@
         "column"
       ],
       "category": "other",
-      "icon": "mdi-account-outline"
+      "icon": "mdi-account-outline",
+      "descr": "The name of the subfield."
     },
     "description": {
       "id": "description",
@@ -73,7 +76,8 @@
       "actions": [
         "column"
       ],
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "A description of the subfield."
     },
     "topics": {
       "id": "topics",
@@ -87,7 +91,8 @@
       "redshiftFilterColumn": null,
       "actions": [
       ],
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "The topics that are children of this subfield."
     },
     "siblings": {
       "id": "siblings",
@@ -101,7 +106,8 @@
       "redshiftFilterColumn": null,
       "actions": [
       ],
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "The subfields that are related to this subfield."
     },
     "field": {
       "id": "field",
@@ -114,7 +120,8 @@
       "redshiftFilterColumn": null,
       "actions": [
       ],
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "The field that is the parent of this subfield."
     },
     "domain": {
       "id": "domain",
@@ -127,7 +134,8 @@
       "redshiftFilterColumn": null,
       "actions": [
       ],
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "The domain that is the parent of this subfield."
     }
   },
   "values": [

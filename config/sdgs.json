@@ -10,6 +10,7 @@
   "placeholder": "Search SDGs",
   "filterName": "Sustainable Development Goals",
   "filterKey": "sustainable_development_goals.id",
+  "descrFull": "The Sustainable Development Goals (SDGs) are a collection of 17 global goals set by the United Nations General Assembly in 2015 for the year 2030.",
   "hasAutocomplete": false,
   "isNative": false,
   "idRegex": "(?:https:\\/\\/openalex\\.org\\/sdgs\\/|sdgs\\/)(\\d+)",
@@ -18,8 +19,7 @@
     "display_name"
   ],
   "showOnTablePage": [
-    "display_name",
-    "description"
+    "display_name"
   ],
   "columns": {
     "id": {
@@ -34,7 +34,8 @@
       "actions": [
       ],
       "type": "string",
-      "icon": "mdi-tag-outline"
+      "icon": "mdi-tag-outline",
+      "descr": "The unique identifier for the Sustainable Development Goa (SDG) in OpenAlex."
     },
     "display_name": {
       "id": "display_name",
@@ -54,7 +55,29 @@
         "column"
       ],
       "category": "other",
-      "icon": "mdi-account-outline"
+      "icon": "mdi-account-outline",
+      "descr": "The name of the Sustainable Development Goal (SDG)."
+    },
+    "description": {
+      "id": "description",
+      "isColumnMandatory": true,
+      "subjectEntity": "sdgs",
+      "objectEntity": null,
+      "displayName": "description",
+      "type": "string",
+      "redshiftDisplayColumn": "description",
+      "redshiftFilterColumn": "description",
+      "actions": [
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "category": "other",
+      "icon": "mdi-account-outline",
+      "descr": "The description of the Sustainable Development Goal (SDG)."
     }
   },
   "values": [
