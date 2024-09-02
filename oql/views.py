@@ -99,7 +99,7 @@ def entity_config(entity):
 queue_results = {}
 
 # Create a ThreadPoolExecutor with 30 threads
-executor = ThreadPoolExecutor(max_workers=30)
+executor = ThreadPoolExecutor(max_workers=10)
 
 
 def process_query_test(test):
