@@ -7,9 +7,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from redis.client import Redis
 
-redis_client = Redis.from_url(os.environ.get("REDIS_DO_URL"))
+REDIS_CLIENT = Redis.from_url(os.environ.get("REDIS_DO_URL"))
 
-executor = ThreadPoolExecutor(max_workers=30)
+EXECUTOR = ThreadPoolExecutor(max_workers=30)
+HARD_TIMEOUT = 2*60
 
 
 def decode_redis_data(data):
@@ -56,24 +57,31 @@ def process_query_test(test):
             result = get_search_state(search_id)
             if result['is_ready']:
                 elapsed_time = time.time() - start_time
+                passing = len(result['results']) > 0
+                results_json = json.dumps(result['results'])
+                if 'resultsContain' in test:
+                    if isinstance(test['resultsContain'], list):
+                        passing = passing and all([substr in results_json for substr in test['resultsContain']])
+                    elif isinstance(test['resultsContain'], str):
+                        passing = passing and test['resultsContain'] in results_json
                 return {
                     'id': test['test_id'],
                     'case': 'queryToSearch',
-                    'isPassing': len(result['results']) > 0,
+                    'isPassing': passing,
                     'details': {
                         'searchId': search_id,
                         'elapsedTime': elapsed_time,
                         'resultsCount': len(result['results']),
                     }
                 }
-            if time.time() - start_time >= timeout:
+            if time.time() - start_time >= timeout or time.time() - start_time >= HARD_TIMEOUT:
                 return {
                     'id': test['test_id'],
                     'case': 'queryToSearch',
                     'isPassing': False,
                     'details': {
                         'searchId': search_id,
-                        'error': 'Search timed out',
+                        'error': 'timeout',
                         'test': test
                     }
                 }
@@ -97,7 +105,7 @@ def process_nat_lang_test(test):
         'mailto': 'team@ourresearch.org'
     }
     try:
-        r = requests.get('https://api.openalex.org/text/oql', params=params)
+        r = requests.get('https://api.openalex.org/text/oql', params=params, timeout=HARD_TIMEOUT)
         r.raise_for_status()
         oqo = r.json()
         return {
@@ -128,32 +136,44 @@ def process_job(job_id):
     try:
         print(f'Processing job: {job_id}')
         # Get the job from Redis
-        job = redis_client.hgetall(f'job:{job_id}')
+        job = REDIS_CLIENT.hgetall(f'job:{job_id}')
         job = decode_redis_data(job)
 
         # Update job status
-        redis_client.hset(f'job:{job_id}', 'status', 'processing')
+        REDIS_CLIENT.hset(f'job:{job_id}', 'status', 'processing')
 
         tests = job['tests']
         results = []
-        nat_lang_results = {}
 
         # Use the global executor
-        future_to_test = {executor.submit(process_test, test): test for test in
+        future_to_test = {EXECUTOR.submit(process_test, test): test for test in
                           tests}
         for future in as_completed(future_to_test):
             test = future_to_test[future]
             try:
                 result = future.result()
                 if result['case'] == 'natLang':
-                    if result['id'] not in nat_lang_results:
-                        nat_lang_results[result['id']] = []
-                    nat_lang_results[result['id']].append(result)
+                    # Find existing natLang result group or create a new one
+                    nat_lang_group = next((r for r in results if
+                                           r['id'] == result['id'] and r[
+                                               'case'] == 'natLang'), None)
+                    if nat_lang_group is None:
+                        nat_lang_group = {
+                            'id': result['id'],
+                            'case': 'natLang',
+                            'results': []
+                        }
+                        results.append(nat_lang_group)
+                    nat_lang_group['results'].append(result)
                 else:
                     results.append(result)
+
+                # Update all results in Redis
+                REDIS_CLIENT.hset(f'job:{job_id}', 'results',
+                                  json.dumps(results))
             except Exception as e:
                 print(f"Test processing failed: {str(e)}")
-                results.append({
+                error_result = {
                     'id': test.get('test_id', 'unknown'),
                     'case': test.get('case', 'unknown'),
                     'isPassing': False,
@@ -161,26 +181,21 @@ def process_job(job_id):
                         'error': str(e),
                         'test': test
                     }
-                })
+                }
+                results.append(error_result)
+                # Update results in Redis including the error
+                REDIS_CLIENT.hset(f'job:{job_id}', 'results',
+                                  json.dumps(results))
 
-        # Group natLang results
-        for test_id, nat_lang_tests in nat_lang_results.items():
-            results.append({
-                'id': test_id,
-                'case': 'natLang',
-                'results': nat_lang_tests
-            })
-
-        # Update job with results
-        redis_client.hset(f'job:{job_id}', mapping={
+        # Update job as completed
+        REDIS_CLIENT.hset(f'job:{job_id}', mapping={
             'status': 'completed',
             'is_completed': 'true',
-            'results': json.dumps(results)
         })
         print(f'Finished processing job: {job_id}')
     except Exception as e:
         traceback.print_exc()
-        redis_client.hset(f'job:{job_id}', mapping={
+        REDIS_CLIENT.hset(f'job:{job_id}', mapping={
             'status': 'failed',
             'error': str(e)
         })
@@ -189,7 +204,7 @@ def process_job(job_id):
 def run_job_processor():
     while True:
         # Get the next job from the queue
-        job_id = redis_client.brpop('job_queue', timeout=1)
+        job_id = REDIS_CLIENT.brpop('job_queue', timeout=1)
         if job_id:
             job_id = job_id[1].decode()
             process_job(job_id)
@@ -206,4 +221,4 @@ if __name__ == "__main__":
             run_job_processor()
         finally:
             # Ensure the executor is shut down properly when the script exits
-            executor.shutdown(wait=True)
+            EXECUTOR.shutdown(wait=True)
