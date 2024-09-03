@@ -38,7 +38,13 @@ class RedshiftQueryHandler:
         query = self.apply_entity_filters(query, entity_class)
         query = self.apply_sort(query, entity_class)
         query = self.apply_stats(query, entity_class)
-        return query.limit(100).all()
+
+        count_query = db.session.query(func.count()).select_from(query.subquery())
+        total_count = db.session.execute(count_query).scalar()
+
+        results = query.limit(100).all()
+
+        return total_count, results
 
     def build_joins(self, entity_class):
         columns_to_select = [entity_class]
