@@ -101,9 +101,9 @@ def entity_config(entity):
     return jsonify(config)
 
 
-@blueprint.route('/bulk_test', methods=['OPTIONS'])
-def bulk_test_cors():
-    return add_cors_headers(make_response()), 200
+# @blueprint.route('/bulk_test', methods=['OPTIONS'])
+# def bulk_test_cors():
+#     return add_cors_headers(make_response()), 200
 
 
 @blueprint.route('/bulk_test', methods=['POST'])
@@ -150,9 +150,9 @@ def bulk_test():
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 
-@blueprint.route('/job_status/<job_id>', methods=['OPTIONS'])
-def job_status_cors(job_id):
-    return add_cors_headers(make_response()), 200
+# @blueprint.route('/job_status/<job_id>', methods=['OPTIONS'])
+# def job_status_cors(job_id):
+#     return add_cors_headers(make_response()), 200
 
 
 @blueprint.route('/job_status/<job_id>', methods=['GET'])
