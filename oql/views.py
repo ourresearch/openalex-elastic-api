@@ -45,7 +45,7 @@ def results():
     })
 
     # if not ok:
-        # return jsonify({"invalid query error": error}), 400
+    # return jsonify({"invalid query error": error}), 400
 
     # query object
     query = QueryNew(
@@ -118,7 +118,8 @@ def create_testing_job():
             tests = json.loads(request.data)
 
         if not tests:
-            return jsonify({'error': 'No tests provided'}), 400
+            return add_cors_headers(
+                jsonify({'error': 'No tests provided'})), 400
 
         job_id = str(uuid.uuid4())
 
@@ -167,3 +168,10 @@ def job_status(job_id):
         'status': job['status'],
         'is_completed': job['is_completed'],
         'results': job['results']})
+
+
+@blueprint.after_request
+def add_cors_headers_to_test_stories(response):
+    if request.path.startswith('/test_stories'):
+        return add_cors_headers(response)
+    return response
