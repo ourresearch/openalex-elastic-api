@@ -101,13 +101,13 @@ def entity_config(entity):
     return jsonify(config)
 
 
-# @blueprint.route('/bulk_test', methods=['OPTIONS'])
-# def bulk_test_cors():
-#     return add_cors_headers(make_response()), 200
+@blueprint.route('/test_stories', methods=['OPTIONS'])
+def bulk_test_cors():
+    return add_cors_headers(make_response()), 200
 
 
-@blueprint.route('/bulk_test', methods=['POST'])
-def bulk_test():
+@blueprint.route('/test_stories', methods=['POST'])
+def create_testing_job():
     try:
         # If the content type is application/json, Flask should have already parsed it
         if request.is_json:
@@ -150,12 +150,12 @@ def bulk_test():
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 
-# @blueprint.route('/job_status/<job_id>', methods=['OPTIONS'])
-# def job_status_cors(job_id):
-#     return add_cors_headers(make_response()), 200
+@blueprint.route('/test_stories/<job_id>', methods=['OPTIONS'])
+def job_status_cors(job_id):
+    return add_cors_headers(make_response()), 200
 
 
-@blueprint.route('/job_status/<job_id>', methods=['GET'])
+@blueprint.route('/test_stories/<job_id>', methods=['GET'])
 def job_status(job_id):
     job = redis_client.hgetall(f'job:{job_id}')
     if not job:
@@ -165,4 +165,4 @@ def job_status(job_id):
     return jsonify({
         'status': job['status'],
         'is_completed': job['is_completed'],
-        'results': job['results'] if job['is_completed'] else []})
+        'results': job['results']})
