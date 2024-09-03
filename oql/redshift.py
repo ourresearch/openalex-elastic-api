@@ -38,7 +38,13 @@ class RedshiftQueryHandler:
         query = self.apply_entity_filters(query, entity_class)
         query = self.apply_sort(query, entity_class)
         query = self.apply_stats(query, entity_class)
-        return query.limit(100).all()
+
+        count_query = db.session.query(func.count()).select_from(query.subquery())
+        total_count = db.session.execute(count_query).scalar()
+
+        results = query.limit(100).all()
+
+        return total_count, results
 
     def build_joins(self, entity_class):
         columns_to_select = [entity_class]
@@ -237,6 +243,10 @@ class RedshiftQueryHandler:
             if subject_entity == "works":
                 continue
 
+            # do not filter stats
+            if key.startswith("count(") or key == "mean(fwci)":
+                continue
+
             # setup
             redshift_column = self.entity_config.get(key).get("redshiftFilterColumn")
             column_type = self.entity_config.get(key).get("type")
@@ -354,6 +364,12 @@ class RedshiftQueryHandler:
                         stat_function.label(f"{stat}({related_entity})")
                     )
 
+                    for filter in self.filters:
+                        if filter["column_id"] == "count(works)":
+                            query = self.filter_stats(
+                                query, stat_function, filter["operator"], filter["value"]
+                            )
+
                     if self.sort_by_column == column:
                         query = self.sort_from_stat(
                             query, self.sort_by_order, stat_function
@@ -387,6 +403,12 @@ class RedshiftQueryHandler:
                         stat_function.label(f"{stat}({related_entity})")
                     )
 
+                    for filter in self.filters:
+                        if filter["column_id"] == "count(citations)":
+                            query = self.filter_stats(
+                                query, stat_function, filter["operator"], filter["value"]
+                            )
+
                     if self.sort_by_column == column:
                         query = self.sort_from_stat(
                             query, self.sort_by_order, stat_function
@@ -398,13 +420,11 @@ class RedshiftQueryHandler:
 
                     query = query.group_by(*self.model_return_columns)
 
-                    # Create the case statement for calculating is_open_access percentage
                     open_access_case = case(
                         [(work_class.oa_status != "closed", 1)],
                         else_=0
                     )
 
-                    # Cast the case statement to Float and divide by count
                     stat_function = (
                             func.sum(cast(open_access_case, Float)) / cast(func.count(work_class.paper_id),
                                                                            Float)
@@ -530,6 +550,18 @@ class RedshiftQueryHandler:
                 query = query.order_by(sort_func.desc().nulls_last())
             else:
                 query = query.order_by(sort_func.asc().nulls_last())
+        return query
+
+    def filter_stats(self, query, stat_function, operator, value):
+        """Apply filtering on the calculated stat."""
+        if operator == "is greater than":
+            query = query.having(stat_function > int(value))
+        elif operator == "is less than":
+            query = query.having(stat_function < int(value))
+        elif operator == "is":
+            query = query.having(stat_function == int(value))
+        elif operator == "is not":
+            query = query.having(stat_function != int(value))
         return query
 
 

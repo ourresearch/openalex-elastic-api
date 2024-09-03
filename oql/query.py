@@ -13,6 +13,7 @@ class QueryNew:
         self.columns = columns or self.default_columns()
         self.sort_by_column = "cited_by_count" if self.entity == "works" else sort_by_column
         self.sort_by_order = sort_by_order or "desc"
+        self.total_count = 0
         self.valid_columns = self.get_valid_columns()
         self.valid_sort_columns = self.get_valid_sort_columns()
 
@@ -28,7 +29,8 @@ class QueryNew:
             return_columns=self.columns,
             valid_columns=self.valid_columns
         )
-        results = redshift_handler.execute()
+        total_count, results = redshift_handler.execute()
+        self.total_count = total_count
         json_data = self.format_results_as_json(results)
         return json_data
 
