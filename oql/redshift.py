@@ -238,7 +238,7 @@ class RedshiftQueryHandler:
                 continue
 
             # do not filter stats
-            if key.startswith("count("):
+            if key.startswith("count(") or key == "mean(fwci)":
                 continue
 
             # setup
@@ -397,6 +397,12 @@ class RedshiftQueryHandler:
                         stat_function.label(f"{stat}({related_entity})")
                     )
 
+                    for filter in self.filters:
+                        if filter["column_id"] == "count(citations)":
+                            query = self.filter_stats(
+                                query, stat_function, filter["operator"], filter["value"]
+                            )
+
                     if self.sort_by_column == column:
                         query = self.sort_from_stat(
                             query, self.sort_by_order, stat_function
@@ -408,13 +414,11 @@ class RedshiftQueryHandler:
 
                     query = query.group_by(*self.model_return_columns)
 
-                    # Create the case statement for calculating is_open_access percentage
                     open_access_case = case(
                         [(work_class.oa_status != "closed", 1)],
                         else_=0
                     )
 
-                    # Cast the case statement to Float and divide by count
                     stat_function = (
                             func.sum(cast(open_access_case, Float)) / cast(func.count(work_class.paper_id),
                                                                            Float)
