@@ -1,21 +1,27 @@
 import json
-import time
+import os
 import uuid
-from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from queue import Queue
-from threading import Thread
 
-import requests
-from flask import Blueprint, request, jsonify, Response, make_response
+import redis
+from flask import Blueprint, request, jsonify, make_response
+from redis.client import Redis
 
 from combined_config import all_entities_config
+from oql.process_bulk_tests import decode_redis_data
 from oql.query import QueryNew
 from oql.results_table import ResultTable
 from oql.search import Search, get_existing_search
 from oql.validate import OQOValidator
 
 blueprint = Blueprint("oql", __name__)
+redis_client = Redis.from_url(os.environ.get("REDIS_DO_URL"))
+
+
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = '*'
+    return response
 
 
 @blueprint.route("/results", methods=["GET", "POST"])
@@ -95,166 +101,75 @@ def entity_config(entity):
     return jsonify(config)
 
 
-# Dictionary to store queue-specific results
-queue_results = {}
-
-# Create a ThreadPoolExecutor with 30 threads
-executor = ThreadPoolExecutor(max_workers=10)
-
-
-def process_query_test(test):
-    def create_search(query):
-        params = {
-            'query': query,
-            'mailto': 'team@ourresearch.org'
-        }
-        r = requests.post("https://api.openalex.org/searches", params=params)
-        r.raise_for_status()
-        return r.json()['id']
-
-    def get_search_state(search_id):
-        url = f"https://api.openalex.org/searches/{search_id}"
-        params = {'mailto': 'team@ourresearch.org'}
-        r = requests.get(url, params=params)
-        r.raise_for_status()
-        return r.json()
-
-    try:
-        search_id = create_search(test['query'])
-        timeout = test.get('searchTimeout', 30)
-        start_time = time.time()
-        while True:
-            result = get_search_state(search_id)
-            if result['is_ready']:
-                elapsed_time = time.time() - start_time
-                return {
-                    'id': test['test_id'],
-                    'case': 'queryToSearch',
-                    'isPassing': len(result['results']) > 0,
-                    'details': {
-                        'searchId': search_id,
-                        'elapsedTime': elapsed_time,
-                        'resultsCount': len(result['results']),
-                    }
-                }
-            if time.time() - start_time >= timeout:
-                return {
-                    'id': test['test_id'],
-                    'case': 'queryToSearch',
-                    'isPassing': False,
-                    'details': {
-                        'error': 'Search timed out',
-                        'test': test
-                    }
-                }
-            time.sleep(1)
-    except Exception as e:
-        return {
-            'id': test['test_id'],
-            'case': 'queryToSearch',
-            'isPassing': False,
-            'details': {
-                'error': str(e),
-                'test': test
-            }
-        }
-
-
-def process_nat_lang_test(test):
-    params = {
-        'natural_language': test['prompt'],
-        'mailto': 'team@ourresearch.org'
-    }
-    try:
-        r = requests.get('https://api.openalex.org/text/oql', params=params)
-        r.raise_for_status()
-        oqo = r.json()
-        return {
-            'id': test['test_id'],
-            'case': 'natLang',
-            'prompt': test['prompt'],
-            'oqo': oqo
-        }
-    except Exception as e:
-        return {
-            'id': test['test_id'],
-            'case': 'natLang',
-            'prompt': test['prompt'],
-            'error': str(e)
-        }
-
-
-def process_test(test):
-    if 'query' in test:
-        return process_query_test(test)
-    elif 'prompt' in test:
-        return process_nat_lang_test(test)
-    else:
-        return {'error': 'Invalid test format', 'test': test}
-
-
-def process_tests(tests, queue_id):
-    futures = []
-    for test in tests:
-        futures.append(executor.submit(process_test, test))
-
-    nat_lang_results = defaultdict(list)
-
-    for future in as_completed(futures):
-        result = future.result()
-        if result['case'] == 'natLang':
-            nat_lang_results[result['id']].append(result)
-        else:
-            queue_results[queue_id].put(result)
-
-    # Send grouped natLang results
-    for test_id, results in nat_lang_results.items():
-        grouped_result = {
-            'id': test_id,
-            'case': 'natLang',
-            'results': results
-        }
-        queue_results[queue_id].put(grouped_result)
-
-    # Signal that all tests are completed
-    queue_results[queue_id].put({'status': 'all_completed'})
+@blueprint.route('/bulk_test', methods=['OPTIONS'])
+def bulk_test_cors():
+    return add_cors_headers(make_response()), 200
 
 
 @blueprint.route('/bulk_test', methods=['POST'])
 def bulk_test():
-    tests = json.loads(request.data)
-    queue_id = str(uuid.uuid4())
-    queue_results[queue_id] = Queue()
+    try:
+        # If the content type is application/json, Flask should have already parsed it
+        if request.is_json:
+            tests = request.json
+        else:
+            # If not, we'll try to parse it ourselves
+            tests = json.loads(request.data)
 
-    executor.submit(process_tests, tests, queue_id)
-    resp = make_response(
-        jsonify({'queue_id': queue_id, 'message': 'Tests started'}), 202)
-    resp.headers['Access-Control-Allow-Origin'] = '*'
-    return resp
+        if not tests:
+            return add_cors_headers(
+                jsonify({'error': 'No tests provided'})), 400
+
+        job_id = str(uuid.uuid4())
+
+        # Create a new job in Redis
+        job_data = {
+            'status': 'queued',
+            'tests': json.dumps(tests),
+            'results': json.dumps([]),
+            'is_completed': 'false'
+        }
+
+        # Use pipeline for atomic operation
+        pipe = redis_client.pipeline()
+        pipe.hset(f'job:{job_id}', mapping=job_data)
+        pipe.lpush('job_queue', job_id)
+        pipe.execute()
+
+        # Verify the job was created
+        stored_job = redis_client.hgetall(f'job:{job_id}')
+        if not stored_job:
+            return add_cors_headers(
+                jsonify({'error': 'Failed to create job'})), 500
+
+        return add_cors_headers(
+            jsonify({'job_id': job_id, 'message': 'Job queued'})), 202
+
+    except json.JSONDecodeError:
+        return add_cors_headers(
+            jsonify({'error': 'Invalid JSON in request body'})), 400
+    except redis.RedisError as e:
+        return add_cors_headers(
+            jsonify({'error': f'Redis error: {str(e)}'})), 500
+    except Exception as e:
+        return add_cors_headers(
+            jsonify({'error': f'Unexpected error: {str(e)}'})), 500
 
 
-@blueprint.route('/stream/<queue_id>')
-def stream(queue_id):
-    def event_stream():
-        while True:
-            if queue_id in queue_results:
-                if not queue_results[queue_id].empty():
-                    result = queue_results[queue_id].get()
-                    yield f"data: {json.dumps(result)}\n\n"
-                    if result.get('status') == 'all_completed':
-                        break
-                else:
-                    yield f"data: {json.dumps({'status': 'processing'})}\n\n"
-            else:
-                yield f"data: {json.dumps({'status': 'error', 'message': 'Invalid queue ID'})}\n\n"
-                break
-            time.sleep(0.5)
+@blueprint.route('/job_status/<job_id>', methods=['OPTIONS'])
+def job_status_cors(job_id):
+    return add_cors_headers(make_response()), 200
 
-        # Clean up the queue when done
-        if queue_id in queue_results:
-            del queue_results[queue_id]
 
-    resp = make_response(
-        Response(event_stream(), content_type='text/event-stream'))
-    resp.headers['Access-Control-Allow-Origin'] = '*'
-    return resp
+@blueprint.route('/job_status/<job_id>', methods=['GET'])
+def job_status(job_id):
+    job = redis_client.hgetall(f'job:{job_id}')
+    if not job:
+        return add_cors_headers(
+            jsonify({'status': 'error', 'message': 'Invalid job ID'})), 404
+    job = decode_redis_data(job)
+
+    return add_cors_headers(jsonify({
+        'status': job['status'],
+        'is_completed': job['is_completed'],
+        'results': job['results'] if job['is_completed'] else []}))
