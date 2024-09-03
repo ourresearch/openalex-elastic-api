@@ -117,8 +117,7 @@ def bulk_test():
             tests = json.loads(request.data)
 
         if not tests:
-            return add_cors_headers(
-                jsonify({'error': 'No tests provided'})), 400
+            return jsonify({'error': 'No tests provided'}), 400
 
         job_id = str(uuid.uuid4())
 
@@ -139,21 +138,16 @@ def bulk_test():
         # Verify the job was created
         stored_job = redis_client.hgetall(f'job:{job_id}')
         if not stored_job:
-            return add_cors_headers(
-                jsonify({'error': 'Failed to create job'})), 500
+            return jsonify({'error': 'Failed to create job'}), 500
 
-        return add_cors_headers(
-            jsonify({'job_id': job_id, 'message': 'Job queued'})), 202
+        return jsonify({'job_id': job_id, 'message': 'Job queued'}), 202
 
     except json.JSONDecodeError:
-        return add_cors_headers(
-            jsonify({'error': 'Invalid JSON in request body'})), 400
+        return jsonify({'error': 'Invalid JSON in request body'}), 400
     except redis.RedisError as e:
-        return add_cors_headers(
-            jsonify({'error': f'Redis error: {str(e)}'})), 500
+        return jsonify({'error': f'Redis error: {str(e)}'}), 500
     except Exception as e:
-        return add_cors_headers(
-            jsonify({'error': f'Unexpected error: {str(e)}'})), 500
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 
 @blueprint.route('/job_status/<job_id>', methods=['OPTIONS'])
@@ -165,11 +159,10 @@ def job_status_cors(job_id):
 def job_status(job_id):
     job = redis_client.hgetall(f'job:{job_id}')
     if not job:
-        return add_cors_headers(
-            jsonify({'status': 'error', 'message': 'Invalid job ID'})), 404
+        return jsonify({'status': 'error', 'message': 'Invalid job ID'}), 404
     job = decode_redis_data(job)
 
-    return add_cors_headers(jsonify({
+    return jsonify({
         'status': job['status'],
         'is_completed': job['is_completed'],
-        'results': job['results'] if job['is_completed'] else []}))
+        'results': job['results'] if job['is_completed'] else []})
