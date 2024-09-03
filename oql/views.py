@@ -104,7 +104,6 @@ def entity_config(entity):
 
 @blueprint.route('/test_stories', methods=['POST'])
 def create_testing_job():
-    return jsonify({'test': 'this is a test'})
     try:
         # If the content type is application/json, Flask should have already parsed it
         if request.is_json:
@@ -114,8 +113,7 @@ def create_testing_job():
             tests = json.loads(request.data)
 
         if not tests:
-            return add_cors_headers(
-                jsonify({'error': 'No tests provided'})), 400
+            return jsonify({'error': 'No tests provided'}), 400
 
         job_id = str(uuid.uuid4())
 
