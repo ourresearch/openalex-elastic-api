@@ -109,6 +109,7 @@ def bulk_test_cors():
 
 @blueprint.route('/test_stories', methods=['POST'])
 def create_testing_job():
+    return jsonify({'test': 'this is a test'})
     try:
         # If the content type is application/json, Flask should have already parsed it
         if request.is_json:
