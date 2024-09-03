@@ -1,6 +1,7 @@
 import re
 
 from sqlalchemy import desc, func
+from sqlalchemy.orm import aliased
 from extensions import db
 
 from combined_config import all_entities_config
@@ -138,7 +139,7 @@ class RedshiftQueryHandler:
             # specialized filters
             elif key == "keywords.id":
                 value = get_short_id_text(value)
-                work_keyword_class = getattr(models, "WorkKeyword")
+                work_keyword_class = aliased(getattr(models, "WorkKeyword"))
                 query = query.join(
                     work_keyword_class,
                     work_keyword_class.paper_id == work_class.paper_id,
