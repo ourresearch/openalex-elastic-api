@@ -726,6 +726,17 @@ class WorkKeyword(db.Model):
         return f"<WorkKeyword(paper_id={self.paper_id}, keyword_id={self.keyword_id})>"
 
 
+class WorkSdg(db.Model):
+    __tablename__ = "work_sdg"
+
+    paper_id = Column(BigInteger, primary_key=True)
+    sdg_id = Column(Integer, primary_key=True)
+    score = Column(Float, nullable=True)
+
+    def __repr__(self):
+        return f"<WorkSdg(paper_id={self.paper_id}, sdg_id={self.sdg_id})>"
+
+
 class WorkTopic(db.Model):
     __tablename__ = "work_topic"
 

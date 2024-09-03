@@ -1,6 +1,6 @@
 import re
 
-from sqlalchemy import desc, func
+from sqlalchemy import case, cast, desc, func, Float
 from sqlalchemy.orm import aliased
 from extensions import db
 
@@ -305,6 +305,7 @@ class RedshiftQueryHandler:
             if (
                 self.sort_by_column == "count(works)"
                 or self.sort_by_column == "mean(fwci)"
+                or self.sort_by_column == "percent(is_open_access)"
             ):
                 return query
             else:
@@ -381,6 +382,33 @@ class RedshiftQueryHandler:
                     query = query.group_by(*self.model_return_columns)
 
                     stat_function = func.sum(work_class.cited_by_count)
+
+                    query = query.add_columns(
+                        stat_function.label(f"{stat}({related_entity})")
+                    )
+
+                    if self.sort_by_column == column:
+                        query = self.sort_from_stat(
+                            query, self.sort_by_order, stat_function
+                        )
+                elif column == "percent(is_open_access)" and self.entity == "institutions":
+                    stat, related_entity = parse_stats_column(column)
+
+                    work_class = getattr(models, "Work")
+
+                    query = query.group_by(*self.model_return_columns)
+
+                    # Create the case statement for calculating is_open_access percentage
+                    open_access_case = case(
+                        [(work_class.oa_status != "closed", 1)],
+                        else_=0
+                    )
+
+                    # Cast the case statement to Float and divide by count
+                    stat_function = (
+                            func.sum(cast(open_access_case, Float)) / cast(func.count(work_class.paper_id),
+                                                                           Float)
+                    )
 
                     query = query.add_columns(
                         stat_function.label(f"{stat}({related_entity})")

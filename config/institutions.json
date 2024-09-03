@@ -221,9 +221,8 @@
             ],
             "icon": "mdi-book-open-variant",
             "descr": "The number of works affiliated with the institution in OpenAlex"
-        }
-    },
-    "count(citations)": {
+        },
+        "count(citations)": {
             "id": "count(citations)",
             "subjectEntity": "institutions",
             "objectEntity": null,
@@ -242,5 +241,25 @@
             "icon": "mdi-book-open-variant",
             "descr": "The count of citations for this institution in OpenAlex"
         },
+        "percent(is_open_access)": {
+            "id": "percent(is_open_access)",
+            "subjectEntity": "institutions",
+            "objectEntity": null,
+            "displayName": "is open access %",
+            "type": "number",
+            "redshiftDisplayColumn": "percent(is_open_access)",
+            "redshiftFilterColumn": "percent(is_open_access)",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "icon": "mdi-book-open-variant",
+            "descr": "The percentage of works affiliated with the institution that are open access"
+        }
+    },
     "values": null
 }

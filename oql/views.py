@@ -44,8 +44,8 @@ def results():
         "sort_by_order": sort_by_order,
     })
 
-    if not ok:
-        return jsonify({"invalid query error": error}), 400
+    # if not ok:
+        # return jsonify({"invalid query error": error}), 400
 
     # query object
     query = QueryNew(
