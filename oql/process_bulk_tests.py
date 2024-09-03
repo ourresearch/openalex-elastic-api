@@ -9,7 +9,7 @@ from redis.client import Redis
 
 REDIS_CLIENT = Redis.from_url(os.environ.get("REDIS_DO_URL"))
 
-EXECUTOR = ThreadPoolExecutor(max_workers=30)
+EXECUTOR = ThreadPoolExecutor(max_workers=os.environ.get("TEST_THREADS_PER_DYNO", 100))
 HARD_TIMEOUT = 2*60
 
 
