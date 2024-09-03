@@ -237,6 +237,10 @@ class RedshiftQueryHandler:
             if subject_entity == "works":
                 continue
 
+            # do not filter stats
+            if key.startswith("count("):
+                continue
+
             # setup
             redshift_column = self.entity_config.get(key).get("redshiftFilterColumn")
             column_type = self.entity_config.get(key).get("type")
@@ -353,6 +357,12 @@ class RedshiftQueryHandler:
                     query = query.add_columns(
                         stat_function.label(f"{stat}({related_entity})")
                     )
+
+                    for filter in self.filters:
+                        if filter["column_id"] == "count(works)":
+                            query = self.filter_stats(
+                                query, stat_function, filter["operator"], filter["value"]
+                            )
 
                     if self.sort_by_column == column:
                         query = self.sort_from_stat(
@@ -530,6 +540,18 @@ class RedshiftQueryHandler:
                 query = query.order_by(sort_func.desc().nulls_last())
             else:
                 query = query.order_by(sort_func.asc().nulls_last())
+        return query
+
+    def filter_stats(self, query, stat_function, operator, value):
+        """Apply filtering on the calculated stat."""
+        if operator == "is greater than":
+            query = query.having(stat_function > int(value))
+        elif operator == "is less than":
+            query = query.having(stat_function < int(value))
+        elif operator == "is":
+            query = query.having(stat_function == int(value))
+        elif operator == "is not":
+            query = query.having(stat_function != int(value))
         return query
 
 
