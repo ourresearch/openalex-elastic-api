@@ -2,7 +2,7 @@ import json
 import os
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 
 import requests
 from redis.client import Redis
@@ -11,6 +11,7 @@ REDIS_CLIENT = Redis.from_url(os.environ.get("REDIS_DO_URL"))
 
 EXECUTOR = ThreadPoolExecutor(max_workers=os.environ.get("TEST_THREADS_PER_DYNO", 100))
 HARD_TIMEOUT = 2*60
+DEFAULT_JOB_TIMEOUT = 3*60
 
 
 def decode_redis_data(data):
@@ -135,62 +136,91 @@ def process_test(test):
 def process_job(job_id):
     try:
         print(f'Processing job: {job_id}')
-        # Get the job from Redis
         job = REDIS_CLIENT.hgetall(f'job:{job_id}')
         job = decode_redis_data(job)
+        job_timeout = job.get('timeout', DEFAULT_JOB_TIMEOUT)
 
-        # Update job status
         REDIS_CLIENT.hset(f'job:{job_id}', 'status', 'processing')
 
         tests = job['tests']
         results = []
+        futures = {}
 
-        # Use the global executor
-        future_to_test = {EXECUTOR.submit(process_test, test): test for test in
-                          tests}
-        for future in as_completed(future_to_test):
-            test = future_to_test[future]
+        start_time = time.time()
+
+        # Submit all tests to the executor
+        for test in tests:
+            future = EXECUTOR.submit(process_test, test)
+            futures[future] = test
+
+        # Process completed futures and handle timeout
+        while futures:
             try:
-                result = future.result()
-                if result['case'] == 'natLang':
-                    # Find existing natLang result group or create a new one
-                    nat_lang_group = next((r for r in results if
-                                           r['id'] == result['id'] and r[
-                                               'case'] == 'natLang'), None)
-                    if nat_lang_group is None:
-                        nat_lang_group = {
-                            'id': result['id'],
-                            'case': 'natLang',
-                            'results': []
+                # Wait for the next future to complete, but not longer than the remaining timeout
+                time_elapsed = time.time() - start_time
+                time_remaining = max(0, job_timeout - time_elapsed)
+                print(f'Processing job: {job_id}, time: {time_remaining} seconds')
+                completed = as_completed(futures.keys(),
+                                            timeout=time_remaining)
+                for future in completed:
+                    test = futures.pop(future)
+                    try:
+                        result = future.result()
+                        if result['case'] == 'natLang':
+                            nat_lang_group = next((r for r in results if
+                                                   r['id'] == result['id'] and
+                                                   r['case'] == 'natLang'),
+                                                  None)
+                            if nat_lang_group is None:
+                                nat_lang_group = {
+                                    'id': result['id'],
+                                    'case': 'natLang',
+                                    'results': []
+                                }
+                                results.append(nat_lang_group)
+                            nat_lang_group['results'].append(result)
+                        else:
+                            results.append(result)
+                    except Exception as e:
+                        error_result = {
+                            'id': test.get('test_id', 'unknown'),
+                            'case': test.get('case', 'unknown'),
+                            'isPassing': False,
+                            'details': {
+                                'error': str(e),
+                                'test': test
+                            }
                         }
-                        results.append(nat_lang_group)
-                    nat_lang_group['results'].append(result)
-                else:
-                    results.append(result)
+                        results.append(error_result)
 
-                # Update all results in Redis
-                REDIS_CLIENT.hset(f'job:{job_id}', 'results',
-                                  json.dumps(results))
-            except Exception as e:
-                print(f"Test processing failed: {str(e)}")
-                error_result = {
-                    'id': test.get('test_id', 'unknown'),
-                    'case': test.get('case', 'unknown'),
-                    'isPassing': False,
-                    'details': {
-                        'error': str(e),
-                        'test': test
+                    # Update results in Redis
+                    REDIS_CLIENT.hset(f'job:{job_id}', 'results',
+                                      json.dumps(results))
+
+            except TimeoutError:
+                # Job timeout reached, mark remaining tests as failed
+                for future, test in futures.items():
+                    future.cancel()
+                    timeout_result = {
+                        'id': test.get('test_id', 'unknown'),
+                        'case': test.get('case', 'unknown'),
+                        'isPassing': False,
+                        'details': {
+                            'error': 'timeout',
+                            'test': test
+                        }
                     }
-                }
-                results.append(error_result)
-                # Update results in Redis including the error
-                REDIS_CLIENT.hset(f'job:{job_id}', 'results',
-                                  json.dumps(results))
+                    if test.get('prompt'):
+                        timeout_result['prompt'] = test['prompt']
+                    results.append(timeout_result)
+
+                break  # Exit the while loop as we've handled all remaining futures
 
         # Update job as completed
         REDIS_CLIENT.hset(f'job:{job_id}', mapping={
             'status': 'completed',
             'is_completed': 'true',
+            'results': json.dumps(results)
         })
         print(f'Finished processing job: {job_id}')
     except Exception as e:

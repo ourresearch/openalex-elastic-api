@@ -107,12 +107,12 @@ def create_testing_job():
     try:
         # If the content type is application/json, Flask should have already parsed it
         if request.is_json:
-            tests = request.json
+            j = request.json
         else:
             # If not, we'll try to parse it ourselves
-            tests = json.loads(request.data)
+            j = json.loads(request.data)
 
-        if not tests:
+        if not j:
             return jsonify({'error': 'No tests provided'}), 400
 
         job_id = str(uuid.uuid4())
@@ -120,7 +120,8 @@ def create_testing_job():
         # Create a new job in Redis
         job_data = {
             'status': 'queued',
-            'tests': json.dumps(tests),
+            'timeout': j.get('timeout', 3 * 60),
+            'tests': json.dumps(j['tests']),
             'results': json.dumps([]),
             'is_completed': 'false'
         }
