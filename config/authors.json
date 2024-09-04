@@ -140,6 +140,28 @@
             "icon": "mdi-shape-outline",
             "descr": "The type of institutions that the author has been affiliated with which are taking from ROR."
         },
+        "affiliations.institution.country_code": {
+            "id": "affiliations.institution.country_code",
+            "isList": true,
+            "subjectEntity": "authors",
+            "entityId": "countries",
+            "objectEntity": "countries",
+            "isId": true,
+            "displayName": "country",
+            "type": "array",
+            "isCountry": true,
+            "redshiftDisplayColumn": "country_code",
+            "redshiftFilterColumn": "country_code",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-earth",
+            "descr": "The countries of the institutions that the author has been affiliated with."
+        },
         "last_known_institutions.id": {
             "id": "last_known_institutions.id",
             "isList": true,
@@ -211,8 +233,8 @@
             "objectEntity": null,
             "displayName": "Has an ORCID",
             "type": "boolean",
-            "redshiftDisplayColumn": null,
-            "redshiftFilterColumn": null,
+            "redshiftDisplayColumn": "has_orcid",
+            "redshiftFilterColumn": "has_orcid",
             "actions": [
                 "filter",
                 "group_by"

@@ -262,6 +262,20 @@ class RedshiftQueryHandler:
                 query = self.do_operator_query(model_column, operator, query, value)
             elif column_type == "search":
                 query = query.filter(model_column.ilike(f"%{value}%"))
+            # specialized filters
+            elif key == "affiliations.institution.country_code" and self.entity == "authors":
+                value = get_short_id_text(value)
+                value = value.upper()
+                affiliation_class = aliased(getattr(models, "Affiliation"))
+                institution_class = aliased(getattr(models, "Institution"))
+                query = query.join(
+                    affiliation_class,
+                    affiliation_class.author_id == entity_class.author_id,
+                ).join(
+                    institution_class,
+                    affiliation_class.affiliation_id == institution_class.affiliation_id,
+                )
+                query = self.do_operator_query(institution_class.country_code, operator, query, value)
             elif (
                 column_type == "object" or column_type == "array"
             ) and is_object_entity:

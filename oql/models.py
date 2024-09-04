@@ -311,6 +311,14 @@ class Author(db.Model):
     def id(cls):
         return func.concat('authors/A', cls.author_id)
 
+    @hybrid_property
+    def has_orcid(self):
+        return self.orcid is not None
+
+    @has_orcid.expression
+    def has_orcid(cls):
+        return cls.orcid.isnot(None)
+
     @property
     def affiliations(self):
         results = (
