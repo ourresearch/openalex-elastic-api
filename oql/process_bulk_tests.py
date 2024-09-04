@@ -121,7 +121,6 @@ def process_nat_lang_test(test):
                 'expected': test['query'],
                 'actual': oqo,
             },
-            'oqo': oqo
         }
         result['details'].update(passing)
     except Exception as e:
