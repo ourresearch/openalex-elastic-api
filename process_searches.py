@@ -52,6 +52,7 @@ def fetch_results(query):
             entity=entity,
             show_columns=show_columns,
             json_data=json_data,
+            total_count=query.total_count,
             page=1,
             per_page=100,
         )
