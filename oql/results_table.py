@@ -2,9 +2,9 @@ from combined_config import all_entities_config
 
 
 class ResultTable:
-    def __init__(self, entity, columns, json_data, page=1, per_page=100, total_count=0):
+    def __init__(self, entity, show_columns, json_data, page=1, per_page=100, total_count=0):
         self.entity = entity
-        self.columns = columns or all_entities_config[self.entity]["showOnTablePage"]
+        self.show_columns = show_columns
         self.json_data = json_data
         self.page = page
         self.per_page = per_page
@@ -13,7 +13,7 @@ class ResultTable:
     def header(self):
         return [
             all_entities_config[self.entity]['columns'][column]
-            for column in self.columns
+            for column in self.show_columns
             if column in all_entities_config[self.entity]['columns']
         ]
 
@@ -23,7 +23,7 @@ class ResultTable:
     def format_row(self, row):
         row_id = row.get("id")
         result = {"id": row_id, "cells": []}
-        for column in self.columns:
+        for column in self.show_columns:
             # get the value of the column
             value = row.get(column)
             result["cells"].append(self.format_value(column, value))

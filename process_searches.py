@@ -10,7 +10,7 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 import settings
 from app import create_app
 from combined_config import all_entities_config
-from oql.query import QueryNew
+from oql.query import Query
 from oql.results_table import ResultTable
 from oql.validate import OQOValidator
 
@@ -28,24 +28,19 @@ sentry_sdk.init(
 def fetch_results(query):
     with app.app_context():
         # params
-        entity = query.get("summarize_by") or "works"
-        filters = query.get("filters") or []
-        columns = query.get("return_columns")
-        sort_by_column = query.get("sort_by", {}).get("column_id", "display_name")
-        sort_by_order = query.get("sort_by", {}).get("direction", "asc")
-
-        # validate the query
-        oqo = OQOValidator(all_entities_config)
-        ok, error = oqo.validate(query)
-
-        if not ok:
-            return {"invalid_query_error": error}
+        entity = query.get("get_rows")
+        filter_works = query.get("filter_works")
+        filter_aggs = query.get("filter_aggs")
+        show_columns = query.get("show_columns")
+        sort_by_column = query.get("sort_by_column")
+        sort_by_order = query.get("sort_by_order")
 
         # query object
-        query = QueryNew(
+        query = Query(
             entity=entity,
-            columns=columns,
-            filters=filters,
+            filter_works=filter_works,
+            filter_aggs=filter_aggs,
+            show_columns=show_columns,
             sort_by_column=sort_by_column,
             sort_by_order=sort_by_order,
         )
@@ -55,7 +50,7 @@ def fetch_results(query):
         # results table
         results_table = ResultTable(
             entity=entity,
-            columns=columns,
+            show_columns=show_columns,
             json_data=json_data,
             page=1,
             per_page=100,

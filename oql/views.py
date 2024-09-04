@@ -8,7 +8,7 @@ from redis.client import Redis
 
 from combined_config import all_entities_config
 from oql.process_bulk_tests import decode_redis_data
-from oql.query import QueryNew
+from oql.query import Query
 from oql.results_table import ResultTable
 from oql.search import Search, get_existing_search
 from oql.validate import OQOValidator
@@ -26,55 +26,75 @@ def add_cors_headers(response):
 
 @blueprint.route("/results", methods=["GET", "POST"])
 def results():
+    """
+    For testing OQL queries and results.
+    """
     # set results from json
-    entity = request.json.get("summarize_by") or "works"
-    filters = request.json.get("filters") or []
-    columns = request.json.get("return_columns")
-    sort_by_column = request.json.get("sort_by", {}).get("column_id",
-                                                         "display_name")
-    sort_by_order = request.json.get("sort_by", {}).get("direction", "asc")
-
-    # validate the query
-    oqo = OQOValidator(all_entities_config)
-    ok, error = oqo.validate({
-        "summarize_by": entity,
-        "filters": filters,
-        "return_columns": columns,
-        "sort_by_column": sort_by_column,
-        "sort_by_order": sort_by_order,
-    })
-
-    # if not ok:
-    # return jsonify({"invalid query error": error}), 400
+    entity = request.json.get("get_rows")
+    filter_works = request.json.get("filter_works")
+    filter_aggs = request.json.get("filter_aggs")
+    show_columns = request.json.get("show_columns")
+    sort_by_column = request.json.get("sort_by_column")
+    sort_by_order = request.json.get("sort_by_order")
 
     # query object
-    query = QueryNew(
+    query = Query(
         entity=entity,
-        columns=columns,
-        filters=filters,
+        filter_works=filter_works,
+        filter_aggs=filter_aggs,
+        show_columns=show_columns,
         sort_by_column=sort_by_column,
         sort_by_order=sort_by_order,
     )
+
+    # validate the query
+    oqo = OQOValidator(all_entities_config)
+    ok, error = oqo.validate(query.to_dict())
+
+    if not ok:
+        return jsonify({"invalid query error": error}), 400
 
     json_data = query.execute()
 
     # results table
     results_table = ResultTable(
-        entity=entity,
-        columns=columns,
+        entity=query.entity,
+        show_columns=query.show_columns,
         json_data=json_data,
         total_count=query.total_count,
         page=1,
         per_page=100,
     )
     results_table_response = results_table.response()
-    return jsonify(results_table_response)
+    result = {
+        "query": query.to_dict(),
+        "results": results_table_response
+    }
+    return jsonify(result)
 
 
 @blueprint.route("/searches", methods=["POST"])
 def store_search():
-    query = request.json.get("query")
-    s = Search(query=query)
+    raw_query = request.json.get("query")
+
+    # query object
+    query = Query(
+        entity=raw_query.get("get_rows"),
+        filter_works=raw_query.get("filter_works"),
+        filter_aggs=raw_query.get("filter_aggs"),
+        show_columns=raw_query.get("show_columns"),
+        sort_by_column=raw_query.get("sort_by_column"),
+        sort_by_order=raw_query.get("sort_by_order"),
+    )
+
+    # validate the query
+    oqo = OQOValidator(all_entities_config)
+    ok, error = oqo.validate(query.to_dict())
+
+    if not ok:
+        return jsonify({"invalid query error": error}), 400
+
+    s = Search(query=query.to_dict())
     s.save()
     return jsonify(s.to_dict()), 201
 

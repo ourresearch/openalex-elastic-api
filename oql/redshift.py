@@ -13,17 +13,19 @@ class RedshiftQueryHandler:
     def __init__(
         self,
         entity,
+        filter_works,
+        filter_aggs,
+        show_columns,
         sort_by_column,
         sort_by_order,
-        filters,
-        return_columns,
         valid_columns,
     ):
         self.entity = entity
+        self.filter_works = filter_works
+        self.filter_aggs = filter_aggs
+        self.show_columns = show_columns
         self.sort_by_column = sort_by_column
         self.sort_by_order = sort_by_order
-        self.filters = filters
-        self.return_columns = return_columns
         self.valid_columns = valid_columns
         self.model_return_columns = []
         self.entity_config = all_entities_config.get(entity).get("columns")
@@ -88,7 +90,7 @@ class RedshiftQueryHandler:
     def set_columns(self, query, entity_class):
         columns_to_select = [entity_class]
 
-        for column in self.return_columns:
+        for column in self.show_columns:
             column_info = self.entity_config.get(column)
             if not column_info:
                 continue
@@ -107,12 +109,9 @@ class RedshiftQueryHandler:
         return query
 
     def apply_work_filters(self, query):
-        if not self.filters:
-            return query
-
         work_class = getattr(models, "Work")
 
-        for filter in self.filters:
+        for filter in self.filter_works:
             subject_entity = filter.get("subjectEntity")
             key = filter.get("column_id")
             value = filter.get("value")
@@ -226,10 +225,7 @@ class RedshiftQueryHandler:
         return query
 
     def apply_entity_filters(self, query, entity_class):
-        if not self.filters:
-            return query
-
-        for filter in self.filters:
+        for filter in self.filter_aggs:
             subject_entity = filter.get("subjectEntity")
             key = filter.get("column_id")
             value = filter.get("value")
@@ -341,220 +337,208 @@ class RedshiftQueryHandler:
                     if self.sort_by_order == "asc"
                     else query.order_by(desc(model_column))
                 )
-            else:
-                query = self.default_sort(query, entity_class)
-        else:
-            query = self.default_sort(query, entity_class)
-
         return query
 
-    def default_sort(self, query, entity_class):
-        default_sort_column = (
-            "cited_by_count" if self.entity == "works" else "display_name"
-        )
-        return query.order_by(desc(getattr(entity_class, default_sort_column, None)))
-
     def apply_stats(self, query, entity_class):
-        if self.return_columns:
-            for column in self.return_columns:
-                if column == "count(works)" and (
-                    self.entity == "authors" or self.entity == "institutions"
-                ):
-                    stat, related_entity = parse_stats_column(column)
+        for column in self.show_columns:
+            if column == "count(works)" and (
+                self.entity == "authors" or self.entity == "institutions"
+            ):
+                stat, related_entity = parse_stats_column(column)
 
-                    # use the existing join to calculate count_works
-                    affiliation_class = getattr(models, "Affiliation")
+                # use the existing join to calculate count_works
+                affiliation_class = getattr(models, "Affiliation")
 
-                    # stat function
-                    stat_function = func.count(
-                        func.distinct(affiliation_class.paper_id)
-                    )
+                # stat function
+                stat_function = func.count(
+                    func.distinct(affiliation_class.paper_id)
+                )
 
-                    # group by
-                    query = query.group_by(*self.model_return_columns)
+                # group by
+                query = query.group_by(*self.model_return_columns)
 
-                    # add stat column
-                    query = query.add_columns(
-                        stat_function.label(f"{stat}({related_entity})")
-                    )
+                # add stat column
+                query = query.add_columns(
+                    stat_function.label(f"{stat}({related_entity})")
+                )
 
-                    for filter in self.filters:
-                        if filter["column_id"] == "count(works)":
-                            query = self.filter_stats(
-                                query, stat_function, filter["operator"], filter["value"]
-                            )
-
-                    if self.sort_by_column == column:
-                        query = self.sort_from_stat(
-                            query, self.sort_by_order, stat_function
+                for filter in self.filters:
+                    if filter["column_id"] == "count(works)":
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
                         )
 
-                elif column == "mean(fwci)" and self.entity == "institutions":
-                    # use the existing join to calculate mean_fwci
-                    work_class = getattr(models, "Work")
+                if self.sort_by_column == column:
+                    query = self.sort_from_stat(
+                        query, self.sort_by_order, stat_function
+                    )
 
-                    stat_function = func.avg(work_class.fwci)
+            elif column == "mean(fwci)" and self.entity == "institutions":
+                # use the existing join to calculate mean_fwci
+                work_class = getattr(models, "Work")
 
-                    query = query.add_columns(stat_function.label("mean_fwci"))
+                stat_function = func.avg(work_class.fwci)
 
-                    query = query.group_by(*self.model_return_columns)
+                query = query.add_columns(stat_function.label("mean_fwci"))
 
-                    if self.sort_by_column == column:
-                        query = self.sort_from_stat(
-                            query, self.sort_by_order, stat_function
+                query = query.group_by(*self.model_return_columns)
+
+                if self.sort_by_column == column:
+                    query = self.sort_from_stat(
+                        query, self.sort_by_order, stat_function
+                    )
+
+            elif column == "count(citations)" and self.entity == "institutions":
+                stat, related_entity = parse_stats_column(column)
+
+                work_class = getattr(models, "Work")
+
+                query = query.group_by(*self.model_return_columns)
+
+                stat_function = func.sum(work_class.cited_by_count)
+
+                query = query.add_columns(
+                    stat_function.label(f"{stat}({related_entity})")
+                )
+
+                for filter in self.filters:
+                    if filter["column_id"] == "count(citations)":
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
                         )
 
-                elif column == "count(citations)" and self.entity == "institutions":
-                    stat, related_entity = parse_stats_column(column)
+                if self.sort_by_column == column:
+                    query = self.sort_from_stat(
+                        query, self.sort_by_order, stat_function
+                    )
+            elif column == "percent(is_open_access)" and self.entity == "institutions":
+                stat, related_entity = parse_stats_column(column)
 
-                    work_class = getattr(models, "Work")
+                work_class = getattr(models, "Work")
 
-                    query = query.group_by(*self.model_return_columns)
+                query = query.group_by(*self.model_return_columns)
 
-                    stat_function = func.sum(work_class.cited_by_count)
+                open_access_case = case(
+                    [(work_class.oa_status != "closed", 1)],
+                    else_=0
+                )
 
-                    query = query.add_columns(
-                        stat_function.label(f"{stat}({related_entity})")
+                stat_function = (
+                        func.sum(cast(open_access_case, Float)) / cast(func.count(work_class.paper_id),
+                                                                       Float)
+                )
+
+                query = query.add_columns(
+                    stat_function.label(f"{stat}({related_entity})")
+                )
+
+                if self.sort_by_column == column:
+                    query = self.sort_from_stat(
+                        query, self.sort_by_order, stat_function
+                    )
+            elif column == "count(works)" and self.entity == "topics":
+                stat, related_entity = parse_stats_column(column)
+
+                work_topic_class = getattr(models, "WorkTopic")
+
+                query = query.outerjoin(
+                    work_topic_class,
+                    work_topic_class.topic_id == entity_class.topic_id,
+                )
+
+                query = query.group_by(
+                    *self.model_return_columns + [entity_class.topic_id]
+                )
+
+                query = query.filter(
+                    work_topic_class.topic_rank == 1
+                )  # only take the first topic
+
+                stat_function = func.count(func.distinct(work_topic_class.paper_id))
+
+                query = query.add_columns(
+                    stat_function.label(f"{stat}({related_entity})")
+                )
+
+                if self.sort_by_column == column:
+                    query = self.sort_from_stat(
+                        query, self.sort_by_order, stat_function
                     )
 
-                    for filter in self.filters:
-                        if filter["column_id"] == "count(citations)":
-                            query = self.filter_stats(
-                                query, stat_function, filter["operator"], filter["value"]
-                            )
+            elif column == "count(works)" and self.entity == "sources":
+                stat, related_entity = parse_stats_column(column)
 
-                    if self.sort_by_column == column:
-                        query = self.sort_from_stat(
-                            query, self.sort_by_order, stat_function
-                        )
-                elif column == "percent(is_open_access)" and self.entity == "institutions":
-                    stat, related_entity = parse_stats_column(column)
+                work_class = getattr(models, "Work")
 
-                    work_class = getattr(models, "Work")
+                query = query.group_by(
+                    *self.model_return_columns + [entity_class.source_id]
+                )
 
-                    query = query.group_by(*self.model_return_columns)
+                stat_function = func.count(work_class.paper_id)
 
-                    open_access_case = case(
-                        [(work_class.oa_status != "closed", 1)],
-                        else_=0
+                query = query.add_columns(
+                    stat_function.label(f"{stat}({related_entity})")
+                )
+
+                if self.sort_by_column == column:
+                    query = self.sort_from_stat(
+                        query, self.sort_by_order, stat_function
                     )
 
-                    stat_function = (
-                            func.sum(cast(open_access_case, Float)) / cast(func.count(work_class.paper_id),
-                                                                           Float)
+            elif column == "count(works)" and self.entity == "keywords":
+                stat, related_entity = parse_stats_column(column)
+
+                work_keyword_class = getattr(models, "WorkKeyword")
+
+                query = query.outerjoin(
+                    work_keyword_class,
+                    work_keyword_class.keyword_id == entity_class.keyword_id,
+                )
+
+                query = query.group_by(
+                    *self.model_return_columns + [entity_class.keyword_id]
+                )
+
+                stat_function = func.count(work_keyword_class.paper_id)
+
+                query = query.add_columns(
+                    stat_function.label(f"{stat}({related_entity})")
+                )
+
+                if self.sort_by_column == column:
+                    query = self.sort_from_stat(
+                        query, self.sort_by_order, stat_function
                     )
 
-                    query = query.add_columns(
-                        stat_function.label(f"{stat}({related_entity})")
+            elif column == "count(works)" and self.entity == "countries":
+                stat, related_entity = parse_stats_column(column)
+
+                affiliation_class = getattr(models, "Affiliation")
+                institution_class = getattr(models, "Institution")
+
+                query = query.join(
+                    institution_class,
+                    affiliation_class.affiliation_id
+                    == institution_class.affiliation_id,
+                )
+
+                query = query.group_by(
+                    *self.model_return_columns + [institution_class.country_code]
+                )
+
+                stat_function = func.count(
+                    func.distinct(affiliation_class.paper_id)
+                )
+
+                query = query.add_columns(
+                    institution_class.country_code,
+                    stat_function.label(f"{stat}({related_entity})"),
+                )
+
+                if self.sort_by_column == column:
+                    query = self.sort_from_stat(
+                        query, self.sort_by_order, stat_function
                     )
-
-                    if self.sort_by_column == column:
-                        query = self.sort_from_stat(
-                            query, self.sort_by_order, stat_function
-                        )
-                elif column == "count(works)" and self.entity == "topics":
-                    stat, related_entity = parse_stats_column(column)
-
-                    work_topic_class = getattr(models, "WorkTopic")
-
-                    query = query.outerjoin(
-                        work_topic_class,
-                        work_topic_class.topic_id == entity_class.topic_id,
-                    )
-
-                    query = query.group_by(
-                        *self.model_return_columns + [entity_class.topic_id]
-                    )
-
-                    query = query.filter(
-                        work_topic_class.topic_rank == 1
-                    )  # only take the first topic
-
-                    stat_function = func.count(func.distinct(work_topic_class.paper_id))
-
-                    query = query.add_columns(
-                        stat_function.label(f"{stat}({related_entity})")
-                    )
-
-                    if self.sort_by_column == column:
-                        query = self.sort_from_stat(
-                            query, self.sort_by_order, stat_function
-                        )
-
-                elif column == "count(works)" and self.entity == "sources":
-                    stat, related_entity = parse_stats_column(column)
-
-                    work_class = getattr(models, "Work")
-
-                    query = query.group_by(
-                        *self.model_return_columns + [entity_class.source_id]
-                    )
-
-                    stat_function = func.count(work_class.paper_id)
-
-                    query = query.add_columns(
-                        stat_function.label(f"{stat}({related_entity})")
-                    )
-
-                    if self.sort_by_column == column:
-                        query = self.sort_from_stat(
-                            query, self.sort_by_order, stat_function
-                        )
-
-                elif column == "count(works)" and self.entity == "keywords":
-                    stat, related_entity = parse_stats_column(column)
-
-                    work_keyword_class = getattr(models, "WorkKeyword")
-
-                    query = query.outerjoin(
-                        work_keyword_class,
-                        work_keyword_class.keyword_id == entity_class.keyword_id,
-                    )
-
-                    query = query.group_by(
-                        *self.model_return_columns + [entity_class.keyword_id]
-                    )
-
-                    stat_function = func.count(work_keyword_class.paper_id)
-
-                    query = query.add_columns(
-                        stat_function.label(f"{stat}({related_entity})")
-                    )
-
-                    if self.sort_by_column == column:
-                        query = self.sort_from_stat(
-                            query, self.sort_by_order, stat_function
-                        )
-
-                elif column == "count(works)" and self.entity == "countries":
-                    stat, related_entity = parse_stats_column(column)
-
-                    affiliation_class = getattr(models, "Affiliation")
-                    institution_class = getattr(models, "Institution")
-
-                    query = query.join(
-                        institution_class,
-                        affiliation_class.affiliation_id
-                        == institution_class.affiliation_id,
-                    )
-
-                    query = query.group_by(
-                        *self.model_return_columns + [institution_class.country_code]
-                    )
-
-                    stat_function = func.count(
-                        func.distinct(affiliation_class.paper_id)
-                    )
-
-                    query = query.add_columns(
-                        institution_class.country_code,
-                        stat_function.label(f"{stat}({related_entity})"),
-                    )
-
-                    if self.sort_by_column == column:
-                        query = self.sort_from_stat(
-                            query, self.sort_by_order, stat_function
-                        )
         return query
 
     @staticmethod

@@ -6,13 +6,17 @@ from oql.redshift import RedshiftQueryHandler
 valid_entities = list(all_entities_config.keys())
 
 
-class QueryNew:
-    def __init__(self, entity, filters, columns, sort_by_column, sort_by_order):
-        self.entity = entity
-        self.filters = filters
-        self.columns = columns or self.default_columns()
-        self.sort_by_column = "cited_by_count" if self.entity == "works" else sort_by_column
-        self.sort_by_order = sort_by_order or "desc"
+class Query:
+    """
+    Query object to execute a query and return results. Also sets the defaults for the query.
+    """
+    def __init__(self, entity, filter_works, filter_aggs, show_columns, sort_by_column, sort_by_order):
+        self.entity = entity or "works"
+        self.filter_works = filter_works or []
+        self.filter_aggs = filter_aggs or []
+        self.show_columns = show_columns or self.default_columns()
+        self.sort_by_column = sort_by_column or self.default_sort_by_column()
+        self.sort_by_order = sort_by_order or self.default_sort_by_order()
         self.total_count = 0
         self.valid_columns = self.get_valid_columns()
         self.valid_sort_columns = self.get_valid_sort_columns()
@@ -23,10 +27,11 @@ class QueryNew:
     def execute(self):
         redshift_handler = RedshiftQueryHandler(
             entity=self.entity,
+            filter_works=self.filter_works,
+            filter_aggs=self.filter_aggs,
             sort_by_column=self.sort_by_column,
             sort_by_order=self.sort_by_order,
-            filters=self.filters,
-            return_columns=self.columns,
+            show_columns=self.show_columns,
             valid_columns=self.valid_columns
         )
         total_count, results = redshift_handler.execute()
@@ -36,7 +41,7 @@ class QueryNew:
 
     def format_results_as_json(self, results):
         json_data = {"results": []}
-        columns = self.columns or self.default_columns()
+        columns = self.show_columns or self.default_columns()
 
         for r in results:
             model_instance = r[0] if isinstance(r, Row) else r
@@ -80,6 +85,18 @@ class QueryNew:
         else:
             return []
 
+    def default_sort_by_column(self):
+        if self.entity == "works":
+            return "cited_by_count"
+        elif self.entity == "summary":
+            return None
+        else:
+            return "count(works)"
+
+    @staticmethod
+    def default_sort_by_order():
+        return "desc"
+
     def get_valid_sort_columns(self):
         if not self.entity or self.entity and self.entity not in all_entities_config:
             return []
@@ -93,6 +110,16 @@ class QueryNew:
         for property_config in all_entities_config.get(self.entity, {}).get('columns').values():
             if property_config.get("id", "") == column:
                 return property_config.get("type", "string")
+
+    def to_dict(self):
+        return {
+            "get_rows": self.entity,
+            "filter_works": self.filter_works,
+            "filter_aggs": self.filter_aggs,
+            "show_columns": self.show_columns,
+            "sort_by_column": self.sort_by_column,
+            "sort_by_order": self.sort_by_order,
+        }
 
 
 
