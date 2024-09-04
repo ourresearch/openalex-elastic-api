@@ -7,6 +7,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 import requests
 from redis.client import Redis
 
+from oql.util import queries_equal
+
 REDIS_CLIENT = Redis.from_url(os.environ.get("REDIS_DO_URL"))
 
 EXECUTOR = ThreadPoolExecutor(max_workers=os.environ.get("TEST_THREADS_PER_DYNO", 100))
@@ -109,16 +111,24 @@ def process_nat_lang_test(test):
         r = requests.get('https://api.openalex.org/text/oql', params=params, timeout=HARD_TIMEOUT)
         r.raise_for_status()
         oqo = r.json()
-        return {
+        passing = queries_equal(oqo, test['query'])
+        result = {
             'id': test['test_id'],
             'case': 'natLang',
+            'isPassing': passing,
             'prompt': test['prompt'],
+            'details': {
+                'expected': test['query'],
+                'actual': oqo,
+            },
             'oqo': oqo
         }
+        result['details'].update(passing)
     except Exception as e:
         return {
             'id': test['test_id'],
             'case': 'natLang',
+            'isPassing': False,
             'prompt': test['prompt'],
             'error': str(e)
         }
