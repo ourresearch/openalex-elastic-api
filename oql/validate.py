@@ -11,7 +11,8 @@ From: https://github.com/ourresearch/oqo-validate/blob/main/oqo_validate/validat
 class OQOValidator:
     BRANCH_OPERATORS = {'and', 'or'}
     LEAF_OPERATORS = {'is', 'is not', 'contains', 'does not contain',
-                      'is greater than', 'is less than', '>', '<', 'is in', 'is not in'}
+                      'is greater than', 'is less than', '>', '<', 'is in',
+                      'is not in'}
     FILTER_TYPES = {'branch', 'leaf'}
 
     def __init__(self, config: Optional[Dict] = None):
@@ -53,12 +54,18 @@ class OQOValidator:
                 return col
         return None
 
-    def _validate_leaf(self, leaf_filter):
-        subj_entity = leaf_filter['subjectEntity']
-        col = self._get_entity_column(subj_entity, leaf_filter['column_id'])
+    def _validate_leaf(self, leaf_filter, get_rows_entity, origin):
+        if get_rows_entity == 'works' and origin != 'filter_works':
+            return f'works filter cannot be in {origin}'
+        if subj_entity := leaf_filter.get('subjectEntity'):
+            if subj_entity == 'works' and origin != 'filter_works':
+                return False, f'work filter cannot be in {origin}'
+            elif subj_entity != 'works' and origin != 'filter_aggs':
+                return False, f'agg filter cannot be in {origin}'
+        col = self._get_entity_column(get_rows_entity, leaf_filter['column_id'])
         if not col:
-            return False, f'{subj_entity}.{leaf_filter["column_id"]} not a valid filter column'
-        if leaf_filter['operator'] not in self.LEAF_OPERATORS:
+            return False, f'{get_rows_entity}.{leaf_filter["column_id"]} not a valid filter column'
+        if leaf_filter.get('operator', 'is') not in self.LEAF_OPERATORS:
             return False, f'{leaf_filter["operator"]} not a valid leaf operator'
         obj_entity = col.get('objectEntity')
         if obj_entity:
@@ -66,7 +73,8 @@ class OQOValidator:
             value = leaf_filter[
                 'value'] if obj_entity != 'countries' else self._formatted_country_value(
                 leaf_filter['value'])
-            if possible_values and self._safe_lower(value) not in possible_values:
+            if possible_values and self._safe_lower(
+                    value) not in possible_values:
                 return False, f'{leaf_filter["value"]} not a valid value for {obj_entity}'
         return True, None
 
@@ -77,53 +85,71 @@ class OQOValidator:
             return False, f'{branch_filter["operator"]} not a valid branch operator'
         return True, None
 
-    def _validate_filter(self, filter_node):
-        if filter_node['type'] not in self.FILTER_TYPES:
-            return False, f'{filter_node.get("type")} not a valid filter type'
-        if filter_node['type'] == 'branch':
-            return self._validate_branch(filter_node)
-        elif filter_node['type'] == 'leaf':
-            return self._validate_leaf(filter_node)
-        return False, f'{filter_node.get("type")} not a valid filter type'
+    def _validate_filter(self, filter_node, get_rows_entity, origin):
+        # if filter_node['type'] not in self.FILTER_TYPES:
+        #     return False, f'{filter_node.get("type")} not a valid filter type'
+        # if filter_node['type'] == 'branch':
+        #     return self._validate_branch(filter_node)
+        # elif filter_node['type'] == 'leaf':
+        return self._validate_leaf(filter_node, get_rows_entity, origin)
+        # return False, f'{filter_node.get("type")} not a valid filter type'
 
-    def _validate_sort_by(self, sort_by, entity='works'):
-        col = self._get_entity_column(entity, sort_by['column_id'])
+    def _validate_sort_by_column(self, sort_by_column, entity='works'):
+        col = self._get_entity_column(entity, sort_by_column)
         if not col:
-            return False, f'{entity}.{sort_by["column_id"]} not a valid sort column'
-        if sort_by['direction'] not in {'asc', 'desc'}:
-            return False, f'{sort_by["direction"]} not a valid sort direction'
+            return False, f'{entity}.{sort_by_column} not a valid sort column'
         return True, None
 
-    def _validate_return_columns(self, return_columns, entity='works'):
-        for column in return_columns:
+    @staticmethod
+    def _validate_sort_order(sort_order):
+        if sort_order not in {'asc', 'desc'}:
+            return False, f'{sort_order} not a valid sort order'
+        return True, None
+
+    def _validate_show_columns(self, show_columns, entity='works'):
+        for column in show_columns:
             col = self._get_entity_column(entity, column)
             if not col:
                 return False, f'{entity}.{column} not a valid return column'
         return True, None
 
-    def _validate_summarize_by(self, summarize_by):
-        if summarize_by not in self.ENTITIES_CONFIG.keys() and summarize_by != 'all':
-            return False, f'{summarize_by} is not a valid entity'
+    def _validate_get_rows(self, get_rows):
+        if get_rows not in self.ENTITIES_CONFIG.keys() and get_rows != 'summary':
+            return False, f'{get_rows} is not a valid entity'
         return True, None
 
     def _validate(self, oqo):
-        for _filter in oqo.get('filters', []):
-            ok, error = self._validate_filter(_filter)
+        ok, err = self._validate_get_rows(oqo.get('get_rows'))
+        if not ok:
+            return False, err
+        for _filter in oqo.get('filter_works', []):
+            ok, error = self._validate_filter(_filter, 'works', 'filter_works')
             if not ok:
                 return False, error
-        summarize_by_entity = oqo.get('summarize_by')
-        if summarize_by_entity:
-            ok, error = self._validate_summarize_by(summarize_by_entity)
+
+        for _filter in oqo.get('filter_aggs', []):
+            ok, error = self._validate_filter(_filter, oqo.get('get_rows'), 'filter_aggs')
             if not ok:
                 return False, error
-        if return_cols := oqo.get('return_columns', []):
-            ok, error = self._validate_return_columns(return_cols,
-                                                      summarize_by_entity or 'works')
-            if not ok:
-                return False, error
-        if sort_by := oqo.get('sort_by'):
-            ok, error = self._validate_sort_by(sort_by,
-                                               summarize_by_entity or 'works')
+
+        if return_cols := oqo.get('show_columns', []):
+            if oqo.get('get_rows') == 'summary':
+                # TODO: not sure yet
+                pass
+            else:
+                ok, error = self._validate_show_columns(return_cols, entity=oqo.get('get_rows'))
+                if not ok:
+                    return False, error
+        if sort_by_col := oqo.get('sort_by_column'):
+            if oqo.get('get_rows') == 'summary':
+                # TODO: not sure yet
+                pass
+            else:
+                ok, error = self._validate_sort_by_column(sort_by_col, oqo.get('get_rows') or 'works')
+                if not ok:
+                    return False, error
+        if sort_by_dir := oqo.get('sort_by_order'):
+            ok, error = self._validate_sort_order(sort_by_dir)
             if not ok:
                 return False, error
         return True, None
