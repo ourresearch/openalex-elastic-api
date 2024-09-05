@@ -13,7 +13,7 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 SQLALCHEMY_ECHO = True if ENV == "development" else False
 
 # indexes
-AUTHORS_INDEX = "authors-v14"
+AUTHORS_INDEX = "authors-v15"
 AUTHORS_INDEX_OLD = "authors-v10"
 CONCEPTS_INDEX = "concepts-v8"
 CONTINENTS_INDEX = "continents-v1"
