@@ -27,9 +27,7 @@
     ],
     "showOnTablePage": [
         "display_name",
-        "type",
-        "country_code",
-        "ids.ror"
+        "count(works)"
     ],
     "idRegex": "(?i)(?:institutions\\/)?(?:https:\\/\\/openalex\\.org\\/)?(i\\d+)",
     "groupByDefaults": [

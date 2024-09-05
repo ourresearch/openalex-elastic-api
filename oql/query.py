@@ -14,9 +14,9 @@ class Query:
         self.entity = entity or "works"
         self.filter_works = filter_works or []
         self.filter_aggs = filter_aggs or []
-        self.show_columns = show_columns or self.default_columns()
         self.sort_by_column = sort_by_column or self.default_sort_by_column()
         self.sort_by_order = sort_by_order or self.default_sort_by_order()
+        self.show_columns = self.set_show_columns(show_columns)
         self.total_count = 0
         self.valid_columns = self.get_valid_columns()
         self.valid_sort_columns = self.get_valid_sort_columns()
@@ -41,7 +41,7 @@ class Query:
 
     def format_results_as_json(self, results):
         json_data = {"results": []}
-        columns = self.show_columns or self.default_columns()
+        columns = self.show_columns
 
         for r in results:
             model_instance = r[0] if isinstance(r, Row) else r
@@ -79,11 +79,21 @@ class Query:
             else []
         )
 
-    def default_columns(self):
-        if self.entity and self.entity in all_entities_config:
-            return all_entities_config[self.entity]["showOnTablePage"]
+    def set_show_columns(self, show_columns=None):
+        if show_columns:
+            # if show_columns is passed in, use that
+            columns = show_columns
+        elif self.entity and self.entity in all_entities_config:
+            # otherwise, use the default columns for the entity
+            columns = all_entities_config[self.entity]["showOnTablePage"]
         else:
-            return []
+            # if the entity is not valid, return an empty list
+            columns = []
+
+        # add the sort column if it's not already in the list
+        if self.sort_by_column and self.sort_by_column not in columns:
+            columns.append(self.sort_by_column)
+        return columns
 
     def default_sort_by_column(self):
         entities_with_works_count = ["authors", "countries", "institutions", "keywords", "sources", "topics"]

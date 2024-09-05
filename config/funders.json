@@ -20,10 +20,7 @@
         "display_name"
     ],
     "showOnTablePage": [
-        "display_name",
-        "doi",
-        "country_code",
-        "description"
+        "display_name"
     ],
     "columns": {
         "id": {

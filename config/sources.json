@@ -37,8 +37,7 @@
     ],
     "showOnTablePage": [
         "display_name",
-        "type",
-        "ids.issn"
+        "count(works)"
     ],
     "groupByDefaults": [
         "type",

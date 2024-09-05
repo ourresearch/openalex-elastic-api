@@ -20,7 +20,8 @@
         "display_name"
     ],
     "showOnTablePage": [
-        "display_name"
+        "display_name",
+        "count(works)"
     ],
     "columns": {
         "id": {

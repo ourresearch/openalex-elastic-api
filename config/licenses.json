@@ -19,8 +19,7 @@
     "display_name"
   ],
   "showOnTablePage": [
-    "display_name",
-    "description"
+    "display_name"
   ],
   "columns": {
     "id": {

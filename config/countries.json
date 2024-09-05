@@ -19,7 +19,8 @@
     "display_name"
   ],
   "showOnTablePage": [
-    "display_name"
+    "display_name",
+    "count(works)"
   ],
   "columns": {
     "id": {
@@ -55,7 +56,27 @@
       "redshiftFilterColumn": null,
       "icon": "mdi-account-outline",
       "descr": "The name of the country"
-    }
+    },
+    "count(works)": {
+            "id": "count(works)",
+            "subjectEntity": "countries",
+            "entityId": "works",
+            "objectEntity": null,
+            "displayName": "works count",
+            "type": "number",
+            "redshiftDisplayColumn": "count(works)",
+            "redshiftFilterColumn": null,
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "icon": "mdi-book-open-variant",
+            "descr": "The number of works created by this country."
+        }
   },
   "values": [
     {

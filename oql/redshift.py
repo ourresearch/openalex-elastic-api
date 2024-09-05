@@ -362,7 +362,7 @@ class RedshiftQueryHandler:
                     stat_function.label(f"{stat}({related_entity})")
                 )
 
-                for filter in self.filters:
+                for filter in self.filter_aggs:
                     if filter["column_id"] == "count(works)":
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
@@ -401,7 +401,7 @@ class RedshiftQueryHandler:
                     stat_function.label(f"{stat}({related_entity})")
                 )
 
-                for filter in self.filters:
+                for filter in self.filter_aggs:
                     if filter["column_id"] == "count(citations)":
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]

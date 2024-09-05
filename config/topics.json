@@ -26,7 +26,7 @@
     ],
     "showOnTablePage": [
         "display_name",
-        "description"
+        "count(works)"
     ],
     "columns": {
         "id": {

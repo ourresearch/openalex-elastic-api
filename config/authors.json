@@ -39,8 +39,7 @@
     ],
     "showOnTablePage": [
         "display_name",
-        "ids.orcid",
-        "last_known_institutions.id"
+        "count(works)"
     ],
     "groupByDefaults": [
         "last_known_institutions.id",
