@@ -277,15 +277,11 @@ class RedshiftQueryHandler:
             elif key == "affiliations.institution.id" and self.entity == "authors":
                 value = get_short_id_integer(value)
                 affiliation_class = aliased(getattr(models, "Affiliation"))
-                institution_class = aliased(getattr(models, "Institution"))
                 query = query.join(
                     affiliation_class,
                     affiliation_class.author_id == entity_class.author_id,
-                ).join(
-                    institution_class,
-                    affiliation_class.affiliation_id == institution_class.affiliation_id,
                 )
-                query = self.do_operator_query(institution_class.affiliation_id, operator, query, value)
+                query = self.do_operator_query(affiliation_class.affiliation_id, operator, query, value)
             elif (
                 column_type == "object" or column_type == "array"
             ) and is_object_entity:
