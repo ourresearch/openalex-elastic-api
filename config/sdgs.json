@@ -19,7 +19,8 @@
         "display_name"
     ],
     "showOnTablePage": [
-        "display_name"
+        "display_name",
+        "count(works)"
     ],
     "columns": {
         "id": {
@@ -116,6 +117,35 @@
             "category": "other",
             "icon": "mdi-account-outline",
             "descr": "The description of the Sustainable Development Goal (SDG)."
+        },
+        "count(works)": {
+            "id": "count(works)",
+            "subjectEntity": "sdgs",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
+            "objectEntity": "works",
+            "displayName": "number of works",
+            "type": "integer",
+            "redshiftDisplayColumn": "count(works)",
+            "redshiftFilterColumn": "count(works)",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline",
+            "descr": "The number of works associated with the Sustainable Development Goal (SDG)."
         }
     },
     "values": [

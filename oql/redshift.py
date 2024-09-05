@@ -543,6 +543,30 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
+            elif column == "count(works)" and self.entity == "sdgs":
+                stat, related_entity = parse_stats_column(column)
+
+                work_sdg_class = getattr(models, "WorkSdg")
+
+                query = query.join(
+                    work_sdg_class,
+                    work_sdg_class.sdg_id == entity_class.sdg_id,
+                )
+
+                query = query.group_by(
+                    *self.model_return_columns
+                )
+
+                stat_function = func.count(work_sdg_class.paper_id)
+
+                query = query.add_columns(
+                    stat_function.label(f"{stat}({related_entity})")
+                )
+
+                if self.sort_by_column == column:
+                    query = self.sort_from_stat(
+                        query, self.sort_by_order, stat_function
+                    )
         return query
 
     @staticmethod
