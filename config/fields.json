@@ -72,7 +72,7 @@
             "descr": "The name of the field"
         },
         "display_name.search": {
-            "id": "display_name",
+            "id": "display_name.search",
             "subjectEntity": "fields",
             "operators": [
                 "contains",

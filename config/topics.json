@@ -74,7 +74,7 @@
             "descr": "The name of the topic."
         },
         "display_name.search": {
-            "id": "display_name",
+            "id": "display_name.search",
             "subjectEntity": "topics",
             "operators": [
                 "contains",

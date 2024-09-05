@@ -70,7 +70,7 @@
             "descr": "The name of the keyword"
         },
         "display_name.search": {
-            "id": "display_name",
+            "id": "display_name.search",
             "subjectEntity": "keywords",
             "operators": [
                 "contains",

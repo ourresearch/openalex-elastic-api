@@ -68,7 +68,7 @@
             "descr": "The name of the country"
         },
         "display_name.search": {
-            "id": "display_name",
+            "id": "display_name.search",
             "subjectEntity": "countries",
             "operators": [
                 "contains",

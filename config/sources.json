@@ -113,7 +113,7 @@
             "descr": "The name of the source."
         },
         "display_name.search": {
-            "id": "display_name",
+            "id": "display_name.search",
             "subjectEntity": "sources",
             "operators": [
                 "contains",

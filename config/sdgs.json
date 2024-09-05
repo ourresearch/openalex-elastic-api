@@ -68,7 +68,7 @@
             "descr": "The name of the Sustainable Development Goal (SDG)."
         },
         "display_name.search": {
-            "id": "display_name",
+            "id": "display_name.search",
             "subjectEntity": "sdgs",
             "operators": [
                 "contains",

@@ -73,7 +73,7 @@
             "descr": "The name of the subfield."
         },
         "display_name.search": {
-            "id": "display_name",
+            "id": "display_name.search",
             "subjectEntity": "subfields",
             "operators": [
                 "contains",

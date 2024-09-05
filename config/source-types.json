@@ -68,7 +68,7 @@
             "descr": "The name of the source type."
         },
         "display_name.search": {
-            "id": "display_name",
+            "id": "display_name.search",
             "subjectEntity": "source-types",
             "operators": [
                 "contains",

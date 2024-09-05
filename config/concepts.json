@@ -67,10 +67,10 @@
             "id": "display_name.search",
             "subjectEntity": "concepts",
             "operators": [
-                "is",
-                "is not"
+                "contains",
+                "does not contain"
             ],
-            "defaultOperator": "is",
+            "defaultOperator": "contains",
             "displayName": "Name search",
             "type": "string",
             "icon": "mdi-magnify",

@@ -69,7 +69,7 @@
             "descr": "The name of the continent"
         },
         "display_name.search": {
-            "id": "display_name",
+            "id": "display_name.search",
             "subjectEntity": "continents",
             "operators": [
                 "contains",
