@@ -27,6 +27,11 @@
         "id": {
             "id": "id",
             "subjectEntity": "concepts",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "concepts",
             "objectEntity": "concepts",
             "displayName": "OpenAlex ID",
@@ -39,6 +44,11 @@
             "id": "display_name",
             "isColumnMandatory": true,
             "subjectEntity": "concepts",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "name",
             "type": "string",
             "actions": [
@@ -53,9 +63,27 @@
             "icon": "mdi-account-outline",
             "descr": "The name of this concept or field of study"
         },
+        "display_name.search": {
+            "id": "display_name.search",
+            "subjectEntity": "concepts",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "displayName": "Name search",
+            "type": "string",
+            "icon": "mdi-magnify",
+            "descr": "Display name for search"
+        },
         "description": {
             "id": "description",
             "subjectEntity": "concepts",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "concepts",
             "objectEntity": "concepts",
             "displayName": "description",
@@ -63,17 +91,18 @@
             "icon": "mdi-tag-outline",
             "descr": "A description of this concept or field of study"
         },
-        "display_name.search": {
-            "id": "display_name.search",
-            "subjectEntity": "concepts",
-            "displayName": "Name search",
-            "type": "string",
-            "icon": "mdi-magnify",
-            "descr": "Display name for search"
-        },
         "level": {
             "id": "level",
             "subjectEntity": "concepts",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
             "displayName": "Level",
             "maxPotentialFiltersToShow": 10,
             "type": "number",

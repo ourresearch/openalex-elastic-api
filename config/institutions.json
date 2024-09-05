@@ -38,6 +38,11 @@
         "id": {
             "id": "id",
             "subjectEntity": "institutions",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "institutions",
             "objectEntity": null,
             "displayName": "OpenAlex ID",
@@ -52,6 +57,11 @@
             "id": "display_name",
             "isColumnMandatory": true,
             "subjectEntity": "institutions",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "objectEntity": null,
             "displayName": "name",
             "type": "string",
@@ -69,9 +79,38 @@
             "icon": "mdi-account-outline",
             "descr": "The name of the institution"
         },
+        "display_name.search": {
+            "id": "display_name",
+            "subjectEntity": "institutions",
+            "operators": [
+                "contains",
+                "does not contain"
+            ],
+            "defaultOperator": "contains",
+            "objectEntity": null,
+            "displayName": "search display_name",
+            "type": "string",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "category": "search",
+            "icon": "mdi-account-outline",
+            "descr": "The name of the institution",
+            "isSearchColumn": true
+        },
         "ids.ror": {
             "id": "ids.ror",
             "subjectEntity": "institutions",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "institutions",
             "objectEntity": null,
             "displayName": "ROR",
@@ -85,6 +124,11 @@
         "country_code": {
             "id": "country_code",
             "subjectEntity": "institutions",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "countries",
             "objectEntity": "countries",
             "displayName": "Country",
@@ -107,6 +151,11 @@
         "type": {
             "id": "type",
             "subjectEntity": "institutions",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "institution-types",
             "objectEntity": "institution-types",
             "displayName": "Institution type",
@@ -130,6 +179,11 @@
             "id": "display_name_alternatives",
             "isList": true,
             "subjectEntity": "institutions",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "objectEntity": null,
             "displayName": "alternate names",
             "redshiftDisplayColumn": null,
@@ -144,6 +198,11 @@
             "id": "parent_institutions",
             "isList": true,
             "subjectEntity": "institutions",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "objectEntity": "institutions",
             "displayName": "parent institutions",
             "redshiftDisplayColumn": null,
@@ -158,6 +217,11 @@
             "id": "child_institutions",
             "isList": true,
             "subjectEntity": "institutions",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "objectEntity": "institutions",
             "displayName": "child institutions",
             "redshiftDisplayColumn": null,
@@ -172,6 +236,11 @@
             "id": "related_institutions",
             "isList": true,
             "subjectEntity": "institutions",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "objectEntity": "institutions",
             "displayName": "related institutions",
             "redshiftDisplayColumn": null,
@@ -185,6 +254,15 @@
         "mean(fwci)": {
             "id": "mean(fwci)",
             "subjectEntity": "institutions",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
             "objectEntity": null,
             "displayName": "mean fwci",
             "type": "number",
@@ -204,6 +282,15 @@
         "count(works)": {
             "id": "count",
             "subjectEntity": "institutions",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
             "objectEntity": null,
             "displayName": "works count",
             "type": "number",
@@ -223,6 +310,15 @@
         "count(citations)": {
             "id": "count(citations)",
             "subjectEntity": "institutions",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
             "objectEntity": null,
             "displayName": "citation count",
             "type": "number",
@@ -242,6 +338,15 @@
         "percent(is_open_access)": {
             "id": "percent(is_open_access)",
             "subjectEntity": "institutions",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
             "objectEntity": null,
             "displayName": "is open access %",
             "type": "number",

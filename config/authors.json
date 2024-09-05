@@ -50,6 +50,11 @@
         "id": {
             "id": "id",
             "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "authors",
             "objectEntity": "authors",
             "displayName": "OpenAlex ID",
@@ -65,6 +70,11 @@
         "ids.orcid": {
             "id": "ids.orcid",
             "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "authors",
             "objectEntity": null,
             "displayName": "ORCID",
@@ -83,6 +93,11 @@
             "id": "display_name",
             "isColumnMandatory": true,
             "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "objectEntity": null,
             "displayName": "name",
             "type": "string",
@@ -100,10 +115,39 @@
             "icon": "mdi-account-outline",
             "descr": "The name of the author."
         },
+        "display_name.search": {
+            "id": "display_name",
+            "subjectEntity": "authors",
+            "operators": [
+                "contains",
+                "does not contain"
+            ],
+            "defaultOperator": "contains",
+            "objectEntity": null,
+            "displayName": "search display_name",
+            "type": "string",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "category": "search",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "icon": "mdi-account-outline",
+            "descr": "The name of the author.",
+            "isSearchColumn": true
+        },
         "affiliations.institution.id": {
             "id": "affiliations.institution.id",
             "isList": true,
             "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "Past institutions",
             "entityId": "institutions",
             "objectEntity": "institutions",
@@ -113,8 +157,7 @@
             "actions": [
                 "column"
             ],
-            "actionsPopular": [
-            ],
+            "actionsPopular": [],
             "icon": "mdi-town-hall",
             "descr": "The institutions that the author has been affiliated with."
         },
@@ -123,6 +166,11 @@
             "isList": true,
             "isId": true,
             "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "institution-types",
             "objectEntity": "institution-types",
             "displayName": "Past institutions type",
@@ -143,6 +191,11 @@
             "id": "affiliations.institution.country_code",
             "isList": true,
             "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "countries",
             "objectEntity": "countries",
             "isId": true,
@@ -165,6 +218,11 @@
             "id": "last_known_institutions.id",
             "isList": true,
             "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "institution",
             "entityId": "institutions",
             "objectEntity": "institutions",
@@ -185,6 +243,11 @@
             "id": "last_known_institutions.country_code",
             "isList": true,
             "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "countries",
             "objectEntity": "countries",
             "isId": true,
@@ -208,6 +271,11 @@
             "id": "last_known_institutions.type",
             "isList": true,
             "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "institution-types",
             "objectEntity": "institution-types",
             "displayName": "Institution type",
@@ -228,6 +296,10 @@
         "has_orcid": {
             "id": "has_orcid",
             "subjectEntity": "authors",
+            "operators": [
+                "is"
+            ],
+            "defaultOperator": "is",
             "entityId": "authors",
             "objectEntity": null,
             "displayName": "Has an ORCID",
@@ -249,6 +321,11 @@
             "id": "display_name_alternatives",
             "isList": true,
             "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "authors",
             "objectEntity": null,
             "displayName": "alternate names",
@@ -263,6 +340,15 @@
         "count(works)": {
             "id": "count(works)",
             "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
             "entityId": "works",
             "objectEntity": null,
             "displayName": "works count",

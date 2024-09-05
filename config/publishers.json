@@ -26,6 +26,11 @@
         "id": {
             "id": "id",
             "subjectEntity": "publishers",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "publishers",
             "objectEntity": null,
             "displayName": "OpenAlex ID",
@@ -33,8 +38,7 @@
             "type": "string",
             "redshiftDisplayColumn": "id",
             "redshiftFilterColumn": "id",
-            "actions": [
-            ],
+            "actions": [],
             "icon": "mdi-domain",
             "descr": "The unique identifier for the publisher in OpenAlex."
         },
@@ -42,6 +46,11 @@
             "id": "display_name",
             "isColumnMandatory": true,
             "subjectEntity": "publishers",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "objectEntity": null,
             "displayName": "name",
             "type": "string",
@@ -59,9 +68,38 @@
             "icon": "mdi-account-outline",
             "descr": "The name of the publisher."
         },
+        "display_name.search": {
+            "id": "display_name",
+            "subjectEntity": "publishers",
+            "operators": [
+                "contains",
+                "does not contain"
+            ],
+            "defaultOperator": "contains",
+            "objectEntity": null,
+            "displayName": "search display_name",
+            "type": "string",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": "display_name",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "category": "search",
+            "icon": "mdi-account-outline",
+            "descr": "The name of the publisher.",
+            "isSearchColumn": true
+        },
         "country_code": {
             "id": "country_code",
             "subjectEntity": "publishers",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "countries",
             "objectEntity": "countries",
             "displayName": "Country",

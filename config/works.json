@@ -71,6 +71,11 @@
         "id": {
             "id": "id",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "works",
             "objectEntity": null,
             "displayName": "OpenAlex ID",
@@ -90,6 +95,11 @@
         "doi": {
             "id": "doi",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "works",
             "objectEntity": null,
             "displayName": "DOI",
@@ -110,6 +120,11 @@
         "primary_topic.id": {
             "id": "primary_topic.id",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "topic",
             "entityId": "topics",
             "objectEntity": "topics",
@@ -133,6 +148,11 @@
             "id": "keywords.id",
             "isList": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "keyword",
             "entityId": "keywords",
             "objectEntity": "keywords",
@@ -155,6 +175,11 @@
         "primary_topic.subfield.id": {
             "id": "primary_topic.subfield.id",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "subfield",
             "entityId": "subfields",
             "objectEntity": "subfields",
@@ -174,6 +199,11 @@
         "primary_topic.field.id": {
             "id": "primary_topic.field.id",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "field",
             "entityId": "fields",
             "objectEntity": "fields",
@@ -193,6 +223,11 @@
         "primary_topic.domain.id": {
             "id": "primary_topic.domain.id",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "domain",
             "entityId": "domains",
             "objectEntity": "domains",
@@ -213,6 +248,11 @@
             "id": "authorships.institutions.id",
             "isList": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "institutions",
             "entityId": "institutions",
             "objectEntity": "institutions",
@@ -235,6 +275,15 @@
         "cited_by_count": {
             "id": "cited_by_count",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
             "displayName": "cited by count",
             "objectEntity": null,
             "type": "number",
@@ -256,6 +305,11 @@
             "id": "authorships.institutions.ror",
             "isList": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "institutions",
             "objectEntity": null,
             "displayName": "ROR ID",
@@ -273,6 +327,11 @@
             "id": "authorships.author.id",
             "isList": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "authors",
             "entityId": "authors",
             "objectEntity": "authors",
@@ -296,6 +355,11 @@
             "id": "authorships.author.orcid",
             "isList": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "authors",
             "objectEntity": null,
             "displayName": "ORCID",
@@ -313,6 +377,11 @@
             "id": "display_name",
             "isColumnMandatory": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "title",
             "objectEntity": null,
             "type": "string",
@@ -334,6 +403,10 @@
         "open_access.is_oa": {
             "id": "open_access.is_oa",
             "subjectEntity": "works",
+            "operators": [
+                "is"
+            ],
+            "defaultOperator": "is",
             "displayName": "open access",
             "objectEntity": null,
             "type": "boolean",
@@ -357,6 +430,11 @@
         "open_access.oa_status": {
             "id": "open_access.oa_status",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "oa status",
             "objectEntity": null,
             "type": "string",
@@ -375,6 +453,15 @@
             "id": "apc_paid.value_usd",
             "isCurrency": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
             "objectEntity": null,
             "displayName": "APC paid (est)",
             "type": "number",
@@ -390,6 +477,11 @@
             "id": "authorships.countries",
             "isList": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "countries",
             "objectEntity": "countries",
             "displayName": "Country",
@@ -413,6 +505,11 @@
             "id": "authorships.institutions.continent",
             "isList": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "continents",
             "objectEntity": "continents",
             "displayName": "Continent",
@@ -432,6 +529,10 @@
         "authorships.institutions.is_global_south": {
             "id": "institutions.is_global_south",
             "subjectEntity": "works",
+            "operators": [
+                "is"
+            ],
+            "defaultOperator": "is",
             "displayName": "from Global South",
             "objectEntity": null,
             "type": "boolean",
@@ -450,6 +551,11 @@
             "id": "authorships.institutions.type",
             "isList": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "institution-types",
             "objectEntity": "institution-types",
             "displayName": "institution type",
@@ -468,6 +574,11 @@
         "primary_location.source.id": {
             "id": "primary_location.source.id",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "source",
             "entityId": "sources",
             "objectEntity": "sources",
@@ -486,6 +597,11 @@
         "primary_location.source.issn": {
             "id": "primary_location.source.issn",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "sources",
             "objectEntity": null,
             "displayName": "ISSN",
@@ -502,6 +618,11 @@
         "primary_location.source.type": {
             "id": "primary_location.source.type",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "source-types",
             "displayName": "source type",
             "objectEntity": "source-types",
@@ -521,6 +642,10 @@
         "primary_location.source.is_in_doaj": {
             "id": "primary_location.source.is_in_doaj",
             "subjectEntity": "works",
+            "operators": [
+                "is"
+            ],
+            "defaultOperator": "is",
             "displayName": "indexed by DOAJ",
             "objectEntity": null,
             "type": "boolean",
@@ -538,6 +663,10 @@
         "primary_location.source.is_oa": {
             "id": "primary_location.source.is_oa",
             "subjectEntity": "works",
+            "operators": [
+                "is"
+            ],
+            "defaultOperator": "is",
             "displayName": "in OA source",
             "objectEntity": null,
             "type": "boolean",
@@ -552,6 +681,11 @@
         "type": {
             "id": "type",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "types",
             "displayName": "type",
             "objectEntity": "types",
@@ -578,6 +712,11 @@
             "id": "grants.funder",
             "isList": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "funder",
             "entityId": "funders",
             "objectEntity": "funders",
@@ -594,6 +733,11 @@
             "id": "grants.award_id",
             "isList": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "grant ID",
             "objectEntity": null,
             "type": "array",
@@ -609,6 +753,15 @@
             "id": "publication_year",
             "isYear": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
             "displayName": "year",
             "objectEntity": null,
             "isDate": true,
@@ -641,6 +794,15 @@
             "id": "apc_sum",
             "isCurrency": true,
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
             "displayName": "APC sum",
             "objectEntity": null,
             "type": "number",
@@ -659,6 +821,11 @@
             "id": "language",
             "entityId": "languages",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "language",
             "objectEntity": "languages",
             "isId": true,
@@ -682,6 +849,11 @@
             "entityId": "sdgs",
             "objectEntity": "sdgs",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "sdgs",
             "type": "array",
             "displayNullAs": "Unknown",
@@ -696,6 +868,11 @@
         "referenced_works": {
             "id": "referenced_works",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "entityId": "works",
             "isList": true,
             "isId": true,
@@ -714,6 +891,11 @@
         "display_name.search": {
             "id": "display_name.search",
             "subjectEntity": "works",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
             "displayName": "search display_name",
             "objectEntity": null,
             "type": "string",
