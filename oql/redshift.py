@@ -81,6 +81,15 @@ class RedshiftQueryHandler:
                     models.Work.journal_id == models.Source.source_id,
                 )
             )
+        elif self.entity == "sdgs":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.WorkSdg, models.WorkSdg.sdg_id == entity_class.sdg_id)
+                .join(models.Work, models.Work.paper_id == models.WorkSdg.paper_id)
+                .join(models.Affiliation, models.Affiliation.paper_id == models.Work.paper_id)
+                .join(models.Institution, models.Affiliation.affiliation_id == models.Institution.affiliation_id)
+            )
         else:
             query = db.session.query(*columns_to_select)
 
@@ -112,17 +121,12 @@ class RedshiftQueryHandler:
         work_class = getattr(models, "Work")
 
         for filter in self.filter_works:
-            subject_entity = filter.get("subjectEntity")
             key = filter.get("column_id")
             value = filter.get("value")
             operator = filter.get("operator")
 
             # ensure is valid filter
             if key is None or value is None or operator is None:
-                continue
-
-            # only filter by works
-            if subject_entity != "works":
                 continue
 
             # setup
@@ -546,18 +550,14 @@ class RedshiftQueryHandler:
             elif column == "count(works)" and self.entity == "sdgs":
                 stat, related_entity = parse_stats_column(column)
 
-                work_sdg_class = getattr(models, "WorkSdg")
+                work_class = getattr(models, "Work")
 
-                query = query.join(
-                    work_sdg_class,
-                    work_sdg_class.sdg_id == entity_class.sdg_id,
-                )
 
                 query = query.group_by(
                     *self.model_return_columns
                 )
 
-                stat_function = func.count(work_sdg_class.paper_id)
+                stat_function = func.count(func.distinct(work_class.paper_id))
 
                 query = query.add_columns(
                     stat_function.label(f"{stat}({related_entity})")
