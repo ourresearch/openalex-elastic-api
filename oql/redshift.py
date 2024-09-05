@@ -87,8 +87,6 @@ class RedshiftQueryHandler:
                 .distinct()
                 .join(models.WorkSdg, models.WorkSdg.sdg_id == entity_class.sdg_id)
                 .join(models.Work, models.Work.paper_id == models.WorkSdg.paper_id)
-                .join(models.Affiliation, models.Affiliation.paper_id == models.Work.paper_id)
-                .join(models.Institution, models.Affiliation.affiliation_id == models.Institution.affiliation_id)
             )
         else:
             query = db.session.query(*columns_to_select)
