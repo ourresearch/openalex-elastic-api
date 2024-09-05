@@ -237,10 +237,6 @@ class RedshiftQueryHandler:
             if key is None or value is None or operator is None:
                 continue
 
-            # only filter by other entities
-            if subject_entity == "works":
-                continue
-
             # do not filter stats
             if key.startswith("count(") or key == "mean(fwci)":
                 continue
@@ -249,6 +245,10 @@ class RedshiftQueryHandler:
             redshift_column = self.entity_config.get(key).get("redshiftFilterColumn")
             column_type = self.entity_config.get(key).get("type")
             is_object_entity = self.entity_config.get(key).get("objectEntity")
+
+            if not redshift_column:
+                raise(ValueError(f"Column {key} not found in entity config"))
+
             model_column = getattr(entity_class, redshift_column, None)
 
             # filters
@@ -274,6 +274,18 @@ class RedshiftQueryHandler:
                     affiliation_class.affiliation_id == institution_class.affiliation_id,
                 )
                 query = self.do_operator_query(institution_class.country_code, operator, query, value)
+            elif key == "affiliations.institution.id" and self.entity == "authors":
+                value = get_short_id_integer(value)
+                affiliation_class = aliased(getattr(models, "Affiliation"))
+                institution_class = aliased(getattr(models, "Institution"))
+                query = query.join(
+                    affiliation_class,
+                    affiliation_class.author_id == entity_class.author_id,
+                ).join(
+                    institution_class,
+                    affiliation_class.affiliation_id == institution_class.affiliation_id,
+                )
+                query = self.do_operator_query(institution_class.affiliation_id, operator, query, value)
             elif (
                 column_type == "object" or column_type == "array"
             ) and is_object_entity:
