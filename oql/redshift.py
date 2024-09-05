@@ -293,11 +293,15 @@ class RedshiftQueryHandler:
 
     @staticmethod
     def filter_by_number(model_column, operator, query, value):
-        if operator == "is greater than":
+        if operator == "is greater than" or operator == ">":
             query = query.filter(model_column > int(value))
-        elif operator == "is less than":
+        elif operator == "is greater than or equal to" or operator == ">=":
+            query = query.filter(model_column >= int(value))
+        elif operator == "is less than" or operator == "<":
             query = query.filter(model_column < int(value))
-        elif operator == "is not":
+        elif operator == "is less than or equal to" or operator == "<=":
+            query = query.filter(model_column <= int(value))
+        elif operator == "is not" or operator == "!=":
             query = query.filter(model_column != int(value))
         else:
             query = query.filter(model_column == int(value))
