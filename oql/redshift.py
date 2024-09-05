@@ -556,13 +556,17 @@ class RedshiftQueryHandler:
 
     def filter_stats(self, query, stat_function, operator, value):
         """Apply filtering on the calculated stat."""
-        if operator == "is greater than":
+        if operator == "is greater than" or operator == ">":
             query = query.having(stat_function > int(value))
-        elif operator == "is less than":
+        elif operator == "is greater than or equal to" or operator == ">=":
+            query = query.having(stat_function >= int(value))
+        elif operator == "is less than" or operator == "<":
             query = query.having(stat_function < int(value))
+        elif operator == "is less than or equal to" or operator == "<=":
+            query = query.having(stat_function <= int(value))
         elif operator == "is":
             query = query.having(stat_function == int(value))
-        elif operator == "is not":
+        elif operator == "is not" or operator == "!=":
             query = query.having(stat_function != int(value))
         return query
 
