@@ -111,7 +111,7 @@ def get_search(id):
 
 @blueprint.route("/entities/config", methods=["GET"])
 def entities_config():
-    _format = request.args.get("format")
+    _format = request.args.get("format", "json")
     if _format.lower() in {'yaml', 'yml'}:
         yaml_config = yaml.dump(all_entities_config, default_flow_style=False)
         return yaml_config, 200, {'Content-Type': 'application/yaml'}
