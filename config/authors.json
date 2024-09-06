@@ -228,7 +228,7 @@
             "objectEntity": "institutions",
             "type": "array",
             "redshiftDisplayColumn": "last_known_institutions",
-            "redshiftFilterColumn": null,
+            "redshiftFilterColumn": "last_known_institutions_id",
             "actions": [
                 "column",
                 "filter"

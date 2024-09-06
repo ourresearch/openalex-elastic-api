@@ -228,7 +228,6 @@ class RedshiftQueryHandler:
 
     def apply_entity_filters(self, query, entity_class):
         for filter in self.filter_aggs:
-            subject_entity = filter.get("subjectEntity")
             key = filter.get("column_id")
             value = filter.get("value")
             operator = filter.get("operator")
@@ -261,6 +260,17 @@ class RedshiftQueryHandler:
             elif column_type == "search":
                 query = query.filter(model_column.ilike(f"%{value}%"))
             # specialized filters
+            elif key == "last_known_institutions.id" and self.entity == "authors":
+                value = get_short_id_integer(value)
+
+                query = query.join(
+                    models.AuthorLastKnownInstitutions,
+                    (models.AuthorLastKnownInstitutions.author_id == entity_class.author_id) &
+                    (models.AuthorLastKnownInstitutions.rank == 1)  # most recent affiliation
+                )
+
+                query = self.do_operator_query(models.AuthorLastKnownInstitutions.affiliation_id, operator, query, value)
+
             elif key == "affiliations.institution.country_code" and self.entity == "authors":
                 value = get_short_id_text(value)
                 value = value.upper()

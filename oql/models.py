@@ -366,6 +366,20 @@ class Author(db.Model):
         return f"<Author(author_id={self.author_id}, display_name={self.display_name})>"
 
 
+class AuthorLastKnownInstitutions(db.Model):
+    __tablename__ = "author_last_known_affiliations_mv"
+
+    author_id = Column(BigInteger, primary_key=True)
+    affiliation_id = Column(BigInteger, primary_key=True)
+    paper_id = Column(BigInteger)
+    display_name = Column(String(65535))
+    year = Column(Integer)
+    rank = Column(Integer)
+
+    def __repr__(self):
+        return f"<AuthorLastKnownInstitution(author_id={self.author_id}, affiliation_id={self.affiliation_id}, display_name={self.display_name})>"
+
+
 class InstitutionCounts(db.Model):
     __tablename__ = "citation_institutions_mv"
 
