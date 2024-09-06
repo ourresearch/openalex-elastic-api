@@ -1,0 +1,674 @@
+id: subfields
+icon: mdi-tag-outline
+name: subfields
+nameSingular: subfield
+displayName: subfields
+displayNameSingular: subfield
+descr: what works are about
+eg: Molecular biology
+placeholder: Search subfields
+filterName: subfields
+filterKey: primary_topic.subfield.id
+descrFull: Subfields are the specific areas of research that a work is about. Subfields
+  are below fields but above topics in the hierarchy of research areas in OpenAlex.
+hasAutocomplete: false
+isNative: false
+idRegex: (?:https:\/\/openalex\.org\/subfields\/|subfields\/)(\d+)
+showOnEntityPage:
+  - id
+  - display_name
+  - description
+  - topics
+  - siblings
+  - field
+  - domain
+showOnTablePage:
+  - display_name
+columns:
+  id:
+    id: id
+    subjectEntity: subfields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: subfields
+    objectEntity:
+    displayName: OpenAlex ID
+    isId: true
+    type: string
+    redshiftDisplayColumn: id
+    redshiftFilterColumn: id
+    actions: []
+    icon: mdi-tag-outline
+    descr: The unique identifier for the subfield in OpenAlex.
+  display_name:
+    id: display_name
+    isColumnMandatory: true
+    subjectEntity: subfields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: name
+    type: string
+    redshiftDisplayColumn: display_name
+    redshiftFilterColumn:
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    category: other
+    icon: mdi-account-outline
+    descr: The name of the subfield.
+  display_name.search:
+    id: display_name.search
+    subjectEntity: subfields
+    operators:
+      - contains
+      - does not contain
+    defaultOperator: contains
+    objectEntity:
+    displayName: search display_name
+    type: string
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions:
+      - filter
+    actionsPopular:
+      - filter
+    category: search
+    icon: mdi-account-outline
+    descr: The name of the subfield.
+    isSearchColumn: true
+  description:
+    id: description
+    subjectEntity: subfields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: subfields
+    objectEntity:
+    displayName: description
+    type: string
+    redshiftDisplayColumn: description
+    redshiftFilterColumn: description
+    actions:
+      - column
+    icon: mdi-tag-outline
+    descr: A description of the subfield.
+  topics:
+    id: topics
+    isList: true
+    subjectEntity: subfields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: topics
+    objectEntity: topics
+    displayName: topics (children)
+    type: array
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: The topics that are children of this subfield.
+  siblings:
+    id: siblings
+    isList: true
+    subjectEntity: subfields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: subfields
+    objectEntity: subfields
+    displayName: related subfields (siblings)
+    type: array
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: The subfields that are related to this subfield.
+  field:
+    id: field
+    subjectEntity: subfields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: fields
+    objectEntity: fields
+    displayName: field (parent)
+    type: object
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: The field that is the parent of this subfield.
+  domain:
+    id: domain
+    subjectEntity: subfields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: domains
+    objectEntity: domains
+    displayName: domain
+    type: object
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: The domain that is the parent of this subfield.
+values:
+  - id: subfields/3312
+    display_name: Sociology and Political Science
+  - id: subfields/1312
+    display_name: Molecular Biology
+  - id: subfields/3320
+    display_name: Political Science and International Relations
+  - id: subfields/3304
+    display_name: Education
+  - id: subfields/2208
+    display_name: Electrical and Electronic Engineering
+  - id: subfields/2746
+    display_name: Surgery
+  - id: subfields/2505
+    display_name: Materials Chemistry
+  - id: subfields/2002
+    display_name: Economics and Econometrics
+  - id: subfields/1110
+    display_name: Plant Science
+  - id: subfields/3600
+    display_name: General Health Professions
+  - id: subfields/1702
+    display_name: Artificial Intelligence
+  - id: subfields/2210
+    display_name: Mechanical Engineering
+  - id: subfields/2204
+    display_name: Biomedical Engineering
+  - id: subfields/2739
+    display_name: Public Health, Environmental and Occupational Health
+  - id: subfields/2740
+    display_name: Pulmonary and Respiratory Medicine
+  - id: subfields/1710
+    display_name: Information Systems
+  - id: subfields/2713
+    display_name: Epidemiology
+  - id: subfields/1605
+    display_name: Organic Chemistry
+  - id: subfields/1208
+    display_name: Literature and Literary Theory
+  - id: subfields/1202
+    display_name: History
+  - id: subfields/3107
+    display_name: Atomic and Molecular Physics, and Optics
+  - id: subfields/3203
+    display_name: Clinical Psychology
+  - id: subfields/3103
+    display_name: Astronomy and Astrophysics
+  - id: subfields/2207
+    display_name: Control and Systems Engineering
+  - id: subfields/2205
+    display_name: Civil and Structural Engineering
+  - id: subfields/1311
+    display_name: Genetics
+  - id: subfields/1705
+    display_name: Computer Networks and Communications
+  - id: subfields/1408
+    display_name: Strategy and Management
+  - id: subfields/2705
+    display_name: Cardiology and Cardiovascular Medicine
+  - id: subfields/2737
+    display_name: Physiology
+  - id: subfields/3308
+    display_name: Law
+  - id: subfields/2730
+    display_name: Oncology
+  - id: subfields/2202
+    display_name: Aerospace Engineering
+  - id: subfields/2303
+    display_name: Ecology
+  - id: subfields/2741
+    display_name: Radiology, Nuclear Medicine and Imaging
+  - id: subfields/1203
+    display_name: Language and Linguistics
+  - id: subfields/2211
+    display_name: Mechanics of Materials
+  - id: subfields/3207
+    display_name: Social Psychology
+  - id: subfields/1204
+    display_name: Archeology
+  - id: subfields/3314
+    display_name: Anthropology
+  - id: subfields/1105
+    display_name: Ecology, Evolution, Behavior and Systematics
+  - id: subfields/1707
+    display_name: Computer Vision and Pattern Recognition
+  - id: subfields/1211
+    display_name: Philosophy
+  - id: subfields/2206
+    display_name: Computational Mechanics
+  - id: subfields/2308
+    display_name: Management, Monitoring, Policy and Law
+  - id: subfields/1106
+    display_name: Food Science
+  - id: subfields/2735
+    display_name: Pediatrics, Perinatology and Child Health
+  - id: subfields/2306
+    display_name: Global and Planetary Change
+  - id: subfields/1402
+    display_name: Accounting
+  - id: subfields/2805
+    display_name: Cognitive Neuroscience
+  - id: subfields/2212
+    display_name: Ocean Engineering
+  - id: subfields/2403
+    display_name: Immunology
+  - id: subfields/3316
+    display_name: Cultural Studies
+  - id: subfields/3106
+    display_name: Nuclear and High Energy Physics
+  - id: subfields/3317
+    display_name: Demography
+  - id: subfields/2725
+    display_name: Infectious Diseases
+  - id: subfields/2712
+    display_name: Endocrinology, Diabetes and Metabolism
+  - id: subfields/1902
+    display_name: Atmospheric Science
+  - id: subfields/2734
+    display_name: Pathology and Forensic Medicine
+  - id: subfields/1703
+    display_name: Computational Theory and Mathematics
+  - id: subfields/1908
+    display_name: Geophysics
+  - id: subfields/2728
+    display_name: Neurology
+  - id: subfields/2105
+    display_name: Renewable Energy, Sustainability and the Environment
+  - id: subfields/1803
+    display_name: Management Science and Operations Research
+  - id: subfields/2312
+    display_name: Water Science and Technology
+  - id: subfields/2736
+    display_name: Pharmacology
+  - id: subfields/2738
+    display_name: Psychiatry and Mental health
+  - id: subfields/2003
+    display_name: Finance
+  - id: subfields/2215
+    display_name: Building and Construction
+  - id: subfields/2209
+    display_name: Industrial and Manufacturing Engineering
+  - id: subfields/2745
+    display_name: Rheumatology
+  - id: subfields/3322
+    display_name: Urban Studies
+  - id: subfields/1307
+    display_name: Cell Biology
+  - id: subfields/1607
+    display_name: Spectroscopy
+  - id: subfields/2916
+    display_name: Nutrition and Dietetics
+  - id: subfields/2000
+    display_name: General Economics, Econometrics and Finance
+  - id: subfields/1207
+    display_name: History and Philosophy of Science
+  - id: subfields/1212
+    display_name: Religious studies
+  - id: subfields/3205
+    display_name: Experimental and Cognitive Psychology
+  - id: subfields/1407
+    display_name: Organizational Behavior and Human Resource Management
+  - id: subfields/2804
+    display_name: Cellular and Molecular Neuroscience
+  - id: subfields/3204
+    display_name: Developmental and Educational Psychology
+  - id: subfields/1100
+    display_name: General Agricultural and Biological Sciences
+  - id: subfields/2307
+    display_name: Health, Toxicology and Mutagenesis
+  - id: subfields/1404
+    display_name: Management Information Systems
+  - id: subfields/1910
+    display_name: Oceanography
+  - id: subfields/2504
+    display_name: Electronic, Optical and Magnetic Materials
+  - id: subfields/1306
+    display_name: Cancer Research
+  - id: subfields/3318
+    display_name: Gender Studies
+  - id: subfields/3109
+    display_name: Statistical and Nonlinear Physics
+  - id: subfields/2304
+    display_name: Environmental Chemistry
+  - id: subfields/2309
+    display_name: Nature and Landscape Conservation
+  - id: subfields/2507
+    display_name: Polymers and Plastics
+  - id: subfields/1604
+    display_name: Inorganic Chemistry
+  - id: subfields/1406
+    display_name: Marketing
+  - id: subfields/2305
+    display_name: Environmental Engineering
+  - id: subfields/1213
+    display_name: Visual Arts and Performing Arts
+  - id: subfields/2720
+    display_name: Hematology
+  - id: subfields/2604
+    display_name: Applied Mathematics
+  - id: subfields/2502
+    display_name: Biomaterials
+  - id: subfields/1606
+    display_name: Physical and Theoretical Chemistry
+  - id: subfields/1102
+    display_name: Agronomy and Crop Science
+  - id: subfields/3311
+    display_name: Safety Research
+  - id: subfields/2731
+    display_name: Ophthalmology
+  - id: subfields/1109
+    display_name: Insect Science
+  - id: subfields/2203
+    display_name: Automotive Engineering
+  - id: subfields/3104
+    display_name: Condensed Matter Physics
+  - id: subfields/2707
+    display_name: Complementary and alternative medicine
+  - id: subfields/1405
+    display_name: Management of Technology and Innovation
+  - id: subfields/3315
+    display_name: Communication
+  - id: subfields/1802
+    display_name: Information Systems and Management
+  - id: subfields/2213
+    display_name: Safety, Risk, Reliability and Quality
+  - id: subfields/3305
+    display_name: Geography, Planning and Development
+  - id: subfields/2608
+    display_name: Geometry and Topology
+  - id: subfields/2310
+    display_name: Pollution
+  - id: subfields/2214
+    display_name: Media Technology
+  - id: subfields/2708
+    display_name: Dermatology
+  - id: subfields/1111
+    display_name: Soil Science
+  - id: subfields/1103
+    display_name: Animal Science and Zoology
+  - id: subfields/2743
+    display_name: Reproductive Medicine
+  - id: subfields/1205
+    display_name: Classics
+  - id: subfields/2716
+    display_name: Genetics
+  - id: subfields/2610
+    display_name: Mathematical Physics
+  - id: subfields/2711
+    display_name: Emergency Medicine
+  - id: subfields/2613
+    display_name: Statistics and Probability
+  - id: subfields/1210
+    display_name: Music
+  - id: subfields/3108
+    display_name: Radiation
+  - id: subfields/3306
+    display_name: Health
+  - id: subfields/1711
+    display_name: Signal Processing
+  - id: subfields/2808
+    display_name: Neurology
+  - id: subfields/2311
+    display_name: Industrial and Manufacturing Engineering
+  - id: subfields/1209
+    display_name: Museology
+  - id: subfields/3300
+    display_name: General Social Sciences
+  - id: subfields/3004
+    display_name: Pharmacology
+  - id: subfields/2729
+    display_name: Obstetrics and Gynecology
+  - id: subfields/3604
+    display_name: Emergency Medical Services
+  - id: subfields/1602
+    display_name: Analytical Chemistry
+  - id: subfields/2721
+    display_name: Hepatology
+  - id: subfields/2732
+    display_name: Orthopedics and Sports Medicine
+  - id: subfields/2727
+    display_name: Nephrology
+  - id: subfields/3616
+    display_name: Speech and Hearing
+  - id: subfields/1804
+    display_name: Statistics, Probability and Uncertainty
+  - id: subfields/3313
+    display_name: Transportation
+  - id: subfields/1305
+    display_name: Biotechnology
+  - id: subfields/3612
+    display_name: Physical Therapy, Sports Therapy and Rehabilitation
+  - id: subfields/3303
+    display_name: Development
+  - id: subfields/3310
+    display_name: Linguistics and Language
+  - id: subfields/1206
+    display_name: Conservation
+  - id: subfields/1708
+    display_name: Hardware and Architecture
+  - id: subfields/1907
+    display_name: Geology
+  - id: subfields/1706
+    display_name: Computer Science Applications
+  - id: subfields/1104
+    display_name: Aquatic Science
+  - id: subfields/3504
+    display_name: Oral Surgery
+  - id: subfields/3404
+    display_name: Small Animals
+  - id: subfields/2405
+    display_name: Parasitology
+  - id: subfields/1911
+    display_name: Paleontology
+  - id: subfields/3003
+    display_name: Pharmaceutical Science
+  - id: subfields/3605
+    display_name: Health Information Management
+  - id: subfields/2742
+    display_name: Rehabilitation
+  - id: subfields/1904
+    display_name: Earth-Surface Processes
+  - id: subfields/2404
+    display_name: Microbiology
+  - id: subfields/3321
+    display_name: Public Administration
+  - id: subfields/2508
+    display_name: Surfaces, Coatings and Films
+  - id: subfields/2748
+    display_name: Urology
+  - id: subfields/1303
+    display_name: Biochemistry
+  - id: subfields/3609
+    display_name: Occupational Therapy
+  - id: subfields/1308
+    display_name: Clinical Biochemistry
+  - id: subfields/1107
+    display_name: Forestry
+  - id: subfields/2715
+    display_name: Gastroenterology
+  - id: subfields/3611
+    display_name: Pharmacy
+  - id: subfields/2703
+    display_name: Anesthesiology and Pain Medicine
+  - id: subfields/1906
+    display_name: Geochemistry and Petrology
+  - id: subfields/1709
+    display_name: Human-Computer Interaction
+  - id: subfields/1507
+    display_name: Fluid Flow and Transfer Processes
+  - id: subfields/2723
+    display_name: Immunology and Allergy
+  - id: subfields/3309
+    display_name: Library and Information Sciences
+  - id: subfields/1304
+    display_name: Biophysics
+  - id: subfields/3506
+    display_name: Periodontics
+  - id: subfields/2602
+    display_name: Algebra and Number Theory
+  - id: subfields/3614
+    display_name: Radiological and Ultrasound Technology
+  - id: subfields/1503
+    display_name: Catalysis
+  - id: subfields/2500
+    display_name: General Materials Science
+  - id: subfields/1310
+    display_name: Endocrinology
+  - id: subfields/2733
+    display_name: Otorhinolaryngology
+  - id: subfields/2807
+    display_name: Endocrine and Autonomic Systems
+  - id: subfields/2612
+    display_name: Numerical Analysis
+  - id: subfields/3202
+    display_name: Applied Psychology
+  - id: subfields/1704
+    display_name: Computer Graphics and Computer-Aided Design
+  - id: subfields/2702
+    display_name: Anatomy
+  - id: subfields/2503
+    display_name: Ceramics and Composites
+  - id: subfields/2611
+    display_name: Modeling and Simulation
+  - id: subfields/1712
+    display_name: Software
+  - id: subfields/2706
+    display_name: Critical Care and Intensive Care Medicine
+  - id: subfields/2406
+    display_name: Virology
+  - id: subfields/2717
+    display_name: Geriatrics and Gerontology
+  - id: subfields/3505
+    display_name: Orthodontics
+  - id: subfields/2704
+    display_name: Biochemistry
+  - id: subfields/1313
+    display_name: Molecular Medicine
+  - id: subfields/2302
+    display_name: Ecological Modeling
+  - id: subfields/1603
+    display_name: Electrochemistry
+  - id: subfields/2216
+    display_name: Architecture
+  - id: subfields/2809
+    display_name: Sensory Systems
+  - id: subfields/3105
+    display_name: Instrumentation
+  - id: subfields/2724
+    display_name: Internal Medicine
+  - id: subfields/1200
+    display_name: General Arts and Humanities
+  - id: subfields/1502
+    display_name: Bioengineering
+  - id: subfields/1314
+    display_name: Physiology
+  - id: subfields/2607
+    display_name: Discrete Mathematics and Combinatorics
+  - id: subfields/2910
+    display_name: Issues, ethics and legal aspects
+  - id: subfields/2614
+    display_name: Theoretical Computer Science
+  - id: subfields/2102
+    display_name: Energy Engineering and Power Technology
+  - id: subfields/3307
+    display_name: Human Factors and Ergonomics
+  - id: subfields/2806
+    display_name: Developmental Neuroscience
+  - id: subfields/3005
+    display_name: Toxicology
+  - id: subfields/3607
+    display_name: Medical Laboratory Technology
+  - id: subfields/3200
+    display_name: General Psychology
+  - id: subfields/1403
+    display_name: Business and International Management
+  - id: subfields/2747
+    display_name: Transplantation
+  - id: subfields/2802
+    display_name: Behavioral Neuroscience
+  - id: subfields/1410
+    display_name: Industrial relations
+  - id: subfields/3603
+    display_name: Complementary and Manual Therapy
+  - id: subfields/2100
+    display_name: General Energy
+  - id: subfields/2200
+    display_name: General Engineering
+  - id: subfields/3206
+    display_name: Neuropsychology and Physiological Psychology
+  - id: subfields/1409
+    display_name: Tourism, Leisure and Hospitality Management
+  - id: subfields/1508
+    display_name: Process Chemistry and Technology
+  - id: subfields/2402
+    display_name: Applied Microbiology and Biotechnology
+  - id: subfields/1912
+    display_name: Space and Planetary Science
+  - id: subfields/3319
+    display_name: Life-span and Life-course Studies
+  - id: subfields/1309
+    display_name: Developmental Biology
+  - id: subfields/3302
+    display_name: Archeology
+  - id: subfields/1302
+    display_name: Aging
+  - id: subfields/2911
+    display_name: Leadership and Management
+  - id: subfields/2803
+    display_name: Biological Psychiatry
+  - id: subfields/2506
+    display_name: Metals and Alloys
+  - id: subfields/2714
+    display_name: Family Practice
+  - id: subfields/1800
+    display_name: General Decision Sciences
+  - id: subfields/3402
+    display_name: Equine
+  - id: subfields/2103
+    display_name: Fuel Technology
+  - id: subfields/3500
+    display_name: General Dentistry
+  - id: subfields/1506
+    display_name: Filtration and Separation
+  - id: subfields/1504
+    display_name: Chemical Health and Safety
+  - id: subfields/2718
+    display_name: Health Informatics
+  - id: subfields/2726
+    display_name: Microbiology
+  - id: subfields/1315
+    display_name: Structural Biology
+  - id: subfields/3608
+    display_name: Medical Terminology
+  - id: subfields/3102
+    display_name: Acoustics and Ultrasonics
+  - id: subfields/1108
+    display_name: Horticulture
+  - id: subfields/2605
+    display_name: Computational Mathematics
+  - id: subfields/2922
+    display_name: Research and Theory
+  - id: subfields/2104
+    display_name: Nuclear Energy and Engineering
+  - id: subfields/3002
+    display_name: Drug Discovery

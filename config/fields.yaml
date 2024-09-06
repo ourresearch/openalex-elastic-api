@@ -1,0 +1,223 @@
+id: fields
+icon: mdi-tag-outline
+name: fields
+nameSingular: field
+displayName: fields
+displayNameSingular: field
+descr: what works are about
+eg: Computer science
+placeholder: Search fields
+filterName: fields
+filterKey: primary_topic.field.id
+descrFull: Fields the second level of description of the subject area of works. Each
+  field has a unique OpenAlex ID. Fields are above subfields but below domains in
+  the hierarchy of research areas in OpenAlex.
+hasAutocomplete: false
+isNative: false
+idRegex: (?:https:\/\/openalex\.org\/fields\/|fields\/)(\d+)
+showOnEntityPage:
+  - id
+  - display_name
+  - description
+  - display_name_alternatives
+  - subfields
+  - siblings
+  - domain
+showOnTablePage:
+  - display_name
+columns:
+  id:
+    id: id
+    subjectEntity: fields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: fields
+    objectEntity:
+    displayName: OpenAlex ID
+    isId: true
+    type: string
+    redshiftDisplayColumn: id
+    redshiftFilterColumn: id
+    icon: mdi-tag-outline
+    descr: Unique identifier for the field
+  display_name:
+    id: display_name
+    isColumnMandatory: true
+    subjectEntity: fields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: name
+    type: string
+    redshiftDisplayColumn: display_name
+    redshiftFilterColumn: display_name
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    category: other
+    icon: mdi-account-outline
+    descr: The name of the field
+  display_name.search:
+    id: display_name.search
+    subjectEntity: fields
+    operators:
+      - contains
+      - does not contain
+    defaultOperator: contains
+    objectEntity:
+    displayName: search display_name
+    type: string
+    redshiftDisplayColumn:
+    redshiftFilterColumn: display_name
+    actions:
+      - filter
+    actionsPopular:
+      - filter
+    category: search
+    icon: mdi-account-outline
+    descr: The name of the field
+    isSearchColumn: true
+  description:
+    id: description
+    subjectEntity: fields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: fields
+    objectEntity:
+    displayName: description
+    type: string
+    redshiftDisplayColumn: description
+    redshiftFilterColumn: description
+    actions:
+      - column
+    icon: mdi-tag-outline
+    descr: A description of the field
+  display_name_alternatives:
+    id: display_name_alternatives
+    isList: true
+    subjectEntity: fields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: fields
+    objectEntity:
+    displayName: alternate names
+    type: array
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: Alternate names for the field
+  siblings:
+    id: siblings
+    isList: true
+    subjectEntity: fields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: fields
+    objectEntity: fields
+    displayName: related fields (siblings)
+    type: array
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: Fields that are related to this field
+  subfields:
+    id: subfields
+    isList: true
+    subjectEntity: fields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: subfields
+    objectEntity: subfields
+    displayName: subfields (children)
+    type: array
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: The set of subfields that are children of this field
+  domain:
+    id: domain
+    subjectEntity: fields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: domains
+    objectEntity: domains
+    displayName: domain (parent)
+    type: object
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: The domain that is the parent of this field
+values:
+  - id: fields/27
+    display_name: Medicine
+  - id: fields/33
+    display_name: Social Sciences
+  - id: fields/22
+    display_name: Engineering
+  - id: fields/12
+    display_name: Arts and Humanities
+  - id: fields/17
+    display_name: Computer Science
+  - id: fields/13
+    display_name: Biochemistry, Genetics and Molecular Biology
+  - id: fields/11
+    display_name: Agricultural and Biological Sciences
+  - id: fields/23
+    display_name: Environmental Science
+  - id: fields/31
+    display_name: Physics and Astronomy
+  - id: fields/25
+    display_name: Materials Science
+  - id: fields/14
+    display_name: Business, Management and Accounting
+  - id: fields/20
+    display_name: Economics, Econometrics and Finance
+  - id: fields/36
+    display_name: Health Professions
+  - id: fields/32
+    display_name: Psychology
+  - id: fields/16
+    display_name: Chemistry
+  - id: fields/19
+    display_name: Earth and Planetary Sciences
+  - id: fields/28
+    display_name: Neuroscience
+  - id: fields/26
+    display_name: Mathematics
+  - id: fields/24
+    display_name: Immunology and Microbiology
+  - id: fields/18
+    display_name: Decision Sciences
+  - id: fields/21
+    display_name: Energy
+  - id: fields/29
+    display_name: Nursing
+  - id: fields/30
+    display_name: Pharmacology, Toxicology and Pharmaceutics
+  - id: fields/35
+    display_name: Dentistry
+  - id: fields/15
+    display_name: Chemical Engineering
+  - id: fields/34
+    display_name: Veterinary

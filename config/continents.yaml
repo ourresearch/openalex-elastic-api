@@ -1,0 +1,97 @@
+id: continents
+icon: mdi-earth
+name: continents
+nameSingular: continent
+displayName: continents
+displayNameSingular: continent
+descr: Continents
+eg: Africa
+placeholder: Search continents
+filterName: continent
+filterKey: authorships.institutions.continent
+descrFull: These are the continents of the world. Each continent has a unique OpenAlex
+  ID.
+hasAutocomplete: false
+isNative: false
+idRegex: (?i)(?:https:\/\/openalex\.org\/continents\/|continents\/)(q\d+)
+showOnEntityPage:
+  - id
+  - display_name
+  - countries
+showOnTablePage:
+  - display_name
+columns:
+  id:
+    id: id
+    subjectEntity: continents
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: continents
+    objectEntity:
+    isId: true
+    displayName: Continent ID
+    type: string
+    redshiftDisplayColumn: id
+    redshiftFilterColumn: id
+    actions:
+      - filter
+    actionsPopular:
+      - filter
+    icon: mdi-shape-outline
+    descr: Unique identifier for the continent
+  display_name:
+    id: display_name
+    subjectEntity: continents
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: continents
+    objectEntity:
+    displayName: Continent name
+    type: string
+    redshiftDisplayColumn: display_name
+    redshiftFilterColumn:
+    actions:
+      - column
+    actionsPopular: []
+    icon: mdi-shape-outline
+    descr: The name of the continent
+  display_name.search:
+    id: display_name.search
+    subjectEntity: continents
+    operators:
+      - contains
+      - does not contain
+    defaultOperator: contains
+    entityId: continents
+    objectEntity:
+    displayName: search display_name
+    type: string
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions:
+      - filter
+    actionsPopular:
+      - filter
+    icon: mdi-shape-outline
+    descr: The name of the continent
+    isSearchColumn: true
+    category: search
+values:
+  - id: continents/Q15
+    display_name: Africa
+  - id: continents/Q18
+    display_name: South America
+  - id: continents/Q46
+    display_name: Europe
+  - id: continents/Q48
+    display_name: Asia
+  - id: continents/Q49
+    display_name: North America
+  - id: continents/Q51
+    display_name: Antarctica
+  - id: continents/Q55643
+    display_name: Oceania
