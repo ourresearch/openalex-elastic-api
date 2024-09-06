@@ -1,0 +1,371 @@
+{
+    "id": "authors",
+    "icon": "mdi-account-outline",
+    "name": "authors",
+    "nameSingular": "author",
+    "displayName": "authors",
+    "displayNameSingular": "author",
+    "descr": "Creators of scholarly works",
+    "eg": "Albert Einstein",
+    "placeholder": "Search scholarly authors",
+    "filterName": "author",
+    "filterKey": "authorships.author.id",
+    "descrFull": "These are the creators of scholarly works. They can be affiliated with institutions, have ORCIDs, and have published works. Each author has a unique OpenAlex ID.",
+    "hintVerb": "at",
+    "color": "green",
+    "hasAutocomplete": true,
+    "isNative": true,
+    "hasSerp": true,
+    "highlightFilters": [
+        {
+            "key": "has_orcid",
+            "value": true,
+            "displayName": "with ORCIDs"
+        },
+        {
+            "key": "last_known_institutions.is_global_south",
+            "value": true,
+            "displayName": "from the Global South"
+        }
+    ],
+    "idRegex": "(?i)(?:authors\\/)?(?:https:\\/\\/openalex\\.org\\/)?(a\\d+)",
+    "showOnEntityPage": [
+        "id",
+        "display_name",
+        "display_name_alternatives",
+        "last_known_institutions.id",
+        "affiliations.institution.id",
+        "ids.orcid"
+    ],
+    "showOnTablePage": [
+        "display_name",
+        "count(works)"
+    ],
+    "groupByDefaults": [
+        "last_known_institutions.id",
+        "last_known_institutions.country_code",
+        "has_orcid"
+    ],
+    "columns": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "entityId": "authors",
+            "objectEntity": "authors",
+            "displayName": "OpenAlex ID",
+            "type": "string",
+            "redshiftDisplayColumn": "id",
+            "redshiftFilterColumn": "id",
+            "actions": [],
+            "actionsPopular": [],
+            "isId": true,
+            "icon": "mdi-account-outline",
+            "descr": "A unique identifier for each author that can be used for filtering works by author."
+        },
+        "ids.orcid": {
+            "id": "ids.orcid",
+            "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "entityId": "authors",
+            "objectEntity": null,
+            "displayName": "ORCID",
+            "isId": true,
+            "redshiftDisplayColumn": "orcid",
+            "redshiftFilterColumn": "orcid",
+            "actions": [
+                "column",
+                "filter"
+            ],
+            "type": "string",
+            "icon": "mdi-account-outline",
+            "descr": "A common identifier for researchers that can be used to link their works across databases."
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "objectEntity": null,
+            "displayName": "name",
+            "type": "string",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "redshiftDisplayColumn": "display_name",
+            "redshiftFilterColumn": null,
+            "icon": "mdi-account-outline",
+            "descr": "The name of the author."
+        },
+        "display_name.search": {
+            "id": "display_name.search",
+            "subjectEntity": "authors",
+            "operators": [
+                "contains",
+                "does not contain"
+            ],
+            "defaultOperator": "contains",
+            "objectEntity": null,
+            "displayName": "search display_name",
+            "type": "string",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "category": "search",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "icon": "mdi-account-outline",
+            "descr": "The name of the author.",
+            "isSearchColumn": true
+        },
+        "affiliations.institution.id": {
+            "id": "affiliations.institution.id",
+            "isList": true,
+            "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "displayName": "Past institutions",
+            "entityId": "institutions",
+            "objectEntity": "institutions",
+            "type": "array",
+            "redshiftDisplayColumn": "affiliations",
+            "redshiftFilterColumn": "affiliations_id",
+            "actions": [
+                "column"
+            ],
+            "actionsPopular": [],
+            "icon": "mdi-town-hall",
+            "descr": "The institutions that the author has been affiliated with."
+        },
+        "affiliations.institution.type": {
+            "id": "affiliations.institution.type",
+            "isList": true,
+            "isId": true,
+            "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "entityId": "institution-types",
+            "objectEntity": "institution-types",
+            "displayName": "Past institutions type",
+            "type": "array",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-shape-outline",
+            "descr": "The type of institutions that the author has been affiliated with which are taking from ROR."
+        },
+        "affiliations.institution.country_code": {
+            "id": "affiliations.institution.country_code",
+            "isList": true,
+            "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "entityId": "countries",
+            "objectEntity": "countries",
+            "isId": true,
+            "displayName": "country",
+            "type": "array",
+            "isCountry": true,
+            "redshiftDisplayColumn": "country_code",
+            "redshiftFilterColumn": "country_code",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-earth",
+            "descr": "The countries of the institutions that the author has been affiliated with."
+        },
+        "last_known_institutions.id": {
+            "id": "last_known_institutions.id",
+            "isList": true,
+            "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "displayName": "institution",
+            "entityId": "institutions",
+            "objectEntity": "institutions",
+            "type": "array",
+            "redshiftDisplayColumn": "last_known_institutions",
+            "redshiftFilterColumn": "last_known_institutions_id",
+            "actions": [
+                "column",
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-town-hall",
+            "descr": "The latest institution that the author has been affiliated with in OpenAlex."
+        },
+        "last_known_institutions.country_code": {
+            "id": "last_known_institutions.country_code",
+            "isList": true,
+            "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "entityId": "countries",
+            "objectEntity": "countries",
+            "isId": true,
+            "displayName": "institution country",
+            "type": "array",
+            "isCountry": true,
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-earth",
+            "descr": "The country of the latest institution that the author has been affiliated with in OpenAlex."
+        },
+        "last_known_institutions.type": {
+            "id": "last_known_institutions.type",
+            "isList": true,
+            "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "entityId": "institution-types",
+            "objectEntity": "institution-types",
+            "displayName": "Institution type",
+            "isId": true,
+            "type": "array",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-shape-outline",
+            "descr": "The type of the latest institution that the author has been affiliated with in OpenAlex."
+        },
+        "has_orcid": {
+            "id": "has_orcid",
+            "subjectEntity": "authors",
+            "operators": [
+                "is"
+            ],
+            "defaultOperator": "is",
+            "entityId": "authors",
+            "objectEntity": null,
+            "displayName": "Has an ORCID",
+            "type": "boolean",
+            "redshiftDisplayColumn": "has_orcid",
+            "redshiftFilterColumn": "has_orcid",
+            "actions": [
+                "filter",
+                "group_by"
+            ],
+            "actionsPopular": [
+                "filter",
+                "group_by"
+            ],
+            "icon": "mdi-tag-outline",
+            "descr": "Whether the author has an ORCID."
+        },
+        "display_name_alternatives": {
+            "id": "display_name_alternatives",
+            "isList": true,
+            "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "entityId": "authors",
+            "objectEntity": null,
+            "displayName": "alternate names",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "type": "array",
+            "actions": [],
+            "actionsPopular": [],
+            "icon": "mdi-town-hall",
+            "descr": "Alternate names of the author which are determined from the raw author name of all works associated with an author."
+        },
+        "count(works)": {
+            "id": "count(works)",
+            "subjectEntity": "authors",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
+            "entityId": "works",
+            "objectEntity": null,
+            "displayName": "works count",
+            "type": "number",
+            "redshiftDisplayColumn": "count(works)",
+            "redshiftFilterColumn": null,
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "icon": "mdi-book-open-variant",
+            "descr": "The number of works that the author has created."
+        }
+    },
+    "values": null
+}

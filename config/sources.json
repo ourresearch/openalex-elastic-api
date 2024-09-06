@@ -1,0 +1,296 @@
+{
+    "id": "sources",
+    "icon": "mdi-book-open-outline",
+    "name": "sources",
+    "nameSingular": "source",
+    "displayName": "sources",
+    "displayNameSingular": "source",
+    "descr": "Journals, conferences, and repositories",
+    "eg": "The New England Journal of Medicine",
+    "placeholder": "Search academic journals & repositories",
+    "filterName": "primary_location.source",
+    "filterKey": "primary_location.source.id",
+    "descrFull": "The source or location of scholarly articles, such as a journal, conference, or repository.",
+    "hintVerb": "published by",
+    "color": "orange",
+    "hasAutocomplete": true,
+    "isNative": true,
+    "hasSerp": true,
+    "highlightFilters": [
+        {
+            "key": "is_oa",
+            "value": true,
+            "displayName": "that are Open Access"
+        }
+    ],
+    "idRegex": "(?i)(?:sources\\/)?(?:https:\\/\\/openalex\\.org\\/)?(s\\d+)",
+    "showOnEntityPage": [
+        "id",
+        "display_name",
+        "ids.issn",
+        "type",
+        "host_organization",
+        "alternate_titles",
+        "is_oa",
+        "is_in_doaj",
+        "apc_usd"
+    ],
+    "showOnTablePage": [
+        "display_name",
+        "count(works)"
+    ],
+    "groupByDefaults": [
+        "type",
+        "is_oa",
+        "is_in_doaj"
+    ],
+    "columns": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "sources",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "entityId": null,
+            "objectEntity": "sources",
+            "displayName": "OpenAlex ID",
+            "isId": true,
+            "type": "string",
+            "redshiftDisplayColumn": "id",
+            "redshiftFilterColumn": "id",
+            "actions": [],
+            "icon": "mdi-book-open-outline",
+            "descr": "The unique identifier for the source in OpenAlex."
+        },
+        "ids.issn": {
+            "id": "ids.issn",
+            "subjectEntity": "sources",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "objectEntity": null,
+            "entityId": "sources",
+            "displayName": "ISSNs",
+            "isId": true,
+            "type": "string",
+            "redshiftDisplayColumn": "issn",
+            "redshiftFilterColumn": "issn",
+            "actions": [
+                "column",
+                "filter"
+            ],
+            "icon": "mdi-book-open-outline",
+            "descr": "The International Standard Serial Number (ISSN) of the source."
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "sources",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "objectEntity": null,
+            "displayName": "name",
+            "type": "string",
+            "redshiftDisplayColumn": "display_name",
+            "redshiftFilterColumn": "display_name",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline",
+            "descr": "The name of the source."
+        },
+        "display_name.search": {
+            "id": "display_name.search",
+            "subjectEntity": "sources",
+            "operators": [
+                "contains",
+                "does not contain"
+            ],
+            "defaultOperator": "contains",
+            "objectEntity": null,
+            "displayName": "search display_name",
+            "type": "string",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": "display_name",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "category": "search",
+            "icon": "mdi-account-outline",
+            "descr": "The name of the source.",
+            "isSearchColumn": true
+        },
+        "host_organization": {
+            "id": "host_organization",
+            "subjectEntity": "sources",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "entityId": "publishers",
+            "objectEntity": "publishers",
+            "displayName": "Publisher",
+            "type": "object",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "actions": [],
+            "actionsPopular": [],
+            "icon": "mdi-domain",
+            "descr": "The organization or publisher that publishes the source."
+        },
+        "type": {
+            "id": "type",
+            "subjectEntity": "sources",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "entityId": "source-types",
+            "objectEntity": "source-types",
+            "displayName": "Source type",
+            "isId": true,
+            "isExternalId": true,
+            "externalIdPrefix": "source-types",
+            "type": "object",
+            "redshiftDisplayColumn": "type_formatted",
+            "redshiftFilterColumn": "type",
+            "actions": [
+                "column",
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-shape-outline",
+            "descr": "The type of source."
+        },
+        "apc_usd": {
+            "id": "apc_usd",
+            "isCurrency": true,
+            "subjectEntity": "sources",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
+            "objectEntity": null,
+            "displayName": "Article Processing Charge",
+            "type": "number",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "actions": [],
+            "actionsPopular": [],
+            "icon": "mdi-cash",
+            "descr": "The Article Processing Charge (APC) in USD for the source."
+        },
+        "is_oa": {
+            "id": "is_oa",
+            "subjectEntity": "sources",
+            "operators": [
+                "is"
+            ],
+            "defaultOperator": "is",
+            "objectEntity": null,
+            "displayName": "Fully open access",
+            "type": "boolean",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "actions": [],
+            "actionsPopular": [],
+            "icon": "mdi-lock-open-outline",
+            "descr": "Whether the source is fully open access."
+        },
+        "is_in_doaj": {
+            "id": "is_in_doaj",
+            "subjectEntity": "sources",
+            "operators": [
+                "is"
+            ],
+            "defaultOperator": "is",
+            "objectEntity": null,
+            "displayName": "In DOAJ",
+            "type": "boolean",
+            "redshiftDisplayColumn": "is_in_doaj",
+            "redshiftFilterColumn": "is_in_doaj",
+            "actions": [
+                "column",
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "icon": "mdi-lock-open-outline",
+            "descr": "Whether the source is listed in the Directory of Open Access Journals (DOAJ)."
+        },
+        "alternate_titles": {
+            "id": "alternate_titles",
+            "isList": true,
+            "subjectEntity": "sources",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "objectEntity": null,
+            "displayName": "alternate names",
+            "type": "array",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": null,
+            "actions": [],
+            "actionsPopular": [],
+            "icon": "mdi-book-open-outline",
+            "descr": "Alternate names for the source."
+        },
+        "count(works)": {
+            "id": "count(works)",
+            "subjectEntity": "sources",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
+            "objectEntity": null,
+            "displayName": "works count",
+            "type": "number",
+            "redshiftDisplayColumn": "count(works)",
+            "redshiftFilterColumn": null,
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "icon": "mdi-book-open-variant",
+            "descr": "The number of works published by the source."
+        }
+    },
+    "values": null
+}

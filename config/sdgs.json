@@ -1,0 +1,221 @@
+{
+    "id": "sdgs",
+    "icon": "mdi-sprout-outline",
+    "name": "sdgs",
+    "nameSingular": "sdg",
+    "displayName": "Sustainable Development Goals",
+    "displayNameSingular": "Sustainable Development Goal",
+    "descr": "Relevant UN SDGs",
+    "eg": "Clean water and sanitation",
+    "placeholder": "Search SDGs",
+    "filterName": "Sustainable Development Goals",
+    "filterKey": "sustainable_development_goals.id",
+    "descrFull": "The Sustainable Development Goals (SDGs) are a collection of 17 global goals set by the United Nations General Assembly in 2015 for the year 2030.",
+    "hasAutocomplete": false,
+    "isNative": false,
+    "idRegex": "(?:https:\\/\\/openalex\\.org\\/sdgs\\/|sdgs\\/)(\\d+)",
+    "showOnEntityPage": [
+        "id",
+        "display_name"
+    ],
+    "showOnTablePage": [
+        "display_name",
+        "count(works)"
+    ],
+    "columns": {
+        "id": {
+            "id": "id",
+            "subjectEntity": "sdgs",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "entityId": "sdgs",
+            "objectEntity": null,
+            "displayName": "SDG ID",
+            "isId": true,
+            "redshiftDisplayColumn": "id",
+            "redshiftFilterColumn": "id",
+            "actions": [],
+            "type": "string",
+            "icon": "mdi-tag-outline",
+            "descr": "The unique identifier for the Sustainable Development Goa (SDG) in OpenAlex."
+        },
+        "display_name": {
+            "id": "display_name",
+            "isColumnMandatory": true,
+            "subjectEntity": "sdgs",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "objectEntity": null,
+            "displayName": "name",
+            "type": "string",
+            "redshiftDisplayColumn": "display_name",
+            "redshiftFilterColumn": "display_name",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline",
+            "descr": "The name of the Sustainable Development Goal (SDG)."
+        },
+        "display_name.search": {
+            "id": "display_name.search",
+            "subjectEntity": "sdgs",
+            "operators": [
+                "contains",
+                "does not contain"
+            ],
+            "defaultOperator": "contains",
+            "objectEntity": null,
+            "displayName": "search display_name",
+            "type": "string",
+            "redshiftDisplayColumn": null,
+            "redshiftFilterColumn": "display_name",
+            "actions": [
+                "filter"
+            ],
+            "actionsPopular": [
+                "filter"
+            ],
+            "category": "search",
+            "icon": "mdi-account-outline",
+            "descr": "The name of the Sustainable Development Goal (SDG).",
+            "isSearchColumn": true
+        },
+        "description": {
+            "id": "description",
+            "isColumnMandatory": true,
+            "subjectEntity": "sdgs",
+            "operators": [
+                "is",
+                "is not"
+            ],
+            "defaultOperator": "is",
+            "objectEntity": null,
+            "displayName": "description",
+            "type": "string",
+            "redshiftDisplayColumn": "description",
+            "redshiftFilterColumn": "description",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline",
+            "descr": "The description of the Sustainable Development Goal (SDG)."
+        },
+        "count(works)": {
+            "id": "count(works)",
+            "subjectEntity": "sdgs",
+            "operators": [
+                "is",
+                "is not",
+                "is greater than",
+                "is greater than or equal to",
+                "is less than",
+                "is less than or equal to"
+            ],
+            "defaultOperator": "is",
+            "objectEntity": "works",
+            "displayName": "number of works",
+            "type": "integer",
+            "redshiftDisplayColumn": "count(works)",
+            "redshiftFilterColumn": "count(works)",
+            "actions": [
+                "sort",
+                "column"
+            ],
+            "actionsPopular": [
+                "sort",
+                "column"
+            ],
+            "category": "other",
+            "icon": "mdi-account-outline",
+            "descr": "The number of works associated with the Sustainable Development Goal (SDG)."
+        }
+    },
+    "values": [
+        {
+            "id": "sdgs/3",
+            "display_name": "Good health and well-being"
+        },
+        {
+            "id": "sdgs/2",
+            "display_name": "Zero hunger"
+        },
+        {
+            "id": "sdgs/4",
+            "display_name": "Quality education"
+        },
+        {
+            "id": "sdgs/7",
+            "display_name": "Affordable and clean energy"
+        },
+        {
+            "id": "sdgs/10",
+            "display_name": "Reduced inequalities"
+        },
+        {
+            "id": "sdgs/16",
+            "display_name": "Peace, justice, and strong institutions"
+        },
+        {
+            "id": "sdgs/8",
+            "display_name": "Decent work and economic growth"
+        },
+        {
+            "id": "sdgs/11",
+            "display_name": "Sustainable cities and communities"
+        },
+        {
+            "id": "sdgs/6",
+            "display_name": "Clean water and sanitation"
+        },
+        {
+            "id": "sdgs/5",
+            "display_name": "Gender equality"
+        },
+        {
+            "id": "sdgs/14",
+            "display_name": "Life below water"
+        },
+        {
+            "id": "sdgs/15",
+            "display_name": "Life on land"
+        },
+        {
+            "id": "sdgs/13",
+            "display_name": "Climate action"
+        },
+        {
+            "id": "sdgs/9",
+            "display_name": "Industry, innovation and infrastructure"
+        },
+        {
+            "id": "sdgs/17",
+            "display_name": "Partnerships for the goals"
+        },
+        {
+            "id": "sdgs/1",
+            "display_name": "No poverty"
+        },
+        {
+            "id": "sdgs/12",
+            "display_name": "Responsible consumption and production"
+        }
+    ]
+}
