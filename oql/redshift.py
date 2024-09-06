@@ -88,6 +88,15 @@ class RedshiftQueryHandler:
                 .join(models.WorkSdg, models.WorkSdg.sdg_id == entity_class.sdg_id)
                 .join(models.Work, models.Work.paper_id == models.WorkSdg.paper_id)
             )
+        elif self.entity == "topics":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.WorkTopic, models.WorkTopic.topic_id == entity_class.topic_id)
+                .join(models.Work, models.Work.paper_id == models.WorkTopic.paper_id)
+                .join(models.Affiliation, models.Affiliation.paper_id == models.Work.paper_id)
+                .join(models.Institution, models.Institution.affiliation_id == models.Affiliation.affiliation_id)
+            )
         else:
             query = db.session.query(*columns_to_select)
 
@@ -121,11 +130,11 @@ class RedshiftQueryHandler:
         for filter in self.filter_works:
             key = filter.get("column_id")
             value = filter.get("value")
-            operator = filter.get("operator")
+            operator = filter.get("operator") or "is"
 
             # ensure is valid filter
-            if key is None or value is None or operator is None:
-                continue
+            if key is None or value is None:
+                raise(ValueError("Invalid work filter: missing key or value"))
 
             # setup
             redshift_column = self.works_config.get(key).get("redshiftFilterColumn")
@@ -168,10 +177,6 @@ class RedshiftQueryHandler:
             elif key == "authorships.author.id":
                 value = get_short_id_integer(value)
                 affiliation_class = getattr(models, "Affiliation")
-                query = query.join(
-                    affiliation_class,
-                    affiliation_class.paper_id == work_class.paper_id,
-                )
                 column = affiliation_class.author_id
                 query = self.do_operator_query(column, operator, query, value)
             elif key == "authorships.countries":
@@ -230,11 +235,11 @@ class RedshiftQueryHandler:
         for filter in self.filter_aggs:
             key = filter.get("column_id")
             value = filter.get("value")
-            operator = filter.get("operator")
+            operator = filter.get("operator") or "is"
 
             # ensure is valid filter
-            if key is None or value is None or operator is None:
-                continue
+            if key is None or value is None:
+                raise(ValueError("Invalid entity filter: missing key or value"))
 
             # do not filter stats
             if key.startswith("count(") or key == "mean(fwci)":
@@ -270,7 +275,6 @@ class RedshiftQueryHandler:
                 )
 
                 query = self.do_operator_query(models.AuthorLastKnownInstitutions.affiliation_id, operator, query, value)
-
             elif key == "affiliations.institution.country_code" and self.entity == "authors":
                 value = get_short_id_text(value)
                 value = value.upper()
@@ -464,11 +468,6 @@ class RedshiftQueryHandler:
                 stat, related_entity = parse_stats_column(column)
 
                 work_topic_class = getattr(models, "WorkTopic")
-
-                query = query.outerjoin(
-                    work_topic_class,
-                    work_topic_class.topic_id == entity_class.topic_id,
-                )
 
                 query = query.group_by(
                     *self.model_return_columns + [entity_class.topic_id]
