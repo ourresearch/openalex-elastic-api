@@ -1,0 +1,105 @@
+id: publishers
+icon: mdi-domain
+name: publishers
+nameSingular: publisher
+displayName: publishers
+displayNameSingular: publisher
+descr: Company hosting journals
+eg: Elsevier
+placeholder: Search academic publishers
+filterName: primary_location.source.publisher_lineage
+filterKey: primary_location.source.publisher_lineage
+descrFull: The publisher of scholarly articles, usually a company or organization.
+color: pink
+hasAutocomplete: true
+isNative: true
+idRegex: (?i)(?:publishers\/)?(?:https:\/\/openalex\.org\/)?(p\d+)
+showOnEntityPage:
+  - id
+  - display_name
+showOnTablePage:
+  - display_name
+columns:
+  id:
+    id: id
+    subjectEntity: publishers
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: publishers
+    objectEntity:
+    displayName: OpenAlex ID
+    isId: true
+    type: string
+    redshiftDisplayColumn: id
+    redshiftFilterColumn: id
+    actions: []
+    icon: mdi-domain
+    descr: The unique identifier for the publisher in OpenAlex.
+  display_name:
+    id: display_name
+    isColumnMandatory: true
+    subjectEntity: publishers
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: name
+    type: string
+    redshiftDisplayColumn: display_name
+    redshiftFilterColumn: display_name
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    category: other
+    icon: mdi-account-outline
+    descr: The name of the publisher.
+  display_name.search:
+    id: display_name.search
+    subjectEntity: publishers
+    operators:
+      - contains
+      - does not contain
+    defaultOperator: contains
+    objectEntity:
+    displayName: search display_name
+    type: string
+    redshiftDisplayColumn:
+    redshiftFilterColumn: display_name
+    actions:
+      - filter
+    actionsPopular:
+      - filter
+    category: search
+    icon: mdi-account-outline
+    descr: The name of the publisher.
+    isSearchColumn: true
+  country_code:
+    id: country_code
+    subjectEntity: publishers
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: countries
+    objectEntity: countries
+    displayName: Country
+    isId: true
+    type: object
+    redshiftDisplayColumn: country_code_formatted
+    redshiftFilterColumn: country_code
+    isExternalId: true
+    externalIdPrefix: countries
+    isCountry: true
+    actions:
+      - filter
+    actionsPopular:
+      - filter
+    icon: mdi-earth
+    descr: The country where the publisher is located.
+values:

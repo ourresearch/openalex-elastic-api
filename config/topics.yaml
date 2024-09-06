@@ -1,0 +1,188 @@
+id: topics
+icon: mdi-tag-outline
+name: topics
+nameSingular: topic
+displayName: topics
+displayNameSingular: topics
+descr: what works are about
+eg: RNA sequencing
+placeholder: Search topics
+filterName: topics
+filterKey: primary_topic.id
+descrFull: Topics are the fourth level of description of the subject area of works.
+  Each topic has a unique OpenAlex ID. Topics are above keywords but below domains,
+  fields, and subfields in the hierarchy of research areas in OpenAlex.
+hintVerb: ':'
+hasAutocomplete: true
+isNative: true
+idRegex: (?i)(?:topics\/)?(?:https:\/\/openalex\.org\/)?(t\d+)
+showOnEntityPage:
+  - id
+  - display_name
+  - description
+  - siblings
+  - subfield
+  - field
+  - domain
+showOnTablePage:
+  - display_name
+  - count(works)
+columns:
+  id:
+    id: id
+    subjectEntity: topics
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: topics
+    objectEntity:
+    displayName: OpenAlex ID
+    isId: true
+    type: string
+    redshiftDisplayColumn: id
+    redshiftFilterColumn: id
+    icon: mdi-tag-outline
+    descr: Unique identifier for the topic in OpenAlex.
+  display_name:
+    id: display_name
+    isColumnMandatory: true
+    subjectEntity: topics
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: name
+    type: string
+    redshiftDisplayColumn: display_name
+    redshiftFilterColumn: display_name
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    category: other
+    icon: mdi-account-outline
+    descr: The name of the topic.
+  display_name.search:
+    id: display_name.search
+    subjectEntity: topics
+    operators:
+      - contains
+      - does not contain
+    defaultOperator: contains
+    objectEntity:
+    displayName: search display_name
+    type: string
+    redshiftDisplayColumn:
+    redshiftFilterColumn: display_name
+    actions:
+      - filter
+    actionsPopular:
+      - filter
+    category: search
+    icon: mdi-account-outline
+    descr: The name of the topic.
+    isSearchColumn: true
+  description:
+    id: description
+    subjectEntity: topics
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: topics
+    objectEntity:
+    displayName: description
+    type: string
+    redshiftDisplayColumn: description
+    redshiftFilterColumn: description
+    actions:
+      - column
+    icon: mdi-tag-outline
+    descr: A description of the topic.
+  siblings:
+    id: siblings
+    isList: true
+    subjectEntity: topics
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: topics
+    objectEntity: topics
+    displayName: related topics (siblings)
+    type: array
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: Other topics that are closely related to this topic.
+  subfield:
+    id: subfield
+    subjectEntity: topics
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: subfields
+    objectEntity: subfields
+    displayName: subfield (parent)
+    type: object
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: The subfield that this topic belongs to.
+  field:
+    id: field
+    subjectEntity: topics
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: fields
+    objectEntity: fields
+    displayName: field
+    type: object
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: The field that this topic belongs to.
+  domain:
+    id: domain
+    subjectEntity: topics
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: domains
+    objectEntity: domains
+    displayName: domain
+    type: object
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: The domain that this topic belongs to.
+  count(works):
+    id: count(works)
+    subjectEntity: topics
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    entityId: works
+    objectEntity:
+    displayName: works count
+    type: number
+    redshiftDisplayColumn: count(works)
+    redshiftFilterColumn:
+    icon: mdi-tag-outline
+    descr: The number of works that are tagged with this topic.
+values:
