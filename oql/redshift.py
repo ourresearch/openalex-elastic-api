@@ -167,7 +167,7 @@ class RedshiftQueryHandler:
                 query = self.do_operator_query(model_column, operator, query, value)
             elif key == "authorships.institutions.id":
                 value = get_short_id_integer(value)
-                affiliation_class = getattr(models, "AffiliationDistinct")
+                affiliation_class = aliased(getattr(models, "AffiliationDistinct"))
                 query = query.join(
                     affiliation_class,
                     affiliation_class.paper_id == work_class.paper_id,
