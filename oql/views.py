@@ -109,29 +109,31 @@ def get_search(id):
     return jsonify(search)
 
 
+def serve_config(data, filename):
+    _format = request.args.get("format", "json")
+
+    if _format.lower() in {'yaml', 'yml'}:
+        yaml_config = yaml.dump(data, default_flow_style=False)
+        response = make_response(yaml_config)
+        response.headers['Content-Type'] = 'application/yaml'
+        response.headers[
+            'Content-Disposition'] = f'attachment; filename={filename}.yaml'
+        return response
+    else:
+        return jsonify(data)
+
+
 @blueprint.route("/entities/config", methods=["GET"])
 def entities_config():
-    _format = request.args.get("format", "json")
-    if _format.lower() in {'yaml', 'yml'}:
-        yaml_config = yaml.dump(all_entities_config, default_flow_style=False)
-        return yaml_config, 200, {'Content-Type': 'application/yaml'}
-    else:
-        return jsonify(all_entities_config)
+    return serve_config(all_entities_config, 'all_entities_config')
 
 
 @blueprint.route("/entities/<entity>/config", methods=["GET"])
 def entity_config(entity):
-    _format = request.args.get("format", "json")
     if entity not in all_entities_config:
         return jsonify({"error": "Entity not found"}), 404
 
-    config = all_entities_config[entity]
-
-    if _format.lower() in {'yaml', 'yml'}:
-        yaml_config = yaml.dump(config, default_flow_style=False)
-        return yaml_config, 200, {'Content-Type': 'application/yaml'}
-    else:
-        return jsonify(config)
+    return serve_config(all_entities_config[entity], f'{entity}_config')
 
 
 @blueprint.route('/test_stories', methods=['POST'])
