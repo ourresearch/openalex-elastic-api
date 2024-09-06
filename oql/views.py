@@ -3,6 +3,7 @@ import os
 import uuid
 
 import redis
+import yaml
 from flask import Blueprint, request, jsonify, make_response
 from redis.client import Redis
 
@@ -110,16 +111,27 @@ def get_search(id):
 
 @blueprint.route("/entities/config", methods=["GET"])
 def entities_config():
-    return jsonify(all_entities_config)
+    _format = request.args.get("format")
+    if _format.lower() in {'yaml', 'yml'}:
+        yaml_config = yaml.dump(all_entities_config, default_flow_style=False)
+        return yaml_config, 200, {'Content-Type': 'application/yaml'}
+    else:
+        return jsonify(all_entities_config)
 
 
 @blueprint.route("/entities/<entity>/config", methods=["GET"])
 def entity_config(entity):
+    _format = request.args.get("format", "json")
     if entity not in all_entities_config:
         return jsonify({"error": "Entity not found"}), 404
 
     config = all_entities_config[entity]
-    return jsonify(config)
+
+    if _format.lower() in {'yaml', 'yml'}:
+        yaml_config = yaml.dump(config, default_flow_style=False)
+        return yaml_config, 200, {'Content-Type': 'application/yaml'}
+    else:
+        return jsonify(config)
 
 
 @blueprint.route('/test_stories', methods=['POST'])
