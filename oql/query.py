@@ -34,9 +34,14 @@ class Query:
             show_columns=self.show_columns,
             valid_columns=self.valid_columns
         )
-        total_count, results = redshift_handler.execute()
-        self.total_count = total_count
-        json_data = self.format_results_as_json(results)
+        if self.entity == "summary":
+            results = redshift_handler.execute_summary()
+            self.total_count = results["count"]
+            json_data = {"results": [results]}
+        else:
+            total_count, results = redshift_handler.execute()
+            self.total_count = total_count
+            json_data = self.format_results_as_json(results)
         return json_data
 
     def format_results_as_json(self, results):
@@ -83,6 +88,8 @@ class Query:
         if show_columns:
             # if show_columns is passed in, use that
             columns = show_columns
+        elif self.entity == "summary":
+            return ["count", "sum(cited_by_count)", "mean(cited_by_count)",  "mean(fwci)", "sum(is_oa)", "percent(is_oa)"]
         elif self.entity and self.entity in all_entities_config:
             # otherwise, use the default columns for the entity
             columns = all_entities_config[self.entity]["showOnTablePage"]

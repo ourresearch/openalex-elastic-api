@@ -28,7 +28,7 @@ class RedshiftQueryHandler:
         self.sort_by_order = sort_by_order
         self.valid_columns = valid_columns
         self.model_return_columns = []
-        self.entity_config = all_entities_config.get(entity).get("columns")
+        self.entity_config = self.get_entity_config()
         self.works_config = all_entities_config.get("works").get("columns")
 
     def execute(self):
@@ -47,6 +47,17 @@ class RedshiftQueryHandler:
         results = query.limit(100).all()
 
         return total_count, results
+
+    def execute_summary(self):
+        entity_class = get_entity_class(self.entity)
+
+        query = self.build_joins(entity_class)
+        query = self.set_columns(query, entity_class)
+        query = self.apply_work_filters(query)
+        query = self.apply_entity_filters(query, entity_class)
+        summary = self.get_summary(query)
+
+        return summary
 
     def build_joins(self, entity_class):
         columns_to_select = [entity_class]
@@ -306,6 +317,31 @@ class RedshiftQueryHandler:
             else:
                 query = self.do_operator_query(model_column, operator, query, value)
         return query
+
+    def get_summary(self, query):
+        if self.entity != "summary":
+            return None
+
+        summary_query = query.with_entities(
+            func.count().label("count"),
+            func.sum(models.Work.cited_by_count).label("sum(cited_by_count)"),
+            func.sum(case([(models.Work.oa_status != "closed", 1)], else_=0)).label("sum(is_open_access)"),
+            func.avg(models.Work.fwci).label("mean(fwci)"),
+            func.avg(models.Work.cited_by_count).label("mean(cited_by_count)")
+        )
+
+        count, citation_count, open_access_count, mean_fwci, mean_citation_count = db.session.execute(
+            summary_query).fetchone()
+
+        return {
+            "id": "summary",
+            "count": count,
+            "sum(cited_by_count)": citation_count,
+            "sum(is_oa)": open_access_count,
+            "mean(fwci)": mean_fwci,
+            "mean(cited_by_count)": mean_citation_count,
+            "percent(is_oa)": open_access_count / count if count > 0 else 0
+        }
 
     @staticmethod
     def do_operator_query(column, operator, query, value):
@@ -609,6 +645,10 @@ class RedshiftQueryHandler:
             query = query.having(stat_function != int(value))
         return query
 
+    def get_entity_config(self):
+        entity_for_config = "works" if self.entity == "summary" else self.entity
+        return all_entities_config.get(entity_for_config).get("columns")
+
 
 def get_entity_class(entity):
     if entity == "countries":
@@ -619,6 +659,8 @@ def get_entity_class(entity):
         entity_class = getattr(models, "SourceType")
     elif entity == "work-types":
         entity_class = getattr(models, "WorkType")
+    elif entity == "summary":
+        entity_class = getattr(models, "Work")
     else:
         entity_class = getattr(models, entity[:-1].capitalize())
     return entity_class

@@ -3,7 +3,7 @@ from combined_config import all_entities_config
 
 class ResultTable:
     def __init__(self, entity, show_columns, json_data, page=1, per_page=100, total_count=0):
-        self.entity = entity
+        self.entity = "works" if entity == "summary" else entity
         self.show_columns = show_columns
         self.json_data = json_data
         self.page = page
