@@ -19,6 +19,7 @@ showOnEntityPage:
   - display_name
 showOnTablePage:
   - display_name
+  - count(works)
 columns:
   id:
     id: id
