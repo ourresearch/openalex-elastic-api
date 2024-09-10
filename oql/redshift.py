@@ -227,6 +227,10 @@ class RedshiftQueryHandler:
                     models.Affiliation.author_id == models.Author.author_id
                 )
                 query = query.filter(models.Author.orcid == value)
+            elif key == "language":
+                value = value.lower()
+                value = get_short_id_text(value)
+                query = self.do_operator_query(model_column, operator, query, value)
             # id filters
             elif (
                 column_type == "object" or column_type == "array"

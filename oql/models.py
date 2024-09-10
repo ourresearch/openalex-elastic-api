@@ -14,6 +14,7 @@ class Work(db.Model):
     journal_id = Column(BigInteger)
     publication_date = Column(String(500))
     is_paratext = Column(Boolean)
+    language = Column(String(300))
     oa_status = Column(String(500))
     type = Column(String(500))
     type_crossref = Column(String(500))
@@ -44,6 +45,10 @@ class Work(db.Model):
     @property
     def type_formatted(self):
         return {"id": f"types/{self.type}", "display_name": self.type}
+
+    @property
+    def language_formatted(self):
+        return {"id": f"languages/{self.language}", "display_name": self.language.upper()} if self.language else None
 
     @property
     def primary_location(self):
