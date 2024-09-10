@@ -325,7 +325,7 @@ class RedshiftQueryHandler:
         summary_query = query.with_entities(
             func.count().label("count"),
             func.sum(models.Work.cited_by_count).label("sum(cited_by_count)"),
-            func.sum(case([(models.Work.oa_status != "closed", 1)], else_=0)).label("sum(is_open_access)"),
+            func.sum(case([(models.Work.oa_status.in_(["gold", "hybrid", "green"]), 1)], else_=0)).label("sum(is_oa)"),
             func.avg(models.Work.fwci).label("mean(fwci)"),
             func.avg(models.Work.cited_by_count).label("mean(cited_by_count)")
         )
@@ -483,7 +483,7 @@ class RedshiftQueryHandler:
                 query = query.group_by(*self.model_return_columns)
 
                 open_access_case = case(
-                    [(work_class.oa_status != "closed", 1)],
+                    [(work_class.oa_status.in_(["gold", "hybrid", "green"]), 1)],
                     else_=0
                 )
 
