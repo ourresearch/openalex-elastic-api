@@ -134,14 +134,13 @@ columns:
     actionsPopular: []
     icon: mdi-domain
     descr: The organization or publisher that publishes the source.
-  host_organization.search:
-    id: host_organization.search
+  host_organization_name:
+    id: host_organization_name
     subjectEntity: sources
     operators:
       - is
       - is not
-      - contains
-    defaultOperator: contains
+    defaultOperator: is
     entityId: publishers
     objectEntity: publishers
     displayName: Publisher
