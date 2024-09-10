@@ -790,4 +790,96 @@ columns:
       - filter
     icon: mdi-file-document-outline
     descr: Searches the title of the work.
+  count:
+    id: count
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: works count
+    objectEntity:
+    type: number
+    apiField:
+    redshiftDisplayColumn: count
+    redshiftFilterColumn: count
+    actions:
+      - summary
+    actionsPopular:
+    icon: mdi-file-document-outline
+    descr: The number of works.
+  mean(cited_by_count):
+    id: mean(cited_by_count)
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: mean citation count
+    objectEntity:
+    type: number
+    apiField:
+    redshiftDisplayColumn: mean_cited_by_count
+    redshiftFilterColumn: mean_cited_by_count
+    actions:
+      - summary
+    icon: mdi-file-document-outline
+    descr: The mean number of times the works have been cited by other works.
+  mean(fwci):
+    id: mean(fwci)
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: mean(fwci)
+    objectEntity:
+    type: number
+    apiField: mean(fwci)
+    redshiftDisplayColumn: mean_fwci
+    redshiftFilterColumn: mean_fwci
+    actions:
+      - summary
+    icon: mdi-file-document-outline
+    descr: The mean Field-Weighted Citation Impact (FWCI) of the works.
+  percent(is_oa):
+    id: percent(is_oa)
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: percent open access
+    objectEntity:
+    type: number
+    apiField: percent(is_oa)
+    redshiftDisplayColumn: percent_is_oa
+    redshiftFilterColumn: percent_is_oa
+    actions:
+      - summary
+    icon: mdi-file-document-outline
+    descr: The percentage of works that are open access.
+  sum(cited_by_count):
+    id: sum(cited_by_count)
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: sum citation count
+    objectEntity:
+    type: number
+    apiField:
+    redshiftDisplayColumn: sum_cited_by_count
+    redshiftFilterColumn: sum_cited_by_count
+    actions:
+      - summary
+    icon: mdi-file-document-outline
+    descr: The total number of times the works have been cited by other works.
+  sum(is_oa):
+    id: sum(is_oa)
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: sum of open access
+    objectEntity:
+    type: number
+    apiField: sum(is_oa)
+    redshiftDisplayColumn: sum_is_oa
+    redshiftFilterColumn: sum_is_oa
+    actions:
+      - summary
+    icon: mdi-file-document-outline
+    descr: The total number of open access works.
+
 values:
