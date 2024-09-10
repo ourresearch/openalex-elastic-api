@@ -104,4 +104,26 @@ columns:
     category: other
     icon: mdi-account-outline
     descr: The number of works that have this keyword
+  sum(citations):
+    id: sum(citations)
+    subjectEntity: keywords
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    objectEntity:
+    displayName: citation sum
+    type: number
+    redshiftDisplayColumn: sum(citations)
+    redshiftFilterColumn: sum(citations)
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The sum of citations for this keyword in OpenAlex
 values:

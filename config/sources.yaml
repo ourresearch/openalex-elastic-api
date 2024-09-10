@@ -134,6 +134,24 @@ columns:
     actionsPopular: []
     icon: mdi-domain
     descr: The organization or publisher that publishes the source.
+  host_organization.search:
+    id: host_organization.search
+    subjectEntity: sources
+    operators:
+      - is
+      - is not
+      - contains
+    defaultOperator: contains
+    entityId: publishers
+    objectEntity: publishers
+    displayName: Publisher
+    type: object
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: [ ]
+    actionsPopular: [ ]
+    icon: mdi-domain
+    descr: Name search of the host organization that publishes the source
   type:
     id: type
     subjectEntity: sources
@@ -209,23 +227,23 @@ columns:
       - filter
     icon: mdi-lock-open-outline
     descr: Whether the source is listed in the Directory of Open Access Journals (DOAJ).
-  alternate_titles:
-    id: alternate_titles
-    isList: true
-    subjectEntity: sources
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    objectEntity:
-    displayName: alternate names
-    type: array
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
-    actions: []
-    actionsPopular: []
-    icon: mdi-book-open-outline
-    descr: Alternate names for the source.
+#  alternate_titles:
+#    id: alternate_titles
+#    isList: true
+#    subjectEntity: sources
+#    operators:
+#      - is
+#      - is not
+#    defaultOperator: is
+#    objectEntity:
+#    displayName: alternate names
+#    type: array
+#    redshiftDisplayColumn:
+#    redshiftFilterColumn:
+#    actions: []
+#    actionsPopular: []
+#    icon: mdi-book-open-outline
+#    descr: Alternate names for the source.
   count(works):
     id: count(works)
     subjectEntity: sources
@@ -248,4 +266,26 @@ columns:
       - column
     icon: mdi-book-open-variant
     descr: The number of works published by the source.
+  sum(citations):
+    id: sum(citations)
+    subjectEntity: sources
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    objectEntity:
+    displayName: citation sum
+    type: number
+    redshiftDisplayColumn: sum(citations)
+    redshiftFilterColumn: sum(citations)
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The sum of citations of works for this source
 values:

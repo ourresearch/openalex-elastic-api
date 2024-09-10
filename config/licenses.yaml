@@ -78,23 +78,68 @@ columns:
     icon: mdi-account-outline
     descr: The name of the license.
     isSearchColumn: true
-  description:
-    id: description
+#  description:
+#    id: description
+#    subjectEntity: licenses
+#    operators:
+#      - is
+#      - is not
+#    defaultOperator: is
+#    entityId: licenses
+#    objectEntity:
+#    displayName: description
+#    type: string
+#    redshiftDisplayColumn: description
+#    redshiftFilterColumn: description
+#    actions:
+#      - column
+#    icon: mdi-shape-outline
+#    descr: A description of the license.
+  count(works):
+    id: count(works)
     subjectEntity: licenses
     operators:
       - is
       - is not
+      - is greater than
+      - is less than
     defaultOperator: is
-    entityId: licenses
     objectEntity:
-    displayName: description
-    type: string
-    redshiftDisplayColumn: description
-    redshiftFilterColumn: description
+    displayName: works count
+    type: number
+    redshiftDisplayColumn: count(works)
+    redshiftFilterColumn: count(works)
     actions:
+      - sort
       - column
-    icon: mdi-shape-outline
-    descr: A description of the license.
+    actionsPopular:
+      - sort
+      - column
+    category: other
+    icon: mdi-account-outline
+    descr: The number of works that are under this license
+  sum(citations):
+    id: sum(citations)
+    subjectEntity: licenses
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    objectEntity:
+    displayName: citation sum
+    type: number
+    redshiftDisplayColumn: sum(citations)
+    redshiftFilterColumn: sum(citations)
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: Number of works cited that are under this license
 values:
   - id: licenses/cc-by
     display_name: CC BY

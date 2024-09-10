@@ -84,57 +84,57 @@ columns:
     icon: mdi-account-outline
     descr: The name of the subfield.
     isSearchColumn: true
-  description:
-    id: description
-    subjectEntity: subfields
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    entityId: subfields
-    objectEntity:
-    displayName: description
-    type: string
-    redshiftDisplayColumn: description
-    redshiftFilterColumn: description
-    actions:
-      - column
-    icon: mdi-tag-outline
-    descr: A description of the subfield.
-  topics:
-    id: topics
-    isList: true
-    subjectEntity: subfields
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    entityId: topics
-    objectEntity: topics
-    displayName: topics (children)
-    type: array
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
-    actions: []
-    icon: mdi-tag-outline
-    descr: The topics that are children of this subfield.
-  siblings:
-    id: siblings
-    isList: true
-    subjectEntity: subfields
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    entityId: subfields
-    objectEntity: subfields
-    displayName: related subfields (siblings)
-    type: array
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
-    actions: []
-    icon: mdi-tag-outline
-    descr: The subfields that are related to this subfield.
+#  description:
+#    id: description
+#    subjectEntity: subfields
+#    operators:
+#      - is
+#      - is not
+#    defaultOperator: is
+#    entityId: subfields
+#    objectEntity:
+#    displayName: description
+#    type: string
+#    redshiftDisplayColumn: description
+#    redshiftFilterColumn: description
+#    actions:
+#      - column
+#    icon: mdi-tag-outline
+#    descr: A description of the subfield.
+#  topics:
+#    id: topics
+#    isList: true
+#    subjectEntity: subfields
+#    operators:
+#      - is
+#      - is not
+#    defaultOperator: is
+#    entityId: topics
+#    objectEntity: topics
+#    displayName: topics (children)
+#    type: array
+#    redshiftDisplayColumn:
+#    redshiftFilterColumn:
+#    actions: []
+#    icon: mdi-tag-outline
+#    descr: The topics that are children of this subfield.
+#  siblings:
+#    id: siblings
+#    isList: true
+#    subjectEntity: subfields
+#    operators:
+#      - is
+#      - is not
+#    defaultOperator: is
+#    entityId: subfields
+#    objectEntity: subfields
+#    displayName: related subfields (siblings)
+#    type: array
+#    redshiftDisplayColumn:
+#    redshiftFilterColumn:
+#    actions: []
+#    icon: mdi-tag-outline
+#    descr: The subfields that are related to this subfield.
   field:
     id: field
     subjectEntity: subfields
@@ -151,22 +151,67 @@ columns:
     actions: []
     icon: mdi-tag-outline
     descr: The field that is the parent of this subfield.
-  domain:
-    id: domain
+#  domain:
+#    id: domain
+#    subjectEntity: subfields
+#    operators:
+#      - is
+#      - is not
+#    defaultOperator: is
+#    entityId: domains
+#    objectEntity: domains
+#    displayName: domain
+#    type: object
+#    redshiftDisplayColumn:
+#    redshiftFilterColumn:
+#    actions: []
+#    icon: mdi-tag-outline
+#    descr: The domain that is the parent of this subfield.
+  count(works):
+    id: count(works)
     subjectEntity: subfields
     operators:
       - is
       - is not
+      - is greater than
+      - is less than
     defaultOperator: is
-    entityId: domains
-    objectEntity: domains
-    displayName: domain
-    type: object
-    redshiftDisplayColumn:
+    objectEntity:
+    displayName: works count
+    type: number
+    redshiftDisplayColumn: count(works)
     redshiftFilterColumn:
-    actions: []
-    icon: mdi-tag-outline
-    descr: The domain that is the parent of this subfield.
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The number of works published in this subfield
+  sum(citations):
+    id: sum(citations)
+    subjectEntity: subfields
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    objectEntity:
+    displayName: citation sum
+    type: number
+    redshiftDisplayColumn: sum(citations)
+    redshiftFilterColumn: sum(citations)
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The sum of works cited for this subfield
+
 values:
   - id: subfields/3312
     display_name: Sociology and Political Science

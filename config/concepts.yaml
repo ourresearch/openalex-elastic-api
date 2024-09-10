@@ -66,21 +66,8 @@ columns:
     type: string
     icon: mdi-magnify
     descr: Display name for search
-  description:
-    id: description
-    subjectEntity: concepts
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    entityId: concepts
-    objectEntity: concepts
-    displayName: description
-    type: string
-    icon: mdi-tag-outline
-    descr: A description of this concept or field of study
-  level:
-    id: level
+  count(works):
+    id: count(works)
     subjectEntity: concepts
     operators:
       - is
@@ -88,10 +75,69 @@ columns:
       - is greater than
       - is less than
     defaultOperator: is
-    displayName: Level
-    maxPotentialFiltersToShow: 10
+    entityId: works
+    objectEntity:
+    displayName: works count
     type: number
-    icon: mdi-tag-outline
-    descr: The level of this concept in the hierarchy of concepts from level 0 to
-      level 6
+    redshiftDisplayColumn: count(works)
+    redshiftFilterColumn:
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The number of works related to the concept
+  sum(citations):
+    id: sum(citations)
+    subjectEntity: concepts
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    entityId: works
+    objectEntity:
+    displayName: citations sum
+    type: number
+    redshiftDisplayColumn: sum(citations)
+    redshiftFilterColumn:
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: Number of times a work related to the concept has been cited
+#  description:
+#    id: description
+#    subjectEntity: concepts
+#    operators:
+#      - is
+#      - is not
+#    defaultOperator: is
+#    entityId: concepts
+#    objectEntity: concepts
+#    displayName: description
+#    type: string
+#    icon: mdi-tag-outline
+#    descr: A description of this concept or field of study
+#  level:
+#    id: level
+#    subjectEntity: concepts
+#    operators:
+#      - is
+#      - is not
+#      - is greater than
+#      - is less than
+#    defaultOperator: is
+#    displayName: Level
+#    maxPotentialFiltersToShow: 10
+#    type: number
+#    icon: mdi-tag-outline
+#    descr: The level of this concept in the hierarchy of concepts from level 0 to
+#      level 6
 values:

@@ -80,28 +80,28 @@ columns:
     icon: mdi-account-outline
     descr: The name of the Sustainable Development Goal (SDG).
     isSearchColumn: true
-  description:
-    id: description
-    isColumnMandatory: true
-    subjectEntity: sdgs
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    objectEntity:
-    displayName: description
-    type: string
-    redshiftDisplayColumn: description
-    redshiftFilterColumn: description
-    actions:
-      - sort
-      - column
-    actionsPopular:
-      - sort
-      - column
-    category: other
-    icon: mdi-account-outline
-    descr: The description of the Sustainable Development Goal (SDG).
+#  description:
+#    id: description
+#    isColumnMandatory: true
+#    subjectEntity: sdgs
+#    operators:
+#      - is
+#      - is not
+#    defaultOperator: is
+#    objectEntity:
+#    displayName: description
+#    type: string
+#    redshiftDisplayColumn: description
+#    redshiftFilterColumn: description
+#    actions:
+#      - sort
+#      - column
+#    actionsPopular:
+#      - sort
+#      - column
+#    category: other
+#    icon: mdi-account-outline
+#    descr: The description of the Sustainable Development Goal (SDG).
   count(works):
     id: count(works)
     subjectEntity: sdgs
@@ -125,6 +125,28 @@ columns:
     category: other
     icon: mdi-account-outline
     descr: The number of works associated with the Sustainable Development Goal (SDG).
+  sum(citations):
+    id: sum(citations)
+    subjectEntity: sdgs
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    objectEntity:
+    displayName: citation sum
+    type: number
+    redshiftDisplayColumn: sum(citations)
+    redshiftFilterColumn: sum(citations)
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The sum of citations of works for this SDG
 values:
   - id: sdgs/3
     display_name: Good health and well-being

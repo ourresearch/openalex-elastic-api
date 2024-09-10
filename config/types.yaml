@@ -80,40 +80,80 @@ columns:
     icon: mdi-account-outline
     descr: The name of the work type.
     isSearchColumn: true
-  description:
-    id: description
-    subjectEntity: types
+#  description:
+#    id: description
+#    subjectEntity: types
+#    operators:
+#      - is
+#      - is not
+#    defaultOperator: is
+#    entityId: types
+#    objectEntity:
+#    displayName: description
+#    type: string
+#    redshiftDisplayColumn: description
+#    redshiftFilterColumn:
+#    actions:
+#      - column
+#    icon: mdi-shape-outline
+#    descr: A description of the work type.
+#  crossref_types:
+#    id: crossref_types
+#    isList: true
+#    subjectEntity: types
+#    operators:
+#      - is
+#      - is not
+#    defaultOperator: is
+#    entityId: types
+#    objectEntity:
+#    displayName: alternate names (Crossref)
+#    type: array
+#    redshiftDisplayColumn:
+#    redshiftFilterColumn:
+#    actions: []
+#    icon: mdi-shape-outline
+#    descr: Alternate names for the work type from Crossref.
+  count(works):
+    id: count(works)
+    subjectEntity: topics
     operators:
       - is
       - is not
+      - is greater than
+      - is less than
     defaultOperator: is
-    entityId: types
+    entityId: works
     objectEntity:
-    displayName: description
-    type: string
-    redshiftDisplayColumn: description
+    displayName: works count
+    type: number
+    redshiftDisplayColumn: count(works)
     redshiftFilterColumn:
+    icon: mdi-tag-outline
+    descr: The number of works of this type
+  sum(citations):
+    id: sum(citations)
+    subjectEntity: topics
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    objectEntity:
+    displayName: citation sum
+    type: number
+    redshiftDisplayColumn: sum(citations)
+    redshiftFilterColumn: sum(citations)
     actions:
+      - sort
       - column
-    icon: mdi-shape-outline
-    descr: A description of the work type.
-  crossref_types:
-    id: crossref_types
-    isList: true
-    subjectEntity: types
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    entityId: types
-    objectEntity:
-    displayName: alternate names (Crossref)
-    type: array
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
-    actions: []
-    icon: mdi-shape-outline
-    descr: Alternate names for the work type from Crossref.
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The sum of works cited that are of this type
+
 values:
   - id: types/article
     display_name: article

@@ -82,57 +82,103 @@ columns:
     icon: mdi-account-outline
     descr: The name of the domain
     isSearchColumn: true
-  description:
-    id: description
+  count(works):
+    id: count(works)
     subjectEntity: domains
     operators:
       - is
       - is not
+      - is greater than
+      - is less than
     defaultOperator: is
-    entityId: domains
+    entityId: works
     objectEntity:
-    displayName: description
-    type: string
-    redshiftDisplayColumn: description
+    displayName: works count
+    type: number
+    redshiftDisplayColumn: count(works)
     redshiftFilterColumn:
     actions:
+      - sort
       - column
-    icon: mdi-tag-outline
-    descr: A description of the domain
-  fields:
-    id: fields
-    isList: true
-    subjectEntity: domains
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The number of works that fall under this domain
+  sum(citations):
+    id: sum(citations)
+    subjectEntity: fields
     operators:
       - is
       - is not
+      - is greater than
+      - is less than
     defaultOperator: is
-    entityId: fields
+    entityId: works
     objectEntity:
-    displayName: fields (children)
-    type: array
-    redshiftDisplayColumn:
+    displayName: citations sum
+    type: number
+    redshiftDisplayColumn: sum(citations)
     redshiftFilterColumn:
-    actions: []
-    icon: mdi-tag-outline
-    descr: The set of fields that are children of this domain
-  siblings:
-    id: siblings
-    isList: true
-    subjectEntity: domains
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    entityId: domains
-    objectEntity: domains
-    displayName: other domains (siblings)
-    type: array
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
-    actions: []
-    icon: mdi-tag-outline
-    descr: The set of domains that are siblings of this domain
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: Number of times that works under this domain have been cited
+#  description:
+#    id: description
+#    subjectEntity: domains
+#    operators:
+#      - is
+#      - is not
+#    defaultOperator: is
+#    entityId: domains
+#    objectEntity:
+#    displayName: description
+#    type: string
+#    redshiftDisplayColumn: description
+#    redshiftFilterColumn:
+#    actions:
+#      - column
+#    icon: mdi-tag-outline
+#    descr: A description of the domain
+#  fields:
+#    id: fields
+#    isList: true
+#    subjectEntity: domains
+#    operators:
+#      - is
+#      - is not
+#    defaultOperator: is
+#    entityId: fields
+#    objectEntity:
+#    displayName: fields (children)
+#    type: array
+#    redshiftDisplayColumn:
+#    redshiftFilterColumn:
+#    actions: []
+#    icon: mdi-tag-outline
+#    descr: The set of fields that are children of this domain
+#  siblings:
+#    id: siblings
+#    isList: true
+#    subjectEntity: domains
+#    operators:
+#      - is
+#      - is not
+#    defaultOperator: is
+#    entityId: domains
+#    objectEntity: domains
+#    displayName: other domains (siblings)
+#    type: array
+#    redshiftDisplayColumn:
+#    redshiftFilterColumn:
+#    actions: []
+#    icon: mdi-tag-outline
+#    descr: The set of domains that are siblings of this domain
 values:
   - id: domains/3
     display_name: Physical Sciences

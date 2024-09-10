@@ -317,4 +317,27 @@ columns:
       - column
     icon: mdi-book-open-variant
     descr: The number of works that the author has created.
+  sum(citations):
+    id: sum(citations)
+    subjectEntity: authors
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    entityId: works
+    objectEntity:
+    displayName: citations sum
+    type: number
+    redshiftDisplayColumn: sum(citations)
+    redshiftFilterColumn:
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: Number of times the author has been cited
 values:

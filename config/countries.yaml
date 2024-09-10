@@ -101,6 +101,29 @@ columns:
       - column
     icon: mdi-book-open-variant
     descr: The number of works created by this country.
+  sum(citations):
+    id: sum(citations)
+    subjectEntity: countries
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    entityId: works
+    objectEntity:
+    displayName: citations sum
+    type: number
+    redshiftDisplayColumn: sum(citations)
+    redshiftFilterColumn:
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: Number of times authors from this country have been cited
 values:
   - id: countries/US
     display_name: United States of America
