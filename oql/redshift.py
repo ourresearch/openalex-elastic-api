@@ -583,7 +583,7 @@ class RedshiftQueryHandler:
                         query, self.sort_by_order, stat_function
                     )
             # sum citations
-            elif column == "sum(citations)" and self.entity == "institutions":
+            elif column == "sum(citations)" and (self.entity == "authors" or self.entity == "institutions"):
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
