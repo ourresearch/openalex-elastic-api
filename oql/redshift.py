@@ -259,7 +259,12 @@ class RedshiftQueryHandler:
                 query = self.do_operator_query(column, operator, query, value)
             elif key == "authorships.author.id":
                 value = get_short_id_integer(value)
-                affiliation_class = getattr(models, "Affiliation")
+                work_class = getattr(models, "Work")
+                affiliation_class = aliased(getattr(models, "Affiliation"))
+                query = query.join(
+                    affiliation_class,
+                    affiliation_class.paper_id == work_class.paper_id,
+                )
                 column = affiliation_class.author_id
                 query = self.do_operator_query(column, operator, query, value)
             elif key == "authorships.countries":
@@ -645,7 +650,7 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "mean(fwci)" and self.entity == "institutions":
+            elif column == "mean(fwci)" and (self.entity == "institutions" or self.entity == "authors"):
                 work_class = getattr(models, "Work")
 
                 stat_function = func.avg(work_class.fwci)
