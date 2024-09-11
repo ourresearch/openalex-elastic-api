@@ -606,6 +606,23 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
+            elif column == "sum(citations)" and (self.entity == "sources" or self.entity == "topics"):
+                stat, related_entity = parse_stats_column(column)
+
+                work_class = getattr(models, "Work")
+
+                query = query.group_by(*self.model_return_columns)
+
+                stat_function = func.sum(work_class.cited_by_count)
+
+                query = query.add_columns(
+                    stat_function.label(f"{stat}({related_entity})")
+                )
+
+                if self.sort_by_column == column:
+                    query = self.sort_from_stat(
+                        query, self.sort_by_order, stat_function
+                    )
             elif column == "mean(fwci)" and self.entity == "institutions":
                 work_class = getattr(models, "Work")
 
