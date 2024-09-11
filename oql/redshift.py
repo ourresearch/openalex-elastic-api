@@ -149,6 +149,30 @@ class RedshiftQueryHandler:
                 .join(models.WorkKeyword, models.WorkKeyword.keyword_id == entity_class.keyword_id)
                 .join(models.Work, models.Work.paper_id == models.WorkKeyword.paper_id)
             )
+        elif self.entity == "domains":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.Topic, models.Topic.domain_id == models.Domain.domain_id)
+                .join(models.WorkTopic, models.WorkTopic.topic_id == models.Topic.topic_id)
+                .join(models.Work, models.Work.paper_id == models.WorkTopic.paper_id)
+            )
+        elif self.entity == "fields":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.Topic, models.Topic.field_id == models.Field.field_id)
+                .join(models.WorkTopic, models.WorkTopic.topic_id == models.Topic.topic_id)
+                .join(models.Work, models.Work.paper_id == models.WorkTopic.paper_id)
+            )
+        elif self.entity == "subfields":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.Topic, models.Topic.subfield_id == models.Subfield.subfield_id)
+                .join(models.WorkTopic, models.WorkTopic.topic_id == models.Topic.topic_id)
+                .join(models.Work, models.Work.paper_id == models.WorkTopic.paper_id)
+            )
         else:
             query = db.session.query(*columns_to_select)
 
@@ -529,7 +553,7 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "count(works)" and (self.entity == "sdgs" or self.entity == "types"):
+            elif column == "count(works)" and self.entity in ["domains", "fields", "sdgs", "subfields", "types"]:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
@@ -591,7 +615,7 @@ class RedshiftQueryHandler:
                         query, self.sort_by_order, stat_function
                     )
             # sum citations
-            elif column == "sum(citations)" and self.entity in ["authors", "countries", "institutions", "keywords", "languages", "types", "sdgs", "sources", "topics"]:
+            elif column == "sum(citations)" and self.entity in ["authors", "countries", "domains", "fields", "institutions", "keywords", "languages", "subfields", "types", "sdgs", "sources", "topics"]:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
