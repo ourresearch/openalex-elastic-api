@@ -746,8 +746,8 @@ columns:
     displayNullAs: Unknown
     category: other
     apiField: sustainable_development_goals.id
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftDisplayColumn: sdgs
+    redshiftFilterColumn: sdgs
     actions: []
     icon: mdi-sprout-outline
     descr: The Sustainable Development Goals (SDGs) associated with the work.

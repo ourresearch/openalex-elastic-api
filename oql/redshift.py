@@ -244,6 +244,15 @@ class RedshiftQueryHandler:
                 value = value.lower()
                 value = get_short_id_text(value)
                 query = self.do_operator_query(model_column, operator, query, value)
+            elif key == "sustainable_development_goals.id":
+                value = get_short_id_integer(value)
+                work_sdg_class = aliased(getattr(models, "WorkSdg"))
+                query = query.join(
+                    work_sdg_class,
+                    work_sdg_class.paper_id == work_class.paper_id,
+                )
+                column = work_sdg_class.sdg_id
+                query = self.do_operator_query(column, operator, query, value)
             # id filters
             elif (
                 column_type == "object" or column_type == "array"
