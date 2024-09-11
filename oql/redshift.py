@@ -286,6 +286,7 @@ class RedshiftQueryHandler:
             redshift_column = self.entity_config.get(key).get("redshiftFilterColumn")
             column_type = self.entity_config.get(key).get("type")
             is_object_entity = self.entity_config.get(key).get("objectEntity")
+            is_search_column = self.entity_config.get(key).get("isSearchColumn")
 
             if not redshift_column:
                 raise(ValueError(f"Column {key} not found in entity config"))
@@ -297,10 +298,10 @@ class RedshiftQueryHandler:
                 query = self.filter_by_number(model_column, operator, query, value)
             elif column_type == "boolean":
                 query = self.filter_by_boolean(model_column, query, value)
+            elif is_search_column:
+                query = query.filter(model_column.ilike(f"%{value}%"))
             elif column_type == "string":
                 query = self.do_operator_query(model_column, operator, query, value)
-            elif column_type == "search":
-                query = query.filter(model_column.ilike(f"%{value}%"))
             # specialized filters
             elif key == "last_known_institutions.id" and self.entity == "authors":
                 value = get_short_id_integer(value)

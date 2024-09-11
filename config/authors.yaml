@@ -116,8 +116,8 @@ columns:
     actionsPopular:
       - filter
     category: search
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftDisplayColumn: display_name
+    redshiftFilterColumn: display_name
     icon: mdi-account-outline
     descr: The name of the author.
     isSearchColumn: true
