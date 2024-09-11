@@ -73,6 +73,28 @@ class RedshiftQueryHandler:
                 )
                 .join(models.Work, models.Work.paper_id == models.Affiliation.paper_id)
             )
+        elif self.entity == "countries":
+            institution_class = models.Institution
+            affiliation_class = models.Affiliation
+            work_class = models.Work
+            country_class = models.Country
+
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(
+                    institution_class,
+                    institution_class.country_code == country_class.country_id
+                )
+                .join(
+                    affiliation_class,
+                    affiliation_class.affiliation_id == institution_class.affiliation_id
+                )
+                .join(
+                    work_class,
+                    work_class.paper_id == affiliation_class.paper_id
+                )
+            )
         elif self.entity == "authors":
             query = (
                 db.session.query(*columns_to_select)
@@ -434,7 +456,7 @@ class RedshiftQueryHandler:
         for column in self.show_columns:
             # count works
             if column == "count(works)" and (
-                self.entity == "authors" or self.entity == "institutions"
+                self.entity == "authors" or self.entity == "institutions" or self.entity == "countries"
             ):
                 stat, related_entity = parse_stats_column(column)
 
@@ -459,35 +481,6 @@ class RedshiftQueryHandler:
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
                         )
-
-                if self.sort_by_column == column:
-                    query = self.sort_from_stat(
-                        query, self.sort_by_order, stat_function
-                    )
-            elif column == "count(works)" and self.entity == "countries":
-                stat, related_entity = parse_stats_column(column)
-
-                affiliation_class = getattr(models, "Affiliation")
-                institution_class = getattr(models, "Institution")
-
-                query = query.join(
-                    institution_class,
-                    affiliation_class.affiliation_id
-                    == institution_class.affiliation_id,
-                )
-
-                query = query.group_by(
-                    *self.model_return_columns + [institution_class.country_code]
-                )
-
-                stat_function = func.count(
-                    func.distinct(affiliation_class.paper_id)
-                )
-
-                query = query.add_columns(
-                    institution_class.country_code,
-                    stat_function.label(f"{stat}({related_entity})"),
-                )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
@@ -536,7 +529,6 @@ class RedshiftQueryHandler:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
-
 
                 query = query.group_by(
                     *self.model_return_columns
@@ -595,7 +587,7 @@ class RedshiftQueryHandler:
                         query, self.sort_by_order, stat_function
                     )
             # sum citations
-            elif column == "sum(citations)" and (self.entity == "authors" or self.entity == "institutions"):
+            elif column == "sum(citations)" and (self.entity == "authors" or self.entity == "countries" or self.entity == "institutions"):
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
