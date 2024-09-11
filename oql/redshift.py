@@ -130,6 +130,12 @@ class RedshiftQueryHandler:
                 .join(models.Affiliation, models.Affiliation.paper_id == models.Work.paper_id)
                 .join(models.Institution, models.Institution.affiliation_id == models.Affiliation.affiliation_id)
             )
+        elif self.entity == "types":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.Work, models.Work.type == entity_class.work_type_id)
+            )
         elif self.entity == "languages":
             query = (
                 db.session.query(*columns_to_select)
@@ -455,9 +461,7 @@ class RedshiftQueryHandler:
     def apply_stats(self, query, entity_class):
         for column in self.show_columns:
             # count works
-            if column == "count(works)" and (
-                self.entity == "authors" or self.entity == "institutions" or self.entity == "countries"
-            ):
+            if column == "count(works)" and self.entity in ["authors", "countries", "institutions"]:
                 stat, related_entity = parse_stats_column(column)
 
                 # use the existing join to calculate count_works
@@ -525,7 +529,7 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "count(works)" and self.entity == "sdgs":
+            elif column == "count(works)" and (self.entity == "sdgs" or self.entity == "types"):
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
@@ -587,7 +591,7 @@ class RedshiftQueryHandler:
                         query, self.sort_by_order, stat_function
                     )
             # sum citations
-            elif column == "sum(citations)" and (self.entity == "authors" or self.entity == "countries" or self.entity == "institutions"):
+            elif column == "sum(citations)" and self.entity in ["authors", "countries", "institutions", "keywords", "languages", "types", "sdgs", "sources", "topics"]:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
@@ -605,23 +609,6 @@ class RedshiftQueryHandler:
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
                         )
-
-                if self.sort_by_column == column:
-                    query = self.sort_from_stat(
-                        query, self.sort_by_order, stat_function
-                    )
-            elif column == "sum(citations)" and self.entity in ["keywords", "languages", "sdgs", "sources", "topics"]:
-                stat, related_entity = parse_stats_column(column)
-
-                work_class = getattr(models, "Work")
-
-                query = query.group_by(*self.model_return_columns)
-
-                stat_function = func.sum(work_class.cited_by_count)
-
-                query = query.add_columns(
-                    stat_function.label(f"{stat}({related_entity})")
-                )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
@@ -743,6 +730,7 @@ def get_short_id_integer(value):
 
 def parse_stats_column(column):
     # use format like count(works) to get stat and entity
+    print(column)
     stat = column.split("(")[0]
     entity = column.split("(")[1].split(")")[0]
     return stat, entity
