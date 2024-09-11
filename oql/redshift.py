@@ -608,7 +608,7 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "sum(citations)" and self.entity in ["keywords", "sources", "topics"]:
+            elif column == "sum(citations)" and self.entity in ["keywords", "languages", "sdgs", "sources", "topics"]:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
