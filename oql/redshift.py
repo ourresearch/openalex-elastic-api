@@ -114,6 +114,13 @@ class RedshiftQueryHandler:
                 .distinct()
                 .join(models.Work, models.Work.language == entity_class.language_id)
             )
+        elif self.entity == "keywords":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.WorkKeyword, models.WorkKeyword.keyword_id == entity_class.keyword_id)
+                .join(models.Work, models.Work.paper_id == models.WorkKeyword.paper_id)
+            )
         else:
             query = db.session.query(*columns_to_select)
 
@@ -479,18 +486,13 @@ class RedshiftQueryHandler:
             elif column == "count(works)" and self.entity == "keywords":
                 stat, related_entity = parse_stats_column(column)
 
-                work_keyword_class = getattr(models, "WorkKeyword")
-
-                query = query.outerjoin(
-                    work_keyword_class,
-                    work_keyword_class.keyword_id == entity_class.keyword_id,
-                )
+                work_class = getattr(models, "Work")
 
                 query = query.group_by(
                     *self.model_return_columns + [entity_class.keyword_id]
                 )
 
-                stat_function = func.count(work_keyword_class.paper_id)
+                stat_function = func.count(work_class.paper_id)
 
                 query = query.add_columns(
                     stat_function.label(f"{stat}({related_entity})")
@@ -606,7 +608,7 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "sum(citations)" and (self.entity == "sources" or self.entity == "topics"):
+            elif column == "sum(citations)" and self.entity in ["keywords", "sources", "topics"]:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
