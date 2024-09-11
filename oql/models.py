@@ -653,6 +653,7 @@ class Source(db.Model):
     issn = Column(String(500), nullable=True)
     is_in_doaj = Column(Boolean, nullable=True)
     journal_id = Column(BigInteger, nullable=True)
+    publisher_id = Column(BigInteger, nullable=True)
 
     @hybrid_property
     def id(self):

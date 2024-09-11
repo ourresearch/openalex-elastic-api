@@ -173,6 +173,13 @@ class RedshiftQueryHandler:
                 .join(models.WorkTopic, models.WorkTopic.topic_id == models.Topic.topic_id)
                 .join(models.Work, models.Work.paper_id == models.WorkTopic.paper_id)
             )
+        elif self.entity == "publishers":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.Source, models.Source.source_id == models.Work.journal_id)
+                .join(models.Publisher, models.Publisher.publisher_id == models.Source.publisher_id)
+            )
         else:
             query = db.session.query(*columns_to_select)
 
@@ -553,7 +560,7 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "count(works)" and self.entity in ["domains", "fields", "sdgs", "subfields", "types"]:
+            elif column == "count(works)" and self.entity in ["domains", "fields", "publishers", "sdgs", "subfields", "types"]:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
@@ -615,7 +622,7 @@ class RedshiftQueryHandler:
                         query, self.sort_by_order, stat_function
                     )
             # sum citations
-            elif column == "sum(citations)" and self.entity in ["authors", "countries", "domains", "fields", "institutions", "keywords", "languages", "subfields", "types", "sdgs", "sources", "topics"]:
+            elif column == "sum(citations)" and self.entity in ["authors", "countries", "domains", "fields", "institutions", "keywords", "languages", "publishers", "subfields", "types", "sdgs", "sources", "topics"]:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
