@@ -666,7 +666,7 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "mean(fwci)" and self.entity in ["authors", "countries", "domains", "fields", "institutions", "keywords", "languages", "sdgs", "sources", "subfields", "types", "topics"]:
+            elif column == "mean(fwci)" and self.entity in ["authors", "countries", "domains", "fields", "funders", "institutions", "keywords", "languages", "publishers", "sdgs", "sources", "subfields", "types", "topics"]:
                 work_class = getattr(models, "Work")
 
                 stat_function = func.avg(work_class.fwci)

@@ -147,4 +147,26 @@ columns:
       - column
     icon: mdi-book-open-variant
     descr: The sum of citations for this publisher in OpenAlex
+  mean(fwci):
+    id: mean(fwci)
+    subjectEntity: publishers
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    objectEntity:
+    displayName: mean fwci
+    type: number
+    redshiftDisplayColumn: mean_fwci
+    redshiftFilterColumn: mean_fwci
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The mean field-weighted citation impact for this publisher in OpenAlex
 values:
