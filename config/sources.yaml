@@ -287,4 +287,26 @@ columns:
       - column
     icon: mdi-book-open-variant
     descr: The sum of citations of works for this source
+  mean(fwci):
+    id: mean(fwci)
+    subjectEntity: sources
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    objectEntity:
+    displayName: mean FWCI
+    type: number
+    redshiftDisplayColumn: mean_fwci
+    redshiftFilterColumn: mean_fwci
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The mean Field-Weighted Citation Impact (FWCI) of works for this source
 values:

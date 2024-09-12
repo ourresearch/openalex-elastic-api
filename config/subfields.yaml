@@ -211,6 +211,28 @@ columns:
       - column
     icon: mdi-book-open-variant
     descr: The sum of works cited for this subfield
+  mean(fwci):
+    id: mean(fwci)
+    subjectEntity: subfields
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    objectEntity:
+    displayName: mean FWCI
+    type: number
+    redshiftDisplayColumn: mean_fwci
+    redshiftFilterColumn: mean_fwci
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The mean FWCI of works in this subfield
 
 values:
   - id: subfields/3312

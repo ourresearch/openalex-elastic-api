@@ -128,6 +128,29 @@ columns:
       - column
     icon: mdi-book-open-variant
     descr: Number of times that works under this domain have been cited
+  mean(fwci):
+    id: mean(fwci)
+    subjectEntity: domains
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    entityId: works
+    objectEntity:
+    displayName: mean FWCI
+    type: number
+    redshiftDisplayColumn: mean_fwci
+    redshiftFilterColumn: mean_fwci
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The mean FWCI of works under this domain
 #  description:
 #    id: description
 #    subjectEntity: domains

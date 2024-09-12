@@ -214,6 +214,29 @@ columns:
     actions: []
     icon: mdi-tag-outline
     descr: The domain that is the parent of this field
+  mean(fwci):
+    id: mean(fwci)
+    subjectEntity: fields
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    entityId: works
+    objectEntity:
+    displayName: mean FWCI
+    type: number
+    redshiftDisplayColumn: mean_fwci
+    redshiftFilterColumn: mean_fwci
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The mean FWCI of works from this field
 values:
   - id: fields/27
     display_name: Medicine

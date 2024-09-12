@@ -124,6 +124,29 @@ columns:
       - column
     icon: mdi-book-open-variant
     descr: Number of times authors from this country have been cited
+  mean(fwci):
+    id: mean(fwci)
+    subjectEntity: countries
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    entityId: works
+    objectEntity:
+    displayName: mean FWCI
+    type: number
+    redshiftDisplayColumn: mean_fwci
+    redshiftFilterColumn:
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The mean Field-Weighted Citation Impact (FWCI) of works created by this country.
 values:
   - id: countries/US
     display_name: United States of America
