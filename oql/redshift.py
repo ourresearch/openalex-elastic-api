@@ -592,6 +592,12 @@ class RedshiftQueryHandler:
                     stat_function.label(f"{stat}({related_entity})")
                 )
 
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
+
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
@@ -611,6 +617,11 @@ class RedshiftQueryHandler:
                     work_class.language,
                     stat_function.label(f"{stat}({related_entity})")
                 )
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
@@ -630,6 +641,11 @@ class RedshiftQueryHandler:
                 query = query.add_columns(
                     stat_function.label(f"{stat}({related_entity})")
                 )
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
@@ -649,6 +665,11 @@ class RedshiftQueryHandler:
                 query = query.add_columns(
                     stat_function.label(f"{stat}({related_entity})")
                 )
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
@@ -672,6 +693,11 @@ class RedshiftQueryHandler:
                 query = query.add_columns(
                     stat_function.label(f"{stat}({related_entity})")
                 )
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
@@ -692,7 +718,7 @@ class RedshiftQueryHandler:
                 )
 
                 for filter in self.filter_aggs:
-                    if filter["column_id"] == "sum(citations)":
+                    if filter["column_id"] == column:
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
                         )
@@ -709,6 +735,12 @@ class RedshiftQueryHandler:
                 query = query.add_columns(stat_function.label("mean_fwci"))
 
                 query = query.group_by(*self.model_return_columns)
+
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
@@ -734,6 +766,11 @@ class RedshiftQueryHandler:
                 query = query.add_columns(
                     stat_function.label(f"{stat}({related_entity})")
                 )
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
