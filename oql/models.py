@@ -743,6 +743,16 @@ class Topic(db.Model):
         return f"<Topic(topic_id={self.topic_id}, display_name={self.display_name})>"
 
 
+class WorkFunder(db.Model):
+    __tablename__ = "work_funder"
+
+    paper_id = Column(BigInteger, primary_key=True)
+    funder_id = Column(BigInteger, primary_key=True)
+
+    def __repr__(self):
+        return f"<WorkFunder(paper_id={self.paper_id}, funder_id={self.funder_id}>"
+
+
 class WorkKeyword(db.Model):
     __tablename__ = "work_keyword"
 
