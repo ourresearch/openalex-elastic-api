@@ -4,7 +4,7 @@ from sqlalchemy import case, cast, desc, func, Float
 from sqlalchemy.orm import aliased
 from extensions import db
 
-from combined_config import all_entities_config
+from combined_config import all_entities_config, entity_name
 from oql import models
 from sqlalchemy.ext.hybrid import hybrid_property
 
@@ -93,6 +93,19 @@ class RedshiftQueryHandler:
                 .join(
                     work_class,
                     work_class.paper_id == affiliation_class.paper_id
+                )
+            )
+        elif self.entity == "continents":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(
+                    models.Affiliation,
+                    models.Affiliation.continent_id == entity_class.continent_id,
+                )
+                .join(
+                    models.Work,
+                    models.Work.paper_id == models.Affiliation.paper_id
                 )
             )
         elif self.entity == "authors":
@@ -332,6 +345,19 @@ class RedshiftQueryHandler:
                     work_sdg_class.paper_id == work_class.paper_id,
                 )
                 column = work_sdg_class.sdg_id
+                query = self.do_operator_query(column, operator, query, value)
+            elif key == "authorships.institutions.continent":
+                wiki_code = get_short_id_text(value)
+                value = convert_wiki_to_continent_id(wiki_code)
+
+                affiliation_continent_class = getattr(
+                    models, "AffiliationContinentDistinct"
+                )
+                query = query.join(
+                    affiliation_continent_class,
+                    affiliation_continent_class.paper_id == work_class.paper_id,
+                )
+                column = affiliation_continent_class.continent_id
                 query = self.do_operator_query(column, operator, query, value)
             # id filters
             elif (
@@ -786,3 +812,17 @@ def parse_stats_column(column):
     stat = column.split("(")[0]
     entity = column.split("(")[1].split(")")[0]
     return stat, entity
+
+
+def convert_wiki_to_continent_id(value):
+    value = value.upper()
+    mapping = {
+        "Q15": 1,
+        "Q51": 2,
+        "Q48": 3,
+        "Q46": 4,
+        "Q49": 5,
+        "Q55643": 6,
+        "Q18": 7,
+    }
+    return mapping.get(value)

@@ -301,6 +301,17 @@ class AffiliationCountryDistinct(db.Model):
         return f"<Affiliation(paper_id={self.paper_id}>"
 
 
+class AffiliationContinentDistinct(db.Model):
+    __tablename__ = "paper_continent_distinct_mv"
+
+    paper_id = Column(BigInteger, primary_key=True)
+    country_id = Column(String(500))
+    continent_id = Column(Integer)
+    is_global_south = Column(Boolean)
+
+    def __repr__(self):
+        return f"<Affiliation(paper_id={self.paper_id}>"
+
 class Author(db.Model):
     __tablename__ = "author_mv"
 
@@ -415,7 +426,7 @@ class Country(db.Model):
         return func.concat('countries/', cls.country_id)
 
     def __repr__(self):
-        return f"<Country(country_code={self.country_code}, display_name={self.display_name})>"
+        return f"<Country(country_code={self.country_id}, display_name={self.display_name})>"
 
 
 class Continent(db.Model):

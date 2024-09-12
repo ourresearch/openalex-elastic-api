@@ -450,8 +450,8 @@ columns:
       - column
     actionsPopular: []
     apiField: authorships.institutions.continent
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftDisplayColumn: continent
+    redshiftFilterColumn: continent_id
     icon: mdi-earth
     descr: The continents of the institutions associated with the work.
   authorships.institutions.is_global_south:
