@@ -153,6 +153,28 @@ columns:
       - column
     icon: mdi-book-open-variant
     descr: The sum of works cited that are of this type
+  mean(fwci):
+    id: mean(fwci)
+    subjectEntity: types
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    objectEntity:
+    displayName: mean FWCI
+    type: number
+    redshiftDisplayColumn: mean_fwci
+    redshiftFilterColumn: mean_fwci
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The mean FWCI of works of this type
 
 values:
   - id: types/article

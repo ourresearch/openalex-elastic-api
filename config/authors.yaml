@@ -116,8 +116,8 @@ columns:
     actionsPopular:
       - filter
     category: search
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftDisplayColumn: display_name
+    redshiftFilterColumn: display_name
     icon: mdi-account-outline
     descr: The name of the author.
     isSearchColumn: true
@@ -340,4 +340,27 @@ columns:
       - column
     icon: mdi-book-open-variant
     descr: Number of times the author has been cited
+  mean(fwci):
+    id: mean(fwci)
+    subjectEntity: authors
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    entityId: works
+    objectEntity:
+    displayName: mean FWCI
+    type: number
+    redshiftDisplayColumn: mean_fwci
+    redshiftFilterColumn: mean_fwci
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The mean Field-Weighted Citation Impact (FWCI) of the author's works.
 values:

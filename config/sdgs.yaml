@@ -147,6 +147,28 @@ columns:
       - column
     icon: mdi-book-open-variant
     descr: The sum of citations of works for this SDG
+  mean(fwci):
+    id: mean(fwci)
+    subjectEntity: sdgs
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    objectEntity:
+    displayName: mean FWCI
+    type: number
+    redshiftDisplayColumn: mean_fwci
+    redshiftFilterColumn: mean_fwci
+    actions:
+      - sort
+      - column
+    actionsPopular:
+      - sort
+      - column
+    icon: mdi-book-open-variant
+    descr: The mean Field-Weighted Citation Impact (FWCI) of works associated with this SDG.
 values:
   - id: sdgs/3
     display_name: Good health and well-being

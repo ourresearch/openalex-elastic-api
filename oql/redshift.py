@@ -4,7 +4,7 @@ from sqlalchemy import case, cast, desc, func, Float
 from sqlalchemy.orm import aliased
 from extensions import db
 
-from combined_config import all_entities_config
+from combined_config import all_entities_config, entity_name
 from oql import models
 from sqlalchemy.ext.hybrid import hybrid_property
 
@@ -73,6 +73,41 @@ class RedshiftQueryHandler:
                 )
                 .join(models.Work, models.Work.paper_id == models.Affiliation.paper_id)
             )
+        elif self.entity == "countries":
+            institution_class = models.Institution
+            affiliation_class = models.Affiliation
+            work_class = models.Work
+            country_class = models.Country
+
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(
+                    institution_class,
+                    institution_class.country_code == country_class.country_id
+                )
+                .join(
+                    affiliation_class,
+                    affiliation_class.affiliation_id == institution_class.affiliation_id
+                )
+                .join(
+                    work_class,
+                    work_class.paper_id == affiliation_class.paper_id
+                )
+            )
+        elif self.entity == "continents":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(
+                    models.Affiliation,
+                    models.Affiliation.continent_id == entity_class.continent_id,
+                )
+                .join(
+                    models.Work,
+                    models.Work.paper_id == models.Affiliation.paper_id
+                )
+            )
         elif self.entity == "authors":
             query = (
                 db.session.query(*columns_to_select)
@@ -82,6 +117,13 @@ class RedshiftQueryHandler:
                     models.Affiliation.author_id == models.Author.author_id,
                 )
                 .join(models.Work, models.Work.paper_id == models.Affiliation.paper_id)
+            )
+        elif self.entity == "funders":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.WorkFunder, models.WorkFunder.funder_id == entity_class.funder_id)
+                .join(models.Work, models.Work.paper_id == models.WorkFunder.paper_id)
             )
         elif self.entity == "sources":
             query = (
@@ -108,6 +150,12 @@ class RedshiftQueryHandler:
                 .join(models.Affiliation, models.Affiliation.paper_id == models.Work.paper_id)
                 .join(models.Institution, models.Institution.affiliation_id == models.Affiliation.affiliation_id)
             )
+        elif self.entity == "types":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.Work, models.Work.type == entity_class.work_type_id)
+            )
         elif self.entity == "languages":
             query = (
                 db.session.query(*columns_to_select)
@@ -120,6 +168,37 @@ class RedshiftQueryHandler:
                 .distinct()
                 .join(models.WorkKeyword, models.WorkKeyword.keyword_id == entity_class.keyword_id)
                 .join(models.Work, models.Work.paper_id == models.WorkKeyword.paper_id)
+            )
+        elif self.entity == "domains":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.Topic, models.Topic.domain_id == models.Domain.domain_id)
+                .join(models.WorkTopic, models.WorkTopic.topic_id == models.Topic.topic_id)
+                .join(models.Work, models.Work.paper_id == models.WorkTopic.paper_id)
+            )
+        elif self.entity == "fields":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.Topic, models.Topic.field_id == models.Field.field_id)
+                .join(models.WorkTopic, models.WorkTopic.topic_id == models.Topic.topic_id)
+                .join(models.Work, models.Work.paper_id == models.WorkTopic.paper_id)
+            )
+        elif self.entity == "subfields":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.Topic, models.Topic.subfield_id == models.Subfield.subfield_id)
+                .join(models.WorkTopic, models.WorkTopic.topic_id == models.Topic.topic_id)
+                .join(models.Work, models.Work.paper_id == models.WorkTopic.paper_id)
+            )
+        elif self.entity == "publishers":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(models.Source, models.Source.source_id == models.Work.journal_id)
+                .join(models.Publisher, models.Publisher.publisher_id == models.Source.publisher_id)
             )
         else:
             query = db.session.query(*columns_to_select)
@@ -200,7 +279,12 @@ class RedshiftQueryHandler:
                 query = self.do_operator_query(column, operator, query, value)
             elif key == "authorships.author.id":
                 value = get_short_id_integer(value)
-                affiliation_class = getattr(models, "Affiliation")
+                work_class = getattr(models, "Work")
+                affiliation_class = aliased(getattr(models, "Affiliation"))
+                query = query.join(
+                    affiliation_class,
+                    affiliation_class.paper_id == work_class.paper_id,
+                )
                 column = affiliation_class.author_id
                 query = self.do_operator_query(column, operator, query, value)
             elif key == "authorships.countries":
@@ -214,6 +298,15 @@ class RedshiftQueryHandler:
                     affiliation_country_class.paper_id == work_class.paper_id,
                 )
                 column = affiliation_country_class.country_id
+                query = self.do_operator_query(column, operator, query, value)
+            elif key == "authorships.institutions.is_global_south":
+                value = self.get_boolean_value(value)
+                affiliation_class = aliased(getattr(models, "Affiliation"))
+                query = query.join(
+                    affiliation_class,
+                    affiliation_class.paper_id == work_class.paper_id,
+                )
+                column = affiliation_class.is_global_south
                 query = self.do_operator_query(column, operator, query, value)
             elif key == "authorships.institutions.ror":
                 query = query.join(
@@ -244,6 +337,37 @@ class RedshiftQueryHandler:
                 value = value.lower()
                 value = get_short_id_text(value)
                 query = self.do_operator_query(model_column, operator, query, value)
+            elif key == "grants.funder":
+                value = get_short_id_integer(value)
+                work_funder_class = getattr(models, "WorkFunder")
+                query = query.join(
+                    work_funder_class,
+                    work_funder_class.paper_id == work_class.paper_id,
+                )
+                column = work_funder_class.funder_id
+                query = self.do_operator_query(column, operator, query, value)
+            elif key == "sustainable_development_goals.id":
+                value = get_short_id_integer(value)
+                work_sdg_class = aliased(getattr(models, "WorkSdg"))
+                query = query.join(
+                    work_sdg_class,
+                    work_sdg_class.paper_id == work_class.paper_id,
+                )
+                column = work_sdg_class.sdg_id
+                query = self.do_operator_query(column, operator, query, value)
+            elif key == "authorships.institutions.continent":
+                wiki_code = get_short_id_text(value)
+                value = convert_wiki_to_continent_id(wiki_code)
+
+                affiliation_continent_class = getattr(
+                    models, "AffiliationContinentDistinct"
+                )
+                query = query.join(
+                    affiliation_continent_class,
+                    affiliation_continent_class.paper_id == work_class.paper_id,
+                )
+                column = affiliation_continent_class.continent_id
+                query = self.do_operator_query(column, operator, query, value)
             # id filters
             elif (
                 column_type == "object" or column_type == "array"
@@ -277,6 +401,7 @@ class RedshiftQueryHandler:
             redshift_column = self.entity_config.get(key).get("redshiftFilterColumn")
             column_type = self.entity_config.get(key).get("type")
             is_object_entity = self.entity_config.get(key).get("objectEntity")
+            is_search_column = self.entity_config.get(key).get("isSearchColumn")
 
             if not redshift_column:
                 raise(ValueError(f"Column {key} not found in entity config"))
@@ -288,10 +413,10 @@ class RedshiftQueryHandler:
                 query = self.filter_by_number(model_column, operator, query, value)
             elif column_type == "boolean":
                 query = self.filter_by_boolean(model_column, query, value)
+            elif is_search_column:
+                query = query.filter(model_column.ilike(f"%{value}%"))
             elif column_type == "string":
                 query = self.do_operator_query(model_column, operator, query, value)
-            elif column_type == "search":
-                query = query.filter(model_column.ilike(f"%{value}%"))
             # specialized filters
             elif key == "last_known_institutions.id" and self.entity == "authors":
                 value = get_short_id_integer(value)
@@ -423,9 +548,7 @@ class RedshiftQueryHandler:
     def apply_stats(self, query, entity_class):
         for column in self.show_columns:
             # count works
-            if column == "count(works)" and (
-                self.entity == "authors" or self.entity == "institutions"
-            ):
+            if column == "count(works)" and self.entity in ["authors", "countries", "institutions"]:
                 stat, related_entity = parse_stats_column(column)
 
                 # use the existing join to calculate count_works
@@ -454,35 +577,6 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "count(works)" and self.entity == "countries":
-                stat, related_entity = parse_stats_column(column)
-
-                affiliation_class = getattr(models, "Affiliation")
-                institution_class = getattr(models, "Institution")
-
-                query = query.join(
-                    institution_class,
-                    affiliation_class.affiliation_id
-                    == institution_class.affiliation_id,
-                )
-
-                query = query.group_by(
-                    *self.model_return_columns + [institution_class.country_code]
-                )
-
-                stat_function = func.count(
-                    func.distinct(affiliation_class.paper_id)
-                )
-
-                query = query.add_columns(
-                    institution_class.country_code,
-                    stat_function.label(f"{stat}({related_entity})"),
-                )
-
-                if self.sort_by_column == column:
-                    query = self.sort_from_stat(
-                        query, self.sort_by_order, stat_function
-                    )
             elif column == "count(works)" and self.entity == "keywords":
                 stat, related_entity = parse_stats_column(column)
 
@@ -497,6 +591,12 @@ class RedshiftQueryHandler:
                 query = query.add_columns(
                     stat_function.label(f"{stat}({related_entity})")
                 )
+
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
@@ -517,16 +617,20 @@ class RedshiftQueryHandler:
                     work_class.language,
                     stat_function.label(f"{stat}({related_entity})")
                 )
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "count(works)" and self.entity == "sdgs":
+            elif column == "count(works)" and self.entity in ["domains", "fields", "funders", "publishers", "sdgs", "subfields", "types"]:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
-
 
                 query = query.group_by(
                     *self.model_return_columns
@@ -537,6 +641,11 @@ class RedshiftQueryHandler:
                 query = query.add_columns(
                     stat_function.label(f"{stat}({related_entity})")
                 )
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
@@ -556,6 +665,11 @@ class RedshiftQueryHandler:
                 query = query.add_columns(
                     stat_function.label(f"{stat}({related_entity})")
                 )
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
@@ -579,13 +693,18 @@ class RedshiftQueryHandler:
                 query = query.add_columns(
                     stat_function.label(f"{stat}({related_entity})")
                 )
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
             # sum citations
-            elif column == "sum(citations)" and (self.entity == "authors" or self.entity == "institutions"):
+            elif column == "sum(citations)" and self.entity in ["authors", "countries", "domains", "fields", "funders", "institutions", "keywords", "languages", "publishers", "subfields", "types", "sdgs", "sources", "topics"]:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
@@ -599,7 +718,7 @@ class RedshiftQueryHandler:
                 )
 
                 for filter in self.filter_aggs:
-                    if filter["column_id"] == "sum(citations)":
+                    if filter["column_id"] == column:
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
                         )
@@ -608,24 +727,7 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "sum(citations)" and self.entity in ["keywords", "languages", "sdgs", "sources", "topics"]:
-                stat, related_entity = parse_stats_column(column)
-
-                work_class = getattr(models, "Work")
-
-                query = query.group_by(*self.model_return_columns)
-
-                stat_function = func.sum(work_class.cited_by_count)
-
-                query = query.add_columns(
-                    stat_function.label(f"{stat}({related_entity})")
-                )
-
-                if self.sort_by_column == column:
-                    query = self.sort_from_stat(
-                        query, self.sort_by_order, stat_function
-                    )
-            elif column == "mean(fwci)" and self.entity == "institutions":
+            elif column == "mean(fwci)" and self.entity in ["authors", "countries", "domains", "fields", "funders", "institutions", "keywords", "languages", "publishers", "sdgs", "sources", "subfields", "types", "topics"]:
                 work_class = getattr(models, "Work")
 
                 stat_function = func.avg(work_class.fwci)
@@ -633,6 +735,12 @@ class RedshiftQueryHandler:
                 query = query.add_columns(stat_function.label("mean_fwci"))
 
                 query = query.group_by(*self.model_return_columns)
+
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
@@ -658,6 +766,11 @@ class RedshiftQueryHandler:
                 query = query.add_columns(
                     stat_function.label(f"{stat}({related_entity})")
                 )
+                for filter in self.filter_aggs:
+                    if filter["column_id"] == column:
+                        query = self.filter_stats(
+                            query, stat_function, filter["operator"], filter["value"]
+                        )
 
                 if self.sort_by_column == column:
                     query = self.sort_from_stat(
@@ -741,6 +854,21 @@ def get_short_id_integer(value):
 
 def parse_stats_column(column):
     # use format like count(works) to get stat and entity
+    print(column)
     stat = column.split("(")[0]
     entity = column.split("(")[1].split(")")[0]
     return stat, entity
+
+
+def convert_wiki_to_continent_id(value):
+    value = value.upper()
+    mapping = {
+        "Q15": 1,
+        "Q51": 2,
+        "Q48": 3,
+        "Q46": 4,
+        "Q49": 5,
+        "Q55643": 6,
+        "Q18": 7,
+    }
+    return mapping.get(value)
