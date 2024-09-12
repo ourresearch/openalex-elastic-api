@@ -299,6 +299,15 @@ class RedshiftQueryHandler:
                 )
                 column = affiliation_country_class.country_id
                 query = self.do_operator_query(column, operator, query, value)
+            elif key == "authorships.institutions.is_global_south":
+                value = self.get_boolean_value(value)
+                affiliation_class = aliased(getattr(models, "Affiliation"))
+                query = query.join(
+                    affiliation_class,
+                    affiliation_class.paper_id == work_class.paper_id,
+                )
+                column = affiliation_class.is_global_south
+                query = self.do_operator_query(column, operator, query, value)
             elif key == "authorships.institutions.ror":
                 query = query.join(
                     models.Affiliation,

@@ -459,6 +459,7 @@ columns:
     subjectEntity: works
     operators:
       - is
+      - is not
     defaultOperator: is
     displayName: from Global South
     objectEntity:
