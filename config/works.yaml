@@ -791,6 +791,23 @@ columns:
       - filter
     icon: mdi-file-document-outline
     descr: Searches the title of the work.
+  about:
+    id: about
+    subjectEntity: works
+    operators:
+      - is
+    defaultOperator: is
+    displayName: about
+    objectEntity:
+    type: string
+    category: other
+    apiField: about
+    redshiftDisplayColumn: about
+    redshiftFilterColumn: about
+    actions:
+      - filter
+    icon: mdi-file-document-outline
+    descr: Vector search across title and abstract.
   count:
     id: count
     subjectEntity: works

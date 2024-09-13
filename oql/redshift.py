@@ -1,12 +1,13 @@
 import re
 
+import requests
 from sqlalchemy import case, cast, desc, func, Float
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import aliased
-from extensions import db
 
 from combined_config import all_entities_config, entity_name
+from extensions import db
 from oql import models
-from sqlalchemy.ext.hybrid import hybrid_property
 
 
 class RedshiftQueryHandler:
@@ -368,6 +369,12 @@ class RedshiftQueryHandler:
                 )
                 column = affiliation_continent_class.continent_id
                 query = self.do_operator_query(column, operator, query, value)
+            elif key == "about":
+                r = requests.get(f"https://api.openalex.org/text/related?text={value}")
+                if r.status_code == 200:
+                    results = r.json()
+                    related_paper_ids = [result["work_id"] for result in results]
+                    query = query.filter(work_class.paper_id.in_(related_paper_ids))
             # id filters
             elif (
                 column_type == "object" or column_type == "array"
