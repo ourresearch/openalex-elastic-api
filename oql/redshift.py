@@ -440,6 +440,10 @@ class RedshiftQueryHandler:
                 query = self.filter_by_boolean(model_column, query, value)
             elif is_search_column:
                 query = query.filter(model_column.ilike(f"%{value}%"))
+            elif key == "id" and self.entity == "continents":
+                value = get_short_id_text(value)
+                value = value.upper()
+                query = self.do_operator_query(model_column, operator, query, value)
             elif column_type == "string":
                 query = self.do_operator_query(model_column, operator, query, value)
             # specialized filters
