@@ -252,8 +252,6 @@ class RedshiftQueryHandler:
             if column_type == "number":
                 print(f"filtering by number {model_column}")
                 query = self.filter_by_number(model_column, operator, query, value)
-            elif column_type == "boolean":
-                query = self.filter_by_boolean(model_column, query, value)
             elif ".search" in key:
                 query = query.filter(model_column.ilike(f"%{value}%"))
             # specialized filters
@@ -456,6 +454,8 @@ class RedshiftQueryHandler:
                     affiliation_class.author_id == entity_class.author_id,
                 )
                 query = self.do_operator_query(affiliation_class.affiliation_id, operator, query, value)
+            elif column_type == "boolean":
+                query = self.filter_by_boolean(model_column, query, value)
             elif (
                 column_type == "object" or column_type == "array"
             ) and is_object_entity:

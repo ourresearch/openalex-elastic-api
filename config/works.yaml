@@ -343,7 +343,7 @@ columns:
     category: other
     apiField: display_name
     redshiftDisplayColumn: display_name
-    redshiftReturnColumn: display_name
+    redshiftFilterColumn: display_name
     icon: mdi-file-document-outline
     descr: The title of the work.
   open_access.is_oa:
@@ -459,7 +459,6 @@ columns:
     subjectEntity: works
     operators:
       - is
-      - is not
     defaultOperator: is
     displayName: from Global South
     objectEntity:
@@ -470,7 +469,7 @@ columns:
     category: institution
     apiField: institutions.is_global_south
     redshiftDisplayColumn: is_global_south
-    redshiftReturnColumn: is_global_south
+    redshiftFilterColumn: is_global_south
     icon: mdi-earth
     descr: Whether the institutions associated with the work are in the Global South.
   authorships.institutions.type:
