@@ -573,22 +573,22 @@ columns:
     icon: mdi-book-open-outline
     descr: Whether the primary source of the work is indexed by the Directory of Open
       Access Journals (DOAJ).
-  primary_location.source.is_oa:
-    id: primary_location.source.is_oa
-    subjectEntity: works
-    operators:
-      - is
-    defaultOperator: is
-    displayName: in OA source
-    objectEntity:
-    type: boolean
-    category: source
-    apiField: primary_location.source.is_oa
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
-    actions: []
-    icon: mdi-book-open-outline
-    descr: Whether the primary source of the work is an open access source.
+#  primary_location.source.is_oa:
+#    id: primary_location.source.is_oa
+#    subjectEntity: works
+#    operators:
+#      - is
+#    defaultOperator: is
+#    displayName: in OA source
+#    objectEntity:
+#    type: boolean
+#    category: source
+#    apiField: primary_location.source.is_oa
+#    redshiftDisplayColumn: primary_source_is_oa
+#    redshiftFilterColumn: primary_source_is_oa
+#    actions: []
+#    icon: mdi-book-open-outline
+#    descr: Whether the primary source of the work is an open access source.
   type:
     id: type
     subjectEntity: works
@@ -609,10 +609,8 @@ columns:
     redshiftFilterColumn: type
     actions:
       - filter
-      - column
     actionsPopular:
       - filter
-      - column
     icon: mdi-shape-outline
     descr: The OpenAlex work type of the work
   grants.funder:

@@ -153,11 +153,10 @@ columns:
     objectEntity: institution-types
     displayName: Past institutions type
     type: array
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftDisplayColumn: institution_type
+    redshiftFilterColumn: institution_type
     actions:
       - filter
-      - group_by
     actionsPopular:
       - filter
     icon: mdi-shape-outline

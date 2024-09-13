@@ -117,6 +117,8 @@ class RedshiftQueryHandler:
                     models.Affiliation,
                     models.Affiliation.author_id == models.Author.author_id,
                 )
+                .outerjoin(models.Institution,
+                      models.Institution.affiliation_id == models.Affiliation.affiliation_id)
                 .join(models.Work, models.Work.paper_id == models.Affiliation.paper_id)
             )
         elif self.entity == "funders":
@@ -430,6 +432,10 @@ class RedshiftQueryHandler:
             # filters
             if column_type == "number":
                 query = self.filter_by_number(model_column, operator, query, value)
+            elif key == "affiliations.institution.type":
+                value = get_short_id_text(value)
+                value = value.capitalize()
+                query = self.do_operator_query(models.Institution.type, operator, query, value)
             elif column_type == "boolean":
                 query = self.filter_by_boolean(model_column, query, value)
             elif is_search_column:
