@@ -276,6 +276,20 @@ class RedshiftQueryHandler:
                 )
                 column = affiliation_class.affiliation_id
                 query = self.do_operator_query(column, operator, query, value)
+            elif key == "authorships.institutions.type":
+                value = get_short_id_text(value)
+                value = value.capitalize()
+
+                affiliation_class = aliased(getattr(models, "Affiliation"))
+                institution_class = aliased(getattr(models, "Institution"))
+                query = query.join(
+                    affiliation_class,
+                    affiliation_class.paper_id == work_class.paper_id,
+                ).join(
+                    institution_class,
+                    institution_class.affiliation_id == affiliation_class.affiliation_id,
+                )
+                query = self.do_operator_query(institution_class.type, operator, query, value)
             elif key == "authorships.author.id":
                 value = get_short_id_integer(value)
                 work_class = getattr(models, "Work")
