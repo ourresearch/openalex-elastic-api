@@ -41,7 +41,7 @@ columns:
     isId: true
     type: string
     redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftFilterColumn: topic_id
     icon: mdi-tag-outline
     descr: Unique identifier for the topic in OpenAlex.
   display_name:

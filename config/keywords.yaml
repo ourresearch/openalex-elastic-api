@@ -35,7 +35,7 @@ columns:
     isId: true
     type: string
     redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftFilterColumn: keyword_id
     actions: []
     icon: mdi-tag-outline
     descr: The unique identifier for the keyword in OpenAlex
@@ -72,7 +72,7 @@ columns:
     displayName: search display_name
     type: string
     redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftFilterColumn: display_name
     actions:
       - filter
     actionsPopular:

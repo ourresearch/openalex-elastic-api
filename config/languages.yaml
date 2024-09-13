@@ -34,7 +34,7 @@ columns:
     isId: true
     type: string
     redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftFilterColumn: language_id
     actions: []
     icon: mdi-tag-outline
     descr: The unique identifier for the language in OpenAlex

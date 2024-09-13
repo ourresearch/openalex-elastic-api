@@ -37,7 +37,7 @@ columns:
     isId: true
     type: string
     redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftFilterColumn: domain_id
     icon: mdi-tag-outline
     descr: Unique identifier for the domain
   display_name:
@@ -73,7 +73,7 @@ columns:
     displayName: search display_name
     type: string
     redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftFilterColumn: display_name
     actions:
       - filter
     actionsPopular:
