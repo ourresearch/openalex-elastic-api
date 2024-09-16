@@ -117,7 +117,7 @@ class RedshiftQueryHandler:
                     models.Affiliation,
                     models.Affiliation.author_id == models.Author.author_id,
                 )
-                .outerjoin(models.Institution,
+                .join(models.Institution,
                       models.Institution.affiliation_id == models.Affiliation.affiliation_id)
                 .join(models.Work, models.Work.paper_id == models.Affiliation.paper_id)
             )
@@ -383,7 +383,7 @@ class RedshiftQueryHandler:
                 )
                 column = affiliation_continent_class.continent_id
                 query = self.do_operator_query(column, operator, query, value)
-            elif key == "about":
+            elif key == "related_to_text":
                 r = requests.get(f"https://api.openalex.org/text/related-works?text={value}")
                 if r.status_code == 200:
                     results = r.json()
@@ -444,6 +444,12 @@ class RedshiftQueryHandler:
                 value = get_short_id_text(value)
                 value = value.upper()
                 query = self.do_operator_query(model_column, operator, query, value)
+            elif key == "related_to_text" and self.entity == "authors":
+                r = requests.get(f"https://api.openalex.org/text/related-authors?text={value}")
+                if r.status_code == 200:
+                    results = r.json()
+                    related_author_ids = [result["author_id"] for result in results]
+                    query = query.filter(entity_class.author_id.in_(related_author_ids))
             elif column_type == "string":
                 query = self.do_operator_query(model_column, operator, query, value)
             # specialized filters

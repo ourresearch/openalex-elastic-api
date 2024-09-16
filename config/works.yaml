@@ -788,19 +788,19 @@ columns:
       - filter
     icon: mdi-file-document-outline
     descr: Searches the title of the work.
-  about:
-    id: about
+  related_to_text:
+    id: related_to_text
     subjectEntity: works
     operators:
       - is
     defaultOperator: is
-    displayName: about
+    displayName: related to text
     objectEntity:
     type: string
     category: other
-    apiField: about
-    redshiftDisplayColumn: about
-    redshiftFilterColumn: about
+    apiField: related_to_text
+    redshiftDisplayColumn: related_to_text
+    redshiftFilterColumn: related_to_text
     actions:
       - filter
     icon: mdi-file-document-outline
