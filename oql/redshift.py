@@ -446,7 +446,7 @@ class RedshiftQueryHandler:
                 query = self.filter_by_boolean(model_column, query, value)
             elif is_search_column:
                 query = query.filter(model_column.ilike(f"%{value}%"))
-            elif key == "id" and self.entity in ["continents", "languages", "licenses"]:
+            elif key == "id" and self.entity in ["continents", "institution-types", "languages", "licenses", "types", "source-types"]:
                 value = get_short_id_text(value)
                 if self.entity == "continents":
                     value = value.upper()

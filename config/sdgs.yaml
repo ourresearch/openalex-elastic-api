@@ -33,7 +33,7 @@ columns:
     displayName: SDG ID
     isId: true
     redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftFilterColumn: sdg_id
     actions: []
     type: string
     icon: mdi-tag-outline

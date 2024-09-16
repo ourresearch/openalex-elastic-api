@@ -34,7 +34,7 @@ columns:
     isId: true
     type: string
     redshiftDisplayColumn: id
-    redshiftFilterColumn: type_id
+    redshiftFilterColumn: work_type_id
     actions: []
     icon: mdi-tag-outline
     descr: The unique identifier for the work type in OpenAlex.
