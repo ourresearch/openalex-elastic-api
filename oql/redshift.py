@@ -440,9 +440,12 @@ class RedshiftQueryHandler:
                 query = self.filter_by_boolean(model_column, query, value)
             elif is_search_column:
                 query = query.filter(model_column.ilike(f"%{value}%"))
-            elif key == "id" and self.entity == "continents":
+            elif key == "id" and self.entity in ["continents", "languages", "licenses"]:
                 value = get_short_id_text(value)
-                value = value.upper()
+                if self.entity == "continents":
+                    value = value.upper()
+                else:
+                    value = value.lower()
                 query = self.do_operator_query(model_column, operator, query, value)
             elif key == "related_to_text" and self.entity == "authors":
                 r = requests.get(f"https://api.openalex.org/text/related-authors?text={value}")
