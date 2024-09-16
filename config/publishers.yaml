@@ -33,7 +33,7 @@ columns:
     isId: true
     type: string
     redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftFilterColumn: publisher_id
     actions: []
     icon: mdi-domain
     descr: The unique identifier for the publisher in OpenAlex.

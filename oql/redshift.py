@@ -453,6 +453,9 @@ class RedshiftQueryHandler:
                 else:
                     value = value.lower()
                 query = self.do_operator_query(model_column, operator, query, value)
+            elif key == "id":
+                value = get_short_id_integer(value)
+                query = self.do_operator_query(model_column, operator, query, value)
             elif key == "related_to_text" and self.entity == "authors":
                 r = requests.get(f"https://api.openalex.org/text/related-authors?text={value}")
                 if r.status_code == 200:
@@ -534,6 +537,7 @@ class RedshiftQueryHandler:
     @staticmethod
     def do_operator_query(column, operator, query, value):
         if operator == "is":
+            print(column, value)
             query = query.filter(column == value)
         elif operator == "is not":
             query = query.filter(column != value)
