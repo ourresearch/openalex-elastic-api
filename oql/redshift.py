@@ -384,7 +384,7 @@ class RedshiftQueryHandler:
                 column = affiliation_continent_class.continent_id
                 query = self.do_operator_query(column, operator, query, value)
             elif key == "about":
-                r = requests.get(f"https://api.openalex.org/text/related?text={value}")
+                r = requests.get(f"https://api.openalex.org/text/related-works?text={value}")
                 if r.status_code == 200:
                     results = r.json()
                     related_paper_ids = [result["work_id"] for result in results]
