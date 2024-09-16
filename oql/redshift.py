@@ -200,8 +200,14 @@ class RedshiftQueryHandler:
             query = (
                 db.session.query(*columns_to_select)
                 .distinct()
-                .join(models.Source, models.Source.source_id == models.Work.journal_id)
-                .join(models.Publisher, models.Publisher.publisher_id == models.Source.publisher_id)
+                .join(
+                    models.Source,
+                    models.Source.publisher_id == models.Publisher.publisher_id
+                )
+                .join(
+                    models.Work,
+                    models.Work.journal_id == models.Source.source_id
+                )
             )
         else:
             query = db.session.query(*columns_to_select)
