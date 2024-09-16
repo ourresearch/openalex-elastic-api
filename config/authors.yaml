@@ -52,7 +52,7 @@ columns:
     displayName: OpenAlex ID
     type: string
     redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftFilterColumn: author_id
     actions: []
     actionsPopular: []
     isId: true
