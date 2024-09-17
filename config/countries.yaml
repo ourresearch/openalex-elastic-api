@@ -58,6 +58,22 @@ columns:
     redshiftFilterColumn:
     icon: mdi-account-outline
     descr: The name of the country
+  continent:
+    id: continent
+    subjectEntity: countries
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: countries
+    objectEntity: continents
+    displayName: Continent ID
+    isId: true
+    type: string
+    redshiftDisplayColumn: continent_id
+    redshiftFilterColumn: continent_id
+    icon: mdi-tag-outline
+    descr: ID of the continent that the country is on
   display_name.search:
     id: display_name.search
     subjectEntity: countries
