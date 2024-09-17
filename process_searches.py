@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timezone
 import os
 import time
+import hashlib
 
 import redis
 import sentry_sdk
@@ -46,7 +47,7 @@ def fetch_results(query):
         )
 
         # check if it's cached
-        cache_key = json.dumps(query)
+        cache_key = generate_cache_key(query.to_dict())
         cached_data = redis_db.get(cache_key)
         if cached_data:
             print(f"Returning cached results for query: {cache_key}")
@@ -128,6 +129,11 @@ def process_searches():
 
         # wait to avoid hammering the Redis server
         time.sleep(0.1)
+
+
+def generate_cache_key(query_dict):
+    query_str = json.dumps(query_dict, sort_keys=True)
+    return hashlib.md5(query_str.encode('utf-8')).hexdigest()
 
 
 if __name__ == "__main__":
