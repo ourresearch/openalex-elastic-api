@@ -46,7 +46,7 @@ def fetch_results(query):
             sort_by_order=sort_by_order,
         )
 
-        cache_key = generate_cache_key(query_dict)
+        cache_key = generate_cache_key(query.to_dict())
 
         # check if the result is cached
         cached_data = redis_db.get(cache_key)
