@@ -209,6 +209,15 @@ class RedshiftQueryHandler:
                     models.Work.journal_id == models.Source.source_id
                 )
             )
+        elif self.entity == "licenses":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .outerjoin(
+                    models.Work,
+                    models.Work.license == models.License.license_id
+                )
+            )
         else:
             query = db.session.query(*columns_to_select)
 
