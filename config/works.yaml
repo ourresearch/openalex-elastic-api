@@ -585,8 +585,8 @@ columns:
     type: boolean
     category: source
     apiField: primary_location.source.is_oa
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftDisplayColumn: primary_source_is_oa
+    redshiftFilterColumn: primary_source_is_oa
     actions: []
     icon: mdi-book-open-outline
     descr: Whether the primary source of the work is an open access source.
