@@ -245,18 +245,18 @@ class OpenAlexIDField(Field):
             return q
         elif self.param == "authorships.institutions.lineage":
             if self.value == "null":
-                q = ~Q("exists", field="authorships.institutions.lineage") & ~Q("exists", field="institution_assertions.id")
+                q = ~Q("exists", field="authorships.institutions.lineage") & ~Q("exists", field="institution_assertions.lineage")
             elif self.value == "!null":
-                q = Q("exists", field="authorships.institutions.lineage") & Q("exists", field="institution_assertions.id")
+                q = Q("exists", field="authorships.institutions.lineage") & Q("exists", field="institution_assertions.lineage")
             elif self.value.startswith("!"):
                 query = self.value[1:]
                 query = get_full_openalex_id(query)
                 self.validate(self.value)
-                q = ~Q("term", **{"authorships.institutions.lineage": query}) & ~Q("term", **{"institution_assertions.id": query})
+                q = ~Q("term", **{"authorships.institutions.lineage": query}) & ~Q("term", **{"institution_assertions.lineage": query})
             else:
                 query = get_full_openalex_id(self.value)
                 self.validate(self.value)
-                q = Q("term", **{"authorships.institutions.lineage": query}) | Q("term", **{"institution_assertions.id": query})
+                q = Q("term", **{"authorships.institutions.lineage": query}) | Q("term", **{"institution_assertions.lineage": query})
             return q
         elif self.value == "null" and self.param not in ["repository", "journal"]:
             field_name = self.es_field()
