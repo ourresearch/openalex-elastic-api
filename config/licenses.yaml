@@ -32,7 +32,7 @@ columns:
     isId: true
     type: string
     redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftFilterColumn: license_id
     actions: []
     icon: mdi-tag-outline
     descr: The unique identifier for the license in OpenAlex.

@@ -52,7 +52,7 @@ columns:
     displayName: OpenAlex ID
     type: string
     redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftFilterColumn: author_id
     actions: []
     actionsPopular: []
     isId: true
@@ -153,11 +153,10 @@ columns:
     objectEntity: institution-types
     displayName: Past institutions type
     type: array
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftDisplayColumn: institution_type
+    redshiftFilterColumn: institution_type
     actions:
       - filter
-      - group_by
     actionsPopular:
       - filter
     icon: mdi-shape-outline
@@ -294,6 +293,24 @@ columns:
     icon: mdi-town-hall
     descr: Alternate names of the author which are determined from the raw author
       name of all works associated with an author.
+  related_to_text:
+    id: related_to_text
+    subjectEntity: authors
+    operators:
+      - is
+    defaultOperator: is
+    entityId: authors
+    objectEntity:
+    displayName: related to text
+    type: string
+    redshiftDisplayColumn: related_to_text
+    redshiftFilterColumn: related_to_text
+    actions:
+      - filter
+    actionsPopular:
+      - filter
+    icon: mdi-text
+    descr: Text that the author is related to.
   count(works):
     id: count(works)
     subjectEntity: authors

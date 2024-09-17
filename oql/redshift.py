@@ -1,12 +1,13 @@
 import re
 
+import requests
 from sqlalchemy import case, cast, desc, func, Float
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import aliased
-from extensions import db
 
 from combined_config import all_entities_config, entity_name
+from extensions import db
 from oql import models
-from sqlalchemy.ext.hybrid import hybrid_property
 
 
 class RedshiftQueryHandler:
@@ -116,6 +117,8 @@ class RedshiftQueryHandler:
                     models.Affiliation,
                     models.Affiliation.author_id == models.Author.author_id,
                 )
+                .join(models.Institution,
+                      models.Institution.affiliation_id == models.Affiliation.affiliation_id)
                 .join(models.Work, models.Work.paper_id == models.Affiliation.paper_id)
             )
         elif self.entity == "funders":
@@ -197,8 +200,14 @@ class RedshiftQueryHandler:
             query = (
                 db.session.query(*columns_to_select)
                 .distinct()
-                .join(models.Source, models.Source.source_id == models.Work.journal_id)
-                .join(models.Publisher, models.Publisher.publisher_id == models.Source.publisher_id)
+                .join(
+                    models.Source,
+                    models.Source.publisher_id == models.Publisher.publisher_id
+                )
+                .join(
+                    models.Work,
+                    models.Work.journal_id == models.Source.source_id
+                )
             )
         else:
             query = db.session.query(*columns_to_select)
@@ -251,8 +260,6 @@ class RedshiftQueryHandler:
             if column_type == "number":
                 print(f"filtering by number {model_column}")
                 query = self.filter_by_number(model_column, operator, query, value)
-            elif column_type == "boolean":
-                query = self.filter_by_boolean(model_column, query, value)
             elif ".search" in key:
                 query = query.filter(model_column.ilike(f"%{value}%"))
             # specialized filters
@@ -277,6 +284,20 @@ class RedshiftQueryHandler:
                 )
                 column = affiliation_class.affiliation_id
                 query = self.do_operator_query(column, operator, query, value)
+            elif key == "authorships.institutions.type":
+                value = get_short_id_text(value)
+                value = value.capitalize()
+
+                affiliation_class = aliased(getattr(models, "Affiliation"))
+                institution_class = aliased(getattr(models, "Institution"))
+                query = query.join(
+                    affiliation_class,
+                    affiliation_class.paper_id == work_class.paper_id,
+                ).join(
+                    institution_class,
+                    institution_class.affiliation_id == affiliation_class.affiliation_id,
+                )
+                query = self.do_operator_query(institution_class.type, operator, query, value)
             elif key == "authorships.author.id":
                 value = get_short_id_integer(value)
                 work_class = getattr(models, "Work")
@@ -368,6 +389,12 @@ class RedshiftQueryHandler:
                 )
                 column = affiliation_continent_class.continent_id
                 query = self.do_operator_query(column, operator, query, value)
+            elif key == "related_to_text":
+                r = requests.get(f"https://api.openalex.org/text/related-works?text={value}")
+                if r.status_code == 200:
+                    results = r.json()
+                    related_paper_ids = [result["work_id"] for result in results]
+                    query = query.filter(work_class.paper_id.in_(related_paper_ids))
             # id filters
             elif (
                 column_type == "object" or column_type == "array"
@@ -411,10 +438,30 @@ class RedshiftQueryHandler:
             # filters
             if column_type == "number":
                 query = self.filter_by_number(model_column, operator, query, value)
+            elif key == "affiliations.institution.type":
+                value = get_short_id_text(value)
+                value = value.capitalize()
+                query = self.do_operator_query(models.Institution.type, operator, query, value)
             elif column_type == "boolean":
                 query = self.filter_by_boolean(model_column, query, value)
             elif is_search_column:
                 query = query.filter(model_column.ilike(f"%{value}%"))
+            elif key == "id" and self.entity in ["continents", "institution-types", "languages", "licenses", "types", "source-types"]:
+                value = get_short_id_text(value)
+                if self.entity == "continents":
+                    value = value.upper()
+                else:
+                    value = value.lower()
+                query = self.do_operator_query(model_column, operator, query, value)
+            elif key == "id":
+                value = get_short_id_integer(value)
+                query = self.do_operator_query(model_column, operator, query, value)
+            elif key == "related_to_text" and self.entity == "authors":
+                r = requests.get(f"https://api.openalex.org/text/related-authors?text={value}")
+                if r.status_code == 200:
+                    results = r.json()
+                    related_author_ids = [result["author_id"] for result in results]
+                    query = query.filter(entity_class.author_id.in_(related_author_ids))
             elif column_type == "string":
                 query = self.do_operator_query(model_column, operator, query, value)
             # specialized filters
@@ -449,6 +496,8 @@ class RedshiftQueryHandler:
                     affiliation_class.author_id == entity_class.author_id,
                 )
                 query = self.do_operator_query(affiliation_class.affiliation_id, operator, query, value)
+            elif column_type == "boolean":
+                query = self.filter_by_boolean(model_column, query, value)
             elif (
                 column_type == "object" or column_type == "array"
             ) and is_object_entity:
@@ -488,6 +537,7 @@ class RedshiftQueryHandler:
     @staticmethod
     def do_operator_query(column, operator, query, value):
         if operator == "is":
+            print(column, value)
             query = query.filter(column == value)
         elif operator == "is not":
             query = query.filter(column != value)

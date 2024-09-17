@@ -39,7 +39,7 @@ columns:
     isId: true
     type: string
     redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftFilterColumn: field_id
     icon: mdi-tag-outline
     descr: Unique identifier for the field
   display_name:
@@ -210,7 +210,7 @@ columns:
     displayName: domain (parent)
     type: object
     redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftFilterColumn: domain_id
     actions: []
     icon: mdi-tag-outline
     descr: The domain that is the parent of this field

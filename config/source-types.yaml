@@ -33,7 +33,7 @@ columns:
     isId: true
     type: string
     redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftFilterColumn: source_type_id
     actions: []
     actionsPopular: []
     icon: mdi-shape-outline

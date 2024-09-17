@@ -34,7 +34,7 @@ columns:
     displayName: Continent ID
     type: string
     redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftFilterColumn: wikidata_id
     actions:
       - filter
     actionsPopular:
@@ -70,8 +70,8 @@ columns:
     objectEntity:
     displayName: search display_name
     type: string
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftDisplayColumn: display_name
+    redshiftFilterColumn: display_name
     actions:
       - filter
     actionsPopular:
