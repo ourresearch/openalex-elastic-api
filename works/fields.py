@@ -428,6 +428,8 @@ fields = [
         docstring="The OpenAlex ID for a work",
         documentation_link="https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
     ),
+    OpenAlexIDField(param="institution_assertions.id"),
+    OpenAlexIDField(param="institution_assertions.lineage"),
     OpenAlexIDField(param="institution.id", alias="authorships.institutions.id"),
     OpenAlexIDField(param="institutions.id", alias="authorships.institutions.id"),
     OpenAlexIDField(param="journal", custom_es_field="primary_location.source.id"),
@@ -710,6 +712,9 @@ fields = [
     TermField(
         param="indexed_in",
     ),
+    TermField(param="institution_assertions.country_code"),
+    TermField(param="institution_assertions.ror"),
+    TermField(param="institution_assertions.type"),
     TermField(
         param="institutions.country_code",
         alias="authorships.institutions.country_code",

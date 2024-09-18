@@ -28,6 +28,8 @@ class Work(db.Model):
     primary_source_type = Column(String(500))
     primary_source_issn = Column(String(500))
     primary_source_is_in_doaj = Column(Boolean)
+    license = Column(String(500))
+    is_retracted = Column(Boolean)
     created_date = Column(String(500))
 
     @property

@@ -77,6 +77,7 @@ def results():
 @blueprint.route("/searches", methods=["POST"])
 def store_search():
     raw_query = request.json.get("query")
+    bypass_cache = request.json.get("bypass_cache", False)
 
     # query object
     query = Query(
@@ -95,7 +96,7 @@ def store_search():
     if not ok:
         return jsonify({"invalid query error": error}), 400
 
-    s = Search(query=query.to_dict())
+    s = Search(query=query.to_dict(), bypass_cache=bypass_cache)
     s.save()
     return jsonify(s.to_dict()), 201
 

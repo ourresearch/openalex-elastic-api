@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timezone
 import os
 import time
+import hashlib
 
 import redis
 import sentry_sdk
@@ -62,6 +63,7 @@ def fetch_results(query):
 
 def process_searches():
     last_log_time = 0
+    cache_expiration = 24 * 3600  # 24 hours in seconds
 
     while True:
         search_id = redis_db.lpop(search_queue)
@@ -75,13 +77,41 @@ def process_searches():
             continue
 
         search_json = redis_db.get(search_id)
-        if search_json:
-            print(f"found a search_json!")
         if not search_json:
             continue
 
         search = json.loads(search_json)
-        if search.get("is_ready"):
+
+        # Check if bypass_cache is set to true or the cache is older than 24 hours
+        bypass_cache = search.get("bypass_cache", False)
+        print(f"Processing search {search_id} with bypass_cache={bypass_cache}")
+        last_processed_time = search["timestamps"].get("completed")
+
+        if last_processed_time:
+            last_processed_time = datetime.fromisoformat(last_processed_time)
+            time_since_processed = (datetime.now(timezone.utc) - last_processed_time).total_seconds()
+        else:
+            time_since_processed = cache_expiration + 1  # force recalculation if no timestamp
+
+        cache_valid = not bypass_cache and time_since_processed <= cache_expiration
+
+        # If the cache is not valid or bypass_cache is true, clear old results and reset state
+        if not cache_valid:
+            print(f"Cache is not valid for search {search_id}")
+            search["results"] = None
+            search["results_header"] = None
+            search["meta"] = None
+            search["is_ready"] = False
+            search["is_completed"] = False
+            search["timestamps"]["completed"] = None
+
+            # Save the cleared search object back to Redis
+            print(f"Clearing old results for search {search_id}")
+            redis_db.set(search_id, json.dumps(search))
+
+        # process only if results are not ready or the cache is invalid (bypass or older than 24 hours)
+        if search.get("is_ready") and cache_valid:
+            print(f"Search {search_id} is already processed and cache is valid so skipping")
             continue
 
         try:
@@ -117,6 +147,11 @@ def process_searches():
 
         # wait to avoid hammering the Redis server
         time.sleep(0.1)
+
+
+def generate_cache_key(query_dict):
+    query_str = json.dumps(query_dict, sort_keys=True)
+    return hashlib.md5(query_str.encode('utf-8')).hexdigest()
 
 
 if __name__ == "__main__":

@@ -228,7 +228,37 @@ class DateTimeField(DateField):
 
 class OpenAlexIDField(Field):
     def build_query(self):
-        if self.value == "null" and self.param not in ["repository", "journal"]:
+        if self.param == "authorships.institutions.id":
+            if self.value == "null":
+                q = ~Q("exists", field="authorships.institutions.id") & ~Q("exists", field="institution_assertions.id")
+            elif self.value == "!null":
+                q = Q("exists", field="authorships.institutions.id") & Q("exists", field="institution_assertions.id")
+            elif self.value.startswith("!"):
+                query = self.value[1:]
+                query = get_full_openalex_id(query)
+                self.validate(self.value)
+                q = ~Q("term", **{"authorships.institutions.id": query}) & ~Q("term", **{"institution_assertions.id": query})
+            else:
+                query = get_full_openalex_id(self.value)
+                self.validate(self.value)
+                q = Q("term", **{"authorships.institutions.id": query}) | Q("term", **{"institution_assertions.id": query})
+            return q
+        elif self.param == "authorships.institutions.lineage":
+            if self.value == "null":
+                q = ~Q("exists", field="authorships.institutions.lineage") & ~Q("exists", field="institution_assertions.lineage")
+            elif self.value == "!null":
+                q = Q("exists", field="authorships.institutions.lineage") & Q("exists", field="institution_assertions.lineage")
+            elif self.value.startswith("!"):
+                query = self.value[1:]
+                query = get_full_openalex_id(query)
+                self.validate(self.value)
+                q = ~Q("term", **{"authorships.institutions.lineage": query}) & ~Q("term", **{"institution_assertions.lineage": query})
+            else:
+                query = get_full_openalex_id(self.value)
+                self.validate(self.value)
+                q = Q("term", **{"authorships.institutions.lineage": query}) | Q("term", **{"institution_assertions.lineage": query})
+            return q
+        elif self.value == "null" and self.param not in ["repository", "journal"]:
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
             q = ~Q("exists", field=field_name)
@@ -558,6 +588,67 @@ class TermField(Field):
             self.value = self.value.replace("https://openalex.org/", "").replace(
                 "licenses/", ""
             )
+        elif self.param == "authorships.institutions.country_code":
+            self.value = self.value.replace("countries/", "")
+            if self.value == "null":
+                q = ~Q("exists", field="authorships.institutions.country_code") & ~Q(
+                    "exists", field="institution_assertions.country_code"
+                )
+            elif self.value == "!null":
+                q = Q("exists", field="authorships.institutions.country_code") & Q(
+                    "exists", field="institution_assertions.country_code"
+                )
+            elif self.value.startswith("!"):
+                query = self.value[1:]
+                q = ~Q("term", **{"authorships.institutions.country_code": query}) & ~Q(
+                    "term", **{"institution_assertions.country_code": query})
+            else:
+                q = Q("term", **{"authorships.institutions.country_code": self.value}) | Q(
+                    "term", **{"institution_assertions.country_code": self.value}
+                )
+            return q
+        elif self.param == "authorships.institutions.ror":
+            if self.value == "null":
+                q = ~Q("exists", field="authorships.institutions.ror") & ~Q(
+                    "exists", field="institution_assertions.ror"
+                )
+            elif self.value == "!null":
+                q = Q("exists", field="authorships.institutions.ror") & Q(
+                    "exists", field="institution_assertions.ror"
+                )
+            elif self.value.startswith("!"):
+                query = self.value[1:]
+                if "ror.org" not in query:
+                    query = f"https://ror.org/{query}"
+                q = ~Q("term", **{"authorships.institutions.ror": query}) & ~Q(
+                    "term", **{"institution_assertions.ror": query}
+                )
+            else:
+                if "ror.org" not in self.value:
+                    self.value = f"https://ror.org/{self.value}"
+                q = Q("term", **{"authorships.institutions.ror": self.value}) | Q(
+                    "term", **{"institution_assertions.ror": self.value}
+                )
+            return q
+        elif self.param == "authorships.institutions.type":
+            self.value = self.value.replace("institution-types/", "")
+            if self.value == "null":
+                q = ~Q("exists", field="authorships.institutions.type") & ~Q(
+                    "exists", field="institution_assertions.type"
+                )
+            elif self.value == "!null":
+                q = Q("exists", field="authorships.institutions.type") & Q(
+                    "exists", field="institution_assertions.type"
+                )
+            elif self.value.startswith("!"):
+                query = self.value[1:]
+                q = ~Q("term", **{"authorships.institutions.type": query}) & ~Q(
+                    "term", **{"institution_assertions.type": query}
+                )
+            else:
+                q = Q("term", **{"authorships.institutions.type": self.value}) | Q(
+                    "term", **{"institution_assertions.type": self.value}
+                )
         elif self.param == "id":
             if "keywords/" in self.value and not self.value.startswith(
                 "https://openalex.org/"
