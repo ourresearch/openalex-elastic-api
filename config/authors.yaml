@@ -301,7 +301,7 @@ columns:
     defaultOperator: is
     entityId: authors
     objectEntity:
-    displayName: related to text
+    displayName: related text
     type: string
     redshiftDisplayColumn: related_to_text
     redshiftFilterColumn: related_to_text

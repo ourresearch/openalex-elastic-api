@@ -794,7 +794,7 @@ columns:
     operators:
       - is
     defaultOperator: is
-    displayName: related to text
+    displayName: related text
     objectEntity:
     type: string
     category: other
