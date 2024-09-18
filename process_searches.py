@@ -46,19 +46,7 @@ def fetch_results(query):
             sort_by_order=sort_by_order,
         )
 
-        cache_key = generate_cache_key(query.to_dict())
-
-        # check if the result is cached
-        cached_data = redis_db.get(cache_key)
-        if cached_data:
-            print(f"got cached results for query: {cache_key}")
-            json_data = json.loads(cached_data)
-
         json_data = query.execute()
-
-        # cache the result for 24 hours
-        redis_db.setex(cache_key, 86400, json.dumps(json_data))
-        print(f"Cached new results for query: {cache_key}")
 
         # results table
         results_table = ResultTable(

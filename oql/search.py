@@ -1,10 +1,10 @@
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
+import hashlib
 import json
 from typing import Dict, List, Optional
 
 import redis
-import shortuuid
 
 import settings
 
@@ -26,12 +26,13 @@ class Search:
     timestamps: Dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
-        self.id = self.short_uuid()
+        self.id = self.hash_id()
         self.timestamps["started"] = datetime.now(timezone.utc).isoformat()
         self.timestamps["est_completed"] = "not implemented"
 
-    def short_uuid(self) -> str:
-        return shortuuid.uuid()
+    def hash_id(self):
+        query_str = json.dumps(self.query, sort_keys=True)
+        return hashlib.md5(query_str.encode('utf-8')).hexdigest()
 
     def save(self):
         print(f"Saving search {self.id} to cache with {self.to_dict()}")
