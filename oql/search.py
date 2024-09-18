@@ -23,6 +23,7 @@ class Search:
     meta: Optional[Dict] = field(default_factory=dict)
     is_completed: bool = False
     is_ready: bool = False
+    bypass_cache: bool = False
     timestamps: Dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
