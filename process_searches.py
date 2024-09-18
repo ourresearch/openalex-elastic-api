@@ -84,6 +84,7 @@ def process_searches():
 
         # Check if bypass_cache is set to true or the cache is older than 24 hours
         bypass_cache = search.get("bypass_cache", False)
+        print(f"Processing search {search_id} with bypass_cache={bypass_cache}")
         last_processed_time = search["timestamps"].get("completed")
 
         if last_processed_time:
@@ -96,6 +97,7 @@ def process_searches():
 
         # If the cache is not valid or bypass_cache is true, clear old results and reset state
         if not cache_valid:
+            print(f"Cache is not valid for search {search_id}")
             search["results"] = None
             search["results_header"] = None
             search["meta"] = None
@@ -109,6 +111,7 @@ def process_searches():
 
         # process only if results are not ready or the cache is invalid (bypass or older than 24 hours)
         if search.get("is_ready") and cache_valid:
+            print(f"Search {search_id} is already processed and cache is valid so skipping")
             continue
 
         try:
