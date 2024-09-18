@@ -94,6 +94,19 @@ def process_searches():
 
         cache_valid = not bypass_cache and time_since_processed <= cache_expiration
 
+        # If the cache is not valid or bypass_cache is true, clear old results and reset state
+        if not cache_valid:
+            search["results"] = None
+            search["results_header"] = None
+            search["meta"] = None
+            search["is_ready"] = False
+            search["is_completed"] = False
+            search["timestamps"]["completed"] = None
+
+            # Save the cleared search object back to Redis
+            print(f"Clearing old results for search {search_id}")
+            redis_db.set(search_id, json.dumps(search))
+
         # process only if results are not ready or the cache is invalid (bypass or older than 24 hours)
         if search.get("is_ready") and cache_valid:
             continue
