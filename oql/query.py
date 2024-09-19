@@ -103,15 +103,14 @@ class Query:
         return columns
 
     def default_sort_by_column(self):
-        entities_with_works_count = ["authors", "countries", "institutions", "keywords", "languages", "sdgs", "sources", "topics"]
         if self.entity == "works":
             return "cited_by_count"
         elif self.entity == "summary":
             return None
-        elif self.entity in entities_with_works_count:
-            return "count(works)"
-        else:
+        elif self.entity in ["institution-types", "source-types", "continents"]:
             return "display_name"
+        else:
+            return "count(works)"
 
     @staticmethod
     def default_sort_by_order():
