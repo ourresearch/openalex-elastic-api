@@ -17,6 +17,8 @@ idRegex: (?i)(?:publishers\/)?(?:https:\/\/openalex\.org\/)?(p\d+)
 showOnEntityPage:
   - id
   - display_name
+  - homepage_url
+  - alternate_titles
 showOnTablePage:
   - display_name
 columns:
@@ -102,6 +104,36 @@ columns:
       - filter
     icon: mdi-earth
     descr: The country where the publisher is located.
+  homepage_url:
+    id: homepage_url
+    subjectEntity: publishers
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: Homepage URL
+    isId: false
+    type: string
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    category: ids
+    actions: [ ]
+    icon: mdi-file-document-outline
+    descr: Homepage url of the publisher
+  alternative_titles:
+    id: alternative_titles
+    subjectEntity: publishers
+    objectEntity:
+    displayName: Alternative titles
+    isId: false
+    type: array
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    category: ids
+    actions: [ ]
+    icon: mdi-file-document-outline
+    descr: Alternative titles of the publisher
   count(works):
     id: count(works)
     subjectEntity: publishers
