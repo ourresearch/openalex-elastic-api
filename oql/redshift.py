@@ -153,7 +153,7 @@ class RedshiftQueryHandler:
                 .join(models.Affiliation, models.Affiliation.paper_id == models.Work.paper_id)
                 .join(models.Institution, models.Institution.affiliation_id == models.Affiliation.affiliation_id)
             )
-        elif self.entity == "types":
+        elif self.entity == "work-types":
             query = (
                 db.session.query(*columns_to_select)
                 .distinct()
@@ -485,7 +485,7 @@ class RedshiftQueryHandler:
                 query = self.filter_by_boolean(model_column, query, value)
             elif is_search_column:
                 query = query.filter(model_column.ilike(f"%{value}%"))
-            elif key == "id" and self.entity in ["continents", "institution-types", "languages", "licenses", "types", "source-types"]:
+            elif key == "id" and self.entity in ["continents", "institution-types", "languages", "licenses", "source-types", "work-types"]:
                 value = get_short_id_text(value)
                 if self.entity == "continents":
                     value = value.upper()
@@ -716,7 +716,7 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "count(works)" and self.entity in ["continents", "domains", "fields", "funders", "institution-types", "licenses", "publishers", "sdgs", "source-types", "subfields", "types"]:
+            elif column == "count(works)" and self.entity in ["continents", "domains", "fields", "funders", "institution-types", "licenses", "publishers", "sdgs", "source-types", "subfields", "work-types"]:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
@@ -793,7 +793,7 @@ class RedshiftQueryHandler:
                         query, self.sort_by_order, stat_function
                     )
             # sum citations
-            elif column == "sum(citations)" and self.entity in ["authors", "countries", "domains", "fields", "funders", "institutions", "keywords", "languages", "publishers", "subfields", "types", "sdgs", "sources", "topics"]:
+            elif column == "sum(citations)" and self.entity in ["authors", "countries", "domains", "fields", "funders", "institutions", "keywords", "languages", "publishers", "subfields", "sdgs", "sources", "topics", "work-types"]:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
@@ -816,7 +816,7 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "mean(fwci)" and self.entity in ["authors", "countries", "domains", "fields", "funders", "institutions", "keywords", "languages", "publishers", "sdgs", "sources", "subfields", "types", "topics"]:
+            elif column == "mean(fwci)" and self.entity in ["authors", "countries", "domains", "fields", "funders", "institutions", "keywords", "languages", "publishers", "sdgs", "sources", "subfields", "topics", "work-types"]:
                 work_class = getattr(models, "Work")
 
                 stat_function = func.avg(work_class.fwci)

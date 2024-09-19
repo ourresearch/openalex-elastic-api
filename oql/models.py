@@ -800,7 +800,7 @@ class WorkTopic(db.Model):
         return f"<WorkTopic(paper_id={self.paper_id}, topic_id={self.topic_id}, score={self.score})>"
 
 
-class Type(db.Model):
+class WorkType(db.Model):
     __tablename__ = "work_type"
 
     work_type_id = Column(String(500), primary_key=True)
