@@ -40,7 +40,7 @@ columns:
     type: string
     redshiftDisplayColumn: id
     redshiftFilterColumn: funder_id
-    actions: []
+    actions:
     icon: mdi-cash-multiple
     descr: Unique identifier for the funder
   display_name:

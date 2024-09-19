@@ -122,7 +122,7 @@ class Query:
         return [
             key
             for key, values in all_entities_config[self.entity]['columns'].items()
-            if "sort" in values.get("actions", [])
+            if "sort" in (values.get("actions") or [])
         ]
 
     def property_type(self, column):
