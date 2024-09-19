@@ -88,6 +88,8 @@ class Query:
         if show_columns:
             # if show_columns is passed in, use that
             columns = show_columns
+            if "display_name" not in columns:
+                columns.insert(0, "display_name")
         elif self.entity == "summary":
             return ["count", "sum(cited_by_count)", "mean(cited_by_count)",  "mean(fwci)", "sum(is_oa)", "percent(is_oa)"]
         elif self.entity and self.entity in all_entities_config:
