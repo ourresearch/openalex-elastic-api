@@ -5,7 +5,7 @@ from sqlalchemy import case, cast, desc, func, Float
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import aliased
 
-from combined_config import all_entities_config, entity_name
+from combined_config import all_entities_config
 from extensions import db
 from oql import models
 
@@ -460,7 +460,7 @@ class RedshiftQueryHandler:
                 raise(ValueError("Invalid entity filter: missing key or value"))
 
             # do not filter stats
-            if key.startswith("count(") or key == "mean(fwci)":
+            if key.startswith("count(") or key.startswith("sum(") or key.startswith("mean(") or key.startswith("percent("):
                 continue
 
             # setup

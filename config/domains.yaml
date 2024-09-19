@@ -115,7 +115,7 @@ columns:
     displayName: works count
     type: number
     redshiftDisplayColumn: count(works)
-    redshiftFilterColumn:
+    redshiftFilterColumn: count(works)
     actions:
       - sort
       - column
@@ -138,7 +138,7 @@ columns:
     displayName: citations sum
     type: number
     redshiftDisplayColumn: sum(citations)
-    redshiftFilterColumn:
+    redshiftFilterColumn: sum(citations)
     actions:
       - sort
       - column

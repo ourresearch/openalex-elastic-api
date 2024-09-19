@@ -181,7 +181,7 @@ columns:
     displayName: works count
     type: number
     redshiftDisplayColumn: count(works)
-    redshiftFilterColumn:
+    redshiftFilterColumn: count(works)
     actions:
       - sort
       - column

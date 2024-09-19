@@ -129,7 +129,7 @@ columns:
     displayName: works count
     type: number
     redshiftDisplayColumn: count(works)
-    redshiftFilterColumn:
+    redshiftFilterColumn: count(works)
     icon: mdi-tag-outline
     descr: The number of works of this type
   sum(citations):
