@@ -107,7 +107,7 @@ class Query:
             return "cited_by_count"
         elif self.entity == "summary":
             return None
-        elif self.entity in ["institution-types", "source-types", "continents"]:
+        elif self.entity in ["institution-types", "source-types"]:
             return "display_name"
         else:
             return "count(works)"
