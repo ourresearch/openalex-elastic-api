@@ -165,11 +165,11 @@ columns:
     descr: The mean Field-Weighted Citation Impact (FWCI) of works created by this country.
 values:
   - id: countries/US
-    display_name: United States of America
+    display_name: United States
   - id: countries/CN
     display_name: China
   - id: countries/GB
-    display_name: United Kingdom of Great Britain and Northern Ireland
+    display_name: United Kingdom
   - id: countries/DE
     display_name: Germany
   - id: countries/JP
@@ -189,13 +189,13 @@ values:
   - id: countries/ES
     display_name: Spain
   - id: countries/RU
-    display_name: Russian Federation
+    display_name: Russia
   - id: countries/ID
     display_name: Indonesia
   - id: countries/NL
     display_name: Netherlands
   - id: countries/KR
-    display_name: Korea, Republic of
+    display_name: South Korea
   - id: countries/PL
     display_name: Poland
   - id: countries/CH
@@ -207,9 +207,9 @@ values:
   - id: countries/BE
     display_name: Belgium
   - id: countries/IR
-    display_name: Iran, Islamic Republic of
+    display_name: Iran
   - id: countries/TW
-    display_name: Taiwan, Province of China
+    display_name: Taiwan
   - id: countries/MX
     display_name: Mexico
   - id: countries/DK
@@ -271,7 +271,7 @@ values:
   - id: countries/RS
     display_name: Serbia
   - id: countries/VN
-    display_name: Viet Nam
+    display_name: Vietnam
   - id: countries/IQ
     display_name: Iraq
   - id: countries/MA
@@ -301,7 +301,7 @@ values:
   - id: countries/ET
     display_name: Ethiopia
   - id: countries/VE
-    display_name: Venezuela, Bolivarian Republic of
+    display_name: Venezuela
   - id: countries/JO
     display_name: Jordan
   - id: countries/LT
@@ -337,7 +337,7 @@ values:
   - id: countries/PR
     display_name: Puerto Rico
   - id: countries/TZ
-    display_name: Tanzania, United Republic of
+    display_name: Tanzania
   - id: countries/UG
     display_name: Uganda
   - id: countries/CM
@@ -353,7 +353,7 @@ values:
   - id: countries/IS
     display_name: Iceland
   - id: countries/BA
-    display_name: Bosnia and Herzegovina
+    display_name: Bosnia & Herzegovina
   - id: countries/TJ
     display_name: Tajikistan
   - id: countries/AM
@@ -361,7 +361,7 @@ values:
   - id: countries/GE
     display_name: Georgia
   - id: countries/BO
-    display_name: Bolivia, Plurinational State of
+    display_name: Bolivia
   - id: countries/SD
     display_name: Sudan
   - id: countries/MN
@@ -373,9 +373,9 @@ values:
   - id: countries/SN
     display_name: Senegal
   - id: countries/MD
-    display_name: Moldova, Republic of
+    display_name: Moldova
   - id: countries/CI
-    display_name: Côte d'Ivoire
+    display_name: Ivory Coast
   - id: countries/YE
     display_name: Yemen
   - id: countries/ZM
@@ -387,7 +387,7 @@ values:
   - id: countries/KH
     display_name: Cambodia
   - id: countries/PS
-    display_name: Palestine, State of
+    display_name: Palestine
   - id: countries/BJ
     display_name: Benin
   - id: countries/MT
@@ -411,9 +411,9 @@ values:
   - id: countries/MM
     display_name: Myanmar
   - id: countries/SY
-    display_name: Syrian Arab Republic
+    display_name: Syria
   - id: countries/CD
-    display_name: Congo, Democratic Republic of the
+    display_name: DR Congo
   - id: countries/BW
     display_name: Botswana
   - id: countries/NE
@@ -423,11 +423,11 @@ values:
   - id: countries/RE
     display_name: Réunion
   - id: countries/BN
-    display_name: Brunei Darussalam
+    display_name: Brunei
   - id: countries/BI
     display_name: Burundi
   - id: countries/VG
-    display_name: Virgin Islands, British
+    display_name: British Virgin Islands
   - id: countries/RW
     display_name: Rwanda
   - id: countries/ME
@@ -439,7 +439,7 @@ values:
   - id: countries/CG
     display_name: Congo
   - id: countries/TT
-    display_name: Trinidad and Tobago
+    display_name: Trinidad & Tobago
   - id: countries/NI
     display_name: Nicaragua
   - id: countries/KG
@@ -449,7 +449,7 @@ values:
   - id: countries/HN
     display_name: Honduras
   - id: countries/DO
-    display_name: Dominican Republic
+    display_name: Dominican Rep.
   - id: countries/NA
     display_name: Namibia
   - id: countries/FJ
@@ -469,13 +469,13 @@ values:
   - id: countries/GM
     display_name: Gambia
   - id: countries/ST
-    display_name: Sao Tome and Principe
+    display_name: São Tomé & Príncipe
   - id: countries/GA
     display_name: Gabon
   - id: countries/GD
     display_name: Grenada
   - id: countries/LA
-    display_name: Lao People's Democratic Republic
+    display_name: Laos
   - id: countries/GN
     display_name: Guinea
   - id: countries/SL
@@ -515,9 +515,9 @@ values:
   - id: countries/SO
     display_name: Somalia
   - id: countries/KN
-    display_name: Saint Kitts and Nevis
+    display_name: St. Kitts & Nevis
   - id: countries/MF
-    display_name: Saint Martin (French part)
+    display_name: Saint Martin
   - id: countries/LS
     display_name: Lesotho
   - id: countries/BS
@@ -535,7 +535,7 @@ values:
   - id: countries/FO
     display_name: Faroe Islands
   - id: countries/VI
-    display_name: Virgin Islands, U.S.
+    display_name: US Virgin Islands
   - id: countries/SR
     display_name: Suriname
   - id: countries/BZ
@@ -553,7 +553,7 @@ values:
   - id: countries/KY
     display_name: Cayman Islands
   - id: countries/KP
-    display_name: Korea, Democratic People's Republic of
+    display_name: North Korea
   - id: countries/GI
     display_name: Gibraltar
   - id: countries/SC
@@ -579,7 +579,7 @@ values:
   - id: countries/BL
     display_name: Saint Barthélemy
   - id: countries/BQ
-    display_name: Bonaire, Sint Eustatius and Saba
+    display_name: Caribbean Netherlands
   - id: countries/BV
     display_name: Bouvet Island
   - id: countries/CC
@@ -591,17 +591,17 @@ values:
   - id: countries/DJ
     display_name: Djibouti
   - id: countries/FK
-    display_name: Falkland Islands (Malvinas)
+    display_name: Falkland Islands
   - id: countries/FM
-    display_name: Micronesia, Federated States of
+    display_name: Micronesia
   - id: countries/GG
     display_name: Guernsey
   - id: countries/GQ
     display_name: Equatorial Guinea
   - id: countries/GS
-    display_name: South Georgia and the South Sandwich Islands
+    display_name: South Georgia & South Sandwich Is.
   - id: countries/HM
-    display_name: Heard Island and McDonald Islands
+    display_name: Heard & McDonald Islands
   - id: countries/IM
     display_name: Isle of Man
   - id: countries/IO
@@ -617,7 +617,7 @@ values:
   - id: countries/MH
     display_name: Marshall Islands
   - id: countries/MP
-    display_name: Northern Mariana Islands
+    display_name: Northern Mariana Is.
   - id: countries/MS
     display_name: Montserrat
   - id: countries/NF
@@ -627,7 +627,7 @@ values:
   - id: countries/NU
     display_name: Niue
   - id: countries/PM
-    display_name: Saint Pierre and Miquelon
+    display_name: St. Pierre & Miquelon
   - id: countries/PN
     display_name: Pitcairn
   - id: countries/PW
@@ -635,13 +635,13 @@ values:
   - id: countries/SB
     display_name: Solomon Islands
   - id: countries/SH
-    display_name: Saint Helena, Ascension and Tristan da Cunha
+    display_name: Saint Helena
   - id: countries/SJ
     display_name: Svalbard and Jan Mayen
   - id: countries/SX
     display_name: Sint Maarten
   - id: countries/TC
-    display_name: Turks and Caicos Islands
+    display_name: Turks & Caicos Islands
   - id: countries/TK
     display_name: Tokelau
   - id: countries/TO
@@ -649,11 +649,11 @@ values:
   - id: countries/TV
     display_name: Tuvalu
   - id: countries/VC
-    display_name: Saint Vincent and the Grenadines
+    display_name: St. Vincent & Grenadines
   - id: countries/VU
     display_name: Vanuatu
   - id: countries/WF
-    display_name: Wallis and Futuna
+    display_name: Wallis & Futuna
   - id: countries/WS
     display_name: Samoa
   - id: countries/YT
