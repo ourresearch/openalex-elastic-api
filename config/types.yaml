@@ -80,40 +80,40 @@ columns:
     icon: mdi-account-outline
     descr: The name of the work type.
     isSearchColumn: true
-#  description:
-#    id: description
-#    subjectEntity: types
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    entityId: types
-#    objectEntity:
-#    displayName: description
-#    type: string
-#    redshiftDisplayColumn: description
-#    redshiftFilterColumn:
-#    actions:
-#      - column
-#    icon: mdi-shape-outline
-#    descr: A description of the work type.
-#  crossref_types:
-#    id: crossref_types
-#    isList: true
-#    subjectEntity: types
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    entityId: types
-#    objectEntity:
-#    displayName: alternate names (Crossref)
-#    type: array
-#    redshiftDisplayColumn:
-#    redshiftFilterColumn:
-#    actions: []
-#    icon: mdi-shape-outline
-#    descr: Alternate names for the work type from Crossref.
+  description:
+    id: description
+    subjectEntity: types
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: types
+    objectEntity:
+    displayName: description
+    type: string
+    redshiftDisplayColumn: description
+    redshiftFilterColumn:
+    actions:
+      - column
+    icon: mdi-shape-outline
+    descr: A description of the work type.
+  crossref_types:
+    id: crossref_types
+    isList: true
+    subjectEntity: types
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: types
+    objectEntity:
+    displayName: alternate names (Crossref)
+    type: array
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-shape-outline
+    descr: Alternate names for the work type from Crossref.
   count(works):
     id: count(works)
     subjectEntity: topics
