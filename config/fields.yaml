@@ -84,74 +84,74 @@ columns:
     icon: mdi-account-outline
     descr: The name of the field
     isSearchColumn: true
-#  description:
-#    id: description
-#    subjectEntity: fields
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    entityId: fields
-#    objectEntity:
-#    displayName: description
-#    type: string
-#    redshiftDisplayColumn: description
-#    redshiftFilterColumn: description
-#    actions:
-#      - column
-#    icon: mdi-tag-outline
-#    descr: A description of the field
-#  display_name_alternatives:
-#    id: display_name_alternatives
-#    isList: true
-#    subjectEntity: fields
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    entityId: fields
-#    objectEntity:
-#    displayName: alternate names
-#    type: array
-#    redshiftDisplayColumn:
-#    redshiftFilterColumn:
-#    actions: []
-#    icon: mdi-tag-outline
-#    descr: Alternate names for the field
-#  siblings:
-#    id: siblings
-#    isList: true
-#    subjectEntity: fields
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    entityId: fields
-#    objectEntity: fields
-#    displayName: related fields (siblings)
-#    type: array
-#    redshiftDisplayColumn:
-#    redshiftFilterColumn:
-#    actions: []
-#    icon: mdi-tag-outline
-#    descr: Fields that are related to this field
-#  subfields:
-#    id: subfields
-#    isList: true
-#    subjectEntity: fields
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    entityId: subfields
-#    objectEntity: subfields
-#    displayName: subfields (children)
-#    type: array
-#    redshiftDisplayColumn:
-#    redshiftFilterColumn:
-#    actions: []
-#    icon: mdi-tag-outline
-#    descr: The set of subfields that are children of this field
+  description:
+    id: description
+    subjectEntity: fields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: fields
+    objectEntity:
+    displayName: description
+    type: string
+    redshiftDisplayColumn: description
+    redshiftFilterColumn: description
+    actions:
+      - column
+    icon: mdi-tag-outline
+    descr: A description of the field
+  display_name_alternatives:
+    id: display_name_alternatives
+    isList: true
+    subjectEntity: fields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: fields
+    objectEntity:
+    displayName: alternate names
+    type: array
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: Alternate names for the field
+  siblings:
+    id: siblings
+    isList: true
+    subjectEntity: fields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: fields
+    objectEntity: fields
+    displayName: related fields (siblings)
+    type: array
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: Fields that are related to this field
+  subfields:
+    id: subfields
+    isList: true
+    subjectEntity: fields
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: subfields
+    objectEntity: subfields
+    displayName: subfields (children)
+    type: array
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: The set of subfields that are children of this field
   count(works):
     id: count(works)
     subjectEntity: fields
