@@ -16,6 +16,9 @@ idRegex: (?:https:\/\/openalex\.org\/countries\/|countries\/)([a-zA-Z]{2})
 showOnEntityPage:
   - id
   - display_name
+  - description
+  - display_name_alternatives
+  - is_global_south
 showOnTablePage:
   - display_name
   - count(works)
@@ -94,6 +97,57 @@ columns:
     icon: mdi-account-outline
     descr: The name of the country
     isSearchColumn: true
+  description:
+    id: description
+    isColumnMandatory: false
+    subjectEntity: countries
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: description
+    type: string
+    redshiftDisplayColumn: description
+    redshiftFilterColumn: description
+    actions: [ ]
+    actionsPopular: [ ]
+    category: other
+    icon: mdi-account-outline
+    descr: The description of the country
+  display_name_alternatives:
+    id: display_name_alternatives
+    isList: true
+    subjectEntity: countries
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: countries
+    objectEntity:
+    displayName: alternate names
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    type: array
+    actions: [ ]
+    actionsPopular: [ ]
+    icon: mdi-town-hall
+    descr: Alternate names of the country
+  is_global_south:
+    id: is_global_south
+    subjectEntity: countries
+    operators:
+      - is
+    defaultOperator: is
+    displayName: from Global South
+    objectEntity:
+    type: boolean
+    actions: []
+    category: other
+    redshiftDisplayColumn: is_global_south
+    redshiftFilterColumn: is_global_south
+    icon: mdi-earth
+    descr: Whether the country is in the global south
   count(works):
     id: count(works)
     subjectEntity: countries
