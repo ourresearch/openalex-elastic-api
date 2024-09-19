@@ -172,7 +172,7 @@ columns:
       - is not
     defaultOperator: is
     objectEntity:
-    displayName: description
+    displayName: Homepage URL
     isId: false
     type: string
     redshiftDisplayColumn:
