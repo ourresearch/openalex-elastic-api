@@ -16,6 +16,8 @@ idRegex: (?:https:\/\/openalex\.org\/licenses\/|licenses\/)([a-zA-Z0-9\-]+)
 showOnEntityPage:
   - id
   - display_name
+  - url
+  - description
 showOnTablePage:
   - display_name
 columns:
@@ -78,23 +80,37 @@ columns:
     icon: mdi-account-outline
     descr: The name of the license.
     isSearchColumn: true
-#  description:
-#    id: description
-#    subjectEntity: licenses
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    entityId: licenses
-#    objectEntity:
-#    displayName: description
-#    type: string
-#    redshiftDisplayColumn: description
-#    redshiftFilterColumn: description
-#    actions:
-#      - column
-#    icon: mdi-shape-outline
-#    descr: A description of the license.
+  url:
+    id: url
+    subjectEntity: licenses
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: URL
+    type: string
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    descr: URL of the license
+  description:
+    id: description
+    subjectEntity: licenses
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: licenses
+    objectEntity:
+    displayName: description
+    type: string
+    redshiftDisplayColumn: description
+    redshiftFilterColumn: description
+    actions:
+      - column
+    icon: mdi-shape-outline
+    descr: A description of the license.
   count(works):
     id: count(works)
     subjectEntity: licenses
