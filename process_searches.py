@@ -93,7 +93,9 @@ def process_searches():
         else:
             time_since_processed = cache_expiration + 1  # force recalculation if no timestamp
 
-        cache_valid = not bypass_cache and time_since_processed <= cache_expiration
+        # cache_valid = not bypass_cache and time_since_processed <= cache_expiration
+        # turn off caching for now
+        cache_valid = False
 
         # If the cache is not valid or bypass_cache is true, clear old results and reset state
         if not cache_valid:
