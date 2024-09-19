@@ -218,6 +218,36 @@ class RedshiftQueryHandler:
                     models.Work.license == models.License.license_id
                 )
             )
+        elif self.entity == "institution-types":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(
+                    models.Institution,
+                    models.Institution.type == models.InstitutionType.institution_type_id
+                )
+                .join(
+                    models.Affiliation,
+                    models.Affiliation.affiliation_id == models.Institution.affiliation_id
+                )
+                .join(
+                    models.Work,
+                    models.Work.paper_id == models.Affiliation.paper_id
+                )
+            )
+        elif self.entity == "source-types":
+            query = (
+                db.session.query(*columns_to_select)
+                .distinct()
+                .join(
+                    models.Source,
+                    models.Work.journal_id == models.Source.source_id  # First join Work and Source
+                )
+                .join(
+                    models.SourceType,
+                    models.SourceType.source_type_id == models.Source.type  # Then join SourceType and Source
+                )
+            )
         else:
             query = db.session.query(*columns_to_select)
 
@@ -686,7 +716,7 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "count(works)" and self.entity in ["continents", "domains", "fields", "funders", "licenses", "publishers", "sdgs", "subfields", "types"]:
+            elif column == "count(works)" and self.entity in ["continents", "domains", "fields", "funders", "institution-types", "licenses", "publishers", "sdgs", "source-types", "subfields", "types"]:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")
