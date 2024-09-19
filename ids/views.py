@@ -718,13 +718,14 @@ def get_by_openalex_external_id(index, schema, id):
     only_fields = process_id_only_fields(request, schema)
 
     if index.startswith("institution-types"):
-        endpoint_name = "institution-types"
+        entity_name = endpoint_name = "institution-types"
     elif index.startswith("source-types"):
-        endpoint_name = "source-types"
+        entity_name = endpoint_name = "source-types"
     elif index.startswith("work-types"):
+        entity_name = "work-types"
         endpoint_name = "types"
     else:
-        endpoint_name = index.split("-")[0]
+        entity_name = endpoint_name = index.split("-")[0]
 
     clean_id = str(id).lower()
     formatted_id = f"https://openalex.org/{endpoint_name}/{clean_id}"
@@ -738,7 +739,7 @@ def get_by_openalex_external_id(index, schema, id):
     schema_instance = schema(context={"display_relevance": False}, only=only_fields)
     if is_ui_format():
         json_output = json.dumps(dict(schema_instance.dump(response[0])))
-        ui_format = format_as_ui(endpoint_name, json_output)
+        ui_format = format_as_ui(entity_name, json_output)
         return jsonify(
             {
                 "meta": {
