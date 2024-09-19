@@ -167,6 +167,15 @@ def format_as_ui(entity, data):
                     "config": config,
                 }
             )
+
+        # display_name_alternatives for example
+        elif column in data and isinstance(data[column], list) and data[column] and isinstance(data[column][0], str):
+            results.append(
+                {
+                    "value": data[column],
+                    'config': config,
+                }
+            )
         # normal columns
         elif "." not in column and not is_list:
             if column == "type" and entity == "works":
