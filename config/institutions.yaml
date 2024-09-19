@@ -19,6 +19,7 @@ hasSerp: true
 showOnEntityPage:
   - id
   - display_name
+  - homepage_url
   - display_name_alternatives
   - parent_institutions
   - child_institutions
@@ -170,6 +171,23 @@ columns:
     actionsPopular: []
     icon: mdi-town-hall
     descr: Alternative names or acronyms for the institution
+  homepage_url:
+    id: homepage_url
+    subjectEntity: institutions
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: Homepage URL
+    isId: false
+    type: string
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    category: ids
+    actions:
+    icon: mdi-file-document-outline
+    descr: Homepage url of the institution
   parent_institutions:
     id: parent_institutions
     isList: true
