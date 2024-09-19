@@ -165,7 +165,7 @@ columns:
     displayName: alternate names
     redshiftDisplayColumn:
     redshiftFilterColumn:
-    type: string
+    type: array
     actions: []
     actionsPopular: []
     icon: mdi-town-hall
