@@ -86,40 +86,40 @@ columns:
     icon: mdi-account-outline
     descr: The name of the topic.
     isSearchColumn: true
-#  description:
-#    id: description
-#    subjectEntity: topics
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    entityId: topics
-#    objectEntity:
-#    displayName: description
-#    type: string
-#    redshiftDisplayColumn: description
-#    redshiftFilterColumn: description
-#    actions:
-#      - column
-#    icon: mdi-tag-outline
-#    descr: A description of the topic.
-#  siblings:
-#    id: siblings
-#    isList: true
-#    subjectEntity: topics
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    entityId: topics
-#    objectEntity: topics
-#    displayName: related topics (siblings)
-#    type: array
-#    redshiftDisplayColumn:
-#    redshiftFilterColumn:
-#    actions: []
-#    icon: mdi-tag-outline
-#    descr: Other topics that are closely related to this topic.
+  description:
+    id: description
+    subjectEntity: topics
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: topics
+    objectEntity:
+    displayName: description
+    type: string
+    redshiftDisplayColumn: description
+    redshiftFilterColumn: description
+    actions:
+      - column
+    icon: mdi-tag-outline
+    descr: A description of the topic.
+  siblings:
+    id: siblings
+    isList: true
+    subjectEntity: topics
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: topics
+    objectEntity: topics
+    displayName: related topics (siblings)
+    type: array
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: Other topics that are closely related to this topic.
   subfield:
     id: subfield
     subjectEntity: topics
@@ -136,38 +136,38 @@ columns:
     actions: []
     icon: mdi-tag-outline
     descr: The subfield that this topic belongs to.
-#  field:
-#    id: field
-#    subjectEntity: topics
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    entityId: fields
-#    objectEntity: fields
-#    displayName: field
-#    type: object
-#    redshiftDisplayColumn:
-#    redshiftFilterColumn:
-#    actions: []
-#    icon: mdi-tag-outline
-#    descr: The field that this topic belongs to.
-#  domain:
-#    id: domain
-#    subjectEntity: topics
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    entityId: domains
-#    objectEntity: domains
-#    displayName: domain
-#    type: object
-#    redshiftDisplayColumn:
-#    redshiftFilterColumn:
-#    actions: []
-#    icon: mdi-tag-outline
-#    descr: The domain that this topic belongs to.
+  field:
+    id: field
+    subjectEntity: topics
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: fields
+    objectEntity: fields
+    displayName: field
+    type: object
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: The field that this topic belongs to.
+  domain:
+    id: domain
+    subjectEntity: topics
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: domains
+    objectEntity: domains
+    displayName: domain
+    type: object
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions: []
+    icon: mdi-tag-outline
+    descr: The domain that this topic belongs to.
   count(works):
     id: count(works)
     subjectEntity: topics
