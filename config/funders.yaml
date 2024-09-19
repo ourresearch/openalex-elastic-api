@@ -20,8 +20,8 @@ showOnEntityPage:
   - display_name
   - description
   - homepage_url
-  - doi
-  - crossref_id
+  - ids.doi
+  - ids.crossref
   - country_code
 showOnTablePage:
   - display_name
@@ -109,8 +109,8 @@ columns:
       - filter
     icon: mdi-earth
     descr: The country in which the funder is based
-  doi:
-    id: doi
+  ids.doi:
+    id: ids.doi
     subjectEntity: funders
     operators:
       - is
@@ -129,8 +129,8 @@ columns:
       - filter
     icon: mdi-file-document-outline
     descr: The DOI of the funder
-  crossref_id:
-    id: crossref_id
+  ids.crossref:
+    id: ids.crossref
     subjectEntity: funders
     operators:
       - is
@@ -140,11 +140,10 @@ columns:
     displayName: crossref id
     isId: true
     type: string
-    redshiftDisplayColumn: crossref_id
-    redshiftFilterColumn: crossref_id
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
     category: ids
     actions:
-      - column
     icon: mdi-file-document-outline
     descr: The crossref id of the funder
   description:
