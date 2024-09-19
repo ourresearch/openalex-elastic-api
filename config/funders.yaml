@@ -18,6 +18,11 @@ idRegex: (?i)(?:funders\/)?(?:https:\/\/openalex\.org\/)?(f\d+)
 showOnEntityPage:
   - id
   - display_name
+  - description
+  - homepage_url
+  - doi
+  - crossref_id
+  - country_code
 showOnTablePage:
   - display_name
 columns:
@@ -104,63 +109,79 @@ columns:
       - filter
     icon: mdi-earth
     descr: The country in which the funder is based
-
-#  doi:
-#    id: doi
-#    subjectEntity: funders
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    entityId: works
-#    objectEntity:
-#    displayName: DOI
-#    isId: true
-#    type: string
-#    redshiftDisplayColumn: doi
-#    redshiftFilterColumn: doi
-#    category: ids
-#    actions:
-#      - column
-#      - filter
-#    icon: mdi-file-document-outline
-#    descr: The DOI of the funder
-#  crossref_id:
-#    id: crossref_id
-#    subjectEntity: funders
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    objectEntity:
-#    displayName: crossref id
-#    isId: true
-#    type: string
-#    redshiftDisplayColumn: crossref_id
-#    redshiftFilterColumn: crossref_id
-#    category: ids
-#    actions:
-#      - column
-#    icon: mdi-file-document-outline
-#    descr: The crossref id of the funder
-#  description:
-#    id: description
-#    subjectEntity: funders
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    objectEntity:
-#    displayName: description
-#    isId: true
-#    type: string
-#    redshiftDisplayColumn: description
-#    redshiftFilterColumn: description
-#    category: ids
-#    actions:
-#      - column
-#    icon: mdi-file-document-outline
-#    descr: A description of the funder
+  doi:
+    id: doi
+    subjectEntity: funders
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: works
+    objectEntity:
+    displayName: DOI
+    isId: true
+    type: string
+    redshiftDisplayColumn: doi
+    redshiftFilterColumn: doi
+    category: ids
+    actions:
+      - column
+      - filter
+    icon: mdi-file-document-outline
+    descr: The DOI of the funder
+  crossref_id:
+    id: crossref_id
+    subjectEntity: funders
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: crossref id
+    isId: true
+    type: string
+    redshiftDisplayColumn: crossref_id
+    redshiftFilterColumn: crossref_id
+    category: ids
+    actions:
+      - column
+    icon: mdi-file-document-outline
+    descr: The crossref id of the funder
+  description:
+    id: description
+    subjectEntity: funders
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: description
+    isId: true
+    type: string
+    redshiftDisplayColumn: description
+    redshiftFilterColumn: description
+    category: ids
+    actions:
+      - column
+    icon: mdi-file-document-outline
+    descr: A description of the funder
+  homepage_url:
+    id: homepage_url
+    subjectEntity: funders
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: description
+    isId: false
+    type: string
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    category: ids
+    actions:
+    icon: mdi-file-document-outline
+    descr: Homepage url of the funder
   count(works):
     id: count(works)
     subjectEntity: funders
