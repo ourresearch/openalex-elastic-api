@@ -20,6 +20,7 @@ showOnEntityPage:
   - crossref_types
 showOnTablePage:
   - display_name
+  - count(works)
 columns:
   id:
     id: id

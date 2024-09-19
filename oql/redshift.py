@@ -686,7 +686,7 @@ class RedshiftQueryHandler:
                     query = self.sort_from_stat(
                         query, self.sort_by_order, stat_function
                     )
-            elif column == "count(works)" and self.entity in ["domains", "fields", "funders", "publishers", "sdgs", "subfields", "types"]:
+            elif column == "count(works)" and self.entity in ["domains", "fields", "funders", "licenses", "publishers", "sdgs", "subfields", "types"]:
                 stat, related_entity = parse_stats_column(column)
 
                 work_class = getattr(models, "Work")

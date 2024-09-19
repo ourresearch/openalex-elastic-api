@@ -24,6 +24,7 @@ showOnEntityPage:
   - domain
 showOnTablePage:
   - display_name
+  - count(works)
 columns:
   id:
     id: id
