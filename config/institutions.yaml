@@ -185,7 +185,7 @@ columns:
     redshiftDisplayColumn:
     redshiftFilterColumn:
     category: ids
-    actions:
+    actions: []
     icon: mdi-file-document-outline
     descr: Homepage url of the institution
   parent_institutions:
