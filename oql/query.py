@@ -21,6 +21,7 @@ class Query:
         self.total_count = 0
         self.valid_columns = self.get_valid_columns()
         self.valid_sort_columns = self.get_valid_sort_columns()
+        self.source = None
 
     def get_filter_by(self):
         return []
@@ -53,11 +54,13 @@ class Query:
             total_count, results = elastic_handler.execute()
             self.total_count = total_count
             json_data = self.format_elastic_results_as_json(results)
+            self.source = "elastic"
         else:
             print(f"Executing redshift query for {self.entity}")
             total_count, results = redshift_handler.execute()
             self.total_count = total_count
             json_data = self.format_redshift_results_as_json(results)
+            self.source = "redshift"
         return json_data
 
     def format_redshift_results_as_json(self, results):

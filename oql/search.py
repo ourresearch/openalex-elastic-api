@@ -25,11 +25,13 @@ class Search:
     is_ready: bool = False
     bypass_cache: bool = True
     timestamps: Dict[str, str] = field(default_factory=dict)
+    source: Optional[str] = None
 
     def __post_init__(self):
         self.id = self.hash_id()
         self.timestamps["started"] = datetime.now(timezone.utc).isoformat()
         self.timestamps["est_completed"] = "not implemented"
+        self.source = self.query.source
 
     def hash_id(self):
         query_str = json.dumps(self.query, sort_keys=True)

@@ -69,7 +69,8 @@ def results():
     results_table_response = results_table.response()
     result = {
         "query": query.to_dict(),
-        "results": results_table_response
+        "source": query.source,
+        "results": results_table_response,
     }
     return jsonify(result)
 
