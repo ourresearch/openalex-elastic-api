@@ -32,12 +32,67 @@ class ElasticQueryHandler:
                 "display_name",
                 "orcid",
             ],
+            "continents": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
+            "countries": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
+            "domains": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
+            "fields": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
+            "funders": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
             "institutions": [
                 "id",
                 "count(works)",
                 "display_name",
             ],
+            "keywords": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
+            "languages": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
+            "licenses": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
+            "publishers": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
             "sources": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
+            "subfields": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
+            "topics": [
                 "id",
                 "count(works)",
                 "display_name",
