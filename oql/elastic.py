@@ -32,11 +32,6 @@ class ElasticQueryHandler:
                 "display_name",
                 "orcid",
             ],
-            "continents": [
-                "id",
-                "count(works)",
-                "display_name",
-            ],
             "countries": [
                 "id",
                 "count(works)",
