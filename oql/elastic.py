@@ -32,6 +32,16 @@ class ElasticQueryHandler:
                 "display_name",
                 "orcid",
             ],
+            "institutions": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
+            "sources": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
             "works": [
                 "id",
                 "cited_by_count",
@@ -44,6 +54,7 @@ class ElasticQueryHandler:
         }
         return (
             self.entity in valid_elastic_columns.keys()
+            and not self.filter_works
             and not self.filter_aggs
             and all(
                 column in valid_elastic_columns.get(self.entity)
