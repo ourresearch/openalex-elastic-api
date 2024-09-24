@@ -73,7 +73,7 @@ class ElasticQueryHandler:
         }
         return (
             self.entity == "works"
-            and self.filter_aggs is None
+            and not self.filter_aggs
             and all(
                 column in valid_elastic_columns.get(self.entity)
                 for column in self.show_columns
