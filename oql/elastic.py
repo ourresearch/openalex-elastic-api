@@ -52,6 +52,11 @@ class ElasticQueryHandler:
                 "count(works)",
                 "display_name",
             ],
+            "institution-types": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
             "institutions": [
                 "id",
                 "count(works)",
@@ -77,6 +82,16 @@ class ElasticQueryHandler:
                 "count(works)",
                 "display_name",
             ],
+            "sdgs": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
+            "source-types": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
             "sources": [
                 "id",
                 "count(works)",
@@ -88,6 +103,11 @@ class ElasticQueryHandler:
                 "display_name",
             ],
             "topics": [
+                "id",
+                "count(works)",
+                "display_name",
+            ],
+            "work-types": [
                 "id",
                 "count(works)",
                 "display_name",
