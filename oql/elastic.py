@@ -26,6 +26,12 @@ class ElasticQueryHandler:
 
     def is_valid(self):
         valid_elastic_columns = {
+            "authors": [
+                "id",
+                "count(works)",
+                "display_name",
+                "orcid",
+            ],
             "works": [
                 "id",
                 "cited_by_count",
@@ -37,7 +43,7 @@ class ElasticQueryHandler:
             ]
         }
         return (
-            self.entity == "works"
+            self.entity in valid_elastic_columns.keys()
             and not self.filter_aggs
             and all(
                 column in valid_elastic_columns.get(self.entity)
@@ -54,21 +60,39 @@ class ElasticQueryHandler:
         return total_count, results
 
     def build_url(self):
-        sort_by_column = (
-            self.sort_by_column
-            if self.sort_by_column in self.works_config
-            else "cited_by_count"
-        )
+        sort_by_column = self.build_sort()
         sort_by_order = (
             self.sort_by_order if self.sort_by_order in ["asc", "desc"] else "desc"
         )
-        select_columns = ",".join(self.show_columns + ["id"])
-        url = f"https://api.openalex.org/works?select={select_columns}&per-page=100&sort={sort_by_column}:{sort_by_order}&mailto=team@ourresearch.org"
+        select_columns = self.build_select_columns()
+        url = f"https://api.openalex.org/{self.entity}?select={select_columns}&per-page=100&sort={sort_by_column}:{sort_by_order}&mailto=team@ourresearch.org"
         return url
+
+    def build_select_columns(self):
+        columns = []
+        for column in self.show_columns:
+            if column == "count(works)":
+                columns.append("works_count")
+            else:
+                columns.append(column)
+        if "id" not in columns:
+            columns.append("id")
+        return ",".join(columns)
+
+    def build_sort(self):
+        if self.sort_by_column == "count(works)":
+            sort_by_column = "works_count"
+        elif self.sort_by_column:
+            sort_by_column = self.sort_by_column
+        elif self.entity == "works":
+            sort_by_column = "cited_by_count"
+        else:
+            sort_by_column = "works_count"
+        return sort_by_column
 
     def transform_ids(self, results):
         for result in results:
-            for key, value in result.items():
+            for key, value in list(result.items()):
                 # id
                 if key == "id":
                     result[key] = self.convert_id_to_short_format(value)
@@ -78,6 +102,10 @@ class ElasticQueryHandler:
                         "id": f"types/{value}",
                         "display_name": value,
                     }
+                # works_count -> count(works)
+                elif key == "works_count":
+                    result["count(works)"] = value  # Assign value to the new key
+                    del result[key]  # Optionally delete the original key
                 else:
                     result[key] = value
         return results
