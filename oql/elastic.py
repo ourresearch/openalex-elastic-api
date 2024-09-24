@@ -24,10 +24,30 @@ class ElasticQueryHandler:
         self.entity_config = self.get_entity_config()
         self.works_config = all_entities_config.get("works").get("columns")
 
-    def execute(self):
-        r = requests.get(
-            "https://api.openalex.org/works?per-page=100&sort=cited_by_count:desc"
+    def is_valid(self):
+        valid_elastic_columns = {
+            "works": [
+                "id",
+                "cited_by_count",
+                "display_name",
+                "doi",
+                "publication_year",
+                "title",
+                "type",
+            ]
+        }
+        return (
+            self.entity == "works"
+            and not self.filter_aggs
+            and all(
+                column in valid_elastic_columns.get(self.entity)
+                for column in self.show_columns
+            )
         )
+
+    def execute(self):
+        url = self.build_url()
+        r = requests.get(url)
         raw_results = r.json()["results"]
         results = self.transform_ids(raw_results)
         total_count = r.json()["meta"]["count"]
@@ -42,15 +62,18 @@ class ElasticQueryHandler:
         sort_by_order = (
             self.sort_by_order if self.sort_by_order in ["asc", "desc"] else "desc"
         )
-        select_columns = ",".join(self.show_columns)
+        select_columns = ",".join(self.show_columns + ["id"])
         url = f"https://api.openalex.org/works?select={select_columns}&per-page=100&sort={sort_by_column}:{sort_by_order}&mailto=team@ourresearch.org"
         return url
 
     def transform_ids(self, results):
         for result in results:
             for key, value in result.items():
+                # id
+                if key == "id":
+                    result[key] = self.convert_id_to_short_format(value)
                 # type
-                if key == "type" and self.entity == "works":
+                elif key == "type" and self.entity == "works":
                     result[key] = {
                         "id": f"types/{value}",
                         "display_name": value,
@@ -59,26 +82,9 @@ class ElasticQueryHandler:
                     result[key] = value
         return results
 
-    def is_valid(self):
-        valid_elastic_columns = {
-            "works": [
-                "id",
-                "display_name",
-                "title",
-                "type",
-                "doi",
-                "publication_year",
-                "cited_by_count",
-            ]
-        }
-        return (
-            self.entity == "works"
-            and not self.filter_aggs
-            and all(
-                column in valid_elastic_columns.get(self.entity)
-                for column in self.show_columns
-            )
-        )
+    def convert_id_to_short_format(self, id):
+        short_id = id.split("/")[-1]
+        return f"{self.entity}/{short_id}"
 
     def get_entity_config(self):
         entity_for_config = "works" if self.entity == "summary" else self.entity
