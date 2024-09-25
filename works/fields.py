@@ -418,6 +418,7 @@ fields = [
         docstring="Concepts are abstract ideas that the work is about",
         documentation_link="https://docs.openalex.org/api-entities/concepts",
     ),
+    OpenAlexIDField(param="datasets"),
     OpenAlexIDField(
         param="grants.funder",
         docstring="The funders listed in the work's grants",
