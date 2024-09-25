@@ -58,6 +58,7 @@ def fetch_results(query):
             per_page=100,
         )
         results_table_response = results_table.response()
+        results_table_response["source"] = query.source
         return results_table_response
 
 
@@ -130,6 +131,7 @@ def process_searches():
                 search["results"] = results["results"]
                 search["results_header"] = results["results_header"]
                 search["meta"] = results["meta"]
+                search["source"] = results["source"]
                 search["is_ready"] = True
                 search["is_completed"] = True
                 search["timestamps"]["completed"] = datetime.now(timezone.utc).isoformat()

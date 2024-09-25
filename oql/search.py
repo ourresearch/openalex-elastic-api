@@ -31,7 +31,6 @@ class Search:
         self.id = self.hash_id()
         self.timestamps["started"] = datetime.now(timezone.utc).isoformat()
         self.timestamps["est_completed"] = "not implemented"
-        self.source = self.query.get("source")
 
     def hash_id(self):
         query_str = json.dumps(self.query, sort_keys=True)
