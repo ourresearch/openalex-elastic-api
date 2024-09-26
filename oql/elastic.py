@@ -202,11 +202,15 @@ class ElasticQueryHandler:
             for key, value in list(result.items()):
                 if key == "id":
                     result[key] = self.convert_id_to_short_format(value)
-                elif key == "type" and self.entity == "works":
-                    result[key] = {
-                        "id": f"types/{value}",
-                        "display_name": value,
-                    }
+                elif key == "keywords":
+                    result["keywords.id"] = [
+                        {
+                            "id": f"keywords/{self.get_id_from_openalex_id(keyword.get('id'))}",
+                            "display_name": keyword.get("display_name"),
+                        }
+                        for keyword in value
+                    ]
+                    del result[key]
                 elif key == "primary_topic":
                     topic_id = result.get("primary_topic").get("id") if result.get("primary_topic") else None
                     short_id = self.get_id_from_openalex_id(topic_id)
@@ -219,6 +223,11 @@ class ElasticQueryHandler:
                     convert_topic_field(result, "domain", "domains")
                     convert_topic_field(result, "field", "fields")
                     convert_topic_field(result, "subfield", "subfields")
+                elif key == "type" and self.entity == "works":
+                    result[key] = {
+                        "id": f"types/{value}",
+                        "display_name": value,
+                    }
                 elif key == "works_count":
                     result["count(works)"] = value
                     del result[key]
