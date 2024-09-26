@@ -41,16 +41,19 @@ class ElasticQueryHandler:
                 "id",
                 "count(works)",
                 "display_name",
+                "description",
             ],
             "fields": [
                 "id",
                 "count(works)",
                 "display_name",
+                "description",
             ],
             "funders": [
                 "id",
                 "count(works)",
                 "display_name",
+                "description",
             ],
             "institution-types": [
                 "id",
@@ -76,6 +79,7 @@ class ElasticQueryHandler:
                 "id",
                 "count(works)",
                 "display_name",
+                "description",
             ],
             "publishers": [
                 "id",
@@ -101,16 +105,19 @@ class ElasticQueryHandler:
                 "id",
                 "count(works)",
                 "display_name",
+                "description",
             ],
             "topics": [
                 "id",
                 "count(works)",
                 "display_name",
+                "description",
             ],
             "work-types": [
                 "id",
                 "count(works)",
                 "display_name",
+                "description",
             ],
             "works": [
                 "id",

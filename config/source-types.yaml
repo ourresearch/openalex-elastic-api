@@ -91,7 +91,7 @@ columns:
     defaultOperator: is
     objectEntity: works
     displayName: number of works
-    type: integer
+    type: number
     redshiftDisplayColumn: count(works)
     redshiftFilterColumn: count(works)
     actions:
