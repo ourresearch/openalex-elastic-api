@@ -30,7 +30,8 @@ class ElasticQueryHandler:
                 "id",
                 "count(works)",
                 "display_name",
-                "orcid",
+                "ids.orcid",
+
             ],
             "countries": [
                 "id",
@@ -124,6 +125,11 @@ class ElasticQueryHandler:
                 "cited_by_count",
                 "display_name",
                 "doi",
+                "keywords.id",
+                "primary_topic.domain.id",
+                "primary_topic.id",
+                "primary_topic.field.id",
+                "primary_topic.subfield.id",
                 "publication_year",
                 "title",
                 "type",
@@ -161,10 +167,13 @@ class ElasticQueryHandler:
         for column in self.show_columns:
             if column == "count(works)":
                 columns.append("works_count")
+            elif "." in column:
+                columns.append(column.split(".")[0])
             else:
                 columns.append(column)
         if "id" not in columns:
             columns.append("id")
+        columns = list(set(columns))
         return ",".join(columns)
 
     def build_sort(self):
@@ -181,16 +190,20 @@ class ElasticQueryHandler:
     def transform_ids(self, results):
         for result in results:
             for key, value in list(result.items()):
-                # id
                 if key == "id":
                     result[key] = self.convert_id_to_short_format(value)
-                # type
                 elif key == "type" and self.entity == "works":
                     result[key] = {
                         "id": f"types/{value}",
                         "display_name": value,
                     }
-                # works_count -> count(works)
+                elif key == "primary_topic":
+                    topic_id = result.get("primary_topic").get("id") if result.get("primary_topic") else None
+                    short_id = self.get_id_from_openalex_id(topic_id)
+                    result["primary_topic.id"] = {
+                        "id": f"topics/{short_id}",
+                        "display_name": result.get("primary_topic").get("display_name"),
+                    } if short_id else None
                 elif key == "works_count":
                     result["count(works)"] = value  # Assign value to the new key
                     del result[key]  # Optionally delete the original key
@@ -201,6 +214,10 @@ class ElasticQueryHandler:
     def convert_id_to_short_format(self, id):
         short_id = id.split("/")[-1]
         return f"{self.entity}/{short_id}"
+
+    @staticmethod
+    def get_id_from_openalex_id(openalex_id):
+        return openalex_id.split("/")[-1] if openalex_id else None
 
     def get_entity_config(self):
         entity_for_config = "works" if self.entity == "summary" else self.entity
