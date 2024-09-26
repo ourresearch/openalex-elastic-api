@@ -122,6 +122,8 @@ class ElasticQueryHandler:
             ],
             "works": [
                 "id",
+                "authorships.author.id",
+                "authorships.institutions.id",
                 "cited_by_count",
                 "display_name",
                 "doi",
@@ -202,6 +204,29 @@ class ElasticQueryHandler:
             for key, value in list(result.items()):
                 if key == "id":
                     result[key] = self.convert_id_to_short_format(value)
+                elif key == "authorships":
+                    result["authorships.author.id"] = [
+                        {
+                            "id": f"authors/{self.get_id_from_openalex_id(author.get('author').get('id'))}",
+                            "display_name": author.get("author").get("display_name"),
+                        }
+                        for author in value
+                    ]
+                    # ensure unique institutions
+                    seen_institutions = set()
+                    unique_institutions = []
+                    for author in value:
+                        for institution in author.get("institutions", []):
+                            institution_id = self.get_id_from_openalex_id(institution.get("id"))
+                            if institution_id not in seen_institutions:
+                                unique_institutions.append({
+                                    "id": f"institutions/{institution_id}",
+                                    "display_name": institution.get("display_name"),
+                                })
+                                seen_institutions.add(institution_id)
+
+                    result["authorships.institutions.id"] = unique_institutions
+                    del result[key]
                 elif key == "keywords":
                     result["keywords.id"] = [
                         {
