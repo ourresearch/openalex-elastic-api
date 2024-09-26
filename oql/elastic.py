@@ -53,8 +53,9 @@ class ElasticQueryHandler:
             "funders": [
                 "id",
                 "count(works)",
-                "display_name",
                 "description",
+                "display_name",
+                "doi",
             ],
             "institution-types": [
                 "id",
