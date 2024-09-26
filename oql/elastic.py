@@ -188,6 +188,16 @@ class ElasticQueryHandler:
         return sort_by_column
 
     def transform_ids(self, results):
+        def convert_topic_field(result, entity_key, entity_name):
+            entity = result.get("primary_topic", {}).get(entity_key, {}) if result.get("primary_topic") else {}
+            entity_id = entity.get("id")
+            short_id = self.get_id_from_openalex_id(entity_id)
+            if short_id:
+                result[f"primary_topic.{entity_key}.id"] = {
+                    "id": f"{entity_name}/{short_id}",
+                    "display_name": entity.get("display_name"),
+                }
+
         for result in results:
             for key, value in list(result.items()):
                 if key == "id":
@@ -200,13 +210,18 @@ class ElasticQueryHandler:
                 elif key == "primary_topic":
                     topic_id = result.get("primary_topic").get("id") if result.get("primary_topic") else None
                     short_id = self.get_id_from_openalex_id(topic_id)
-                    result["primary_topic.id"] = {
-                        "id": f"topics/{short_id}",
-                        "display_name": result.get("primary_topic").get("display_name"),
-                    } if short_id else None
+                    if short_id:
+                        result["primary_topic.id"] = {
+                            "id": f"topics/{short_id}",
+                            "display_name": result["primary_topic"].get("display_name"),
+                        }
+                    # Handle nested fields
+                    convert_topic_field(result, "domain", "domains")
+                    convert_topic_field(result, "field", "fields")
+                    convert_topic_field(result, "subfield", "subfields")
                 elif key == "works_count":
-                    result["count(works)"] = value  # Assign value to the new key
-                    del result[key]  # Optionally delete the original key
+                    result["count(works)"] = value
+                    del result[key]
                 else:
                     result[key] = value
         return results
