@@ -38,6 +38,7 @@ def find_id_and_prepare_delete(work_id):
     actions = []
     if s.count() == 2:
         record = response.hits[1]
+        print(f"Adding duplicate record with id: {record.meta.id} in index: {record.meta.index}")
         actions.append({
             '_op_type': 'delete',
             '_index': record.meta.index,
