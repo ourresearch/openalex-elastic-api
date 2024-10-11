@@ -45,7 +45,7 @@ def create_app(config_object="settings"):
 
     @app.after_request
     def add_header(response):
-        response.cache_control.max_age = 60 * 60 * 1  # 1 hour
+        response.cache_control.max_age = 60 * 60 * 12  # 12 hours
         return response
 
     return app
