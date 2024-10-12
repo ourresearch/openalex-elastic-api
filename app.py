@@ -33,7 +33,7 @@ import topics
 import works
 import work_types
 from core.exceptions import APIError
-from extensions import cache, db
+from extensions import cache, compress, db
 
 
 def create_app(config_object="settings"):
@@ -86,6 +86,7 @@ def register_extensions(app):
     sentry_sdk.init(dsn=os.environ.get("SENTRY_DSN"), integrations=[FlaskIntegration()])
     connections.create_connection(hosts=[settings.ES_URL], timeout=30)
     cache.init_app(app)
+    compress.init_app(app)
 
 
 def register_errorhandlers(app):
