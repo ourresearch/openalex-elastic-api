@@ -6,6 +6,8 @@ from settings import ES_URL, WORKS_INDEX
 
 BATCH_SIZE = 100
 
+def init_es():
+    connections.create_connection(hosts=[ES_URL], timeout=30, alias='default')
 
 def remove_duplicates(work_ids):
 
@@ -54,7 +56,7 @@ def bulk_delete(actions):
 
 
 def run_parallel():
-    connections.create_connection(hosts=[ES_URL], timeout=30)
+    init_es()
 
     with open("duplicate_record_ids_works.csv", "r") as f:
         work_ids = [line.strip() for line in f]
@@ -64,7 +66,7 @@ def run_parallel():
     num_workers = 8
     chunk_size = len(work_ids) // num_workers
 
-    with Pool(processes=num_workers) as pool:
+    with Pool(processes=num_workers, initializer=init_es) as pool:
         pool.map(remove_duplicates, [work_ids[i:i + chunk_size] for i in range(0, len(work_ids), chunk_size)])
 
 
