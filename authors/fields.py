@@ -148,7 +148,7 @@ fields = [
     ),
     TermField(param="orcid", alias="ids.orcid"),
     TermField(param="scopus", alias="ids.scopus.keyword"),
-    TermField(param="topics.id"),
+    TermField(param="topics.id", custom_es_field="topics.id"),
     TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),
 ]
 
