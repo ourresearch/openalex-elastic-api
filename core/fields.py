@@ -497,6 +497,12 @@ class SearchField(Field):
                 primary_field=self.es_field(),
             )
             q = search_oa.build_query()
+        elif self.param == "raw_author_name.search":
+            search_oa = SearchOpenAlex(
+                search_terms=self.value,
+                primary_field="authorships.raw_author_name",
+            )
+            q = search_oa.build_query()
         elif self.param == "title_and_abstract.search":
             search_oa = SearchOpenAlex(
                 search_terms=self.value,

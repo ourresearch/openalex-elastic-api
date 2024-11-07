@@ -596,6 +596,10 @@ fields = [
         custom_es_field="authorships.raw_affiliation_strings",
     ),
     SearchField(
+        param="raw_author_name.search",
+        custom_es_field="authorships.raw_author_name",
+    ),
+    SearchField(
         param="semantic.search",
         custom_es_field="vector_embedding",
     ),

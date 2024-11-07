@@ -32,6 +32,9 @@ class SearchOpenAlex:
         ):
             query_string_query = self.query_string_query()
             query = self.citation_boost_query(query_string_query)
+        elif self.primary_field == "authorships.raw_author_name":
+            query_string_query = self.query_string_query()
+            query = self.citation_boost_query(query_string_query)
         elif self.is_author_name_query:
             author_name_query = self.author_name_query()
             query = self.citation_boost_query(author_name_query)
@@ -379,6 +382,7 @@ def check_is_search_query(filter_params, search):
         "fulltext.search",
         "keyword.search",
         "raw_affiliation_strings.search",
+        "raw_author_name.search",
         "semantic.search",
         "title.search",
         "title_and_abstract.search",
