@@ -16,3 +16,4 @@ sentry-sdk[flask]==1.10.1
 shortuuid==1.0.13
 sqlalchemy-redshift==0.8.14
 pyyaml==6.0.2
+Werkzeug==2.2.2
