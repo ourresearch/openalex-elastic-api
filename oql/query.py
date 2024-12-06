@@ -1,6 +1,7 @@
 from sqlalchemy.engine.row import Row
 
 from combined_config import all_entities_config
+from oql.elastic import ElasticQueryHandler
 from oql.redshift import RedshiftQueryHandler
 
 valid_entities = list(all_entities_config.keys())
@@ -20,11 +21,21 @@ class Query:
         self.total_count = 0
         self.valid_columns = self.get_valid_columns()
         self.valid_sort_columns = self.get_valid_sort_columns()
+        self.source = None
 
     def get_filter_by(self):
         return []
 
     def execute(self):
+        elastic_handler = ElasticQueryHandler(
+            entity=self.entity,
+            filter_works=self.filter_works,
+            filter_aggs=self.filter_aggs,
+            sort_by_column=self.sort_by_column,
+            sort_by_order=self.sort_by_order,
+            show_columns=self.show_columns,
+            valid_columns=self.valid_columns
+        )
         redshift_handler = RedshiftQueryHandler(
             entity=self.entity,
             filter_works=self.filter_works,
@@ -38,13 +49,21 @@ class Query:
             results = redshift_handler.execute_summary()
             self.total_count = results["count"]
             json_data = {"results": [results]}
+        elif elastic_handler.is_valid():
+            print(f"Executing elastic query for {self.entity}")
+            total_count, results = elastic_handler.execute()
+            self.total_count = total_count
+            json_data = self.format_elastic_results_as_json(results)
+            self.source = "elastic"
         else:
+            print(f"Executing redshift query for {self.entity}")
             total_count, results = redshift_handler.execute()
             self.total_count = total_count
-            json_data = self.format_results_as_json(results)
+            json_data = self.format_redshift_results_as_json(results)
+            self.source = "redshift"
         return json_data
 
-    def format_results_as_json(self, results):
+    def format_redshift_results_as_json(self, results):
         json_data = {"results": []}
         columns = self.show_columns
 
@@ -73,6 +92,24 @@ class Query:
                 result_data[column] = value
 
             result_data["id"] = model_instance.id
+            json_data["results"].append(result_data)
+
+        return json_data
+
+    def format_elastic_results_as_json(self, results):
+        json_data = {"results": []}
+        columns = self.show_columns
+
+        for r in results:
+            result_data = {}
+            for column in columns:
+                if column in r.keys():
+                    value = r[column]
+                else:
+                    value = None
+                result_data[column] = value
+
+            result_data["id"] = r["id"]
             json_data["results"].append(result_data)
 
         return json_data

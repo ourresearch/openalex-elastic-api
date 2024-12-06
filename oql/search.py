@@ -25,6 +25,7 @@ class Search:
     is_ready: bool = False
     bypass_cache: bool = True
     timestamps: Dict[str, str] = field(default_factory=dict)
+    source: Optional[str] = None
 
     def __post_init__(self):
         self.id = self.hash_id()

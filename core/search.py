@@ -379,6 +379,7 @@ def check_is_search_query(filter_params, search):
         "fulltext.search",
         "keyword.search",
         "raw_affiliation_strings.search",
+        "raw_author_name.search",
         "semantic.search",
         "title.search",
         "title_and_abstract.search",
