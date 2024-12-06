@@ -29,6 +29,7 @@ from funders.fields import fields_dict as funders_fields_dict
 from institutions.fields import fields_dict as institutions_fields_dict
 from keywords.fields import fields_dict as keywords_fields_dict
 from licenses.fields import fields_dict as licenses_fields_dict
+from subfields.fields import fields_dict as subfields_fields_dict
 from publishers.fields import fields_dict as publishers_fields_dict
 from settings import (
     AUTHORS_INDEX,
@@ -40,7 +41,7 @@ from settings import (
     PUBLISHERS_INDEX,
     SOURCES_INDEX,
     TOPICS_INDEX,
-    WORKS_INDEX,
+    WORKS_INDEX, SUBFIELDS_INDEX,
 )
 from sources.fields import fields_dict as sources_fields_dict
 from topics.fields import fields_dict as topics_fields_dict
@@ -214,6 +215,13 @@ def autocomplete_keywords():
 def autocomplete_licenses():
     index_name = LICENSES_INDEX
     result = single_entity_autocomplete(licenses_fields_dict, index_name, request)
+    message_schema = MessageSchema()
+    return message_schema.dump(result)
+
+@blueprint.route("/autocomplete/subfields")
+def autocomplete_subfields():
+    index_name = SUBFIELDS_INDEX
+    result = single_entity_autocomplete(subfields_fields_dict, index_name, request)
     message_schema = MessageSchema()
     return message_schema.dump(result)
 
