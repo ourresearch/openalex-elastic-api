@@ -35,40 +35,68 @@ def single_entity_autocomplete(fields_dict, index_name, request):
             s = filter_records(fields_dict, filter_params, s)
 
         if q:
-            # autocomplete
+            # Build the autocomplete query based on index type
+            autocomplete_query = None
             if index_name.startswith("author"):
-                s = s.query(
-                    Q("match_phrase_prefix", display_name__autocomplete=q)
-                    | Q(
-                        "match_phrase_prefix", display_name_alternatives__autocomplete=q
-                    )
+                autocomplete_query = (
+                        Q("match_phrase_prefix", display_name__autocomplete=q)
+                        | Q("match_phrase_prefix",
+                            display_name_alternatives__autocomplete=q)
                 )
             elif index_name.startswith("institution"):
-                s = s.query(
-                    Q("match_phrase_prefix", display_name__autocomplete=q)
-                    | Q("match_phrase_prefix", display_name_acronyms__autocomplete=q)
-                    | Q(
-                        "match_phrase_prefix", display_name_alternatives__autocomplete=q
-                    )
+                autocomplete_query = (
+                        Q("match_phrase_prefix", display_name__autocomplete=q)
+                        | Q("match_phrase_prefix",
+                            display_name_acronyms__autocomplete=q)
+                        | Q("match_phrase_prefix",
+                            display_name_alternatives__autocomplete=q)
                 )
             elif index_name.startswith("source"):
-                s = s.query(
-                    Q("match_phrase_prefix", display_name__autocomplete=q)
-                    | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
-                    | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
+                autocomplete_query = (
+                        Q("match_phrase_prefix", display_name__autocomplete=q)
+                        | Q("match_phrase_prefix",
+                            alternate_titles__autocomplete=q)
+                        | Q("match_phrase_prefix",
+                            abbreviated_title__autocomplete=q)
                 )
             elif index_name.startswith("topic"):
-                s = s.query(
-                    Q("match_phrase_prefix", display_name__autocomplete=q)
-                    | Q("match_phrase_prefix", description__autocomplete=q)
-                    | Q("match_phrase_prefix", keywords__autocomplete=q)
+                autocomplete_query = (
+                        Q("match_phrase_prefix", display_name__autocomplete=q)
+                        | Q("match_phrase_prefix", description__autocomplete=q)
+                        | Q("match_phrase_prefix", keywords__autocomplete=q)
                 )
             else:
-                s = s.query("match_phrase_prefix", display_name__autocomplete=q)
+                autocomplete_query = Q("match_phrase_prefix",
+                                       display_name__autocomplete=q)
+
+            # Create a function score query that boosts exact matches
+            exact_match_query = Q(
+                "function_score",
+                query=autocomplete_query,
+                functions=[
+                    # Boost exact matches in display_name
+                    {
+                        "filter": Q("term", display_name__keyword=q),
+                        "weight": 1000
+                    },
+                    # Boost prefix matches at word boundaries
+                    {
+                        "filter": Q("prefix", display_name__keyword=q),
+                        "weight": 500
+                    }
+                ],
+                score_mode="max",
+                boost_mode="multiply"
+            )
+
+            s = s.query(exact_match_query)
+
+        # Apply secondary sorting based on index type
         if index_name.startswith("work"):
-            s = s.sort("-cited_by_count")
+            s = s.sort("_score", "-cited_by_count")
         else:
-            s = s.sort("-works_count")
+            s = s.sort("_score", "-works_count")
+
         s = s.source(AUTOCOMPLETE_SOURCE)
         preference = clean_preference(q)
         s = s.params(preference=preference)
