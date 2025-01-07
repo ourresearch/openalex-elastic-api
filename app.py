@@ -3,7 +3,7 @@ import os
 import sentry_sdk
 from elasticsearch_dsl import connections
 from flask import Flask, jsonify
-
+from opensearchpy import OpenSearch
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 import authors
@@ -84,7 +84,10 @@ def register_blueprints(app):
 def register_extensions(app):
     db.init_app(app)
     sentry_sdk.init(dsn=os.environ.get("SENTRY_DSN"), integrations=[FlaskIntegration()])
-    connections.create_connection(hosts=[settings.ES_URL], timeout=30)
+    connections.create_connection('default', hosts=[settings.ES_URL], timeout=30)
+    if settings.ES_URL_V2:
+        opensearch_client = OpenSearch(hosts=[settings.ES_URL_V2], timeout=30)
+        connections.add_connection('v2', opensearch_client)
     cache.init_app(app)
     compress.init_app(app)
 

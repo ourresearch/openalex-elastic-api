@@ -1,7 +1,8 @@
 from collections import OrderedDict
 
 from elasticsearch.exceptions import RequestError
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import Search, connections
+from opensearch_dsl import Search as OSSearch
 
 import settings
 from core.cursor import get_next_cursor, handle_cursor
@@ -20,10 +21,10 @@ from core.sort import get_sort_fields, sort_with_cursor, sort_with_sample
 from core.utils import get_field
 
 
-def shared_view(request, fields_dict, index_name, default_sort):
+def shared_view(request, fields_dict, index_name, default_sort, connection='default'):
     """Primary function used to search, filter, and aggregate across all entities."""
     params = parse_params(request)
-    s = construct_query(params, fields_dict, index_name, default_sort)
+    s = construct_query(params, fields_dict, index_name, default_sort, connection)
     response = execute_search(s, params)
     result = format_response(response, params, index_name, fields_dict, s)
     if settings.DEBUG:
@@ -31,8 +32,8 @@ def shared_view(request, fields_dict, index_name, default_sort):
     return result
 
 
-def construct_query(params, fields_dict, index_name, default_sort):
-    s = Search(index=index_name)
+def construct_query(params, fields_dict, index_name, default_sort, connection):
+    s = Search(index=index_name, using=connection)
 
     s = set_source(index_name, s)
 
@@ -160,16 +161,32 @@ def filter_group_with_q(params, fields_dict, s):
 
 def execute_search(s, params):
     paginate = get_pagination(params)
-    if params["group_by"]:
-        response = s.execute()
-    else:
-        try:
-            response = s[paginate.start : paginate.end].execute()
-        except RequestError as e:
-            if "search_after has" in str(e) and "sort has" in str(e):
-                raise APIPaginationError("Cursor value is invalid.")
-            raise e
-    return response
+
+    # default case: Elasticsearch connection
+    if s._using != 'v2':
+        if params["group_by"]:
+            return s.execute()
+        else:
+            try:
+                return s[paginate.start:paginate.end].execute()
+            except RequestError as e:
+                if "search_after has" in str(e) and "sort has" in str(e):
+                    raise APIPaginationError("Cursor value is invalid.")
+                raise e
+
+    # special case: OpenSearch v2 connection
+    client = connections.get_connection('v2')
+    s = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
+
+    try:
+        if params["group_by"]:
+            return s.execute()
+        else:
+            return s[paginate.start:paginate.end].execute()
+    except RequestError as e:
+        if "search_after has" in str(e) and "sort has" in str(e):
+            raise APIPaginationError("Cursor value is invalid.")
+        raise e
 
 
 def format_response(response, params, index_name, fields_dict, s):
@@ -252,6 +269,18 @@ def format_group_bys(response, params, index_name, fields_dict):
 
 
 def calculate_sample_or_default_count(params, s):
-    if params["sample"] and params["sample"] < s.count():
-        return params["sample"]
-    return s.count()
+    # default behavior for Elasticsearch (non-v2)
+    if s._using != 'v2':
+        count = s.count()
+        if params.get("sample") and params["sample"] < count:
+            return params["sample"]
+        return count
+
+    # special case for OpenSearch v2
+    client = connections.get_connection('v2')
+    query_body = {"query": s.to_dict().get("query", {})}
+
+    if not query_body["query"]:
+        query_body["query"] = {"match_all": {}}
+
+    return client.count(index=s._index, body=query_body)['count']

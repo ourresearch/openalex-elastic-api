@@ -44,6 +44,16 @@ def works():
     return message_schema.dump(result)
 
 
+@blueprint.route("/works/v2/")
+def works_v2():
+    index_name = WORKS_INDEX
+    default_sort = ["-cited_by_percentile_year.max", "-cited_by_count", "id"]
+    only_fields = process_only_fields(request, WorksSchema)
+    result = shared_view(request, fields_dict, index_name, default_sort, connection='v2')
+    message_schema = MessageSchema(only=only_fields)
+    return message_schema.dump(result)
+
+
 @blueprint.route("/works/filters/<path:params>")
 def works_filters(params):
     index_name = WORKS_INDEX
