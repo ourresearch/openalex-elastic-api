@@ -43,8 +43,8 @@ class RedshiftQueryHandler:
         query = self.apply_sort(query, entity_class)  
         query = self.apply_stats(query, entity_class)
 
-        #print("***SQL BEFORE COUNT***")
-        #print(query.statement.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}), flush=True)
+        print("***SQL BEFORE COUNT***")
+        print(query.statement.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}), flush=True)
 
         count_query = db.session.query(func.count()).select_from(query.subquery())
         total_count = db.session.execute(count_query).scalar()
@@ -346,9 +346,6 @@ class RedshiftQueryHandler:
         if value is None:
             raise(ValueError("Invalid work filter: missing value"))
 
-        print("value: ")
-        print(value, flush=True)
-
         # setup
         redshift_column = self.works_config.get(key).get("redshiftFilterColumn")
         column_type = self.works_config.get(key).get("type")
@@ -535,7 +532,7 @@ class RedshiftQueryHandler:
         
         elif key == "id" and self.entity in ["continents", "countries", "institution-types", "languages", "licenses", "source-types", "work-types"]:
             value = get_short_id_text(value)
-            if self.entity == "continents":
+            if self.entity in ["countries", "continents"]:
                 value = value.upper()
             else:
                 value = value.lower()
