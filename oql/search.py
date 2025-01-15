@@ -37,7 +37,7 @@ class Search:
         return hashlib.md5(query_str.encode('utf-8')).hexdigest()
 
     def save(self):
-        print(f"Saving search {self.id} to cache with {self.to_dict()}")
+        print(f"Saving search {self.id} to cache")
         redis_db.set(self.id, json.dumps(self.to_dict()))
         # add to queue for processing
         redis_db.rpush(search_queue, self.id)

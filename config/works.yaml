@@ -72,8 +72,8 @@ columns:
     type: string
     category: ids
     apiField: id
-    redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftDisplayColumn: paper_id
+    redshiftFilterColumn: paper_id
     actions:
       - ''
     icon: mdi-file-document-outline
@@ -896,5 +896,4 @@ columns:
       - summary
     icon: mdi-file-document-outline
     descr: The total number of open access works.
-
 values:

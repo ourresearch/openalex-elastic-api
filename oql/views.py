@@ -18,13 +18,6 @@ blueprint = Blueprint("oql", __name__)
 redis_client = Redis.from_url(os.environ.get("REDIS_DO_URL"))
 
 
-def add_cors_headers(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = '*'
-    return response
-
-
 @blueprint.route("/results", methods=["GET", "POST"])
 def results():
     """
@@ -195,9 +188,3 @@ def job_status(job_id):
         'is_completed': job['is_completed'],
         'results': job['results']})
 
-
-@blueprint.after_request
-def add_cors_headers_to_test_stories(response):
-    if request.path.startswith('/test_stories'):
-        return add_cors_headers(response)
-    return response

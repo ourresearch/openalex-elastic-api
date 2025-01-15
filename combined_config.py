@@ -14,6 +14,7 @@ for filename in os.listdir(config_dir):
         try:
             # Attempt to open and load the JSON file
             with open(file_path, 'r') as file:
+                #print(f"YAML reading: {file}")
                 entity_config = yaml.safe_load(file)
                 entity_name = filename.replace('.yaml', '')
                 all_entities_config[entity_name] = entity_config

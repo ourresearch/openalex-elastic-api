@@ -9,7 +9,7 @@ From: https://github.com/ourresearch/oqo-validate/blob/main/oqo_validate/validat
 
 
 class OQOValidator:
-    BRANCH_OPERATORS = {'and', 'or'}
+    JOIN_OPERATORS = {'and', 'or'}
     LEAF_OPERATORS = {'is', 'is not', 'contains', 'does not contain',
                       'is greater than', 'is less than', '>', '<', 'is in',
                       'is not in',
@@ -17,7 +17,6 @@ class OQOValidator:
                       'is greater than or equal to',
                       '<=',
                       'is less than or equal to'}
-    FILTER_TYPES = {'branch', 'leaf'}
 
     def __init__(self, config: Optional[Dict] = None):
         self.ENTITIES_CONFIG = config or self._fetch_entities_config()
@@ -82,21 +81,23 @@ class OQOValidator:
                 return False, f'{leaf_filter["value"]} not a valid value for {obj_entity}'
         return True, None
 
-    def _validate_branch(self, branch_filter):
-        if not branch_filter.get('children'):
-            return False, f'Branch {branch_filter.get("id")} has empty children'
-        if branch_filter['operator'] not in self.BRANCH_OPERATORS:
-            return False, f'{branch_filter["operator"]} not a valid branch operator'
+    def _validate_branch(self, _filter, get_rows_entity, origin):
+        if not _filter.get('filters'):
+            return False, f'Join fitlers must contain the a `filters` list.'
+        if _filter['join'] not in self.JOIN_OPERATORS:
+            return False, f'{_filter["join"]} not a valid join operator'
+        for next_filter in _filter['filters']:
+            ok, error = self._validate_filter(next_filter, get_rows_entity, origin)
+            if not ok:
+                return False, error        
+
         return True, None
 
-    def _validate_filter(self, filter_node, get_rows_entity, origin):
-        # if filter_node['type'] not in self.FILTER_TYPES:
-        #     return False, f'{filter_node.get("type")} not a valid filter type'
-        # if filter_node['type'] == 'branch':
-        #     return self._validate_branch(filter_node)
-        # elif filter_node['type'] == 'leaf':
-        return self._validate_leaf(filter_node, get_rows_entity, origin)
-        # return False, f'{filter_node.get("type")} not a valid filter type'
+    def _validate_filter(self, _filter, get_rows_entity, origin):
+        if "join" in _filter:
+            return self._validate_branch(_filter, get_rows_entity, origin)
+        else: 
+            return self._validate_leaf(_filter, get_rows_entity, origin)
 
     def _validate_sort_by_column(self, sort_by_column, entity='works'):
         col = self._get_entity_column(entity, sort_by_column)

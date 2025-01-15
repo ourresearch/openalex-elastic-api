@@ -70,7 +70,7 @@ columns:
     entityId: source-types
     displayName: search display_name
     type: string
-    redshiftDisplayColumn:
+    redshiftDisplayColumn: display_name
     redshiftFilterColumn: display_name
     actions:
       - filter

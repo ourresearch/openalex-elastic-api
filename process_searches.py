@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import os
 import time
 import hashlib
+import traceback
 
 import redis
 import sentry_sdk
@@ -135,18 +136,22 @@ def process_searches():
                 search["is_ready"] = True
                 search["is_completed"] = True
                 search["timestamps"]["completed"] = datetime.now(timezone.utc).isoformat()
-            print(f"Processed search {search_id} with {search}")
+            print(f"Processed search {search_id}")
         except Exception as e:
             # backend error
-            print(f"Error processing search {search_id}: {e}")
-            search["backend_error"] = str(e)
+            tb = traceback.extract_tb(e.__traceback__)
+            for frame in tb:
+                error_msg = f"Error: {e}, File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}"
+
+            print(error_msg)
+            search["backend_error"] = error_msg
             search["is_ready"] = True
             search["is_completed"] = True
             search["timestamps"]["completed"] = datetime.now(timezone.utc).isoformat()
             sentry_sdk.capture_exception(e)
 
         # save updated search object back to Redis
-        print(f"Saving search {search_id} to redis with {search}")
+        print(f"Saving search {search_id} to redis")
         redis_db.set(search_id, json.dumps(search))
 
         # wait to avoid hammering the Redis server

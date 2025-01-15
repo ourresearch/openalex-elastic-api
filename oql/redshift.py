@@ -1,9 +1,10 @@
 import re
 
 import requests
-from sqlalchemy import case, cast, desc, func, Float
+from sqlalchemy import and_, or_, case, cast, desc, func, Float
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import aliased
+from sqlalchemy.dialects import postgresql
 
 from combined_config import all_entities_config
 from extensions import db
@@ -38,9 +39,12 @@ class RedshiftQueryHandler:
         query = self.build_joins(entity_class)
         query = self.set_columns(query, entity_class)
         query = self.apply_work_filters(query)
-        query = self.apply_entity_filters(query, entity_class)
-        query = self.apply_sort(query, entity_class)
+        query = self.apply_entity_filters(query)       
+        query = self.apply_sort(query, entity_class)  
         query = self.apply_stats(query, entity_class)
+
+        #print("***SQL BEFORE COUNT***")
+        #print(query.statement.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}), flush=True)
 
         count_query = db.session.query(func.count()).select_from(query.subquery())
         total_count = db.session.execute(count_query).scalar()
@@ -75,25 +79,20 @@ class RedshiftQueryHandler:
                 .join(models.Work, models.Work.paper_id == models.Affiliation.paper_id)
             )
         elif self.entity == "countries":
-            institution_class = models.Institution
-            affiliation_class = models.Affiliation
-            work_class = models.Work
-            country_class = models.Country
-
             query = (
                 db.session.query(*columns_to_select)
                 .distinct()
                 .join(
-                    institution_class,
-                    institution_class.country_code == country_class.country_id
+                    models.Institution,
+                    models.Institution.country_code == models.Country.country_id
                 )
                 .join(
-                    affiliation_class,
-                    affiliation_class.affiliation_id == institution_class.affiliation_id
+                    models.Affiliation,
+                    models.Affiliation.affiliation_id == models.Institution.affiliation_id
                 )
                 .join(
-                    work_class,
-                    work_class.paper_id == affiliation_class.paper_id
+                    models.Work,
+                    models.Work.paper_id == models.Affiliation.paper_id
                 )
             )
         elif self.entity == "continents":
@@ -241,13 +240,13 @@ class RedshiftQueryHandler:
                 .distinct()
                 .join(
                     models.Source,
-                    models.Work.journal_id == models.Source.source_id  # First join Work and Source
+                    models.SourceType.source_type_id == models.Source.type  
                 )
                 .join(
-                    models.SourceType,
-                    models.SourceType.source_type_id == models.Source.type  # Then join SourceType and Source
+                    models.Work,
+                    models.Work.journal_id == models.Source.source_id
                 )
-            )
+            )  
         else:
             query = db.session.query(*columns_to_select)
 
@@ -264,289 +263,334 @@ class RedshiftQueryHandler:
 
             redshift_column = column_info.get("redshiftDisplayColumn")
             if redshift_column.startswith("count("):
-                # Handle aggregate columns elsewhere
-                continue
+                continue # Handle aggregate columns elsewhere
 
             if is_model_property(redshift_column, entity_class):
-                # Skip model properties
-                continue
+                continue # Skip model properties
 
             if hasattr(entity_class, redshift_column):
                 columns_to_select.append(getattr(entity_class, redshift_column))
-        return query
+
+        return query.with_entities(*columns_to_select)
 
     def apply_work_filters(self, query):
+        return self.apply_filters(query, "work")
+
+    def apply_entity_filters(self, query):
+        return self.apply_filters(query, "entity")
+
+    def apply_filters(self, query, type):
+        condition = None
+        if type == "work":
+            condition = self.build_filters_condition(self.filter_works, "and", "work")
+        elif type == "entity":    
+            condition = self.build_filters_condition(self.filter_aggs, "and", "entity")
+
+        print(f"Applying condition for {type}")
+        print(condition, flush=True)
+
+        if condition is not None:
+            query = query.filter(condition)
+        
+        return query       
+
+    def build_filters_condition(self, filters, join, type):
+        """
+        Recursive function to build nested dis/conjunctions of filter objects.
+        :filters - List of filter objects
+        :join - String in ["and", "or"] -- how to join each filter condition
+        :type - String in ["works", "entity"] - chooses which base function to build conditions
+        Returns a single condition joining all condition parts with either "and"/"or"
+        """
+        conditions = []
+        print("build_filters_condition: filters:")
+        print(filters)
+        print(f"build_filters_condition: type: {type}")
+
+        for _filter in filters:
+            new_condition = None
+            if "join" in _filter and "filters" in _filter:  # Compound filter
+                # Recurse for nested filters
+                new_condition = self.build_filters_condition(_filter["filters"], _filter["join"], type)
+            else:
+                if type == "work":
+                    new_condition = self.build_work_filter_condition(_filter)
+                elif type == "entity":
+                    new_condition = self.build_entity_filter_condition(_filter)
+
+            if new_condition is not None:
+                conditions.append(new_condition)
+
+        print("build_filters_condition: conditions:")
+        print(conditions)
+
+        # Combine all conditions using and_/or_
+        # defaults to "and" if bad join value is passed
+        return or_(*conditions) if join == "or" else and_(*conditions)
+            
+
+    def build_work_filter_condition(self, filter):
+        """ Returns a `condition` which represents `filter` for works."""
         work_class = getattr(models, "Work")
 
-        for filter in self.filter_works:
-            key = filter.get("column_id")
-            value = filter.get("value")
-            operator = filter.get("operator") or "is"
+        key = filter.get("column_id")
+        value = filter.get("value")
+        operator = filter.get("operator") or "is"
 
-            # ensure is valid filter
-            if key is None or value is None:
-                raise(ValueError("Invalid work filter: missing key or value"))
+        print("Building work filter: ")
+        print(filter, flush=True)
 
-            # setup
-            redshift_column = self.works_config.get(key).get("redshiftFilterColumn")
-            column_type = self.works_config.get(key).get("type")
-            is_object_entity = self.works_config.get(key).get("objectEntity")
-            model_column = getattr(
-                work_class, redshift_column, None
-            )  # primary column to filter against
+        # ensure is valid filter
+        if key is None:
+            raise(ValueError("Invalid work filter: missing key"))
+        if value is None:
+            raise(ValueError("Invalid work filter: missing value"))
 
-            # filters
-            if column_type == "number":
-                print(f"filtering by number {model_column}")
-                query = self.filter_by_number(model_column, operator, query, value)
-            elif ".search" in key:
-                query = query.filter(model_column.ilike(f"%{value}%"))
-            # specialized filters
-            elif key == "keywords.id":
-                value = get_short_id_text(value)
-                work_keyword_class = aliased(getattr(models, "WorkKeyword"))
-                query = query.join(
-                    work_keyword_class,
-                    work_keyword_class.paper_id == work_class.paper_id,
-                )
-                column = work_keyword_class.keyword_id
-                query = self.do_operator_query(column, operator, query, value)
-            elif key == "type" or key == "primary_location.source.type":
-                value = get_short_id_text(value)
-                query = self.do_operator_query(model_column, operator, query, value)
-            elif key == "authorships.institutions.id":
-                value = get_short_id_integer(value)
-                affiliation_class = aliased(getattr(models, "AffiliationDistinct"))
-                query = query.join(
-                    affiliation_class,
-                    affiliation_class.paper_id == work_class.paper_id,
-                )
-                column = affiliation_class.affiliation_id
-                query = self.do_operator_query(column, operator, query, value)
-            elif key == "authorships.institutions.type":
-                value = get_short_id_text(value)
-                value = value.capitalize()
+        print("value: ")
+        print(value, flush=True)
 
-                affiliation_class = aliased(getattr(models, "Affiliation"))
-                institution_class = aliased(getattr(models, "Institution"))
-                query = query.join(
-                    affiliation_class,
-                    affiliation_class.paper_id == work_class.paper_id,
-                ).join(
-                    institution_class,
-                    institution_class.affiliation_id == affiliation_class.affiliation_id,
-                )
-                query = self.do_operator_query(institution_class.type, operator, query, value)
-            elif key == "authorships.author.id":
-                value = get_short_id_integer(value)
-                work_class = getattr(models, "Work")
-                affiliation_class = aliased(getattr(models, "Affiliation"))
-                query = query.join(
-                    affiliation_class,
-                    affiliation_class.paper_id == work_class.paper_id,
-                )
-                column = affiliation_class.author_id
-                query = self.do_operator_query(column, operator, query, value)
-            elif key == "authorships.countries":
-                value = get_short_id_text(value)
-                value = value.upper()  # country code needs to be uppercase
-                affiliation_country_class = getattr(
-                    models, "AffiliationCountryDistinct"
-                )
-                query = query.join(
-                    affiliation_country_class,
-                    affiliation_country_class.paper_id == work_class.paper_id,
-                )
-                column = affiliation_country_class.country_id
-                query = self.do_operator_query(column, operator, query, value)
-            elif key == "authorships.institutions.is_global_south":
-                value = self.get_boolean_value(value)
-                affiliation_class = aliased(getattr(models, "Affiliation"))
-                query = query.join(
-                    affiliation_class,
-                    affiliation_class.paper_id == work_class.paper_id,
-                )
-                column = affiliation_class.is_global_south
-                query = self.do_operator_query(column, operator, query, value)
-            elif key == "authorships.institutions.ror":
-                query = query.join(
-                    models.Affiliation,
-                    models.Work.paper_id == models.Affiliation.paper_id
-                ).join(
-                    models.Institution,
-                    models.Affiliation.affiliation_id == models.Institution.affiliation_id
-                )
-                query = query.filter(models.Institution.ror == value)
-            elif key == "id":
-                if isinstance(value, str):
-                    value = get_short_id_integer(value)
-                elif isinstance(value, int):
-                    value = int(value)
-                model_column = getattr(work_class, "paper_id", None)
-                query = self.do_operator_query(model_column, operator, query, value)
-            elif key == "authorships.author.orcid":
-                query = query.join(
-                    models.Affiliation,
-                    models.Work.paper_id == models.Affiliation.paper_id
-                ).join(
-                    models.Author,
-                    models.Affiliation.author_id == models.Author.author_id
-                )
-                query = query.filter(models.Author.orcid == value)
-            elif key == "language":
-                value = value.lower()
-                value = get_short_id_text(value)
-                query = self.do_operator_query(model_column, operator, query, value)
-            elif key == "grants.funder":
-                value = get_short_id_integer(value)
-                work_funder_class = getattr(models, "WorkFunder")
-                query = query.join(
-                    work_funder_class,
-                    work_funder_class.paper_id == work_class.paper_id,
-                )
-                column = work_funder_class.funder_id
-                query = self.do_operator_query(column, operator, query, value)
-            elif key == "sustainable_development_goals.id":
-                value = get_short_id_integer(value)
-                work_sdg_class = aliased(getattr(models, "WorkSdg"))
-                query = query.join(
-                    work_sdg_class,
-                    work_sdg_class.paper_id == work_class.paper_id,
-                )
-                column = work_sdg_class.sdg_id
-                query = self.do_operator_query(column, operator, query, value)
-            elif key == "authorships.institutions.continent":
-                wiki_code = get_short_id_text(value)
-                value = convert_wiki_to_continent_id(wiki_code)
+        # setup
+        redshift_column = self.works_config.get(key).get("redshiftFilterColumn")
+        column_type = self.works_config.get(key).get("type")
+        is_object_entity = self.works_config.get(key).get("objectEntity")
+        model_column = getattr(
+            work_class, redshift_column, None
+        )  # primary column to filter against
 
-                affiliation_continent_class = getattr(
-                    models, "AffiliationContinentDistinct"
-                )
-                query = query.join(
-                    affiliation_continent_class,
-                    affiliation_continent_class.paper_id == work_class.paper_id,
-                )
-                column = affiliation_continent_class.continent_id
-                query = self.do_operator_query(column, operator, query, value)
-            elif key == "related_to_text":
-                r = requests.get(f"https://api.openalex.org/text/related-works?text={value}")
-                if r.status_code == 200:
-                    results = r.json()
-                    related_paper_ids = [result["work_id"] for result in results]
-                    query = query.filter(work_class.paper_id.in_(related_paper_ids))
-            # id filters
-            elif (
-                column_type == "object" or column_type == "array"
-            ) and is_object_entity:
+        if not redshift_column:
+            raise(ValueError(f"Column {key} missing 'redshiftFilterColumn' in entity config"))
+
+        if column_type == "number":
+            return build_number_condition(model_column, operator, value)
+
+        elif ".search" in key:
+            return model_column.ilike(f"%{value}%")
+
+        elif key == "keywords.id":
+            value = get_short_id_text(value)
+            join_condition = models.WorkKeyword.paper_id == work_class.paper_id
+            filter_column = models.WorkKeyword.keyword_id
+            filter_condition = build_operator_condition(filter_column, operator, value)
+            return and_(join_condition, filter_condition)            
+
+        elif key == "type" or key == "primary_location.source.type":
+            value = get_short_id_text(value)
+            return build_operator_condition(model_column, operator, value)
+
+        elif key == "authorships.institutions.id":
+            value = get_short_id_integer(value)
+            join_condition = models.AffiliationDistinct.paper_id == work_class.paper_id
+            filter_column = models.AffiliationDistinct.affiliation_id
+            filter_condition = build_operator_condition(filter_column, operator, value)
+            return and_(join_condition, filter_condition)
+
+        elif key == "authorships.institutions.type":
+            value = get_short_id_text(value).capitalize()
+            affiliation_class = aliased(getattr(models, "Affiliation"))
+            institution_class = aliased(getattr(models, "Institution"))
+            join_condition = and_(
+                affiliation_class.paper_id == work_class.paper_id,
+                institution_class.affiliation_id == affiliation_class.affiliation_id,
+            )
+            filter_condition = build_operator_condition(institution_class.type, operator, value)
+            return and_(join_condition, filter_condition)
+
+        elif key == "authorships.author.id":
+            value = get_short_id_integer(value)
+            join_condition = models.Affiliation.paper_id == work_class.paper_id
+            filter_column = models.Affiliation.author_id
+            filter_condition = build_operator_condition(filter_column, operator, value)
+            return and_(join_condition, filter_condition)
+
+        elif key == "authorships.countries":
+            value = get_short_id_text(value).upper()  # Country codes must be uppercase
+            join_condition = models.AffiliationCountryDistinct.paper_id == work_class.paper_id
+            filter_column = models.AffiliationCountryDistinct.country_id
+            filter_condition = build_operator_condition(filter_column, operator, value)
+            return and_(join_condition, filter_condition)
+
+        elif key == "authorships.institutions.is_global_south":
+            value = get_boolean_value(value)
+            join_condition = models.Affiliation.paper_id == work_class.paper_id
+            filter_column = models.Affiliation.is_global_south
+            filter_condition = build_operator_condition(filter_column, operator, value)
+            return and_(join_condition, filter_condition)
+
+        elif key == "authorships.institutions.ror":
+            join_condition = and_(
+                models.Work.paper_id == models.Affiliation.paper_id,
+                models.Affiliation.affiliation_id == models.Institution.affiliation_id,
+            )
+            filter_condition = models.Institution.ror == value
+            return and_(join_condition, filter_condition)
+
+        elif key == "id":
+            if isinstance(value, str):
                 value = get_short_id_integer(value)
-                query = self.do_operator_query(model_column, operator, query, value)
-            elif column_type == "string":
-                query = self.do_operator_query(model_column, operator, query, value)
-            # array of string filters
+            elif isinstance(value, int):
+                value = int(value)
+            return build_operator_condition(model_column, operator, value)
+
+        elif key == "authorships.author.orcid":
+            join_condition = and_(
+                models.Work.paper_id == models.Affiliation.paper_id,
+                models.Affiliation.author_id == models.Author.author_id,
+            )
+            filter_condition = models.Author.orcid == value
+            return and_(join_condition, filter_condition)
+
+        elif key == "language":
+            value = get_short_id_text(value).lower()
+            return build_operator_condition(model_column, operator, value)
+
+        elif key == "grants.funder":
+            value = get_short_id_integer(value)
+            join_condition = models.WorkFunder.paper_id == work_class.paper_id
+            filter_column = models.WorkFunder.funder_id
+            filter_condition = build_operator_condition(filter_column, operator, value)
+            return and_(join_condition, filter_condition)
+
+        elif key == "sustainable_development_goals.id":
+            value = get_short_id_integer(value)
+            join_condition = models.WorkSdg.paper_id == work_class.paper_id
+            filter_column = models.WorkSdg.sdg_id
+            filter_condition = build_operator_condition(filter_column, operator, value)
+            return and_(join_condition, filter_condition)
+
+        elif key == "authorships.institutions.continent":
+            wiki_code = get_short_id_text(value)
+            value = convert_wiki_to_continent_id(wiki_code)
+            affiliation_continent_class = getattr(models, "AffiliationContinentDistinct")
+            join_condition = models.AffiliationContinentDistinct.paper_id == work_class.paper_id
+            filter_column = models.AffiliationContinentDistinct.continent_id
+            filter_condition = build_operator_condition(filter_column, operator, value)
+            return and_(join_condition, filter_condition)
+
+        elif key == "related_to_text":
+            r = requests.get(f"https://api.openalex.org/text/related-works?text={value}")
+            if r.status_code == 200:
+                results = r.json()
+                related_paper_ids = [result["work_id"] for result in results]
+                return work_class.paper_id.in_(related_paper_ids)
             else:
-                print(f"filtering by string {model_column}")
-                query = self.do_operator_query(model_column, operator, query, value)
+                raise ValueError(f"Failed to get related works for text: {value}")
+       
+        elif column_type in ["object", "array"] or is_object_entity:
+            value = get_short_id_integer(value)
+            return build_operator_condition(model_column, operator, value)
 
-        return query
+        elif column_type == "string":
+            return build_operator_condition(model_column, operator, value)
 
-    def apply_entity_filters(self, query, entity_class):
-        for filter in self.filter_aggs:
-            key = filter.get("column_id")
-            value = filter.get("value")
-            operator = filter.get("operator") or "is"
+        else:            
+            return build_operator_condition(model_column, operator, value)
 
-            # ensure is valid filter
-            if key is None or value is None:
-                raise(ValueError("Invalid entity filter: missing key or value"))
+    def build_entity_filter_condition(self, filter):
+        """ Returns a `condition` which represents `filter` for entities."""
 
-            # do not filter stats
-            if key.startswith("count(") or key.startswith("sum(") or key.startswith("mean(") or key.startswith("percent("):
-                continue
+        entity_class = get_entity_class(self.entity)
 
-            # setup
-            redshift_column = self.entity_config.get(key).get("redshiftFilterColumn")
-            column_type = self.entity_config.get(key).get("type")
-            is_object_entity = self.entity_config.get(key).get("objectEntity")
-            is_search_column = self.entity_config.get(key).get("isSearchColumn")
+        key = filter.get("column_id")
+        value = filter.get("value")
+        operator = filter.get("operator") or "is"
 
-            if not redshift_column:
-                raise(ValueError(f"Column {key} not found in entity config"))
+        # ensure is valid filter
+        # ensure is valid filter
+        if key is None:
+            raise(ValueError("Invalid entity filter: missing key"))
+        if value is None:
+            raise(ValueError("Invalid entity filter: missing value"))
 
-            model_column = getattr(entity_class, redshift_column, None)
+        # do not filter stats
+        if key.startswith(("count(", "sum(", "mean(", "percent(")):
+            return None
 
-            # filters
-            if column_type == "number":
-                query = self.filter_by_number(model_column, operator, query, value)
-            elif key == "affiliations.institution.type":
-                value = get_short_id_text(value)
-                value = value.capitalize()
-                query = self.do_operator_query(models.Institution.type, operator, query, value)
-            elif column_type == "boolean":
-                query = self.filter_by_boolean(model_column, query, value)
-            elif is_search_column:
-                query = query.filter(model_column.ilike(f"%{value}%"))
-            elif key == "id" and self.entity in ["continents", "institution-types", "languages", "licenses", "source-types", "work-types"]:
-                value = get_short_id_text(value)
-                if self.entity == "continents":
-                    value = value.upper()
-                else:
-                    value = value.lower()
-                query = self.do_operator_query(model_column, operator, query, value)
-            elif key == "id":
-                value = get_short_id_integer(value)
-                query = self.do_operator_query(model_column, operator, query, value)
-            elif key == "related_to_text" and self.entity == "authors":
-                r = requests.get(f"https://api.openalex.org/text/related-authors?text={value}")
-                if r.status_code == 200:
-                    results = r.json()
-                    related_author_ids = [result["author_id"] for result in results]
-                    query = query.filter(entity_class.author_id.in_(related_author_ids))
-            elif column_type == "string":
-                query = self.do_operator_query(model_column, operator, query, value)
-            # specialized filters
-            elif key == "last_known_institutions.id" and self.entity == "authors":
-                value = get_short_id_integer(value)
+        # setup
+        redshift_column = self.entity_config.get(key).get("redshiftFilterColumn")
+        column_type = self.entity_config.get(key).get("type")
+        is_object_entity = self.entity_config.get(key).get("objectEntity")
+        is_search_column = self.entity_config.get(key).get("isSearchColumn")
 
-                query = query.join(
-                    models.AuthorLastKnownInstitutions,
-                    (models.AuthorLastKnownInstitutions.author_id == entity_class.author_id) &
-                    (models.AuthorLastKnownInstitutions.rank == 1)  # most recent affiliation
-                )
+        if not redshift_column:
+            raise(ValueError(f"Column {key} missing 'redshitFilterColumn' in entity config"))
 
-                query = self.do_operator_query(models.AuthorLastKnownInstitutions.affiliation_id, operator, query, value)
-            elif key == "affiliations.institution.country_code" and self.entity == "authors":
-                value = get_short_id_text(value)
+        model_column = getattr(entity_class, redshift_column, None)
+
+        print(f"Building entity filter: redshift_column: {redshift_column}, column_type: {column_type}, is_object_entity: {is_object_entity}, is_search_column: {is_search_column}, model_column: {model_column}")
+
+
+        if column_type == "number":
+            return build_number_condition(model_column, operator, value)
+
+        elif column_type == "boolean":
+            value = get_boolean_value(value)
+            return build_operator_condition(model_column, operator, value)
+
+        elif is_search_column:
+            return model_column.ilike(f"%{value}%")
+
+        elif key == "affiliations.institution.type":
+            value = get_short_id_text(value).capitalize()
+            return build_operator_condition(models.Institution.type, operator, value)
+        
+        elif key == "id" and self.entity in ["continents", "countries", "institution-types", "languages", "licenses", "source-types", "work-types"]:
+            value = get_short_id_text(value)
+            if self.entity == "continents":
                 value = value.upper()
-                affiliation_class = aliased(getattr(models, "Affiliation"))
-                institution_class = aliased(getattr(models, "Institution"))
-                query = query.join(
-                    affiliation_class,
-                    affiliation_class.author_id == entity_class.author_id,
-                ).join(
-                    institution_class,
-                    affiliation_class.affiliation_id == institution_class.affiliation_id,
-                )
-                query = self.do_operator_query(institution_class.country_code, operator, query, value)
-            elif key == "affiliations.institution.id" and self.entity == "authors":
-                value = get_short_id_integer(value)
-                affiliation_class = aliased(getattr(models, "Affiliation"))
-                query = query.join(
-                    affiliation_class,
-                    affiliation_class.author_id == entity_class.author_id,
-                )
-                query = self.do_operator_query(affiliation_class.affiliation_id, operator, query, value)
-            elif column_type == "boolean":
-                query = self.filter_by_boolean(model_column, query, value)
-            elif (
-                column_type == "object" or column_type == "array"
-            ) and is_object_entity:
-                value = get_short_id_text(value)
-                value = value.upper() if "country_code" in key else value
-                query = self.do_operator_query(model_column, operator, query, value)
-            # array of string filters
             else:
-                query = self.do_operator_query(model_column, operator, query, value)
-        return query
+                value = value.lower()
+            return build_operator_condition(model_column, operator, value)
+
+        elif key == "id":
+            value = get_short_id_integer(value)
+            return build_operator_condition(model_column, operator, value)
+
+        elif key == "related_to_text" and self.entity == "authors":
+            r = requests.get(f"https://api.openalex.org/text/related-authors?text={value}")
+            if r.status_code == 200:
+                results = r.json()
+                related_author_ids = [result["author_id"] for result in results]
+                return entity_class.author_id.in_(related_author_ids)
+            else:
+                raise ValueError(f"Failed to get related authors for text: {value}")
+        
+        # specialized filters
+        elif key == "last_known_institutions.id" and self.entity == "authors":
+            value = get_short_id_integer(value)
+            join_condition = and_(
+                models.AuthorLastKnownInstitutions.author_id == entity_class.author_id,
+                models.AuthorLastKnownInstitutions.rank == 1  # Most recent affiliation
+            )
+            filter_condition = build_operator_condition(models.AuthorLastKnownInstitutions.affiliation_id, operator, value)
+            return and_(join_condition, filter_condition)
+
+        elif key == "affiliations.institution.country_code" and self.entity == "authors":
+            value = get_short_id_text(value).upper()
+            affiliation_class = aliased(getattr(models, "Affiliation"))
+            institution_class = aliased(getattr(models, "Institution"))
+            join_condition = and_(
+                affiliation_class.author_id == entity_class.author_id,
+                institution_class.affiliation_id == affiliation_class.affiliation_id,
+            )
+            filter_condition = build_operator_condition(institution_class.country_code, operator, value)
+            return and_(join_condition, filter_condition)
+
+        elif key == "affiliations.institution.id" and self.entity == "authors":
+            value = get_short_id_integer(value)
+            join_condition = models.Affiliation.author_id == entity_class.author_id
+            filter_condition = build_operator_condition(models.Affiliation.affiliation_id, operator, value)
+            return and_(join_condition, filter_condition)
+
+        elif column_type in ["object", "array"] and is_object_entity:
+            value = get_short_id_text(value) if column_type == "object" else value
+            value = value.upper() if "country_code" in key else value
+            return build_operator_condition(model_column, operator, value)
+
+        elif column_type == "string":
+            return build_operator_condition(model_column, operator, value)
+
+        else:
+            return build_operator_condition(model_column, operator, value)
 
     def get_summary(self, query):
         if self.entity != "summary":
@@ -572,45 +616,6 @@ class RedshiftQueryHandler:
             "mean(cited_by_count)": mean_citation_count,
             "percent(is_oa)": open_access_count / count if count > 0 else 0
         }
-
-    @staticmethod
-    def do_operator_query(column, operator, query, value):
-        if operator == "is":
-            print(column, value)
-            query = query.filter(column == value)
-        elif operator == "is not":
-            query = query.filter(column != value)
-        return query
-
-    @staticmethod
-    def filter_by_number(model_column, operator, query, value):
-        if operator == "is greater than" or operator == ">":
-            query = query.filter(model_column > int(value))
-        elif operator == "is greater than or equal to" or operator == ">=":
-            query = query.filter(model_column >= int(value))
-        elif operator == "is less than" or operator == "<":
-            query = query.filter(model_column < int(value))
-        elif operator == "is less than or equal to" or operator == "<=":
-            query = query.filter(model_column <= int(value))
-        elif operator == "is not" or operator == "!=":
-            query = query.filter(model_column != int(value))
-        else:
-            query = query.filter(model_column == int(value))
-        return query
-
-    def filter_by_boolean(self, model_column, query, value):
-        value = self.get_boolean_value(value)
-        query = query.filter(model_column == value)
-        return query
-
-    @staticmethod
-    def get_boolean_value(value):
-        if isinstance(value, bool):
-            return value
-        elif value.lower() == "true":
-            return True
-        elif value.lower() == "false":
-            return False
 
     def apply_sort(self, query, entity_class):
         if self.sort_by_column:
@@ -657,7 +662,7 @@ class RedshiftQueryHandler:
                 )
 
                 for filter in self.filter_aggs:
-                    if filter["column_id"] == "count(works)":
+                    if filter.get("column_id") == "count(works)":
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
                         )
@@ -682,7 +687,7 @@ class RedshiftQueryHandler:
                 )
 
                 for filter in self.filter_aggs:
-                    if filter["column_id"] == column:
+                    if filter.get("column_id") == column:
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
                         )
@@ -707,7 +712,7 @@ class RedshiftQueryHandler:
                     stat_function.label(f"{stat}({related_entity})")
                 )
                 for filter in self.filter_aggs:
-                    if filter["column_id"] == column:
+                    if filter.get("column_id") == column:
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
                         )
@@ -731,7 +736,7 @@ class RedshiftQueryHandler:
                     stat_function.label(f"{stat}({related_entity})")
                 )
                 for filter in self.filter_aggs:
-                    if filter["column_id"] == column:
+                    if filter.get("column_id") == column:
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
                         )
@@ -755,7 +760,7 @@ class RedshiftQueryHandler:
                     stat_function.label(f"{stat}({related_entity})")
                 )
                 for filter in self.filter_aggs:
-                    if filter["column_id"] == column:
+                    if filter.get("column_id") == column:
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
                         )
@@ -783,7 +788,7 @@ class RedshiftQueryHandler:
                     stat_function.label(f"{stat}({related_entity})")
                 )
                 for filter in self.filter_aggs:
-                    if filter["column_id"] == column:
+                    if filter.get("column_id") == column:
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
                         )
@@ -807,7 +812,7 @@ class RedshiftQueryHandler:
                 )
 
                 for filter in self.filter_aggs:
-                    if filter["column_id"] == column:
+                    if filter.get("column_id") == column:
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
                         )
@@ -826,7 +831,7 @@ class RedshiftQueryHandler:
                 query = query.group_by(*self.model_return_columns)
 
                 for filter in self.filter_aggs:
-                    if filter["column_id"] == column:
+                    if filter.get("column_id") == column:
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
                         )
@@ -856,7 +861,7 @@ class RedshiftQueryHandler:
                     stat_function.label(f"{stat}({related_entity})")
                 )
                 for filter in self.filter_aggs:
-                    if filter["column_id"] == column:
+                    if filter.get("column_id") == column:
                         query = self.filter_stats(
                             query, stat_function, filter["operator"], filter["value"]
                         )
@@ -876,7 +881,7 @@ class RedshiftQueryHandler:
                 query = query.order_by(sort_func.asc().nulls_last())
         return query
 
-    def filter_stats(self, query, stat_function, operator, value):
+    def sfilter_stats(self, query, stat_function, operator, value):
         """Apply filtering on the calculated stat."""
         if operator == "is greater than" or operator == ">":
             query = query.having(stat_function > int(value))
@@ -911,6 +916,43 @@ def get_entity_class(entity):
     else:
         entity_class = getattr(models, entity[:-1].capitalize())
     return entity_class
+
+
+def build_operator_condition(column, operator, value):
+    print("model_column / operator / value ")
+    print(f"{column} / {operator} / {value}", flush=True)
+    if operator == "is":
+        return column == value
+    elif operator == "is not":
+        return column != value
+    else:
+        raise ValueError(f"Unsupported operator: {operator}")
+
+
+def build_number_condition(column, operator, value):
+    if operator in ["is greater than", ">"]:
+        return column > value
+    elif operator in ["is less than", "<"]:
+        return column < value
+    elif operator in ["is greater than or equal to", ">="]:
+        return column >= value
+    elif operator in ["is less than or equal to", "<="]:
+        return column <= value
+    elif operator == "is not":
+        return column != value
+    elif operator == "is":
+        return column == value
+    else:
+        raise ValueError(f"Unsupported operator: {operator}")
+
+
+def get_boolean_value(value):
+    if isinstance(value, bool):
+        return value
+    elif value.lower() == "true":
+        return True
+    elif value.lower() == "false":
+        return False
 
 
 def is_model_property(column, entity_class):
