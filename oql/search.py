@@ -11,7 +11,7 @@ import settings
 redis_db = redis.Redis.from_url(settings.CACHE_REDIS_URL or "redis://localhost:6379/0")
 
 CACHE_EXPIRATION_MINUTES = 1
-search_queue = "search_queue"
+search_queue = settings.SEARCH_QUEUE
 
 
 @dataclass

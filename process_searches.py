@@ -18,7 +18,7 @@ from oql.validate import OQOValidator
 
 app = create_app()
 redis_db = redis.Redis.from_url(settings.CACHE_REDIS_URL)
-search_queue = "search_queue"
+search_queue = settings.SEARCH_QUEUE
 
 # enable sentry
 sentry_sdk.init(

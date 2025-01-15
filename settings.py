@@ -12,6 +12,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 SQLALCHEMY_DATABASE_URI = os.environ.get("REDSHIFT_SERVERLESS_URL")
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 SQLALCHEMY_ECHO = True if ENV == "development" else False
+SEARCH_QUEUE = "search_queue"
 
 # indexes
 AUTHORS_INDEX = "authors-v15"
