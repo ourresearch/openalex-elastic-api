@@ -107,6 +107,7 @@ def process_searches():
             search["meta"] = None
             search["is_ready"] = False
             search["is_completed"] = False
+            search["backend_error"] = None
             search["timestamps"]["completed"] = None
 
             # Save the cleared search object back to Redis
