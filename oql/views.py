@@ -69,9 +69,12 @@ def results():
 
 
 @blueprint.route("/searches", methods=["POST"])
-def store_search():
+def create_search():
     raw_query = request.json.get("query")
     bypass_cache = request.json.get("bypass_cache", False)
+
+    print("create_search")
+    print(raw_query, flush=True)
 
     # query object
     query = Query(
@@ -88,7 +91,8 @@ def store_search():
     ok, error = oqo.validate(query.to_dict())
 
     if not ok:
-        return jsonify({"invalid query error": error}), 400
+        print(f"Invalid Query: {error}", flush=True)
+        return jsonify({"error": "Invalid Query", "details": error, "query": raw_query}), 400
 
     s = Search(query=query.to_dict(), bypass_cache=bypass_cache)
     s.save()
