@@ -26,6 +26,7 @@ class Search:
     bypass_cache: bool = True
     timestamps: Dict[str, str] = field(default_factory=dict)
     source: Optional[str] = None
+    redshift_sql: Optional[str] = None
 
     def __post_init__(self):
         self.id = self.hash_id()

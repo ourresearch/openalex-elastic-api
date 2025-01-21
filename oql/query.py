@@ -23,44 +23,48 @@ class Query:
         self.valid_sort_columns = self.get_valid_sort_columns()
         self.source = None
 
+        self.elastic_handler = ElasticQueryHandler(
+            entity=self.entity,
+            filter_works=self.filter_works,
+            filter_aggs=self.filter_aggs,
+            sort_by_column=self.sort_by_column,
+            sort_by_order=self.sort_by_order,
+            show_columns=self.show_columns,
+            valid_columns=self.valid_columns
+        )
+        self.redshift_handler = RedshiftQueryHandler(
+            entity=self.entity,
+            filter_works=self.filter_works,
+            filter_aggs=self.filter_aggs,
+            sort_by_column=self.sort_by_column,
+            sort_by_order=self.sort_by_order,
+            show_columns=self.show_columns,
+            valid_columns=self.valid_columns
+        )
+
     def get_filter_by(self):
         return []
 
     def execute(self):
-        elastic_handler = ElasticQueryHandler(
-            entity=self.entity,
-            filter_works=self.filter_works,
-            filter_aggs=self.filter_aggs,
-            sort_by_column=self.sort_by_column,
-            sort_by_order=self.sort_by_order,
-            show_columns=self.show_columns,
-            valid_columns=self.valid_columns
-        )
-        redshift_handler = RedshiftQueryHandler(
-            entity=self.entity,
-            filter_works=self.filter_works,
-            filter_aggs=self.filter_aggs,
-            sort_by_column=self.sort_by_column,
-            sort_by_order=self.sort_by_order,
-            show_columns=self.show_columns,
-            valid_columns=self.valid_columns
-        )
         if self.entity == "summary":
-            results = redshift_handler.execute_summary()
+            results = self.redshift_handler.execute_summary()
             self.total_count = results["count"]
             json_data = {"results": [results]}
-        elif elastic_handler.is_valid():
+        
+        elif self.elastic_handler.is_valid():
             print(f"Executing elastic query for {self.entity}")
-            total_count, results = elastic_handler.execute()
+            total_count, results = self.elastic_handler.execute()
             self.total_count = total_count
             json_data = self.format_elastic_results_as_json(results)
             self.source = "elastic"
+        
         else:
             print(f"Executing redshift query for {self.entity}")
-            total_count, results = redshift_handler.execute()
+            total_count, results = self.redshift_handler.execute()
             self.total_count = total_count
             json_data = self.format_redshift_results_as_json(results)
             self.source = "redshift"
+        
         return json_data
 
     def format_redshift_results_as_json(self, results):
@@ -166,6 +170,9 @@ class Query:
         for property_config in all_entities_config.get(self.entity, {}).get('columns').values():
             if property_config.get("id", "") == column:
                 return property_config.get("type", "string")
+
+    def get_sql(self):
+        return self.redshift_handler.get_sql()
 
     def to_dict(self):
         return {

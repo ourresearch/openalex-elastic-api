@@ -34,17 +34,7 @@ class RedshiftQueryHandler:
         self.works_config = all_entities_config.get("works").get("columns")
 
     def execute(self):
-        entity_class = get_entity_class(self.entity)  # from summarize_by
-
-        query = self.build_joins(entity_class)
-        query = self.set_columns(query, entity_class)
-        query = self.apply_work_filters(query)
-        query = self.apply_entity_filters(query)       
-        query = self.apply_sort(query, entity_class)  
-        query = self.apply_stats(query, entity_class)
-
-        print("***SQL BEFORE COUNT***")
-        print(query.statement.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}), flush=True)
+        query = self.build_query()
 
         count_query = db.session.query(func.count()).select_from(query.subquery())
         total_count = db.session.execute(count_query).scalar()
@@ -54,15 +44,42 @@ class RedshiftQueryHandler:
         return total_count, results
 
     def execute_summary(self):
+        summary_query = self.build_query()
+        
+        count, citation_count, open_access_count, mean_fwci, mean_citation_count = db.session.execute(
+            summary_query).fetchone()
+
+        return {
+            "id": "summary",
+            "count": count,
+            "sum(cited_by_count)": citation_count,
+            "sum(is_oa)": open_access_count,
+            "mean(fwci)": mean_fwci,
+            "mean(cited_by_count)": mean_citation_count,
+            "percent(is_oa)": open_access_count / count if count > 0 else 0
+        }
+
+        return summary
+
+    def build_query(self):
         entity_class = get_entity_class(self.entity)
 
         query = self.build_joins(entity_class)
         query = self.set_columns(query, entity_class)
         query = self.apply_work_filters(query)
-        query = self.apply_entity_filters(query, entity_class)
-        summary = self.get_summary(query)
+        query = self.apply_entity_filters(query)  
 
-        return summary
+        if self.entity != "summary":
+            query = self.apply_sort(query, entity_class)  
+            query = self.apply_stats(query, entity_class)
+
+        return query
+
+    def get_sql(self):
+        query = self.build_query()
+        return str(query.statement.compile(
+                    dialect=postgresql.dialect(), 
+                    compile_kwargs={"literal_binds": True}))
 
     def build_joins(self, entity_class):
         columns_to_select = [entity_class]
@@ -588,6 +605,17 @@ class RedshiftQueryHandler:
 
         else:
             return build_operator_condition(model_column, operator, value)
+
+    def apply_summary(self, query):
+
+        summary_query = query.with_entities(
+            func.count().label("count"),
+            func.sum(models.Work.cited_by_count).label("sum(cited_by_count)"),
+            func.sum(case([(models.Work.oa_status.in_(["gold", "hybrid", "green"]), 1)], else_=0)).label("sum(is_oa)"),
+            func.avg(models.Work.fwci).label("mean(fwci)"),
+            func.avg(models.Work.cited_by_count).label("mean(cited_by_count)")
+        )      
+        return summary_query
 
     def get_summary(self, query):
         if self.entity != "summary":

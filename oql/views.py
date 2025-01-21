@@ -94,7 +94,9 @@ def create_search():
         print(f"Invalid Query: {error}", flush=True)
         return jsonify({"error": "Invalid Query", "details": error, "query": raw_query}), 400
 
-    s = Search(query=query.to_dict(), bypass_cache=bypass_cache)
+    print("query.to_dict()")
+    print(query.to_dict(), flush=True)
+    s = Search(query=query.to_dict(), redshift_sql=query.get_sql(), bypass_cache=bypass_cache)
     s.save()
     return jsonify(s.to_dict()), 201
 
