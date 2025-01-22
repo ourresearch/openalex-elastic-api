@@ -82,7 +82,7 @@ class RedshiftQueryHandler:
                     compile_kwargs={"literal_binds": True}))
 
     def build_joins(self, entity_class):
-        columns_to_select = []
+        columns_to_select = [entity_class]
 
         if self.entity == "institutions":
             query = (
