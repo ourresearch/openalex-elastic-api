@@ -52,14 +52,14 @@ class Query:
             json_data = {"results": [results]}
         
         elif self.elastic_handler.is_valid():
-            print(f"Executing elastic query for {self.entity}")
+            print(f"Initiating elastic query for {self.entity}")
             total_count, results = self.elastic_handler.execute()
             self.total_count = total_count
             json_data = self.format_elastic_results_as_json(results)
             self.source = "elastic"
         
         else:
-            print(f"Executing redshift query for {self.entity}")
+            print(f"Initiating redshift query for {self.entity}")
             total_count, results = self.redshift_handler.execute()
             self.total_count = total_count
             json_data = self.format_redshift_results_as_json(results)
@@ -68,12 +68,59 @@ class Query:
         return json_data
 
     def format_redshift_results_as_json(self, results):
+        """
+        Convert row-based results (no full ORM object) into the old JSON structure,
+        but skip property/callable logic.
+        """
+        json_data = {"results": []}
+        columns = list(set(self.show_columns + ["id"]))
+
+        print("format_redshift_results_as_json, first row:")
+        if results:
+            print(results[0])
+            print(type(results[0]))
+            print(results[0].keys() if hasattr(results[0], "keys") else "No keys")
+        print("***")
+        print("processing rows")
+
+        for row in results:
+            if "id" in row and row["id"] == "works/W4285719527":
+                continue # Deleted Work ID
+
+            result_data = {}
+            #result_data["id"] = row.get("id")
+
+            for column in columns:
+                # Use config to get the underlying redshift column name
+                column_info = all_entities_config[self.entity]["columns"].get(column, {})
+                redshift_column = column_info.get("redshiftDisplayColumn", None)
+
+                # 1) If the row has a direct aggregator label or same-named key, use that
+                if column in row.keys():
+                    value = row[column]
+                # 2) Otherwise, if we have a known DB column name in row, use that
+                elif redshift_column and redshift_column in row.keys():
+                    value = row[redshift_column]
+                else:
+                    # Not found in row
+                    value = None
+
+                result_data[column] = value
+
+            json_data["results"].append(result_data)
+        print("finished processing rows", flush=True)
+        return json_data
+
+    def Xformat_redshift_results_as_json(self, results):
         json_data = {"results": []}
         columns = self.show_columns
 
+        print("format_redshift_results_as_json")
         for r in results:
+            # print(r)
             model_instance = r[0] if isinstance(r, Row) else r
 
+            # print(model_instance, flush=True)
             if model_instance.id == "works/W4285719527":
                 # deleted work, skip
                 continue
