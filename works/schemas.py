@@ -103,6 +103,7 @@ class SourceSchema(Schema):
     issn = fields.List(fields.Str())
     is_oa = fields.Bool()
     is_in_doaj = fields.Bool()
+    is_indexed_in_scopus = fields.Bool()
     is_core = fields.Bool()
     host_organization = fields.Str()
     host_organization_name = fields.Str()
