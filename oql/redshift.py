@@ -271,7 +271,7 @@ class RedshiftQueryHandler:
         return query
 
     def set_columns(self, query, entity_class):
-        columns_to_select = []
+        columns_to_select = [entity_class]
 
         for column in self.show_columns:
             column_info = self.entity_config.get(column)
