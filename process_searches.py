@@ -127,7 +127,7 @@ def process_searches():
                 search["invalid_query_error"] = results["invalid_query_error"]
                 search["is_ready"] = True
                 search["is_completed"] = True
-                search["timestamps"]["completed"] = datetime.now(timezone.utc).isoformat()
+
             else:
                 # valid results
                 search["results"] = results["results"]
@@ -136,7 +136,14 @@ def process_searches():
                 search["source"] = results["source"]
                 search["is_ready"] = True
                 search["is_completed"] = True
-                search["timestamps"]["completed"] = datetime.now(timezone.utc).isoformat()
+
+            # timestamps
+            completed = datetime.now(timezone.utc)
+            started = datetime.fromisoformat(search["timestamps"]["started"])
+            duration = (completed - started).total_seconds()
+            search["timestamps"]["completed"] = completed.isoformat()
+            search["timestamps"]["duration"] = duration
+
             print(f"Processed search {search_id}")
         except Exception as e:
             # backend error
