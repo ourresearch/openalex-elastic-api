@@ -94,8 +94,6 @@ def create_search():
         print(f"Invalid Query: {error}", flush=True)
         return jsonify({"error": "Invalid Query", "details": error, "query": raw_query}), 400
 
-    print("query.to_dict()")
-    print(query.to_dict(), flush=True)
     s = Search(query=query.to_dict(), redshift_sql=query.get_sql(), bypass_cache=bypass_cache)
     s.save()
     return jsonify(s.to_dict()), 201
@@ -103,9 +101,26 @@ def create_search():
 
 @blueprint.route("/searches/<id>", methods=["GET"])
 def get_search(id):
+    bypass_cache = request.args.get("bypass_cache") == "true"
+
     search = get_existing_search(id)
     if not search:
         return jsonify({"error": "Search not found"}), 404
+
+    if bypass_cache:
+        # Reset all fields that would be reset in process_searches.py
+        search["results"] = None
+        search["results_header"] = None
+        search["meta"] = None
+        search["is_ready"] = False
+        search["is_completed"] = False
+        search["backend_error"] = None
+        search["timestamps"]["completed"] = None
+        search["bypass_cache"] = True
+        
+        redis_db.set(id, json.dumps(search))
+        # Re-add to queue for processing
+        redis_db.rpush(search_queue, id)
 
     return jsonify(search)
 
