@@ -30,8 +30,6 @@ class Search:
 
     def __post_init__(self):
         self.id = self.hash_id()
-        self.timestamps["started"] = datetime.now(timezone.utc).isoformat()
-        self.timestamps["est_completed"] = "not implemented"
 
     def hash_id(self):
         query_str = json.dumps(self.query, sort_keys=True)

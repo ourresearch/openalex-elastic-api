@@ -76,4 +76,5 @@ class ResultTable:
             "meta": self.meta(),
             "results_header": self.header(),
             "results": self.body(),
+            "timestamps": self.json_data["timestamps"],
         }
