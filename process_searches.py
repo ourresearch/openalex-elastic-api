@@ -86,7 +86,7 @@ def process_searches():
 
         # Check if bypass_cache is set to true or the cache is older than 24 hours
         bypass_cache = search.get("bypass_cache", False)
-        print(f"Processing search {search_id} with bypass_cache={bypass_cache}")
+        print(f"Processing search {search_id} with bypass_cache={bypass_cache}", flush=True)
         last_processed_time = search["timestamps"].get("completed")
 
         if last_processed_time:
@@ -151,11 +151,13 @@ def process_searches():
             for frame in tb:
                 error_msg = f"Error: {e}, File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}"
 
-            print(error_msg)
+            print(error_msg, flush=True)
             search["backend_error"] = error_msg
             search["is_ready"] = True
             search["is_completed"] = True
-            search["timestamps"]["completed"] = datetime.now(timezone.utc).isoformat()
+            search["results"] = None
+            search["results_header"] = None
+            search["meta"] = None
             sentry_sdk.capture_exception(e)
 
         # save updated search object back to Redis
