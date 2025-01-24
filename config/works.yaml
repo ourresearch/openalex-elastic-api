@@ -684,6 +684,34 @@ columns:
       - group_by
     icon: mdi-calendar-range
     descr: The publication year of the work.
+  publication_date:
+    id: publication_date
+    subjectEntity: works
+    operators:
+      - is
+      - is not
+      - is greater than
+      - is less than
+    defaultOperator: is
+    displayName: publication date
+    objectEntity:
+    isDate: true
+    type: string
+    sortByValue: true
+    examples:
+      - '2020-11-04'
+      - '1982-02-24'
+      - '2002-09-02'
+    category: other
+    apiField: publication_date
+    redshiftDisplayColumn: publication_date
+    redshiftFilterColumn: publication_date
+    actions:
+      - filter
+      - sort
+      - column
+    icon: mdi-calendar-range
+    descr: The publication date of the work.
 #  apc_sum:
 #    id: apc_sum
 #    isCurrency: true
