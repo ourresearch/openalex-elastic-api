@@ -8,7 +8,7 @@ from sqlalchemy.dialects import postgresql
 
 from combined_config import all_entities_config
 from extensions import db
-from oql import models
+from . import models
 
 
 class RedshiftQueryHandler:
@@ -35,7 +35,7 @@ class RedshiftQueryHandler:
 
     def execute(self):
         query = self.build_query()
-        print("Executing redshift count query")
+        # print("Executing redshift count query")
         count_query = db.session.query(func.count()).select_from(query.subquery())
         total_count = db.session.execute(count_query).scalar()
 
@@ -62,7 +62,7 @@ class RedshiftQueryHandler:
         return summary
 
     def build_query(self):
-        entity_class = get_entity_class(self.entity)
+        entity_class = models.get_entity_class(self.entity)
 
         query = self.build_joins(entity_class)
         query = self.set_columns(query, entity_class)
@@ -76,7 +76,7 @@ class RedshiftQueryHandler:
         return query
 
     def build_joins(self, entity_class):
-        query = db.session.query(entity_class).distinct()
+        query = db.session.query(entity_class)
 
         if self.entity == "institutions":
             query = (
@@ -262,27 +262,29 @@ class RedshiftQueryHandler:
 
     def set_columns(self, query, entity_class):
         columns_to_select = []
-
-        # Always include "id"
-        id_col_name = self.entity_config.get("id").get("redshiftDisplayColumn")
-        id_col = getattr(entity_class, id_col_name).label("id")
-        columns_to_select.append(id_col)
-
-        show_columns = [c for c in self.show_columns if c != "id"]
+        # print("set_columns")
+        show_columns = list(set(self.show_columns + ["id"]))
         for column in show_columns:
             column_info = self.entity_config.get(column)
             if not column_info:
+                print(f"Skipping {column} - no column config")
                 continue
 
-            redshift_column = column_info.get("redshiftDisplayColumn", "")
+            redshift_column = column_info.get("redshiftFilterColumn", "")
+            if not redshift_column:
+                print(f"Skipping {column} - no redshift filter column")
+                continue
+                
             if redshift_column.startswith(("count(", "sum(", "mean(", "percent(")):
+                # print(f"Skipping {column} - agg")
                 continue # Skip aggregators
 
-            if is_model_property(redshift_column, entity_class):
-                continue # Skip python-only properties
-
             if hasattr(entity_class, redshift_column):
-                # Label with the 'column' name so row["title"], row["year"] etc. 
+                attr = getattr(entity_class, redshift_column)
+                if isinstance(attr, property):
+                    # print(f"Skipping {column} - {redshift_column} is property")
+                    continue
+                # print(f"Adding {column} from redshift_column: {redshift_column}")
                 col_ = getattr(entity_class, redshift_column).label(column)
                 columns_to_select.append(col_)
 
@@ -501,7 +503,7 @@ class RedshiftQueryHandler:
     def build_entity_filter_condition(self, filter):
         """ Returns a `condition` which represents `filter` for entities."""
 
-        entity_class = get_entity_class(self.entity)
+        entity_class = models.get_entity_class(self.entity)
 
         key = filter.get("column_id")
         value = filter.get("value")
@@ -799,22 +801,6 @@ class RedshiftQueryHandler:
         return str(query.statement.compile(
                     dialect=postgresql.dialect(), 
                     compile_kwargs={"literal_binds": True}))
-
-
-def get_entity_class(entity):
-    if entity == "countries":
-        entity_class = getattr(models, "Country")
-    elif entity == "institution-types":
-        entity_class = getattr(models, "InstitutionType")
-    elif entity == "source-types":
-        entity_class = getattr(models, "SourceType")
-    elif entity == "work-types":
-        entity_class = getattr(models, "WorkType")
-    elif entity == "summary":
-        entity_class = getattr(models, "Work")
-    else:
-        entity_class = getattr(models, entity[:-1].capitalize())
-    return entity_class
 
 
 def build_operator_condition(column, operator, value):

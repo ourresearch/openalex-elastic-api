@@ -23,7 +23,7 @@ class Search:
     meta: Optional[Dict] = field(default_factory=dict)
     is_completed: bool = False
     is_ready: bool = False
-    bypass_cache: bool = True
+    bypass_cache: bool = not settings.ENABLE_SEARCH_CACHE
     timestamps: Dict[str, str] = field(default_factory=dict)
     source: Optional[str] = None
     redshift_sql: Optional[str] = None

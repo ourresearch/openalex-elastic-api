@@ -842,3 +842,49 @@ class Ror(db.Model):
 
     def __repr__(self):
         return "<Ror ( {} ) {}>".format(self.ror_id, self.name)
+
+
+def get_entity_class(entity):
+    """
+    Return the appropriate SQLAlchemy model class for the given entity name.
+    """
+    if entity == "countries":
+        return Country
+    elif entity == "institution-types":
+        return InstitutionType
+    elif entity == "source-types":
+        return SourceType
+    elif entity == "work-types":
+        return WorkType
+    elif entity == "summary":
+        # "summary" also uses the Work model
+        return Work
+    else:
+        # default: drop trailing "s" and capitalize, e.g. "authors" -> "Author"
+        singular = entity[:-1].capitalize()
+        return globals().get(singular, None) 
+
+
+def is_model_property(column, entity_class):
+    attr = getattr(entity_class, column, None)
+
+    # check if it's a standard Python property
+    if isinstance(attr, property):
+        return True
+
+    if isinstance(attr, hybrid_property):
+        return False  # do not skip, we want to add hybrid properties
+
+    if hasattr(attr, "expression"):
+        return False  # do not skip, this is likely a hybrid property
+
+    return False
+
+
+def is_model_hybrid_property(column, entity_class):
+    attr = getattr(entity_class, column, None)
+
+    if isinstance(attr, hybrid_property):
+        return True
+
+    return False

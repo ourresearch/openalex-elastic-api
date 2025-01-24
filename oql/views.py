@@ -11,11 +11,69 @@ from combined_config import all_entities_config
 from oql.process_bulk_tests import decode_redis_data
 from oql.query import Query
 from oql.results_table import ResultTable
-from oql.search import Search, get_existing_search
+from oql.search import Search, get_existing_search, redis_db, search_queue
 from oql.validate import OQOValidator
 
 blueprint = Blueprint("oql", __name__)
 redis_client = Redis.from_url(os.environ.get("REDIS_DO_URL"))
+
+
+@blueprint.route("/searches", methods=["POST"])
+def create_search():
+    raw_query = request.json.get("query")
+    bypass_cache = request.json.get("bypass_cache", False)
+
+    print("create_search")
+    print(raw_query, flush=True)
+
+    # query object
+    query = Query(
+        entity=raw_query.get("get_rows"),
+        filter_works=raw_query.get("filter_works"),
+        filter_aggs=raw_query.get("filter_aggs"),
+        show_columns=raw_query.get("show_columns"),
+        sort_by_column=raw_query.get("sort_by_column"),
+        sort_by_order=raw_query.get("sort_by_order"),
+    )
+
+    # validate the query
+    oqo = OQOValidator(all_entities_config)
+    ok, error = oqo.validate(query.to_dict())
+
+    if not ok:
+        print(f"Invalid Query: {error}", flush=True)
+        return jsonify({"error": "Invalid Query", "details": error, "query": raw_query}), 400
+
+    print("query.to_dict()")
+    print(query.to_dict(), flush=True)
+    s = Search(query=query.to_dict(), redshift_sql=query.get_sql(), bypass_cache=bypass_cache)
+    s.save()
+    return jsonify(s.to_dict()), 201
+
+
+@blueprint.route("/searches/<id>", methods=["GET"])
+def get_search(id):
+    bypass_cache = request.args.get("bypass_cache") == "true"
+    search = get_existing_search(id)
+    if not search:
+        return jsonify({"error": "Search not found"}), 404
+    
+    if bypass_cache:
+        # Reset all fields that would be reset in process_searches.py
+        search["results"] = None
+        search["results_header"] = None
+        search["meta"] = None
+        search["is_ready"] = False
+        search["is_completed"] = False
+        search["backend_error"] = None
+        search["timestamps"]["completed"] = None
+        search["bypass_cache"] = True
+        
+        redis_db.set(id, json.dumps(search))
+        # Re-add to queue for processing
+        redis_db.rpush(search_queue, id)
+    
+    return jsonify(search)
 
 
 @blueprint.route("/results", methods=["GET", "POST"])
@@ -66,48 +124,6 @@ def results():
         "results": results_table_response,
     }
     return jsonify(result)
-
-
-@blueprint.route("/searches", methods=["POST"])
-def create_search():
-    raw_query = request.json.get("query")
-    bypass_cache = request.json.get("bypass_cache", False)
-
-    print("create_search")
-    print(raw_query, flush=True)
-
-    # query object
-    query = Query(
-        entity=raw_query.get("get_rows"),
-        filter_works=raw_query.get("filter_works"),
-        filter_aggs=raw_query.get("filter_aggs"),
-        show_columns=raw_query.get("show_columns"),
-        sort_by_column=raw_query.get("sort_by_column"),
-        sort_by_order=raw_query.get("sort_by_order"),
-    )
-
-    # validate the query
-    oqo = OQOValidator(all_entities_config)
-    ok, error = oqo.validate(query.to_dict())
-
-    if not ok:
-        print(f"Invalid Query: {error}", flush=True)
-        return jsonify({"error": "Invalid Query", "details": error, "query": raw_query}), 400
-
-    print("query.to_dict()")
-    print(query.to_dict(), flush=True)
-    s = Search(query=query.to_dict(), redshift_sql=query.get_sql(), bypass_cache=bypass_cache)
-    s.save()
-    return jsonify(s.to_dict()), 201
-
-
-@blueprint.route("/searches/<id>", methods=["GET"])
-def get_search(id):
-    search = get_existing_search(id)
-    if not search:
-        return jsonify({"error": "Search not found"}), 404
-
-    return jsonify(search)
 
 
 def serve_config(data, filename):
@@ -193,4 +209,3 @@ def job_status(job_id):
         'status': job['status'],
         'is_completed': job['is_completed'],
         'results': job['results']})
-

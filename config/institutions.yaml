@@ -44,7 +44,7 @@ columns:
     objectEntity:
     displayName: OpenAlex ID
     redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftFilterColumn: affiliation_id
     isId: true
     type: string
     icon: mdi-town-hall
@@ -61,7 +61,7 @@ columns:
     displayName: name
     type: string
     redshiftDisplayColumn: display_name
-    redshiftFilterColumn:
+    redshiftFilterColumn: display_name
     actions:
       - sort
       - column

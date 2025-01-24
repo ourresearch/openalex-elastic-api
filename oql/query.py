@@ -3,9 +3,10 @@ from sqlalchemy.engine.row import Row
 from combined_config import all_entities_config
 from oql.elastic import ElasticQueryHandler
 from oql.redshift import RedshiftQueryHandler
+from oql.models import get_entity_class, is_model_property, is_model_hybrid_property
+
 
 valid_entities = list(all_entities_config.keys())
-
 
 class Query:
     """
@@ -73,76 +74,61 @@ class Query:
         but skip property/callable logic.
         """
         json_data = {"results": []}
-        columns = list(set(self.show_columns + ["id"]))
 
-        print("format_redshift_results_as_json, first row:")
-        if results:
-            print(results[0])
-            print(type(results[0]))
-            print(results[0].keys() if hasattr(results[0], "keys") else "No keys")
-        print("***")
-        print("processing rows")
+        output_columns = list(set(self.show_columns + ["id"]))
+        entity_class = get_entity_class(self.entity)
+        entity_columns_config = all_entities_config[self.entity]["columns"]
+        # print(f"output_columns: {output_columns}")
+        redshift_display_columns = {column: entity_columns_config.get(column, {}).get("redshiftDisplayColumn", None) for column in output_columns}
+        redshift_filter_columns = {column: entity_columns_config.get(column, {}).get("redshiftFilterColumn", None) for column in output_columns}
+
 
         for row in results:
-            if "id" in row and row["id"] == "works/W4285719527":
-                continue # Deleted Work ID
+            # Create an ephemeral model instance so we can call property methods
+            ephemeral_model = entity_class()
+            # print(f"Row has keys: {row.keys()}")
+            # Populate ephemeral model from the row
+            for key in row.keys():
+                redshift_filter_column = redshift_filter_columns.get(key)
+                if hasattr(entity_class, redshift_filter_column) and not is_model_hybrid_property(redshift_filter_column, entity_class):
+                    # print(f"Ephemeral Model: Setting column: {redshift_filter_column} to {row[key]}", flush=True)
+                    setattr(ephemeral_model, redshift_filter_column, row[key])
 
-            result_data = {}
-            #result_data["id"] = row.get("id")
-
-            for column in columns:
-                # Use config to get the underlying redshift column name
-                column_info = all_entities_config[self.entity]["columns"].get(column, {})
-                redshift_column = column_info.get("redshiftDisplayColumn", None)
-
-                # 1) If the row has a direct aggregator label or same-named key, use that
-                if column in row.keys():
-                    value = row[column]
-                # 2) Otherwise, if we have a known DB column name in row, use that
-                elif redshift_column and redshift_column in row.keys():
-                    value = row[redshift_column]
-                else:
-                    # Not found in row
-                    value = None
-
-                result_data[column] = value
-
-            json_data["results"].append(result_data)
-        print("finished processing rows", flush=True)
-        return json_data
-
-    def Xformat_redshift_results_as_json(self, results):
-        json_data = {"results": []}
-        columns = self.show_columns
-
-        print("format_redshift_results_as_json")
-        for r in results:
-            # print(r)
-            model_instance = r[0] if isinstance(r, Row) else r
-
-            # print(model_instance, flush=True)
-            if model_instance.id == "works/W4285719527":
-                # deleted work, skip
+            # Skip "deleted" works
+            if ephemeral_model.id == "works/W4285719527":
                 continue
 
             result_data = {}
-            for column in columns:
-                # use the redshift display column from config
-                redshift_column = all_entities_config[self.entity]['columns'][column]["redshiftDisplayColumn"]
 
-                if hasattr(model_instance, redshift_column):
-                    value = getattr(model_instance, redshift_column)
-
-                    # if the value is callable (i.e., it's a property method), call it
-                    if callable(value):
-                        value = value()
+            # Build final row data
+            for col_name in output_columns:
+                redshift_display_column = redshift_display_columns.get(col_name)
+                # print(f"Looking at {col_name} / {redshift_display_column}")
+                if col_name not in row.keys():
+                    pass
+                    #print(f"Column {col_name} not found in row")
                 else:
-                    # otherwise, look for the value in the result set
-                    value = r[redshift_column] if redshift_column in r.keys() else None
+                    pass
+                    # print(f"with row value: {row[col_name]}", flush=True)
+                # If ephemeral_model property
+                if is_model_property(redshift_display_column, entity_class):
+                    attr_value = getattr(ephemeral_model, redshift_display_column, None)
+                    if callable(attr_value):
+                        # print("Calling property method")
+                        attr_value = attr_value()
+                    result_data[col_name] = attr_value
+                    # print(f"Setting column: {col_name} to {attr_value}", flush=True)
+                    continue
 
-                result_data[column] = value
+                if col_name in row.keys():
+                    result_data[col_name] = row[col_name]
+                    # print(f"Setting column: {col_name} to {row[col_name]}", flush=True)
+                    continue
 
-            result_data["id"] = model_instance.id
+                # Otherwise, None
+                result_data[col_name] = None
+                # print("No value found for column", col_name, flush=True)
+
             json_data["results"].append(result_data)
 
         return json_data

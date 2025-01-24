@@ -342,8 +342,8 @@ columns:
       - column
     category: other
     apiField: display_name
-    redshiftDisplayColumn: display_name
-    redshiftFilterColumn: display_name
+    redshiftDisplayColumn: original_title
+    redshiftFilterColumn: original_title
     icon: mdi-file-document-outline
     descr: The title of the work.
   open_access.is_oa:
