@@ -103,11 +103,51 @@ class SourceSchema(Schema):
     issn = fields.List(fields.Str())
     is_oa = fields.Bool()
     is_in_doaj = fields.Bool()
+    is_indexed_in_scopus = fields.Bool()
     is_core = fields.Bool()
     host_organization = fields.Str()
     host_organization_name = fields.Str()
     host_organization_lineage = fields.List(fields.Str())
     host_organization_lineage_names = fields.List(fields.Str())
+    type = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
+class HostOrganizationSchma(Schema):
+    """
+    New schema for Walden, replace host_organization in locations.
+    """
+    id = fields.Str()
+    display_name = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
+class SourcesLocationsSchema(Schema):
+    """
+    New schema for Walden, replaces locations.
+    """
+    url = fields.Str()
+    content_type = fields.Str()
+
+
+class SourcesSchema(Schema):
+    """
+    New schema for Walden, replaces locations.
+    """
+    native_id = fields.Str()
+    source_id = fields.Str()
+    display_name = fields.Str()
+    locations = fields.Nested(SourcesLocationsSchema, many=True)
+    issn_l = fields.Str()
+    issns = fields.List(fields.Str())
+    is_oa = fields.Bool()
+    is_in_doaj = fields.Bool()
+    is_core = fields.Bool()
+    host_organization = fields.Nested(HostOrganizationSchma)
     type = fields.Str()
 
     class Meta:
@@ -207,6 +247,7 @@ class WorksSchema(Schema):
     ids = fields.Nested(IDsSchema)
     language = fields.Str()
     primary_location = fields.Nested(LocationSchema)
+    sources = fields.Nested(SourcesSchema, many=True)
     type = fields.Str()
     type_crossref = fields.Str()
     indexed_in = fields.List(fields.Str())
@@ -249,6 +290,7 @@ class WorksSchema(Schema):
         if "abstract_inverted_index" in obj and obj.abstract_inverted_index
         else None
     )
+    abstract_inverted_index_v2 = fields.Str()
     cited_by_api_url = fields.Str()
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     updated_date = fields.Str()

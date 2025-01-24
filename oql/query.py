@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy.engine.row import Row
 
 from combined_config import all_entities_config
@@ -47,6 +49,7 @@ class Query:
         return []
 
     def execute(self):
+        timestamps = {"started": datetime.now(timezone.utc).isoformat()}
         if self.entity == "summary":
             results = self.redshift_handler.execute_summary()
             self.total_count = results["count"]
@@ -56,16 +59,21 @@ class Query:
             print(f"Initiating elastic query for {self.entity}")
             total_count, results = self.elastic_handler.execute()
             self.total_count = total_count
-            json_data = self.format_elastic_results_as_json(results)
+            json_data = self.format_elastic_results_as_json(results)            
             self.source = "elastic"
         
         else:
             print(f"Initiating redshift query for {self.entity}")
             total_count, results = self.redshift_handler.execute()
             self.total_count = total_count
+            timestamps["core_query_completed"] = datetime.now(timezone.utc).isoformat()
             json_data = self.format_redshift_results_as_json(results)
+            timestamps["secondary_queries_completed"] = datetime.now(timezone.utc).isoformat()
             self.source = "redshift"
-        
+
+        timestamps["completed"] = datetime.now(timezone.utc).isoformat()
+        json_data["timestamps"] = timestamps
+
         return json_data
 
     def format_redshift_results_as_json(self, results):

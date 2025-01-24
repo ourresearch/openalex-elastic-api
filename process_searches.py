@@ -60,6 +60,7 @@ def fetch_results(query):
         )
         results_table_response = results_table.response()
         results_table_response["source"] = query.source
+        
         return results_table_response
 
 
@@ -107,7 +108,7 @@ def process_searches():
             search["is_ready"] = False
             search["is_completed"] = False
             search["backend_error"] = None
-            search["timestamps"]["completed"] = None
+            search["timestamps"] = {}
 
             # Save the cleared search object back to Redis
             print(f"Clearing old results for search {search_id}")
@@ -124,25 +125,37 @@ def process_searches():
             if "invalid_query_error" in results:
                 # invalid query
                 search["invalid_query_error"] = results["invalid_query_error"]
-                search["is_ready"] = True
-                search["is_completed"] = True
+
             else:
                 # valid results
                 search["results"] = results["results"]
                 search["results_header"] = results["results_header"]
                 search["meta"] = results["meta"]
                 search["source"] = results["source"]
-                search["is_ready"] = True
-                search["is_completed"] = True
+                
+            search["is_ready"] = True
+            search["is_completed"] = True
 
             # timestamps
-            completed = datetime.now(timezone.utc)
+            search["timestamps"] = results["timestamps"]
             started = datetime.fromisoformat(search["timestamps"]["started"])
+            completed = datetime.fromisoformat(search["timestamps"]["completed"])
             duration = (completed - started).total_seconds()
-            search["timestamps"]["completed"] = completed.isoformat()
             search["timestamps"]["duration"] = duration
 
+            if "core_query_completed" in search["timestamps"]:
+                core_completed = datetime.fromisoformat(search["timestamps"]["core_query_completed"])
+                secondary_completed = datetime.fromisoformat(search["timestamps"]["secondary_queries_completed"])
+            
+                duration_core = (core_completed - started).total_seconds()
+                duration_secondary = (secondary_completed - core_completed).total_seconds()
+                
+                search["timestamps"]["duration_core"] = duration_core
+                search["timestamps"]["duration_secondary"] = duration_secondary
+                search["timestamps"]["duration_core_percent"] = duration_core / (duration_core + duration_secondary)
+
             print(f"Processed search {search_id}")
+        
         except Exception as e:
             # backend error
             tb = traceback.extract_tb(e.__traceback__)

@@ -16,7 +16,7 @@ SEARCH_QUEUE = "search_queue"
 ENABLE_SEARCH_CACHE = False
 
 # indexes
-AUTHORS_INDEX = "authors-v15"
+AUTHORS_INDEX = "authors-v16"
 AUTHORS_INDEX_OLD = "authors-v10"
 CONCEPTS_INDEX = "concepts-v8"
 CONTINENTS_INDEX = "continents-v1"

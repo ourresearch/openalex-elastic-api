@@ -7,6 +7,7 @@ import yaml
 from flask import Blueprint, request, jsonify, make_response
 from redis.client import Redis
 
+import settings
 from combined_config import all_entities_config
 from oql.process_bulk_tests import decode_redis_data
 from oql.query import Query
@@ -14,8 +15,11 @@ from oql.results_table import ResultTable
 from oql.search import Search, get_existing_search, redis_db, search_queue
 from oql.validate import OQOValidator
 
+
 blueprint = Blueprint("oql", __name__)
+redis_db = redis.Redis.from_url(settings.CACHE_REDIS_URL)
 redis_client = Redis.from_url(os.environ.get("REDIS_DO_URL"))
+search_queue = settings.SEARCH_QUEUE
 
 
 @blueprint.route("/searches", methods=["POST"])
