@@ -815,6 +815,12 @@ def build_operator_condition(column, operator, value):
 
 
 def build_number_condition(column, operator, value):
+    if type(value) == str:
+        try:
+            value = int(value)
+        except:
+            return build_number_condition_from_string(column, operator, value)
+
     if operator in ["is greater than", ">"]:
         return column > value
     elif operator in ["is less than", "<"]:
@@ -829,6 +835,46 @@ def build_number_condition(column, operator, value):
         return column == value
     else:
         raise ValueError(f"Unsupported operator: {operator}")
+
+
+def build_number_condition_from_string(column, operator, value):
+    if operator not in ["is", "is not"]:
+        raise ValueError(f"Unsupported operator for number ranges: {operator}")
+
+    if "-" in value:
+        value = value.split("-")
+        if len(value) != 2:
+            raise ValueError(f"Invalid range: {value} (only one '-' allowed per range)")
+        try:
+            start, end = int(value[0]), int(value[1])
+        except ValueError:
+            raise ValueError(f"Invalid range: {value} (Start and end of ranges must be integers)")
+
+        return and_(column >= start, column <= end) if operator == "is" else or_(column < start, column > end)
+
+    # parse values like ">2000". value can start with ">", "<", ">=", or "<=" and the rest must be a number
+    operators = [">=", "<=", ">", "<"]  # check longer operators first
+    found_op = None
+    for op in operators:
+        if value.startswith(op):
+            found_op = op
+            try:
+                num_value = int(value[len(op):])
+            except ValueError:
+                raise ValueError(f"Invalid number after {op}: {value}")
+            break
+
+    if found_op is None:
+        raise ValueError(f"Invalid number condition: {value}")
+    
+    if found_op == ">":
+        return column > num_value if operator == "is" else column <= num_value
+    if found_op == "<":
+        return column < num_value if operator == "is" else column >= num_value
+    if found_op == ">=":
+        return column >= num_value if operator == "is" else column < num_value
+    if found_op == "<=":
+        return column <= num_value if operator == "is" else column > num_value
 
 
 def get_boolean_value(value):
