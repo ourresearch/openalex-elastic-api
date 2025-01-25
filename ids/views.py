@@ -235,7 +235,10 @@ def authors_random_get():
 @blueprint.route("/authors/<path:id>")
 @blueprint.route("/people/<path:id>")
 def authors_id_get(id):
-    s = Search(index=settings.AUTHORS_INDEX)
+    if not request.args.get("warm"):
+        s = Search(index=settings.AUTHORS_INDEX)
+    else:
+        s = Search(index="authors-warm")
     only_fields = process_id_only_fields(request, AuthorsSchema)
 
     if is_openalex_id(id):

@@ -23,6 +23,7 @@ def validate_params(request):
         "search",
         "select",
         "sort",
+        "warm",
     ]
     hidden_valid_params = ["bypass_cache"]
     for arg in request.args:

@@ -21,9 +21,11 @@ blueprint = Blueprint("authors", __name__)
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
 def authors():
-    index_name = AUTHORS_INDEX
-    # if is_query_for_old_authors() is True:
-    #     index_name = AUTHORS_INDEX_OLD
+    warm_index = request.args.get("warm")
+    if not warm_index:
+        index_name = AUTHORS_INDEX
+    else:
+        index_name = "authors-warm"
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, AuthorsSchema)
     result = shared_view(request, fields_dict, index_name, default_sort)
