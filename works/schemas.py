@@ -139,7 +139,7 @@ class SourcesSchema(Schema):
     New schema for Walden, replaces locations.
     """
     native_id = fields.Str()
-    source_id = fields.Str()
+    id = fields.Str()
     display_name = fields.Str()
     locations = fields.Nested(SourcesLocationsSchema, many=True)
     issn_l = fields.Str()
