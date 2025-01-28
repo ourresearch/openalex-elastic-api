@@ -290,7 +290,11 @@ class WorksSchema(Schema):
         if "abstract_inverted_index" in obj and obj.abstract_inverted_index
         else None
     )
-    abstract_inverted_index_v2 = fields.Str()
+    abstract_inverted_index_v3 = fields.Function(
+        lambda obj: json.loads(obj.abstract_inverted_index_v3)
+        if "abstract_inverted_index_v3" in obj and obj.abstract_inverted_index_v3
+        else None
+    )
     cited_by_api_url = fields.Str()
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
     updated_date = fields.Str()
