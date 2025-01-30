@@ -98,7 +98,7 @@ columns:
       - column
     category: other
     redshiftDisplayColumn: display_name
-    redshiftFilterColumn:
+    redshiftFilterColumn: display_name
     icon: mdi-account-outline
     descr: The name of the author.
   display_name.search:
