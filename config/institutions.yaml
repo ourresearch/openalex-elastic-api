@@ -252,7 +252,7 @@ columns:
     displayName: mean fwci
     type: number
     redshiftDisplayColumn: mean_fwci
-    redshiftFilterColumn:
+    redshiftFilterColumn: mean_fwci
     actions:
       - sort
       - column
