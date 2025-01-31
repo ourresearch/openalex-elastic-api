@@ -609,6 +609,8 @@ columns:
     redshiftFilterColumn: type
     actions:
       - filter
+      - column
+      - sort
     actionsPopular:
       - filter
     icon: mdi-shape-outline

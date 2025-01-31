@@ -51,8 +51,9 @@ columns:
     displayName: name
     type: string
     redshiftDisplayColumn: display_name
-    redshiftFilterColumn:
+    redshiftFilterColumn: display_name
     actions:
+      - filter
       - sort
       - column
     actionsPopular:

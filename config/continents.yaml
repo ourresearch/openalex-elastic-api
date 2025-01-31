@@ -55,7 +55,7 @@ columns:
     displayName: Continent name
     type: string
     redshiftDisplayColumn: display_name
-    redshiftFilterColumn:
+    redshiftFilterColumn: display_name
     actions:
       - column
     actionsPopular: []

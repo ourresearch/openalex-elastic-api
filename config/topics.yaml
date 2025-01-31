@@ -131,9 +131,12 @@ columns:
     objectEntity: subfields
     displayName: subfield (parent)
     type: object
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
-    actions: []
+    redshiftDisplayColumn: subfield_id
+    redshiftFilterColumn: subfield_id
+    actions:
+      - filter
+      - sort
+      - column
     icon: mdi-tag-outline
     descr: The subfield that this topic belongs to.
   field:
