@@ -128,9 +128,12 @@ columns:
     objectEntity: publishers
     displayName: Publisher
     type: object
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
-    actions: []
+    redshiftDisplayColumn: publisher_id
+    redshiftFilterColumn: publisher_id
+    actions:
+      - filter
+      - column
+      - sort
     actionsPopular: []
     icon: mdi-domain
     descr: The organization or publisher that publishes the source.
@@ -200,7 +203,7 @@ columns:
       - is
     defaultOperator: is
     objectEntity:
-    displayName: Fully open access
+    displayName: fully open access
     type: boolean
     redshiftDisplayColumn:
     redshiftFilterColumn:
