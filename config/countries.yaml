@@ -35,8 +35,8 @@ columns:
     displayName: Country ID
     isId: true
     type: string
-    redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftDisplayColumn: country_id
+    redshiftFilterColumn: country_id
     icon: mdi-tag-outline
     descr: Unique identifier for the country
   display_name:

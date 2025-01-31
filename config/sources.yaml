@@ -51,8 +51,8 @@ columns:
     displayName: OpenAlex ID
     isId: true
     type: string
-    redshiftDisplayColumn: id
-    redshiftFilterColumn: id
+    redshiftDisplayColumn: source_id
+    redshiftFilterColumn: source_id
     actions: []
     icon: mdi-book-open-outline
     descr: The unique identifier for the source in OpenAlex.

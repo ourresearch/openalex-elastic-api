@@ -90,7 +90,6 @@ class Query:
         redshift_display_columns = {column: entity_columns_config.get(column, {}).get("redshiftDisplayColumn", None) for column in output_columns}
         redshift_filter_columns = {column: entity_columns_config.get(column, {}).get("redshiftFilterColumn", None) for column in output_columns}
 
-
         for row in results:
             # Create an ephemeral model instance so we can call property methods
             ephemeral_model = entity_class()
@@ -99,7 +98,7 @@ class Query:
             for key in row.keys():
                 redshift_filter_column = redshift_filter_columns.get(key)
                 if hasattr(entity_class, redshift_filter_column) and not is_model_hybrid_property(redshift_filter_column, entity_class):
-                    # print(f"Ephemeral Model: Setting column: {redshift_filter_column} to {row[key]}", flush=True)
+                    #print(f"Ephemeral Model: Setting column: {redshift_filter_column} to {row[key]}", flush=True)
                     setattr(ephemeral_model, redshift_filter_column, row[key])
 
             # Skip "deleted" works
