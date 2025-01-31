@@ -166,8 +166,8 @@ columns:
     objectEntity: domains
     displayName: domain
     type: object
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftDisplayColumn: domain_id
+    redshiftFilterColumn: domain_id
     actions: []
     icon: mdi-tag-outline
     descr: The domain that this topic belongs to.
