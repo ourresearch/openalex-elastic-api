@@ -101,7 +101,7 @@ def process_searches():
 
         # If the cache is not valid or bypass_cache is true, clear old results and reset state
         if not cache_valid:
-            print(f"Cache is not valid for search {search_id}")
+            print(f"Cache is not valid for search {search_id}", flush=True)
             search["results"] = None
             search["results_header"] = None
             search["meta"] = None
@@ -111,7 +111,7 @@ def process_searches():
             search["timestamps"] = {}
 
             # Save the cleared search object back to Redis
-            print(f"Clearing old results for search {search_id}")
+            print(f"Clearing old results for search {search_id}", flush=True)
             redis_db.set(search_id, json.dumps(search))
 
         # process only if results are not ready or the cache is invalid (bypass or older than 24 hours)
@@ -120,6 +120,7 @@ def process_searches():
             continue
 
         try:
+            print(f"Executing query {search['id']}", flush=True)
             results = fetch_results(search["query"])
 
             if "invalid_query_error" in results:

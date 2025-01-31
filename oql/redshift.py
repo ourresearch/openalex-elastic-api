@@ -400,7 +400,7 @@ class RedshiftQueryHandler:
             return and_(join_condition, filter_condition)
 
         elif key == "authorships.institutions.type":
-            value = get_short_id_text(value).capitalize()
+            value = get_short_id_text(value)
             affiliation_class = aliased(getattr(models, "Affiliation"))
             institution_class = aliased(getattr(models, "Institution"))
             join_condition = and_(
@@ -544,7 +544,7 @@ class RedshiftQueryHandler:
             return model_column.ilike(f"%{value}%")
 
         elif key == "affiliations.institution.type":
-            value = get_short_id_text(value).capitalize()
+            value = get_short_id_text(value)
             return build_operator_condition(models.Institution.type, operator, value)
         
         elif key == "id" and self.entity in ["continents", "countries", "institution-types", "languages", "licenses", "source-types", "work-types"]:
@@ -884,22 +884,6 @@ def get_boolean_value(value):
         return True
     elif value.lower() == "false":
         return False
-
-
-def is_model_property(column, entity_class):
-    attr = getattr(entity_class, column, None)
-
-    # check if it's a standard Python property
-    if isinstance(attr, property):
-        return True
-
-    if isinstance(attr, hybrid_property):
-        return False  # do not skip, we want to add hybrid properties
-
-    if hasattr(attr, "expression"):
-        return False  # do not skip, this is likely a hybrid property
-
-    return False
 
 
 def get_short_id_text(value):

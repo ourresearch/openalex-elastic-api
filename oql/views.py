@@ -48,8 +48,8 @@ def create_search():
         print(f"Invalid Query: {error}", flush=True)
         return jsonify({"error": "Invalid Query", "details": error, "query": raw_query}), 400
 
-    print("query.to_dict()")
-    print(query.to_dict(), flush=True)
+    # print("query.to_dict()")
+    # print(query.to_dict(), flush=True)
     s = Search(query=query.to_dict(), redshift_sql=query.get_sql(), bypass_cache=bypass_cache)
     s.save()
     return jsonify(s.to_dict()), 201
@@ -64,6 +64,7 @@ def get_search(id):
     
     if bypass_cache:
         # Reset all fields that would be reset in process_searches.py
+        print(f"Resetting saved search {id} - bypass_cache == True", flush=True)
         search["results"] = None
         search["results_header"] = None
         search["meta"] = None
@@ -75,6 +76,7 @@ def get_search(id):
         
         redis_db.set(id, json.dumps(search))
         # Re-add to queue for processing
+        print(f"Pusing {id} to search_queue", flush=True)
         redis_db.rpush(search_queue, id)
     
     return jsonify(search)
