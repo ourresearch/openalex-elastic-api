@@ -687,6 +687,16 @@ class Source(db.Model):
             else None
         )
 
+    @property
+    def publisher(self):
+        result = db.session.query(Publisher).filter_by(publisher_id=self.publisher_id).first()
+        if result:
+            return {
+                "id": f"publishers/{result.publisher_id}",
+                "display_name": result.display_name,
+            }
+
+
     def __repr__(self):
         return f"<Source(source_id={self.source_id}, display_name={self.display_name})>"
 

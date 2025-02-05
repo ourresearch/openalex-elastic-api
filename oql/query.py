@@ -110,26 +110,26 @@ class Query:
             # Build final row data
             for col_name in output_columns:
                 redshift_display_column = redshift_display_columns.get(col_name)
-                # print(f"Looking at {col_name} / {redshift_display_column}")
+                #print(f"Looking at {col_name} / {redshift_display_column}")
                 if col_name not in row.keys():
                     pass
                     #print(f"Column {col_name} not found in row")
                 else:
                     pass
-                    # print(f"with row value: {row[col_name]}", flush=True)
+                    #print(f"with row value: {row[col_name]}", flush=True)
                 # If ephemeral_model property
                 if is_model_property(redshift_display_column, entity_class):
                     attr_value = getattr(ephemeral_model, redshift_display_column, None)
                     if callable(attr_value):
-                        # print("Calling property method")
+                        #print("Calling property method")
                         attr_value = attr_value()
                     result_data[col_name] = attr_value
-                    # print(f"Setting column: {col_name} to {attr_value}", flush=True)
+                    #print(f"Setting column: {col_name} to {attr_value}", flush=True)
                     continue
 
                 if col_name in row.keys():
                     result_data[col_name] = row[col_name]
-                    # print(f"Setting column: {col_name} to {row[col_name]}", flush=True)
+                    #print(f"Setting column: {col_name} to {row[col_name]}", flush=True)
                     continue
 
                 # Otherwise, None
