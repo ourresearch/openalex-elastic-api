@@ -559,6 +559,10 @@ class RedshiftQueryHandler:
             value = get_short_id_integer(value)
             return build_operator_condition(model_column, operator, value)
 
+        elif key == "continent":
+            value = convert_wiki_to_continent_id(value)
+            return build_operator_condition(model_column, operator, value)
+
         elif key == "related_to_text" and self.entity == "authors":
             r = requests.get(f"https://api.openalex.org/text/related-authors?text={value}")
             if r.status_code == 200:
@@ -911,6 +915,7 @@ def parse_stats_column(column):
 
 
 def convert_wiki_to_continent_id(value):
+    value = get_short_id_text(value)
     value = value.upper()
     mapping = {
         "Q15": 1,
