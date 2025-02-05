@@ -595,6 +595,10 @@ class RedshiftQueryHandler:
             filter_condition = build_operator_condition(models.Affiliation.affiliation_id, operator, value)
             return and_(join_condition, filter_condition)
 
+        elif key == "host_organization" and self.entity == "sources":
+            value = get_short_id_integer(value)
+            return build_operator_condition(model_column, operator, value)
+
         elif column_type in ["object", "array"] and is_object_entity:
             value = get_short_id_text(value) if column_type == "object" else value
             value = value.upper() if "country_code" in key else value
