@@ -28,6 +28,7 @@ class Work(db.Model):
     primary_source_type = Column(String(500))
     primary_source_issn = Column(String(500))
     primary_source_is_in_doaj = Column(Boolean)
+    abstract = Column(String(65535))
     license = Column(String(500))
     is_retracted = Column(Boolean)
     created_date = Column(String(500))
@@ -51,17 +52,6 @@ class Work(db.Model):
     @property
     def language_formatted(self):
         return {"id": f"languages/{self.language}", "display_name": self.language.upper()} if self.language else None
-
-    @property
-    def primary_location(self):
-        source = db.session.query(Source).filter_by(source_id=self.journal_id).first()
-        if source:
-            return {
-                "id": f"sources/S{source.source_id}",
-                "display_name": source.display_name,
-            }
-        else:
-            return None
 
     @property
     def authors(self):

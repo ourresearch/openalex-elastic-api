@@ -500,19 +500,37 @@ columns:
       - is
       - is not
     defaultOperator: is
-    displayName: source
+    displayName: source ID
+    isId: true
     entityId: sources
     objectEntity: sources
-    type: object
+    type: number
     category: source
     apiField: primary_location.source.id
-    redshiftDisplayColumn: primary_location
+    redshiftDisplayColumn: journal_id
     redshiftFilterColumn: journal_id
     actions:
       - filter
       - column
     icon: mdi-book-open-outline
     descr: The primary source or location of the work.
+  primary_location.source.display_name:
+    id: primary_location.source.display_name
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: source name
+    entityId: sources
+    objectEntity: sources
+    type: string
+    category: source
+    apiField: primary_location.source.id
+    redshiftDisplayColumn: primary_source_display_name
+    redshiftFilterColumn: primary_source_display_name
+    actions:
+      - column
+    icon: mdi-book-open-outline
+    descr: The name of the primary source or location of the work.
   primary_location.source.issn:
     id: primary_location.source.issn
     subjectEntity: works
@@ -818,6 +836,22 @@ columns:
       - filter
     icon: mdi-file-document-outline
     descr: Searches the title of the work.
+  abstract:
+    id: abstract
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: abstract
+    objectEntity:
+    type: string
+    category: other
+    apiField: abstract
+    redshiftDisplayColumn: abstract
+    redshiftFilterColumn: abstract
+    actions:
+      - column
+    icon: mdi-text-box-outline
+    descr: The abstract of a work
   related_to_text:
     id: related_to_text
     subjectEntity: works
