@@ -128,7 +128,7 @@ columns:
     objectEntity: publishers
     displayName: Publisher
     type: object
-    redshiftDisplayColumn: publisher
+    redshiftDisplayColumn: publisher_id
     redshiftFilterColumn: publisher_id
     actions:
       - filter

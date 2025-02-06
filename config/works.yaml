@@ -225,7 +225,7 @@ columns:
     category: institution
     apiField: authorships.institutions.id
     redshiftDisplayColumn: institutions
-    redshiftFilterColumn: institution_id
+    redshiftFilterColumn: affiliation_id
     actions:
       - filter
       - return

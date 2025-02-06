@@ -32,6 +32,7 @@ class RedshiftQueryHandler:
         self.model_return_columns = []
         self.entity_config = self.get_entity_config()
         self.works_config = all_entities_config.get("works").get("columns")
+        self.filter_aliases = {}
 
     def execute(self):
         query = self.build_query()
@@ -256,9 +257,85 @@ class RedshiftQueryHandler:
                     models.Work,
                     models.Work.journal_id == models.Source.source_id
                 )
-            )  
+            )
+        
+        # Add addtional join if this is "coauthorship" type filter (see below)
+        for filter_obj in self.filter_works:
+            if self.is_co_relationship_filter(filter_obj["column_id"]):
+                query = self.apply_co_relationship_joins(query, filter_obj)
 
         return query
+
+    def apply_co_relationship_joins(self, query, filter_obj):
+        """    
+        For authors, we join the Affiliation table (which has paper_id).
+        For institutions, we need to join first Affiliation then Institution,
+        so that we can filter using Institution attributes.
+        """
+        if self.entity == "authors":
+            # For a co‐relationship query like "get authors who have co‐authored a paper with X",
+            # we need to join not only on paper_id but also restrict to the target author X.
+            alias_model = models.Affiliation
+            target = get_short_id_integer(filter_obj["value"])
+            alias = aliased(alias_model)
+            query = query.join(
+                alias,
+                and_(
+                    models.Work.paper_id == alias.paper_id,
+                    alias.author_id == target
+                )
+            )
+            self.filter_aliases[filter_obj["column_id"]] = alias
+        
+        elif self.entity == "funders":
+            alias_model = models.WorkFunder
+            target = get_short_id_integer(filter_obj["value"])
+            alias = aliased(alias_model)
+            query = query.join(
+                alias,
+                and_(
+                    models.Work.paper_id == alias.paper_id,
+                    alias.funder_id == target
+                )
+            )
+            self.filter_aliases[filter_obj["column_id"]] = alias
+
+        elif self.entity == "institutions":
+            # For institutions the main query is on Institution.
+            # To filter the works we need to join the relationship.
+            # We first join an alias of Affiliation and then join Institution.
+            aff_alias = aliased(models.Affiliation)
+            inst_alias = aliased(models.Institution)
+            # First, join Affiliation on work.paper_id:
+            # (this should mirror the normal join in the institutions branch)            
+            query = query.join((aff_alias, models.Work.paper_id == aff_alias.paper_id))            
+            # Then join Institution using the affiliation_id
+            query = query.join(inst_alias, aff_alias.affiliation_id == inst_alias.affiliation_id)
+            self.filter_aliases[filter_obj["column_id"]] = inst_alias
+
+        else:
+            raise ValueError(f"Unsupported co-relationship filter for entity {self.entity}: {filter_obj['column_id']}")
+
+        return query
+
+    def is_co_relationship_filter(self, column_id):
+        """
+        Determines if the given filter column represents a co-relationship filter.
+        
+        A co-relationship filter is one where the filter's configuration specifies an 
+        "objectEntity" that matches the current query's entity type. In such cases,
+        the filter is intended to restrict the works (or subject) to those that include at least
+        one related record matching the condition, rather than filtering the main join itself.
+        
+        For example, when filtering on 'authorships.author.id' in an authors query, the configuration
+        indicates objectEntity 'authors'. This means we want to restrict works to those having a 
+        record for that author, but then still return all authors on those works.
+        
+        Returns:
+            True if the filter should be applied as a co-relationship filter; False otherwise.
+        """
+        config = self.works_config.get(column_id)
+        return bool(config.get("objectEntity") and config.get("objectEntity") == self.entity)
 
     def set_columns(self, query, entity_class):
         columns_to_select = []
@@ -365,6 +442,7 @@ class RedshiftQueryHandler:
             raise(ValueError("Invalid work filter: missing value"))
 
         # setup
+        config = self.works_config.get(key)
         redshift_column = self.works_config.get(key).get("redshiftFilterColumn")
         column_type = self.works_config.get(key).get("type")
         is_object_entity = self.works_config.get(key).get("objectEntity")
@@ -372,7 +450,14 @@ class RedshiftQueryHandler:
             work_class, redshift_column, None
         )  # primary column to filter against
 
-        if not redshift_column:
+        if self.is_co_relationship_filter(key):
+            # "Co-relationship" filters use additional join (see below)
+            alias = self.filter_aliases.get(key)
+            value = get_short_id_integer(value)
+            filter_column = getattr(alias, redshift_column)
+            return build_operator_condition(filter_column, operator, value)
+
+        elif not redshift_column:
             raise(ValueError(f"Column {key} missing 'redshiftFilterColumn' in entity config"))
 
         if column_type == "number":
@@ -458,6 +543,12 @@ class RedshiftQueryHandler:
             value = get_short_id_text(value).lower()
             return build_operator_condition(model_column, operator, value)
 
+        if key == "grants.funder" and self.entity == "funders":
+            # co-relationship: The extra join (added in build_joins) has restricted works to those funded by X.
+            # Now, filter out X from the final results.
+            value = get_short_id_integer(value)
+            return build_operator_condition(models.Funder.funder_id, "is not", value)
+
         elif key == "grants.funder":
             value = get_short_id_integer(value)
             join_condition = models.WorkFunder.paper_id == work_class.paper_id
@@ -531,7 +622,6 @@ class RedshiftQueryHandler:
         model_column = getattr(entity_class, redshift_column, None)
 
         #print(f"Building entity filter: redshift_column: {redshift_column}, column_type: {column_type}, is_object_entity: {is_object_entity}, is_search_column: {is_search_column}, model_column: {model_column}")
-
 
         if column_type == "number":
             return build_number_condition(model_column, operator, value)
