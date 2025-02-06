@@ -111,6 +111,7 @@ columns:
     entityId: topics
     objectEntity: topics
     type: object
+    isId: true
     category: other
     apiField: primary_topic.id
     redshiftDisplayColumn: topic
@@ -121,6 +122,24 @@ columns:
     actionsPopular:
       - filter
       - group_by
+    icon: mdi-tag-outline
+    descr: The primary topic of the work.
+  primary_topic.display_name:
+    id: primary_topic.display_name
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: topic name
+    entityId: topics
+    objectEntity: topics
+    type: object
+    category: other
+    apiField: primary_topic.display_name
+    redshiftDisplayColumn: topic_display_name
+    redshiftFilterColumn: topic_display_name
+    actions:
+      - column
+    actionsPopular:
     icon: mdi-tag-outline
     descr: The primary topic of the work.
   keywords.id:
@@ -500,7 +519,7 @@ columns:
       - is
       - is not
     defaultOperator: is
-    displayName: source ID
+    displayName: source
     isId: true
     entityId: sources
     objectEntity: sources

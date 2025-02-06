@@ -69,7 +69,7 @@ class Work(db.Model):
         ]
 
     @property
-    def topic(self):
+    def Xtopic(self):
         result = db.session.query(Topic).filter_by(topic_id=self.topic_id).first()
         if result:
             return {

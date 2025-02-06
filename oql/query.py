@@ -86,19 +86,19 @@ class Query:
         output_columns = list(set(self.show_columns + ["id"]))
         entity_class = get_entity_class(self.entity)
         entity_columns_config = all_entities_config[self.entity]["columns"]
-        # print(f"output_columns: {output_columns}")
+        print(f"output_columns: {output_columns}", flush=True)
         redshift_display_columns = {column: entity_columns_config.get(column, {}).get("redshiftDisplayColumn", None) for column in output_columns}
         redshift_filter_columns = {column: entity_columns_config.get(column, {}).get("redshiftFilterColumn", None) for column in output_columns}
 
         for row in results:
             # Create an ephemeral model instance so we can call property methods
             ephemeral_model = entity_class()
-            # print(f"Row has keys: {row.keys()}")
+            print(f"Row has keys: {row.keys()}", flush=True)
             # Populate ephemeral model from the row
             for key in row.keys():
                 redshift_filter_column = redshift_filter_columns.get(key)
                 if hasattr(entity_class, redshift_filter_column) and not is_model_hybrid_property(redshift_filter_column, entity_class):
-                    #print(f"Ephemeral Model: Setting column: {redshift_filter_column} to {row[key]}", flush=True)
+                    print(f"Ephemeral Model: Setting column: {redshift_filter_column} to {row[key]}", flush=True)
                     setattr(ephemeral_model, redshift_filter_column, row[key])
 
             # Skip "deleted" works
@@ -110,7 +110,7 @@ class Query:
             # Build final row data
             for col_name in output_columns:
                 redshift_display_column = redshift_display_columns.get(col_name)
-                #print(f"Looking at {col_name} / {redshift_display_column}")
+                print(f"Looking at {col_name} / {redshift_display_column}", flush=True)
                 if col_name not in row.keys():
                     pass
                     #print(f"Column {col_name} not found in row")
@@ -121,7 +121,7 @@ class Query:
                 if is_model_property(redshift_display_column, entity_class):
                     attr_value = getattr(ephemeral_model, redshift_display_column, None)
                     if callable(attr_value):
-                        #print("Calling property method")
+                        print("Calling property method", flush=True)
                         attr_value = attr_value()
                     result_data[col_name] = attr_value
                     #print(f"Setting column: {col_name} to {attr_value}", flush=True)

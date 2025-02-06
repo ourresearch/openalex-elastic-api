@@ -100,6 +100,7 @@ def process_search(search_id):
     try:
         print(f"Executing query {search['id']}", flush=True)
         results = fetch_results(search["query"])
+        print(f"--- using {results['source']}", flush=True)
 
         if "invalid_query_error" in results:
             search["invalid_query_error"] = results["invalid_query_error"]
