@@ -261,7 +261,8 @@ class RedshiftQueryHandler:
         
         # Add addtional join if this is "coauthorship" type filter (see below)
         for filter_obj in self.filter_works:
-            if self.is_co_relationship_filter(filter_obj["column_id"]):
+            key = filter_obj.get("column_id")
+            if key and self.is_co_relationship_filter(key):
                 query = self.apply_co_relationship_joins(query, filter_obj)
 
         return query
@@ -334,6 +335,8 @@ class RedshiftQueryHandler:
         Returns:
             True if the filter should be applied as a co-relationship filter; False otherwise.
         """
+        if self.entity == "countries":
+            return False # Works without special casing
         config = self.works_config.get(column_id)
         return bool(config.get("objectEntity") and config.get("objectEntity") == self.entity)
 
