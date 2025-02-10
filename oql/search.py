@@ -28,6 +28,7 @@ class Search:
     source: Optional[str] = None
     redshift_sql: Optional[str] = None
     oql: Optional[str] = None
+    attempts: int = 0
 
     def __post_init__(self):
         self.id = self.hash_id()

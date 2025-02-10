@@ -89,6 +89,7 @@ def process_search(search_id):
         search["is_ready"] = False
         search["is_completed"] = False
         search["backend_error"] = None
+        search["attempts"] = 0
         search["timestamps"] = {}
         print(f"Clearing old results for search {search_id}", flush=True)
         redis_db.set(search_id, json.dumps(search))
@@ -135,6 +136,20 @@ def process_search(search_id):
         for frame in tb:
             error_msg = f"Error: {e}, File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}"
         print(error_msg, flush=True)
+
+        # Check if it's a connection error and handle retries
+        if "ConnectionError" in str(e) or "ConnectionTimeout" in str(e):
+            attempts = search.get("attempts", 0) + 1
+            search["attempts"] = attempts
+            
+            if attempts < 3:  # Maximum 3 retry attempts
+                print(f"Connection error, retrying search {search_id} (attempt {attempts})", flush=True)
+                redis_db.rpush(search_queue, search_id)
+                redis_db.set(search_id, json.dumps(search))
+                return
+            else:
+                error_msg = f"Failed after {attempts} attempts. Error: {error_msg}"
+
         search["backend_error"] = error_msg
         search["is_ready"] = True
         search["is_completed"] = True
