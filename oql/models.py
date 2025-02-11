@@ -21,6 +21,7 @@ class Work(db.Model):
     year = Column(Integer)
     fwci = Column(Float)
     topic_id = Column(Integer)  # joined from work_topic
+    topic_display_name = Column(String(65535))
     subfield_id = Column(Integer)  # joined rom work_topic
     field_id = Column(Integer)  # joined from work_topic
     domain_id = Column(Integer)  # joined from work_topic
@@ -70,7 +71,7 @@ class Work(db.Model):
             {"id": f"authors/A{result.author_id}", "display_name": result.display_name}
             for result in results
         ]
-    """
+    
 
     @property
     def topic(self):
@@ -80,6 +81,7 @@ class Work(db.Model):
                 "id": f"topics/T{result.topic_id}",
                 "display_name": result.display_name,
             }
+    """
 
     @property
     def subfield(self):

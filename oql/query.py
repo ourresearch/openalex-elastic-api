@@ -93,12 +93,12 @@ class Query:
         for row in results:
             # Create an ephemeral model instance so we can call property methods
             ephemeral_model = entity_class()
-            print(f"Row has keys: {row.keys()}", flush=True)
+            # print(f"Row has keys: {row.keys()}", flush=True)
             # Populate ephemeral model from the row
             for key in row.keys():
                 redshift_display_column = redshift_display_columns.get(key)
                 if hasattr(entity_class, redshift_display_column) and not is_model_hybrid_property(redshift_display_column, entity_class):
-                    print(f"Ephemeral Model: Setting column: {redshift_display_column} to {row[key]}", flush=True)
+                    # print(f"Ephemeral Model: Setting column: {redshift_display_column} to {row[key]}", flush=True)
                     setattr(ephemeral_model, redshift_display_column, row[key])
 
             # Skip "deleted" works
@@ -110,7 +110,7 @@ class Query:
             # Build final row data
             for col_name in output_columns:
                 redshift_display_column = redshift_display_columns.get(col_name)
-                print(f"Looking at {col_name} / {redshift_display_column}", flush=True)
+                # print(f"Looking at {col_name} / {redshift_display_column}", flush=True)
                 if col_name not in row.keys():
                     pass
                     #print(f"Column {col_name} not found in row")

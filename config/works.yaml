@@ -108,13 +108,14 @@ columns:
       - is not
     defaultOperator: is
     displayName: topic
+    displayNameForColumn: topic ID
     entityId: topics
     objectEntity: topics
-    type: object
+    type: string
     isId: true
     category: other
     apiField: primary_topic.id
-    redshiftDisplayColumn: topic
+    redshiftDisplayColumn: topic_id
     redshiftFilterColumn: topic_id
     actions:
       - filter
@@ -132,11 +133,11 @@ columns:
     displayName: topic name
     entityId: topics
     objectEntity: topics
-    type: object
+    type: string
     category: other
     apiField: primary_topic.display_name
     redshiftDisplayColumn: topic_display_name
-    redshiftFilterColumn: topic_display_name
+    redshiftFilterColumn: 
     actions:
       - column
     actionsPopular:
