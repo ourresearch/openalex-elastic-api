@@ -138,6 +138,7 @@ class ElasticQueryHandler:
                 "type",
             ]
         }
+        return False # Turn off elastic routing
         return (
             self.entity in valid_elastic_columns.keys()
             and not self.filter_works
