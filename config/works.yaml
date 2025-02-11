@@ -300,6 +300,7 @@ columns:
   authorships.author.id:
     id: authorships.author.id
     isList: true
+    isId: true
     subjectEntity: works
     operators:
       - is
@@ -311,16 +312,54 @@ columns:
     type: array
     category: author
     apiField: authorships.author.id
-    redshiftDisplayColumn: authors
+    redshiftDisplayColumn: 
     redshiftFilterColumn: author_id
     actions:
       - filter
-      - column
     actionsPopular:
       - filter
       - group_by
     icon: mdi-account-outline
     descr: The OpenAlex author ID of the authors associated with the work.
+  authorships.author.ids:
+    id: authorships.author.ids
+    isList: true
+    isId: true
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: author IDs
+    entityId: authors
+    objectEntity: authors
+    type: string
+    category: author
+    apiField:
+    redshiftDisplayColumn: author_ids
+    redshiftFilterColumn: 
+    actions:
+      - column
+    actionsPopular:
+    icon: mdi-account-outline
+    descr: The OpenAlex author IDs of the authors associated with the work.
+  authorships.author.display_names:
+    id: authorships.author.display_names
+    isList: true
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: author names
+    entityId: authors
+    objectEntity: authors
+    type: string
+    category: author
+    apiField: 
+    redshiftDisplayColumn: author_display_names
+    redshiftFilterColumn: 
+    actions:
+      - column
+    actionsPopular:
+    icon: mdi-account-outline
+    descr: The names of the authors associated with the work.
   authorships.author.orcid:
     id: authorships.author.orcid
     isList: true

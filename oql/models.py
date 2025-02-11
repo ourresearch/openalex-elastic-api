@@ -29,6 +29,8 @@ class Work(db.Model):
     primary_source_issn = Column(String(500))
     primary_source_is_in_doaj = Column(Boolean)
     abstract = Column(String(65535))
+    author_ids = Column(String(65535))
+    author_display_names = Column(String(65535))
     license = Column(String(500))
     is_retracted = Column(Boolean)
     created_date = Column(String(500))
@@ -53,6 +55,7 @@ class Work(db.Model):
     def language_formatted(self):
         return {"id": f"languages/{self.language}", "display_name": self.language.upper()} if self.language else None
 
+    """
     @property
     def authors(self):
         results = (
@@ -67,9 +70,10 @@ class Work(db.Model):
             {"id": f"authors/A{result.author_id}", "display_name": result.display_name}
             for result in results
         ]
+    """
 
     @property
-    def Xtopic(self):
+    def topic(self):
         result = db.session.query(Topic).filter_by(topic_id=self.topic_id).first()
         if result:
             return {

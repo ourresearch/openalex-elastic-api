@@ -96,10 +96,10 @@ class Query:
             print(f"Row has keys: {row.keys()}", flush=True)
             # Populate ephemeral model from the row
             for key in row.keys():
-                redshift_filter_column = redshift_filter_columns.get(key)
-                if hasattr(entity_class, redshift_filter_column) and not is_model_hybrid_property(redshift_filter_column, entity_class):
-                    print(f"Ephemeral Model: Setting column: {redshift_filter_column} to {row[key]}", flush=True)
-                    setattr(ephemeral_model, redshift_filter_column, row[key])
+                redshift_display_column = redshift_display_columns.get(key)
+                if hasattr(entity_class, redshift_display_column) and not is_model_hybrid_property(redshift_display_column, entity_class):
+                    print(f"Ephemeral Model: Setting column: {redshift_display_column} to {row[key]}", flush=True)
+                    setattr(ephemeral_model, redshift_display_column, row[key])
 
             # Skip "deleted" works
             if ephemeral_model.id == "works/W4285719527":

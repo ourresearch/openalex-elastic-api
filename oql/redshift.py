@@ -350,9 +350,9 @@ class RedshiftQueryHandler:
                 print(f"Skipping {column} - no column config")
                 continue
 
-            redshift_column = column_info.get("redshiftFilterColumn", "")
+            redshift_column = column_info.get("redshiftDisplayColumn", "")
             if not redshift_column:
-                print(f"Skipping {column} - no redshift filter column")
+                print(f"Skipping {column} - no redshiftDisplayColumn")
                 continue
                 
             if redshift_column.startswith(("count(", "sum(", "mean(", "percent(")):
