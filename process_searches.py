@@ -101,7 +101,6 @@ def process_search(search_id):
     try:
         print(f"Executing query {search['id']}", flush=True)
         results = fetch_results(search["query"])
-        print(f"--- using {results['source']}", flush=True)
 
         if "invalid_query_error" in results:
             search["invalid_query_error"] = results["invalid_query_error"]
@@ -138,7 +137,8 @@ def process_search(search_id):
         print(error_msg, flush=True)
 
         # Check if it's a connection error and handle retries
-        if "ConnectionError" in str(e) or "ConnectionTimeout" in str(e):
+        print(f"Debug - Error string: {error_msg}", flush=True)
+        if any(error in error_msg for error in ("ConnectionError", "ConnectionTimeout", "OperationalError")):
             attempts = search.get("attempts", 0) + 1
             search["attempts"] = attempts
             
