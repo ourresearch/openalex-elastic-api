@@ -43,7 +43,7 @@ columns:
     entityId: institutions
     objectEntity:
     displayName: OpenAlex ID
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: affiliation_id
     redshiftFilterColumn: affiliation_id
     isId: true
     type: string
@@ -141,12 +141,12 @@ columns:
     entityId: institution-types
     objectEntity: institution-types
     displayName: Institution type
-    redshiftDisplayColumn: type_formatted
+    redshiftDisplayColumn: type
     redshiftFilterColumn: type
     isExternalId: true
     externalIdPrefix: institution-types
     isId: true
-    type: object
+    type: string
     actions:
       - column
       - filter

@@ -32,12 +32,13 @@ columns:
     defaultOperator: is
     entityId: publishers
     objectEntity:
-    displayName: OpenAlex ID
+    displayName: Publisher ID
     isId: true
     type: string
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: publisher_id
     redshiftFilterColumn: publisher_id
-    actions: []
+    actions:
+    - column
     icon: mdi-domain
     descr: The unique identifier for the publisher in OpenAlex.
   display_name:

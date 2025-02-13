@@ -146,6 +146,7 @@ columns:
   keywords.id:
     id: keywords.id
     isList: true
+    isId: true
     subjectEntity: works
     operators:
       - is
@@ -157,14 +158,52 @@ columns:
     type: array
     category: other
     apiField: keywords.id
-    redshiftDisplayColumn: keywords
+    redshiftDisplayColumn: 
     redshiftFilterColumn: keyword_id
     actions:
       - filter
-      - column
     actionsPopular:
       - filter
       - group_by
+    icon: mdi-tag-outline
+    descr: Keywords associated with the work.
+  keywords.ids:
+    id: keywords.ids
+    isList: true
+    isId: true
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: keyword IDs
+    entityId: keywords
+    objectEntity: keywords
+    type: string
+    category: other
+    apiField: 
+    redshiftDisplayColumn: keyword_ids
+    redshiftFilterColumn:
+    actions:
+      - column
+    actionsPopular:
+    icon: mdi-tag-outline
+    descr: Keyword IDs associated with the work.
+  keywords.display_names:
+    id: keywords.display_names
+    isList: true
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: keywords
+    entityId: keywords
+    objectEntity: keywords
+    type: string
+    category: other
+    apiField:
+    redshiftDisplayColumn: keyword_display_names
+    redshiftFilterColumn:
+    actions:
+      - column
+    actionsPopular:
     icon: mdi-tag-outline
     descr: Keywords associated with the work.
   primary_topic.subfield.id:
@@ -175,19 +214,38 @@ columns:
       - is not
     defaultOperator: is
     displayName: subfield
+    displayNameForColumn: subfield ID
     entityId: subfields
     objectEntity: subfields
-    type: object
+    type: string
     category: other
     apiField: primary_topic.subfield.id
-    redshiftDisplayColumn: subfield
+    redshiftDisplayColumn: subfield_id
     redshiftFilterColumn: subfield_id
     actions:
       - filter
       - column
     actionsPopular: []
     icon: mdi-tag-outline
-    descr: The subfield of the primary topic of the work.
+    descr: The subfield ID of the primary topic of the work.
+  primary_topic.subfield.display_name:
+    id: primary_topic.subfield.display_name
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: subfield name
+    entityId: subfields
+    objectEntity: subfields
+    type: string
+    category: other
+    apiField: 
+    redshiftDisplayColumn: subfield_display_name
+    redshiftFilterColumn: subfield_display_name
+    actions:
+      - column
+    actionsPopular: []
+    icon: mdi-tag-outline
+    descr: The name of the subfield of the primary topic of the work.
   primary_topic.field.id:
     id: primary_topic.field.id
     subjectEntity: works
@@ -196,19 +254,39 @@ columns:
       - is not
     defaultOperator: is
     displayName: field
+    displayNameForColumn: field ID
+    isId: true
     entityId: fields
     objectEntity: fields
     type: object
     category: other
     apiField: primary_topic.field.id
-    redshiftDisplayColumn: field
+    redshiftDisplayColumn: field_id
     redshiftFilterColumn: field_id
     actions:
       - filter
       - column
     actionsPopular: []
     icon: mdi-tag-outline
-    descr: The field of the primary topic of the work.
+    descr: The field ID of the primary topic of the work.
+  primary_topic.field.display_name:
+    id: primary_topic.field.display_name
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: field name
+    entityId: fields
+    objectEntity: fields
+    type: string
+    category: other
+    apiField:
+    redshiftDisplayColumn: field_display_name
+    redshiftFilterColumn: field_display_name
+    actions:
+      - column
+    actionsPopular: []
+    icon: mdi-tag-outline
+    descr: The name of the field of the primary topic of the work.
   primary_topic.domain.id:
     id: primary_topic.domain.id
     subjectEntity: works
@@ -217,19 +295,40 @@ columns:
       - is not
     defaultOperator: is
     displayName: domain
+    displayNameForColumn: domain ID
     entityId: domains
     objectEntity: domains
-    type: object
+    isId: true
+    type: string
     category: other
     apiField: primary_topic.domain.id
-    redshiftDisplayColumn: domain
+    redshiftDisplayColumn: domain_id
     redshiftFilterColumn: domain_id
     actions:
       - filter
       - column
     actionsPopular: []
     icon: mdi-tag-outline
-    descr: The domain of the primary topic of the work.
+    descr: The domain ID of the primary topic of the work.
+  primary_topic.domain.display_name:
+    id: primary_topic.domain.display_name
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: domain name
+    entityId: domains
+    objectEntity: domains
+    isId: true
+    type: string
+    category: other
+    apiField: primary_topic.domain.id
+    redshiftDisplayColumn: domain_display_name
+    redshiftFilterColumn: domain_display_name
+    actions:
+      - column
+    actionsPopular: []
+    icon: mdi-tag-outline
+    descr: The name of the domain of the primary topic of the work.
   authorships.institutions.id:
     id: authorships.institutions.id
     isList: true
@@ -238,22 +337,42 @@ columns:
       - is
       - is not
     defaultOperator: is
-    displayName: institutions
+    displayName: institution
+    displayNameForColumn: institution ID
     entityId: institutions
     objectEntity: institutions
-    type: array
+    type: string
     category: institution
     apiField: authorships.institutions.id
-    redshiftDisplayColumn: institutions
+    redshiftDisplayColumn: institution_ids
     redshiftFilterColumn: affiliation_id
     actions:
       - filter
-      - return
+      - column
     actionsPopular:
       - filter
       - column
     icon: mdi-town-hall
     descr: The OpenAlex institution ID of the institutions associated with the work.
+  authorships.institutions.display_names:
+    id: authorships.institutions.display_names
+    isList: true
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    displayName: institution name
+    entityId: institutions
+    objectEntity: institutions
+    type: string
+    category: institution
+    apiField:
+    redshiftDisplayColumn: institution_display_names
+    redshiftFilterColumn: 
+    actions:
+      - column
+    actionsPopular:
+    icon: mdi-town-hall
+    descr: The names of the institutions associated with the work.
   cited_by_count:
     id: cited_by_count
     subjectEntity: works
@@ -280,6 +399,7 @@ columns:
   authorships.institutions.ror:
     id: authorships.institutions.ror
     isList: true
+    isId: true
     subjectEntity: works
     operators:
       - is
@@ -288,13 +408,14 @@ columns:
     entityId: institutions
     objectEntity:
     displayName: ROR ID
-    isId: true
-    type: array
+    type: string
     category: ids
     apiField: authorships.institutions.ror
     redshiftDisplayColumn: ror_ids
     redshiftFilterColumn: ror_id
-    actions: []
+    actions:
+    - filter
+    - column
     icon: mdi-town-hall
     descr: The Research Organization Registry (ROR) ID of the institutions associated
       with the work.
@@ -307,14 +428,14 @@ columns:
       - is
       - is not
     defaultOperator: is
-    displayName: authors
+    displayName: author
     entityId: authors
     objectEntity: authors
     type: array
     category: author
     apiField: authorships.author.id
     redshiftDisplayColumn: 
-    redshiftFilterColumn: author_id
+    redshiftFilterColumn:
     actions:
       - filter
     actionsPopular:
@@ -373,11 +494,11 @@ columns:
     objectEntity:
     displayName: ORCID
     isId: true
-    type: array
+    type: string
     category: ids
     apiField: authorships.author.orcid
     redshiftDisplayColumn: orcid_ids
-    redshiftFilterColumn: orcid_id
+    redshiftFilterColumn: 
     actions: []
     icon: mdi-account-outline
     descr: The Open Researcher and Contributor ID (ORCID) of the authors associated
@@ -478,7 +599,8 @@ columns:
     entityId: countries
     objectEntity: countries
     displayName: Country
-    type: array
+    displayNameForColumn: Country ID
+    type: string
     isCountry: true
     actions:
       - filter
@@ -487,10 +609,31 @@ columns:
       - group_by
     category: institution
     apiField: authorships.countries
-    redshiftDisplayColumn: authorships_countries
-    redshiftFilterColumn: country_id
+    redshiftDisplayColumn: country_ids
+    redshiftFilterColumn:
     icon: mdi-earth
-    descr: The countries of the institutions associated with the work.
+    descr: The country IDs of the institutions associated with the work.
+  authorships.countries.display_name:
+    id: authorships.countries.display_name
+    isList: true
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    entityId: countries
+    objectEntity: countries
+    displayName: Country Name
+    type: string
+    isCountry: true
+    actions:
+      - column
+    actionsPopular:
+      - group_by
+    category: institution
+    apiField: authorships.countries
+    redshiftDisplayColumn: country_display_names
+    redshiftFilterColumn:
+    icon: mdi-earth
+    descr: The country names of the institutions associated with the work.
   authorships.institutions.continent:
     id: authorships.institutions.continent
     isList: true
@@ -502,17 +645,37 @@ columns:
     entityId: continents
     objectEntity: continents
     displayName: Continent
+    displayNameForColumn: Continent ID
     isId: true
-    type: array
+    type: string
     actions:
       - filter
       - column
     actionsPopular: []
     apiField: authorships.institutions.continent
-    redshiftDisplayColumn: continent
-    redshiftFilterColumn: continent_id
+    redshiftDisplayColumn: continent_ids
+    redshiftFilterColumn:
     icon: mdi-earth
-    descr: The continents of the institutions associated with the work.
+    descr: The continent ID of the institutions associated with the work.
+  authorships.institutions.continent.display_name:
+    id: authorships.institutions.continent.display_name
+    isList: true
+    subjectEntity: works
+    operators:
+    defaultOperator:
+    entityId: continents
+    objectEntity: continents
+    displayName: Continent Name
+    isId: true
+    type: string
+    actions:
+      - column
+    actionsPopular: []
+    apiField:
+    redshiftDisplayColumn: continent_display_names
+    redshiftFilterColumn:
+    icon: mdi-earth
+    descr: The name of the continent of the institutions associated with the work.
   authorships.institutions.is_global_south:
     id: authorships.institutions.is_global_south
     subjectEntity: works
@@ -543,13 +706,15 @@ columns:
     objectEntity: institution-types
     displayName: institution type
     isId: true
+    isList: true
     category: institution
     apiField: authorships.institutions.type
     redshiftDisplayColumn: institution_types
-    redshiftFilterColumn: institution_type_id
-    type: object
+    redshiftFilterColumn:
+    type: string
     actions:
       - filter
+      - column
     icon: mdi-town-hall
     descr: The institution types associated with the work.
   primary_location.source.id:
@@ -563,7 +728,7 @@ columns:
     isId: true
     entityId: sources
     objectEntity: sources
-    type: number
+    type: string
     category: source
     apiField: primary_location.source.id
     redshiftDisplayColumn: journal_id
@@ -679,10 +844,10 @@ columns:
     isExternalId: true
     isId: true
     externalIdPrefix: work-types
-    type: object
+    type: string
     category: other
     apiField: type
-    redshiftDisplayColumn: type_formatted
+    redshiftDisplayColumn: type
     redshiftFilterColumn: type
     actions:
       - filter
@@ -824,11 +989,11 @@ columns:
     displayName: language
     objectEntity: languages
     isId: true
-    type: object
+    type: string
     displayNullAs: Unknown
     category: other
     apiField: language
-    redshiftDisplayColumn: language_formatted
+    redshiftDisplayColumn: language
     redshiftFilterColumn: language
     actions:
       - filter
@@ -884,7 +1049,7 @@ columns:
       - contains
       - does not contain
     defaultOperator: contains
-    displayName: search display_name
+    displayName: title
     objectEntity:
     type: string
     category: search

@@ -10,26 +10,40 @@ class Work(db.Model):
     original_title = Column(String(65535))
     doi = Column(String(500))
     doi_lower = Column(String(500))
-    cited_by_count = Column(Integer)  # joined from citation_papers_mv
+    cited_by_count = Column(Integer)
     journal_id = Column(BigInteger)
     publication_date = Column(String(500))
     is_paratext = Column(Boolean)
     language = Column(String(300))
     oa_status = Column(String(500))
+    is_oa = Column(Boolean)
     type = Column(String(500))
     type_crossref = Column(String(500))
     year = Column(Integer)
     fwci = Column(Float)
-    topic_id = Column(Integer)  # joined from work_topic
+    topic_id = Column(Integer)
     topic_display_name = Column(String(65535))
-    subfield_id = Column(Integer)  # joined rom work_topic
-    field_id = Column(Integer)  # joined from work_topic
-    domain_id = Column(Integer)  # joined from work_topic
+    subfield_id = Column(Integer)
+    subfield_display_name = Column(String(65535))
+    field_id = Column(Integer)  
+    field_display_name = Column(String(65535))
+    domain_id = Column(Integer)  
+    domain_display_name = Column(String(65535))
     primary_source_display_name = Column(String(65535))
     primary_source_type = Column(String(500))
     primary_source_issn = Column(String(500))
     primary_source_is_in_doaj = Column(Boolean)
-    abstract = Column(String(65535))
+    keyword_ids = Column(String(65535))
+    keyword_display_names = Column(String(65535))
+    institution_ids = Column(String(65535))
+    institution_display_names = Column(String(65535))
+    institution_types = Column(String(65535))
+    ror_ids = Column(String(65535))
+    orcid_ids = Column(String(65535))
+    country_ids = Column(String(65535))
+    country_display_names = Column(String(65535))
+    continent_ids = Column(String(65535))
+    continent_display_names = Column(String(65535))
     author_ids = Column(String(65535))
     author_display_names = Column(String(65535))
     license = Column(String(500))
@@ -39,208 +53,20 @@ class Work(db.Model):
     @property
     def id(self):
         return f"works/W{self.paper_id}"
-
-    @hybrid_property
-    def display_name(self):
-        return self.original_title
-
-    @display_name.expression
-    def display_name(cls):
-        return cls.original_title
-
-    @property
-    def type_formatted(self):
-        return {"id": f"types/{self.type}", "display_name": self.type}
-
-    @property
-    def language_formatted(self):
-        return {"id": f"languages/{self.language}", "display_name": self.language.upper()} if self.language else None
-
-    """
-    @property
-    def authors(self):
-        results = (
-            db.session.query(Author.author_id, Author.display_name)
-            .join(Affiliation, Affiliation.author_id == Author.author_id)
-            .filter(Affiliation.paper_id == self.paper_id)
-            .order_by(Affiliation.author_sequence_number)
-            .limit(10)
-            .all()
-        )
-        return [
-            {"id": f"authors/A{result.author_id}", "display_name": result.display_name}
-            for result in results
-        ]
     
-
-    @property
-    def topic(self):
-        result = db.session.query(Topic).filter_by(topic_id=self.topic_id).first()
-        if result:
-            return {
-                "id": f"topics/T{result.topic_id}",
-                "display_name": result.display_name,
-            }
-    """
-
-    @property
-    def subfield(self):
-        result = db.session.query(Subfield).filter_by(subfield_id=self.subfield_id).first()
-        if result:
-            return {
-                "id": f"subfields/{result.subfield_id}",
-                "display_name": result.display_name,
-            }
-
-    @property
-    def field(self):
-        result = db.session.query(Field).filter_by(field_id=self.field_id).first()
-        if result:
-            return {
-                "id": f"fields/{result.field_id}",
-                "display_name": result.display_name,
-            }
-
-    @property
-    def domain(self):
-        result = db.session.query(Domain).filter_by(domain_id=self.domain_id).first()
-        if result:
-            return {
-                "id": f"domains/{result.domain_id}",
-                "display_name": result.display_name,
-            }
-
-    @property
-    def keywords(self):
-        results = (
-            db.session.query(WorkKeyword.keyword_id, Keyword.display_name)
-            .join(Keyword, WorkKeyword.keyword_id == Keyword.keyword_id)
-            .filter(WorkKeyword.paper_id == self.paper_id)
-            .limit(10)
-            .all()
-        )
-        return [
-            {"id": f"keywords/{keyword_id}", "display_name": display_name}
-            for keyword_id, display_name in results
-        ]
-
-    @property
-    def institutions(self):
-        results = (
-            db.session.query(Affiliation.affiliation_id, Institution.display_name)
-            .join(Institution, Affiliation.affiliation_id == Institution.affiliation_id)
-            .filter(Affiliation.paper_id == self.paper_id)
-            .limit(20)
-            .all()
-        )
-        # get unique institutions
-        unique_institutions = {}
-        for result in results:
-            if result.affiliation_id not in unique_institutions:
-                unique_institutions[result.affiliation_id] = result.display_name
-
-        return [
-            {
-                "id": f"institutions/I{affiliation_id}",
-                "display_name": display_name,
-            }
-            for affiliation_id, display_name in unique_institutions.items()
-        ]
-
-    @property
-    def ror_ids(self):
-        results = (
-            db.session.query(Affiliation.ror)
-            .filter(Affiliation.paper_id == self.paper_id)
-            .limit(10)
-            .all()
-        )
-        return list(set([result.ror for result in results]))
-
-    @property
-    def orcid_ids(self):
-        results = (
-            db.session.query(Author.orcid)
-            .join(Affiliation, Affiliation.author_id == Author.author_id)
-            .filter(Affiliation.paper_id == self.paper_id)
-            .limit(10)
-            .all()
-        )
-        return list(set([result.orcid for result in results if result.orcid]))
-
-    @property
-    def is_oa(self):
-        return self.oa_status != "closed"
-
-    @property
-    def authorships_countries(self):
-        results = (
-            db.session.query(Affiliation.country_id, Affiliation.country_display_name)
-            .join(Author, Affiliation.author_id == Author.author_id)
-            .filter(Affiliation.paper_id == self.paper_id)
-            .limit(10)
-            .all()
-        )
-
-        # unique countries
-        unique_countries = {}
-        for result in results:
-            if result.country_id and result.country_id not in unique_countries:
-                unique_countries[result.country_id] = result.country_display_name
-
-        return [
-            {"id": f"countries/{country_id}", "display_name": display_name}
-            for country_id, display_name in unique_countries.items()
-        ]
-
-    @property
-    def authorships_continents(self):
-        results = (
-            db.session.query(Affiliation.continent_id, Affiliation.contintent_display_name)
-            .join(Author, Affiliation.author_id == Author.author_id)
-            .filter(Affiliation.paper_id == self.paper_id)
-            .limit(10)
-            .all()
-        )
-        return [
-            {"id": f"continents/{result.continent_id, result.contintent_display_name}"}
-            for result in results if result.continent_id
-        ]
-
-    @property
-    def is_global_south(self):
-        results = (
-            db.session.query(Affiliation.is_global_south)
-            .join(Author, Affiliation.author_id == Author.author_id)
-            .filter(Affiliation.paper_id == self.paper_id)
-            .limit(10)
-            .all()
-        )
-        return any(result.is_global_south for result in results)
-
-    @property
-    def institution_types(self):
-        results = (
-            db.session.query(Institution.type)
-            .join(Affiliation, Affiliation.affiliation_id == Institution.affiliation_id)
-            .filter(Affiliation.paper_id == self.paper_id)
-            .limit(10)
-            .all()
-        )
-        return list(set([result.type for result in results]))
-
-    @hybrid_property
-    def is_oa(self):
-        return self.oa_status != "closed"
-
-    @is_oa.expression
-    def is_oa(cls):
-        return cls.oa_status != "closed"
-
     def __repr__(self):
         return f"<Work(paper_id={self.paper_id}, original_title={self.original_title})>"
+    
+class Abstract(db.Model):
+    __tablename__ = "abstract"
 
+    paper_id = Column(BigInteger, primary_key=True)
+    abstract = Column(String(65535))    
 
+    def __repr__(self):
+        return f"<Abstract(paper_id={self.paper_id}, abstract={self.abstract})>"
+
+        
 class Affiliation(db.Model):
     __tablename__ = "affiliation_mv"
 
@@ -310,12 +136,25 @@ class AffiliationContinentDistinct(db.Model):
     def __repr__(self):
         return f"<Affiliation(paper_id={self.paper_id}>"
 
+
+class AffiliationTypeDistinct(db.Model):
+    __tablename__ = 'paper_type_distinct_mv'
+
+    paper_id = db.Column(db.BigInteger, primary_key=True)
+    type = db.Column(db.Text, primary_key=True)
+
+
 class Author(db.Model):
     __tablename__ = "author_mv"
 
     author_id = Column(BigInteger, primary_key=True)
     display_name = Column(String(65535))
-    orcid = Column(String(500))  # joined from author_orcid
+    orcid = Column(String(500))
+    has_orcid = Column(Boolean)
+    affiliation_id = Column(String(500))
+    affiliation_display_name = Column(String(65535))
+    past_affiliation_ids = Column(String(65535))
+    past_affiliation_display_names = Column(String(65535))
 
     @hybrid_property
     def id(self):
@@ -324,57 +163,6 @@ class Author(db.Model):
     @id.expression
     def id(cls):
         return func.concat('authors/A', cls.author_id)
-
-    @hybrid_property
-    def has_orcid(self):
-        return self.orcid is not None
-
-    @has_orcid.expression
-    def has_orcid(cls):
-        return cls.orcid.isnot(None)
-
-    @property
-    def affiliations(self):
-        results = (
-            db.session.query(Affiliation.affiliation_id, Institution.display_name)
-            .join(Institution, Affiliation.affiliation_id == Institution.affiliation_id)
-            .filter(Affiliation.author_id == self.author_id)
-            .limit(10)
-            .all()
-        )
-        return [
-            {
-                "id": f"institutions/I{result.affiliation_id}",
-                "display_name": result.display_name,
-            }
-            for result in results
-        ]
-
-    @property
-    def last_known_institutions(self):
-        results = (
-            db.session.query(Affiliation.affiliation_id, Institution.display_name)
-            .join(Institution, Affiliation.affiliation_id == Institution.affiliation_id)
-            .filter(Affiliation.author_id == self.author_id)
-            .limit(2)
-            .all()
-        )
-        seen = set()
-        unique_results = []
-        for result in results:
-            if result.display_name not in seen:
-                seen.add(result.display_name)
-                unique_results.append(result)
-                if len(unique_results) >= 10:
-                    break
-
-        return [
-            {
-                "id": f"institutions/I{result.affiliation_id}",
-                "display_name": result.display_name,
-            }
-            for result in unique_results
-        ]
 
     def __repr__(self):
         return f"<Author(author_id={self.author_id}, display_name={self.display_name})>"
@@ -519,25 +307,6 @@ class Institution(db.Model):
     def id(cls):
         return func.concat('institutions/I', cls.affiliation_id)
 
-    @hybrid_property
-    def type_formatted(self):
-        return (
-            {
-                "id": f"institution-types/{self.type.lower()}",
-                "display_name": self.type.lower(),
-            }
-            if self.type
-            else None
-        )
-
-    @type_formatted.expression
-    def type_formatted(cls):
-        return (
-            select([InstitutionType.display_name])
-            .where(InstitutionType.institution_type_id == cls.type)
-            .scalar_subquery()
-        )
-
     @property
     def country_code_formatted(self):
         return (
@@ -671,27 +440,6 @@ class Source(db.Model):
     @id.expression
     def id(cls):
         return func.concat('sources/S', cls.source_id)
-
-    @property
-    def type_formatted(self):
-        return (
-            {
-                "id": f"source-types/{self.type.lower()}",
-                "display_name": self.type.lower(),
-            }
-            if self.type
-            else None
-        )
-
-    @property
-    def publisher(self):
-        result = db.session.query(Publisher).filter_by(publisher_id=self.publisher_id).first()
-        if result:
-            return {
-                "id": f"publishers/{result.publisher_id}",
-                "display_name": result.display_name,
-            }
-
 
     def __repr__(self):
         return f"<Source(source_id={self.source_id}, display_name={self.display_name})>"

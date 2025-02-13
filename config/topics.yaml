@@ -40,7 +40,7 @@ columns:
     displayName: OpenAlex ID
     isId: true
     type: string
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: topic_id
     redshiftFilterColumn: topic_id
     icon: mdi-tag-outline
     descr: Unique identifier for the topic in OpenAlex.
@@ -74,7 +74,7 @@ columns:
       - does not contain
     defaultOperator: contains
     objectEntity:
-    displayName: search display_name
+    displayName: topic name
     type: string
     redshiftDisplayColumn:
     redshiftFilterColumn: display_name

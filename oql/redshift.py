@@ -1,7 +1,7 @@
 import re
 
 import requests
-from sqlalchemy import and_, or_, case, cast, desc, func, Float
+from sqlalchemy import and_, column, or_, case, cast, desc, func, Float
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import aliased
 from sqlalchemy.dialects import postgresql
@@ -339,7 +339,20 @@ class RedshiftQueryHandler:
             return False # Works without special casing
         config = self.works_config.get(column_id)
         return bool(config.get("objectEntity") and config.get("objectEntity") == self.entity)
-
+    
+    def get_co_relationship_filter_column(self):
+        """
+        Returns the appropriate filter column on the appropriate model for co-relationship filters based on the current entity.
+        This is used in conjunction with apply_co_relationship_joins which sets up the necessary joins.
+        """
+        if self.entity == "authors":
+            return aliased(models.Affiliation).author_id
+        elif self.entity == "funders":
+            return aliased(models.WorkFunder).funder_id
+        elif self.entity == "institutions":
+            return aliased(models.Institution).affiliation_id
+        
+        raise ValueError(f"Unsupported co-relationship filter for entity {self.entity}")
     def set_columns(self, query, entity_class):
         columns_to_select = []
         # print("set_columns")
@@ -451,17 +464,13 @@ class RedshiftQueryHandler:
         is_object_entity = self.works_config.get(key).get("objectEntity")
         model_column = getattr(
             work_class, redshift_column, None
-        )  # primary column to filter against
+        )  if redshift_column else None# primary column to filter against
 
         if self.is_co_relationship_filter(key):
             # "Co-relationship" filters use additional join (see below)
-            alias = self.filter_aliases.get(key)
             value = get_short_id_integer(value)
-            filter_column = getattr(alias, redshift_column)
-            return build_operator_condition(filter_column, operator, value)
-
-        elif not redshift_column:
-            raise(ValueError(f"Column {key} missing 'redshiftFilterColumn' in entity config"))
+            column = self.get_co_relationship_filter_column()
+            return build_operator_condition(column, operator, value)
 
         if column_type == "number":
             return build_number_condition(model_column, operator, value)
@@ -489,15 +498,10 @@ class RedshiftQueryHandler:
 
         elif key == "authorships.institutions.type":
             value = get_short_id_text(value)
-            affiliation_class = aliased(getattr(models, "Affiliation"))
-            institution_class = aliased(getattr(models, "Institution"))
-            join_condition = and_(
-                affiliation_class.paper_id == work_class.paper_id,
-                institution_class.affiliation_id == affiliation_class.affiliation_id,
-            )
-            filter_condition = build_operator_condition(institution_class.type, operator, value)
+            join_condition = models.AffiliationTypeDistinct.paper_id == work_class.paper_id
+            filter_condition = build_operator_condition(models.AffiliationTypeDistinct.type, operator, value)
             return and_(join_condition, filter_condition)
-
+        
         elif key == "authorships.author.id":
             value = get_short_id_integer(value)
             join_condition = models.Affiliation.paper_id == work_class.paper_id
@@ -675,6 +679,12 @@ class RedshiftQueryHandler:
             filter_condition = build_operator_condition(models.AuthorLastKnownInstitutions.affiliation_id, operator, value)
             return and_(join_condition, filter_condition)
 
+        elif key == "affiliations.institution.id" and self.entity == "authors":
+            value = get_short_id_integer(value)
+            join_condition = models.Affiliation.author_id == entity_class.author_id
+            filter_condition = build_operator_condition(models.Affiliation.affiliation_id, operator, value)
+            return and_(join_condition, filter_condition)
+
         elif key == "affiliations.institution.country_code" and self.entity == "authors":
             value = get_short_id_text(value).upper()
             affiliation_class = aliased(getattr(models, "Affiliation"))
@@ -684,12 +694,6 @@ class RedshiftQueryHandler:
                 institution_class.affiliation_id == affiliation_class.affiliation_id,
             )
             filter_condition = build_operator_condition(institution_class.country_code, operator, value)
-            return and_(join_condition, filter_condition)
-
-        elif key == "affiliations.institution.id" and self.entity == "authors":
-            value = get_short_id_integer(value)
-            join_condition = models.Affiliation.author_id == entity_class.author_id
-            filter_condition = build_operator_condition(models.Affiliation.affiliation_id, operator, value)
             return and_(join_condition, filter_condition)
 
         elif key == "host_organization" and self.entity == "sources":

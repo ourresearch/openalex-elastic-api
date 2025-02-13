@@ -51,7 +51,7 @@ columns:
     objectEntity: authors
     displayName: OpenAlex ID
     type: string
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: author_id
     redshiftFilterColumn: author_id
     actions: []
     actionsPopular: []
@@ -130,11 +130,33 @@ columns:
       - is not
     defaultOperator: is
     displayName: Past institutions
+    displayNameForColumn: Past institution ID
     entityId: institutions
     objectEntity: institutions
-    type: array
-    redshiftDisplayColumn: affiliations
-    redshiftFilterColumn: affiliations_id
+    type: string
+    redshiftDisplayColumn: past_affiliation_ids
+    redshiftFilterColumn: 
+    actions:
+      - filter
+      - column
+    actionsPopular: []
+    icon: mdi-town-hall
+    descr: The institutions that the author has been affiliated with.
+  affiliations.institution.display_name:
+    id: affiliations.institution.display_name
+    isList: true
+    subjectEntity: authors
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    displayName: Past institutions
+    displayNameForColumn: Past institution name
+    entityId: institutions
+    objectEntity: institutions
+    type: string
+    redshiftDisplayColumn: past_affiliation_display_names
+    redshiftFilterColumn: 
     actions:
       - column
     actionsPopular: []
@@ -187,18 +209,19 @@ columns:
     descr: The countries of the institutions that the author has been affiliated with.
   last_known_institutions.id:
     id: last_known_institutions.id
-    isList: true
+    isId: true
     subjectEntity: authors
     operators:
       - is
       - is not
     defaultOperator: is
     displayName: institution
+    displayNameForColumn: institution ID
     entityId: institutions
     objectEntity: institutions
-    type: array
-    redshiftDisplayColumn: last_known_institutions
-    redshiftFilterColumn: last_known_institutions_id
+    type: string
+    redshiftDisplayColumn: affiliation_id
+    redshiftFilterColumn: 
     actions:
       - column
       - filter
@@ -206,6 +229,24 @@ columns:
       - filter
     icon: mdi-town-hall
     descr: The latest institution that the author has been affiliated with in OpenAlex.
+  last_known_institutions.display_name:
+    id: last_known_institutions.display_name
+    subjectEntity: authors
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    displayName: institution name
+    entityId: institutions
+    objectEntity: institutions
+    type: string
+    redshiftDisplayColumn: affiliation_id
+    redshiftFilterColumn: 
+    actions:
+      - column
+    actionsPopular:
+    icon: mdi-town-hall
+    descr: The names of the latest institution that the author has been affiliated with in OpenAlex.
   last_known_institutions.country_code:
     id: last_known_institutions.country_code
     isList: true

@@ -1,3 +1,5 @@
+# DEPRECATED - Using the ElasticQueryHandler is currently turned off, all queries for through RedshiftQueryHandler
+
 import requests
 
 from combined_config import all_entities_config

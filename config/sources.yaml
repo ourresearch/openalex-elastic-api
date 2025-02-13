@@ -167,8 +167,8 @@ columns:
     isId: true
     isExternalId: true
     externalIdPrefix: source-types
-    type: object
-    redshiftDisplayColumn: type_formatted
+    type: string
+    redshiftDisplayColumn: type
     redshiftFilterColumn: type
     actions:
       - column
