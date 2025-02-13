@@ -1071,11 +1071,11 @@ columns:
     category: other
     apiField: abstract
     redshiftDisplayColumn: abstract
-    redshiftFilterColumn: abstract
+    redshiftFilterColumn:
     actions:
       - column
     icon: mdi-text-box-outline
-    descr: The abstract of a work
+    descr: The abstract of the work.
   related_to_text:
     id: related_to_text
     subjectEntity: works

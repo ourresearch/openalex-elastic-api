@@ -357,6 +357,11 @@ class RedshiftQueryHandler:
         columns_to_select = []
         # print("set_columns")
         show_columns = list(set(self.show_columns + ["id"]))
+        
+        # Special case: If querying works and abstract is in show_columns, add join to Abstract model
+        if self.entity == "works" and "abstract" in show_columns:
+            query = query.outerjoin(models.Abstract, models.Work.paper_id == models.Abstract.paper_id)
+            
         for column in show_columns:
             column_info = self.entity_config.get(column)
             if not column_info:
@@ -370,8 +375,14 @@ class RedshiftQueryHandler:
                 
             if redshift_column.startswith(("count(", "sum(", "mean(", "percent(")):
                 # print(f"Skipping {column} - agg")
-                continue # Skip aggregators
+                continue # Skip aggregators, these are handled in apply_stats()
 
+            if column == "abstract":
+                print("Adding abstract")
+                print(models.Abstract, flush=True)
+                columns_to_select.append(models.Abstract.abstract.label("abstract"))
+                continue
+            
             if hasattr(entity_class, redshift_column):
                 attr = getattr(entity_class, redshift_column)
                 if isinstance(attr, property):
