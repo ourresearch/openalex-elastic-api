@@ -174,7 +174,7 @@ columns:
     entityId: institution-types
     objectEntity: institution-types
     displayName: Past institutions type
-    type: array
+    type: string
     redshiftDisplayColumn: institution_type
     redshiftFilterColumn: institution_type
     actions:
@@ -284,9 +284,9 @@ columns:
     objectEntity: institution-types
     displayName: Institution type
     isId: true
-    type: array
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
+    type: string
+    redshiftDisplayColumn: type
+    redshiftFilterColumn: type
     actions:
       - filter
       - group_by

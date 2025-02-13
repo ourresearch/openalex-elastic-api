@@ -634,10 +634,8 @@ class RedshiftQueryHandler:
         is_object_entity = self.entity_config.get(key).get("objectEntity")
         is_search_column = self.entity_config.get(key).get("isSearchColumn")
 
-        if not redshift_column:
-            raise(ValueError(f"Column {key} missing 'redshftFilterColumn' in entity config"))
-
-        model_column = getattr(entity_class, redshift_column, None)
+        if redshift_column:
+            model_column = getattr(entity_class, redshift_column, None)
 
         #print(f"Building entity filter: redshift_column: {redshift_column}, column_type: {column_type}, is_object_entity: {is_object_entity}, is_search_column: {is_search_column}, model_column: {model_column}")
 
@@ -653,7 +651,7 @@ class RedshiftQueryHandler:
 
         elif key == "affiliations.institution.type":
             value = get_short_id_text(value)
-            return build_operator_condition(models.Institution.type, operator, value)
+            return build_operator_condition(model_column, operator, value)
         
         elif key == "id" and self.entity in ["continents", "countries", "institution-types", "languages", "licenses", "source-types", "work-types"]:
             value = get_short_id_text(value)
@@ -711,12 +709,17 @@ class RedshiftQueryHandler:
             value = get_short_id_integer(value)
             return build_operator_condition(model_column, operator, value)
 
+        elif key == "country_code":
+            value = get_short_id_text(value).upper()
+            return build_operator_condition(model_column, operator, value)
+
+        elif key in ["type", "last_known_institutions.type"]:
+            value = get_short_id_text(value)
+            return build_operator_condition(model_column, operator, value)
+
         elif column_type in ["object", "array"] and is_object_entity:
             value = get_short_id_text(value) if column_type == "object" else value
             value = value.upper() if "country_code" in key else value
-            return build_operator_condition(model_column, operator, value)
-
-        elif column_type == "string":
             return build_operator_condition(model_column, operator, value)
 
         else:
