@@ -285,8 +285,8 @@ columns:
     displayName: Institution type
     isId: true
     type: string
-    redshiftDisplayColumn: type
-    redshiftFilterColumn: type
+    redshiftDisplayColumn: past_affiliation_types
+    redshiftFilterColumn: past_affiliation_types
     actions:
       - filter
       - group_by
