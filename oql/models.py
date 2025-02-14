@@ -278,14 +278,6 @@ class Funder(db.Model):
     def id(self):
         return f"funders/F{self.funder_id}"
 
-    @property
-    def country_code_formatted(self):
-        return (
-            {"id": f"countries/{self.country_code}", "display_name": self.country_code}
-            if self.country_code
-            else None
-        )
-
     def __repr__(self):
         return f"<Funder(funder_id={self.funder_id}, display_name={self.display_name})>"
 
@@ -308,14 +300,6 @@ class Institution(db.Model):
     @id.expression
     def id(cls):
         return func.concat('institutions/I', cls.affiliation_id)
-
-    @property
-    def country_code_formatted(self):
-        return (
-            {"id": f"countries/{self.country_code}", "display_name": self.country_code}
-            if self.country_code
-            else None
-        )
 
     def __repr__(self):
         return f"<Institution(affiliation_id={self.affiliation_id}, display_name={self.display_name})>"
@@ -396,14 +380,6 @@ class Publisher(db.Model):
     @property
     def id(self):
         return f"publishers/P{self.publisher_id}"
-
-    @property
-    def country_code_formatted(self):
-        return (
-            {"id": f"countries/{self.country_code}", "display_name": self.country_code}
-            if self.country_code
-            else None
-        )
 
     def __repr__(self):
         return f"<Publisher(publisher_id={self.publisher_id}, display_name={self.display_name})>"
@@ -500,14 +476,6 @@ class Topic(db.Model):
     def description(self):
         return self.summary
 
-    @hybrid_property
-    def domain(self):
-        return self.domain_id
-
-    @domain.expression
-    def domain(cls):
-        return cls.domain_id
-
     def __repr__(self):
         return f"<Topic(topic_id={self.topic_id}, display_name={self.display_name})>"
 
@@ -568,9 +536,8 @@ class WorkType(db.Model):
         return f"work-types/{self.work_type_id}"
 
     def __repr__(self):
-        return (
-            f"<WorkType(type_id={self.work_type_id}, display_name={self.display_name})>"
-        )
+        return f"<WorkType(type_id={self.work_type_id}, display_name={self.display_name})>"
+        
 
 
 class AuthorOrcid(db.Model):

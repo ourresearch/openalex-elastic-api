@@ -27,6 +27,8 @@ showOnEntityPage:
 showOnTablePage:
   - display_name
   - count(works)
+sortByDefault: count(works)
+sortDirDefault: desc
 columns:
   id:
     id: id
@@ -165,7 +167,7 @@ columns:
     entityId: domains
     objectEntity: domains
     displayName: domain
-    type: object
+    type: string
     redshiftDisplayColumn: domain_id
     redshiftFilterColumn: domain_id
     actions: []

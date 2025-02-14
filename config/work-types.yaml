@@ -21,6 +21,8 @@ showOnEntityPage:
 showOnTablePage:
   - display_name
   - count(works)
+sortByDefault: count(works)
+sortDirDefault: desc
 columns:
   id:
     id: id
@@ -28,6 +30,7 @@ columns:
     operators:
       - is
       - is not
+    defaultOperator: is
     defaultOperator: is
     entityId: work-types
     objectEntity:
@@ -53,7 +56,6 @@ columns:
     redshiftDisplayColumn: display_name
     redshiftFilterColumn: display_name
     actions:
-      - filter
       - sort
       - column
     actionsPopular:
@@ -75,9 +77,7 @@ columns:
     redshiftDisplayColumn:
     redshiftFilterColumn: display_name
     actions:
-      - filter
     actionsPopular:
-      - filter
     category: search
     icon: mdi-account-outline
     descr: The name of the work type.

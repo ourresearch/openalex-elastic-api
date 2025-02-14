@@ -35,6 +35,8 @@ showOnEntityPage:
 showOnTablePage:
   - display_name
   - count(works)
+sortByDefault: count(works)
+sortDirDefault: desc
 groupByDefaults:
   - last_known_institutions.id
   - last_known_institutions.country_code

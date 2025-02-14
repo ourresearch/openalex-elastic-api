@@ -26,6 +26,8 @@ showOnEntityPage:
 showOnTablePage:
   - display_name
   - count(works)
+sortByDefault: count(works)
+sortDirDefault: desc
 columns:
   id:
     id: id

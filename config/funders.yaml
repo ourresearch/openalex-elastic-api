@@ -26,6 +26,8 @@ showOnEntityPage:
 showOnTablePage:
   - display_name
   - count(works)
+sortByDefault: count(works)
+sortDirDefault: desc
 columns:
   id:
     id: id
@@ -97,11 +99,11 @@ columns:
     objectEntity: countries
     displayName: Country
     isId: true
-    type: object
+    type: string
     isExternalId: true
     externalIdPrefix: countries
     isCountry: true
-    redshiftDisplayColumn: country_code_formatted
+    redshiftDisplayColumn: country_code
     redshiftFilterColumn: country_code
     actions:
       - column
