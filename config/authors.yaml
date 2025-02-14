@@ -175,8 +175,8 @@ columns:
     objectEntity: institution-types
     displayName: Past institutions type
     type: string
-    redshiftDisplayColumn: institution_type
-    redshiftFilterColumn: institution_type
+    redshiftDisplayColumn: affiliation_type
+    redshiftFilterColumn: affiliation_type
     actions:
       - filter
     actionsPopular:
