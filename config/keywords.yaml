@@ -36,7 +36,7 @@ columns:
     displayName: Keyword ID
     isId: true
     type: string
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: keyword_id
     redshiftFilterColumn: keyword_id
     actions: []
     icon: mdi-tag-outline
