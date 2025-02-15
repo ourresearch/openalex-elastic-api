@@ -859,23 +859,46 @@ columns:
     descr: The OpenAlex work type of the work
   grants.funder:
     id: grants.funder
-    isList: true
     subjectEntity: works
     operators:
       - is
       - is not
     defaultOperator: is
     displayName: funder
+    displayNameForColumn: funder ID
     entityId: funders
     objectEntity: funders
-    type: array
+    type: string
     category: other
     apiField: grants.funder
-    redshiftDisplayColumn: funder
+    redshiftDisplayColumn: funder_id
     redshiftFilterColumn: funder_id
-    actions: []
+    actions:
+      - filter
+      - column
+      - sort
     icon: mdi-cash-multiple
-    descr: The OpenAlex funder ID of the funders associated with the work.
+    descr: The funder associated with the work.
+  grants.funder.display_name:
+    id: grants.funder.display_name
+    subjectEntity: works
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    displayName: funder name
+    entityId: funders
+    objectEntity: funders
+    type: string
+    category: other
+    apiField:
+    redshiftDisplayColumn: funder_display_name
+    redshiftFilterColumn: funder_display_name
+    actions:
+      - column
+      - sort
+    icon: mdi-cash-multiple
+    descr: The funder associated with the work.
 #  grants.award_id:
 #    id: grants.award_id
 #    isList: true

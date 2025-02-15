@@ -46,6 +46,8 @@ class Work(db.Model):
     continent_display_names = Column(String(65535))
     author_ids = Column(String(65535))
     author_display_names = Column(String(65535))
+    funder_id = Column(Integer)
+    funder_display_name = Column(String(65535))
     license = Column(String(500))
     is_retracted = Column(Boolean)
     created_date = Column(String(500))
