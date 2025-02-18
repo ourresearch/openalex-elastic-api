@@ -964,13 +964,29 @@ def build_number_condition_from_string(column, operator, value):
         value = value.split("-")
         if len(value) != 2:
             raise ValueError(f"Invalid range: {value} (only one '-' allowed per range)")
+        
+        # Handle open-ended ranges like "2018-" or "-2018"
+        if value[0] == "":  # Format: "-2018"
+            try:
+                end = int(value[1])
+                return column <= end if operator == "is" else column > end
+            except ValueError:
+                raise ValueError(f"Invalid range: {value} (End of range must be an integer)")
+        elif value[1] == "":  # Format: "2018-"
+            try:
+                start = int(value[0])
+                return column >= start if operator == "is" else column < start
+            except ValueError:
+                raise ValueError(f"Invalid range: {value} (Start of range must be an integer)")
+        
+        # Handle regular ranges like "2018-2020"
         try:
             start, end = int(value[0]), int(value[1])
         except ValueError:
             raise ValueError(f"Invalid range: {value} (Start and end of ranges must be integers)")
 
         return and_(column >= start, column <= end) if operator == "is" else or_(column < start, column > end)
-
+    
     # parse values like ">2000". value can start with ">", "<", ">=", or "<=" and the rest must be a number
     operators = [">=", "<=", ">", "<"]  # check longer operators first
     found_op = None
