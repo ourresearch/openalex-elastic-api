@@ -370,8 +370,6 @@ class RedshiftQueryHandler:
                 continue # Skip aggregators, these are handled in apply_stats()
 
             if column == "abstract":
-                print("Adding abstract")
-                print(models.Abstract, flush=True)
                 columns_to_select.append(models.Abstract.abstract.label("abstract"))
                 continue
             
