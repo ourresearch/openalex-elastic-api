@@ -447,8 +447,10 @@ class RedshiftQueryHandler:
         work_class = getattr(models, "Work")
 
         key = filter.get("column_id")
+        config = self.works_config.get(key)
+
         value = filter.get("value")
-        operator = filter.get("operator") or "is"
+        operator = filter.get("operator") or config.get("defaultOperator")
 
         #print("Building work filter: ")
         #print(filter, flush=True)
@@ -460,10 +462,9 @@ class RedshiftQueryHandler:
             raise(ValueError("Invalid work filter: missing value"))
 
         # setup
-        config = self.works_config.get(key)
-        redshift_column = self.works_config.get(key).get("redshiftFilterColumn")
-        column_type = self.works_config.get(key).get("type")
-        is_object_entity = self.works_config.get(key).get("objectEntity")
+        redshift_column = config.get("redshiftFilterColumn")
+        column_type = config.get("type")
+        is_object_entity = config.get("objectEntity")
         model_column = getattr(
             work_class, redshift_column, None
         )  if redshift_column else None# primary column to filter against
@@ -927,9 +928,9 @@ def build_operator_condition(column, operator, value):
     elif operator == "is not":
         return column != value
     elif operator == "includes":
-        return column.ilike(f"%|{value}|%")
+        return column.ilike(f"%{value}%")
     elif operator == "does not include":
-        return column.notilike(f"%|{value}|%")
+        return column.notilike(f"%{value}%")
     else:
         raise ValueError(f"Unsupported operator: {operator}")
 
