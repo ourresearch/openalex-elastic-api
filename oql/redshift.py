@@ -32,7 +32,7 @@ class RedshiftQueryHandler:
         self.model_return_columns = []
         self.entity_config = self.get_entity_config()
         self.works_config = all_entities_config.get("works").get("columns")
-        self.filter_aliases = {}
+        self.filter_joins = []
 
     def execute(self):
         query = self.build_query()
@@ -286,7 +286,6 @@ class RedshiftQueryHandler:
                     alias.author_id == target
                 )
             )
-            self.filter_aliases[filter_obj["column_id"]] = alias
         
         elif self.entity == "funders":
             alias_model = models.WorkFunder
@@ -299,20 +298,12 @@ class RedshiftQueryHandler:
                     alias.funder_id == target
                 )
             )
-            self.filter_aliases[filter_obj["column_id"]] = alias
 
         elif self.entity == "institutions":
-            # For institutions the main query is on Institution.
-            # To filter the works we need to join the relationship.
-            # We first join an alias of Affiliation and then join Institution.
             aff_alias = aliased(models.Affiliation)
-            inst_alias = aliased(models.Institution)
-            # First, join Affiliation on work.paper_id:
-            # (this should mirror the normal join in the institutions branch)            
+            inst_alias = aliased(models.Institution)           
             query = query.join((aff_alias, models.Work.paper_id == aff_alias.paper_id))            
-            # Then join Institution using the affiliation_id
             query = query.join(inst_alias, aff_alias.affiliation_id == inst_alias.affiliation_id)
-            self.filter_aliases[filter_obj["column_id"]] = inst_alias
 
         else:
             raise ValueError(f"Unsupported co-relationship filter for entity {self.entity}: {filter_obj['column_id']}")
@@ -353,6 +344,7 @@ class RedshiftQueryHandler:
             return aliased(models.Institution).affiliation_id
         
         raise ValueError(f"Unsupported co-relationship filter for entity {self.entity}")
+
     def set_columns(self, query, entity_class):
         columns_to_select = []
         # print("set_columns")
@@ -450,7 +442,6 @@ class RedshiftQueryHandler:
         # defaults to "and" if bad join value is passed
         return or_(*conditions) if join == "or" else and_(*conditions)
             
-
     def build_work_filter_condition(self, filter):
         """ Returns a `condition` which represents `filter` for works."""
         work_class = getattr(models, "Work")
@@ -483,7 +474,7 @@ class RedshiftQueryHandler:
             column = self.get_co_relationship_filter_column()
             return build_operator_condition(column, operator, value)
 
-        if column_type == "number":
+        elif column_type == "number":
             return build_number_condition(model_column, operator, value)
 
         elif ".search" in key:
@@ -510,13 +501,14 @@ class RedshiftQueryHandler:
         elif key == "authorships.institutions.type":
             value = get_short_id_text(value)
             join_condition = models.AffiliationTypeDistinct.paper_id == work_class.paper_id
-            filter_condition = build_operator_condition(models.AffiliationTypeDistinct.type, operator, value)
+            filter_column = models.AffiliationTypeDistinct.type
+            filter_condition = build_operator_condition(filter_column, operator, value)
             return and_(join_condition, filter_condition)
         
         elif key == "authorships.author.id":
             value = get_short_id_integer(value)
-            join_condition = models.Affiliation.paper_id == work_class.paper_id
-            filter_column = models.Affiliation.author_id
+            join_condition = models.AffiliationAuthorDistinct.paper_id == work_class.paper_id
+            filter_column = models.AffiliationAuthorDistinct.author_ids
             filter_condition = build_operator_condition(filter_column, operator, value)
             return and_(join_condition, filter_condition)
 
@@ -778,20 +770,25 @@ class RedshiftQueryHandler:
                 if self.entity in ["authors", "countries", "institutions"]:
                     affiliation_class = getattr(models, "Affiliation")
                     stat_function = func.count(func.distinct(affiliation_class.paper_id))
+                
                 elif self.entity == "keywords":
                     stat_function = func.count(work_class.paper_id)
                     extra_groupbys.append(entity_class.keyword_id)
+                
                 elif self.entity == "languages":
                     stat_function = func.count(work_class.paper_id)
                     extra_groupbys.append(work_class.language)
+                
                 elif self.entity == "sources":
                     stat_function = func.count(work_class.paper_id)
                     extra_groupbys.append(entity_class.source_id)
+                
                 elif self.entity == "topics":
                     work_topic_class = getattr(models, "WorkTopic")
                     query = query.filter(work_topic_class.topic_rank == 1)
                     stat_function = func.count(func.distinct(work_topic_class.paper_id))
                     extra_groupbys.append(entity_class.topic_id)
+                
                 else:
                     # Default applies to ["continents", "domains", "fields", "funders", "institution-types", "licenses", "publishers", "sdgs", "source-types", "subfields", "work-types"]:
                     stat_function = func.count(work_class.paper_id)
@@ -929,6 +926,10 @@ def build_operator_condition(column, operator, value):
         return column == value
     elif operator == "is not":
         return column != value
+    elif operator == "includes":
+        return column.ilike(f"%|{value}|%")
+    elif operator == "does not include":
+        return column.notilike(f"%|{value}|%")
     else:
         raise ValueError(f"Unsupported operator: {operator}")
 

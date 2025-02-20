@@ -46,8 +46,8 @@ class Work(db.Model):
     continent_display_names = Column(String(65535))
     author_ids = Column(String(65535))
     author_display_names = Column(String(65535))
-    funder_id = Column(Integer)
-    funder_display_name = Column(String(65535))
+    funder_ids = Column(String(65535))
+    funder_display_names = Column(String(65535))
     license = Column(String(500))
     is_retracted = Column(Boolean)
     created_date = Column(String(500))
@@ -112,6 +112,13 @@ class AffiliationDistinct(db.Model):
 
     def __repr__(self):
         return f"<AffiliationDistinct(paper_id={self.paper_id}, author_id={self.author_id}, affiliation_id={self.affiliation_id})>"
+
+
+class AffiliationAuthorDistinct(db.Model):
+    __tablename__ = 'paper_author_distinct_mv'
+
+    paper_id = db.Column(db.BigInteger, primary_key=True)
+    author_ids = db.Column(db.String(65535))
 
 
 class AffiliationCountryDistinct(db.Model):

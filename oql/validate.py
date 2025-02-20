@@ -10,7 +10,7 @@ From: https://github.com/ourresearch/oqo-validate/blob/main/oqo_validate/validat
 
 class OQOValidator:
     JOIN_OPERATORS = {'and', 'or'}
-    LEAF_OPERATORS = {'is', 'is not', 'contains', 'does not contain',
+    LEAF_OPERATORS = {'is', 'is not', 'contains', 'does not contain', "includes", "does not include",
                       'is greater than', 'is less than', '>', '<', 'is in',
                       'is not in',
                       '>=',

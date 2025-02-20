@@ -425,9 +425,9 @@ columns:
     isId: true
     subjectEntity: works
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - includes
+      - does not include
+    defaultOperator: includes
     displayName: author
     entityId: authors
     objectEntity: authors
@@ -860,10 +860,11 @@ columns:
   grants.funder:
     id: grants.funder
     subjectEntity: works
+    isList: true
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - includes
+      - does not include
+    defaultOperator: includes
     displayName: funder
     displayNameForColumn: funder ID
     entityId: funders
@@ -871,34 +872,35 @@ columns:
     type: string
     category: other
     apiField: grants.funder
-    redshiftDisplayColumn: funder_id
-    redshiftFilterColumn: funder_id
+    redshiftDisplayColumn: funder_ids
+    redshiftFilterColumn: funder_ids
     actions:
       - filter
       - column
       - sort
     icon: mdi-cash-multiple
-    descr: The funder associated with the work.
+    descr: The funder IDs associated with the work.
   grants.funder.display_name:
     id: grants.funder.display_name
     subjectEntity: works
+    isList: true
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - contains
+      - does not contain
+    defaultOperator: contains
     displayName: funder name
     entityId: funders
     objectEntity: funders
     type: string
     category: other
     apiField:
-    redshiftDisplayColumn: funder_display_name
-    redshiftFilterColumn: funder_display_name
+    redshiftDisplayColumn: funder_display_names
+    redshiftFilterColumn: funder_display_names
     actions:
       - column
       - sort
     icon: mdi-cash-multiple
-    descr: The funder associated with the work.
+    descr: The funder names associated with the work.
 #  grants.award_id:
 #    id: grants.award_id
 #    isList: true
