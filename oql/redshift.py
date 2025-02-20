@@ -494,10 +494,7 @@ class RedshiftQueryHandler:
 
         elif key == "authorships.institutions.id":
             value = get_short_id_integer(value)
-            join_condition = models.AffiliationDistinct.paper_id == work_class.paper_id
-            filter_column = models.AffiliationDistinct.affiliation_id
-            filter_condition = build_operator_condition(filter_column, operator, value)
-            return and_(join_condition, filter_condition)
+            return build_operator_condition(model_column, operator, value)
 
         elif key == "authorships.institutions.type":
             value = get_short_id_text(value)

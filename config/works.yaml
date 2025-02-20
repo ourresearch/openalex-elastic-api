@@ -334,9 +334,9 @@ columns:
     isList: true
     subjectEntity: works
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - includes
+      - does not include
+    defaultOperator: includes
     displayName: institution
     displayNameForColumn: institution ID
     entityId: institutions
@@ -345,7 +345,7 @@ columns:
     category: institution
     apiField: authorships.institutions.id
     redshiftDisplayColumn: institution_ids
-    redshiftFilterColumn: affiliation_id
+    redshiftFilterColumn: institution_ids
     actions:
       - filter
       - column
