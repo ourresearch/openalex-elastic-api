@@ -890,13 +890,14 @@ columns:
     defaultOperator: contains
     displayName: funder name
     entityId: funders
-    objectEntity: funders
+    objectEntity:
     type: string
     category: other
     apiField:
     redshiftDisplayColumn: funder_display_names
     redshiftFilterColumn: funder_display_names
     actions:
+      - filter
       - column
       - sort
     icon: mdi-cash-multiple

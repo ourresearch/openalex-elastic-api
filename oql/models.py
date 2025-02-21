@@ -598,6 +598,9 @@ def get_entity_class(entity):
 
 
 def is_model_property(column, entity_class):
+    if not column:
+        return False
+    
     attr = getattr(entity_class, column, None)
 
     # check if it's a standard Python property

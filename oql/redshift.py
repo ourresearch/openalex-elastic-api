@@ -378,7 +378,7 @@ class RedshiftQueryHandler:
                 if isinstance(attr, property):
                     # print(f"Skipping {column} - {redshift_column} is property")
                     continue
-                # print(f"Adding {column} from redshift_column: {redshift_column}")
+                print(f"Adding {column} from redshift_column: {redshift_column}")
                 col_ = getattr(entity_class, redshift_column).label(column)
                 columns_to_select.append(col_)
 
@@ -925,6 +925,10 @@ def build_operator_condition(column, operator, value):
     elif operator == "includes":
         return column.ilike(f"%{value}%")
     elif operator == "does not include":
+        return column.notilike(f"%{value}%")
+    elif operator == "contains":
+        return column.ilike(f"%{value}%")
+    elif operator == "does not contain":
         return column.notilike(f"%{value}%")
     else:
         raise ValueError(f"Unsupported operator: {operator}")
