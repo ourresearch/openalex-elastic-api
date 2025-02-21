@@ -195,6 +195,8 @@ values:
     display_name: review
   - id: types/paratext
     display_name: paratext
+  - id: types/libguides
+    display_name: libguides
   - id: types/letter
     display_name: letter
   - id: types/other
@@ -207,11 +209,13 @@ values:
     display_name: editorial
   - id: types/peer-review
     display_name: peer-review
-  - id: types/standard
-    display_name: standard
   - id: types/erratum
     display_name: erratum
+  - id: types/standard
+    display_name: standard
   - id: types/grant
     display_name: grant
   - id: types/supplementary-materials
     display_name: supplementary-materials
+  - id: types/retraction
+    display_name: retraction

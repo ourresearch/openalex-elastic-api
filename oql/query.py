@@ -135,7 +135,7 @@ class Query:
 
                 if col_name in row.keys():
                     result_data[col_name] = row[col_name]
-                    print(f"Setting column: {col_name} to {row[col_name]}", flush=True)
+                    #print(f"Setting column: {col_name} to {row[col_name]}", flush=True)
                     continue
 
                 # Otherwise, None

@@ -510,10 +510,7 @@ class RedshiftQueryHandler:
 
         elif key == "authorships.countries":
             value = get_short_id_text(value).upper()  # Country codes must be uppercase
-            join_condition = models.AffiliationCountryDistinct.paper_id == work_class.paper_id
-            filter_column = models.AffiliationCountryDistinct.country_id
-            filter_condition = build_operator_condition(filter_column, operator, value)
-            return and_(join_condition, filter_condition)
+            return build_operator_condition(model_column, operator, value)
 
         elif key == "authorships.institutions.is_global_south":
             value = get_boolean_value(value)

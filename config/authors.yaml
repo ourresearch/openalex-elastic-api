@@ -51,12 +51,14 @@ columns:
     defaultOperator: is
     entityId: authors
     objectEntity: authors
-    displayName: OpenAlex ID
+    displayName: author
+    displayNameForColumn: author ID
     type: string
     redshiftDisplayColumn: author_id
     redshiftFilterColumn: author_id
-    actions: []
-    actionsPopular: []
+    actions:
+      - filter
+      - column
     isId: true
     icon: mdi-account-outline
     descr: A unique identifier for each author that can be used for filtering works
@@ -86,16 +88,18 @@ columns:
     isColumnMandatory: true
     subjectEntity: authors
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - contains
+      - does not contain
+    defaultOperator: contains
     objectEntity:
     displayName: name
     type: string
     actions:
+      - filter
       - sort
       - column
     actionsPopular:
+      - filter
       - sort
       - column
     category: other
@@ -103,26 +107,6 @@ columns:
     redshiftFilterColumn: display_name
     icon: mdi-account-outline
     descr: The name of the author.
-  display_name.search:
-    id: display_name.search
-    subjectEntity: authors
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    objectEntity:
-    displayName: search display_name
-    type: string
-    actions:
-      - filter
-    actionsPopular:
-      - filter
-    category: search
-    redshiftDisplayColumn: display_name
-    redshiftFilterColumn: display_name
-    icon: mdi-account-outline
-    descr: The name of the author.
-    isSearchColumn: true
   affiliations.institution.id:
     id: affiliations.institution.id
     isList: true
@@ -158,8 +142,9 @@ columns:
     objectEntity: institutions
     type: string
     redshiftDisplayColumn: past_affiliation_display_names
-    redshiftFilterColumn: 
+    redshiftFilterColumn: past_affiliation_display_names
     actions:
+      - filter
       - column
     actionsPopular: []
     icon: mdi-town-hall
@@ -181,8 +166,7 @@ columns:
     redshiftFilterColumn: affiliation_type
     actions:
       - filter
-    actionsPopular:
-      - filter
+    actionsPopular: []
     icon: mdi-shape-outline
     descr: The type of institutions that the author has been affiliated with which
       are taking from ROR.
@@ -223,7 +207,7 @@ columns:
     objectEntity: institutions
     type: string
     redshiftDisplayColumn: affiliation_id
-    redshiftFilterColumn: 
+    redshiftFilterColumn: affiliation_id
     actions:
       - column
       - filter
@@ -235,15 +219,15 @@ columns:
     id: last_known_institutions.display_name
     subjectEntity: authors
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - contains
+      - does not contain
+    defaultOperator: contains
     displayName: institution name
     entityId: institutions
     objectEntity: institutions
     type: string
-    redshiftDisplayColumn: affiliation_id
-    redshiftFilterColumn: 
+    redshiftDisplayColumn: affiliation_display_name
+    redshiftFilterColumn: affiliation_display_name
     actions:
       - column
     actionsPopular:

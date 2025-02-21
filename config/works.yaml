@@ -593,9 +593,9 @@ columns:
     isList: true
     subjectEntity: works
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - includes
+      - does not include
+    defaultOperator: includes
     entityId: countries
     objectEntity: countries
     displayName: Country
@@ -610,7 +610,7 @@ columns:
     category: institution
     apiField: authorships.countries
     redshiftDisplayColumn: country_ids
-    redshiftFilterColumn:
+    redshiftFilterColumn: country_ids
     icon: mdi-earth
     descr: The country IDs of the institutions associated with the work.
   authorships.countries.display_name:

@@ -44,7 +44,11 @@ columns:
     defaultOperator: is
     entityId: institutions
     objectEntity:
-    displayName: OpenAlex ID
+    displayName: institution
+    displayNameForColumn: institution ID
+    actions:
+      - filter
+      - column
     redshiftDisplayColumn: affiliation_id
     redshiftFilterColumn: affiliation_id
     isId: true
@@ -56,15 +60,16 @@ columns:
     isColumnMandatory: true
     subjectEntity: institutions
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - contains
+      - does not contain
+    defaultOperator: contains
     objectEntity:
-    displayName: name
+    displayName: institution name
     type: string
     redshiftDisplayColumn: display_name
     redshiftFilterColumn: display_name
     actions:
+      - filter
       - sort
       - column
     actionsPopular:
@@ -73,26 +78,6 @@ columns:
     category: other
     icon: mdi-account-outline
     descr: The name of the institution
-  display_name.search:
-    id: display_name.search
-    subjectEntity: institutions
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    objectEntity:
-    displayName: search display_name
-    type: string
-    redshiftDisplayColumn: display_name
-    redshiftFilterColumn: display_name
-    actions:
-      - filter
-    actionsPopular:
-      - filter
-    category: search
-    icon: mdi-account-outline
-    descr: The name of the institution
-    isSearchColumn: true
   ids.ror:
     id: ids.ror
     subjectEntity: institutions
@@ -105,6 +90,9 @@ columns:
     displayName: ROR
     isId: true
     type: string
+    actions:
+      - filter
+      - column
     redshiftDisplayColumn: ror
     redshiftFilterColumn: ror
     icon: mdi-town-hall
