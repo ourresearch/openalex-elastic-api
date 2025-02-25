@@ -166,7 +166,7 @@ def works_v2_id_get(id):
             return redirect(url_for("ids.works_v2_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/W{clean_id}"
-        query = Q("term", ids__openalex=full_openalex_id)
+        query = Q("term", id=full_openalex_id)
         s = s.filter(query)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
