@@ -508,16 +508,18 @@ columns:
     isColumnMandatory: true
     subjectEntity: works
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - contains
+      - does not contain
+    defaultOperator: contains
     displayName: title
     objectEntity:
     type: string
     actions:
+      - filter
       - sort
       - column
     actionsPopular:
+      - filter
       - sort
       - column
     category: other
@@ -1093,40 +1095,43 @@ columns:
 #    icon: mdi-format-quote-close
 #    isDisplayedAsCount: true
 #    descr: The works cited by the work.
-  display_name.search:
-    id: display_name.search
+  abstract:
+    id: abstract
     subjectEntity: works
     operators:
       - contains
       - does not contain
     defaultOperator: contains
-    displayName: title
-    objectEntity:
-    type: string
-    category: search
-    apiField: display_name
-    redshiftDisplayColumn:
-    redshiftFilterColumn: original_title
-    actions:
-      - filter
-    icon: mdi-file-document-outline
-    descr: Searches the title of the work.
-  abstract:
-    id: abstract
-    subjectEntity: works
-    operators:
-    defaultOperator:
     displayName: abstract
     objectEntity:
     type: string
     category: other
     apiField: abstract
     redshiftDisplayColumn: abstract
-    redshiftFilterColumn:
+    redshiftFilterColumn: abstract
     actions:
+      - filter
       - column
     icon: mdi-text-box-outline
     descr: The abstract of the work.
+  title_and_abstract:
+    id: title_and_abstract
+    subjectEntity: works
+    operators:
+      - contains
+      - does not contain
+    defaultOperator: contains
+    displayName: title & abstract
+    objectEntity:
+    type: string
+    category: other
+    apiField: default.search
+    redshiftDisplayColumn:
+    redshiftFilterColumn:
+    actions:
+      - filter
+    icon: mdi-text-box-outline
+    descr: The title and abstract of the work.
   related_to_text:
     id: related_to_text
     subjectEntity: works

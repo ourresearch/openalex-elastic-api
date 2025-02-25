@@ -79,7 +79,17 @@ class RedshiftQueryHandler:
     def build_joins(self, entity_class):
         query = db.session.query(entity_class)
 
-        if self.entity == "institutions":
+        if self.entity == "works":
+            # Special case: If querying works and abstract is in show_columns or filter, add join to Abstract model
+            if (
+                "abstract" in self.show_columns 
+                or "abstract" in self.filter_keys("works")
+                or "title_and_abstract" in self.filter_keys("works")
+                ):
+                print("Adding join to Abstract", flush=True)
+                query = query.outerjoin(models.Abstract, models.Work.paper_id == models.Abstract.paper_id)
+
+        elif self.entity == "institutions":
             query = (
                 query
                 .join(
@@ -349,10 +359,6 @@ class RedshiftQueryHandler:
         columns_to_select = []
         # print("set_columns")
         show_columns = list(set(self.show_columns + ["id"]))
-        
-        # Special case: If querying works and abstract is in show_columns, add join to Abstract model
-        if self.entity == "works" and "abstract" in show_columns:
-            query = query.outerjoin(models.Abstract, models.Work.paper_id == models.Abstract.paper_id)
             
         for column in show_columns:
             column_info = self.entity_config.get(column)
@@ -384,6 +390,23 @@ class RedshiftQueryHandler:
 
         self.model_return_columns = columns_to_select
         return query.with_entities(*columns_to_select)
+
+    def filter_keys(self, entity):
+        """Recursively walks all filters for either "works" or "entity" and returns a list of all filter column ids found."""
+        keys = []
+        filters = self.filter_works if entity == "works" else self.filter_aggs
+        
+        def walk_filters(filters):
+            for _filter in filters:
+                if "join" in _filter and "filters" in _filter:
+                    walk_filters(_filter["filters"])
+                else:
+                    column_id = _filter.get("column_id")
+                    if column_id:
+                        keys.append(column_id)
+        
+        walk_filters(filters)
+        return list(set(keys))
 
     def apply_work_filters(self, query):
         return self.apply_filters(query, "work")
@@ -465,7 +488,7 @@ class RedshiftQueryHandler:
         is_object_entity = config.get("objectEntity")
         model_column = getattr(
             work_class, redshift_column, None
-        )  if redshift_column else None# primary column to filter against
+        )  if redshift_column else None # primary column to filter against
 
         if self.is_co_relationship_filter(key):
             # "Co-relationship" filters use additional join (see below)
@@ -475,9 +498,6 @@ class RedshiftQueryHandler:
 
         elif column_type == "number":
             return build_number_condition(model_column, operator, value)
-
-        elif ".search" in key:
-            return model_column.ilike(f"%{value}%")
 
         elif key == "keywords.id":
             value = get_short_id_text(value)
@@ -584,7 +604,17 @@ class RedshiftQueryHandler:
             value = get_short_id_integer(value)
             return build_operator_condition(model_column, operator, value)
 
-        else:            
+        elif key == "abstract":
+            model_column = models.Abstract.abstract
+            return build_operator_condition(model_column, operator, value)
+
+        elif key == "title_and_abstract":
+            return or_(
+                build_operator_condition(models.Work.original_title, operator, value),
+                build_operator_condition(models.Abstract.abstract, operator, value)
+            )
+
+        else:
             return build_operator_condition(model_column, operator, value)
 
     def build_entity_filter_condition(self, filter):
