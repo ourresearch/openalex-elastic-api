@@ -1024,9 +1024,34 @@ columns:
     actions:
       - filter
       - column
+      - sort
     actionsPopular: []
     icon: mdi-translate
     descr: The language of the work.
+  license:
+    id: license
+    entityId: licenses
+    subjectEntity: works
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    displayName: license
+    objectEntity: licenses
+    isId: true
+    type: string
+    displayNullAs: Unknown
+    category: other
+    apiField: license
+    redshiftDisplayColumn: license
+    redshiftFilterColumn: license
+    actions:
+      - filter
+      - column
+      - sort
+    actionsPopular: []
+    icon: mdi-lock-open-outline
+    descr: The license of the work.
   sustainable_development_goals.id:
     id: sustainable_development_goals.id
     isList: true

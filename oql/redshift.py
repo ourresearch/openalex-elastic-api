@@ -486,8 +486,12 @@ class RedshiftQueryHandler:
             filter_condition = build_operator_condition(filter_column, operator, value)
             return and_(join_condition, filter_condition)            
 
-        elif key == "type" or key == "primary_location.source.type":
-            value = get_short_id_text(value)
+        elif key in ["type", "language", "license", "primary_location.source.type"]:
+            value = get_short_id_text(value).lower()
+            return build_operator_condition(model_column, operator, value)
+
+        elif key == "authorships.countries":
+            value = get_short_id_text(value).upper()  # Country codes must be uppercase
             return build_operator_condition(model_column, operator, value)
 
         elif key == "authorships.institutions.id":
@@ -507,10 +511,6 @@ class RedshiftQueryHandler:
             filter_column = models.AffiliationAuthorDistinct.author_ids
             filter_condition = build_operator_condition(filter_column, operator, value)
             return and_(join_condition, filter_condition)
-
-        elif key == "authorships.countries":
-            value = get_short_id_text(value).upper()  # Country codes must be uppercase
-            return build_operator_condition(model_column, operator, value)
 
         elif key == "authorships.institutions.is_global_south":
             value = get_boolean_value(value)
@@ -542,11 +542,7 @@ class RedshiftQueryHandler:
             filter_condition = models.Author.orcid == value
             return and_(join_condition, filter_condition)
 
-        elif key == "language":
-            value = get_short_id_text(value).lower()
-            return build_operator_condition(model_column, operator, value)
-
-        if key == "grants.funder" and self.entity == "funders":
+        elif key == "grants.funder" and self.entity == "funders":
             # co-relationship: The extra join (added in build_joins) has restricted works to those funded by X.
             # Now, filter out X from the final results.
             value = get_short_id_integer(value)
@@ -586,9 +582,6 @@ class RedshiftQueryHandler:
        
         elif column_type in ["object", "array"] or is_object_entity:
             value = get_short_id_integer(value)
-            return build_operator_condition(model_column, operator, value)
-
-        elif column_type == "string":
             return build_operator_condition(model_column, operator, value)
 
         else:            
