@@ -82,15 +82,16 @@ columns:
     isColumnMandatory: true
     subjectEntity: sources
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - contains
+      - does not contain
+    defaultOperator: contains
     objectEntity:
-    displayName: name
+    displayName: source name
     type: string
     redshiftDisplayColumn: display_name
     redshiftFilterColumn: display_name
     actions:
+      - filter
       - sort
       - column
     actionsPopular:
@@ -99,26 +100,6 @@ columns:
     category: other
     icon: mdi-account-outline
     descr: The name of the source.
-  display_name.search:
-    id: display_name.search
-    subjectEntity: sources
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    objectEntity:
-    displayName: search display_name
-    type: string
-    redshiftDisplayColumn:
-    redshiftFilterColumn: display_name
-    actions:
-      - filter
-    actionsPopular:
-      - filter
-    category: search
-    icon: mdi-account-outline
-    descr: The name of the source.
-    isSearchColumn: true
   host_organization:
     id: host_organization
     subjectEntity: sources
@@ -175,8 +156,7 @@ columns:
     actions:
       - column
       - filter
-    actionsPopular:
-      - filter
+    actionsPopular: []
     icon: mdi-shape-outline
     descr: The type of source.
   apc_usd:
@@ -192,9 +172,12 @@ columns:
     objectEntity:
     displayName: Article Processing Charge
     type: number
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
-    actions: []
+    redshiftDisplayColumn: apc_usd
+    redshiftFilterColumn: apc_usd
+    actions: 
+      - column
+      - filter
+      - sort
     actionsPopular: []
     icon: mdi-cash
     descr: The Article Processing Charge (APC) in USD for the source.
@@ -203,13 +186,17 @@ columns:
     subjectEntity: sources
     operators:
       - is
+      - is not
     defaultOperator: is
     objectEntity:
     displayName: fully open access
     type: boolean
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
-    actions: []
+    redshiftDisplayColumn: is_oa
+    redshiftFilterColumn: is_oa
+    actions:
+      - filter
+      - column
+      - sort
     actionsPopular: []
     icon: mdi-lock-open-outline
     descr: Whether the source is fully open access.
@@ -227,8 +214,7 @@ columns:
     actions:
       - column
       - filter
-    actionsPopular:
-      - filter
+    actionsPopular: []
     icon: mdi-lock-open-outline
     descr: Whether the source is listed in the Directory of Open Access Journals (DOAJ).
 #  alternate_titles:
@@ -265,9 +251,7 @@ columns:
     actions:
       - sort
       - column
-    actionsPopular:
-      - sort
-      - column
+    actionsPopular: []
     icon: mdi-book-open-variant
     descr: The number of works published by the source.
   sum(citations):
@@ -287,9 +271,7 @@ columns:
     actions:
       - sort
       - column
-    actionsPopular:
-      - sort
-      - column
+    actionsPopular: []
     icon: mdi-book-open-variant
     descr: The sum of citations of works for this source
   mean(fwci):
@@ -309,9 +291,7 @@ columns:
     actions:
       - sort
       - column
-    actionsPopular:
-      - sort
-      - column
+    actionsPopular: []
     icon: mdi-book-open-variant
     descr: The mean Field-Weighted Citation Impact (FWCI) of works for this source
 values:
