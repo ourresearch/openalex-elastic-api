@@ -46,9 +46,7 @@ columns:
     objectEntity:
     displayName: institution
     displayNameForColumn: institution ID
-    actions:
-      - filter
-      - column
+    actions: []
     redshiftDisplayColumn: affiliation_id
     redshiftFilterColumn: affiliation_id
     isId: true

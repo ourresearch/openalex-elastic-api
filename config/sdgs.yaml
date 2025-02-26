@@ -64,26 +64,6 @@ columns:
     category: other
     icon: mdi-account-outline
     descr: The name of the Sustainable Development Goal (SDG).
-  display_name.search:
-    id: display_name.search
-    subjectEntity: sdgs
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    objectEntity:
-    displayName: search display_name
-    type: string
-    redshiftDisplayColumn:
-    redshiftFilterColumn: display_name
-    actions:
-      - filter
-    actionsPopular:
-      - filter
-    category: search
-    icon: mdi-account-outline
-    descr: The name of the Sustainable Development Goal (SDG).
-    isSearchColumn: true
   description:
     id: description
     isColumnMandatory: false
@@ -97,7 +77,8 @@ columns:
     type: string
     redshiftDisplayColumn: description
     redshiftFilterColumn: description
-    actions: []
+    actions: 
+      - column
     actionsPopular: []
     category: other
     icon: mdi-account-outline

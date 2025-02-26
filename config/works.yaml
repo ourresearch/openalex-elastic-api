@@ -1071,7 +1071,10 @@ columns:
     apiField: sustainable_development_goals.id
     redshiftDisplayColumn: sdgs
     redshiftFilterColumn: sdgs
-    actions: []
+    actions: 
+      - filter
+      - column
+      - sort
     icon: mdi-sprout-outline
     descr: The Sustainable Development Goals (SDGs) associated with the work.
 #  referenced_works:

@@ -40,18 +40,17 @@ columns:
     redshiftDisplayColumn: id
     redshiftFilterColumn: wikidata_id
     actions:
-      - filter
+      - column
     actionsPopular:
-      - filter
     icon: mdi-shape-outline
     descr: Unique identifier for the continent
   display_name:
     id: display_name
     subjectEntity: continents
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - contains
+      - does not contain
+    defaultOperator: contains
     entityId: continents
     objectEntity:
     displayName: Continent name
@@ -63,27 +62,6 @@ columns:
     actionsPopular: []
     icon: mdi-shape-outline
     descr: The name of the continent
-  display_name.search:
-    id: display_name.search
-    subjectEntity: continents
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    entityId: continents
-    objectEntity:
-    displayName: search display_name
-    type: string
-    redshiftDisplayColumn: display_name
-    redshiftFilterColumn: display_name
-    actions:
-      - filter
-    actionsPopular:
-      - filter
-    icon: mdi-shape-outline
-    descr: The name of the continent
-    isSearchColumn: true
-    category: search
   countries:
     id: countries
     isList: true

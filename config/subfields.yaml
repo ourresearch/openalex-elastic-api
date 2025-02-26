@@ -50,15 +50,16 @@ columns:
     isColumnMandatory: true
     subjectEntity: subfields
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - contains
+      - does not contain
+    defaultOperator: contains
     objectEntity:
-    displayName: name
+    displayName: subfield name
     type: string
     redshiftDisplayColumn: display_name
-    redshiftFilterColumn:
+    redshiftFilterColumn: display_name
     actions:
+      - filter
       - sort
       - column
     actionsPopular:
@@ -67,26 +68,6 @@ columns:
     category: other
     icon: mdi-account-outline
     descr: The name of the subfield.
-  display_name.search:
-    id: display_name.search
-    subjectEntity: subfields
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    objectEntity:
-    displayName: search display_name
-    type: string
-    redshiftDisplayColumn:
-    redshiftFilterColumn: display_name
-    actions:
-      - filter
-    actionsPopular:
-      - filter
-    category: search
-    icon: mdi-account-outline
-    descr: The name of the subfield.
-    isSearchColumn: true
   description:
     id: description
     subjectEntity: subfields

@@ -50,7 +50,7 @@ columns:
       - is not
     defaultOperator: is
     objectEntity:
-    displayName: name
+    displayName: license name
     type: string
     redshiftDisplayColumn: display_name
     redshiftFilterColumn: display_name
@@ -63,26 +63,6 @@ columns:
     category: other
     icon: mdi-account-outline
     descr: The name of the license.
-  display_name.search:
-    id: display_name.search
-    subjectEntity: licenses
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    objectEntity:
-    displayName: search display_name
-    type: string
-    redshiftDisplayColumn:
-    redshiftFilterColumn: display_name
-    actions:
-      - filter
-    actionsPopular:
-      - filter
-    category: search
-    icon: mdi-account-outline
-    descr: The name of the license.
-    isSearchColumn: true
   url:
     id: url
     subjectEntity: licenses

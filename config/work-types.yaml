@@ -47,9 +47,9 @@ columns:
     isColumnMandatory: true
     subjectEntity: work-types
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - contains
+      - does not contain
+    defaultOperator: contains
     objectEntity:
     displayName: name
     type: string
@@ -64,24 +64,6 @@ columns:
     category: other
     icon: mdi-account-outline
     descr: The name of the work type.
-  display_name.search:
-    id: display_name.search
-    subjectEntity: work-types
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    objectEntity:
-    displayName: search display_name
-    type: string
-    redshiftDisplayColumn:
-    redshiftFilterColumn: display_name
-    actions:
-    actionsPopular:
-    category: search
-    icon: mdi-account-outline
-    descr: The name of the work type.
-    isSearchColumn: true
   description:
     id: description
     subjectEntity: work-types

@@ -46,11 +46,11 @@ columns:
     isColumnMandatory: true
     subjectEntity: countries
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - contains
+      - does not contain
+    defaultOperator: contains
     objectEntity:
-    displayName: name
+    displayName: country name
     type: string
     actions:
       - sort
@@ -79,26 +79,6 @@ columns:
     redshiftFilterColumn: continent_id
     icon: mdi-tag-outline
     descr: ID of the continent that the country is on
-  display_name.search:
-    id: display_name.search
-    subjectEntity: countries
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    objectEntity:
-    displayName: search display_name
-    type: string
-    actions:
-      - filter
-    actionsPopular:
-      - filter
-    category: search
-    redshiftDisplayColumn: display_name
-    redshiftFilterColumn: display_name
-    icon: mdi-account-outline
-    descr: The name of the country
-    isSearchColumn: true
   description:
     id: description
     isColumnMandatory: false
@@ -144,7 +124,9 @@ columns:
     displayName: from Global South
     objectEntity:
     type: boolean
-    actions: []
+    actions: 
+      - filter
+      - column
     category: other
     redshiftDisplayColumn: is_global_south
     redshiftFilterColumn: is_global_south

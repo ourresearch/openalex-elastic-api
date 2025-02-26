@@ -39,9 +39,12 @@ columns:
     defaultOperator: is
     entityId: topics
     objectEntity:
-    displayName: OpenAlex ID
+    displayName: Topic ID
     isId: true
     type: string
+    actions:
+      - column
+      - sort
     redshiftDisplayColumn: topic_id
     redshiftFilterColumn: topic_id
     icon: mdi-tag-outline
@@ -51,15 +54,16 @@ columns:
     isColumnMandatory: true
     subjectEntity: topics
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - contains
+      - does not contain
+    defaultOperator: contains
     objectEntity:
-    displayName: name
+    displayName: topic name
     type: string
     redshiftDisplayColumn: display_name
     redshiftFilterColumn: display_name
     actions:
+      - filter
       - sort
       - column
     actionsPopular:
@@ -68,26 +72,6 @@ columns:
     category: other
     icon: mdi-account-outline
     descr: The name of the topic.
-  display_name.search:
-    id: display_name.search
-    subjectEntity: topics
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    objectEntity:
-    displayName: topic name
-    type: string
-    redshiftDisplayColumn:
-    redshiftFilterColumn: display_name
-    actions:
-      - filter
-    actionsPopular:
-      - filter
-    category: search
-    icon: mdi-account-outline
-    descr: The name of the topic.
-    isSearchColumn: true
   description:
     id: description
     subjectEntity: topics
@@ -154,7 +138,10 @@ columns:
     type: object
     redshiftDisplayColumn:
     redshiftFilterColumn:
-    actions: []
+    actions: 
+      - filter
+      - sort
+      - column
     icon: mdi-tag-outline
     descr: The field that this topic belongs to.
   domain:
@@ -170,7 +157,10 @@ columns:
     type: string
     redshiftDisplayColumn: domain_id
     redshiftFilterColumn: domain_id
-    actions: []
+    actions: 
+      - filter
+      - sort
+      - column
     icon: mdi-tag-outline
     descr: The domain that this topic belongs to.
   count(works):
@@ -186,6 +176,10 @@ columns:
     objectEntity:
     displayName: works count
     type: number
+    actions:
+      - filter
+      - sort
+      - column
     redshiftDisplayColumn: count(works)
     redshiftFilterColumn: count(works)
     icon: mdi-tag-outline

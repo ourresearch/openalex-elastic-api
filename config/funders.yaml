@@ -38,7 +38,7 @@ columns:
     defaultOperator: is
     entityId: funders
     objectEntity:
-    displayName: OpenAlex ID
+    displayName: Funder ID
     isId: true
     type: string
     redshiftDisplayColumn: id
@@ -51,15 +51,16 @@ columns:
     isColumnMandatory: true
     subjectEntity: funders
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - contains
+      - does not contain
+    defaultOperator: contains
     objectEntity:
-    displayName: name
+    displayName: funder name
     type: string
     redshiftDisplayColumn: display_name
     redshiftFilterColumn: display_name
     actions:
+      - filter
       - sort
       - column
     actionsPopular:
@@ -68,26 +69,6 @@ columns:
     category: other
     icon: mdi-account-outline
     descr: The name of the funder
-  display_name.search:
-    id: display_name.search
-    subjectEntity: funders
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    objectEntity:
-    displayName: search display_name
-    type: string
-    redshiftDisplayColumn:
-    redshiftFilterColumn: display_name
-    actions:
-      - filter
-    actionsPopular:
-      - filter
-    category: search
-    icon: mdi-account-outline
-    descr: The name of the funder
-    isSearchColumn: true
   country_code:
     id: country_code
     subjectEntity: funders
@@ -143,10 +124,12 @@ columns:
     displayName: crossref id
     isId: true
     type: string
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftDisplayColumn: crossref_id
+    redshiftFilterColumn: crossref_id
     category: ids
     actions:
+      - filter
+      - column
     icon: mdi-file-document-outline
     descr: The crossref id of the funder
   description:
@@ -181,7 +164,7 @@ columns:
     redshiftDisplayColumn:
     redshiftFilterColumn:
     category: ids
-    actions:
+    actions: []
     icon: mdi-file-document-outline
     descr: Homepage url of the funder
   count(works):

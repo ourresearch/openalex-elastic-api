@@ -39,7 +39,10 @@ columns:
     displayName: OpenAlex ID
     isId: true
     type: string
-    redshiftDisplayColumn: id
+    actions:
+      - column
+      - sort
+    redshiftDisplayColumn: domain_id
     redshiftFilterColumn: domain_id
     icon: mdi-tag-outline
     descr: Unique identifier for the domain

@@ -92,7 +92,7 @@ columns:
       - does not contain
     defaultOperator: contains
     objectEntity:
-    displayName: name
+    displayName: author name
     type: string
     actions:
       - filter
@@ -400,6 +400,7 @@ columns:
     redshiftDisplayColumn: mean_fwci
     redshiftFilterColumn: mean_fwci
     actions:
+      - filter
       - sort
       - column
     actionsPopular:

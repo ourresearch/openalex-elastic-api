@@ -62,26 +62,6 @@ columns:
     category: other
     icon: mdi-account-outline
     descr: The name of the language
-  display_name.search:
-    id: display_name.search
-    subjectEntity: languages
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    objectEntity:
-    displayName: search display_name
-    type: string
-    redshiftDisplayColumn:
-    redshiftFilterColumn: display_name
-    actions:
-      - filter
-    actionsPopular:
-      - filter
-    category: search
-    icon: mdi-account-outline
-    descr: The name of the language
-    isSearchColumn: true
   count(works):
     id: count(works)
     subjectEntity: languages
