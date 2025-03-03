@@ -70,7 +70,9 @@ class RedshiftQueryHandler:
         query = self.apply_work_filters(query)
         query = self.apply_entity_filters(query)  
 
-        if self.entity != "summary":
+        if self.entity == "summary":
+            query = self.apply_summary(query)
+        else:
             query = self.apply_sort(query, entity_class)  
             query = self.apply_stats(query, entity_class)
 
