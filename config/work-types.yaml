@@ -19,7 +19,7 @@ showOnEntityPage:
   - description
   - crossref_types
 showOnTablePage:
-  - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -34,12 +34,14 @@ columns:
     defaultOperator: is
     entityId: work-types
     objectEntity:
-    displayName: Work Type ID
+    displayName: work type
     isId: true
     type: string
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: work_type_id
     redshiftFilterColumn: work_type_id
-    actions: []
+    actions:
+      - filter
+      - column
     icon: mdi-tag-outline
     descr: The unique identifier for the work type in OpenAlex.
   display_name:
@@ -51,16 +53,11 @@ columns:
       - does not contain
     defaultOperator: contains
     objectEntity:
-    displayName: name
+    displayName: work type name
     type: string
     redshiftDisplayColumn: display_name
     redshiftFilterColumn: display_name
-    actions:
-      - sort
-      - column
-    actionsPopular:
-      - sort
-      - column
+    actions: []
     category: other
     icon: mdi-account-outline
     descr: The name of the work type.

@@ -20,6 +20,7 @@ showOnEntityPage:
   - description
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -36,9 +37,11 @@ columns:
     displayName: License ID
     isId: true
     type: string
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: license_id
     redshiftFilterColumn: license_id
-    actions: []
+    actions: 
+      - filter
+      - column
     icon: mdi-tag-outline
     descr: The unique identifier for the license in OpenAlex.
   display_name:

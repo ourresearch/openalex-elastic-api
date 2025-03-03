@@ -21,6 +21,7 @@ showOnEntityPage:
   - countries
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -37,7 +38,7 @@ columns:
     isId: true
     displayName: Continent ID
     type: string
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: wikidata_id
     redshiftFilterColumn: wikidata_id
     actions:
       - column

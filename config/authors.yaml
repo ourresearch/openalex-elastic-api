@@ -34,6 +34,7 @@ showOnEntityPage:
   - ids.orcid
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc

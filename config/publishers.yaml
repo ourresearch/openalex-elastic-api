@@ -21,6 +21,7 @@ showOnEntityPage:
   - alternate_titles
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -33,14 +34,16 @@ columns:
       - is not
     defaultOperator: is
     entityId: publishers
-    objectEntity:
-    displayName: Publisher ID
+    objectEntity: publishers
+    displayName: publisher
+    displayNameForColumn: publisher ID
     isId: true
     type: string
     redshiftDisplayColumn: publisher_id
     redshiftFilterColumn: publisher_id
     actions:
-    - column
+      - filter
+      - column
     icon: mdi-domain
     descr: The unique identifier for the publisher in OpenAlex.
   display_name:

@@ -20,6 +20,7 @@ showOnEntityPage:
   - display_name
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -38,7 +39,9 @@ columns:
     type: string
     redshiftDisplayColumn: keyword_id
     redshiftFilterColumn: keyword_id
-    actions: []
+    actions: 
+      - filter
+      - column
     icon: mdi-tag-outline
     descr: The unique identifier for the keyword in OpenAlex
   display_name:

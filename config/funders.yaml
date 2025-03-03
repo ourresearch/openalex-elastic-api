@@ -25,6 +25,7 @@ showOnEntityPage:
   - country_code
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -41,9 +42,11 @@ columns:
     displayName: Funder ID
     isId: true
     type: string
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: funder_id
     redshiftFilterColumn: funder_id
     actions:
+    - filter
+    - column
     icon: mdi-cash-multiple
     descr: Unique identifier for the funder
   display_name:

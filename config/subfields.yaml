@@ -24,6 +24,7 @@ showOnEntityPage:
   - domain
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -37,12 +38,14 @@ columns:
     defaultOperator: is
     entityId: subfields
     objectEntity:
-    displayName: OpenAlex ID
+    displayName: Subfield ID
     isId: true
     type: string
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: subfield_id
     redshiftFilterColumn: subfield_id
-    actions: []
+    actions:
+      - filter
+      - column
     icon: mdi-tag-outline
     descr: The unique identifier for the subfield in OpenAlex.
   display_name:

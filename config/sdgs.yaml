@@ -21,6 +21,7 @@ showOnEntityPage:
   - description
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -36,9 +37,11 @@ columns:
     objectEntity:
     displayName: SDG ID
     isId: true
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: sdg_id
     redshiftFilterColumn: sdg_id
-    actions: []
+    actions: 
+      - filter
+      - column
     type: string
     icon: mdi-tag-outline
     descr: The unique identifier for the Sustainable Development Goal (SDG) in OpenAlex.

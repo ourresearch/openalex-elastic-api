@@ -27,6 +27,7 @@ showOnEntityPage:
   - ids.ror
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -43,10 +44,12 @@ columns:
       - is not
     defaultOperator: is
     entityId: institutions
-    objectEntity:
+    objectEntity: institutions
     displayName: institution
     displayNameForColumn: institution ID
-    actions: []
+    actions: 
+      - filter
+      - column
     redshiftDisplayColumn: affiliation_id
     redshiftFilterColumn: affiliation_id
     isId: true

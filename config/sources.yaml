@@ -33,6 +33,7 @@ showOnEntityPage:
   - apc_usd
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -50,12 +51,15 @@ columns:
     defaultOperator: is
     entityId:
     objectEntity: sources
-    displayName: OpenAlex ID
+    displayName: source
+    displayNameForColumn: source ID
     isId: true
     type: string
     redshiftDisplayColumn: source_id
     redshiftFilterColumn: source_id
-    actions: []
+    actions: 
+      - filter
+      - column
     icon: mdi-book-open-outline
     descr: The unique identifier for the source in OpenAlex.
   ids.issn:

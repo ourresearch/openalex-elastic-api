@@ -25,6 +25,7 @@ showOnEntityPage:
   - domain
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -38,11 +39,14 @@ columns:
     defaultOperator: is
     entityId: fields
     objectEntity:
-    displayName: OpenAlex ID
+    displayName: Field ID
     isId: true
     type: string
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: field_id
     redshiftFilterColumn: field_id
+    actions:
+      - filter
+      - column
     icon: mdi-tag-outline
     descr: Unique identifier for the field
   display_name:

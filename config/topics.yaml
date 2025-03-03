@@ -26,6 +26,7 @@ showOnEntityPage:
   - domain
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -43,6 +44,7 @@ columns:
     isId: true
     type: string
     actions:
+      - filter
       - column
       - sort
     redshiftDisplayColumn: topic_id

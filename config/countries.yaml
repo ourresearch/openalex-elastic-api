@@ -21,6 +21,7 @@ showOnEntityPage:
   - is_global_south
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -39,6 +40,9 @@ columns:
     type: string
     redshiftDisplayColumn: country_id
     redshiftFilterColumn: country_id
+    actions:
+      - filter
+      - column
     icon: mdi-tag-outline
     descr: Unique identifier for the country
   display_name:

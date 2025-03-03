@@ -51,6 +51,7 @@ class Work(db.Model):
     license = Column(String(500))
     is_retracted = Column(Boolean)
     created_date = Column(String(500))
+    publisher = Column(String(65535))
 
     @property
     def id(self):
@@ -85,6 +86,7 @@ class Affiliation(db.Model):
     country_display_name = Column(String(65535))
     continent_id = Column(Integer)
     is_global_south = Column(Boolean)
+    is_corresponding = Column(Boolean)
 
     def __repr__(self):
         return f"<Affiliation(paper_id={self.paper_id}, author_id={self.author_id}, affiliation_id={self.affiliation_id})>"
@@ -109,6 +111,7 @@ class AffiliationDistinct(db.Model):
     country_display_name = Column(String(65535))
     continent_id = Column(Integer)
     is_global_south = Column(Boolean)
+    is_corresponding = Column(Boolean)
 
     def __repr__(self):
         return f"<AffiliationDistinct(paper_id={self.paper_id}, author_id={self.author_id}, affiliation_id={self.affiliation_id})>"

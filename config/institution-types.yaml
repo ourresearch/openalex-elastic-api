@@ -35,9 +35,11 @@ columns:
     displayName: Institution ID
     isId: true
     type: string
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: institution_type_id
     redshiftFilterColumn: institution_type_id
-    actions: []
+    actions:
+      - filter
+      - column
     icon: mdi-tag-outline
     descr: The unique identifier for the institution type
   display_name:
@@ -49,7 +51,7 @@ columns:
       - is not
     defaultOperator: is
     objectEntity:
-    displayName: name
+    displayName: institution type
     type: string
     redshiftDisplayColumn: display_name
     redshiftFilterColumn:

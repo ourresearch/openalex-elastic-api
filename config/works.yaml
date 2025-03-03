@@ -46,6 +46,7 @@ showOnEntityPage:
   - grants.award_id
 showOnTablePage:
   - display_name
+  - id
   - publication_year
   - type
   - cited_by_count
@@ -66,7 +67,7 @@ columns:
     defaultOperator: is
     entityId: works
     objectEntity:
-    displayName: OpenAlex ID
+    displayName: Work ID
     isSingleWork: true
     isId: true
     type: string
@@ -75,7 +76,8 @@ columns:
     redshiftDisplayColumn: paper_id
     redshiftFilterColumn: paper_id
     actions:
-      - ''
+      - column
+      - filter
     icon: mdi-file-document-outline
     descr: The unique identifier for the work in OpenAlex.
   doi:

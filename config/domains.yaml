@@ -23,6 +23,7 @@ showOnEntityPage:
   - siblings
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -36,7 +37,7 @@ columns:
     defaultOperator: is
     entityId: domains
     objectEntity:
-    displayName: OpenAlex ID
+    displayName: Domain ID
     isId: true
     type: string
     actions:

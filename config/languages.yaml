@@ -19,6 +19,7 @@ showOnEntityPage:
   - display_name
 showOnTablePage:
   - display_name
+  - id
   - count(works)
 sortByDefault: count(works)
 sortDirDefault: desc
@@ -35,9 +36,11 @@ columns:
     displayName: Language ID
     isId: true
     type: string
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: language_id
     redshiftFilterColumn: language_id
-    actions: []
+    actions:
+      - filter
+      - column
     icon: mdi-tag-outline
     descr: The unique identifier for the language in OpenAlex
   display_name:

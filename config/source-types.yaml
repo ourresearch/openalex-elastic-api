@@ -35,10 +35,9 @@ columns:
     displayName: Source Type ID
     isId: true
     type: string
-    redshiftDisplayColumn: id
+    redshiftDisplayColumn: source_type_id
     redshiftFilterColumn: source_type_id
     actions: []
-    actionsPopular: []
     icon: mdi-shape-outline
     descr: The unique identifier for the source type in OpenAlex.
   display_name:
@@ -50,7 +49,7 @@ columns:
     defaultOperator: is
     objectEntity:
     entityId: source-types
-    displayName: Source type name
+    displayName: source type
     type: string
     redshiftDisplayColumn: display_name
     redshiftFilterColumn: display_name
