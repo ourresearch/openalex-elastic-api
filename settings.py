@@ -3,6 +3,9 @@ import os
 CACHE_TYPE = "RedisCache"
 CACHE_DEFAULT_TIMEOUT = 300
 CACHE_REDIS_URL = os.environ.get("REDISCLOUD_URL")
+DATABRICKS_HOST = os.environ.get("DATABRICKS_HOST")
+DATABRICKS_HTTP_PATH = os.environ.get("DATABRICKS_HTTP_PATH")
+DATABRICKS_TOKEN = os.environ.get("DATABRICKS_TOKEN")
 ENV = os.environ.get("FLASK_ENV", "production")
 ES_URL = os.environ.get("ES_URL_PROD", "http://elastic:testpass@127.0.0.1:9200")
 ES_URL_V2 = os.environ.get("ES_URL_V2")

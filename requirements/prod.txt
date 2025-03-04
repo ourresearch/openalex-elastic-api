@@ -1,3 +1,4 @@
+databricks-sql-connector==2.5.2
 elasticsearch-dsl==8.9.0
 flask==2.1.2
 flask-caching==2.0.0
