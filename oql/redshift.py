@@ -771,6 +771,8 @@ class RedshiftQueryHandler:
     def apply_stats(self, query, entity_class):
         aggregator_columns = ["count(works)", "sum(citations)", "mean(fwci)", "percent(is_open_access)"]
         
+        grouping_applied = False
+
         for column in self.show_columns:
             if column not in aggregator_columns:
                 continue
@@ -833,6 +835,7 @@ class RedshiftQueryHandler:
             all_groupbys = self.model_return_columns + extra_groupbys
             if all_groupbys:
                 query = query.group_by(*all_groupbys)
+                grouping_applied = True
 
             # label -> e.g. "count(works)" or "sum(citations)"
             query = query.add_columns(stat_function.label(column))
@@ -845,6 +848,13 @@ class RedshiftQueryHandler:
             # apply aggregator sorting if needed
             if self.sort_by_column == column:
                 query = self.sort_from_stat(query, self.sort_by_order, stat_function)
+
+        # If no aggregator columns were applied but we're querying entities other than works or summary,
+        # we need to ensure distinct rows for the entity
+        if not grouping_applied and self.entity not in ["works", "summary"]:
+            # Apply grouping by all selected columns to ensure distinct entity rows
+            if self.model_return_columns:
+                query = query.group_by(*self.model_return_columns)
 
         return query
 
