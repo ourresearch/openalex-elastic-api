@@ -100,7 +100,6 @@ columns:
       - sort
       - column
     actionsPopular:
-      - filter
       - sort
       - column
     category: other
@@ -197,6 +196,7 @@ columns:
   last_known_institutions.id:
     id: last_known_institutions.id
     isId: true
+    isList: true
     subjectEntity: authors
     operators:
       - is

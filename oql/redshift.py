@@ -139,8 +139,6 @@ class RedshiftQueryHandler:
                     models.Affiliation,
                     models.Affiliation.author_id == models.Author.author_id,
                 )
-                .join(models.Institution,
-                      models.Institution.affiliation_id == models.Affiliation.affiliation_id)
                 .join(models.Work, models.Work.paper_id == models.Affiliation.paper_id)
             )
 
