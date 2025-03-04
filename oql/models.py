@@ -506,7 +506,7 @@ class WorkFunder(db.Model):
 
 
 class WorkKeyword(db.Model):
-    __tablename__ = "work_keyword"
+    __tablename__ = "work_keyword_concept"
 
     paper_id = Column(BigInteger, primary_key=True)
     keyword_id = Column(String(500), primary_key=True)

@@ -572,6 +572,26 @@ columns:
     redshiftFilterColumn: oa_status
     icon: mdi-lock-open-outline
     descr: The open access status of the work.
+  open_access.has_fulltext:
+    id: open_access.has_fulltext
+    subjectEntity: works
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    displayName: has fulltext
+    objectEntity:
+    type: boolean
+    actions:
+      - filter
+      - column
+      - sort
+    category: open access
+    apiField: open_access.has_fulltext
+    redshiftDisplayColumn: has_fulltext
+    redshiftFilterColumn: has_fulltext
+    icon: mdi-lock-open-outline
+    descr: Whether the work has fulltext available.
 #  apc_paid.value_usd:
 #    id: apc_paid.value_usd
 #    isCurrency: true
