@@ -1,6 +1,7 @@
 import json
 import random
 
+from databricks import sql
 from elasticsearch_dsl import Q, Search, connections
 from flask import Blueprint, abort, redirect, request, url_for, jsonify
 from opensearch_dsl import Search as OSSearch
@@ -157,6 +158,33 @@ def works_id_get(id):
 
 @blueprint.route("/v2/works/<path:id>")
 def works_v2_id_get(id):
+    if is_openalex_id(id):
+        clean_id = normalize_openalex_id(id)
+        if clean_id != id:
+            return redirect(url_for("ids.works_v2_id_get", id=clean_id, **request.args))
+        clean_id = int(clean_id[1:])
+        full_openalex_id = f"https://openalex.org/W{clean_id}"
+    else:
+        abort(404)
+    with sql.connect(
+            server_hostname=settings.DATABRICKS_HOST,
+            http_path=settings.DATABRICKS_HTTP_PATH,
+            access_token=settings.DATABRICKS_TOKEN,
+    ) as connection:
+        with connection.cursor() as cursor:
+            query = "SELECT json_str FROM openalex.works.openalex_works_json WHERE id = %s"
+            cursor.execute(query, (full_openalex_id,))
+            row = cursor.fetchone()
+
+            if row is None:
+                return jsonify({"error": "Item not found"}), 404
+
+            result = json.loads(row[0])
+            return jsonify(result)
+
+
+@blueprint.route("/v2-elastic/works/<path:id>")
+def works_v2_elastic_id_get(id):
     s = Search(index=settings.WORKS_INDEX, using="v2")
     only_fields = process_id_only_fields(request, WorksSchema)
 
