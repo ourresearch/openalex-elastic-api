@@ -27,10 +27,9 @@ def create_search():
     raw_query = request.json.get("query")
     bypass_cache = request.json.get("bypass_cache", False)
 
-    print("create_search")
-    print(raw_query, flush=True)
+    #print("create_search")
+    #print(raw_query, flush=True)
 
-    # query object
     query = Query(
         entity=raw_query.get("get_rows"),
         filter_works=raw_query.get("filter_works"),
@@ -43,7 +42,6 @@ def create_search():
     # validate the query
     oqo = OQOValidator(all_entities_config)
     ok, error = oqo.validate(query.to_dict())
-
     if not ok:
         print(f"Invalid Query: {error}", flush=True)
         return jsonify({"error": "Invalid Query", "details": error, "query": raw_query}), 400
@@ -71,12 +69,13 @@ def get_search(id):
         search["is_ready"] = False
         search["is_completed"] = False
         search["backend_error"] = None
+        search["redshift_sql"] = None
         search["timestamps"]["completed"] = None
         search["bypass_cache"] = True
         
         redis_db.set(id, json.dumps(search))
         # Re-add to queue for processing
-        print(f"Pusing {id} to search_queue", flush=True)
+        print(f"Pushing {id} to search_queue", flush=True)
         redis_db.rpush(search_queue, id)
     
     return jsonify(search)

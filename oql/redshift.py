@@ -336,7 +336,7 @@ class RedshiftQueryHandler:
         Returns:
             True if the filter should be applied as a co-relationship filter; False otherwise.
         """
-        if self.entity == "countries":
+        if self.entity in ["countries", "institutions"]:
             return False # Works without special casing
         config = self.works_config.get(column_id)
         return bool(config.get("objectEntity") and config.get("objectEntity") == self.entity)
@@ -350,8 +350,6 @@ class RedshiftQueryHandler:
             return aliased(models.Affiliation).author_id
         elif self.entity == "funders":
             return aliased(models.WorkFunder).funder_id
-        elif self.entity == "institutions":
-            return aliased(models.Institution).affiliation_id
         
         raise ValueError(f"Unsupported co-relationship filter for entity {self.entity}")
 
@@ -473,8 +471,8 @@ class RedshiftQueryHandler:
         value = filter.get("value")
         operator = filter.get("operator") or config.get("defaultOperator")
 
-        #print("Building work filter: ")
-        #print(filter, flush=True)
+        print("Building work filter: ")
+        print(filter, flush=True)
 
         # ensure is valid filter
         if key is None:
@@ -516,6 +514,7 @@ class RedshiftQueryHandler:
 
         elif key == "authorships.institutions.id":
             value = get_short_id_integer(value)
+            print(f"Building work filter: key={key}, value={value} on {model_column}", flush=True)
             return build_operator_condition(model_column, operator, value)
 
         elif key == "authorships.institutions.type":
@@ -585,7 +584,6 @@ class RedshiftQueryHandler:
         elif key == "authorships.institutions.continent":
             wiki_code = get_short_id_text(value)
             value = convert_wiki_to_continent_id(wiki_code)
-            affiliation_continent_class = getattr(models, "AffiliationContinentDistinct")
             join_condition = models.AffiliationContinentDistinct.paper_id == work_class.paper_id
             filter_column = models.AffiliationContinentDistinct.continent_id
             filter_condition = build_operator_condition(filter_column, operator, value)
