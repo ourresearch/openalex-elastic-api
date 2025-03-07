@@ -69,7 +69,6 @@ def get_search(id):
         search["is_ready"] = False
         search["is_completed"] = False
         search["backend_error"] = None
-        search["redshift_sql"] = None
         search["timestamps"]["completed"] = None
         search["bypass_cache"] = True
         

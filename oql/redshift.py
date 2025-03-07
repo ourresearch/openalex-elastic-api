@@ -675,6 +675,18 @@ class RedshiftQueryHandler:
             value = convert_wiki_to_continent_id(value)
             return build_operator_condition(model_column, operator, value)
 
+        elif key == "host_organization" and self.entity == "sources":
+            value = get_short_id_integer(value)
+            return build_operator_condition(model_column, operator, value)
+
+        elif key == "country_code" or key == "last_known_institutions.country_code":
+            value = get_short_id_text(value).upper()
+            return build_operator_condition(model_column, operator, value)
+
+        elif key in ["type", "last_known_institutions.type"]:
+            value = get_short_id_text(value)
+            return build_operator_condition(model_column, operator, value)
+
         elif key == "related_to_text" and self.entity == "authors":
             r = requests.get(f"https://api.openalex.org/text/related-authors?text={value}")
             if r.status_code == 200:
@@ -699,29 +711,6 @@ class RedshiftQueryHandler:
             join_condition = models.Affiliation.author_id == entity_class.author_id
             filter_condition = build_operator_condition(models.Affiliation.affiliation_id, operator, value)
             return and_(join_condition, filter_condition)
-
-        elif key == "affiliations.institution.country_code" and self.entity == "authors":
-            value = get_short_id_text(value).upper()
-            affiliation_class = aliased(getattr(models, "Affiliation"))
-            institution_class = aliased(getattr(models, "Institution"))
-            join_condition = and_(
-                affiliation_class.author_id == entity_class.author_id,
-                institution_class.affiliation_id == affiliation_class.affiliation_id,
-            )
-            filter_condition = build_operator_condition(institution_class.country_code, operator, value)
-            return and_(join_condition, filter_condition)
-
-        elif key == "host_organization" and self.entity == "sources":
-            value = get_short_id_integer(value)
-            return build_operator_condition(model_column, operator, value)
-
-        elif key == "country_code":
-            value = get_short_id_text(value).upper()
-            return build_operator_condition(model_column, operator, value)
-
-        elif key in ["type", "last_known_institutions.type"]:
-            value = get_short_id_text(value)
-            return build_operator_condition(model_column, operator, value)
 
         elif column_type in ["object", "array"] and is_object_entity:
             value = get_short_id_text(value) if column_type == "object" else value

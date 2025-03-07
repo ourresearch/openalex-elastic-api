@@ -184,13 +184,9 @@ columns:
     displayName: country
     type: array
     isCountry: true
-    redshiftDisplayColumn: country_code
-    redshiftFilterColumn: country_code
+    redshiftDisplayColumn: 
+    redshiftFilterColumn: 
     actions:
-      - filter
-      - group_by
-    actionsPopular:
-      - filter
     icon: mdi-earth
     descr: The countries of the institutions that the author has been affiliated with.
   last_known_institutions.id:
@@ -236,7 +232,6 @@ columns:
     descr: The names of the latest institution that the author has been affiliated with in OpenAlex.
   last_known_institutions.country_code:
     id: last_known_institutions.country_code
-    isList: true
     subjectEntity: authors
     operators:
       - is
@@ -245,20 +240,21 @@ columns:
     entityId: countries
     objectEntity: countries
     isId: true
-    displayName: institution country
-    type: array
+    displayName: country
+    type: string
     isCountry: true
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
+    redshiftDisplayColumn: affiliation_country_id
+    redshiftFilterColumn: affiliation_country_id
     actions:
       - filter
+      - column
+      - sort
       - group_by
     actionsPopular:
       - filter
       - group_by
     icon: mdi-earth
-    descr: The country of the latest institution that the author has been affiliated
-      with in OpenAlex.
+    descr: The country of the latest institution that the author has been affiliated with in OpenAlex.
   last_known_institutions.type:
     id: last_known_institutions.type
     isList: true

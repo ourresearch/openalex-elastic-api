@@ -167,6 +167,7 @@ class Author(db.Model):
     affiliation_id = Column(String(500))
     affiliation_display_name = Column(String(65535))
     affiliation_type = Column(String(500))
+    affiliation_country_id = Column(String(500))
     past_affiliation_ids = Column(String(65535))
     past_affiliation_display_names = Column(String(65535))
     past_affiliation_types = Column(String(65535))
