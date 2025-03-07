@@ -107,8 +107,8 @@ class Query:
                     #print(f"Ephemeral Model: Setting column: {key} to {row[key]}", flush=True)
                     setattr(ephemeral_model, redshift_column, row[key])
 
-            # Skip "deleted" works
-            if ephemeral_model.id == "works/W4285719527":
+            # Skip "deleted" works or null author ID
+            if ephemeral_model.id == "works/W4285719527" or ephemeral_model.id == "authors/A9999999999":
                 continue
 
             result_data = {}
