@@ -497,13 +497,6 @@ class RedshiftQueryHandler:
         elif column_type == "number":
             return build_number_condition(model_column, operator, value)
 
-        elif key == "keywords.id":
-            value = get_short_id_text(value)
-            join_condition = models.WorkKeyword.paper_id == work_class.paper_id
-            filter_column = models.WorkKeyword.keyword_id
-            filter_condition = build_operator_condition(filter_column, operator, value)
-            return and_(join_condition, filter_condition)            
-
         elif key in ["type", "language", "license", "primary_location.source.type"]:
             value = get_short_id_text(value).lower()
             return build_operator_condition(model_column, operator, value)
@@ -514,8 +507,18 @@ class RedshiftQueryHandler:
 
         elif key == "authorships.institutions.id":
             value = get_short_id_integer(value)
-            print(f"Building work filter: key={key}, value={value} on {model_column}", flush=True)
             return build_operator_condition(model_column, operator, value)
+
+        elif key == "id":
+            value = get_short_id_integer(value)
+            return build_operator_condition(model_column, operator, value)
+
+        elif key == "keywords.id":
+            value = get_short_id_text(value)
+            join_condition = models.WorkKeyword.paper_id == work_class.paper_id
+            filter_column = models.WorkKeyword.keyword_id
+            filter_condition = build_operator_condition(filter_column, operator, value)
+            return and_(join_condition, filter_condition)            
 
         elif key == "authorships.institutions.type":
             value = get_short_id_text(value)
@@ -531,13 +534,6 @@ class RedshiftQueryHandler:
             filter_condition = build_operator_condition(filter_column, operator, value)
             return and_(join_condition, filter_condition)
 
-        elif key == "authorships.institutions.is_global_south":
-            value = get_boolean_value(value)
-            join_condition = models.Affiliation.paper_id == work_class.paper_id
-            filter_column = models.Affiliation.is_global_south
-            filter_condition = build_operator_condition(filter_column, operator, value)
-            return and_(join_condition, filter_condition)
-
         elif key == "authorships.institutions.ror":
             join_condition = and_(
                 models.Work.paper_id == models.Affiliation.paper_id,
@@ -545,13 +541,6 @@ class RedshiftQueryHandler:
             )
             filter_condition = models.Institution.ror == value
             return and_(join_condition, filter_condition)
-
-        elif key == "id":
-            if isinstance(value, str):
-                value = get_short_id_integer(value)
-            elif isinstance(value, int):
-                value = int(value)
-            return build_operator_condition(model_column, operator, value)
 
         elif key == "authorships.author.orcid":
             join_condition = and_(
@@ -933,8 +922,8 @@ class RedshiftQueryHandler:
 
 
 def build_operator_condition(column, operator, value):
-    #print("model_column / operator / value ")
-    #print(f"{column} / {operator} / {value}", flush=True)
+    print("model_column / operator / value ")
+    print(f"{column} / {operator} / {value}", flush=True)
     if operator == "is":
         return column == value
     elif operator == "is not":
@@ -1045,6 +1034,8 @@ def get_short_id_text(value):
 
 
 def get_short_id_integer(value):
+    if isinstance(value, int):
+        return value
     value = get_short_id_text(value)
     value = re.sub(r"[a-zA-Z]", "", value)
     value = int(value)

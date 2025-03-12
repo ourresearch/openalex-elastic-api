@@ -44,6 +44,7 @@ class Work(db.Model):
     country_display_names = Column(String(65535))
     continent_ids = Column(String(65535))
     continent_display_names = Column(String(65535))
+    is_global_south = Column(Boolean)
     author_ids = Column(String(65535))
     author_display_names = Column(String(65535))
     funder_ids = Column(String(65535))
