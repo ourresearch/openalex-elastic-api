@@ -30,27 +30,12 @@ sentry_sdk.init(
 
 def fetch_results(query):
     with app.app_context():
-        entity = query.get("get_rows")
-        filter_works = query.get("filter_works")
-        filter_aggs = query.get("filter_aggs")
-        show_columns = query.get("show_columns")
-        sort_by_column = query.get("sort_by_column")
-        sort_by_order = query.get("sort_by_order")
-
-        query_obj = Query(
-            entity=entity,
-            filter_works=filter_works,
-            filter_aggs=filter_aggs,
-            show_columns=show_columns,
-            sort_by_column=sort_by_column,
-            sort_by_order=sort_by_order,
-        )
-
+        query_obj = Query(query)
         json_data = query_obj.execute()
 
         results_table = ResultTable(
-            entity=entity,
-            show_columns=show_columns,
+            entity=query.get_rows,
+            show_columns=query.show_columns,
             json_data=json_data,
             total_count=query_obj.total_count,
             page=1,
@@ -91,6 +76,7 @@ def process_search(search_id):
         search["backend_error"] = None
         search["attempts"] = 0
         search["timestamps"] = {}
+        search["redshift_sql"] = Query(search["query"]).get_sql()
         print(f"Clearing old results for search {search_id}", flush=True)
         redis_db.set(search_id, json.dumps(search))
 

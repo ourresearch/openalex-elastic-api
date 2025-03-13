@@ -30,14 +30,7 @@ def create_search():
     #print("create_search")
     #print(raw_query, flush=True)
 
-    query = Query(
-        entity=raw_query.get("get_rows"),
-        filter_works=raw_query.get("filter_works"),
-        filter_aggs=raw_query.get("filter_aggs"),
-        show_columns=raw_query.get("show_columns"),
-        sort_by_column=raw_query.get("sort_by_column"),
-        sort_by_order=raw_query.get("sort_by_order"),
-    )
+    query = Query(raw_query)
 
     # validate the query
     oqo = OQOValidator(all_entities_config)
@@ -71,7 +64,7 @@ def get_search(id):
         search["backend_error"] = None
         search["timestamps"]["completed"] = None
         search["bypass_cache"] = True
-        
+        search["redshift_sql"] = Query(search["query"]).get_sql()
         redis_db.set(id, json.dumps(search))
         # Re-add to queue for processing
         print(f"Pushing {id} to search_queue", flush=True)
@@ -86,26 +79,22 @@ def results():
     For testing OQL queries and results.
     """
     # set results from json
-    entity = request.json.get("get_rows")
-    filter_works = request.json.get("filter_works")
-    filter_aggs = request.json.get("filter_aggs")
-    show_columns = request.json.get("show_columns")
-    sort_by_column = request.json.get("sort_by_column")
-    sort_by_order = request.json.get("sort_by_order")
+    raw_query = {
+        "entity": request.json.get("get_rows"),
+        "filter_works": request.json.get("filter_works"),
+        "filter_aggs": request.json.get("filter_aggs"),
+        "show_columns": request.json.get("show_columns"),
+        "sort_by_column": request.json.get("sort_by_column"),
+        "sort_by_order": request.json.get("sort_by_order"),
+    }
 
     # query object
-    query = Query(
-        entity=entity,
-        filter_works=filter_works,
-        filter_aggs=filter_aggs,
-        show_columns=show_columns,
-        sort_by_column=sort_by_column,
-        sort_by_order=sort_by_order,
-    )
+    query = Query(raw_query)
 
+    raw_query = query.to_dict()
     # validate the query
     oqo = OQOValidator(all_entities_config)
-    ok, error = oqo.validate(query.to_dict())
+    ok, error = oqo.validate(raw_query)
 
     if not ok:
         return jsonify({"invalid query error": error}), 400

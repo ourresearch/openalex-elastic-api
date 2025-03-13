@@ -14,13 +14,13 @@ class Query:
     """
     Query object to execute a query and return results. Also sets the defaults for the query.
     """
-    def __init__(self, entity, filter_works, filter_aggs, show_columns, sort_by_column, sort_by_order):
-        self.entity = entity or "works"
-        self.filter_works = filter_works or []
-        self.filter_aggs = filter_aggs or []
-        self.sort_by_column = sort_by_column or self.default_sort_by_column()
-        self.sort_by_order = sort_by_order or self.default_sort_by_order()
-        self.show_columns = self.set_show_columns(show_columns)
+    def __init__(self, raw_query):
+        self.entity = raw_query.get("get_rows", "works")
+        self.filter_works = raw_query.get("filter_works", [])
+        self.filter_aggs = raw_query.get("filter_aggs", [])
+        self.sort_by_column = raw_query.get("sort_by_column", self.default_sort_by_column())
+        self.sort_by_order = raw_query.get("sort_by_order", self.default_sort_by_order())
+        self.show_columns = self.set_show_columns(raw_query.get("show_columns", []))
         self.total_count = 0
         self.valid_columns = self.get_valid_columns()
         self.valid_sort_columns = self.get_valid_sort_columns()
