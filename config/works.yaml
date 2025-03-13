@@ -331,23 +331,23 @@ columns:
     actionsPopular: []
     icon: mdi-tag-outline
     descr: The name of the domain of the primary topic of the work.
-  authorships.institutions.id:
-    id: authorships.institutions.id
+  authorships.institutions.lineage:
+    id: authorships.institutions.lineage
     isList: true
     subjectEntity: works
     operators:
-      - includes
-      - does not include
-    defaultOperator: includes
+      - is
+      - is not
+    defaultOperator: is
     displayName: institution
     displayNameForColumn: institution ID
     entityId: institutions
     objectEntity: institutions
     type: string
     category: institution
-    apiField: authorships.institutions.id
+    apiField: authorships.institutions.lineage
     redshiftDisplayColumn: institution_ids
-    redshiftFilterColumn: institution_ids
+    redshiftFilterColumn: 
     actions:
       - filter
       - column

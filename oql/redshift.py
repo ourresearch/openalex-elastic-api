@@ -520,6 +520,13 @@ class RedshiftQueryHandler:
             filter_condition = build_operator_condition(filter_column, operator, value)
             return and_(join_condition, filter_condition)            
 
+        elif key == "authorships.institutions.lineage":
+            value = get_short_id_integer(value)
+            join_condition = models.PaperInstitutionLineage.paper_id == work_class.paper_id
+            filter_column = models.PaperInstitutionLineage.ancestor_id
+            filter_condition = build_operator_condition(filter_column, operator, value)
+            return and_(join_condition, filter_condition)
+
         elif key == "authorships.institutions.type":
             value = get_short_id_text(value)
             join_condition = models.AffiliationTypeDistinct.paper_id == work_class.paper_id
@@ -823,12 +830,10 @@ class RedshiftQueryHandler:
             if self.sort_by_column == column:
                 query = self.sort_from_stat(query, self.sort_by_order, stat_function)
 
-        # If no aggregator columns were applied but we're querying entities other than works or summary,
+        # If no aggregator columns were applied but we're querying entities other than summary,
         # we need to ensure distinct rows for the entity
-        if not grouping_applied and self.entity not in ["works", "summary"]:
-            # Apply grouping by all selected columns to ensure distinct entity rows
-            if self.model_return_columns:
-                query = query.group_by(*self.model_return_columns)
+        if not grouping_applied and self.entity != "summary":
+            query = query.distinct()
 
         return query
 
@@ -928,14 +933,17 @@ def build_operator_condition(column, operator, value):
         return column == value
     elif operator == "is not":
         return column != value
+
     elif operator == "includes":
-        return column.ilike(f"%{value}%")
+        return column.like(f"%|{value}|%")
     elif operator == "does not include":
-        return column.notilike(f"%{value}%")
+        return column.notlike(f"%|{value}|%")
+
     elif operator == "contains":
         return column.ilike(f"%{value}%")
     elif operator == "does not contain":
         return column.notilike(f"%{value}%")
+
     else:
         raise ValueError(f"Unsupported operator: {operator}")
 

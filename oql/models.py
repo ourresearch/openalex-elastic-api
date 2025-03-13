@@ -126,6 +126,14 @@ class AffiliationAuthorDistinct(db.Model):
     author_ids = db.Column(db.String(65535))
 
 
+class PaperInstitutionLineage(db.Model):
+    __tablename__ = 'paper_institution_lineage_mv'
+    paper_id = db.Column(db.BigInteger, primary_key=True)
+    author_id = db.Column(db.BigInteger, primary_key=True)
+    institution_id = db.Column(db.BigInteger, primary_key=True)
+    ancestor_id = db.Column(db.BigInteger, primary_key=True)
+
+
 class AffiliationCountryDistinct(db.Model):
     __tablename__ = "paper_country_distinct_mv"
 

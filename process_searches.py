@@ -34,8 +34,8 @@ def fetch_results(query):
         json_data = query_obj.execute()
 
         results_table = ResultTable(
-            entity=query.get_rows,
-            show_columns=query.show_columns,
+            entity=query_obj.entity,
+            show_columns=query_obj.show_columns,
             json_data=json_data,
             total_count=query_obj.total_count,
             page=1,
@@ -76,7 +76,8 @@ def process_search(search_id):
         search["backend_error"] = None
         search["attempts"] = 0
         search["timestamps"] = {}
-        search["redshift_sql"] = Query(search["query"]).get_sql()
+        with app.app_context():
+            search["redshift_sql"] = Query(search["query"]).get_sql()
         print(f"Clearing old results for search {search_id}", flush=True)
         redis_db.set(search_id, json.dumps(search))
 
@@ -118,13 +119,16 @@ def process_search(search_id):
 
     except Exception as e:
         tb = traceback.extract_tb(e.__traceback__)
+        error_frames = []
         for frame in tb:
-            error_msg = f"Error: {e}, File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}"
+            error_frames.append(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}")
+        
+        error_msg = f"Error: {e}\nTraceback:\n" + "\n".join(error_frames)
         print(error_msg, flush=True)
 
         # Check if it's a connection error and handle retries
-        print(f"Debug - Error string: {error_msg}", flush=True)
-        if any(error in error_msg for error in ("ConnectionError", "ConnectionTimeout", "OperationalError")):
+        print(f"Debug - Error string: {str(e)}", flush=True)
+        if any(error in str(e) for error in ("ConnectionError", "ConnectionTimeout", "OperationalError")):
             attempts = search.get("attempts", 0) + 1
             search["attempts"] = attempts
             
