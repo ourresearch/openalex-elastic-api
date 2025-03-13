@@ -558,17 +558,11 @@ class RedshiftQueryHandler:
             return and_(join_condition, filter_condition)
 
         elif key == "grants.funder" and self.entity == "funders":
+            # TODO check this is still needed / working
             # co-relationship: The extra join (added in build_joins) has restricted works to those funded by X.
             # Now, filter out X from the final results.
             value = get_short_id_integer(value)
             return build_operator_condition(models.Funder.funder_id, "is not", value)
-
-        elif key == "grants.funder":
-            value = get_short_id_integer(value)
-            join_condition = models.WorkFunder.paper_id == work_class.paper_id
-            filter_column = models.WorkFunder.funder_id
-            filter_condition = build_operator_condition(filter_column, operator, value)
-            return and_(join_condition, filter_condition)
 
         elif key == "sustainable_development_goals.id":
             value = get_short_id_integer(value)
