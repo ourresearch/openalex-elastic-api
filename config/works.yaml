@@ -151,63 +151,48 @@ columns:
     isId: true
     subjectEntity: works
     operators:
-      - is
-      - is not
-    defaultOperator: is
+      - includes
+      - does not include
+    defaultOperator: includes
     displayName: keyword
-    entityId: keywords
-    objectEntity: keywords
-    type: array
-    category: other
-    apiField: keywords.id
-    redshiftDisplayColumn: 
-    redshiftFilterColumn: keyword_id
-    actions:
-      - filter
-    actionsPopular:
-      - filter
-      - group_by
-    icon: mdi-tag-outline
-    descr: Keywords associated with the work.
-  keywords.ids:
-    id: keywords.ids
-    isList: true
-    isId: true
-    subjectEntity: works
-    operators:
-    defaultOperator:
-    displayName: keyword IDs
     entityId: keywords
     objectEntity: keywords
     type: string
     category: other
-    apiField: 
+    apiField: keywords.id
     redshiftDisplayColumn: keyword_ids
-    redshiftFilterColumn:
+    redshiftFilterColumn: keyword_ids
     actions:
+      - filter
       - column
     actionsPopular:
+      - filter
+      - column
+      - group_by
     icon: mdi-tag-outline
-    descr: Keyword IDs associated with the work.
+    descr: Keywords associated with the work.
   keywords.display_names:
     id: keywords.display_names
     isList: true
     subjectEntity: works
     operators:
-    defaultOperator:
-    displayName: keywords
+      - contains
+      - does not contain
+    defaultOperator: contains
+    displayName: keyword name
     entityId: keywords
     objectEntity: keywords
     type: string
     category: other
     apiField:
     redshiftDisplayColumn: keyword_display_names
-    redshiftFilterColumn:
+    redshiftFilterColumn: keyword_display_names
     actions:
+      - filter
       - column
     actionsPopular:
     icon: mdi-tag-outline
-    descr: Keywords associated with the work.
+    descr: Keyword names associated with the work.
   primary_topic.subfield.id:
     id: primary_topic.subfield.id
     subjectEntity: works

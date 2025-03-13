@@ -488,39 +488,37 @@ class RedshiftQueryHandler:
             work_class, redshift_column, None
         )  if redshift_column else None # primary column to filter against
 
+        #print(config, flush=True)
+
         if self.is_co_relationship_filter(key):
             # "Co-relationship" filters use additional join (see below)
             value = get_short_id_integer(value)
             column = self.get_co_relationship_filter_column()
-            operator = {"includes": "is", "excludes": "is not"}.get(operator, operator)
+            operator = {"includes": "is", "does not include": "is not"}.get(operator, operator)
             return build_operator_condition(column, operator, value)
 
         elif column_type == "number":
             return build_number_condition(model_column, operator, value)
 
-        elif key in ["type", "language", "license", "primary_location.source.type"]:
+        elif key in ["type", "language", "license", "keywords.id", "primary_location.source.type"]:
             value = get_short_id_text(value).lower()
-            return build_operator_condition(model_column, operator, value)
 
         elif key == "authorships.countries":
             value = get_short_id_text(value).upper()  # Country codes must be uppercase
-            return build_operator_condition(model_column, operator, value)
 
-        elif key == "authorships.institutions.id":
+        elif key in ["id","authorships.institutions.id"]:
             value = get_short_id_integer(value)
-            return build_operator_condition(model_column, operator, value)
+        
+        elif key == "abstract":
+            model_column = models.Abstract.abstract
 
-        elif key == "id":
-            value = get_short_id_integer(value)
-            return build_operator_condition(model_column, operator, value)
-
-        elif key == "keywords.id":
-            value = get_short_id_text(value)
-            join_condition = models.WorkKeyword.paper_id == work_class.paper_id
-            filter_column = models.WorkKeyword.keyword_id
-            filter_condition = build_operator_condition(filter_column, operator, value)
-            return and_(join_condition, filter_condition)            
-
+        elif key == "title_and_abstract":
+            model_column = models.Work.original_title
+            return or_(
+                build_operator_condition(models.Work.original_title, operator, value),
+                build_operator_condition(models.Abstract.abstract, operator, value)
+            )
+        
         elif key == "authorships.institutions.lineage":
             value = get_short_id_integer(value)
             join_condition = models.PaperInstitutionLineage.paper_id == work_class.paper_id
@@ -590,21 +588,11 @@ class RedshiftQueryHandler:
                 raise ValueError(f"Failed to get related works for text: {value}")
        
         elif column_type in ["object", "array"] or is_object_entity:
+            # TODO check that this case is still relevant
             value = get_short_id_integer(value)
-            return build_operator_condition(model_column, operator, value)
 
-        elif key == "abstract":
-            model_column = models.Abstract.abstract
-            return build_operator_condition(model_column, operator, value)
-
-        elif key == "title_and_abstract":
-            return or_(
-                build_operator_condition(models.Work.original_title, operator, value),
-                build_operator_condition(models.Abstract.abstract, operator, value)
-            )
-
-        else:
-            return build_operator_condition(model_column, operator, value)
+        # Return value for all cases that just set these three values, or default case 
+        return build_operator_condition(model_column, operator, value)
 
     def build_entity_filter_condition(self, filter):
         """ Returns a `condition` which represents `filter` for entities."""
@@ -922,8 +910,8 @@ class RedshiftQueryHandler:
 
 
 def build_operator_condition(column, operator, value):
-    print("model_column / operator / value ")
-    print(f"{column} / {operator} / {value}", flush=True)
+    #print("model_column / operator / value ")
+    #print(f"{column} / {operator} / {value}", flush=True)
     if operator == "is":
         return column == value
     elif operator == "is not":
