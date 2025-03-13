@@ -492,6 +492,7 @@ class RedshiftQueryHandler:
             # "Co-relationship" filters use additional join (see below)
             value = get_short_id_integer(value)
             column = self.get_co_relationship_filter_column()
+            operator = {"includes": "is", "excludes": "is not"}.get(operator, operator)
             return build_operator_condition(column, operator, value)
 
         elif column_type == "number":
