@@ -357,6 +357,7 @@ class RedshiftQueryHandler:
         columns_to_select = []
         # print("set_columns")
         show_columns = list(set(self.show_columns + ["id"]))
+        show_columns = sorted(show_columns, key=lambda x: not "(" in x) 
             
         for column in show_columns:
             column_info = self.entity_config.get(column)

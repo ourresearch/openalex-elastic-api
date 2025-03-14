@@ -1195,7 +1195,7 @@ columns:
     subjectEntity: works
     operators:
     defaultOperator:
-    displayName: mean(fwci)
+    displayName: mean FWCI
     objectEntity:
     type: number
     apiField: mean(fwci)
