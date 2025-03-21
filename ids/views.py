@@ -183,6 +183,69 @@ def works_v2_id_get(id):
             return jsonify(result)
 
 
+@blueprint.route("/v2/works-batch", methods=["POST"])
+def works_v2_batch_get():
+    request_data = request.get_json()
+
+    if not request_data or not isinstance(request_data, dict) or "ids" not in request_data:
+        return jsonify({"error": "Request must include 'ids' field"}), 400
+
+    ids = request_data.get("ids", [])
+
+    if not isinstance(ids, list):
+        return jsonify({"error": "'ids' must be a list"}), 400
+
+    if len(ids) > 100:
+        return jsonify({"error": "Maximum of 100 IDs allowed per request"}), 400
+
+    if len(ids) == 0:
+        return jsonify([])
+
+    normalized_ids = []
+    for id in ids:
+        if is_openalex_id(id):
+            clean_id = normalize_openalex_id(id)
+            clean_id = int(clean_id[1:])
+            full_openalex_id = f"https://openalex.org/W{clean_id}"
+            normalized_ids.append(full_openalex_id)
+        else:
+            # Skip invalid IDs or return error based on your preference
+            continue
+
+    if not normalized_ids:
+        return jsonify({"error": "No valid IDs provided"}), 400
+
+    # Connect to database and fetch results
+    results = []
+    with sql.connect(
+            server_hostname=settings.DATABRICKS_HOST,
+            http_path=settings.DATABRICKS_HTTP_PATH,
+            access_token=settings.DATABRICKS_TOKEN,
+    ) as connection:
+        with connection.cursor() as cursor:
+            # Use parameterized query with IN clause
+            placeholders = ", ".join(["%s"] * len(normalized_ids))
+            query = f"SELECT id, json_str FROM openalex.works.openalex_works_json WHERE id IN ({placeholders})"
+            cursor.execute(query, normalized_ids)
+
+            rows = cursor.fetchall()
+
+            # Process results
+            id_to_result = {}
+            for row in rows:
+                db_id, json_str = row
+                result = json.loads(json_str)
+                id_to_result[db_id] = result
+
+            # Preserve original order from request
+            for full_id in normalized_ids:
+                if full_id in id_to_result:
+                    results.append(id_to_result[full_id])
+                else:
+                    results.append(None)
+    return jsonify(results)
+
+
 @blueprint.route("/v2-elastic/works/<path:id>")
 def works_v2_elastic_id_get(id):
     s = Search(index=settings.WORKS_INDEX, using="v2")
