@@ -1160,7 +1160,7 @@ columns:
     icon: mdi-file-document-outline
     descr: Vector search across title and abstract.
   count:
-    id: count
+    id: count(works)
     subjectEntity: works
     operators:
     defaultOperator:

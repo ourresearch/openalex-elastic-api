@@ -254,7 +254,7 @@ columns:
     descr: The mean Field-Weighted Citation Impact (FWCI) of the institution across
       all works
   count(works):
-    id: count
+    id: count(works)
     subjectEntity: institutions
     operators:
       - is
