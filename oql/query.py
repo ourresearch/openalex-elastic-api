@@ -22,6 +22,7 @@ class Query:
         self.sort_by_order = raw_query.get("sort_by_order", self.default_sort_by_order())
         self.show_columns = self.set_show_columns(raw_query.get("show_columns", []))
         self.total_count = 0
+        self.works_count = 0
         self.valid_columns = self.get_valid_columns()
         self.valid_sort_columns = self.get_valid_sort_columns()
         self.source = None
@@ -64,8 +65,9 @@ class Query:
         
         else:
             print(f"Initiating redshift query for {self.entity}")
-            total_count, results = self.redshift_handler.execute()
+            total_count, works_count, results = self.redshift_handler.execute()
             self.total_count = total_count
+            self.works_count = works_count
             timestamps["core_query_completed"] = datetime.now(timezone.utc).isoformat()
             json_data = self.format_redshift_results_as_json(results)
             timestamps["secondary_queries_completed"] = datetime.now(timezone.utc).isoformat()
@@ -227,7 +229,6 @@ class Query:
             "sort_by_column": self.sort_by_column,
             "sort_by_order": self.sort_by_order,
         }
-
 
 
 def convert_to_snake_case(name):

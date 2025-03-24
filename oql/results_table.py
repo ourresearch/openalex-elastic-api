@@ -2,13 +2,14 @@ from combined_config import all_entities_config
 
 
 class ResultTable:
-    def __init__(self, entity, show_columns, json_data, page=1, per_page=100, total_count=0):
+    def __init__(self, entity, show_columns, json_data, page=1, per_page=100, total_count=0, works_count=0):
         self.entity = "works" if entity == "summary" else entity
         self.show_columns = show_columns
         self.json_data = json_data
         self.page = page
         self.per_page = per_page
         self.total_count = total_count
+        self.works_count = works_count
 
     def header(self):
         return [
@@ -64,6 +65,7 @@ class ResultTable:
     def meta(self):
         return {
             "count": self.total_count,
+            "works_count": self.works_count,
             "page": self.page,
             "per_page": self.per_page,
             "oql": None,

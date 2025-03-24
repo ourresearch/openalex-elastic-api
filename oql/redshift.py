@@ -1,8 +1,8 @@
 import re
+from copy import deepcopy
 
 import requests
-from sqlalchemy import and_, column, or_, case, cast, desc, func, Float
-from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import and_, or_, case, cast, desc, func, Float
 from sqlalchemy.orm import aliased
 from sqlalchemy.dialects import postgresql
 
@@ -35,14 +35,22 @@ class RedshiftQueryHandler:
         self.filter_joins = []
 
     def execute(self):
+        # Build the base query with all necessary joins
         query = self.build_query()
-        # print("Executing redshift count query")
-        count_query = db.session.query(func.count()).select_from(query.subquery())
-        total_count = db.session.execute(count_query).scalar()
 
-        results = query.limit(100).all()
+        # Use the final grouped query for the aggregated results.
+        grouped_cte = query.cte()
+        total_count = db.session.query(func.count()).select_from(grouped_cte).scalar() or 0
+        results = db.session.query(grouped_cte).limit(100).all()
 
-        return total_count, results
+        # Compute works_count as the number of rows returned by the ungrouped query.
+        if self.entity == "works":
+            works_count = total_count
+        else:
+            ungrouped_subq = self.ungrouped_query.subquery()
+            works_count = db.session.query(func.count()).select_from(ungrouped_subq).scalar() or 0
+
+        return total_count, works_count, results
 
     def execute_summary(self):
         summary_query = self.build_query()
@@ -336,7 +344,7 @@ class RedshiftQueryHandler:
         Returns:
             True if the filter should be applied as a co-relationship filter; False otherwise.
         """
-        if self.entity in ["countries", "institutions"]:
+        if self.entity in ["countries", "institutions", "keywords"]:
             return False # Works without special casing
         config = self.works_config.get(column_id)
         return bool(config.get("objectEntity") and config.get("objectEntity") == self.entity)
@@ -794,8 +802,10 @@ class RedshiftQueryHandler:
                     func.count(work_class.paper_id).cast(Float)
                 )
 
-            # Apply "group_by + add_columns + filter_stats + sort" determined above:
+            # Save a copy of query before grouping for works count
+            self.ungrouped_query = query._clone()
 
+            # Apply "group_by + add_columns + filter_stats + sort" determined above:
             # Combine existing group-by columns (from set_columns) with any extra
             all_groupbys = self.model_return_columns + extra_groupbys
             if all_groupbys:

@@ -38,6 +38,7 @@ def fetch_results(query):
             show_columns=query_obj.show_columns,
             json_data=json_data,
             total_count=query_obj.total_count,
+            works_count=query_obj.works_count,
             page=1,
             per_page=100,
         )
