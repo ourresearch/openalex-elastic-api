@@ -47,7 +47,7 @@ class RedshiftQueryHandler:
         if self.entity == "works":
             works_count = total_count
         else:
-            ungrouped_subq = self.ungrouped_query.subquery()
+            ungrouped_subq = self.ungrouped_query.distinct(models.Work.paper_id).subquery()
             works_count = db.session.query(func.count()).select_from(ungrouped_subq).scalar() or 0
 
         return total_count, works_count, results
