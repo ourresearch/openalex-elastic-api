@@ -2,8 +2,8 @@ import re
 from copy import deepcopy
 
 import requests
-from sqlalchemy import and_, or_, case, cast, desc, func, Float
-from sqlalchemy.orm import aliased
+from sqlalchemy import and_, or_, case, cast, desc, func, distinct, Float
+from sqlalchemy.orm import aliased, load_only
 from sqlalchemy.dialects import postgresql
 
 from combined_config import all_entities_config
@@ -47,8 +47,12 @@ class RedshiftQueryHandler:
         if self.entity == "works":
             works_count = total_count
         else:
-            ungrouped_subq = self.ungrouped_query.distinct(models.Work.paper_id).subquery()
-            works_count = db.session.query(func.count()).select_from(ungrouped_subq).scalar() or 0
+            # Before wrapping the query, ensure that models.Work.paper_id is included.
+            # (This may be necessary because set_columns might not have added it.)
+            if not any(col.get("name") == "paper_id" for col in self.ungrouped_query.column_descriptions):
+                self.ungrouped_query = self.ungrouped_query.add_columns(models.Work.paper_id.label("paper_id"))
+            subq = self.ungrouped_query.subquery()
+            works_count = db.session.query(func.count(distinct(subq.c.paper_id))).scalar()
 
         return total_count, works_count, results
 
