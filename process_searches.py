@@ -34,7 +34,7 @@ def fetch_results(query):
         json_data = query_obj.execute()
 
         results_table = ResultTable(
-            entity=query_obj.entity,
+            entity=query_obj.entity if not query_obj.show_underlying_works else "works",
             show_columns=query_obj.show_columns,
             json_data=json_data,
             total_count=query_obj.total_count,

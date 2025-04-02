@@ -21,6 +21,7 @@ class Query:
         self.sort_by_column = raw_query.get("sort_by_column", self.default_sort_by_column())
         self.sort_by_order = raw_query.get("sort_by_order", self.default_sort_by_order())
         self.show_columns = self.set_show_columns(raw_query.get("show_columns", []))
+        self.show_underlying_works = raw_query.get("show_underlying_works", False)
         self.total_count = 0
         self.works_count = 0
         self.valid_columns = self.get_valid_columns()
@@ -43,7 +44,8 @@ class Query:
             sort_by_column=self.sort_by_column,
             sort_by_order=self.sort_by_order,
             show_columns=self.show_columns,
-            valid_columns=self.valid_columns
+            valid_columns=self.valid_columns,
+            show_underlying_works=self.show_underlying_works
         )
 
     def get_filter_by(self):
@@ -85,13 +87,17 @@ class Query:
         """
         json_data = {"results": []}
 
+        entity = self.entity if not self.show_underlying_works else "works"
+
         output_columns = list(set(self.show_columns + ["id"]))
-        entity_class = get_entity_class(self.entity)
-        entity_columns_config = all_entities_config[self.entity]["columns"]
+        entity_class = get_entity_class(entity)
+        entity_columns_config = all_entities_config[entity]["columns"]
         #print(f"output_columns: {output_columns}", flush=True)
         redshift_columns = {column: entity_columns_config.get(column, {}).get("redshiftDisplayColumn", None) for column in output_columns}
 
         #print(f"redshift_display_columns: {redshift_display_columns}", flush=True)
+
+        print(f"First Row: {results[0]}", flush=True)
 
         for row in results:
             # Create an ephemeral model instance so we can call property methods
@@ -129,7 +135,7 @@ class Query:
                 if is_model_property(redshift_column, entity_class):
                     attr_value = getattr(ephemeral_model, redshift_column, None)
                     if callable(attr_value):
-                        #print("Calling property method", flush=True)
+                        print(f"Calling property method for {redshift_column}", flush=True)
                         attr_value = attr_value()
                     result_data[col_name] = attr_value
                     #print(f"Setting column: {col_name} to {attr_value}", flush=True)
@@ -228,6 +234,7 @@ class Query:
             "show_columns": self.show_columns,
             "sort_by_column": self.sort_by_column,
             "sort_by_order": self.sort_by_order,
+            "show_underlying_works": self.show_underlying_works,
         }
 
 

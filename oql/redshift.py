@@ -21,6 +21,7 @@ class RedshiftQueryHandler:
         sort_by_column,
         sort_by_order,
         valid_columns,
+        show_underlying_works,
     ):
         self.entity = entity
         self.filter_works = filter_works
@@ -30,6 +31,7 @@ class RedshiftQueryHandler:
         self.sort_by_order = sort_by_order
         self.valid_columns = valid_columns
         self.model_return_columns = []
+        self.show_underlying_works = show_underlying_works
         self.entity_config = self.get_entity_config()
         self.works_config = all_entities_config.get("works").get("columns")
         self.filter_joins = []
@@ -44,7 +46,7 @@ class RedshiftQueryHandler:
         results = db.session.query(grouped_cte).limit(100).all()
 
         # Compute works_count as the number of rows returned by the ungrouped query.
-        if self.entity == "works":
+        if self.entity == "works" or self.show_underlying_works:
             works_count = total_count
         else:
             # Before wrapping the query, ensure that models.Work.paper_id is included.
@@ -76,16 +78,20 @@ class RedshiftQueryHandler:
 
     def build_query(self):
         entity_class = models.get_entity_class(self.entity)
+        columns_entity_class = entity_class if not self.show_underlying_works else models.Work
 
         query = self.build_joins(entity_class)
-        query = self.set_columns(query, entity_class)
+        query = self.set_columns(query, columns_entity_class)
         query = self.apply_work_filters(query)
         query = self.apply_entity_filters(query)  
 
         if self.entity == "summary":
             query = self.apply_summary(query)
+        if self.show_underlying_works:
+            query = self.apply_sort(query, entity_class)
+            query = query.group_by(*self.model_return_columns)
         else:
-            query = self.apply_sort(query, entity_class)  
+            query = self.apply_sort(query, entity_class)
             query = self.apply_stats(query, entity_class)
 
         return query
@@ -370,9 +376,10 @@ class RedshiftQueryHandler:
         # print("set_columns")
         show_columns = list(set(self.show_columns + ["id"]))
         show_columns = sorted(show_columns, key=lambda x: not "(" in x) 
-            
+        config = self.entity_config if not self.show_underlying_works else self.works_config
+
         for column in show_columns:
-            column_info = self.entity_config.get(column)
+            column_info = config.get(column)
             if not column_info:
                 print(f"Skipping {column} - no column config")
                 continue
@@ -398,6 +405,13 @@ class RedshiftQueryHandler:
                 print(f"Adding {column} from redshift_column: {redshift_column}")
                 col_ = getattr(entity_class, redshift_column).label(column)
                 columns_to_select.append(col_)
+
+
+        if self.show_underlying_works:
+            # Fix to prevent SQLAlchemy from dropping joined tables because we're only looking at Work columns
+            # For a query that started with another entity.
+            entity_class = models.get_entity_class(self.entity)
+            columns_to_select.append(entity_class.id.label("entity_id"))
 
         self.model_return_columns = columns_to_select
         return query.with_entities(*columns_to_select)
@@ -725,7 +739,9 @@ class RedshiftQueryHandler:
 
     def apply_sort(self, query, entity_class):
         if self.sort_by_column:
-            sort_column = self.entity_config.get(self.sort_by_column).get(
+            config  = self.entity_config if not self.show_underlying_works else self.works_config
+            
+            sort_column = config.get(self.sort_by_column).get(
                 "redshiftDisplayColumn"
             )
             if (

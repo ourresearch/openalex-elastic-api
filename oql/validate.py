@@ -113,6 +113,7 @@ class OQOValidator:
 
     def _validate_show_columns(self, show_columns, entity='works'):
         for column in show_columns:
+            print(f"Validating {column} against {entity}", flush=True)
             col = self._get_entity_column(entity, column)
             if not col:
                 return False, f'{entity}.{column} not a valid return column'
@@ -137,12 +138,14 @@ class OQOValidator:
             if not ok:
                 return False, error
 
+        return_cols_entity = oqo.get('get_rows') if not oqo.get("show_underlying_works") else "works"
+
         if return_cols := oqo.get('show_columns', []):
             if oqo.get('get_rows') == 'summary':
                 # TODO: not sure yet
                 pass
             else:
-                ok, error = self._validate_show_columns(return_cols, entity=oqo.get('get_rows'))
+                ok, error = self._validate_show_columns(return_cols, entity=return_cols_entity)
                 if not ok:
                     return False, error
         if sort_by_col := oqo.get('sort_by_column'):
@@ -150,7 +153,7 @@ class OQOValidator:
                 # TODO: not sure yet
                 pass
             else:
-                ok, error = self._validate_sort_by_column(sort_by_col, oqo.get('get_rows') or 'works')
+                ok, error = self._validate_sort_by_column(sort_by_col, return_cols_entity)
                 if not ok:
                     return False, error
         if sort_by_dir := oqo.get('sort_by_order'):
@@ -164,5 +167,6 @@ class OQOValidator:
             try:
                 return self._validate(oqo)
             except Exception as e:
+                print(f"Exception in validate: {e}", flush=True)
                 return False, str(e)
         return self._validate(oqo)
