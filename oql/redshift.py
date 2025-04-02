@@ -49,10 +49,7 @@ class RedshiftQueryHandler:
         if self.entity == "works" or self.show_underlying_works:
             works_count = total_count
         else:
-            # Before wrapping the query, ensure that models.Work.paper_id is included.
-            # (This may be necessary because set_columns might not have added it.)
-            if not any(col.get("name") == "paper_id" for col in self.ungrouped_query.column_descriptions):
-                self.ungrouped_query = self.ungrouped_query.add_columns(models.Work.paper_id.label("paper_id"))
+            self.ungrouped_query = self.ungrouped_query.add_columns(models.Work.paper_id.label("paper_id"))
             subq = self.ungrouped_query.subquery()
             works_count = db.session.query(func.count(distinct(subq.c.paper_id))).scalar()
 
@@ -89,7 +86,22 @@ class RedshiftQueryHandler:
             query = self.apply_summary(query)
         if self.show_underlying_works:
             query = self.apply_sort(query, entity_class)
-            query = query.group_by(*self.model_return_columns)
+            # Underlying Works include a column for entity_id, aggregate on that column
+            # so that we can return distinct works rows.
+            new_columns = []
+            for col in self.model_return_columns:
+                if hasattr(col, 'name') and col.name == 'entity_id':
+                    # Instead of just displaying one entity_id, count how many entities are associated with each work
+                    new_columns.append(func.count(col).label('entity_count'))
+                else:
+                    new_columns.append(col)
+            
+            # Group by all columns except entity_id
+            group_by_columns = [col for col in self.model_return_columns 
+                                if not (hasattr(col, 'name') and col.name == 'entity_id')]
+            
+            # Update the query to use these new columns and proper grouping
+            query = query.with_entities(*new_columns).group_by(*group_by_columns)
         else:
             query = self.apply_sort(query, entity_class)
             query = self.apply_stats(query, entity_class)
@@ -409,7 +421,7 @@ class RedshiftQueryHandler:
 
         if self.show_underlying_works:
             # Fix to prevent SQLAlchemy from dropping joined tables because we're only looking at Work columns
-            # For a query that started with another entity.
+            # for a query whose base is with another entity.
             entity_class = models.get_entity_class(self.entity)
             columns_to_select.append(entity_class.id.label("entity_id"))
 

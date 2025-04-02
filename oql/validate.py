@@ -113,7 +113,6 @@ class OQOValidator:
 
     def _validate_show_columns(self, show_columns, entity='works'):
         for column in show_columns:
-            print(f"Validating {column} against {entity}", flush=True)
             col = self._get_entity_column(entity, column)
             if not col:
                 return False, f'{entity}.{column} not a valid return column'

@@ -109,7 +109,7 @@ class Query:
                 redshift_column = redshift_columns.get(key)
                 #print(f"key / redshift_display_column: {key} / {redshift_display_column}", flush=True)
                 if redshift_column is None:
-                    print(f"missing redshift column for key: {key}", flush=True)
+                    #print(f"missing redshift column for key: {key}", flush=True)
                     continue
                 if hasattr(entity_class, redshift_column) and not is_model_hybrid_property(redshift_column, entity_class):
                     #print(f"Ephemeral Model: Setting column: {key} to {row[key]}", flush=True)
