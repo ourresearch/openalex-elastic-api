@@ -6,9 +6,12 @@ from sqlalchemy import and_, or_, case, cast, desc, func, distinct, Float
 from sqlalchemy.orm import aliased, load_only
 from sqlalchemy.dialects import postgresql
 
+from settings import OPEN_ALEX_API_KEY
 from combined_config import all_entities_config
 from extensions import db
 from . import models
+
+auth_headers = {"Authorization": f"Bearer {OPEN_ALEX_API_KEY}"}
 
 
 class RedshiftQueryHandler:
@@ -118,7 +121,6 @@ class RedshiftQueryHandler:
                 or "abstract" in self.filter_keys("works")
                 or "title_and_abstract" in self.filter_keys("works")
                 ):
-                print("Adding join to Abstract", flush=True)
                 query = query.outerjoin(models.Abstract, models.Work.paper_id == models.Abstract.paper_id)
 
         elif self.entity == "institutions":
@@ -414,7 +416,6 @@ class RedshiftQueryHandler:
                 if isinstance(attr, property):
                     # print(f"Skipping {column} - {redshift_column} is property")
                     continue
-                print(f"Adding {column} from redshift_column: {redshift_column}")
                 col_ = getattr(entity_class, redshift_column).label(column)
                 columns_to_select.append(col_)
 
@@ -618,12 +619,15 @@ class RedshiftQueryHandler:
             return and_(join_condition, filter_condition)
 
         elif key == "related_to_text":
-            r = requests.get(f"https://api.openalex.org/text/related-works?text={value}")
+            print(f"related_to_text GET: https://api.openalex.org/text/related-authors?text={value}")
+            print("Headers: ", auth_headers)
+            r = requests.get(f"https://api.openalex.org/text/related-works?text={value}", headers=auth_headers)
             if r.status_code == 200:
                 results = r.json()
                 related_paper_ids = [result["work_id"] for result in results]
                 return work_class.paper_id.in_(related_paper_ids)
             else:
+                print(f"Response code: {r.status_code}")
                 raise ValueError(f"Failed to get related works for text: {value}")
        
         elif column_type in ["object", "array"] or is_object_entity:
@@ -706,12 +710,15 @@ class RedshiftQueryHandler:
             return build_operator_condition(model_column, operator, value)
 
         elif key == "related_to_text" and self.entity == "authors":
-            r = requests.get(f"https://api.openalex.org/text/related-authors?text={value}")
+            print(f"related_to_text GET: https://api.openalex.org/text/related-authors?text={value}")
+            print("Headers: ", auth_headers)
+            r = requests.get(f"https://api.openalex.org/text/related-authors?text={value}", headers=auth_headers)
             if r.status_code == 200:
                 results = r.json()
                 related_author_ids = [result["author_id"] for result in results]
                 return entity_class.author_id.in_(related_author_ids)
             else:
+                print(f"Response code: {r.status_code}")
                 raise ValueError(f"Failed to get related authors for text: {value}")
         
         # specialized filters
