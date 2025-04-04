@@ -97,8 +97,6 @@ class Query:
 
         #print(f"redshift_display_columns: {redshift_display_columns}", flush=True)
 
-        print(f"First Row: {results[0]}", flush=True)
-
         for row in results:
             # Create an ephemeral model instance so we can call property methods
             ephemeral_model = entity_class()
