@@ -5,6 +5,7 @@ import uuid
 import redis
 import yaml
 from flask import Blueprint, request, jsonify, make_response
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from redis.client import Redis
 
 import settings
@@ -23,6 +24,7 @@ search_queue = settings.SEARCH_QUEUE
 
 
 @blueprint.route("/searches", methods=["POST"])
+@jwt_required()
 def create_search():
     raw_query = request.json.get("query")
     bypass_cache = request.json.get("bypass_cache", False)

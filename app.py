@@ -3,6 +3,7 @@ import os
 import sentry_sdk
 from elasticsearch_dsl import connections
 from flask import Flask, jsonify
+from flask_jwt_extended import JWTManager
 from opensearchpy import OpenSearch
 from sentry_sdk.integrations.flask import FlaskIntegration
 
@@ -39,6 +40,14 @@ from extensions import cache, compress, db
 def create_app(config_object="settings"):
     app = Flask(__name__)
     app.config.from_object(config_object)
+
+    # JWT used by Analytics endpoints
+    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False
+    app.config['JWT_REFRESH_TOKEN_EXPIRES'] = False
+    app.config['JWT_TOKEN_LOCATION'] = ('headers', 'query_string')
+    jwt = JWTManager(app)
+
     register_blueprints(app)
     register_extensions(app)
     register_errorhandlers(app)
