@@ -12,8 +12,8 @@ import settings
 from combined_config import all_entities_config
 from oql.process_bulk_tests import decode_redis_data
 from oql.query import Query
+from oql.search import Search
 from oql.results_table import ResultTable
-from oql.search import Search, get_existing_search, redis_db, search_queue
 from oql.validate import OQOValidator
 
 
@@ -43,7 +43,15 @@ def create_search():
 
     # print("query.to_dict()")
     # print(query.to_dict(), flush=True)
-    s = Search(query=query.to_dict(), redshift_sql=query.get_sql(), bypass_cache=bypass_cache)
+    s = Search(query=query.to_dict(), bypass_cache=bypass_cache)
+    if s.contains_user_data():
+        print("Found user data in query")
+        user_id = get_jwt_identity().get("user_id")
+        jwt_token = request.headers.get("Authorization")
+        s.submitted_query = s.query
+        s.query = s.rewrite_query_with_user_data(user_id, jwt_token)
+        print(f"Rewritten Query: {s.query}", flush=True)
+    s.redshift_sql = Query(s.query).get_sql()
     s.save()
     return jsonify(s.to_dict()), 201
 
@@ -51,28 +59,29 @@ def create_search():
 @blueprint.route("/searches/<id>", methods=["GET"])
 def get_search(id):
     bypass_cache = request.args.get("bypass_cache") == "true"
-    search = get_existing_search(id)
+    search = Search.get(id)
     if not search:
         return jsonify({"error": "Search not found"}), 404
     
+    print(f"Query {search.query}", flush=True)
+
     if bypass_cache:
         # Reset all fields that would be reset in process_searches.py
         print(f"Resetting saved search {id} - bypass_cache == True", flush=True)
-        search["results"] = None
-        search["results_header"] = None
-        search["meta"] = None
-        search["is_ready"] = False
-        search["is_completed"] = False
-        search["backend_error"] = None
-        search["timestamps"]["completed"] = None
-        search["bypass_cache"] = True
-        search["redshift_sql"] = Query(search["query"]).get_sql()
-        redis_db.set(id, json.dumps(search))
-        # Re-add to queue for processing
-        print(f"Pushing {id} to search_queue", flush=True)
+        search.results = None
+        search.results_header = None
+        search.meta = None
+        search.is_ready = False
+        search.is_completed = False
+        search.backend_error = None
+        search.timestamps["completed"] = None
+        search.bypass_cache = True
+        search.redshift_sql = Query(search.query).get_sql()
+        search.save()
+        # Re-add to queue for processing happens in save()
         redis_db.rpush(search_queue, id)
-    
-    return jsonify(search)
+
+    return jsonify(search.to_dict())
 
 
 @blueprint.route("/results", methods=["GET", "POST"])

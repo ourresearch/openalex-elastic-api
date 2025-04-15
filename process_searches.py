@@ -56,7 +56,8 @@ def process_search(search_id):
     search = json.loads(search_json)
     bypass_cache = search.get("bypass_cache", False)
     print(f"Processing search {search_id} with bypass_cache={bypass_cache}", flush=True)
-    
+    print(f"Query {search['query']}", flush=True)
+
     cache_expiration = 24 * 3600  # 24 hours in seconds
     last_processed_time = search["timestamps"].get("completed")
     if last_processed_time:
