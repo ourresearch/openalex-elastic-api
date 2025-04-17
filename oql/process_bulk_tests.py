@@ -41,12 +41,12 @@ def process_query_test(test):
             'query': query,
             'mailto': 'team@ourresearch.org'
         }
-        r = requests.post("https://api.openalex.org/searches", json=json_obj)
+        r = requests.post("https://api.openalex.org/analytics", json=json_obj)
         r.raise_for_status()
         return r.json()['id']
 
     def get_search_state(search_id):
-        url = f"https://api.openalex.org/searches/{search_id}"
+        url = f"https://api.openalex.org/analytics/{search_id}"
         params = {'mailto': 'team@ourresearch.org'}
         r = requests.get(url, params=params)
         r.raise_for_status()

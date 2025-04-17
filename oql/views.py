@@ -24,7 +24,7 @@ redis_client = Redis.from_url(os.environ.get("REDIS_DO_URL"))
 search_queue = settings.SEARCH_QUEUE
 
 
-@blueprint.route("/searches", methods=["POST"])
+@blueprint.route("/analytics", methods=["POST"])
 @jwt_required()
 def create_search():
     raw_query = request.json.get("query")
@@ -63,7 +63,7 @@ def create_search():
     return jsonify(s.to_dict()), 201
 
 
-@blueprint.route("/searches/<id>", methods=["GET"])
+@blueprint.route("/analytics/<id>", methods=["GET"])
 @jwt_required()
 def get_search(id):
     bypass_cache = request.args.get("bypass_cache") == "true"
