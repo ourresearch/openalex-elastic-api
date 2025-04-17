@@ -1,20 +1,22 @@
 from datetime import datetime, timezone
+import requests
+import copy
 
 from sqlalchemy.engine.row import Row
 
+import settings
 from combined_config import all_entities_config
 from oql.elastic import ElasticQueryHandler
 from oql.redshift import RedshiftQueryHandler
 from oql.models import get_entity_class, is_model_property, is_model_hybrid_property
 
 
-valid_entities = list(all_entities_config.keys())
-
 class Query:
     """
     Query object to execute a query and return results. Also sets the defaults for the query.
     """
     def __init__(self, raw_query):
+        self.query = raw_query
         self.entity = raw_query.get("get_rows", "works")
         self.filter_works = raw_query.get("filter_works", [])
         self.filter_aggs = raw_query.get("filter_aggs", [])
@@ -47,9 +49,6 @@ class Query:
             valid_columns=self.valid_columns,
             show_underlying_works=self.show_underlying_works
         )
-
-    def get_filter_by(self):
-        return []
 
     def execute(self):
         timestamps = {"started": datetime.now(timezone.utc).isoformat()}
@@ -216,10 +215,146 @@ class Query:
             if "sort" in (values.get("actions") or [])
         ]
 
-    def property_type(self, column):
-        for property_config in all_entities_config.get(self.entity, {}).get('columns').values():
-            if property_config.get("id", "") == column:
-                return property_config.get("type", "string")
+    def has_lists(self):
+        """ Returns true if the query contains filters that use user created lists."""
+        user_operators = [
+            "matches any item in label",
+            "matches every item in label"
+        ]
+
+        def does_filter_contain_user_data(filter_):
+            if "filters" in filter_:
+                return any(does_filter_contain_user_data(f) for f in filter_["filters"])
+            return filter_.get("operator") in user_operators
+
+        filters_to_check = (self.query.get("filter_works") or []) + (self.query.get("filter_aggs") or [])
+        #print(f"Checking filters: {filters_to_check}", flush=True)
+        return any(does_filter_contain_user_data(f) for f in filters_to_check)
+    
+    def rewrite_query_with_user_data(self, user_id, jwt_token):
+        """
+        Recursively walk through the query and replace any filters that have label components
+        with their equivalents that don't reference user labels.
+        """
+        def rewrite_filters(filters, case):
+            """
+            Recursive helper function to rewrite filters.
+            case is either "filter_works" or "filter_aggs"
+            """
+            rewritten_filters = []
+            for filter_obj in filters:
+                if "join" in filter_obj and "filters" in filter_obj:
+                    # Recursive case: rewrite the nested filters
+                    rewritten_filter = {
+                        "join": filter_obj["join"],
+                        "filters": rewrite_filters(filter_obj["filters"], case),
+                    }
+                    rewritten_filters.append(rewritten_filter)
+                else:
+                    # Terminal case: check if the operator matches a label condition
+                    operator = filter_obj.get("operator")
+                    # print(f"looking at operator: {operator}")
+                    if operator in ["matches any item in label", "matches every item in label"]:
+                        print("Found user data in query")
+                        label_id = filter_obj.get("value")
+                        #label = Collection.get_collection_by_id(label_id)
+
+                        headers = {"Authorization": jwt_token}
+                        url = f"{settings.USERS_API_URL}/user/{user_id}/collections/{label_id}"
+                        #print(f"Fetching label data from {url}")
+                        response = requests.get(url, headers=headers)
+                        label = response.json()
+
+                        if not label:
+                            raise ValueError(f"Label with ID {label_id} not found.")
+                        if not label["ids"]:
+                            raise ValueError(f"Label {label_id} contains no items.")
+
+                        #print("Label Data:")
+                        #print(label)
+
+                        # Determine the join type based on the operator
+                        join_type = "or" if operator == "matches any item in label" else "and"
+
+                        works_id_keys = {
+                            "authors": "authorships.author.id",
+                            "continents": "authorships.institutions.continent",
+                            "countries": "authorships.institutions.country",
+                            "domains": "primary_topic.domain.id",
+                            "fields": "primary_topic.field.id",
+                            "funders": "grants.funder",
+                            "institution-types": "authorships.institutions.type",
+                            "institutions": "authorships.institutions.lineage",
+                            "keywords": "keywords.id",
+                            "langauges": "language",
+                            "licenses": "MISSING",
+                            "publishers": "MISSING",
+                            "sdgs": "sustainable_developement_goals.id",
+                            "sources": "primary_location.source.id",
+                            "subfields": "primary_topic.subfield.id",
+                            "topics": "primary_topic.id",
+                            "work-types": "type",
+                        }
+
+                        column_id = works_id_keys[label.entity_type] if case == "filter_works" else "id"
+
+                        # Construct the rewritten filters for this label
+                        rewritten_label_filter = {
+                            "join": join_type,
+                            "filters": [
+                                {
+                                    "column_id": column_id,
+                                    "value": id_value,
+                                }
+                                for id_value in label["ids"]
+                            ],
+                        }
+                        rewritten_filters.append(rewritten_label_filter)
+                    else:
+                        rewritten_filters.append(filter_obj)
+
+            return rewritten_filters
+
+        # Start rewriting from self.query
+        query_rewritten = copy.deepcopy(self.query)  # Create a copy of the original query
+
+        for case in ["filter_works", "filter_aggs"]:
+            if case in query_rewritten:
+                query_rewritten[case] = rewrite_filters(query_rewritten[case], case)
+
+        return query_rewritten
+
+    def extract_filter_keys(self):
+        """
+        Extracts filter keys from both "filter_works" and "filter_aggs" into a flat list.
+        """
+        keys = []
+        def walk_filters(filters, entity):
+            for f in filters:
+                # If this is a composite filter with a join and nested filters:
+                if "join" in f and "filters" in f:
+                    walk_filters(f["filters"], entity)
+                else:
+                    if "column_id" in f:
+                        keys.append(f"{entity}.{f['column_id']}")
+
+        for key in ["filter_works", "filter_aggs"]:
+            key_type = "works" if key == "filter_works" else self.entity
+            if key in self.query and isinstance(self.query[key], list):
+                walk_filters(self.query[key], key_type)
+        return keys if keys else None
+
+    def has_nested_boolean(self):
+        """
+        Returns true if the query contains nested boolean logic.
+        """
+        # For now, a simple check: if any filter has a "join" key, return True.
+        for key in ["filter_works", "filter_aggs"]:
+            if key in self.query and isinstance(self.query[key], list):
+                for f in self.query[key]:
+                    if "join" in f:
+                        return True
+        return False   
 
     def get_sql(self):
         return self.redshift_handler.get_sql()

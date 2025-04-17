@@ -47,10 +47,10 @@ def create_search():
     # print("query.to_dict()")
     # print(query.to_dict(), flush=True)
     s = Search(query=query.to_dict(), bypass_cache=bypass_cache)
-    if s.contains_user_data():
-        print("Found user data in query")
+    if query.has_lists():
+        print("Found user lists in query")
         s.submitted_query = s.query
-        s.query = s.rewrite_query_with_user_data(user_id, jwt_token)
+        s.query = query.rewrite_query_with_user_data(user_id, jwt_token)
         print(f"Rewritten Query: {s.query}", flush=True)
     s.redshift_sql = Query(s.query).get_sql()
     s.save()
@@ -58,7 +58,7 @@ def create_search():
     # Create a new log entry for this search run, after we receive an ID.
     is_test = request.json.get("is_test", False)
     if not is_test:
-        SearchLog.create(search_id=s.id, user_id=user_id)
+        SearchLog.create(search_id=s.id, query_obj=query, user_id=user_id)
 
     return jsonify(s.to_dict()), 201
 
@@ -94,7 +94,7 @@ def get_search(id):
     is_test = request.args.get("is_test", "false").lower() == "true"
     is_polling = request.args.get("is_polling", "false").lower() == "true"
     if not is_polling and not is_test:
-        SearchLog.create(search_id=search.id, user_id=user_id)
+        SearchLog.create(search_id=search.id, query_obj=Query(search.query), user_id=user_id)
     
     return jsonify(search.to_dict())
 

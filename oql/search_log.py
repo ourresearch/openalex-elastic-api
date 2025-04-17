@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 import uuid
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 import sqlalchemy
 
 # --- Dedicated SQLAlchemy Setup for Logging ---
@@ -36,31 +36,50 @@ class SearchLog(log_db.Model):
     duration = log_db.Column(log_db.Float, nullable=True)
     results_count = log_db.Column(log_db.Integer, nullable=True)
     was_cached = log_db.Column(log_db.Boolean, nullable=True)
+    # New fields
+    query_json = log_db.Column(JSONB, nullable=False)
+    entity = log_db.Column(log_db.String(50), nullable=True)
+    filter_keys = log_db.Column(ARRAY(log_db.String(50)), nullable=True)
+    has_nested_boolean = log_db.Column(log_db.Boolean, nullable=True)
+    has_lists = log_db.Column(log_db.Boolean, nullable=True)
+    # end new fields
     sql = log_db.Column(log_db.Text, nullable=True)
     error_message = log_db.Column(log_db.Text, nullable=True)
     status = log_db.Column(log_db.String(20), nullable=True)
 
-    def __init__(self, user_id=None, search_id=None, **kwargs):
+    def __init__(self, user_id=None, search_id=None, query_obj=None, **kwargs):
         if user_id is None:
             raise ValueError("User ID cannot be empty.")
         if search_id is None:
             raise ValueError("Search ID cannot be empty.")
+        if query_obj is None:
+            raise ValueError("Query cannot be empty.")
 
         self.search_id = search_id
         self.user_id = user_id
         self.status = "INIT"
+
+        self.entity = query_obj.entity
+        self.query_json = query_obj.query
+        self.filter_keys = query_obj.extract_filter_keys()
+        self.has_nested_boolean = query_obj.has_nested_boolean()
+        self.has_lists = query_obj.has_lists()
+
         super().__init__(**kwargs)
 
     @classmethod
-    def create(cls, search_id=None, user_id=None):
+    def create(cls, search_id=None, user_id=None, query_obj=None):
         if user_id is None:
             raise ValueError("User ID cannot be empty when creating a log.")
         if search_id is None:
             raise ValueError("Search ID cannot be empty when creating a log.")
+        if query_obj is None:
+            raise ValueError("Query cannot be empty when creating a log.")
 
         log = cls(
             search_id=search_id,
             user_id=user_id,
+            query_obj=query_obj,
             status="RUNNING"
         )
         with log_app.app_context():
