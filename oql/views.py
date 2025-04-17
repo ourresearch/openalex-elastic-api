@@ -15,6 +15,7 @@ from oql.query import Query
 from oql.search import Search
 from oql.results_table import ResultTable
 from oql.validate import OQOValidator
+from oql.search_log import SearchLog
 
 
 blueprint = Blueprint("oql", __name__)
@@ -27,6 +28,8 @@ search_queue = settings.SEARCH_QUEUE
 @jwt_required()
 def create_search():
     raw_query = request.json.get("query")
+    user_id = get_jwt_identity().get("user_id")
+    jwt_token = request.headers.get("Authorization")
     bypass_cache = request.json.get("bypass_cache", False)
 
     #print("create_search")
@@ -46,24 +49,29 @@ def create_search():
     s = Search(query=query.to_dict(), bypass_cache=bypass_cache)
     if s.contains_user_data():
         print("Found user data in query")
-        user_id = get_jwt_identity().get("user_id")
-        jwt_token = request.headers.get("Authorization")
         s.submitted_query = s.query
         s.query = s.rewrite_query_with_user_data(user_id, jwt_token)
         print(f"Rewritten Query: {s.query}", flush=True)
     s.redshift_sql = Query(s.query).get_sql()
     s.save()
+
+    # Create a new log entry for this search run, after we receive an ID.
+    is_test = request.json.get("is_test", False)
+    if not is_test:
+        SearchLog.create(search_id=s.id, user_id=user_id)
+
     return jsonify(s.to_dict()), 201
 
 
 @blueprint.route("/searches/<id>", methods=["GET"])
+@jwt_required()
 def get_search(id):
     bypass_cache = request.args.get("bypass_cache") == "true"
     search = Search.get(id)
     if not search:
         return jsonify({"error": "Search not found"}), 404
     
-    print(f"Query {search.query}", flush=True)
+    #print(f"Query {search.query}", flush=True)
 
     if bypass_cache:
         # Reset all fields that would be reset in process_searches.py
@@ -78,9 +86,16 @@ def get_search(id):
         search.bypass_cache = True
         search.redshift_sql = Query(search.query).get_sql()
         search.save()
-        # Re-add to queue for processing happens in save()
+        # Re-add to queue for processing
         redis_db.rpush(search_queue, id)
 
+    # Create a search log if needed
+    user_id = get_jwt_identity().get("user_id")
+    is_test = request.args.get("is_test", "false").lower() == "true"
+    is_polling = request.args.get("is_polling", "false").lower() == "true"
+    if not is_polling and not is_test:
+        SearchLog.create(search_id=search.id, user_id=user_id)
+    
     return jsonify(search.to_dict())
 
 

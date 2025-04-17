@@ -1,18 +1,15 @@
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import copy
 from typing import Dict, List, Optional
+from dataclasses import asdict, dataclass, field
 
 import redis
 import requests
 
 import settings
 
-redis_db = redis.Redis.from_url(settings.CACHE_REDIS_URL or "redis://localhost:6379/0")
-
-CACHE_EXPIRATION_MINUTES = 1
+redis_db = redis.Redis.from_url(settings.CACHE_REDIS_URL or "redis://localhost:6379/0", decode_responses=True)
 search_queue = settings.SEARCH_QUEUE
 
 

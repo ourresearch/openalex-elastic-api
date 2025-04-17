@@ -511,8 +511,8 @@ class RedshiftQueryHandler:
         value = filter.get("value")
         operator = filter.get("operator") or config.get("defaultOperator")
 
-        print("Building work filter: ")
-        print(filter, flush=True)
+        #print("Building work filter: ")
+        #print(filter, flush=True)
 
         # ensure is valid filter
         if key is None:
