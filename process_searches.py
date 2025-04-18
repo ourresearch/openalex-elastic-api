@@ -36,10 +36,8 @@ def process_search(search_id):
     #print(f"Query {search['query']}", flush=True)
 
     cache_valid = is_cache_valid(search)
-
     if not cache_valid:
         search = clear_search_cache(search)
-
     #print(f"Cache valid: {cache_valid}", flush=True)
 
     if search.get("is_ready") and cache_valid:
@@ -134,19 +132,20 @@ def fetch_results(query):
 
         return results_table_response
 
+
 def is_cache_valid(search):
-    print(f"Checking cache validity for search {search['id']}", flush=True)
-    cache_expiration = 24 * 3600  # 24 hours in seconds
+    CACHE_EXPIRATION = 24 * 3600  # 24 hours in seconds
     bypass_cache = search.get("bypass_cache", False)
     last_processed_time = search["timestamps"].get("completed")
     if last_processed_time:
         last_processed_time = datetime.fromisoformat(last_processed_time)
         time_since_processed = (datetime.now(timezone.utc) - last_processed_time).total_seconds()
     else:
-        time_since_processed = cache_expiration + 1  # Force recalculation if no timestamp
-    cache_valid = settings.ENABLE_SEARCH_CACHE and not bypass_cache and time_since_processed <= cache_expiration
-    print(f"Cache validity checked", flush=True)
+        time_since_processed = CACHE_EXPIRATION + 1  # Force recalculation if no timestamp
+    cache_valid = settings.ENABLE_SEARCH_CACHE and not bypass_cache and time_since_processed <= CACHE_EXPIRATION
+    
     return cache_valid
+
 
 def clear_search_cache(search):
     print(f"Cache is not valid for search {search['id']}", flush=True)
@@ -160,9 +159,9 @@ def clear_search_cache(search):
     search["timestamps"] = {}
     with app.app_context():
         search["redshift_sql"] = Query(search["query"]).get_sql()
-    print(f"Clearing old results for search {search['id']}", flush=True)
     redis_db.set(search["id"], json.dumps(search))
     return search
+
 
 def process_searches_concurrently(max_workers=100):
     """
