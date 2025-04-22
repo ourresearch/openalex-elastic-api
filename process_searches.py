@@ -9,15 +9,14 @@ import redis
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 
-import settings
+from settings import SEARCH_QUEUE, ENABLE_SEARCH_CACHE, CACHE_REDIS_URL
 from app import create_app
 from oql.query import Query
 from oql.results_table import ResultTable
 from oql.search_log import update_search_logs
 
 app = create_app()
-redis_db = redis.Redis.from_url(settings.CACHE_REDIS_URL, decode_responses=True)
-search_queue = settings.SEARCH_QUEUE
+redis_db = redis.Redis.from_url(CACHE_REDIS_URL, decode_responses=True)
 
 # Enable Sentry
 sentry_sdk.init(
@@ -51,6 +50,7 @@ def process_search(search_id):
         if "invalid_query_error" in results:
             search["invalid_query_error"] = results["invalid_query_error"]
         else:
+            print(f"Results received for {search['id']}", flush=True)
             search["results"] = results["results"]
             search["results_header"] = results["results_header"]
             search["meta"] = results["meta"]
@@ -93,7 +93,7 @@ def process_search(search_id):
             
             if attempts < 3:  # Maximum 3 retry attempts
                 print(f"Connection error, retrying search {search_id} (attempt {attempts})", flush=True)
-                redis_db.rpush(search_queue, search_id)
+                redis_db.rpush(SEARCH_QUEUE, search_id)
                 redis_db.set(search_id, json.dumps(search))
                 return
             else:
@@ -142,13 +142,13 @@ def is_cache_valid(search):
         time_since_processed = (datetime.now(timezone.utc) - last_processed_time).total_seconds()
     else:
         time_since_processed = CACHE_EXPIRATION + 1  # Force recalculation if no timestamp
-    cache_valid = settings.ENABLE_SEARCH_CACHE and not bypass_cache and time_since_processed <= CACHE_EXPIRATION
+    cache_valid = ENABLE_SEARCH_CACHE and not bypass_cache and time_since_processed <= CACHE_EXPIRATION
     
     return cache_valid
 
 
 def clear_search_cache(search):
-    print(f"Cache is not valid for search {search['id']}", flush=True)
+    #print(f"Cache is not valid for search {search['id']}", flush=True)
     search["results"] = None
     search["results_header"] = None
     search["meta"] = None
@@ -170,11 +170,11 @@ def process_searches_concurrently(max_workers=100):
     last_log_time = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor: 
         while True:
-            search_id = redis_db.lpop(search_queue)
+            search_id = redis_db.lpop(SEARCH_QUEUE)
             if not search_id:
                 current_time = time.time()
                 if current_time - last_log_time >= 60:
-                    print(f"Waiting for searches from queue {search_queue}", flush=True)
+                    print(f"Waiting for searches from queue {SEARCH_QUEUE}", flush=True)
                     last_log_time = current_time
                 time.sleep(0.1)
                 continue
