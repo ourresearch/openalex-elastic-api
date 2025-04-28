@@ -89,22 +89,7 @@ class RedshiftQueryHandler:
             query = self.apply_summary(query)
         if self.show_underlying_works:
             query = self.apply_sort(query, entity_class)
-            # Underlying Works include a column for entity_id, aggregate on that column
-            # so that we can return distinct works rows.
-            new_columns = []
-            for col in self.model_return_columns:
-                if hasattr(col, 'name') and col.name == 'entity_id':
-                    # Instead of just displaying one entity_id, count how many entities are associated with each work
-                    new_columns.append(func.count(col).label('entity_count'))
-                else:
-                    new_columns.append(col)
-            
-            # Group by all columns except entity_id
-            group_by_columns = [col for col in self.model_return_columns 
-                                if not (hasattr(col, 'name') and col.name == 'entity_id')]
-            
-            # Update the query to use these new columns and proper grouping
-            query = query.with_entities(*new_columns).group_by(*group_by_columns)
+            query = self.apply_underlying_works_distinct(query)
         else:
             query = self.apply_sort(query, entity_class)
             query = self.apply_stats(query, entity_class)
@@ -785,6 +770,9 @@ class RedshiftQueryHandler:
         
         grouping_applied = False
 
+        # Save a copy of the ungrouped query before any grouping/aggregations for underlying works query/count
+        self.ungrouped_query = query._clone()
+        
         for column in self.show_columns:
             if column not in aggregator_columns:
                 continue
@@ -841,9 +829,6 @@ class RedshiftQueryHandler:
                     func.count(work_class.paper_id).cast(Float)
                 )
 
-            # Save a copy of query before grouping for works count
-            self.ungrouped_query = query._clone()
-
             # Apply "group_by + add_columns + filter_stats + sort" determined above:
             # Combine existing group-by columns (from set_columns) with any extra
             all_groupbys = self.model_return_columns + extra_groupbys
@@ -868,6 +853,25 @@ class RedshiftQueryHandler:
         if not grouping_applied and self.entity != "summary":
             query = query.distinct()
 
+        return query
+
+    def apply_underlying_works_distinct(self, query):
+        # Underlying Works include a column for entity_id, aggregate on that column
+        # so that we can return distinct works rows.
+        new_columns = []
+        for col in self.model_return_columns:
+            if hasattr(col, 'name') and col.name == 'entity_id':
+                # Instead of just displaying one entity_id, count how many entities are associated with each work
+                new_columns.append(func.count(col).label('entity_count'))
+            else:
+                new_columns.append(col)
+        
+        # Group by all columns except entity_id
+        group_by_columns = [col for col in self.model_return_columns 
+                            if not (hasattr(col, 'name') and col.name == 'entity_id')]
+        
+        # Update the query to use these new columns and proper grouping
+        query = query.with_entities(*new_columns).group_by(*group_by_columns)
         return query
 
     def build_aggregator_condition(self, filter_list, agg_col, stat_function, join_type="and"):
