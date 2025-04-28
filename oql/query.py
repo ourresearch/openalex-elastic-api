@@ -296,7 +296,7 @@ class Query:
                             "work-types": "type",
                         }
 
-                        column_id = works_id_keys[label.entity_type] if case == "filter_works" else "id"
+                        column_id = works_id_keys[label["entity_type"]] if case == "filter_works" else "id"
 
                         # Construct the rewritten filters for this label
                         rewritten_label_filter = {
