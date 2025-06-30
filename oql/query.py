@@ -66,12 +66,10 @@ class Query:
         
         else:
             print(f"Initiating redshift query for {self.entity}")
-            total_count, works_count, results = self.redshift_handler.execute()
+            total_count, results = self.redshift_handler.execute()
             self.total_count = total_count
-            self.works_count = works_count
             timestamps["core_query_completed"] = datetime.now(timezone.utc).isoformat()
             json_data = self.format_redshift_results_as_json(results)
-            timestamps["secondary_queries_completed"] = datetime.now(timezone.utc).isoformat()
             self.source = "redshift"
 
         timestamps["completed"] = datetime.now(timezone.utc).isoformat()

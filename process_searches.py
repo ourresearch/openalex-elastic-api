@@ -67,12 +67,8 @@ def process_search(search_id):
 
         if "core_query_completed" in search["timestamps"]:
             core_completed = datetime.fromisoformat(search["timestamps"]["core_query_completed"])
-            secondary_completed = datetime.fromisoformat(search["timestamps"]["secondary_queries_completed"])
             duration_core = (core_completed - started).total_seconds()
-            duration_secondary = (secondary_completed - core_completed).total_seconds()
             search["timestamps"]["duration_core"] = duration_core
-            search["timestamps"]["duration_secondary"] = duration_secondary
-            search["timestamps"]["duration_core_percent"] = duration_core / (duration_core + duration_secondary)
 
         #print(f"Processed search {search_id}", flush=True)
 

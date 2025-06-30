@@ -48,6 +48,7 @@ class RedshiftQueryHandler:
         total_count = db.session.query(func.count()).select_from(grouped_cte).scalar() or 0
         results = db.session.query(grouped_cte).limit(100).all()
 
+        """
         # Compute works_count as the number of rows returned by the ungrouped query.
         if self.entity == "works" or self.show_underlying_works:
             works_count = total_count
@@ -55,8 +56,9 @@ class RedshiftQueryHandler:
             self.ungrouped_query = self.ungrouped_query.add_columns(models.Work.paper_id.label("paper_id"))
             subq = self.ungrouped_query.subquery()
             works_count = db.session.query(func.count(distinct(subq.c.paper_id))).scalar()
+        """
 
-        return total_count, works_count, results
+        return total_count, results
 
     def execute_summary(self):
         summary_query = self.build_query()
@@ -407,7 +409,7 @@ class RedshiftQueryHandler:
 
         if self.show_underlying_works:
             # Fix to prevent SQLAlchemy from dropping joined tables because we're only looking at Work columns
-            # for a query whose base is with another entity.
+            # for a query whose base is joined with another entity.
             entity_class = models.get_entity_class(self.entity)
             columns_to_select.append(entity_class.id.label("entity_id"))
 
