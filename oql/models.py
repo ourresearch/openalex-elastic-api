@@ -55,13 +55,18 @@ class Work(db.Model):
     publisher = Column(String(65535))
     has_fulltext = Column(Boolean)
 
-    @property
+    @hybrid_property
     def id(self):
-        return f"works/W{self.paper_id}"
+        return f"works/{self.paper_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('works/', cls.paper_id)
     
     def __repr__(self):
         return f"<Work(paper_id={self.paper_id}, original_title={self.original_title})>"
-    
+
+
 class Abstract(db.Model):
     __tablename__ = "abstract"
 
@@ -96,10 +101,8 @@ class Affiliation(db.Model):
 
 class AffiliationDistinct(db.Model):
     __tablename__ = "affiliation_distinct_mv"
-
     # This is a view that has unique paper_id, affiliation_id pairs to support filtering by institution
     # So when multiple authors from the same institution are on the same paper, we only get the paper_id returned once
-
     paper_id = Column(BigInteger, primary_key=True)
     author_id = Column(BigInteger, primary_key=True)
     affiliation_id = Column(BigInteger, primary_key=True)
@@ -183,11 +186,11 @@ class Author(db.Model):
 
     @hybrid_property
     def id(self):
-        return f"authors/A{self.author_id}"
+        return f"authors/{self.author_id}"
 
     @id.expression
     def id(cls):
-        return func.concat('authors/A', cls.author_id)
+        return func.concat('authors/', cls.author_id)
 
     def __repr__(self):
         return f"<Author(author_id={self.author_id}, display_name={self.display_name})>"
@@ -248,9 +251,13 @@ class Continent(db.Model):
     description = Column(String(65535), nullable=True)
     wikidata_id = Column(String(500), nullable=True)
 
-    @property
+    @hybrid_property
     def id(self):
-        return f"continents/{self.wikidata_id}"
+        return f"continents/{self.continent_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('continents/', cls.continent_id)
 
     def __repr__(self):
         return f"<Continent(continent_id={self.continent_id}, display_name={self.display_name})>"
@@ -263,9 +270,13 @@ class Domain(db.Model):
     display_name = Column(String(65535), nullable=False)
     description = Column(String(65535), nullable=True)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"domains/{self.domain_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('domains/', cls.domain_id)
 
     def __repr__(self):
         return f"<Domain(domain_id={self.domain_id}, display_name={self.display_name})>"
@@ -278,9 +289,13 @@ class Field(db.Model):
     display_name = Column(String(65535), nullable=False)
     description = Column(String(65535), nullable=True)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"fields/{self.field_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('fields/', cls.field_id)
 
     def __repr__(self):
         return f"<Field(field_id={self.field_id}, display_name={self.display_name})>"
@@ -297,9 +312,14 @@ class Funder(db.Model):
     ror_id = Column(String(500), nullable=True)
     crossref_id = Column(String(500), nullable=True)
 
-    @property
+    @hybrid_property
     def id(self):
-        return f"funders/F{self.funder_id}"
+        return f"funders/{self.funder_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('funders/', cls.funder_id)
+
 
     def __repr__(self):
         return f"<Funder(funder_id={self.funder_id}, display_name={self.display_name})>"
@@ -318,11 +338,11 @@ class Institution(db.Model):
 
     @hybrid_property
     def id(self):
-        return f"institutions/I{self.affiliation_id}"
+        return f"institutions/{self.affiliation_id}"
 
     @id.expression
     def id(cls):
-        return func.concat('institutions/I', cls.affiliation_id)
+        return func.concat('institutions/', cls.affiliation_id)
 
     def __repr__(self):
         return f"<Institution(affiliation_id={self.affiliation_id}, display_name={self.display_name})>"
@@ -334,9 +354,13 @@ class InstitutionType(db.Model):
     institution_type_id = Column(String(500), primary_key=True)
     display_name = Column(String(65535), nullable=False)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"institution-types/{self.institution_type_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('institution-types/', cls.institution_type_id)
 
     def __repr__(self):
         return f"<InstitutionType(institution_type_id={self.institution_type_id}, display_name={self.display_name})>"
@@ -357,9 +381,7 @@ class Keyword(db.Model):
         return func.concat('keywords/', cls.keyword_id)
 
     def __repr__(self):
-        return (
-            f"<Keyword(keyword_id={self.keyword_id}, display_name={self.display_name})>"
-        )
+        return f"<Keyword(keyword_id={self.keyword_id}, display_name={self.display_name})>"
 
 
 class Language(db.Model):
@@ -368,9 +390,13 @@ class Language(db.Model):
     language_id = Column(String(500), primary_key=True)
     display_name = Column(String(65535), nullable=False)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"languages/{self.language_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('languages/', cls.language_id)
 
     def __repr__(self):
         return f"<Language(language_id={self.language_id}, display_name={self.display_name})>"
@@ -383,14 +409,16 @@ class License(db.Model):
     display_name = Column(String(65535), nullable=False)
     description = Column(String(65535), nullable=True)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"licenses/{self.license_id}"
 
+    @id.expression
+    def id(cls):
+        return func.concat('licenses/', cls.license_id)
+
     def __repr__(self):
-        return (
-            f"<License(license_id={self.license_id}, display_name={self.display_name})>"
-        )
+        return f"<License(license_id={self.license_id}, display_name={self.display_name})>"
 
 
 class Publisher(db.Model):
@@ -400,9 +428,13 @@ class Publisher(db.Model):
     display_name = Column(String(65535), nullable=False)
     country_code = Column(String(500), nullable=True)
 
-    @property
+    @hybrid_property
     def id(self):
-        return f"publishers/P{self.publisher_id}"
+        return f"publishers/{self.publisher_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('publishers/', cls.publisher_id)
 
     def __repr__(self):
         return f"<Publisher(publisher_id={self.publisher_id}, display_name={self.display_name})>"
@@ -415,9 +447,13 @@ class Sdg(db.Model):
     display_name = Column(String(65535), nullable=False)
     description = Column(String(65535), nullable=True)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"sdgs/{self.sdg_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('sdgs/', cls.sdg_id)
 
     def __repr__(self):
         return f"<SDG(sdg_id={self.sdg_id}, display_name={self.display_name})>"
@@ -438,11 +474,11 @@ class Source(db.Model):
 
     @hybrid_property
     def id(self):
-        return f"sources/S{self.source_id}"
+        return f"sources/{self.source_id}"
 
     @id.expression
     def id(cls):
-        return func.concat('sources/S', cls.source_id)
+        return func.concat('sources/', cls.source_id)
 
     def __repr__(self):
         return f"<Source(source_id={self.source_id}, display_name={self.display_name})>"
@@ -454,9 +490,13 @@ class SourceType(db.Model):
     source_type_id = Column(String(500), primary_key=True)
     display_name = Column(String(65535), nullable=False)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"source-types/{self.source_type_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('source-types/', cls.source_type_id)
 
     def __repr__(self):
         return f"<SourceType(source_type_id={self.source_type_id}, display_name={self.display_name})>"
@@ -469,9 +509,13 @@ class Subfield(db.Model):
     display_name = Column(String(65535), nullable=False)
     description = Column(String(65535), nullable=True)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"subfields/{self.subfield_id}"
+
+    @id.expression
+    def id(cls):
+        return func.concat('subfields/', cls.subfield_id)
 
     def __repr__(self):
         return f"<Subfield(subfield_id={self.subfield_id}, display_name={self.display_name})>"
@@ -491,11 +535,11 @@ class Topic(db.Model):
 
     @hybrid_property
     def id(self):
-        return f"topics/T{self.topic_id}"
+        return f"topics/{self.topic_id}"
 
     @id.expression
     def id(cls):
-        return func.concat('topics/T', cls.topic_id)
+        return func.concat('topics/', cls.topic_id)
 
     @property
     def description(self):
@@ -556,13 +600,16 @@ class WorkType(db.Model):
     display_name = Column(String(65535), nullable=False)
     description = Column(String(65535), nullable=True)
 
-    @property
+    @hybrid_property
     def id(self):
         return f"work-types/{self.work_type_id}"
 
+    @id.expression
+    def id(cls):
+        return func.concat('work-types/', cls.work_type_id)
+
     def __repr__(self):
         return f"<WorkType(type_id={self.work_type_id}, display_name={self.display_name})>"
-        
 
 
 class AuthorOrcid(db.Model):
