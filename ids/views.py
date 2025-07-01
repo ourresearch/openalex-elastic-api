@@ -158,29 +158,51 @@ def works_id_get(id):
 
 @blueprint.route("/v2/works/<path:id>")
 def works_v2_id_get(id):
+    s = Search(index=settings.WORKS_INDEX, using="v2")
+    only_fields = process_id_only_fields(request, WorksSchema)
+
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
         if clean_id != id:
             return redirect(url_for("ids.works_v2_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/W{clean_id}"
+        query = Q("term", id=full_openalex_id)
+        s = s.filter(query)
+    elif id.startswith("mag:"):
+        clean_id = id.replace("mag:", "")
+        clean_id = f"W{clean_id}"
+        return redirect(url_for("ids.works_id_get", id=clean_id, **request.args))
+    elif id.startswith("pmid:"):
+        id = id.replace("pmid:", "")
+        clean_pmid = normalize_pmid(id)
+        full_pmid = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}"
+        query = Q("term", ids__pmid=full_pmid)
+        s = s.filter(query)
+    elif id.startswith("pmcid:"):
+        id = id.replace("pmcid:", "")
+        clean_pmcid = normalize_pmcid(id)
+        full_pmcid = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{clean_pmcid}"
+        query = Q("term", ids__pmcid=full_pmcid)
+        s = s.filter(query)
+    elif id.startswith("doi:") or ("doi" in id):
+        clean_doi = normalize_doi(id, return_none_if_error=True)
+        if not clean_doi:
+            abort(404)
+        full_doi = f"https://doi.org/{clean_doi}"
+        query = Q("term", ids__doi=full_doi)
+        s = s.filter(query)
     else:
         abort(404)
-    with sql.connect(
-            server_hostname=settings.DATABRICKS_HOST,
-            http_path=settings.DATABRICKS_HTTP_PATH,
-            access_token=settings.DATABRICKS_TOKEN,
-    ) as connection:
-        with connection.cursor() as cursor:
-            query = "SELECT json_str FROM openalex.works.openalex_works_json WHERE id = %s"
-            cursor.execute(query, (full_openalex_id,))
-            row = cursor.fetchone()
-
-            if row is None:
-                return jsonify({"error": "Item not found"}), 404
-
-            result = json.loads(row[0])
-            return jsonify(result)
+    client = connections.get_connection('v2')
+    os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
+    response = os.execute()
+    if not response:
+        abort(404)
+    works_schema = WorksSchema(
+        context={"display_relevance": False, "single_record": True}, only=only_fields
+    )
+    return works_schema.dump(response[0])
 
 
 @blueprint.route("/v2/works-batch", methods=["POST"])
