@@ -89,12 +89,13 @@ class RedshiftQueryHandler:
 
         if self.entity == "summary":
             query = self.apply_summary(query)
-        if self.show_underlying_works:
-            query = self.apply_sort(query, entity_class)
-            query = self.apply_underlying_works_distinct(query)
         else:
-            query = self.apply_sort(query, entity_class)
-            query = self.apply_stats(query, entity_class)
+            if self.show_underlying_works:
+                query = self.apply_sort(query, entity_class)
+                query = self.apply_underlying_works_distinct(query)
+            else:
+                query = self.apply_sort(query, entity_class)
+                query = self.apply_stats(query, entity_class)
 
         return query
 
