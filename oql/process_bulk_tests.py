@@ -58,7 +58,7 @@ def process_query_test(test):
         start_time = time.time()
         while True:
             result = get_search_state(search_id)
-            if result['is_ready']:
+            if result['is_completed']:
                 elapsed_time = time.time() - start_time
                 passing = len(result['results']) > 0
                 results_json = json.dumps(result['results'])

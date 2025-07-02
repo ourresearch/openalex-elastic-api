@@ -39,13 +39,12 @@ def process_search(search_id):
         search = clear_search_cache(search)
     #print(f"Cache valid: {cache_valid}", flush=True)
 
-    if search.get("is_ready") and cache_valid:
+    if search.get("is_completed") and cache_valid:
         print(f"Search {search_id} is already processed and cache is valid, skipping", flush=True)
         return
 
     try:
         print(f"Executing query {search['id']}", flush=True)
-        print(f"use_elastic: {search['use_elastic']}", flush=True)
         results = fetch_results(search["query"], use_elastic=search["use_elastic"])
 
         if "invalid_query_error" in results:
@@ -57,7 +56,6 @@ def process_search(search_id):
             search["meta"] = results["meta"]
             search["meta"]["source"] = results["source"]
 
-        search["is_ready"] = True
         search["is_completed"] = True
 
         search["timestamps"] = results["timestamps"]
@@ -97,7 +95,6 @@ def process_search(search_id):
                 error_msg = f"Failed after {attempts} attempts. Error: {error_msg}"
 
         search["backend_error"] = error_msg
-        search["is_ready"] = True
         search["is_completed"] = True
         search["results"] = None
         search["results_header"] = None
@@ -149,7 +146,6 @@ def clear_search_cache(search):
     search["results"] = None
     search["results_header"] = None
     search["meta"] = None
-    search["is_ready"] = False
     search["is_completed"] = False
     search["backend_error"] = None
     search["attempts"] = 0

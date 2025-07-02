@@ -53,23 +53,21 @@ class Query:
 
     def execute(self):
         timestamps = {"started": datetime.now(timezone.utc).isoformat()}
-        
-        print(f"Query.execute(): use_elastic: {self.use_elastic}")
-        
+                
         if self.entity == "summary":
             results = self.redshift_handler.execute_summary()
             self.total_count = results["count"]
             json_data = {"results": [results]}
         
         elif self.use_elastic and self.elastic_handler.is_valid():
-            print(f"Initiating elastic query for {self.entity}")
+            print(f"Initiating Elastic query for {self.entity}")
             total_count, results = self.elastic_handler.execute()
             self.total_count = total_count
             json_data = self.format_elastic_results_as_json(results)            
             self.source = "elastic"
         
         else:
-            print(f"Initiating redshift query for {self.entity}")
+            print(f"Initiating Redshift query for {self.entity}")
             total_count, results = self.redshift_handler.execute()
             self.total_count = total_count
             timestamps["core_query_completed"] = datetime.now(timezone.utc).isoformat()

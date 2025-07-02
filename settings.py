@@ -18,7 +18,7 @@ SQLALCHEMY_ECHO = True if ENV == "development" else False
 
 # Analytics
 SEARCH_QUEUE = "search_queue"
-ENABLE_SEARCH_CACHE = False
+ENABLE_SEARCH_CACHE = True
 OPEN_ALEX_API_KEY = os.environ.get("OPEN_ALEX_API_KEY")
 USERS_API_URL = os.environ.get("USERS_API_URL")
 

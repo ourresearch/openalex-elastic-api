@@ -80,7 +80,6 @@ def get_search(id):
         search.results = None
         search.results_header = None
         search.meta = None
-        search.is_ready = False
         search.is_completed = False
         search.backend_error = None
         search.timestamps["completed"] = None

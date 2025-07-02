@@ -19,7 +19,6 @@ class Search:
     results_header: Optional[List] = field(default_factory=list)
     meta: Optional[Dict] = field(default_factory=dict)
     is_completed: bool = False
-    is_ready: bool = False
     bypass_cache: bool = not settings.ENABLE_SEARCH_CACHE
     use_elastic: bool = False
     timestamps: Dict[str, str] = field(default_factory=dict)
