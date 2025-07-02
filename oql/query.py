@@ -15,7 +15,7 @@ class Query:
     """
     Query object to execute a query and return results. Also sets the defaults for the query.
     """
-    def __init__(self, raw_query):
+    def __init__(self, raw_query, use_elastic=False):
         self.query = raw_query
         self.entity = raw_query.get("get_rows", "works")
         self.filter_works = raw_query.get("filter_works", [])
@@ -29,6 +29,7 @@ class Query:
         self.valid_columns = self.get_valid_columns()
         self.valid_sort_columns = self.get_valid_sort_columns()
         self.source = None
+        self.use_elastic = use_elastic
 
         self.elastic_handler = ElasticQueryHandler(
             entity=self.entity,
@@ -52,12 +53,15 @@ class Query:
 
     def execute(self):
         timestamps = {"started": datetime.now(timezone.utc).isoformat()}
+        
+        print(f"Query.execute(): use_elastic: {self.use_elastic}")
+        
         if self.entity == "summary":
             results = self.redshift_handler.execute_summary()
             self.total_count = results["count"]
             json_data = {"results": [results]}
         
-        elif self.elastic_handler.is_valid():
+        elif self.use_elastic and self.elastic_handler.is_valid():
             print(f"Initiating elastic query for {self.entity}")
             total_count, results = self.elastic_handler.execute()
             self.total_count = total_count

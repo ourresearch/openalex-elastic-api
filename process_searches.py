@@ -45,7 +45,8 @@ def process_search(search_id):
 
     try:
         print(f"Executing query {search['id']}", flush=True)
-        results = fetch_results(search["query"])
+        print(f"use_elastic: {search['use_elastic']}", flush=True)
+        results = fetch_results(search["query"], use_elastic=search["use_elastic"])
 
         if "invalid_query_error" in results:
             search["invalid_query_error"] = results["invalid_query_error"]
@@ -54,7 +55,7 @@ def process_search(search_id):
             search["results"] = results["results"]
             search["results_header"] = results["results_header"]
             search["meta"] = results["meta"]
-            search["source"] = results["source"]
+            search["meta"]["source"] = results["source"]
 
         search["is_ready"] = True
         search["is_completed"] = True
@@ -109,9 +110,9 @@ def process_search(search_id):
     time.sleep(0.1)  # Small delay to avoid hammering Redis too quickly
 
 
-def fetch_results(query):
+def fetch_results(query, use_elastic=False):
     with app.app_context():
-        query_obj = Query(query)
+        query_obj = Query(query, use_elastic=use_elastic)
         json_data = query_obj.execute()
 
         results_table = ResultTable(

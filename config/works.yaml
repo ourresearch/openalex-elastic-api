@@ -572,7 +572,7 @@ columns:
       - column
       - sort
     category: open access
-    apiField: open_access.has_fulltext
+    apiField: open_access.any_repository_has_fulltext
     redshiftDisplayColumn: has_fulltext
     redshiftFilterColumn: has_fulltext
     icon: mdi-lock-open-outline

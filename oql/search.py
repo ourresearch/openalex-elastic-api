@@ -21,6 +21,7 @@ class Search:
     is_completed: bool = False
     is_ready: bool = False
     bypass_cache: bool = not settings.ENABLE_SEARCH_CACHE
+    use_elastic: bool = False
     timestamps: Dict[str, str] = field(default_factory=dict)
     backend_error: Optional[str] = None
     source: Optional[str] = None

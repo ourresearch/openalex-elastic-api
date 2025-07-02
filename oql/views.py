@@ -31,6 +31,7 @@ def create_search():
     user_id = get_jwt_identity().get("user_id")
     jwt_token = request.headers.get("Authorization")
     bypass_cache = request.json.get("bypass_cache", False)
+    use_elastic = request.json.get("use_elastic", False)
 
     #print("create_search")
     #print(raw_query, flush=True)
@@ -46,7 +47,7 @@ def create_search():
 
     # print("query.to_dict()")
     # print(query.to_dict(), flush=True)
-    s = Search(query=query.to_dict(), bypass_cache=bypass_cache)
+    s = Search(query=query.to_dict(), bypass_cache=bypass_cache, use_elastic=use_elastic)
     if query.has_lists():
         print("Found user lists in query")
         s.submitted_query = s.query
