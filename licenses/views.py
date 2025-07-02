@@ -78,6 +78,16 @@ def licenses_filters_doctrings():
     return jsonify(ret)
 
 
+@blueprint.route("/v2/licenses")
+def v2_licenses():
+    index_name = "licenses-v1"
+    default_sort = ["id"]
+    only_fields = process_only_fields(request, LicensesSchema)
+    result = shared_view(request, fields_dict, index_name, default_sort, connection='v2')
+    message_schema = MessageSchema(only=only_fields)
+    return message_schema.dump(result)
+
+
 @blueprint.route("/licenses/config")
 def licenses_config():
     return jsonify(all_entities_config["licenses"])
