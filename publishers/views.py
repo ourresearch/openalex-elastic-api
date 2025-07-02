@@ -74,6 +74,16 @@ def publishers_filters_doctrings():
     return jsonify(ret)
 
 
+@blueprint.route("/v2/publishers")
+def v2_publishers():
+    index_name = "publishers-v1"
+    default_sort = ["id"]
+    only_fields = process_only_fields(request, PublishersSchema)
+    result = shared_view(request, fields_dict, index_name, default_sort, connection='v2')
+    message_schema = MessageSchema(only=only_fields)
+    return message_schema.dump(result)
+
+
 @blueprint.route("/publishers/config")
 def publishers_config():
     return jsonify(all_entities_config["publishers"])
