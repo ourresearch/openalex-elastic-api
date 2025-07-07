@@ -53,6 +53,7 @@ class Work(db.Model):
     is_retracted = Column(Boolean)
     created_date = Column(String(500))
     publisher = Column(String(65535))
+    publisher_ids = Column(String(65535))
     has_fulltext = Column(Boolean)
 
     @hybrid_property

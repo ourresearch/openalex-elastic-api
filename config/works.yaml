@@ -663,7 +663,7 @@ columns:
     actionsPopular: []
     apiField: authorships.institutions.continent
     redshiftDisplayColumn: continent_ids
-    redshiftFilterColumn:
+    redshiftFilterColumn: continent_ids
     icon: mdi-earth
     descr: The continent ID of the institutions associated with the work.
   authorships.institutions.continent.display_name:
@@ -675,7 +675,6 @@ columns:
     entityId: continents
     objectEntity: continents
     displayName: Continent Name
-    isId: true
     type: string
     actions:
       - column
@@ -840,6 +839,50 @@ columns:
     actions: []
     icon: mdi-book-open-outline
     descr: Whether the primary source of the work is an open access source.
+  primary_location.publisher.display_name:
+    id: primary_location.publisher.display_name
+    subjectEntity: works
+    operators: 
+    - contains
+    - does not contain
+    defaultOperator: contains
+    displayName: publisher name
+    entityId:
+    objectEntity: 
+    type: string
+    category: publisher
+    apiField: 
+    redshiftDisplayColumn: publisher
+    redshiftFilterColumn: publisher
+    actions:
+      - filter
+      - column
+      - sort
+    icon: mdi-domain
+    descr: The name of the publisher of the work.
+  primary_location.source.publisher_lineage:
+    id: primary_location.source.publisher_lineage
+    subjectEntity: works
+    operators: 
+    - includes
+    - does not include
+    defaultOperator: includes
+    displayName: publisher ID
+    entityId: publishers
+    objectEntity: publishers
+    type: string
+    isList: true
+    isId: true
+    category: publisher
+    apiField: 
+    redshiftDisplayColumn: publisher_ids
+    redshiftFilterColumn: publisher_ids
+    actions:
+      - filter
+      - column
+      - sort
+    icon: mdi-domain
+    descr: The IDs of the publisher and parent publishers of the work.
   type:
     id: type
     subjectEntity: works
