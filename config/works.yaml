@@ -867,7 +867,8 @@ columns:
     - includes
     - does not include
     defaultOperator: includes
-    displayName: publisher ID
+    displayName: publisher
+    displayNameForColumn: publisher ID
     entityId: publishers
     objectEntity: publishers
     type: string
