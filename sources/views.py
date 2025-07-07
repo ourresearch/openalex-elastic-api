@@ -66,6 +66,15 @@ def sources_filters_doctrings():
         }
     return jsonify(ret)
 
+@blueprint.route("/v2/sources")
+def v2_sources():
+    index_name = "sources-v1"
+    default_sort = ["-works_count", "id"]
+    only_fields = process_only_fields(request, SourcesSchema)
+    result = shared_view(request, fields_dict, index_name, default_sort, connection='v2')
+    message_schema = MessageSchema(only=only_fields)
+    return message_schema.dump(result)
+
 
 @blueprint.route("/sources/config")
 def sources_config():
