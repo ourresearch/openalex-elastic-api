@@ -88,6 +88,16 @@ def institutions_filters_doctrings():
     return jsonify(ret)
 
 
+@blueprint.route("/v2/institutions")
+def v2_institutions():
+    index_name = "institutions-v1"
+    default_sort = ["-works_count", "id"]
+    only_fields = process_only_fields(request, InstitutionsSchema)
+    result = shared_view(request, fields_dict, index_name, default_sort, connection='v2')
+    message_schema = MessageSchema(only=only_fields)
+    return message_schema.dump(result)
+
+
 @blueprint.route("/institutions/config")
 def institutions_config():
     return jsonify(all_entities_config["institutions"])
