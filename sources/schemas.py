@@ -59,6 +59,7 @@ class SourcesSchema(Schema):
     is_in_doaj = fields.Bool()
     is_indexed_in_scopus = fields.Bool()
     is_core = fields.Bool()
+    is_oa_since_year = fields.Int()
     ids = fields.Nested(IDsSchema)
     homepage_url = fields.Str()
     apc_prices = fields.List(fields.Nested(APCSchema))
