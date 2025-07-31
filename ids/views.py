@@ -91,7 +91,16 @@ def works_random_get():
 
 @blueprint.route("/works/<path:id>")
 def works_id_get(id):
-    s = Search(index=settings.WORKS_INDEX)
+    # Check data_version parameter to determine connection and index
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    if data_version == '2':
+        connection = 'v2'
+        index_name = settings.WORKS_INDEX  # Works v2 uses same index name
+    else:
+        connection = 'default'
+        index_name = settings.WORKS_INDEX
+    
+    s = Search(index=index_name, using=connection)
     only_fields = process_id_only_fields(request, WorksSchema)
 
     if is_openalex_id(id):
@@ -100,15 +109,33 @@ def works_id_get(id):
             return redirect(url_for("ids.works_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/W{clean_id}"
-        query = Q("term", ids__openalex=full_openalex_id)
+        
+        # Use different field name for v2
+        if data_version == '2':
+            query = Q("term", id=full_openalex_id)
+        else:
+            query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
-        if s.count() == 0:
-            # check if document is merged
-            merged_id = get_merged_id("merge-works", full_openalex_id)
-            if merged_id:
-                return redirect(
-                    url_for("ids.works_id_get", id=merged_id, **request.args), code=301
-                )
+        # Check if document exists (avoid count() for v2 due to OpenSearch API differences)
+        if data_version == '2':
+            client = connections.get_connection('v2')
+            os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
+            test_response = os.execute()
+            if not test_response:
+                # check if document is merged
+                merged_id = get_merged_id("merge-works", full_openalex_id)
+                if merged_id:
+                    return redirect(
+                        url_for("ids.works_id_get", id=merged_id, **request.args), code=301
+                    )
+        else:
+            if s.count() == 0:
+                # check if document is merged
+                merged_id = get_merged_id("merge-works", full_openalex_id)
+                if merged_id:
+                    return redirect(
+                        url_for("ids.works_id_get", id=merged_id, **request.args), code=301
+                    )
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"W{clean_id}"
@@ -134,7 +161,15 @@ def works_id_get(id):
         s = s.filter(query)
     else:
         abort(404)
-    response = s.execute()
+        
+    # Handle v2 connection with OpenSearch
+    if data_version == '2':
+        client = connections.get_connection('v2')
+        os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
+        response = os.execute()
+    else:
+        response = s.execute()
+        
     if not response:
         abort(404)
     works_schema = WorksSchema(
@@ -432,7 +467,16 @@ def institutions_random_get():
 
 @blueprint.route("/institutions/<path:id>")
 def institutions_id_get(id):
-    s = Search(index=settings.INSTITUTIONS_INDEX)
+    # Check data_version parameter to determine connection and index
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    if data_version == '2':
+        connection = 'v2'
+        index_name = "institutions-v1"
+    else:
+        connection = 'default'
+        index_name = settings.INSTITUTIONS_INDEX
+    
+    s = Search(index=index_name, using=connection)
     only_fields = process_id_only_fields(request, InstitutionsSchema)
 
     if is_openalex_id(id):
@@ -443,16 +487,35 @@ def institutions_id_get(id):
             )
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/I{clean_id}"
-        query = Q("term", ids__openalex=full_openalex_id)
+        
+        # Use different field name for v2
+        if data_version == '2':
+            query = Q("term", id=full_openalex_id)
+        else:
+            query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
-        if s.count() == 0:
-            # check if document is merged
-            merged_id = get_merged_id("merge-institutions", full_openalex_id)
-            if merged_id:
-                return redirect(
-                    url_for("ids.institutions_id_get", id=merged_id, **request.args),
-                    code=301,
-                )
+        # Check if document exists (avoid count() for v2 due to OpenSearch API differences)
+        if data_version == '2':
+            client = connections.get_connection('v2')
+            os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
+            test_response = os.execute()
+            if not test_response:
+                # check if document is merged
+                merged_id = get_merged_id("merge-institutions", full_openalex_id)
+                if merged_id:
+                    return redirect(
+                        url_for("ids.institutions_id_get", id=merged_id, **request.args),
+                        code=301,
+                    )
+        else:
+            if s.count() == 0:
+                # check if document is merged
+                merged_id = get_merged_id("merge-institutions", full_openalex_id)
+                if merged_id:
+                    return redirect(
+                        url_for("ids.institutions_id_get", id=merged_id, **request.args),
+                        code=301,
+                    )
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"I{clean_id}"
@@ -473,7 +536,15 @@ def institutions_id_get(id):
         s = s.filter(query)
     else:
         abort(404)
-    response = s.execute()
+        
+    # Handle v2 connection with OpenSearch
+    if data_version == '2':
+        client = connections.get_connection('v2')
+        os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
+        response = os.execute()
+    else:
+        response = s.execute()
+        
     if not response:
         abort(404)
     institutions_schema = InstitutionsSchema(
@@ -754,7 +825,16 @@ def sources_random_get():
 @blueprint.route("/sources/<path:id>")
 @blueprint.route("/journals/<path:id>", endpoint="journals_id_get")
 def sources_id_get(id):
-    s = Search(index=settings.SOURCES_INDEX)
+    # Check data_version parameter to determine connection and index
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    if data_version == '2':
+        connection = 'v2'
+        index_name = "sources-v1"
+    else:
+        connection = 'default'
+        index_name = settings.SOURCES_INDEX
+    
+    s = Search(index=index_name, using=connection)
     only_fields = process_id_only_fields(request, SourcesSchema)
 
     if is_openalex_id(id):
@@ -763,16 +843,35 @@ def sources_id_get(id):
             return redirect(url_for("ids.sources_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/S{clean_id}"
-        query = Q("term", ids__openalex=full_openalex_id)
+        
+        # Use different field name for v2
+        if data_version == '2':
+            query = Q("term", id=full_openalex_id)
+        else:
+            query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
-        if s.count() == 0:
-            # check if document is merged
-            merged_id = get_merged_id("merge-sources", full_openalex_id)
-            if merged_id:
-                return redirect(
-                    url_for("ids.sources_id_get", id=merged_id, **request.args),
-                    code=301,
-                )
+        # Check if document exists (avoid count() for v2 due to OpenSearch API differences)
+        if data_version == '2':
+            client = connections.get_connection('v2')
+            os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
+            test_response = os.execute()
+            if not test_response:
+                # check if document is merged
+                merged_id = get_merged_id("merge-sources", full_openalex_id)
+                if merged_id:
+                    return redirect(
+                        url_for("ids.sources_id_get", id=merged_id, **request.args),
+                        code=301,
+                    )
+        else:
+            if s.count() == 0:
+                # check if document is merged
+                merged_id = get_merged_id("merge-sources", full_openalex_id)
+                if merged_id:
+                    return redirect(
+                        url_for("ids.sources_id_get", id=merged_id, **request.args),
+                        code=301,
+                    )
 
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
@@ -806,7 +905,15 @@ def sources_id_get(id):
             abort(404)
     else:
         abort(404)
-    response = s.execute()
+        
+    # Handle v2 connection with OpenSearch
+    if data_version == '2':
+        client = connections.get_connection('v2')
+        os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
+        response = os.execute()
+    else:
+        response = s.execute()
+        
     if not response:
         abort(404)
     sources_schema = SourcesSchema(
