@@ -7,6 +7,8 @@ def validate_params(request):
         "apc_sum",
         "cited_by_count_sum",
         "cursor",
+        "data_version",
+        "data-version",
         "filter",
         "format",
         "group_by",

@@ -25,10 +25,19 @@ blueprint = Blueprint("languages", __name__)
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
 def languages():
-    index_name = LANGUAGES_INDEX
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, LanguagesSchema)
-    result = shared_view(request, fields_dict, index_name, default_sort)
+    
+    # Check data_version parameter to determine connection and index
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    if data_version == '2':
+        connection = 'v2'
+        index_name = "languages-v1"
+    else:
+        connection = 'default'
+        index_name = LANGUAGES_INDEX
+    
+    result = shared_view(request, fields_dict, index_name, default_sort, connection)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)

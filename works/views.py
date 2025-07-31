@@ -36,7 +36,12 @@ def works():
     index_name = WORKS_INDEX
     default_sort = ["-cited_by_percentile_year.max", "-cited_by_count", "id"]
     only_fields = process_only_fields(request, WorksSchema)
-    result = shared_view(request, fields_dict, index_name, default_sort)
+    
+    # Check data_version parameter to determine connection
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    connection = 'v2' if data_version == '2' else 'default'
+    
+    result = shared_view(request, fields_dict, index_name, default_sort, connection)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
