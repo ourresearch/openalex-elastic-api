@@ -21,7 +21,6 @@ blueprint = Blueprint("publishers", __name__)
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
 def publishers():
-    default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, PublishersSchema)
     
     # Check data_version parameter to determine connection and index
@@ -29,9 +28,11 @@ def publishers():
     if data_version == '2':
         connection = 'v2'
         index_name = "publishers-v1"
+        default_sort = ["id"]
     else:
         connection = 'default'
         index_name = PUBLISHERS_INDEX
+        default_sort = ["-works_count", "id"]
     
     result = shared_view(request, fields_dict, index_name, default_sort, connection)
     # export option
