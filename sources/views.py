@@ -28,7 +28,7 @@ def sources():
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
     if data_version == '2':
         connection = 'v2'
-        index_name = "sources-v1"
+        index_name = "sources-v2"
     else:
         connection = 'default'
         index_name = SOURCES_INDEX
