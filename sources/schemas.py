@@ -29,7 +29,7 @@ class IDsSchema(Schema):
     mag = fields.Str()
     wikidata = fields.Str()
     fatcat = fields.Str()
-    datacite = fields.Str()
+    datacite = fields.List(fields.Str())
 
     class Meta:
         ordered = True
