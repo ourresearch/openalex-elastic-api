@@ -55,6 +55,7 @@ class HistogramWrapperSchema(Schema):
 class CountsByYearSchema(Schema):
     year = fields.Int()
     works_count = fields.Int()
+    oa_works_count = fields.Int()
     cited_by_count = fields.Int()
 
     class Meta:
