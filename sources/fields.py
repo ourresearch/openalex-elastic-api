@@ -45,6 +45,14 @@ fields = [
         param=f"is_global_south",
         custom_es_field="country_code",
     ),
+    BooleanField(
+        param="is_high_oa_rate",
+        docstring="The source has a high Open Access rate",
+    ),
+    BooleanField(
+        param="is_in_jstage",
+        docstring="The source is in J-STAGE, the Japan Science and Technology Information Aggregation Service",
+    ),
     DateField(
         param="from_created_date",
         custom_es_field="created_date",
@@ -109,6 +117,12 @@ fields = [
     RangeField(param="apc_usd"),
     RangeField(param="apc_prices.price"),
     RangeField(param="cited_by_count"),
+    RangeField(param="is_in_doaj_since_year"),
+    RangeField(param="is_high_oa_rate_since_year"),
+    RangeField(param="is_in_jstage_since_year"),
+    RangeField(param="last_publication_year"),
+    RangeField(param="first_publication_year"),
+    RangeField(param="oa_flip_year"),
     RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="summary_stats.h_index"),
     RangeField(param="summary_stats.i10_index"),
