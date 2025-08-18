@@ -22,6 +22,7 @@ import institutions
 import keywords
 import languages
 import licenses
+import locations
 import oql
 import publishers
 import settings
@@ -85,6 +86,7 @@ def register_blueprints(app):
     app.register_blueprint(keywords.views.blueprint)
     app.register_blueprint(languages.views.blueprint)
     app.register_blueprint(licenses.views.blueprint)
+    app.register_blueprint(locations.views.blueprint)
     app.register_blueprint(oql.views.blueprint)
     app.register_blueprint(publishers.views.blueprint)
     app.register_blueprint(sdgs.views.blueprint)
