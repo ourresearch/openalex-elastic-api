@@ -8,24 +8,53 @@ from core.schemas import (
     relevance_score,
 )
 
+class MergeKeySchema(Schema):
+    doi = fields.Str(default=None)
+    arxiv = fields.Str(default=None)
+    pmid = fields.Str(default=None)
+    title_author = fields.Str(default=None)
+
+    class Meta:
+        ordered = True
+        unknown = INCLUDE
+
+
+class IdsSchema(Schema):
+    id = fields.Str()
+    namespace = fields.Str()
+    relationship = fields.Str(default=None)
+
+    class Meta:
+        ordered = True
+        unknown = INCLUDE
+
+
+class UrlsSchema(Schema):
+    url = fields.Str()
+    content_type = fields.Str(default=None)
+
 
 class LocationsSchema(Schema):
     id = fields.Str()
     work_id = fields.Str()
     native_id = fields.Str()
     native_id_namespace = fields.Str()
+    provenance = fields.Str(default=None)
     title = fields.Str()
     type = fields.Str()
-    source_name = fields.Str()
-    publisher = fields.Str()
-    source_id = fields.Str()
+    source_name = fields.Str(default=None)
+    publisher = fields.Str(default=None)
+    source_id = fields.Str(default=None)
     is_oa = fields.Bool()
-    version = fields.Str()
-    license = fields.Str()
-    language = fields.Str()
-    is_retracted = fields.Bool()
-    landing_page_url = fields.Str()
-    pdf_url = fields.Str()
+    version = fields.Str(default=None)
+    license = fields.Str(default=None)
+    language = fields.Str(default=None)
+    is_retracted = fields.Bool(defaul=False)
+    landing_page_url = fields.Str(default=None)
+    pdf_url = fields.Str(default=None)
+    ids = fields.Nested(IdsSchema, many=True, default=None)
+    urls = fields.Nested(UrlsSchema, many=True, default=None)
+    merge_key = fields.Nested(MergeKeySchema, default=None)
     relevance_score = fields.Method("get_relevance_score")
 
     @post_dump
