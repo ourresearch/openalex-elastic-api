@@ -42,6 +42,7 @@ from institutions.schemas import InstitutionsSchema
 from keywords.schemas import KeywordsSchema
 from languages.schemas import LanguagesSchema
 from licenses.schemas import LicensesSchema
+from locations.schemas import LocationsSchema
 from publishers.schemas import PublishersSchema
 from sources.schemas import SourcesSchema
 from source_types.schemas import SourceTypesSchema
@@ -1090,6 +1091,29 @@ def keywords_id_get(id):
 def licenses_id_get(id):
     return get_by_openalex_external_id(settings.LICENSES_INDEX, LicensesSchema, id)
 
+
+# Location
+
+@blueprint.route("/locations/<path:id>")
+@blueprint.route("/v2/locations/<path:id>")
+def locations_id_get(id):
+    s = Search(index="locations-v2", using="v2")
+    only_fields = process_id_only_fields(request, LocationsSchema)
+
+    query = Q("term", id=id)
+    s = s.filter(query)
+    
+    client = connections.get_connection('v2')
+    os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
+    response = os.execute()
+    
+    if not response:
+        abort(404)
+    
+    locations_schema = LocationsSchema(
+        context={"display_relevance": False}, only=only_fields
+    )
+    return locations_schema.dump(response[0])
 
 # Universal
 

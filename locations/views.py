@@ -12,6 +12,7 @@ LOCATIONS_INDEX = "locations-v2"
 
 
 @blueprint.route("/locations")
+@blueprint.route("/v2/locations")
 @cache.cached(
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
