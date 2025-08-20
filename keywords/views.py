@@ -35,6 +35,20 @@ def fields():
     message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
 
+@blueprint.route("/v2/keywords")
+@cache.cached(
+    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
+)
+def v2_fields():
+    index_name = "keywords-v1"
+    default_sort = ["-works_count"]
+    only_fields = process_only_fields(request, KeywordsSchema)
+    result = shared_view(request, fields_dict, index_name, default_sort, connection='v2')
+    # export option
+    if is_group_by_export(request):
+        return export_group_by(result, request)
+    message_schema = MessageSchema(only=only_fields)
+    return message_schema.dump(result)
 
 @blueprint.route("/keywords/filters/<path:params>")
 def fields_filters(params):

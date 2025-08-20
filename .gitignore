@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 dump.rdb
 venv/
+.venv/
 .ipynb_checkpoints/
 *.ipynb
 *nohup.out
