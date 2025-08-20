@@ -29,6 +29,7 @@ fields = [
         param="title.search",
         unique_id="location_search",
     ),
+    TermField(param="id", custom_es_field="id"),
     TermField(param="native_id", custom_es_field="native_id"),
     TermField(param="native_id_namespace", custom_es_field="native_id_namespace"),
     TermField(param='provenance', custom_es_field='provenance'),
