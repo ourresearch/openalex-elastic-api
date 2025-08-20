@@ -1084,7 +1084,74 @@ def subfields_id_get(id):
 
 @blueprint.route("/keywords/<path:id>")
 def keywords_id_get(id):
-    return get_by_openalex_external_id(settings.KEYWORDS_INDEX, KeywordsSchema, id)
+    # Check data_version parameter to determine connection and index
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    if data_version == '2':
+        connection = 'v2'
+        index_name = "keywords-v1"
+    else:
+        connection = 'default'
+        index_name = settings.KEYWORDS_INDEX
+    
+    s = Search(index=index_name, using=connection)
+    only_fields = process_id_only_fields(request, KeywordsSchema)
+
+    clean_id = str(id).lower()
+    formatted_id = f"https://openalex.org/keywords/{clean_id}"
+
+    # Use different field name for v2
+    if data_version == '2':
+        query = Q("term", id=formatted_id)
+    else:
+        query = Q("term", id__lower=formatted_id)
+    
+    # Handle v2 connection with OpenSearch
+    if data_version == '2':
+        client = connections.get_connection('v2')
+        os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
+        response = os.execute()
+    else:
+        response = s.filter(query).execute()
+        
+    if not response:
+        abort(404)
+        
+    keywords_schema = KeywordsSchema(context={"display_relevance": False}, only=only_fields)
+    if is_ui_format():
+        json_output = json.dumps(dict(keywords_schema.dump(response[0])))
+        ui_format = format_as_ui("keywords", json_output)
+        return jsonify(
+            {
+                "meta": {
+                    "count": 1,
+                    "page": 1,
+                    "per_page": 1,
+                },
+                "props": ui_format,
+            }
+        )
+    return keywords_schema.dump(response[0])
+
+
+@blueprint.route("/v2/keywords/<path:id>")
+def keywords_v2_id_get(id):
+    s = Search(index="keywords-v1", using="v2")
+    only_fields = process_id_only_fields(request, KeywordsSchema)
+
+    clean_id = str(id).lower()
+    formatted_id = f"https://openalex.org/keywords/{clean_id}"
+    query = Q("term", id=formatted_id)
+    s = s.filter(query)
+    
+    client = connections.get_connection('v2')
+    os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
+    response = os.execute()
+        
+    if not response:
+        abort(404)
+        
+    keywords_schema = KeywordsSchema(context={"display_relevance": False}, only=only_fields)
+    return keywords_schema.dump(response[0])
 
 
 @blueprint.route("/licenses/<path:id>")
