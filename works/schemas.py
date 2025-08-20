@@ -155,6 +155,7 @@ class SourcesSchema(Schema):
 
 
 class LocationSchema(Schema):
+    id = fields.Method("get_id")
     is_oa = fields.Bool()
     landing_page_url = fields.Str()
     pdf_url = fields.Str()
@@ -164,6 +165,31 @@ class LocationSchema(Schema):
     version = fields.Str()
     is_accepted = fields.Bool()
     is_published = fields.Bool()
+
+    def get_id(self, obj):
+        native_id = getattr(obj, 'native_id', '')
+        provenance = getattr(obj, 'provenance', '')
+
+        if not native_id or not provenance:
+            return None
+
+        prefix_map = {
+            'crossref': 'doi',
+            'datacite': 'doi',
+            'pubmed': 'pmid',
+            'mag': 'mag',
+            'repo': 'pmh',
+            'repo_backfill': 'pmh'
+        }
+
+        prefix = prefix_map.get(provenance)
+        return f"{prefix}:{native_id}" if prefix else None
+
+    @post_dump
+    def remove_null_id(self, data, **kwargs):
+        if data.get("id") is None:
+            data.pop("id")
+        return data
 
     class Meta:
         ordered = True

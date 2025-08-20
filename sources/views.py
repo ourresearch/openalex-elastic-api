@@ -77,7 +77,7 @@ def sources_filters_doctrings():
 
 @blueprint.route("/v2/sources")
 def v2_sources():
-    index_name = "sources-v1"
+    index_name = "sources-v5"
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, SourcesSchema)
     result = shared_view(request, fields_dict, index_name, default_sort, connection='v2')
