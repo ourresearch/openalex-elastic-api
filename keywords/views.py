@@ -36,12 +36,9 @@ def fields():
     return message_schema.dump(result)
 
 @blueprint.route("/v2/keywords")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def v2_fields():
     index_name = "keywords-v1"
-    default_sort = ["-works_count"]
+    default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, KeywordsSchema)
     result = shared_view(request, fields_dict, index_name, default_sort, connection='v2')
     # export option
