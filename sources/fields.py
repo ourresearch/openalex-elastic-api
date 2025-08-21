@@ -42,6 +42,9 @@ fields = [
         param="is_core",
     ),
     BooleanField(
+        param="is_ojs",
+    ),
+    BooleanField(
         param=f"is_global_south",
         custom_es_field="country_code",
     ),
