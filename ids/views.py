@@ -829,8 +829,8 @@ def sources_id_get(id):
     # Check data_version parameter to determine connection and index
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
     if data_version == '2':
-        connection = 'v2'
-        index_name = "sources-v5"
+        connection = 'walden'
+        index_name = settings.SOURCES_INDEX
     else:
         connection = 'default'
         index_name = settings.SOURCES_INDEX
@@ -851,28 +851,15 @@ def sources_id_get(id):
         else:
             query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
-        # Check if document exists (avoid count() for v2 due to OpenSearch API differences)
-        if data_version == '2':
-            client = connections.get_connection('v2')
-            os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
-            test_response = os.execute()
-            if not test_response:
-                # check if document is merged
-                merged_id = get_merged_id("merge-sources", full_openalex_id)
-                if merged_id:
-                    return redirect(
-                        url_for("ids.sources_id_get", id=merged_id, **request.args),
-                        code=301,
-                    )
-        else:
-            if s.count() == 0:
-                # check if document is merged
-                merged_id = get_merged_id("merge-sources", full_openalex_id)
-                if merged_id:
-                    return redirect(
-                        url_for("ids.sources_id_get", id=merged_id, **request.args),
-                        code=301,
-                    )
+        # Check if document exists
+        if s.count() == 0:
+            # check if document is merged
+            merged_id = get_merged_id("merge-sources", full_openalex_id)
+            if merged_id:
+                return redirect(
+                    url_for("ids.sources_id_get", id=merged_id, **request.args),
+                    code=301,
+                )
 
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
@@ -907,13 +894,7 @@ def sources_id_get(id):
     else:
         abort(404)
         
-    # Handle v2 connection with OpenSearch
-    if data_version == '2':
-        client = connections.get_connection('v2')
-        os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
-        response = os.execute()
-    else:
-        response = s.execute()
+    response = s.execute()
         
     if not response:
         abort(404)

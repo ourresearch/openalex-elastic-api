@@ -27,8 +27,8 @@ def sources():
     # Check data_version parameter to determine connection and index
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
     if data_version == '2':
-        connection = 'v2'
-        index_name = "sources-v5"
+        connection = 'walden'
+        index_name = SOURCES_INDEX
     else:
         connection = 'default'
         index_name = SOURCES_INDEX
@@ -77,10 +77,10 @@ def sources_filters_doctrings():
 
 @blueprint.route("/v2/sources")
 def v2_sources():
-    index_name = "sources-v5"
+    index_name = SOURCES_INDEX
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, SourcesSchema)
-    result = shared_view(request, fields_dict, index_name, default_sort, connection='v2')
+    result = shared_view(request, fields_dict, index_name, default_sort, connection='walden')
     message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
 

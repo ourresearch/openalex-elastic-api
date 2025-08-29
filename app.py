@@ -107,6 +107,8 @@ def register_extensions(app):
     if settings.ES_URL_V2:
         opensearch_client = OpenSearch(hosts=[settings.ES_URL_V2], timeout=30)
         connections.add_connection('v2', opensearch_client)
+    if settings.ES_URL_WALDEN:
+        connections.create_connection('walden', hosts=[settings.ES_URL_WALDEN], timeout=30)
     cache.init_app(app)
     compress.init_app(app)
 
