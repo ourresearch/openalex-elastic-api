@@ -26,14 +26,9 @@ def sources():
     
     # Check data_version parameter to determine connection and index
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    if data_version == '2':
-        connection = 'walden'
-        index_name = SOURCES_INDEX
-    else:
-        connection = 'default'
-        index_name = SOURCES_INDEX
+    connection = 'walden' if data_version == '2' else 'default'
     
-    result = shared_view(request, fields_dict, index_name, default_sort, connection)
+    result = shared_view(request, fields_dict, SOURCES_INDEX, default_sort, connection)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)

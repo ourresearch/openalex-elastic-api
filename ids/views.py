@@ -737,7 +737,16 @@ def funders_id_get(id):
 
 @blueprint.route("/publishers/<path:id>")
 def publishers_id_get(id):
-    s = Search(index=settings.PUBLISHERS_INDEX)
+    # Check data_version parameter to determine connection and index
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    if data_version == '2':
+        connection = 'walden'
+        index_name = settings.PUBLISHERS_INDEX
+    else:
+        connection = 'default'
+        index_name = settings.PUBLISHERS_INDEX
+    
+    s = Search(index=index_name, using=connection)
     only_fields = process_id_only_fields(request, PublishersSchema)
 
     if is_openalex_id(id):
@@ -748,7 +757,12 @@ def publishers_id_get(id):
             )
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/P{clean_id}"
-        query = Q("term", ids__openalex=full_openalex_id)
+        
+        # Use different field name for v2
+        if data_version == '2':
+            query = Q("term", id=full_openalex_id)
+        else:
+            query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
         if s.count() == 0:
             # check if document is merged
@@ -767,7 +781,9 @@ def publishers_id_get(id):
         s = s.filter(query)
     else:
         abort(404)
+        
     response = s.execute()
+        
     if not response:
         abort(404)
     publishers_schema = PublishersSchema(

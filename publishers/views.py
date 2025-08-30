@@ -25,16 +25,10 @@ def publishers():
     
     # Check data_version parameter to determine connection and index
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    if data_version == '2':
-        connection = 'v2'
-        index_name = "publishers-v1"
-        default_sort = ["id"]
-    else:
-        connection = 'default'
-        index_name = PUBLISHERS_INDEX
-        default_sort = ["-works_count", "id"]
+    connection = 'walden' if data_version == '2' else 'default'
+    default_sort = ["-works_count", "id"]
     
-    result = shared_view(request, fields_dict, index_name, default_sort, connection)
+    result = shared_view(request, fields_dict, PUBLISHERS_INDEX, default_sort, connection)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
@@ -86,10 +80,10 @@ def publishers_filters_doctrings():
 
 @blueprint.route("/v2/publishers")
 def v2_publishers():
-    index_name = "publishers-v1"
-    default_sort = ["id"]
+    index_name = PUBLISHERS_INDEX
+    default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, PublishersSchema)
-    result = shared_view(request, fields_dict, index_name, default_sort, connection='v2')
+    result = shared_view(request, fields_dict, index_name, default_sort, connection='walden')
     message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
 
