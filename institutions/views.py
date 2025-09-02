@@ -26,16 +26,11 @@ def institutions():
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, InstitutionsSchema)
     
-    # Check data_version parameter to determine connection and index
+    # Check data_version parameter to determine connection
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    if data_version == '2':
-        connection = 'v2'
-        index_name = "institutions-v1"
-    else:
-        connection = 'default'
-        index_name = INSTITUTIONS_INDEX
+    connection = 'walden' if data_version == '2' else 'default'
     
-    result = shared_view(request, fields_dict, index_name, default_sort, connection)
+    result = shared_view(request, fields_dict, INSTITUTIONS_INDEX, default_sort, connection)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
@@ -99,10 +94,9 @@ def institutions_filters_doctrings():
 
 @blueprint.route("/v2/institutions")
 def v2_institutions():
-    index_name = "institutions-v1"
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, InstitutionsSchema)
-    result = shared_view(request, fields_dict, index_name, default_sort, connection='v2')
+    result = shared_view(request, fields_dict, INSTITUTIONS_INDEX, default_sort, connection='walden')
     message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
 

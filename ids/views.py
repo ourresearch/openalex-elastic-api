@@ -163,13 +163,7 @@ def works_id_get(id):
     else:
         abort(404)
         
-    # Handle v2 connection with OpenSearch
-    if data_version == '2':
-        client = connections.get_connection('v2')
-        os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
-        response = os.execute()
-    else:
-        response = s.execute()
+    response = s.execute()
         
     if not response:
         abort(404)
@@ -470,14 +464,9 @@ def institutions_random_get():
 def institutions_id_get(id):
     # Check data_version parameter to determine connection and index
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    if data_version == '2':
-        connection = 'v2'
-        index_name = "institutions-v1"
-    else:
-        connection = 'default'
-        index_name = settings.INSTITUTIONS_INDEX
-    
-    s = Search(index=index_name, using=connection)
+    connection = 'walden' if data_version == '2' else 'default'
+
+    s = Search(index=settings.INSTITUTIONS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, InstitutionsSchema)
 
     if is_openalex_id(id):
@@ -488,35 +477,21 @@ def institutions_id_get(id):
             )
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/I{clean_id}"
-        
-        # Use different field name for v2
-        if data_version == '2':
-            query = Q("term", id=full_openalex_id)
-        else:
-            query = Q("term", ids__openalex=full_openalex_id)
+        query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
-        # Check if document exists (avoid count() for v2 due to OpenSearch API differences)
-        if data_version == '2':
-            client = connections.get_connection('v2')
-            os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
-            test_response = os.execute()
-            if not test_response:
-                # check if document is merged
-                merged_id = get_merged_id("merge-institutions", full_openalex_id)
-                if merged_id:
-                    return redirect(
-                        url_for("ids.institutions_id_get", id=merged_id, **request.args),
-                        code=301,
-                    )
-        else:
-            if s.count() == 0:
-                # check if document is merged
-                merged_id = get_merged_id("merge-institutions", full_openalex_id)
-                if merged_id:
-                    return redirect(
-                        url_for("ids.institutions_id_get", id=merged_id, **request.args),
-                        code=301,
-                    )
+
+        # Execute search and check if document exists
+        response = s.execute()
+        if not response.hits:  # Check if any hits were returned
+            # check if document is merged
+            merged_id = get_merged_id("merge-institutions", full_openalex_id)
+            if merged_id:
+                return redirect(
+                    url_for("ids.institutions_id_get", id=merged_id, **request.args),
+                    code=301,
+                )
+            abort(404)
+
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"I{clean_id}"
@@ -528,6 +503,7 @@ def institutions_id_get(id):
         full_ror = f"https://ror.org/{clean_ror}"
         query = Q("term", ror=full_ror)
         s = s.filter(query)
+        response = s.execute()
     elif id.startswith("wikidata:") or ("wikidata" in id):
         clean_wikidata = normalize_wikidata(id)
         if not clean_wikidata:
@@ -535,19 +511,14 @@ def institutions_id_get(id):
         full_wikidata = f"https://www.wikidata.org/wiki/{clean_wikidata}"
         query = Q("term", ids__wikidata=full_wikidata)
         s = s.filter(query)
-    else:
-        abort(404)
-        
-    # Handle v2 connection with OpenSearch
-    if data_version == '2':
-        client = connections.get_connection('v2')
-        os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
-        response = os.execute()
-    else:
         response = s.execute()
-        
-    if not response:
+    else:
         abort(404)
+
+    # Remove the duplicate response execution since we handle it above
+    if not response.hits:  # Use response.hits instead of just response
+        abort(404)
+
     institutions_schema = InstitutionsSchema(
         context={"display_relevance": False}, only=only_fields
     )
