@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, abort
 
 from authors.fields import fields_dict
 from authors.schemas import AuthorsSchema, MessageSchema
@@ -21,6 +21,10 @@ blueprint = Blueprint("authors", __name__)
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
 def authors():
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    if data_version == '2':
+        abort(404)
+    
     warm_index = request.args.get("warm")
     if not warm_index:
         index_name = AUTHORS_INDEX

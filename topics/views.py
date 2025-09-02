@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, abort
 
 from combined_config import all_entities_config
 from core.export import export_group_by, is_group_by_export
@@ -25,6 +25,10 @@ blueprint = Blueprint("topics", __name__)
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
 def topics():
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    if data_version == '2':
+        abort(404)
+    
     index_name = TOPICS_INDEX
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, TopicsSchema)
