@@ -162,8 +162,13 @@ def works_id_get(id):
         s = s.filter(query)
     else:
         abort(404)
-        
-    response = s.execute()
+
+    if data_version == '2':
+        client = connections.get_connection('v2')
+        os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
+        response = os.execute()
+    else:
+        response = s.execute()
         
     if not response:
         abort(404)
