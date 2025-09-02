@@ -27,17 +27,11 @@ blueprint = Blueprint("licenses", __name__)
 def licenses():
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, LicensesSchema)
-    
-    # Check data_version parameter to determine connection and index
+
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    if data_version == '2':
-        connection = 'v2'
-        index_name = "licenses-v1"
-    else:
-        connection = 'default'
-        index_name = LICENSES_INDEX
+    connection = 'walden' if data_version == '2' else 'default'
     
-    result = shared_view(request, fields_dict, index_name, default_sort, connection)
+    result = shared_view(request, fields_dict, LICENSES_INDEX, default_sort, connection)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
