@@ -961,7 +961,10 @@ def topics_id_get(id):
 
 
 def get_by_openalex_external_id(index, schema, id):
-    s = Search(index=index)
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    connection = 'walden' if data_version == '2' else 'default'
+
+    s = Search(index=index, using=connection)
     only_fields = process_id_only_fields(request, schema)
 
     if index.startswith("institution-types"):
