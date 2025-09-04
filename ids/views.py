@@ -1039,12 +1039,8 @@ def subfields_id_get(id):
 def keywords_id_get(id):
     # Check data_version parameter to determine connection and index
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    if data_version == '2':
-        connection = 'v2'
-        index_name = "keywords-v1"
-    else:
-        connection = 'default'
-        index_name = settings.KEYWORDS_INDEX
+    connection = 'walden' if data_version == '2' else 'default'
+    index_name = settings.KEYWORDS_INDEX
     
     s = Search(index=index_name, using=connection)
     only_fields = process_id_only_fields(request, KeywordsSchema)
@@ -1088,7 +1084,7 @@ def keywords_id_get(id):
 
 @blueprint.route("/v2/keywords/<path:id>")
 def keywords_v2_id_get(id):
-    s = Search(index="keywords-v1", using="v2")
+    s = Search(index="keywords-v1", using="walden")
     only_fields = process_id_only_fields(request, KeywordsSchema)
 
     clean_id = str(id).lower()
