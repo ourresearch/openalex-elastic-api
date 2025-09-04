@@ -4,7 +4,6 @@ import sentry_sdk
 from elasticsearch_dsl import connections
 from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
-from opensearchpy import OpenSearch
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 import authors
@@ -104,9 +103,6 @@ def register_extensions(app):
     db.init_app(app)
     sentry_sdk.init(dsn=os.environ.get("SENTRY_DSN"), integrations=[FlaskIntegration()])
     connections.create_connection('default', hosts=[settings.ES_URL], timeout=30)
-    if settings.ES_URL_V2:
-        opensearch_client = OpenSearch(hosts=[settings.ES_URL_V2], timeout=30)
-        connections.add_connection('v2', opensearch_client)
     if settings.ES_URL_WALDEN:
         connections.create_connection('walden', hosts=[settings.ES_URL_WALDEN], timeout=30)
     cache.init_app(app)

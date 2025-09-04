@@ -1,8 +1,7 @@
 from collections import OrderedDict
 
 from elasticsearch.exceptions import RequestError
-from elasticsearch_dsl import Search, connections
-from opensearch_dsl import Search as OSSearch
+from elasticsearch_dsl import Search
 
 import settings
 from core.cursor import get_next_cursor, handle_cursor
@@ -162,31 +161,15 @@ def filter_group_with_q(params, fields_dict, s):
 def execute_search(s, params):
     paginate = get_pagination(params)
 
-    # default case: Elasticsearch connection
-    if s._using != 'v2':
-        if params["group_by"]:
-            return s.execute()
-        else:
-            try:
-                return s[paginate.start:paginate.end].execute()
-            except RequestError as e:
-                if "search_after has" in str(e) and "sort has" in str(e):
-                    raise APIPaginationError("Cursor value is invalid.")
-                raise e
-
-    # special case: OpenSearch v2 connection
-    client = connections.get_connection('v2')
-    s = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
-
-    try:
-        if params["group_by"]:
-            return s.execute()
-        else:
+    if params["group_by"]:
+        return s.execute()
+    else:
+        try:
             return s[paginate.start:paginate.end].execute()
-    except RequestError as e:
-        if "search_after has" in str(e) and "sort has" in str(e):
-            raise APIPaginationError("Cursor value is invalid.")
-        raise e
+        except RequestError as e:
+            if "search_after has" in str(e) and "sort has" in str(e):
+                raise APIPaginationError("Cursor value is invalid.")
+            raise e
 
 
 def format_response(response, params, index_name, fields_dict, s):
@@ -269,18 +252,7 @@ def format_group_bys(response, params, index_name, fields_dict):
 
 
 def calculate_sample_or_default_count(params, s):
-    # default behavior for Elasticsearch (non-v2)
-    if s._using != 'v2':
-        count = s.count()
-        if params.get("sample") and params["sample"] < count:
-            return params["sample"]
-        return count
-
-    # special case for OpenSearch v2
-    client = connections.get_connection('v2')
-    query_body = {"query": s.to_dict().get("query", {})}
-
-    if not query_body["query"]:
-        query_body["query"] = {"match_all": {}}
-
-    return client.count(index=s._index, body=query_body)['count']
+    count = s.count()
+    if params.get("sample") and params["sample"] < count:
+        return params["sample"]
+    return count
