@@ -1,6 +1,7 @@
 from core.fields import (
     DateField,
     DateTimeField,
+    ExternalIDField,
     RangeField,
     SearchField,
     TermField,
@@ -16,7 +17,10 @@ fields = [
         custom_es_field="updated_date",
     ),
     RangeField(param="cited_by_count"),
-    RangeField(param="id"),
+    ExternalIDField(
+        param="id",
+        entity_type="domains",
+    ),
     RangeField(param="fields.id"),
     RangeField(param="works_count"),
     SearchField(param="default.search", index="domains"),

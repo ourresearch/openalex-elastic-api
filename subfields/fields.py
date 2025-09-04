@@ -1,6 +1,7 @@
 from core.fields import (
     DateField,
     DateTimeField,
+    ExternalIDField,
     OpenAlexIDField,
     RangeField,
     SearchField,
@@ -18,14 +19,17 @@ fields = [
     ),
     OpenAlexIDField(param="topics.id"),
     RangeField(param="cited_by_count"),
-    RangeField(param="id"),
+    ExternalIDField(
+        param="id",
+        entity_type="subfields",
+    ),
     RangeField(param="domain.id"),
     RangeField(param="field.id"),
     RangeField(param="works_count"),
     SearchField(param="default.search", index="subfields"),
     SearchField(
         param="display_name.search",
-        docstring="Free text search among domains' names",
+        docstring="Free text search among subfields' names",
         documentation_link="https://docs.openalex.org/api-entities/topics/search-topics#search-a-specific-field",
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),

@@ -981,3 +981,86 @@ class TermField(Field):
             raise APIQueryParamsError(
                 f"Value for {self.param} must be one of {', '.join(valid_values)} and not {self.value}."
             )
+
+
+class ExternalIDField(Field):
+    """
+    Field for handling special OpenAlex entity IDs like languages, countries, 
+    licenses, and continents that don't follow the standard W123/A456 format.
+    
+    Accepts both formats:
+    - Short form: languages/en, countries/us, licenses/cc-by
+    - Full form: https://openalex.org/languages/en
+    """
+    
+    def __init__(self, param, entity_type, **kwargs):
+        super().__init__(param, **kwargs)
+        self.entity_type = entity_type
+    
+    def build_query(self):
+        # Handle null values
+        if self.value == "null":
+            field_name = self.es_field()
+            field_name = field_name.replace("__", ".")
+            return ~Q("exists", field=field_name)
+        elif self.value == "!null":
+            field_name = self.es_field()
+            field_name = field_name.replace("__", ".")
+            return Q("exists", field=field_name)
+        
+        # Handle negation
+        if self.value.startswith("!"):
+            query_value = self.value[1:]
+            formatted_value = self._format_id(query_value)
+            kwargs = {self.es_field(): formatted_value}
+            return ~Q("term", **kwargs)
+        else:
+            formatted_value = self._format_id(self.value)
+            kwargs = {self.es_field(): formatted_value}
+            return Q("term", **kwargs)
+    
+    def es_field(self) -> str:
+        """Use the same field mapping pattern as TermField."""
+        if self.custom_es_field:
+            field = self.custom_es_field
+        elif self.alias:
+            field = self.alias.replace(".", "__") + "__lower"
+        elif "." in self.param:
+            field = self.param.replace(".", "__") + "__lower"
+        else:
+            field = self.param + "__lower"
+        return field
+    
+    def _format_id(self, value):
+        """Format ID to the full URL format expected in Elasticsearch."""
+        # If already a full URL, return as-is
+        if value.startswith("https://openalex.org/"):
+            return value
+        
+        # If it has the entity prefix, add the base URL
+        if value.startswith(f"{self.entity_type}/"):
+            return f"https://openalex.org/{value}"
+        
+        # If it's just the bare code, add both entity prefix and base URL
+        return f"https://openalex.org/{self.entity_type}/{value}"
+    
+    def validate(self, query):
+        """Validate that the ID format is correct for this entity type."""
+        clean_value = query
+        if clean_value.startswith("!"):
+            clean_value = clean_value[1:]
+        
+        if clean_value in ["null", "!null"]:
+            return
+        
+        # Remove URL prefix for validation
+        if clean_value.startswith("https://openalex.org/"):
+            clean_value = clean_value.replace("https://openalex.org/", "")
+        
+        # Check if it's a valid format for this entity type
+        if not (clean_value.startswith(f"{self.entity_type}/") or 
+                "/" not in clean_value):  # Allow bare codes like "en", "us"
+            raise APIQueryParamsError(
+                f"'{query}' is not a valid {self.entity_type} ID. Expected format: "
+                f"{self.entity_type}/code or https://openalex.org/{self.entity_type}/code"
+            )

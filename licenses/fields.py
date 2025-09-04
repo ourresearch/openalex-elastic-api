@@ -1,6 +1,7 @@
 from core.fields import (
     DateField,
     DateTimeField,
+    ExternalIDField,
     OpenAlexIDField,
     RangeField,
     SearchField,
@@ -27,19 +28,20 @@ fields = [
         param="from_updated_date",
         custom_es_field="updated_date",
     ),
-    OpenAlexIDField(
+    ExternalIDField(
         param="id",
+        entity_type="licenses",
         docstring=DOCSTRINGS["openalex"],
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
     ),
     RangeField(param="cited_by_count"),
     RangeField(param="works_count"),
-    SearchField(param="default.search", index="countries"),
+    SearchField(param="default.search", index="licenses"),
     SearchField(
         param="display_name.search",
-        docstring="Free text search among countries' names",
-        documentation_link="https://docs.openalex.org/api-entities/countries/search-countries#search-a-specific-field",
+        docstring="Free text search among licenses' names",
+        documentation_link="https://docs.openalex.org/api-entities/licenses/search-licenses#search-a-specific-field",
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
 ]

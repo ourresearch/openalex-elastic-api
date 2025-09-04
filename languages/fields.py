@@ -1,6 +1,7 @@
 from core.fields import (
     DateField,
     DateTimeField,
+    ExternalIDField,
     OpenAlexIDField,
     RangeField,
     SearchField,
@@ -27,8 +28,9 @@ fields = [
         param="from_updated_date",
         custom_es_field="updated_date",
     ),
-    OpenAlexIDField(
+    ExternalIDField(
         param="id",
+        entity_type="languages",
         docstring=DOCSTRINGS["openalex"],
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
