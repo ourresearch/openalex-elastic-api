@@ -33,13 +33,17 @@ def index():
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
 def works():
-    index_name = WORKS_INDEX
     default_sort = ["-cited_by_percentile_year.max", "-cited_by_count", "id"]
     only_fields = process_only_fields(request, WorksSchema)
     
     # Check data_version parameter to determine connection
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'v2' if data_version == '2' else 'default'
+    if data_version == '2':
+        connection = 'walden'
+        index_name = 'works-v26'
+    else:
+        connection = 'default'
+        index_name = WORKS_INDEX
     
     result = shared_view(request, fields_dict, index_name, default_sort, connection)
     # export option
@@ -51,10 +55,10 @@ def works():
 
 @blueprint.route("/v2/works")
 def v2_works():
-    index_name = WORKS_INDEX
+    index_name = 'works-v26'
     default_sort = ["-cited_by_percentile_year.max", "-cited_by_count", "id"]
     only_fields = process_only_fields(request, WorksSchema)
-    result = shared_view(request, fields_dict, index_name, default_sort, connection='v2')
+    result = shared_view(request, fields_dict, index_name, default_sort, connection='walden')
     message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
 
