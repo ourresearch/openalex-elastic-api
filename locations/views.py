@@ -8,7 +8,7 @@ from extensions import cache
 
 blueprint = Blueprint("locations", __name__)
 
-LOCATIONS_INDEX = "locations-v2"
+LOCATIONS_INDEX = "locations-v1"
 
 
 @blueprint.route("/locations")
@@ -20,6 +20,6 @@ def locations():
     index_name = LOCATIONS_INDEX
     default_sort = ["work_id", "native_id"]
     only_fields = process_only_fields(request, LocationsSchema)
-    result = shared_view(request, fields_dict, index_name, default_sort, connection='v2')
+    result = shared_view(request, fields_dict, index_name, default_sort, connection='walden')
     message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)

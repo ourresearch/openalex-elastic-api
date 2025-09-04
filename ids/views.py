@@ -1113,15 +1113,13 @@ def licenses_id_get(id):
 @blueprint.route("/locations/<path:id>")
 @blueprint.route("/v2/locations/<path:id>")
 def locations_id_get(id):
-    s = Search(index="locations-v2", using="v2")
+    s = Search(index="locations-v1", using="walden")
     only_fields = process_id_only_fields(request, LocationsSchema)
 
     query = Q("term", id=id)
     s = s.filter(query)
-    
-    client = connections.get_connection('v2')
-    os = OSSearch(using=client, index=s._index).update_from_dict(s.to_dict())
-    response = os.execute()
+
+    response = s.execute()
     
     if not response:
         abort(404)
