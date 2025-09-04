@@ -904,7 +904,10 @@ def topics_random_get():
 
 @blueprint.route("/topics/<path:id>")
 def topics_id_get(id):
-    s = Search(index=settings.TOPICS_INDEX)
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    connection = 'walden' if data_version == '2' else 'default'
+
+    s = Search(index=settings.TOPICS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, TopicsSchema)
 
     if is_openalex_id(id):
