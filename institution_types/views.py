@@ -25,9 +25,12 @@ blueprint = Blueprint("institution_types", __name__)
 )
 def institution_types():
     index_name = INSTITUTION_TYPES_INDEX
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    connection = 'walden' if data_version == '2' else 'default'
+
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, InstitutionTypesSchema)
-    result = shared_view(request, fields_dict, index_name, default_sort)
+    result = shared_view(request, fields_dict, index_name, default_sort, connection)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
