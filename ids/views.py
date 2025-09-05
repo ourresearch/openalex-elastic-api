@@ -579,7 +579,10 @@ def funders_random_get():
 
 @blueprint.route("/funders/<path:id>")
 def funders_id_get(id):
-    s = Search(index=settings.FUNDERS_INDEX)
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    connection = 'walden' if data_version == '2' else 'default'
+
+    s = Search(index=settings.FUNDERS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, FundersSchema)
 
     if is_openalex_id(id):
