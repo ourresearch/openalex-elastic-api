@@ -489,7 +489,10 @@ def concepts_random_get():
 
 @blueprint.route("/concepts/<path:id>")
 def concepts_id_get(id):
-    s = Search(index=settings.CONCEPTS_INDEX)
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    connection = 'walden' if data_version == '2' else 'default'
+
+    s = Search(index=settings.CONCEPTS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, ConceptsSchema)
 
     if is_openalex_id(id):

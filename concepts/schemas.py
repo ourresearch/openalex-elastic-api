@@ -73,7 +73,7 @@ class ConceptsSchema(Schema):
     def get_international(self, obj):
         """Returns international field sorted as display_name, description."""
         sorted_dict = OrderedDict()
-        if obj and "international" in obj:
+        if obj and "international" in obj and obj.international:
             international = obj.international.to_dict()
             display_names = international.get("display_name")
             descriptions = international.get("description")
