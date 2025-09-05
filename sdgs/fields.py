@@ -1,7 +1,7 @@
 from core.fields import (
     DateField,
     DateTimeField,
-    OpenAlexIDField,
+    ExternalIDField,
     RangeField,
     SearchField,
     TermField,
@@ -27,18 +27,9 @@ fields = [
         param="from_updated_date",
         custom_es_field="updated_date",
     ),
-    OpenAlexIDField(
+    ExternalIDField(
         param="id",
-        docstring=DOCSTRINGS["openalex"],
-        documentation_link=DOCUMENTATION_LINKS["openalex"],
-        alternate_names=ALTERNATE_NAMES.get("openalex", None),
-    ),
-    OpenAlexIDField(
-        param="openalex",
-        custom_es_field="id.lower",
-        docstring=DOCSTRINGS["openalex"],
-        documentation_link=DOCUMENTATION_LINKS["openalex"],
-        alternate_names=ALTERNATE_NAMES.get("openalex", None),
+        entity_type="sdgs",
     ),
     RangeField(param="cited_by_count"),
     RangeField(param="works_count"),
