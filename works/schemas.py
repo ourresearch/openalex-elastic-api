@@ -312,14 +312,11 @@ class WorksSchema(Schema):
     referenced_works = fields.List(fields.Str())
     related_works = fields.List(fields.Str())
     abstract_inverted_index = fields.Function(
-        lambda obj: json.loads(obj.abstract_inverted_index).get("InvertedIndex")
-        if "abstract_inverted_index" in obj and obj.abstract_inverted_index
-        else None
-    )
-    abstract_inverted_index_v3 = fields.Function(
-        lambda obj: json.loads(obj.abstract_inverted_index_v3)
-        if "abstract_inverted_index_v3" in obj and obj.abstract_inverted_index_v3
-        else None
+        lambda obj: (
+            json.loads(obj.abstract_inverted_index).get("InvertedIndex", json.loads(obj.abstract_inverted_index))
+            if hasattr(obj, "abstract_inverted_index") and obj.abstract_inverted_index is not None
+            else None
+        )
     )
     cited_by_api_url = fields.Str()
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
