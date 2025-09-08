@@ -22,17 +22,12 @@ blueprint = Blueprint("authors", __name__)
 )
 def authors():
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    if data_version == '2':
-        abort(404)
-    
-    warm_index = request.args.get("warm")
-    if not warm_index:
-        index_name = AUTHORS_INDEX
-    else:
-        index_name = "authors-warm"
+    connection = 'walden' if data_version == '2' else 'default'
+
+    index_name = AUTHORS_INDEX
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, AuthorsSchema)
-    result = shared_view(request, fields_dict, index_name, default_sort)
+    result = shared_view(request, fields_dict, index_name, default_sort, connection)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
