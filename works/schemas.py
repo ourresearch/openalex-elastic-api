@@ -95,6 +95,15 @@ class GrantsSchema(Schema):
     class Meta:
         ordered = True
 
+class AwardsSchema(Schema):
+    id = fields.Str()
+    funder_award_id = fields.Str()
+    funder_id = fields.Str()
+    funder_display_name = fields.Str()
+    doi = fields.Str()
+
+    class Meta:
+        ordered = True
 
 class SourceSchema(Schema):
     id = fields.Str()
@@ -306,6 +315,7 @@ class WorksSchema(Schema):
     best_oa_location = fields.Nested(LocationSchema)
     sustainable_development_goals = fields.Nested(SDGSchema, many=True)
     grants = fields.List(fields.Nested(GrantsSchema))
+    awards = fields.List(fields.Nested(AwardsSchema))
     datasets = fields.List(fields.Str())
     versions = fields.List(fields.Str())
     referenced_works_count = fields.Int()
