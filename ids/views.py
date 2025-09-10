@@ -898,10 +898,9 @@ def topics_id_get(id):
 
 
 @blueprint.route("/awards/<path:id>")
-@blueprint.route("/v2/awards/<path:id>")
 def awards_id_get(id):
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    # Awards data only exists in WALDEN connection, not in default/prod
+    connection = 'walden'
 
     s = Search(index=settings.AWARDS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, AwardsSchema)
@@ -1127,7 +1126,11 @@ def universal_get(openalex_id):
         return {"message": "OpenAlex ID format not recognized"}, 404
 
     openalex_id = normalize_openalex_id(openalex_id)
-    if is_work_openalex_id(openalex_id):
+    
+    # Check awards first since it's a new entity type
+    if is_award_openalex_id(openalex_id):
+        return redirect(url_for("ids.awards_id_get", id=openalex_id, **request.args))
+    elif is_work_openalex_id(openalex_id):
         return redirect(url_for("ids.works_id_get", id=openalex_id, **request.args))
     elif is_author_openalex_id(openalex_id):
         return redirect(url_for("ids.authors_id_get", id=openalex_id, **request.args))
@@ -1147,6 +1150,4 @@ def universal_get(openalex_id):
         return redirect(url_for("ids.sources_id_get", id=openalex_id, **request.args))
     elif is_topic_openalex_id(openalex_id):
         return redirect(url_for("ids.topics_id_get", id=openalex_id, **request.args))
-    elif is_award_openalex_id(openalex_id):
-        return redirect(url_for("ids.awards_id_get", id=openalex_id, **request.args))
     return {"message": "OpenAlex ID format not recognized"}, 404

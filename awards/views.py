@@ -12,13 +12,12 @@ AWARDS_INDEX = "awards-v1"
 
 
 @blueprint.route("/awards")
-@blueprint.route("/v2/awards")
 @cache.cached(
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
 def awards():
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    # Awards data only exists in WALDEN connection, not in default/prod
+    connection = 'walden'
     
     index_name = AWARDS_INDEX
     default_sort = ["id"]
