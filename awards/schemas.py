@@ -45,7 +45,7 @@ class AwardsSchema(Schema):
     award_id = fields.Str(default=None, metadata={"description": DOCSTRINGS["award_id"]})
     
     # Funded outputs
-    # funded_outputs = fields.List(fields.Str(), default=None, metadata={"description": DOCSTRINGS["funded_outputs"]})
+    funded_outputs = fields.List(fields.Str(), default=None, metadata={"description": DOCSTRINGS["funded_outputs"]})
     funded_outputs_count = fields.Int(default=None, metadata={"description": DOCSTRINGS["funded_outputs_count"]})
     
     # Award details
@@ -59,7 +59,7 @@ class AwardsSchema(Schema):
     funder_name = fields.Str(default=None, metadata={"description": "The name of the funding organization"})
     funding_type = fields.Str(default=None, metadata={"description": "The type of funding provided"})
     funder_scheme = fields.Str(default=None, metadata={"description": "The specific funding scheme or program"})
-    # funder_ids = fields.Nested(FunderIdsSchema, default=None, metadata={"description": "The funder's external identifiers"})
+    funder_ids = fields.Nested(FunderIdsSchema, default=None, metadata={"description": "The funder's external identifiers"})
     
     # Dates
     start_date = fields.Str(default=None, metadata={"description": DOCSTRINGS["start_date"]})
@@ -82,7 +82,7 @@ class AwardsSchema(Schema):
     # Investigator information
     lead_investigator = fields.Nested(InvestigatorSchema, default=None, metadata={"description": DOCSTRINGS["lead_investigator"]})
     co_lead_investigator = fields.Nested(InvestigatorSchema, default=None, metadata={"description": DOCSTRINGS["co_lead_investigator"]})
-    # investigators = fields.Raw(default=None, metadata={"description": DOCSTRINGS["investigators"]})
+    investigators = fields.List(fields.Nested(InvestigatorSchema), default=None, metadata={"description": DOCSTRINGS["investigators"]})
     
     # Timestamps
     deposited_timestamp = fields.Str(default=None, metadata={"description": DOCSTRINGS["deposited_timestamp"]})
