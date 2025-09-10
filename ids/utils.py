@@ -16,6 +16,9 @@ def is_openalex_id(openalex_id):
         return True
     if re.findall(r"(openalex:[waicfvpstg]\d{2,})", openalex_id):
         return True
+    # Also check for uppercase G (awards) since normalize_openalex_id handles it
+    if re.findall(r"^([G]\d{2,})", openalex_id.upper()):
+        return True
     return False
 
 
