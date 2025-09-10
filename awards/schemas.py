@@ -11,10 +11,19 @@ from core.schemas import (
 # Import docstrings from fields
 from awards.fields import DOCSTRINGS
 
+class AffiliationIdSchema(Schema):
+    id = fields.Str()
+    type = fields.Str()
+    asserted_by = fields.Str()
+
+    class Meta:
+        ordered = True
+        unknown = INCLUDE
+
 class AffiliationSchema(Schema):
     name = fields.Str()
     country = fields.Str(default=None)
-    # ids = fields.Raw(default=None)  # Temporarily disabled - causes AttrList serialization error
+    ids = fields.List(fields.Nested(AffiliationIdSchema), default=None)
 
     class Meta:
         ordered = True
