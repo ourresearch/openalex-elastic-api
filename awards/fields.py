@@ -1,10 +1,11 @@
 from core.fields import (
     BooleanField,
     DateField,
+    DateTimeField,
     OpenAlexIDField,
+    RangeField,
     SearchField,
     TermField,
-    NumericField,
 )
 
 # shared docstrings for when multiple fields share the same docstring (such as aliases)
@@ -51,11 +52,6 @@ fields = [
         docstring=DOCSTRINGS["id"]
     ),
     TermField(
-        param="native_id", 
-        custom_es_field="native_id",
-        docstring=DOCSTRINGS["native_id"]
-    ),
-    TermField(
         param="award_id", 
         custom_es_field="award_id",
         docstring=DOCSTRINGS["award_id"]
@@ -67,7 +63,7 @@ fields = [
         alias="funded_outputs",
         docstring=DOCSTRINGS["funded_outputs"],
     ),
-    NumericField(
+    RangeField(
         param="funded_outputs_count", 
         custom_es_field="funded_outputs_count",
         docstring=DOCSTRINGS["funded_outputs_count"]
@@ -91,7 +87,7 @@ fields = [
     ),
     
     # Funding information
-    NumericField(
+    RangeField(
         param="amount", 
         custom_es_field="amount",
         docstring=DOCSTRINGS["amount"]
@@ -103,30 +99,34 @@ fields = [
     ),
     OpenAlexIDField(
         param="funder_id",
-        custom_es_field="funding.funder.id",
+        custom_es_field="funder_id",
         docstring="The funder's OpenAlex ID",
     ),
     TermField(
         param="funder_name", 
-        custom_es_field="funding.funder.name",
+        custom_es_field="funder_name",
         docstring="The name of the funding organization"
     ),
     TermField(
         param="funding_type", 
-        custom_es_field="funding.type",
+        custom_es_field="funding_type",
         docstring="The type of funding provided"
     ),
     TermField(
-        param="funding_scheme", 
-        custom_es_field="funding.scheme",
+        param="funder_scheme", 
+        custom_es_field="funder_scheme",
         docstring="The specific funding scheme or program"
     ),
-    NumericField(
-        param="funding_percentage", 
-        custom_es_field="funding.percentage",
-        docstring="The percentage of total funding represented by this source"
+    TermField(
+        param="funder_ids.ror_id", 
+        custom_es_field="funder_ids.ror_id",
+        docstring="The ROR ID of the funding organization"
     ),
-    
+    TermField(
+        param="funder_ids.doi", 
+        custom_es_field="funder_ids.doi",
+        docstring="The DOI of the funding organization"
+    ),
     # Dates
     DateField(
         param="start_date", 
@@ -142,11 +142,6 @@ fields = [
         param="planned_end_date", 
         custom_es_field="planned_end_date",
         docstring=DOCSTRINGS["planned_end_date"]
-    ),
-    DateField(
-        param="award_start_date", 
-        custom_es_field="award_start_date",
-        docstring=DOCSTRINGS["award_start_date"]
     ),
     DateField(
         param="accepted_date", 
@@ -188,14 +183,9 @@ fields = [
         docstring=DOCSTRINGS["publisher"]
     ),
     TermField(
-        param="member", 
-        custom_es_field="member",
-        docstring=DOCSTRINGS["member"]
-    ),
-    TermField(
-        param="prefix", 
-        custom_es_field="prefix",
-        docstring=DOCSTRINGS["prefix"]
+        param="member_id", 
+        custom_es_field="member_id",
+        docstring="The member ID associated with the project"
     ),
     TermField(
         param="provenance", 
@@ -205,83 +195,80 @@ fields = [
     
     # Investigator information
     TermField(
-        param="lead_investigator_name", 
+        param="lead_investigator.given_name", 
         custom_es_field="lead_investigator.given_name",
         docstring="The given name of the lead investigator"
     ),
     TermField(
-        param="lead_investigator_family", 
+        param="lead_investigator.family_name", 
         custom_es_field="lead_investigator.family_name",
         docstring="The family name of the lead investigator"
     ),
     TermField(
-        param="lead_investigator_orcid", 
+        param="lead_investigator.orcid", 
         custom_es_field="lead_investigator.orcid",
         docstring="The ORCID identifier of the lead investigator"
     ),
     TermField(
-        param="lead_investigator_affiliation", 
+        param="lead_investigator.affiliation.name", 
         custom_es_field="lead_investigator.affiliation.name",
         docstring="The institutional affiliation of the lead investigator"
     ),
     TermField(
-        param="lead_investigator_country", 
+        param="lead_investigator.affiliation.country", 
         custom_es_field="lead_investigator.affiliation.country",
         docstring="The country of the lead investigator's affiliation"
     ),
     
     # Co-lead investigator
     TermField(
-        param="co_lead_investigator_name", 
+        param="co_lead_investigator.given_name", 
         custom_es_field="co_lead_investigator.given_name",
         docstring="The given name of the co-lead investigator"
     ),
     TermField(
-        param="co_lead_investigator_family", 
+        param="co_lead_investigator.family_name", 
         custom_es_field="co_lead_investigator.family_name",
         docstring="The family name of the co-lead investigator"
     ),
     TermField(
-        param="co_lead_investigator_orcid", 
+        param="co_lead_investigator.orcid", 
         custom_es_field="co_lead_investigator.orcid",
         docstring="The ORCID identifier of the co-lead investigator"
     ),
     TermField(
-        param="co_lead_investigator_affiliation", 
+        param="co_lead_investigator.affiliation.name", 
         custom_es_field="co_lead_investigator.affiliation.name",
         docstring="The institutional affiliation of the co-lead investigator"
     ),
     TermField(
-        param="co_lead_investigator_country", 
+        param="co_lead_investigator.affiliation.country", 
         custom_es_field="co_lead_investigator.affiliation.country",
         docstring="The country of the co-lead investigator's affiliation"
     ),
     
+    # Additional investigators
+    TermField(
+        param="investigators", 
+        custom_es_field="investigators",
+        docstring="A list of all researchers involved in the project"
+    ),
+    
     # Timestamps
-    DateField(
+    DateTimeField(
         param="deposited_timestamp", 
         custom_es_field="deposited_timestamp",
         docstring=DOCSTRINGS["deposited_timestamp"]
     ),
-    DateField(
+    DateTimeField(
         param="created_timestamp", 
         custom_es_field="created_timestamp",
         docstring=DOCSTRINGS["created_timestamp"]
     ),
-    DateField(
+    DateTimeField(
         param="indexed_timestamp", 
         custom_es_field="indexed_timestamp",
         docstring=DOCSTRINGS["indexed_timestamp"]
-    ),
-    DateField(
-        param="indexed_date", 
-        custom_es_field="indexed_date",
-        docstring=DOCSTRINGS["indexed_date"]
-    ),
-    DateField(
-        param="updated_date", 
-        custom_es_field="updated_date",
-        docstring=DOCSTRINGS["updated_date"]
     ),
 ]
 

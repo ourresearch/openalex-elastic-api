@@ -2,7 +2,6 @@ from core.fields import (
     DateField,
     DateTimeField,
     ExternalIDField,
-    OpenAlexIDField,
     RangeField,
     SearchField,
     TermField,
@@ -30,7 +29,7 @@ fields = [
     ),
     ExternalIDField(
         param="id",
-        entity_type="work-types",
+        entity_type="types",
     ),
     RangeField(param="cited_by_count"),
     RangeField(param="works_count"),
