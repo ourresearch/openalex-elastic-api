@@ -14,7 +14,7 @@ from awards.fields import DOCSTRINGS
 class AffiliationSchema(Schema):
     name = fields.Str()
     country = fields.Str(default=None)
-    # ids = fields.Raw(default=None)  # Temporarily disabled for testing
+    ids = fields.Raw(default=None)
 
     class Meta:
         ordered = True
@@ -45,7 +45,7 @@ class AwardsSchema(Schema):
     award_id = fields.Str(default=None, metadata={"description": DOCSTRINGS["award_id"]})
     
     # Funded outputs
-    # funded_outputs = fields.List(fields.Str(), default=None, metadata={"description": DOCSTRINGS["funded_outputs"]})  # Temporarily disabled for testing
+    funded_outputs = fields.List(fields.Str(), default=None, metadata={"description": DOCSTRINGS["funded_outputs"]})
     funded_outputs_count = fields.Int(default=None, metadata={"description": DOCSTRINGS["funded_outputs_count"]})
     
     # Award details
@@ -82,7 +82,7 @@ class AwardsSchema(Schema):
     # Investigator information
     lead_investigator = fields.Nested(InvestigatorSchema, default=None, metadata={"description": DOCSTRINGS["lead_investigator"]})
     co_lead_investigator = fields.Nested(InvestigatorSchema, default=None, metadata={"description": DOCSTRINGS["co_lead_investigator"]})
-    # investigators = fields.Raw(default=None, metadata={"description": DOCSTRINGS["investigators"]})
+    investigators = fields.Raw(default=None, metadata={"description": DOCSTRINGS["investigators"]})
     
     # Timestamps
     deposited_timestamp = fields.Str(default=None, metadata={"description": DOCSTRINGS["deposited_timestamp"]})
