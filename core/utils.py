@@ -7,6 +7,7 @@ import settings
 from core.exceptions import APIQueryParamsError
 from settings import (
     AUTHORS_INDEX,
+    AWARDS_INDEX,
     CONCEPTS_INDEX,
     INSTITUTIONS_INDEX,
     PUBLISHERS_INDEX,
@@ -110,7 +111,10 @@ def get_index_name_by_id(openalex_id):
         error_id = f"'{openalex_id.replace('https://openalex.org/', '')}'"
         raise APIQueryParamsError(f"{error_id} is not a valid OpenAlex ID.")
     index_name = None
-    if clean_id.startswith("A"):
+    
+    if clean_id.startswith("G"):
+        index_name = AWARDS_INDEX    
+    elif clean_id.startswith("A"):
         index_name = AUTHORS_INDEX
     elif clean_id.startswith("C"):
         index_name = CONCEPTS_INDEX

@@ -114,6 +114,7 @@ class AutoCompleteSchema(Schema):
 
     def get_entity_type(self, obj):
         entities = {
+            "awards": "award",
             "authors": "author",
             "concepts": "concept",
             "countries": "country",
