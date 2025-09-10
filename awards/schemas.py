@@ -11,6 +11,16 @@ from core.schemas import (
 # Import docstrings from fields
 from awards.fields import DOCSTRINGS
 
+# Custom field to handle AttrList serialization
+class AttrListField(fields.Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        if value is None:
+            return None
+        # Convert AttrList to regular list
+        if hasattr(value, '__iter__') and not isinstance(value, (str, bytes)):
+            return list(value)
+        return value
+
 class AffiliationSchema(Schema):
     name = fields.Str()
     country = fields.Str(default=None)
@@ -45,7 +55,7 @@ class AwardsSchema(Schema):
     award_id = fields.Str(default=None, metadata={"description": DOCSTRINGS["award_id"]})
     
     # Funded outputs
-    funded_outputs = fields.List(fields.Str(), default=None, metadata={"description": DOCSTRINGS["funded_outputs"]})
+    funded_outputs = AttrListField(default=None, metadata={"description": DOCSTRINGS["funded_outputs"]})
     funded_outputs_count = fields.Int(default=None, metadata={"description": DOCSTRINGS["funded_outputs_count"]})
     
     # Award details
@@ -82,7 +92,7 @@ class AwardsSchema(Schema):
     # Investigator information
     lead_investigator = fields.Nested(InvestigatorSchema, default=None, metadata={"description": DOCSTRINGS["lead_investigator"]})
     co_lead_investigator = fields.Nested(InvestigatorSchema, default=None, metadata={"description": DOCSTRINGS["co_lead_investigator"]})
-    # investigators = fields.Raw(default=None, metadata={"description": DOCSTRINGS["investigators"]})
+    investigators = AttrListField(default=None, metadata={"description": DOCSTRINGS["investigators"]})
     
     # Timestamps
     deposited_timestamp = fields.Str(default=None, metadata={"description": DOCSTRINGS["deposited_timestamp"]})
