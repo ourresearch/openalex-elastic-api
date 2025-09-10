@@ -6,6 +6,7 @@ from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
 from sentry_sdk.integrations.flask import FlaskIntegration
 
+import awards
 import authors
 import autocomplete
 import concepts
@@ -70,6 +71,7 @@ def create_app(config_object="settings"):
 
 def register_blueprints(app):
     """Register Flask blueprints."""
+    app.register_blueprint(awards.views.blueprint)
     app.register_blueprint(authors.views.blueprint)
     app.register_blueprint(autocomplete.views.blueprint)
     app.register_blueprint(concepts.views.blueprint)

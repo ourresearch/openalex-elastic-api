@@ -57,3 +57,4 @@ def test_awards_filters(client):
     data = response.get_json()
     assert "meta" in data
     assert "results" in data
+

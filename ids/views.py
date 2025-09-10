@@ -7,6 +7,7 @@ from flask import Blueprint, abort, redirect, request, url_for, jsonify
 
 import settings
 from authors.schemas import AuthorsSchema
+from awards.schemas import AwardsSchema
 from concepts.schemas import ConceptsSchema
 from continents.schemas import ContinentsSchema
 from countries.schemas import CountriesSchema
@@ -17,6 +18,7 @@ from ids.ui_format import format_as_ui, is_ui_format
 from ids.utils import (
     get_merged_id,
     is_author_openalex_id,
+    is_award_openalex_id,
     is_concept_openalex_id,
     is_funder_openalex_id,
     is_institution_openalex_id,
@@ -895,6 +897,45 @@ def topics_id_get(id):
     return topics_schema.dump(response[0])
 
 
+@blueprint.route("/awards/<path:id>")
+@blueprint.route("/v2/awards/<path:id>")
+def awards_id_get(id):
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    connection = 'walden' if data_version == '2' else 'default'
+
+    s = Search(index=settings.AWARDS_INDEX, using=connection)
+    only_fields = process_id_only_fields(request, AwardsSchema)
+
+    if is_openalex_id(id):
+        clean_id = normalize_openalex_id(id)
+        if clean_id != id:
+            return redirect(url_for("ids.awards_id_get", id=clean_id, **request.args))
+        clean_id = int(clean_id[1:])
+        full_openalex_id = f"https://openalex.org/G{clean_id}"
+        query = Q("term", id=full_openalex_id)
+        s = s.filter(query)
+    else:
+        abort(404)
+    response = s.execute()
+    if not response:
+        abort(404)
+    awards_schema = AwardsSchema(context={"display_relevance": False}, only=only_fields)
+    if is_ui_format():
+        json_output = json.dumps(dict(awards_schema.dump(response[0])))
+        ui_format = format_as_ui("awards", json_output)
+        return jsonify(
+            {
+                "meta": {
+                    "count": 1,
+                    "page": 1,
+                    "per_page": 1,
+                },
+                "props": ui_format,
+            }
+        )
+    return awards_schema.dump(response[0])
+
+
 def get_by_openalex_external_id(index, schema, id):
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
     connection = 'walden' if data_version == '2' else 'default'
@@ -1106,4 +1147,6 @@ def universal_get(openalex_id):
         return redirect(url_for("ids.sources_id_get", id=openalex_id, **request.args))
     elif is_topic_openalex_id(openalex_id):
         return redirect(url_for("ids.topics_id_get", id=openalex_id, **request.args))
+    elif is_award_openalex_id(openalex_id):
+        return redirect(url_for("ids.awards_id_get", id=openalex_id, **request.args))
     return {"message": "OpenAlex ID format not recognized"}, 404

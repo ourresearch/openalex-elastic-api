@@ -18,7 +18,7 @@ AWARDS_INDEX = "awards-v1"
 )
 def awards():
     index_name = AWARDS_INDEX
-    default_sort = ["native_id", "id"]
+    default_sort = ["id"]
     only_fields = process_only_fields(request, AwardsSchema)
     result = shared_view(request, fields_dict, index_name, default_sort, connection='walden')
     message_schema = MessageSchema(only=only_fields)
