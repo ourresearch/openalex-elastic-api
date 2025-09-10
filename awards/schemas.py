@@ -82,7 +82,7 @@ class AwardsSchema(Schema):
     # Investigator information
     lead_investigator = fields.Nested(InvestigatorSchema, default=None, metadata={"description": DOCSTRINGS["lead_investigator"]})
     co_lead_investigator = fields.Nested(InvestigatorSchema, default=None, metadata={"description": DOCSTRINGS["co_lead_investigator"]})
-    investigators = fields.Raw(default=None, metadata={"description": DOCSTRINGS["investigators"]})
+    # investigators = fields.Raw(default=None, metadata={"description": DOCSTRINGS["investigators"]})
     
     # Timestamps
     deposited_timestamp = fields.Str(default=None, metadata={"description": DOCSTRINGS["deposited_timestamp"]})
