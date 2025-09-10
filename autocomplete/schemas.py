@@ -161,6 +161,7 @@ class AutoCompleteSchema(Schema):
     def get_filter_key(obj):
         """Filter key you would need to filter in works, based on the index."""
         mapping = {
+            "awards": "id",
             "authors": "authorships.author.id",
             "concepts": "concepts.id",
             "countries": "authorships.countries",

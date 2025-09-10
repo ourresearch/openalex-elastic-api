@@ -743,6 +743,31 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#grants",
     ),
     TermField(
+        param="awards.id",
+        docstring="The OpenAlex IDs of awards associated with this work",
+        documentation_link="https://docs.openalex.org/api-entities/works/work-object#awards",
+    ),
+    TermField(
+        param="awards.funder_award_id",
+        docstring="The funder's award ID for awards associated with this work",
+        documentation_link="https://docs.openalex.org/api-entities/works/work-object#awards",
+    ),
+    TermField(
+        param="awards.funder_id",
+        docstring="The OpenAlex IDs of funders for awards associated with this work",
+        documentation_link="https://docs.openalex.org/api-entities/works/work-object#awards",
+    ),
+    TermField(
+        param="awards.funder_display_name",
+        docstring="The display names of funders for awards associated with this work",
+        documentation_link="https://docs.openalex.org/api-entities/works/work-object#awards",
+    ),
+    TermField(
+        param="awards.doi",
+        docstring="The DOIs of awards associated with this work",
+        documentation_link="https://docs.openalex.org/api-entities/works/work-object#awards",
+    ),
+    TermField(
         param="language",
         docstring=DOCSTRINGS["language"],
         documentation_link=DOCUMENTATION_LINKS["language"],
