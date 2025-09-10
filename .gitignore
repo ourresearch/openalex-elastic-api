@@ -20,3 +20,4 @@ scratch/
 # !.vscode/launch.json
 # !.vscode/extensions.json
 .aider*
+run_local.py
