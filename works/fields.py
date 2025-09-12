@@ -234,6 +234,9 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("is_retracted", None),
     ),
     BooleanField(
+        param="is_xpac"
+    ),
+    BooleanField(
         param="locations.is_oa",
         docstring=DOCSTRINGS["is_oa"],
         documentation_link=DOCUMENTATION_LINKS["is_oa"],

@@ -305,6 +305,7 @@ class WorksSchema(Schema):
     biblio = fields.Nested(BiblioSchema)
     is_retracted = fields.Bool()
     is_paratext = fields.Bool()
+    is_xpac = fields.Bool()
     primary_topic = fields.Nested(TopicSchema)
     topics = fields.Nested(TopicSchema, many=True)
     keywords = fields.Nested(KeywordsSchema, many=True)
