@@ -22,7 +22,5 @@ scratch/
 .aider*
 run_local.py
 
-# Local python version
-.python-version
 # Local virtualenv
 api/
