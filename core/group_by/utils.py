@@ -35,12 +35,12 @@ def parse_group_by(group_by):
     return group_by, include_unknown
 
 
-def get_all_groupby_values(entity, field):
+def get_all_groupby_values(entity, field, connection='default'):
     # temp fix for best_oa_location.license
     if field == "best_oa_location.license":
         field = "locations.license"
 
-    s = Search(index=GROUPBY_VALUES_INDEX)
+    s = Search(index=GROUPBY_VALUES_INDEX, using=connection)
     s = s.filter("term", entity=entity)
     s = s.filter("term", group_by=field)
     try:

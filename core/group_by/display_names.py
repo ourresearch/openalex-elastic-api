@@ -19,7 +19,7 @@ Code to alter display names for group by fields.
 """
 
 
-def get_id_display_names(ids):
+def get_id_display_names(ids, connection='default'):
     """Takes a list of ids and returns a dict with id[display_name]"""
     if not ids or (ids[0] == "unknown" and len(ids) == 1):
         return None
@@ -28,7 +28,7 @@ def get_id_display_names(ids):
         index_name = get_index_name_by_id(ids[1])
     else:
         index_name = get_index_name_by_id(ids[0])
-    s = Search(index=index_name)
+    s = Search(index=index_name, using=connection)
     s = s.extra(size=500)
     s = s.source(["id", "display_name"])
 
@@ -45,7 +45,7 @@ def get_id_display_names(ids):
     return results
 
 
-def get_display_names_host_organization(ids):
+def get_display_names_host_organization(ids, connection='default'):
     """Host organization is a special case because it can be an institution or a publisher."""
     institution_ids = []
     publisher_ids = []
@@ -55,8 +55,8 @@ def get_display_names_host_organization(ids):
             institution_ids.append(openalex_id)
         elif clean_id and clean_id.startswith("P"):
             publisher_ids.append(openalex_id)
-    institution_names = get_id_display_names(institution_ids)
-    publisher_names = get_id_display_names(publisher_ids)
+    institution_names = get_id_display_names(institution_ids, connection)
+    publisher_names = get_id_display_names(publisher_ids, connection)
 
     # merge the two dictionaries
     results = {}
@@ -67,9 +67,9 @@ def get_display_names_host_organization(ids):
     return results
 
 
-def get_display_names_award_ids(ids):
+def get_display_names_award_ids(ids, connection='default'):
     results = {}
-    ms = MultiSearch(index=WORKS_INDEX)
+    ms = MultiSearch(index=WORKS_INDEX, using=connection)
     for award_id in ids:
         s = Search()
         s = s.filter("term", grants__award_id__keyword=award_id)
@@ -88,9 +88,9 @@ def get_display_names_award_ids(ids):
     return results
 
 
-def get_display_names_sdgs(ids):
+def get_display_names_sdgs(ids, connection='default'):
     results = {}
-    ms = MultiSearch(index=WORKS_INDEX)
+    ms = MultiSearch(index=WORKS_INDEX, using=connection)
     for sdg_id in ids:
         s = Search()
         s = s.filter("term", sustainable_development_goals__id__lower=sdg_id)
@@ -113,12 +113,12 @@ def get_display_names_sdgs(ids):
     return results
 
 
-def get_display_names_keywords_licenses_topics(ids):
+def get_display_names_keywords_licenses_topics(ids, connection='default'):
     if not ids or (ids[0] == "unknown" and len(ids) == 1):
         return None
 
     index = f"{FIELDS_INDEX},{SUBFIELDS_INDEX},{DOMAINS_INDEX},{KEYWORDS_INDEX},{LICENSES_INDEX}"
-    s = Search(index=index)
+    s = Search(index=index, using=connection)
     s = s.extra(size=500)
     s = s.source(["id", "display_name"])
 
@@ -165,7 +165,7 @@ def get_key_display_name(b, group_by):
     return b.key if "key_as_string" not in b else b.key_as_string
 
 
-def get_display_name_mapping(keys, group_by):
+def get_display_name_mapping(keys, group_by, connection='default'):
     display_name_functions = {
         "host_organization": get_display_names_host_organization,
         "host_organization_lineage": get_display_names_host_organization,
@@ -183,9 +183,9 @@ def get_display_name_mapping(keys, group_by):
 
     for key, func in display_name_functions.items():
         if group_by.endswith(key):
-            return func(keys)
+            return func(keys, connection)
 
-    return get_id_display_names(keys)
+    return get_id_display_names(keys, connection)
 
 
 def requires_display_name_conversion(group_by):

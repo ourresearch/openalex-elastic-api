@@ -30,6 +30,7 @@ def get_group_by_results(
     index_name,
     fields_dict,
     response,
+    connection='default',
 ):
     """
     Top level function for getting boolean, custom, or default group by results.
@@ -54,10 +55,10 @@ def get_group_by_results(
         "primary_topic.field.id",
         "primary_topic.subfield.id",
     ):
-        results = get_topics_group_by_results(group_by, response, index_name)
+        results = get_topics_group_by_results(group_by, response, index_name, connection)
     else:
-        results = get_default_group_by_results(group_by, response, index_name)
-    results = add_zero_values(results, include_unknown, index_name, group_by, params)
+        results = get_default_group_by_results(group_by, response, index_name, connection)
+    results = add_zero_values(results, include_unknown, index_name, group_by, params, connection)
 
     # support new id formats so duplicates do not show up with 0 values
     if (
@@ -118,7 +119,7 @@ def get_boolean_group_by_results(response, group_by):
     return group_by_results
 
 
-def get_default_group_by_results(group_by, response, index_name):
+def get_default_group_by_results(group_by, response, index_name, connection='default'):
     """
     Default group by results.
     """
@@ -128,7 +129,7 @@ def get_default_group_by_results(group_by, response, index_name):
 
     if requires_display_name_conversion(group_by):
         keys = [b.key for b in buckets]
-        key_display_names = get_display_name_mapping(keys, group_by)
+        key_display_names = get_display_name_mapping(keys, group_by, connection)
     else:
         key_display_names = {}
 
@@ -140,14 +141,14 @@ def get_default_group_by_results(group_by, response, index_name):
     return group_by_results
 
 
-def get_topics_group_by_results(group_by, response, index_name):
+def get_topics_group_by_results(group_by, response, index_name, connection='default'):
     group_by_results = []
     buckets = get_default_buckets(group_by, response)
     buckets = buckets_to_keep(buckets, group_by)
 
     if requires_display_name_conversion(group_by):
         keys = [b.key for b in buckets]
-        key_display_names = get_display_name_mapping(keys, group_by)
+        key_display_names = get_display_name_mapping(keys, group_by, connection)
     else:
         key_display_names = {}
 
@@ -211,12 +212,12 @@ def get_result(b, key_display_names, group_by, index_name):
     return {"key": key, "key_display_name": key_display_name, "doc_count": doc_count}
 
 
-def add_zero_values(results, include_unknown, index_name, field, params):
+def add_zero_values(results, include_unknown, index_name, field, params, connection='default'):
     ignore_values = set([str(item["key"]) for item in results])
     if not include_unknown:
         ignore_values.update(["unknown", "-111"])
     possible_buckets = get_all_groupby_values(
-        entity=index_name.split("-")[0], field=field
+        entity=index_name.split("-")[0], field=field, connection=connection
     )
     for bucket in possible_buckets:
         if (

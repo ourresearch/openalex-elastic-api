@@ -25,7 +25,7 @@ def shared_view(request, fields_dict, index_name, default_sort, connection='defa
     params = parse_params(request)
     s = construct_query(params, fields_dict, index_name, default_sort, connection)
     response = execute_search(s, params)
-    result = format_response(response, params, index_name, fields_dict, s)
+    result = format_response(response, params, index_name, fields_dict, s, connection)
     if settings.DEBUG:
         print(s.to_dict())
     return result
@@ -172,16 +172,16 @@ def execute_search(s, params):
             raise e
 
 
-def format_response(response, params, index_name, fields_dict, s):
+def format_response(response, params, index_name, fields_dict, s, connection='default'):
     result = OrderedDict()
 
     result["meta"] = format_meta(response, params, s)
 
     if params["group_by"]:
-        result["group_by"] = format_group_by(response, params, index_name, fields_dict)
+        result["group_by"] = format_group_by(response, params, index_name, fields_dict, connection)
     elif params["group_bys"]:
         result["group_bys"] = format_group_bys(
-            response, params, index_name, fields_dict
+            response, params, index_name, fields_dict, connection
         )
         result["group_by"] = []
     else:
@@ -230,21 +230,21 @@ def format_meta(response, params, s):
     return meta
 
 
-def format_group_by(response, params, index_name, fields_dict):
+def format_group_by(response, params, index_name, fields_dict, connection='default'):
     group_by, include_unknown = parse_group_by(params["group_by"])
     group_by_data = get_group_by_results(
-        group_by, include_unknown, params, index_name, fields_dict, response
+        group_by, include_unknown, params, index_name, fields_dict, response, connection
     )
     return group_by_data
 
 
-def format_group_bys(response, params, index_name, fields_dict):
+def format_group_bys(response, params, index_name, fields_dict, connection='default'):
     group_bys_data = []
 
     for group_by_item in params["group_bys"]:
         group_by_item, include_unknown = parse_group_by(group_by_item)
         item_results = get_group_by_results(
-            group_by_item, include_unknown, params, index_name, fields_dict, response
+            group_by_item, include_unknown, params, index_name, fields_dict, response, connection
         )
         group_bys_data.append({"group_by_key": group_by_item, "groups": item_results})
 
