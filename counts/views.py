@@ -13,7 +13,6 @@ blueprint = Blueprint("counts", __name__)
 @blueprint.route("/counts")
 def counts():
     entities_to_indeces = {
-        "awards": AWARDS_INDEX,
         "authors": AUTHORS_INDEX,
         "institutions": INSTITUTIONS_INDEX,
         "sources": SOURCES_INDEX,
