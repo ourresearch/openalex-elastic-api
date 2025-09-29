@@ -66,6 +66,10 @@ def create_app(config_object="settings"):
         response.headers['Access-Control-Allow-Headers'] = '*'
         return response
 
+    @app.route('/.well-known/acme-challenge/zGivZHe7yjlRfYmLpJXeUY3MuVXk1rrCbeCwI2cN2EVZ_wpF7B1u9Wv3Z06kF4x0')
+    def acme_challenge():
+        return 'zGivZHe7yjlRfYmLpJXeUY3MuVXk1rrCbeCwI2cN2EVZ_wpF7B1u9Wv3Z06kF4x0.r54qAqCZSs4xyyeamMffaxyR1FWYVb5OvwUh8EcrhpI'
+
     return app
 
 
