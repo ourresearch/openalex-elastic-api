@@ -95,6 +95,10 @@ class GrantsSchema(Schema):
     class Meta:
         ordered = True
 
+class HasContentSchema(Schema):
+    pdf = fields.Bool()
+    grobid_xml = fields.Bool()
+
 class AwardsSchema(Schema):
     id = fields.Str()
     funder_award_id = fields.Str()
@@ -319,6 +323,7 @@ class WorksSchema(Schema):
     awards = fields.Nested(AwardsSchema, many=True)
     datasets = fields.List(fields.Str())
     versions = fields.List(fields.Str())
+    has_content = fields.Nested(HasContentSchema)
     referenced_works_count = fields.Int()
     referenced_works = fields.List(fields.Str())
     related_works = fields.List(fields.Str())

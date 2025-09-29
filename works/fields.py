@@ -145,6 +145,12 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("has_abstract", None),
     ),
     BooleanField(
+        param="has_content.pdf"
+    ),
+    BooleanField(
+        param="has_content.grobid_xml"
+    ),
+    BooleanField(
         param="has_doi",
         custom_es_field="ids.doi",
         docstring=DOCSTRINGS["has_doi"],
