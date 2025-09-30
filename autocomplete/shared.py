@@ -21,6 +21,10 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
     s = Search(index=index_name, using=connection)
     canonical_id_found = False
 
+    # Exclude deleted author ID for author indexes
+    if "author" in index_name:
+        s = s.exclude("term", ids__openalex="https://openalex.org/A5317838346")
+
     if q:
         # canonical id match
         s, canonical_id_found = search_canonical_id_single(index_name, s, q)

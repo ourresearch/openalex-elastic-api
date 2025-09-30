@@ -99,6 +99,9 @@ def autocomplete_full():
 
     s = Search(index=index, using=connection)
 
+    # Exclude deleted author ID
+    s = s.exclude("term", ids__openalex="https://openalex.org/A5317838346")
+
     if q:
         # canonical id match
         s, canonical_id_found = search_canonical_id_full(s, q)
