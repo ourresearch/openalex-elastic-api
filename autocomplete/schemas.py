@@ -95,7 +95,7 @@ class AutoCompleteSchema(Schema):
     def build_author_string(obj):
         authors_unknown = "authors unknown"
 
-        if "authorships" in obj:
+        if "authorships" in obj and obj.authorships:
             i = 0
             author_names = []
             for author in obj.authorships:

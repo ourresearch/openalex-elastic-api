@@ -6,7 +6,7 @@ import settings
 from autocomplete.shared import is_year_query
 
 
-def get_indices():
+def get_indices(data_version='1'):
     entities_to_indeces = {
         "author": settings.AUTHORS_INDEX,
         "concept": settings.CONCEPTS_INDEX,
@@ -20,7 +20,7 @@ def get_indices():
         "sdgs": settings.SDGS_INDEX,
         "source": settings.SOURCES_INDEX,
         "topic": settings.TOPICS_INDEX,
-        "work": settings.WORKS_INDEX,
+        "work": settings.WORKS_INDEX if data_version != '2' else 'works-v26',
         "work_type": settings.WORK_TYPES_INDEX,
     }
     return entities_to_indeces

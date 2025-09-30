@@ -11,14 +11,14 @@ from core.preference import clean_preference
 from ids import utils as id_utils
 
 
-def single_entity_autocomplete(fields_dict, index_name, request):
+def single_entity_autocomplete(fields_dict, index_name, request, connection='default'):
     # params
     validate_entity_autocomplete_params(request)
     filter_params = map_filter_params(request.args.get("filter"))
     q = request.args.get("q")
     search = request.args.get("search")
 
-    s = Search(index=index_name)
+    s = Search(index=index_name, using=connection)
     canonical_id_found = False
 
     if q:
