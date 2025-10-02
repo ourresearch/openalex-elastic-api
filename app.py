@@ -35,7 +35,7 @@ import topics
 import works
 import work_types
 from core.exceptions import APIError
-from extensions import cache, compress, db
+from extensions import cache, db
 
 
 def create_app(config_object="settings"):
@@ -103,7 +103,6 @@ def register_extensions(app):
     if settings.ES_URL_WALDEN:
         connections.create_connection('walden', hosts=[settings.ES_URL_WALDEN], timeout=30)
     cache.init_app(app)
-    compress.init_app(app)
 
 
 def register_errorhandlers(app):
