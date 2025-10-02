@@ -55,11 +55,6 @@ def create_app(config_object="settings"):
     register_errorhandlers(app)
 
     @app.after_request
-    def add_header(response):
-        response.cache_control.max_age = 60 * 60 * 24 * 1  # 1 day
-        return response
-
-    @app.after_request
     def add_cors_headers(response):
         response.headers['Access-Control-Allow-Origin'] = '*'
         response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
