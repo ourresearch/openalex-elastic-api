@@ -166,7 +166,14 @@ def filter_group_with_q(params, fields_dict, s):
 
 def add_highlighting(params, index_name, s):
     if index_name.startswith("funder-search") and params["search"] and params["search"] != '""':
-        s = s.highlight('html', fragment_size=150, number_of_fragments=10)
+        s = s.highlight(
+            'html',
+            fragment_size=150,
+            number_of_fragments=10,
+            type='plain',
+            pre_tags=['>>'],
+            post_tags=['<<']
+        )
     return s
 
 
