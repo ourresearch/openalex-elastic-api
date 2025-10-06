@@ -175,6 +175,14 @@ def add_highlighting(params, index_name, s):
             pre_tags=['>>'],
             post_tags=['<<']
         )
+    # Also add highlighting for works index when using search param
+    elif index_name.startswith("works") and params["search"] and params["search"] != '""':
+        s = s.highlight(
+            'fulltext',
+            fragment_size=300,
+            number_of_fragments=5,
+            type='unified'
+        )
     return s
 
 

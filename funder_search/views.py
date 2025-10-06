@@ -19,12 +19,14 @@ INDEX_NAME = "funder-search"
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
 def funder_search():
-    # Only use data-version 2 (walden connection)
-    connection = 'walden'
+    # Search works index on default connection
+    import settings
+    connection = 'default'
+    index_name = settings.WORKS_INDEX
+    default_sort = ["_score", "publication_date", "id"]
 
-    default_sort = ["_score", "doi"]
     only_fields = process_only_fields(request, FunderSearchSchema)
-    result = shared_view(request, fields_dict, INDEX_NAME, default_sort, connection)
+    result = shared_view(request, fields_dict, index_name, default_sort, connection)
 
     # export option
     if is_group_by_export(request):
