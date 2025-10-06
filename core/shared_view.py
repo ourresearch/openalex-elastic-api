@@ -168,8 +168,8 @@ def add_highlighting(params, index_name, s):
     if index_name.startswith("funder-search") and params["search"] and params["search"] != '""':
         s = s.highlight(
             'html',
-            fragment_size=150,
-            number_of_fragments=10,
+            fragment_size=300,
+            number_of_fragments=5,
             type='plain',
             pre_tags=['>>'],
             post_tags=['<<']
