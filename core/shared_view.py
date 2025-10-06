@@ -135,7 +135,9 @@ def apply_sorting(params, fields_dict, default_sort, index_name, s):
     elif is_search_query and not params["sort"] and index_name.startswith("works"):
         s = s.sort("_score", "publication_date", "id")
     elif is_search_query and not params["sort"] and index_name.startswith("funder-search"):
-        s = s.sort("_score", "doi")
+        # Random sort for funder-search
+        from elasticsearch_dsl import SF
+        s = s.sort(SF('random_score', seed=params.get('seed', 42)))
     elif is_search_query and not params["sort"]:
         s = s.sort("_score", "-works_count", "id")
     elif not params["group_by"]:

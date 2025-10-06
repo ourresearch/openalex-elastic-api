@@ -366,9 +366,14 @@ def full_search_query(index_name, search_terms):
             tertiary_field="fulltext",
         )
     elif index_name.lower().startswith("funder-search"):
-        # Support wildcards for funder-search
-        if '*' in search_terms or '?' in search_terms:
-            # Use query_string for wildcard support
+        # Support wildcards and proximity search for funder-search
+        # Proximity: "term1 term2"~5 finds terms within 5 words
+        # Wildcards: fund* support*
+        has_proximity = '~' in search_terms and '"' in search_terms
+        has_wildcard = '*' in search_terms or '?' in search_terms
+
+        if has_proximity or has_wildcard:
+            # Use query_string for advanced query support
             return Q(
                 "query_string",
                 query=search_terms,
