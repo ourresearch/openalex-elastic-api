@@ -52,6 +52,8 @@ def construct_query(params, fields_dict, index_name, default_sort, connection):
 
     s = add_meta_sums(params, index_name, s)
 
+    s = add_highlighting(params, index_name, s)
+
     return s
 
 
@@ -130,6 +132,8 @@ def apply_sorting(params, fields_dict, default_sort, index_name, s):
         s = s.sort(*sort_fields)
     elif is_search_query and not params["sort"] and index_name.startswith("works"):
         s = s.sort("_score", "publication_date", "id")
+    elif is_search_query and not params["sort"] and index_name.startswith("funder-search"):
+        s = s.sort("_score", "doi")
     elif is_search_query and not params["sort"]:
         s = s.sort("_score", "-works_count", "id")
     elif not params["group_by"]:
@@ -155,6 +159,12 @@ def filter_group_with_q(params, fields_dict, s):
         group_by, _ = parse_group_by(params["group_by"])
         field = get_field(fields_dict, group_by)
         s = filter_group_by(field, group_by, params["q"], s)
+    return s
+
+
+def add_highlighting(params, index_name, s):
+    if index_name.startswith("funder-search") and params["search"] and params["search"] != '""':
+        s = s.highlight('html', fragment_size=150, number_of_fragments=3)
     return s
 
 

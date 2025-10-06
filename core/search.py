@@ -365,6 +365,13 @@ def full_search_query(index_name, search_terms):
             secondary_field="abstract",
             tertiary_field="fulltext",
         )
+    elif index_name.lower().startswith("funder-search"):
+        search_oa = SearchOpenAlex(
+            search_terms=search_terms,
+            primary_field="html",
+        )
+        # Skip citation boost for funder-search since it doesn't have cited_by_count
+        return search_oa.primary_match_query()
     else:
         search_oa = SearchOpenAlex(search_terms=search_terms)
     search_query = search_oa.build_query()

@@ -15,6 +15,7 @@ import countries
 import counts
 import domains
 import fields
+import funder_search
 import funders
 import ids
 import institution_types
@@ -75,6 +76,7 @@ def register_blueprints(app):
     app.register_blueprint(counts.views.blueprint)
     app.register_blueprint(domains.views.blueprint)
     app.register_blueprint(fields.views.blueprint)
+    app.register_blueprint(funder_search.views.blueprint)
     app.register_blueprint(funders.views.blueprint)
     app.register_blueprint(ids.views.blueprint)
     app.register_blueprint(institution_types.views.blueprint)
