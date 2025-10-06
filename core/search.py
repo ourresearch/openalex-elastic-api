@@ -366,11 +366,49 @@ def full_search_query(index_name, search_terms):
             tertiary_field="fulltext",
         )
     elif index_name.lower().startswith("funder-search"):
-        # Support wildcards and proximity search for funder-search
+        # Support wildcards, proximity search, and span queries for funder-search
         # Proximity: "term1 term2"~5 finds terms within 5 words
         # Wildcards: fund* support*
+        # Span: SPAN("phrase1", "term2", 10) finds phrase1 within 10 words of term2
+
         has_proximity = '~' in search_terms and '"' in search_terms
         has_wildcard = '*' in search_terms or '?' in search_terms
+        has_span = search_terms.upper().startswith('SPAN(')
+
+        if has_span:
+            # Parse span query: SPAN("phrase1", "term2", distance)
+            import re
+            match = re.match(r'SPAN\s*\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*(\d+)\s*\)', search_terms, re.IGNORECASE)
+            if match:
+                phrase1, phrase2, distance = match.groups()
+                distance = int(distance)
+
+                # Helper function to build span clause for a phrase or term
+                def build_span_clause(text):
+                    words = text.split()
+                    if len(words) == 1:
+                        # Single term
+                        return {"span_term": {"html": words[0].lower()}}
+                    else:
+                        # Multiple words - use span_near for the phrase
+                        return {
+                            "span_near": {
+                                "clauses": [{"span_term": {"html": word.lower()}} for word in words],
+                                "slop": 0,
+                                "in_order": True
+                            }
+                        }
+
+                # Build span near query
+                return Q(
+                    "span_near",
+                    clauses=[
+                        build_span_clause(phrase1),
+                        build_span_clause(phrase2)
+                    ],
+                    slop=distance,
+                    in_order=False
+                )
 
         if has_proximity or has_wildcard:
             # Use query_string for advanced query support
