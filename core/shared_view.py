@@ -68,6 +68,8 @@ def set_source(index_name, s):
                 "vector_embedding",
             ]
         )
+    elif index_name.startswith("funder-search"):
+        s = s.source(excludes=["html"])
     return s
 
 
@@ -164,7 +166,7 @@ def filter_group_with_q(params, fields_dict, s):
 
 def add_highlighting(params, index_name, s):
     if index_name.startswith("funder-search") and params["search"] and params["search"] != '""':
-        s = s.highlight('html', fragment_size=150, number_of_fragments=3)
+        s = s.highlight('html', fragment_size=150, number_of_fragments=10)
     return s
 
 
