@@ -407,7 +407,7 @@ def full_search_query(index_name, search_terms):
                         build_span_clause(phrase2)
                     ],
                     slop=distance,
-                    in_order=False
+                    in_order=True
                 )
 
         if has_proximity or has_wildcard:
