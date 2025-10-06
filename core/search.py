@@ -360,40 +360,6 @@ def full_search_query(index_name, search_terms):
             tertiary_field="abbreviated_title",
         )
     elif index_name.lower().startswith("works"):
-        # Check if this is a span query for fulltext
-        has_span = search_terms.upper().startswith('SPAN(')
-
-        if has_span:
-            # Parse and build span query for fulltext field
-            import re
-            match = re.match(r'SPAN\s*\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*(\d+)\s*\)', search_terms, re.IGNORECASE)
-            if match:
-                phrase1, phrase2, distance = match.groups()
-                distance = int(distance)
-
-                def build_span_clause(text):
-                    words = text.split()
-                    if len(words) == 1:
-                        return {"span_term": {"fulltext": words[0].lower()}}
-                    else:
-                        return {
-                            "span_near": {
-                                "clauses": [{"span_term": {"fulltext": word.lower()}} for word in words],
-                                "slop": 0,
-                                "in_order": True
-                            }
-                        }
-
-                return Q(
-                    "span_near",
-                    clauses=[
-                        build_span_clause(phrase1),
-                        build_span_clause(phrase2)
-                    ],
-                    slop=distance,
-                    in_order=True
-                )
-
         search_oa = SearchOpenAlex(
             search_terms=search_terms,
             secondary_field="abstract",
