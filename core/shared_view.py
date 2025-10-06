@@ -135,9 +135,22 @@ def apply_sorting(params, fields_dict, default_sort, index_name, s):
     elif is_search_query and not params["sort"] and index_name.startswith("works"):
         s = s.sort("_score", "publication_date", "id")
     elif is_search_query and not params["sort"] and index_name.startswith("funder-search"):
-        # Random sort for funder-search
-        from elasticsearch_dsl import SF
-        s = s.sort(SF('random_score', seed=params.get('seed', 42)))
+        # Random sort for funder-search using script-based random scoring
+        import random
+        seed = params.get('seed', random.randint(1, 1000000))
+        s = s.extra(
+            query={
+                "function_score": {
+                    "query": s.to_dict().get('query', {"match_all": {}}),
+                    "random_score": {
+                        "seed": seed,
+                        "field": "_seq_no"
+                    }
+                }
+            }
+        )
+        # Clear the original query since we moved it into function_score
+        s._query = None
     elif is_search_query and not params["sort"]:
         s = s.sort("_score", "-works_count", "id")
     elif not params["group_by"]:
