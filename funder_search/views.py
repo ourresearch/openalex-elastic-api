@@ -17,7 +17,31 @@ from funder_search.schemas import FunderSearchSchema, MessageSchema
 INDEX_NAME = "funder-search"
 
 
-def build_fulltext_query(search_terms):
+def analyze_text(text):
+    """Use Elasticsearch's _analyze API to stem text using kstem stemmer and remove stop words."""
+    from elasticsearch_dsl import connections
+
+    es = connections.get_connection('default')
+
+    try:
+        # Use the same analyzer as the fulltext field (with stop words and kstem)
+        response = es.indices.analyze(
+            body={
+                "tokenizer": "standard",
+                "filter": ["lowercase", "stop", "kstem"],
+                "text": text
+            }
+        )
+        tokens = [token['token'] for token in response['tokens']]
+        print(f"Analyzed '{text}' -> {tokens}")
+        return tokens
+    except Exception as e:
+        print(f"Analyzer failed: {e}")
+        # Fallback to lowercased words if analyze fails
+        return text.lower().split()
+
+
+def build_fulltext_query(search_terms, index_name):
     """Build a query that only searches the fulltext field."""
     # Check if this is a span query
     if search_terms.upper().startswith('SPAN('):
@@ -28,13 +52,15 @@ def build_fulltext_query(search_terms):
             distance = int(distance)
 
             def build_span_clause(text):
-                words = text.split()
-                if len(words) == 1:
-                    return {"span_term": {"fulltext": words[0].lower()}}
+                # Analyze/stem the text first
+                tokens = analyze_text(text)
+                print(tokens)
+                if len(tokens) == 1:
+                    return {"span_term": {"fulltext": tokens[0]}}
                 else:
                     return {
                         "span_near": {
-                            "clauses": [{"span_term": {"fulltext": word.lower()}} for word in words],
+                            "clauses": [{"span_term": {"fulltext": token}} for token in tokens],
                             "slop": 0,
                             "in_order": True
                         }
@@ -124,7 +150,7 @@ def funder_search():
             s = handle_cursor(params["cursor"], params["page"], s)
 
         # Add fulltext-only search query
-        search_query = build_fulltext_query(params["search"])
+        search_query = build_fulltext_query(params["search"], index_name)
         if params["sample"]:
             s = s.filter(search_query)
         else:
