@@ -16,6 +16,29 @@ from funder_search.schemas import FunderSearchSchema, MessageSchema
 
 INDEX_NAME = "funder-search"
 
+import re, csv, io
+
+def parse_span(search_terms: str):
+    m = re.match(r'^\s*SPAN\s*\((.*)\)\s*$', search_terms, re.IGNORECASE)
+    if not m:
+        return None
+    inner = m.group(1)
+
+    # split the 3 arguments, respecting quotes & spaces
+    parts = next(csv.reader(io.StringIO(inner), skipinitialspace=True))
+    if len(parts) != 3:
+        return None
+
+    def strip_quotes(s):
+        s = s.strip()
+        if len(s) >= 2 and s[0] in "\"'“”‘’" and s[-1] in "\"'“”‘’":
+            return s[1:-1]
+        return s
+
+    phrase1 = strip_quotes(parts[0])
+    phrase2 = strip_quotes(parts[1])
+    distance = int(strip_quotes(parts[2]))
+    return phrase1, phrase2, distance
 
 def analyze_text(text):
     """Use Elasticsearch's _analyze API to stem text using kstem stemmer and remove stop words."""
@@ -42,39 +65,30 @@ def analyze_text(text):
 
 
 def build_fulltext_query(search_terms, index_name):
-    """Build a query that only searches the fulltext field."""
-    # Check if this is a span query
-    if search_terms.upper().startswith('SPAN('):
-        import re
-        match = re.match(r'SPAN\s*\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*(\d+)\s*\)', search_terms, re.IGNORECASE)
-        if match:
-            phrase1, phrase2, distance = match.groups()
-            distance = int(distance)
+    parsed = parse_span(search_terms)
+    if parsed:
+        phrase1, phrase2, distance = parsed
 
-            def build_span_clause(text):
-                # Analyze/stem the text first
-                tokens = analyze_text(text)
-                print(tokens)
-                if len(tokens) == 1:
-                    return {"span_term": {"fulltext": tokens[0]}}
-                else:
-                    return {
-                        "span_near": {
-                            "clauses": [{"span_term": {"fulltext": token}} for token in tokens],
-                            "slop": 0,
-                            "in_order": True
-                        }
-                    }
+        def build_span_clause(text):
+            toks = analyze_text(text)
+            if len(toks) == 1:
+                return {"span_term": {"fulltext": toks[0]}}
+            # allow gaps for removed stopwords/punctuation
+            inner_slop = max(1, len(toks) - 1)
+            return {
+                "span_near": {
+                    "clauses": [{"span_term": {"fulltext": t}} for t in toks],
+                    "slop": inner_slop,
+                    "in_order": True
+                }
+            }
 
-            return Q(
-                "span_near",
-                clauses=[
-                    build_span_clause(phrase1),
-                    build_span_clause(phrase2)
-                ],
-                slop=distance,
-                in_order=True
-            )
+        return Q(
+            "span_near",
+            clauses=[build_span_clause(phrase1), build_span_clause(phrase2)],
+            slop=distance,
+            in_order=True
+        )
 
     # Check for proximity search
     has_proximity = '~' in search_terms and '"' in search_terms
