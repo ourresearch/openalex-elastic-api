@@ -73,8 +73,6 @@ columns:
     type: string
     category: ids
     apiField: id
-    redshiftDisplayColumn: paper_id
-    redshiftFilterColumn: paper_id
     actions:
       - column
       - filter
@@ -95,8 +93,6 @@ columns:
     type: string
     category: ids
     apiField: doi
-    redshiftDisplayColumn: doi
-    redshiftFilterColumn: doi_lower
     actions:
       - filter
       - column
@@ -117,8 +113,6 @@ columns:
     isId: true
     category: other
     apiField: primary_topic.id
-    redshiftDisplayColumn: topic_id
-    redshiftFilterColumn: topic_id
     actions:
       - filter
       - column
@@ -138,8 +132,6 @@ columns:
     type: string
     category: other
     apiField: primary_topic.display_name
-    redshiftDisplayColumn: topic_display_name
-    redshiftFilterColumn: 
     actions:
       - column
     actionsPopular:
@@ -160,8 +152,6 @@ columns:
     type: string
     category: other
     apiField: keywords.id
-    redshiftDisplayColumn: keyword_ids
-    redshiftFilterColumn: keyword_ids
     actions:
       - filter
       - column
@@ -185,8 +175,6 @@ columns:
     type: string
     category: other
     apiField:
-    redshiftDisplayColumn: keyword_display_names
-    redshiftFilterColumn: keyword_display_names
     actions:
       - filter
       - column
@@ -207,8 +195,6 @@ columns:
     type: string
     category: other
     apiField: primary_topic.subfield.id
-    redshiftDisplayColumn: subfield_id
-    redshiftFilterColumn: subfield_id
     actions:
       - filter
       - column
@@ -226,8 +212,6 @@ columns:
     type: string
     category: other
     apiField: 
-    redshiftDisplayColumn: subfield_display_name
-    redshiftFilterColumn: subfield_display_name
     actions:
       - column
     actionsPopular: []
@@ -248,8 +232,6 @@ columns:
     type: object
     category: other
     apiField: primary_topic.field.id
-    redshiftDisplayColumn: field_id
-    redshiftFilterColumn: field_id
     actions:
       - filter
       - column
@@ -267,8 +249,6 @@ columns:
     type: string
     category: other
     apiField:
-    redshiftDisplayColumn: field_display_name
-    redshiftFilterColumn: field_display_name
     actions:
       - column
     actionsPopular: []
@@ -289,8 +269,6 @@ columns:
     type: string
     category: other
     apiField: primary_topic.domain.id
-    redshiftDisplayColumn: domain_id
-    redshiftFilterColumn: domain_id
     actions:
       - filter
       - column
@@ -309,8 +287,6 @@ columns:
     type: string
     category: other
     apiField: primary_topic.domain.id
-    redshiftDisplayColumn: domain_display_name
-    redshiftFilterColumn: domain_display_name
     actions:
       - column
     actionsPopular: []
@@ -331,8 +307,6 @@ columns:
     type: string
     category: institution
     apiField: authorships.institutions.lineage
-    redshiftDisplayColumn: institution_ids
-    redshiftFilterColumn: 
     actions:
       - filter
       - column
@@ -353,8 +327,7 @@ columns:
     type: string
     category: institution
     apiField:
-    redshiftDisplayColumn: institution_display_names
-    redshiftFilterColumn: 
+ 
     actions:
       - column
     actionsPopular:
@@ -373,8 +346,6 @@ columns:
     objectEntity:
     type: number
     apiField: cited_by_count
-    redshiftDisplayColumn: cited_by_count
-    redshiftFilterColumn: cited_by_count
     actions:
       - sort
       - column
@@ -398,8 +369,6 @@ columns:
     type: string
     category: ids
     apiField: authorships.institutions.ror
-    redshiftDisplayColumn: ror_ids
-    redshiftFilterColumn: ror_id
     actions:
     - filter
     - column
@@ -421,8 +390,6 @@ columns:
     type: array
     category: author
     apiField: authorships.author.id
-    redshiftDisplayColumn: 
-    redshiftFilterColumn:
     actions:
       - filter
     actionsPopular:
@@ -443,8 +410,6 @@ columns:
     type: string
     category: author
     apiField:
-    redshiftDisplayColumn: author_ids
-    redshiftFilterColumn: 
     actions:
       - column
     actionsPopular:
@@ -462,8 +427,7 @@ columns:
     type: string
     category: author
     apiField: 
-    redshiftDisplayColumn: author_display_names
-    redshiftFilterColumn: 
+ 
     actions:
       - column
     actionsPopular:
@@ -484,8 +448,7 @@ columns:
     type: string
     category: ids
     apiField: authorships.author.orcid
-    redshiftDisplayColumn: orcid_ids
-    redshiftFilterColumn: 
+ 
     actions: []
     icon: mdi-account-outline
     descr: The Open Researcher and Contributor ID (ORCID) of the authors associated
@@ -511,8 +474,6 @@ columns:
       - column
     category: other
     apiField: display_name
-    redshiftDisplayColumn: original_title
-    redshiftFilterColumn: original_title
     icon: mdi-file-document-outline
     descr: The title of the work.
   open_access.is_oa:
@@ -534,8 +495,6 @@ columns:
       - group_by
     category: open access
     apiField: open_access.is_oa
-    redshiftDisplayColumn: is_oa
-    redshiftFilterColumn: is_oa
     icon: mdi-lock-open-outline
     descr: Whether the work is open access.
   open_access.oa_status:
@@ -553,8 +512,6 @@ columns:
       - filter
     category: open access
     apiField: open_access.oa_status
-    redshiftDisplayColumn: oa_status
-    redshiftFilterColumn: oa_status
     icon: mdi-lock-open-outline
     descr: The open access status of the work.
   open_access.has_fulltext:
@@ -573,30 +530,8 @@ columns:
       - sort
     category: open access
     apiField: open_access.any_repository_has_fulltext
-    redshiftDisplayColumn: has_fulltext
-    redshiftFilterColumn: has_fulltext
     icon: mdi-lock-open-outline
     descr: Whether the work has fulltext available.
-#  apc_paid.value_usd:
-#    id: apc_paid.value_usd
-#    isCurrency: true
-#    subjectEntity: works
-#    operators:
-#      - is
-#      - is not
-#      - is greater than
-#      - is less than
-#    defaultOperator: is
-#    objectEntity:
-#    displayName: APC paid (est)
-#    type: number
-#    sortByValue: true
-#    apiField: apc_paid.value_usd
-#    redshiftDisplayColumn:
-#    redshiftFilterColumn:
-#    actions: []
-#    icon: mdi-cash
-#    descr: The Article Processing Charge (APC) paid in USD for the work.
   authorships.countries:
     id: authorships.countries
     isList: true
@@ -618,8 +553,6 @@ columns:
       - group_by
     category: institution
     apiField: authorships.countries
-    redshiftDisplayColumn: country_ids
-    redshiftFilterColumn: country_ids
     icon: mdi-earth
     descr: The country IDs of the institutions associated with the work.
   authorships.countries.display_name:
@@ -639,8 +572,6 @@ columns:
       - group_by
     category: institution
     apiField: authorships.countries
-    redshiftDisplayColumn: country_display_names
-    redshiftFilterColumn:
     icon: mdi-earth
     descr: The country names of the institutions associated with the work.
   authorships.institutions.continent:
@@ -662,8 +593,6 @@ columns:
       - column
     actionsPopular: []
     apiField: authorships.institutions.continent
-    redshiftDisplayColumn: continent_ids
-    redshiftFilterColumn: continent_ids
     icon: mdi-earth
     descr: The continent ID of the institutions associated with the work.
   authorships.institutions.continent.display_name:
@@ -680,8 +609,6 @@ columns:
       - column
     actionsPopular: []
     apiField:
-    redshiftDisplayColumn: continent_display_names
-    redshiftFilterColumn:
     icon: mdi-earth
     descr: The name of the continent of the institutions associated with the work.
   authorships.institutions.is_global_south:
@@ -698,8 +625,6 @@ columns:
       - column
     category: institution
     apiField: institutions.is_global_south
-    redshiftDisplayColumn: is_global_south
-    redshiftFilterColumn: is_global_south
     icon: mdi-earth
     descr: Whether the institutions associated with the work are in the Global South.
   authorships.institutions.type:
@@ -714,11 +639,8 @@ columns:
     objectEntity: institution-types
     displayName: institution type
     isId: true
-    isList: true
     category: institution
     apiField: authorships.institutions.type
-    redshiftDisplayColumn: institution_types
-    redshiftFilterColumn:
     type: string
     actions:
       - filter
@@ -955,24 +877,6 @@ columns:
       - sort
     icon: mdi-cash-multiple
     descr: The funder names associated with the work.
-#  grants.award_id:
-#    id: grants.award_id
-#    isList: true
-#    subjectEntity: works
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    displayName: grant ID
-#    objectEntity:
-#    type: array
-#    category: other
-#    apiField: grants.award_id
-#    redshiftDisplayColumn:
-#    redshiftFilterColumn:
-#    actions: []
-#    icon: mdi-cash-multiple
-#    descr: The award ID of the grants associated with the work.
   publication_year:
     id: publication_year
     isYear: true
@@ -1035,28 +939,6 @@ columns:
       - column
     icon: mdi-calendar-range
     descr: The publication date of the work.
-#  apc_sum:
-#    id: apc_sum
-#    isCurrency: true
-#    subjectEntity: works
-#    operators:
-#      - is
-#      - is not
-#      - is greater than
-#      - is less than
-#    defaultOperator: is
-#    displayName: APC sum
-#    objectEntity:
-#    type: number
-#    category: other
-#    apiField: apc_paid.value_usd
-#    redshiftDisplayColumn:
-#    redshiftFilterColumn:
-#    actions: []
-#    actionsPopular:
-#      - group_by
-#    icon: mdi-cash
-#    descr: The total Article Processing Charges (APC) paid in USD for the work.
   language:
     id: language
     entityId: languages
@@ -1128,27 +1010,6 @@ columns:
       - sort
     icon: mdi-sprout-outline
     descr: The Sustainable Development Goals (SDGs) associated with the work.
-#  referenced_works:
-#    id: referenced_works
-#    subjectEntity: works
-#    operators:
-#      - is
-#      - is not
-#    defaultOperator: is
-#    entityId: works
-#    isList: true
-#    isId: true
-#    objectEntity:
-#    displayName: cites
-#    type: string
-#    category: citation
-#    apiField: referenced_works
-#    redshiftDisplayColumn:
-#    redshiftFilterColumn:
-#    actions: []
-#    icon: mdi-format-quote-close
-#    isDisplayedAsCount: true
-#    descr: The works cited by the work.
   abstract:
     id: abstract
     subjectEntity: works
@@ -1186,112 +1047,3 @@ columns:
       - filter
     icon: mdi-text-box-outline
     descr: The title and abstract of the work.
-  related_to_text:
-    id: related_to_text
-    subjectEntity: works
-    operators:
-      - is
-    defaultOperator: is
-    displayName: related text
-    objectEntity:
-    type: string
-    category: other
-    apiField: related_to_text
-    redshiftDisplayColumn: related_to_text
-    redshiftFilterColumn: related_to_text
-    actions:
-      - filter
-    icon: mdi-file-document-outline
-    descr: Vector search across title and abstract.
-  count(works):
-    id: count(works)
-    subjectEntity: works
-    operators:
-    defaultOperator:
-    displayName: works count
-    objectEntity:
-    type: number
-    apiField:
-    redshiftDisplayColumn: count
-    redshiftFilterColumn: count
-    actions:
-      - summary
-    actionsPopular:
-    icon: mdi-file-document-outline
-    descr: The number of works.
-  mean(cited_by_count):
-    id: mean(cited_by_count)
-    subjectEntity: works
-    operators:
-    defaultOperator:
-    displayName: mean citation count
-    objectEntity:
-    type: number
-    apiField:
-    redshiftDisplayColumn: mean_cited_by_count
-    redshiftFilterColumn: mean_cited_by_count
-    actions:
-      - summary
-    icon: mdi-file-document-outline
-    descr: The mean number of times the works have been cited by other works.
-  mean(fwci):
-    id: mean(fwci)
-    subjectEntity: works
-    operators:
-    defaultOperator:
-    displayName: mean FWCI
-    objectEntity:
-    type: number
-    apiField: mean(fwci)
-    redshiftDisplayColumn: mean_fwci
-    redshiftFilterColumn: mean_fwci
-    actions:
-      - summary
-    icon: mdi-file-document-outline
-    descr: The mean Field-Weighted Citation Impact (FWCI) of the works.
-  percent(is_oa):
-    id: percent(is_oa)
-    subjectEntity: works
-    operators:
-    defaultOperator:
-    displayName: percent open access
-    objectEntity:
-    type: number
-    apiField: percent(is_oa)
-    redshiftDisplayColumn: percent_is_oa
-    redshiftFilterColumn: percent_is_oa
-    actions:
-      - summary
-    icon: mdi-file-document-outline
-    descr: The percentage of works that are open access.
-  sum(cited_by_count):
-    id: sum(cited_by_count)
-    subjectEntity: works
-    operators:
-    defaultOperator:
-    displayName: sum citation count
-    objectEntity:
-    type: number
-    apiField:
-    redshiftDisplayColumn: sum_cited_by_count
-    redshiftFilterColumn: sum_cited_by_count
-    actions:
-      - summary
-    icon: mdi-file-document-outline
-    descr: The total number of times the works have been cited by other works.
-  sum(is_oa):
-    id: sum(is_oa)
-    subjectEntity: works
-    operators:
-    defaultOperator:
-    displayName: sum of open access
-    objectEntity:
-    type: number
-    apiField: sum(is_oa)
-    redshiftDisplayColumn: sum_is_oa
-    redshiftFilterColumn: sum_is_oa
-    actions:
-      - summary
-    icon: mdi-file-document-outline
-    descr: The total number of open access works.
-values:
