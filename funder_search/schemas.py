@@ -34,6 +34,7 @@ class FunderSearchSchema(Schema):
 class MessageSchema(Schema):
     meta = fields.Nested(MetaSchema)
     results = fields.Nested(FunderSearchSchema, many=True)
+    group_by = fields.List(fields.Dict())
 
     class Meta:
         ordered = True
