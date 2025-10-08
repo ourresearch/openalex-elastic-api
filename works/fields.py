@@ -429,6 +429,10 @@ fields = [
     ),
     OpenAlexIDField(param="datasets"),
     OpenAlexIDField(
+        param="funders.id",
+        docstring="The funders listed in the work's grants",
+    ),
+    OpenAlexIDField(
         param="grants.funder",
         docstring="The funders listed in the work's grants",
         documentation_link="https://docs.openalex.org/api-entities/funders",
