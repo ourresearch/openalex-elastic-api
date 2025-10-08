@@ -12,7 +12,7 @@ from core.fields import (
 DOCSTRINGS = {
     "id": "A unique numeric identifier for the project, which can be used for database operations and queries",
     "native_id": "An identifier used in the original system or database where the project was recorded, facilitating cross-referencing",
-    "award_id": "The identifier for the specific funding award associated with the project, useful for linking to funding sources",
+    "funder_award_id": "The identifier for the specific funding award associated with the project, useful for linking to funding sources",
     "amount": "The total amount of funding allocated to the project, which is essential for financial analysis",
     "currency": "The currency in which the funding amount is denominated, providing context for financial figures",
     "title": "The title of the research project, giving a brief overview of its focus and objectives",
@@ -52,9 +52,9 @@ fields = [
         docstring=DOCSTRINGS["id"]
     ),
     TermField(
-        param="award_id", 
-        custom_es_field="award_id",
-        docstring=DOCSTRINGS["award_id"]
+        param="funder_award_id",
+        custom_es_field="funder_award_id",
+        docstring=DOCSTRINGS["funder_award_id"]
     ),
     
     # Funded outputs
@@ -256,20 +256,10 @@ fields = [
     
     # Timestamps
     DateTimeField(
-        param="deposited_timestamp", 
-        custom_es_field="deposited_timestamp",
-        docstring=DOCSTRINGS["deposited_timestamp"]
-    ),
-    DateTimeField(
-        param="created_timestamp", 
+        param="created_timestamp",
         custom_es_field="created_timestamp",
         docstring=DOCSTRINGS["created_timestamp"]
-    ),
-    DateTimeField(
-        param="indexed_timestamp", 
-        custom_es_field="indexed_timestamp",
-        docstring=DOCSTRINGS["indexed_timestamp"]
-    ),
+    )
 ]
 
 fields_dict = {f.param: f for f in fields}

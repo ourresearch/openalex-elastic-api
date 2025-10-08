@@ -51,7 +51,7 @@ class FunderIdsSchema(Schema):
 class AwardsSchema(Schema):
     # Core identifiers
     id = fields.Str(metadata={"description": DOCSTRINGS["id"]})
-    award_id = fields.Str(default=None, metadata={"description": DOCSTRINGS["award_id"]})
+    funder_award_id = fields.Str(attribute="award_id", default=None, metadata={"description": DOCSTRINGS["award_id"]})
     
     # Funded outputs
     funded_outputs = fields.List(fields.Str(), default=None, metadata={"description": DOCSTRINGS["funded_outputs"]})
