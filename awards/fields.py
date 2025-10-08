@@ -12,6 +12,7 @@ from core.fields import (
 DOCSTRINGS = {
     "id": "A unique numeric identifier for the project, which can be used for database operations and queries",
     "native_id": "An identifier used in the original system or database where the project was recorded, facilitating cross-referencing",
+    "award_id": "The identifier for the specific funding award associated with the project, useful for linking to funding sources",
     "funder_award_id": "The identifier for the specific funding award associated with the project, useful for linking to funding sources",
     "amount": "The total amount of funding allocated to the project, which is essential for financial analysis",
     "currency": "The currency in which the funding amount is denominated, providing context for financial figures",
