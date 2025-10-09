@@ -6,7 +6,7 @@ from core.utils import set_number_param
 class Paginate:
     def __init__(self, group_by, page, per_page, sample=None):
         self.group_by = group_by
-        self.max_per_page = 1000
+        self.max_per_page = 200
         self.max_result_size = 10000
         self.page = page
         self.per_page = per_page
@@ -42,7 +42,7 @@ class Paginate:
     def validate_per_page(self):
         if self.per_page and self.per_page > self.max_per_page or self.per_page < 1:
             raise APIPaginationError(
-                f"per-page parameter must be between 1 and 1000"
+                f"per-page parameter must be between 1 and {self.max_per_page}."
             )
 
     def validate_result_size(self):

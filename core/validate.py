@@ -5,6 +5,8 @@ from core.exceptions import APIQueryParamsError
 def validate_params(request):
     valid_params = [
         "apc_sum",
+        "api-key",
+        "api_key",
         "cited_by_count_sum",
         "cursor",
         "data_version",
