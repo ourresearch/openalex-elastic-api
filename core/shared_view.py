@@ -74,10 +74,11 @@ def set_source(index_name, s):
 
 
 def set_size(params, s):
+    # Set track_total_hits to true to get accurate counts beyond 10k for all queries
     if params["group_by"]:
-        s = s.extra(size=0)
+        s = s.extra(size=0, track_total_hits=True)
     else:
-        s = s.extra(size=params["per_page"])
+        s = s.extra(size=params["per_page"], track_total_hits=True)
     return s
 
 
@@ -216,7 +217,7 @@ def format_response(response, params, index_name, fields_dict, s, connection='de
 
 def format_meta(response, params, s):
     meta = {
-        "count": calculate_sample_or_default_count(params, s),
+        "count": calculate_sample_or_default_count(params, response),
         "db_response_time_ms": response.took,
         "page": params["page"] if not params["cursor"] else None,
         "per_page": params["per_page"],
@@ -271,8 +272,8 @@ def format_group_bys(response, params, index_name, fields_dict, connection='defa
     return group_bys_data
 
 
-def calculate_sample_or_default_count(params, s):
-    count = s.count()
+def calculate_sample_or_default_count(params, response):
+    count = response.hits.total.value
     if params.get("sample") and params["sample"] < count:
         return params["sample"]
     return count
