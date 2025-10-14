@@ -624,9 +624,12 @@ class TermField(Field):
             and self.param.endswith("license_id")
             or self.param.endswith("license")
         ):
-            return self.value.replace("https://openalex.org/", "").replace(
-                "licenses/", ""
-            )
+            if self.value.startswith("https://openalex.org/licenses/"):
+                return self.value
+            elif self.value.startswith("licenses/"):
+                return f"https://openalex.org/{self.value}"
+            else:
+                return f"https://openalex.org/licenses/{self.value}"
         elif self.param == "id":
             if "keywords/" in self.value and not self.value.startswith(
                 "https://openalex.org/"
@@ -662,14 +665,6 @@ class TermField(Field):
             or self.param == "subfield.id"
         ):
             return f"https://openalex.org/subfields/{self.value}"
-        elif self.param == "keywords.id":
-            return f"https://openalex.org/keywords/{self.value}"
-        elif (
-            self.param
-            and self.param.endswith("license_id")
-            or self.param.endswith("license")
-        ):
-            return f"https://openalex.org/licenses/{self.value}"
         elif self.param in id_params:
             formatted_id = self.format_id()
             if formatted_id is None:
