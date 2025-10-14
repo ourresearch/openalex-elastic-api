@@ -3,6 +3,7 @@ import re
 from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
+from core.fields import TermField
 from core.utils import get_field
 from settings import MAX_IDS_IN_FILTER
 
@@ -75,8 +76,6 @@ def handle_or_query(field, fields_dict, s, value, sample):
     else:
         # standard OR query, like: 42 or 43
         # Check if this is a TermField and use the more efficient terms query
-        from core.fields import TermField
-
         if isinstance(field, TermField):
             # Use the optimized terms query for TermField
             values = value.split("|")
