@@ -74,23 +74,46 @@ def handle_or_query(field, fields_dict, s, value, sample):
                 s = s.filter(not_query)
     else:
         # standard OR query, like: 42 or 43
-        for or_value in value.split("|"):
-            if or_value.startswith("!"):
-                raise APIQueryParamsError(
-                    f"The ! operator can only be used at the beginning of an OR query, "
-                    f"like /works?filter=concepts.id:!C144133560|C15744967, meaning NOT (C144133560 or C15744967). Problem "
-                    f"value: {or_value}"
-                )
-            field.value = or_value
-            q = field.build_query()
-            or_queries.append(q)
-        combined_or_query = Q("bool", should=or_queries, minimum_should_match=1)
-        if sample and "search" in field.param:
-            s = s.filter(combined_or_query)
-        elif "search" in field.param:
-            s = s.query(combined_or_query)
+        # Check if this is a TermField and use the more efficient terms query
+        from core.fields import TermField
+
+        if isinstance(field, TermField):
+            # Use the optimized terms query for TermField
+            values = value.split("|")
+            for or_value in values:
+                if or_value.startswith("!"):
+                    raise APIQueryParamsError(
+                        f"The ! operator can only be used at the beginning of an OR query, "
+                        f"like /works?filter=concepts.id:!C144133560|C15744967, meaning NOT (C144133560 or C15744967). Problem "
+                        f"value: {or_value}"
+                    )
+            # Build a single terms query instead of multiple term queries
+            combined_or_query = field.build_terms_query(values)
+            if sample and "search" in field.param:
+                s = s.filter(combined_or_query)
+            elif "search" in field.param:
+                s = s.query(combined_or_query)
+            else:
+                s = s.filter(combined_or_query)
         else:
-            s = s.filter(combined_or_query)
+            # Fall back to the original bool/should approach for other field types
+            for or_value in value.split("|"):
+                if or_value.startswith("!"):
+                    raise APIQueryParamsError(
+                        f"The ! operator can only be used at the beginning of an OR query, "
+                        f"like /works?filter=concepts.id:!C144133560|C15744967, meaning NOT (C144133560 or C15744967). Problem "
+                        f"value: {or_value}"
+                    )
+                field.value = or_value
+                q = field.build_query()
+                or_queries.append(q)
+            combined_or_query = Q("bool", should=or_queries, minimum_should_match=1)
+            if sample and "search" in field.param:
+                s = s.filter(combined_or_query)
+            elif "search" in field.param:
+                s = s.query(combined_or_query)
+            else:
+                s = s.filter(combined_or_query)
     return s
 
 

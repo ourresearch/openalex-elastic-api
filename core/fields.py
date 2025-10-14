@@ -536,6 +536,150 @@ class SearchField(Field):
 
 
 class TermField(Field):
+    def build_terms_query(self, values):
+        """
+        Build an Elasticsearch terms query (plural) for multiple values.
+        More efficient than multiple bool/should queries.
+        """
+        # Format all values according to the field type
+        formatted_values = []
+        for val in values:
+            self.value = val
+            formatted_val = self._get_formatted_value()
+            formatted_values.append(formatted_val)
+
+        # For DOI, we need to handle both v1 (full URL) and v2 (short form)
+        if self.param == "doi":
+            expanded_values = []
+            for val in values:
+                if "doi.org" in val:
+                    short_doi = val.replace("https://doi.org/", "")
+                    expanded_values.extend([val, short_doi])
+                else:
+                    full_doi = f"https://doi.org/{val}"
+                    expanded_values.extend([val, full_doi])
+            formatted_values = expanded_values
+
+        kwargs = {self.es_field(): formatted_values}
+        return Q("terms", **kwargs)
+
+    def _get_formatted_value(self):
+        """
+        Get the formatted value for a single term, handling all the special cases.
+        Returns the value that would be used in the term query.
+        """
+        id_params = [
+            "affiliations.institution.ror",
+            "author.orcid",
+            "authorships.author.orcid",
+            "authorships.institutions.ror",
+            "doi",
+            "ids.pmid",
+            "ids.pmcid",
+            "institutions.ror",
+            "issn",
+            "orcid",
+            "openalex_id",
+            "pmid",
+            "pmcid",
+            "ror",
+            "wikidata_id",
+        ]
+
+        # Apply the same transformations as in build_query
+        if self.param == "sustainable_development_goals.id":
+            if len(self.value) == 1 or len(self.value) == 2:
+                return f"https://metadata.un.org/sdg/{self.value}"
+            elif self.value.startswith("sdgs/"):
+                sdg_number = self.value.replace("sdgs/", "")
+                return f"https://metadata.un.org/sdg/{sdg_number}"
+        elif self.param == "language":
+            return self.value.replace("languages/", "")
+        elif self.param == "type" or self.param == "last_known_institution.type":
+            return (
+                self.value.replace("work-types/", "")
+                .replace("institution-types/", "")
+                .replace("source-types/", "")
+                .replace("types/", "")
+            )
+        elif (
+            self.param == "primary_location.source.type"
+            or self.param == "locations.source.type"
+        ):
+            return self.value.replace("source-types/", "").replace("%20", " ")
+        elif "country_code" in self.param or "countries" in self.param:
+            return self.value.replace("countries/", "")
+        elif "domain" in self.param:
+            return self.value.replace("domains/", "")
+        elif "field" in self.param and "subfield" not in self.param:
+            return self.value.replace("fields/", "")
+        elif "subfield" in self.param:
+            return self.value.replace("subfields/", "")
+        elif self.param == "keywords.id":
+            return self.value.replace("https://openalex.org/", "").replace(
+                "keywords/", ""
+            )
+        elif (
+            self.param
+            and self.param.endswith("license_id")
+            or self.param.endswith("license")
+        ):
+            return self.value.replace("https://openalex.org/", "").replace(
+                "licenses/", ""
+            )
+        elif self.param == "id":
+            if "keywords/" in self.value and not self.value.startswith(
+                "https://openalex.org/"
+            ):
+                return f"https://openalex.org/{self.value}"
+        elif self.param == "doi":
+            if "doi.org" in self.value:
+                return self.value
+            else:
+                return f"https://doi.org/{self.value}"
+        elif self.param == "display_name":
+            return self.value
+        elif self.param == "language":
+            return self.value.lower()
+        elif self.param == "topics.id" or self.param == "topic_share.id":
+            if "https://openalex.org/" not in self.value:
+                return f"https://openalex.org/{self.value}"
+        elif (
+            self.param == "topics.domain.id"
+            or self.param == "primary_topic.domain.id"
+            or self.param == "domain.id"
+        ):
+            return f"https://openalex.org/domains/{self.value}"
+        elif (
+            self.param == "topics.field.id"
+            or self.param == "primary_topic.field.id"
+            or self.param == "field.id"
+        ):
+            return f"https://openalex.org/fields/{self.value}"
+        elif (
+            self.param == "topics.subfield.id"
+            or self.param == "primary_topic.subfield.id"
+            or self.param == "subfield.id"
+        ):
+            return f"https://openalex.org/subfields/{self.value}"
+        elif self.param == "keywords.id":
+            return f"https://openalex.org/keywords/{self.value}"
+        elif (
+            self.param
+            and self.param.endswith("license_id")
+            or self.param.endswith("license")
+        ):
+            return f"https://openalex.org/licenses/{self.value}"
+        elif self.param in id_params:
+            formatted_id = self.format_id()
+            if formatted_id is None:
+                raise APIQueryParamsError(
+                    f"{self.value} is not a valid ID for {self.param}"
+                )
+            return formatted_id
+
+        return self.value
+
     def build_query(self):
         id_params = [
             "affiliations.institution.ror",
