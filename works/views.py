@@ -7,8 +7,8 @@ from core.semantic import semantic_search
 from core.schemas import FiltersWrapperSchema, StatsWrapperSchema
 from core.shared_view import shared_view
 from core.stats_view import shared_stats_view
-from core.utils import (get_flattened_fields, get_valid_fields, is_cached,
-                        process_only_fields)
+from core.utils import (get_entity_counts, get_flattened_fields, get_valid_fields,
+                        is_cached, process_only_fields)
 from extensions import cache
 from settings import WORKS_INDEX
 from works.fields import fields_dict
@@ -126,3 +126,76 @@ def works_semantic():
 @blueprint.route("/works/config")
 def works_config():
     return jsonify(all_entities_config["works"])
+
+
+@blueprint.route("/entities")
+def entities():
+    """
+    Returns a list of all entity types with their name, description, and count.
+    """
+    # Check data_version parameter to determine connection
+    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    connection = 'walden' if data_version == '2' else 'default'
+
+    # Get counts from Elasticsearch using shared function
+    es_counts = get_entity_counts(connection=connection)
+
+    entities_list = []
+
+    # Define entity types we want to include (in order)
+    entity_types = [
+        "works",
+        "authors",
+        "sources",
+        "institutions",
+        "topics",
+        "publishers",
+        "funders",
+        "domains",
+        "fields",
+        "subfields",
+        "concepts",
+        "keywords",
+        "continents",
+        "countries",
+        "institution-types",
+        "languages",
+        "licenses",
+        "sdgs",
+        "source-types",
+        "work-types",
+    ]
+
+    for entity_type in entity_types:
+        if entity_type in all_entities_config:
+            config = all_entities_config[entity_type]
+
+            # Extract the relevant information
+            entity_info = {
+                "id": config.get("id", entity_type),
+                "display_name": config.get("displayName", entity_type),
+                "description": config.get("descrFull", config.get("descr", "")),
+            }
+
+            # Map entity_type to the key used in es_counts
+            # (e.g., "sdgs" -> "sustainable_development_goals")
+            es_key = entity_type
+            if entity_type == "sdgs":
+                es_key = "sustainable_development_goals"
+
+            # Get count from Elasticsearch if available, otherwise from config values
+            if es_key in es_counts:
+                entity_info["count"] = es_counts[es_key]
+            elif "values" in config and isinstance(config["values"], list):
+                entity_info["count"] = len(config["values"])
+            else:
+                entity_info["count"] = None
+
+            entities_list.append(entity_info)
+
+    return jsonify({
+        "meta": {
+            "count": len(entities_list)
+        },
+        "results": entities_list
+    })

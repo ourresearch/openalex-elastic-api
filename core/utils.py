@@ -9,9 +9,17 @@ from settings import (
     AUTHORS_INDEX,
     AWARDS_INDEX,
     CONCEPTS_INDEX,
+    CONTINENTS_INDEX,
+    COUNTRIES_INDEX,
+    DOMAINS_INDEX,
+    FIELDS_INDEX,
+    FUNDERS_INDEX,
     INSTITUTIONS_INDEX,
+    KEYWORDS_INDEX,
     PUBLISHERS_INDEX,
+    SDGS_INDEX,
     SOURCES_INDEX,
+    SUBFIELDS_INDEX,
     TOPICS_INDEX,
     WORKS_INDEX,
 )
@@ -236,3 +244,40 @@ def get_display_name(openalex_id):
     else:
         display_name = None
     return display_name
+
+
+def get_entity_counts(connection='default'):
+    """
+    Get counts for all entity types from Elasticsearch.
+    Returns a dictionary mapping entity type names to their counts.
+
+    Args:
+        connection: The Elasticsearch connection to use ('default' or 'walden')
+    """
+    # Use different index for works when using walden connection (data-version=2)
+    works_index = 'works-v26' if connection == 'walden' else WORKS_INDEX
+
+    entities_to_indices = {
+        "authors": AUTHORS_INDEX,
+        "institutions": INSTITUTIONS_INDEX,
+        "sources": SOURCES_INDEX,
+        "publishers": PUBLISHERS_INDEX,
+        "funders": FUNDERS_INDEX,
+        "works": works_index,
+        "topics": TOPICS_INDEX,
+        "subfields": SUBFIELDS_INDEX,
+        "fields": FIELDS_INDEX,
+        "domains": DOMAINS_INDEX,
+        "sustainable_development_goals": SDGS_INDEX,
+        "countries": COUNTRIES_INDEX,
+        "continents": CONTINENTS_INDEX,
+        "concepts": CONCEPTS_INDEX,
+        "keywords": KEYWORDS_INDEX,
+    }
+
+    results = {}
+    for name, index in entities_to_indices.items():
+        s = Search(using=connection, index=index)
+        results[name] = s.count()
+
+    return results
