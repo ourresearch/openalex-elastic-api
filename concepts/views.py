@@ -16,6 +16,7 @@ blueprint = Blueprint("concepts", __name__)
 
 
 @blueprint.route("/concepts")
+@blueprint.route("/entities/concepts")
 @cache.cached(
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )

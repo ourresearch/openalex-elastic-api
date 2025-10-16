@@ -29,6 +29,7 @@ def index():
 
 
 @blueprint.route("/works")
+@blueprint.route("/entities/works")
 @cache.cached(
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )

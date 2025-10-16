@@ -21,6 +21,7 @@ blueprint = Blueprint("keywords", __name__)
 
 
 @blueprint.route("/keywords")
+@blueprint.route("/entities/keywords")
 @cache.cached(
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )

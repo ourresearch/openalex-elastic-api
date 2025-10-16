@@ -1122,6 +1122,10 @@ def universal_get(openalex_id):
     if not openalex_id:
         return {"message": "Don't panic"}, 404
 
+    # Skip if this is an entities route (e.g., /entities/works)
+    if openalex_id.startswith("entities/"):
+        abort(404)
+
     if not is_openalex_id(openalex_id):
         return {"message": "OpenAlex ID format not recognized"}, 404
 

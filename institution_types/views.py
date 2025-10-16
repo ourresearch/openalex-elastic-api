@@ -20,6 +20,7 @@ blueprint = Blueprint("institution_types", __name__)
 
 
 @blueprint.route("/institution-types")
+@blueprint.route("/entities/institution-types")
 @cache.cached(
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )

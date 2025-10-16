@@ -21,6 +21,7 @@ blueprint = Blueprint("subfields", __name__)
 
 
 @blueprint.route("/subfields")
+@blueprint.route("/entities/subfields")
 @cache.cached(
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )

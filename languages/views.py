@@ -21,6 +21,7 @@ blueprint = Blueprint("languages", __name__)
 
 
 @blueprint.route("/languages")
+@blueprint.route("/entities/languages")
 @cache.cached(
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
