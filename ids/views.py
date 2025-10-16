@@ -92,6 +92,7 @@ def works_random_get():
 
 
 @blueprint.route("/works/<path:id>")
+@blueprint.route("/entities/works/<path:id>")
 def works_id_get(id):
     # Check data_version parameter to determine connection and index
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
@@ -310,6 +311,7 @@ def authors_random_get():
 
 @blueprint.route("/authors/<path:id>")
 @blueprint.route("/people/<path:id>")
+@blueprint.route("/entities/authors/<path:id>")
 def authors_id_get(id):
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
     connection = 'walden' if data_version == '2' else 'default'
@@ -394,6 +396,7 @@ def institutions_random_get():
 
 
 @blueprint.route("/institutions/<path:id>")
+@blueprint.route("/entities/institutions/<path:id>")
 def institutions_id_get(id):
     # Check data_version parameter to determine connection and index
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
@@ -490,6 +493,7 @@ def concepts_random_get():
 
 
 @blueprint.route("/concepts/<path:id>")
+@blueprint.route("/entities/concepts/<path:id>")
 def concepts_id_get(id):
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
     connection = 'walden' if data_version == '2' else 'default'
@@ -580,6 +584,7 @@ def funders_random_get():
 
 
 @blueprint.route("/funders/<path:id>")
+@blueprint.route("/entities/funders/<path:id>")
 def funders_id_get(id):
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
     connection = 'walden' if data_version == '2' else 'default'
@@ -646,6 +651,7 @@ def funders_id_get(id):
 
 
 @blueprint.route("/publishers/<path:id>")
+@blueprint.route("/entities/publishers/<path:id>")
 def publishers_id_get(id):
     # Check data_version parameter to determine connection and index
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
@@ -751,6 +757,7 @@ def sources_random_get():
 
 @blueprint.route("/sources/<path:id>")
 @blueprint.route("/journals/<path:id>", endpoint="journals_id_get")
+@blueprint.route("/entities/sources/<path:id>")
 def sources_id_get(id):
     # Check data_version parameter to determine connection and index
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
@@ -860,6 +867,7 @@ def topics_random_get():
 
 
 @blueprint.route("/topics/<path:id>")
+@blueprint.route("/entities/topics/<path:id>")
 def topics_id_get(id):
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
     connection = 'walden' if data_version == '2' else 'default'
@@ -979,21 +987,25 @@ def get_by_openalex_external_id(index, schema, id):
 
 
 @blueprint.route("/sdgs/<path:id>")
+@blueprint.route("/entities/sdgs/<path:id>")
 def sdgs_id_get(id):
     return get_by_openalex_external_id(settings.SDGS_INDEX, SdgsSchema, id)
 
 
 @blueprint.route("/continents/<path:id>")
+@blueprint.route("/entities/continents/<path:id>")
 def continents_id_get(id):
     return get_by_openalex_external_id(settings.CONTINENTS_INDEX, ContinentsSchema, id)
 
 
 @blueprint.route("/countries/<path:id>")
+@blueprint.route("/entities/countries/<path:id>")
 def countries_id_get(id):
     return get_by_openalex_external_id(settings.COUNTRIES_INDEX, CountriesSchema, id)
 
 
 @blueprint.route("/institution-types/<path:id>")
+@blueprint.route("/entities/institution-types/<path:id>")
 def institution_types_id_get(id):
     return get_by_openalex_external_id(
         settings.INSTITUTION_TYPES_INDEX, InstitutionTypesSchema, id
@@ -1001,17 +1013,20 @@ def institution_types_id_get(id):
 
 
 @blueprint.route("/languages/<path:id>")
+@blueprint.route("/entities/languages/<path:id>")
 def languages_id_get(id):
     return get_by_openalex_external_id(settings.LANGUAGES_INDEX, LanguagesSchema, id)
 
 
 @blueprint.route("/types/<path:id>")
 @blueprint.route("/work-types/<path:id>")
+@blueprint.route("/entities/work-types/<path:id>")
 def types_id_get(id):
     return get_by_openalex_external_id(settings.WORK_TYPES_INDEX, TypesSchema, id)
 
 
 @blueprint.route("/source-types/<path:id>")
+@blueprint.route("/entities/source-types/<path:id>")
 def source_types_id_get(id):
     return get_by_openalex_external_id(
         settings.SOURCE_TYPES_INDEX, SourceTypesSchema, id
@@ -1019,21 +1034,25 @@ def source_types_id_get(id):
 
 
 @blueprint.route("/domains/<path:id>")
+@blueprint.route("/entities/domains/<path:id>")
 def domains_id_get(id):
     return get_by_openalex_external_id(settings.DOMAINS_INDEX, DomainsSchema, id)
 
 
 @blueprint.route("/fields/<path:id>")
+@blueprint.route("/entities/fields/<path:id>")
 def fields_id_get(id):
     return get_by_openalex_external_id(settings.FIELDS_INDEX, FieldsSchema, id)
 
 
 @blueprint.route("/subfields/<path:id>")
+@blueprint.route("/entities/subfields/<path:id>")
 def subfields_id_get(id):
     return get_by_openalex_external_id(settings.SUBFIELDS_INDEX, SubfieldsSchema, id)
 
 
 @blueprint.route("/keywords/<path:id>")
+@blueprint.route("/entities/keywords/<path:id>")
 def keywords_id_get(id):
     # Check data_version parameter to determine connection and index
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
@@ -1089,6 +1108,7 @@ def keywords_v2_id_get(id):
 
 
 @blueprint.route("/licenses/<path:id>")
+@blueprint.route("/entities/licenses/<path:id>")
 def licenses_id_get(id):
     return get_by_openalex_external_id(settings.LICENSES_INDEX, LicensesSchema, id)
 
