@@ -609,12 +609,6 @@ class TermField(Field):
             return self.value.replace("source-types/", "").replace("%20", " ")
         elif "country_code" in self.param or "countries" in self.param:
             return self.value.replace("countries/", "")
-        elif "domain" in self.param:
-            return self.value.replace("domains/", "")
-        elif "field" in self.param and "subfield" not in self.param:
-            return self.value.replace("fields/", "")
-        elif "subfield" in self.param:
-            return self.value.replace("subfields/", "")
         elif self.param == "keywords.id":
             return self.value.replace("https://openalex.org/", "").replace(
                 "keywords/", ""
@@ -645,26 +639,43 @@ class TermField(Field):
         elif self.param == "language":
             return self.value.lower()
         elif self.param == "topics.id" or self.param == "topic_share.id":
-            if "https://openalex.org/" not in self.value:
+            if self.value.startswith("https://openalex.org/"):
+                return self.value
+            else:
                 return f"https://openalex.org/{self.value}"
         elif (
             self.param == "topics.domain.id"
             or self.param == "primary_topic.domain.id"
             or self.param == "domain.id"
         ):
-            return f"https://openalex.org/domains/{self.value}"
+            if self.value.startswith("https://openalex.org/domains/"):
+                return self.value
+            elif self.value.startswith("domains/"):
+                return f"https://openalex.org/{self.value}"
+            else:
+                return f"https://openalex.org/domains/{self.value}"
         elif (
             self.param == "topics.field.id"
             or self.param == "primary_topic.field.id"
             or self.param == "field.id"
         ):
-            return f"https://openalex.org/fields/{self.value}"
+            if self.value.startswith("https://openalex.org/fields/"):
+                return self.value
+            elif self.value.startswith("fields/"):
+                return f"https://openalex.org/{self.value}"
+            else:
+                return f"https://openalex.org/fields/{self.value}"
         elif (
             self.param == "topics.subfield.id"
             or self.param == "primary_topic.subfield.id"
             or self.param == "subfield.id"
         ):
-            return f"https://openalex.org/subfields/{self.value}"
+            if self.value.startswith("https://openalex.org/subfields/"):
+                return self.value
+            elif self.value.startswith("subfields/"):
+                return f"https://openalex.org/{self.value}"
+            else:
+                return f"https://openalex.org/subfields/{self.value}"
         elif self.param in id_params:
             formatted_id = self.format_id()
             if formatted_id is None:
