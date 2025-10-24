@@ -541,24 +541,34 @@ class TermField(Field):
         Build an Elasticsearch terms query (plural) for multiple values.
         More efficient than multiple bool/should queries.
         """
-        # Format all values according to the field type
-        formatted_values = []
-        for val in values:
-            self.value = val
-            formatted_val = self._get_formatted_value()
-            formatted_values.append(formatted_val)
-
-        # For DOI, we need to handle both v1 (full URL) and v2 (short form)
-        if self.param == "doi":
-            expanded_values = []
+        # Special handling for continents - expand each to country codes and flatten
+        if "continent" in self.param:
+            all_country_codes = []
             for val in values:
-                if "doi.org" in val:
-                    short_doi = val.replace("https://doi.org/", "")
-                    expanded_values.extend([val, short_doi])
-                else:
-                    full_doi = f"https://doi.org/{val}"
-                    expanded_values.extend([val, full_doi])
-            formatted_values = expanded_values
+                self.value = val
+                country_codes = self.get_country_codes()
+                all_country_codes.extend(country_codes)
+            # Remove duplicates while preserving order
+            formatted_values = list(dict.fromkeys(all_country_codes))
+        else:
+            # Format all values according to the field type
+            formatted_values = []
+            for val in values:
+                self.value = val
+                formatted_val = self._get_formatted_value()
+                formatted_values.append(formatted_val)
+
+            # For DOI, we need to handle both v1 (full URL) and v2 (short form)
+            if self.param == "doi":
+                expanded_values = []
+                for val in values:
+                    if "doi.org" in val:
+                        short_doi = val.replace("https://doi.org/", "")
+                        expanded_values.extend([val, short_doi])
+                    else:
+                        full_doi = f"https://doi.org/{val}"
+                        expanded_values.extend([val, full_doi])
+                formatted_values = expanded_values
 
         kwargs = {self.es_field(): formatted_values}
         return Q("terms", **kwargs)
@@ -610,9 +620,12 @@ class TermField(Field):
         elif "country_code" in self.param or "countries" in self.param:
             return self.value.replace("countries/", "")
         elif self.param == "keywords.id":
-            return self.value.replace("https://openalex.org/", "").replace(
-                "keywords/", ""
-            )
+            if self.value.startswith("https://openalex.org/keywords/"):
+                return self.value
+            elif self.value.startswith("keywords/"):
+                return f"https://openalex.org/{self.value}"
+            else:
+                return f"https://openalex.org/keywords/{self.value}"
         elif (
             self.param
             and self.param.endswith("license_id")
