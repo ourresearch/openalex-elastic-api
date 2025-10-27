@@ -186,6 +186,7 @@ class LocationSchema(Schema):
     version = fields.Str()
     is_accepted = fields.Bool()
     is_published = fields.Bool()
+    raw_source_name = fields.Str()
 
     def get_id(self, obj):
         native_id = getattr(obj, 'native_id', '')
