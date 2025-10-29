@@ -302,6 +302,7 @@ class WorksSchema(Schema):
     open_access = fields.Nested(OpenAccessSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
     institution_assertions = fields.Nested(InstitutionsSchema, many=True)
+    institutions = fields.Nested(InstitutionsSchema, many=True)
     countries_distinct_count = fields.Int()
     institutions_distinct_count = fields.Int()
     corresponding_author_ids = fields.List(fields.Str())
