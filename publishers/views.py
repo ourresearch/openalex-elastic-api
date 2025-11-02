@@ -23,13 +23,8 @@ blueprint = Blueprint("publishers", __name__)
 )
 def publishers():
     only_fields = process_only_fields(request, PublishersSchema)
-    
-    # Check data_version parameter to determine connection and index
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
     default_sort = ["-works_count", "id"]
-    
-    result = shared_view(request, fields_dict, PUBLISHERS_INDEX, default_sort, connection)
+    result = shared_view(request, fields_dict, PUBLISHERS_INDEX, default_sort)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)

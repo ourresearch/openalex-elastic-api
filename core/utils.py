@@ -5,24 +5,18 @@ from iso3166 import countries
 
 import settings
 from core.exceptions import APIQueryParamsError
-from settings import (
-    AUTHORS_INDEX,
-    AWARDS_INDEX,
-    CONCEPTS_INDEX,
-    CONTINENTS_INDEX,
-    COUNTRIES_INDEX,
-    DOMAINS_INDEX,
-    FIELDS_INDEX,
-    FUNDERS_INDEX,
-    INSTITUTIONS_INDEX,
-    KEYWORDS_INDEX,
-    PUBLISHERS_INDEX,
-    SDGS_INDEX,
-    SOURCES_INDEX,
-    SUBFIELDS_INDEX,
-    TOPICS_INDEX,
-    WORKS_INDEX,
-)
+
+
+def get_data_version_connection(request):
+    data_version = (
+        request.args.get('data_version') or
+        request.args.get('data-version', settings.DEFAULT_DATA_VERSION)
+    )
+
+    if data_version == '2':
+        return 'walden'
+    else:
+        return 'default'
 
 
 def get_valid_fields(fields_dict):
@@ -119,23 +113,23 @@ def get_index_name_by_id(openalex_id):
         error_id = f"'{openalex_id.replace('https://openalex.org/', '')}'"
         raise APIQueryParamsError(f"{error_id} is not a valid OpenAlex ID.")
     index_name = None
-    
+
     if clean_id.startswith("G"):
-        index_name = AWARDS_INDEX    
+        index_name = settings.AWARDS_INDEX
     elif clean_id.startswith("A"):
-        index_name = AUTHORS_INDEX
+        index_name = settings.AUTHORS_INDEX
     elif clean_id.startswith("C"):
-        index_name = CONCEPTS_INDEX
+        index_name = settings.CONCEPTS_INDEX
     elif clean_id.startswith("I"):
-        index_name = INSTITUTIONS_INDEX
+        index_name = settings.INSTITUTIONS_INDEX
     elif clean_id.startswith("P"):
-        index_name = PUBLISHERS_INDEX
+        index_name = settings.PUBLISHERS_INDEX
     elif clean_id.startswith("S"):
-        index_name = SOURCES_INDEX
+        index_name = settings.SOURCES_INDEX
     elif clean_id.startswith("T"):
-        index_name = TOPICS_INDEX
+        index_name = settings.TOPICS_INDEX
     elif clean_id.startswith("W"):
-        index_name = WORKS_INDEX
+        index_name = settings.WORKS_INDEX
     return index_name
 
 
@@ -246,33 +240,40 @@ def get_display_name(openalex_id):
     return display_name
 
 
-def get_entity_counts(connection='default'):
+def get_entity_counts(request=None, connection=None):
     """
     Get counts for all entity types from Elasticsearch.
     Returns a dictionary mapping entity type names to their counts.
 
     Args:
-        connection: The Elasticsearch connection to use ('default' or 'walden')
+        request: Flask request object (preferred - will auto-detect data version)
+        connection: The Elasticsearch connection to use ('default' or 'walden') - only if request not provided
     """
+    # Determine connection from request if provided, otherwise use explicit connection or default
+    if connection is None and request is not None:
+        connection = get_data_version_connection(request)
+    elif connection is None:
+        connection = 'default'
+
     # Use different index for works when using walden connection (data-version=2)
-    works_index = 'works-v26' if connection == 'walden' else WORKS_INDEX
+    works_index = 'works-v26' if connection == 'walden' else settings.WORKS_INDEX
 
     entities_to_indices = {
-        "authors": AUTHORS_INDEX,
-        "institutions": INSTITUTIONS_INDEX,
-        "sources": SOURCES_INDEX,
-        "publishers": PUBLISHERS_INDEX,
-        "funders": FUNDERS_INDEX,
+        "authors": settings.AUTHORS_INDEX,
+        "institutions": settings.INSTITUTIONS_INDEX,
+        "sources": settings.SOURCES_INDEX,
+        "publishers": settings.PUBLISHERS_INDEX,
+        "funders": settings.FUNDERS_INDEX,
         "works": works_index,
-        "topics": TOPICS_INDEX,
-        "subfields": SUBFIELDS_INDEX,
-        "fields": FIELDS_INDEX,
-        "domains": DOMAINS_INDEX,
-        "sustainable_development_goals": SDGS_INDEX,
-        "countries": COUNTRIES_INDEX,
-        "continents": CONTINENTS_INDEX,
-        "concepts": CONCEPTS_INDEX,
-        "keywords": KEYWORDS_INDEX,
+        "topics": settings.TOPICS_INDEX,
+        "subfields": settings.SUBFIELDS_INDEX,
+        "fields": settings.FIELDS_INDEX,
+        "domains": settings.DOMAINS_INDEX,
+        "sustainable_development_goals": settings.SDGS_INDEX,
+        "countries": settings.COUNTRIES_INDEX,
+        "continents": settings.CONTINENTS_INDEX,
+        "concepts": settings.CONCEPTS_INDEX,
+        "keywords": settings.KEYWORDS_INDEX,
     }
 
     results = {}

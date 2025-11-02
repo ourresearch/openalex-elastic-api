@@ -7,8 +7,9 @@ from core.semantic import semantic_search
 from core.schemas import FiltersWrapperSchema, StatsWrapperSchema
 from core.shared_view import shared_view
 from core.stats_view import shared_stats_view
-from core.utils import (get_entity_counts, get_flattened_fields, get_valid_fields,
-                        is_cached, process_only_fields)
+from core.utils import (get_data_version_connection, get_entity_counts,
+                        get_flattened_fields, get_valid_fields, is_cached,
+                        process_only_fields)
 from extensions import cache
 from settings import WORKS_INDEX
 from works.fields import fields_dict
@@ -36,16 +37,10 @@ def index():
 def works():
     default_sort = ["-cited_by_percentile_year.max", "-cited_by_count", "id"]
     only_fields = process_only_fields(request, WorksSchema)
-    
-    # Check data_version parameter to determine connection
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    if data_version == '2':
-        connection = 'walden'
-        index_name = 'works-v26'
-    else:
-        connection = 'default'
-        index_name = WORKS_INDEX
-    
+
+    connection = get_data_version_connection(request)
+    index_name = 'works-v26' if connection == 'walden' else WORKS_INDEX
+
     result = shared_view(request, fields_dict, index_name, default_sort, connection)
     # export option
     if is_group_by_export(request):
@@ -134,12 +129,8 @@ def entities():
     """
     Returns a list of all entity types with their name, description, and count.
     """
-    # Check data_version parameter to determine connection
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
-
     # Get counts from Elasticsearch using shared function
-    es_counts = get_entity_counts(connection=connection)
+    es_counts = get_entity_counts(request)
 
     entities_list = []
 

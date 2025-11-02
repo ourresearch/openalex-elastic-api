@@ -6,6 +6,7 @@ from elasticsearch_dsl import Q, Search
 from flask import Blueprint, abort, redirect, request, url_for, jsonify
 
 import settings
+from core.utils import get_data_version_connection
 from authors.schemas import AuthorsSchema
 from awards.schemas import AwardsSchema
 from concepts.schemas import ConceptsSchema
@@ -94,15 +95,9 @@ def works_random_get():
 @blueprint.route("/works/<path:id>")
 @blueprint.route("/entities/works/<path:id>")
 def works_id_get(id):
-    # Check data_version parameter to determine connection and index
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    if data_version == '2':
-        connection = 'walden'
-        index_name = 'works-v26'
-    else:
-        connection = 'default'
-        index_name = settings.WORKS_INDEX
-    
+    connection = get_data_version_connection(request)
+    index_name = 'works-v26' if connection == 'walden' else settings.WORKS_INDEX
+
     s = Search(index=index_name, using=connection)
     only_fields = process_id_only_fields(request, WorksSchema)
 
@@ -313,8 +308,7 @@ def authors_random_get():
 @blueprint.route("/people/<path:id>")
 @blueprint.route("/entities/authors/<path:id>")
 def authors_id_get(id):
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
 
     s = Search(index=settings.AUTHORS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, AuthorsSchema)
@@ -398,9 +392,7 @@ def institutions_random_get():
 @blueprint.route("/institutions/<path:id>")
 @blueprint.route("/entities/institutions/<path:id>")
 def institutions_id_get(id):
-    # Check data_version parameter to determine connection and index
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
 
     s = Search(index=settings.INSTITUTIONS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, InstitutionsSchema)
@@ -495,8 +487,7 @@ def concepts_random_get():
 @blueprint.route("/concepts/<path:id>")
 @blueprint.route("/entities/concepts/<path:id>")
 def concepts_id_get(id):
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
 
     s = Search(index=settings.CONCEPTS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, ConceptsSchema)
@@ -586,8 +577,7 @@ def funders_random_get():
 @blueprint.route("/funders/<path:id>")
 @blueprint.route("/entities/funders/<path:id>")
 def funders_id_get(id):
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
 
     s = Search(index=settings.FUNDERS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, FundersSchema)
@@ -653,16 +643,9 @@ def funders_id_get(id):
 @blueprint.route("/publishers/<path:id>")
 @blueprint.route("/entities/publishers/<path:id>")
 def publishers_id_get(id):
-    # Check data_version parameter to determine connection and index
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    if data_version == '2':
-        connection = 'walden'
-        index_name = settings.PUBLISHERS_INDEX
-    else:
-        connection = 'default'
-        index_name = settings.PUBLISHERS_INDEX
-    
-    s = Search(index=index_name, using=connection)
+    connection = get_data_version_connection(request)
+
+    s = Search(index=settings.PUBLISHERS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, PublishersSchema)
 
     if is_openalex_id(id):
@@ -673,9 +656,9 @@ def publishers_id_get(id):
             )
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/P{clean_id}"
-        
+
         # Use different field name for v2
-        if data_version == '2':
+        if connection == 'walden':
             query = Q("term", id=full_openalex_id)
         else:
             query = Q("term", ids__openalex=full_openalex_id)
@@ -759,16 +742,9 @@ def sources_random_get():
 @blueprint.route("/journals/<path:id>", endpoint="journals_id_get")
 @blueprint.route("/entities/sources/<path:id>")
 def sources_id_get(id):
-    # Check data_version parameter to determine connection and index
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    if data_version == '2':
-        connection = 'walden'
-        index_name = settings.SOURCES_INDEX
-    else:
-        connection = 'default'
-        index_name = settings.SOURCES_INDEX
-    
-    s = Search(index=index_name, using=connection)
+    connection = get_data_version_connection(request)
+
+    s = Search(index=settings.SOURCES_INDEX, using=connection)
     only_fields = process_id_only_fields(request, SourcesSchema)
 
     if is_openalex_id(id):
@@ -777,9 +753,9 @@ def sources_id_get(id):
             return redirect(url_for("ids.sources_id_get", id=clean_id, **request.args))
         clean_id = int(clean_id[1:])
         full_openalex_id = f"https://openalex.org/S{clean_id}"
-        
+
         # Use different field name for v2
-        if data_version == '2':
+        if connection == 'walden':
             query = Q("term", id=full_openalex_id)
         else:
             query = Q("term", ids__openalex=full_openalex_id)
@@ -869,8 +845,7 @@ def topics_random_get():
 @blueprint.route("/topics/<path:id>")
 @blueprint.route("/entities/topics/<path:id>")
 def topics_id_get(id):
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
 
     s = Search(index=settings.TOPICS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, TopicsSchema)
@@ -944,8 +919,7 @@ def awards_id_get(id):
 
 
 def get_by_openalex_external_id(index, schema, id):
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
 
     s = Search(index=index, using=connection)
     only_fields = process_id_only_fields(request, schema)
@@ -1054,12 +1028,9 @@ def subfields_id_get(id):
 @blueprint.route("/keywords/<path:id>")
 @blueprint.route("/entities/keywords/<path:id>")
 def keywords_id_get(id):
-    # Check data_version parameter to determine connection and index
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
-    index_name = settings.KEYWORDS_INDEX
-    
-    s = Search(index=index_name, using=connection)
+    connection = get_data_version_connection(request)
+
+    s = Search(index=settings.KEYWORDS_INDEX, using=connection)
     only_fields = process_id_only_fields(request, KeywordsSchema)
 
     clean_id = str(id).lower()

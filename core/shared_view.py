@@ -17,11 +17,13 @@ from core.params import parse_params
 from core.preference import clean_preference, set_preference_for_filter_search
 from core.search import check_is_search_query, full_search_query
 from core.sort import get_sort_fields, sort_with_cursor, sort_with_sample
-from core.utils import get_field
+from core.utils import get_data_version_connection, get_field
 
 
-def shared_view(request, fields_dict, index_name, default_sort, connection='default'):
+def shared_view(request, fields_dict, index_name, default_sort, connection=None):
     """Primary function used to search, filter, and aggregate across all entities."""
+    if connection is None:
+        connection = get_data_version_connection(request)
     params = parse_params(request)
     s = construct_query(params, fields_dict, index_name, default_sort, connection)
     response = execute_search(s, params)

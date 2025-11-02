@@ -24,6 +24,7 @@ from autocomplete.validate import validate_full_autocomplete_params
 from concepts.fields import fields_dict as concepts_fields_dict
 from core.exceptions import APIQueryParamsError
 from core.preference import clean_preference
+from core.utils import get_data_version_connection
 from extensions import cache
 from funders.fields import fields_dict as funders_fields_dict
 from institutions.fields import fields_dict as institutions_fields_dict
@@ -63,9 +64,8 @@ def autocomplete_full():
     entity_type = request.args.get("entity_type")
     filter_results = []
 
+    connection = get_data_version_connection(request)
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
-
     entities_to_indeces = get_indices(data_version)
     if hide_works and hide_works.lower() == "true":
         entities_to_indeces.pop("work")
@@ -142,8 +142,7 @@ def autocomplete_full():
     unless=lambda: not is_cached_autocomplete(request),
 )
 def autocomplete_authors():
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
     index_name = AUTHORS_INDEX
     result = single_entity_autocomplete(authors_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
@@ -152,8 +151,7 @@ def autocomplete_authors():
 
 @blueprint.route("/autocomplete/concepts")
 def autocomplete_concepts():
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
     index_name = CONCEPTS_INDEX
     result = single_entity_autocomplete(concepts_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
@@ -162,8 +160,7 @@ def autocomplete_concepts():
 
 @blueprint.route("/autocomplete/funders")
 def autocomplete_funders():
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
     index_name = FUNDERS_INDEX
     result = single_entity_autocomplete(funders_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
@@ -172,8 +169,7 @@ def autocomplete_funders():
 
 @blueprint.route("/autocomplete/institutions")
 def autocomplete_institutions():
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
     index_name = INSTITUTIONS_INDEX
     result = single_entity_autocomplete(institutions_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
@@ -182,8 +178,7 @@ def autocomplete_institutions():
 
 @blueprint.route("/autocomplete/topics")
 def autocomplete_topics():
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
     index_name = TOPICS_INDEX
     result = single_entity_autocomplete(topics_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
@@ -197,12 +192,11 @@ def autocomplete_topics():
     unless=lambda: not is_cached_autocomplete(request),
 )
 def autocomplete_works():
+    connection = get_data_version_connection(request)
     data_version = request.args.get('data_version') or request.args.get('data-version', '1')
     if data_version == '2':
-        connection = 'walden'
         index_name = 'works-v26'
     else:
-        connection = 'default'
         index_name = WORKS_INDEX
     result = single_entity_autocomplete(works_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
@@ -211,8 +205,7 @@ def autocomplete_works():
 
 @blueprint.route("/autocomplete/publishers")
 def autocomplete_publishers():
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
     index_name = PUBLISHERS_INDEX
     result = single_entity_autocomplete(publishers_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
@@ -221,8 +214,7 @@ def autocomplete_publishers():
 
 @blueprint.route("/autocomplete/sources")
 def autocomplete_sources():
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
     index_name = SOURCES_INDEX
     result = single_entity_autocomplete(sources_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
@@ -231,8 +223,7 @@ def autocomplete_sources():
 
 @blueprint.route("/autocomplete/keywords")
 def autocomplete_keywords():
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
     index_name = KEYWORDS_INDEX
     result = single_entity_autocomplete(keywords_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
@@ -241,8 +232,7 @@ def autocomplete_keywords():
 
 @blueprint.route("/autocomplete/licenses")
 def autocomplete_licenses():
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
     index_name = LICENSES_INDEX
     result = single_entity_autocomplete(licenses_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
@@ -250,8 +240,7 @@ def autocomplete_licenses():
 
 @blueprint.route("/autocomplete/subfields")
 def autocomplete_subfields():
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
     index_name = SUBFIELDS_INDEX
     result = single_entity_autocomplete(subfields_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
@@ -267,8 +256,7 @@ def autocomplete_institutions_country():
             f"Must enter a 'q' parameter in order to use autocomplete. Example: {request.url_rule}?q=my search"
         )
 
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
 
     # get countries and citation sums from elastic transform
     s = Search(index="institutions-countries-transform-v1", using=connection).extra(size=500)
@@ -325,8 +313,7 @@ def autocomplete_institutions_type():
             f"Must enter a 'q' parameter in order to use autocomplete. Example: {request.url_rule}?q=my search"
         )
 
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
+    connection = get_data_version_connection(request)
 
     s = Search(index=INSTITUTIONS_INDEX, using=connection)
     a = A(

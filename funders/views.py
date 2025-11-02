@@ -22,13 +22,10 @@ blueprint = Blueprint("funders", __name__)
     timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
 )
 def funders():
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
-    connection = 'walden' if data_version == '2' else 'default'
-    
     index_name = FUNDERS_INDEX
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, FundersSchema)
-    result = shared_view(request, fields_dict, index_name, default_sort, connection)
+    result = shared_view(request, fields_dict, index_name, default_sort)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
