@@ -25,6 +25,14 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
     if "author" in index_name:
         s = s.exclude("term", ids__openalex="https://openalex.org/A5317838346")
 
+    # Filter xpac works for works index when using walden connection
+    if index_name.startswith("work") and connection == 'walden':
+        # Check for include_xpac as a boolean parameter
+        include_xpac = request.args.get('include_xpac') == 'true' or request.args.get('include-xpac') == 'true'
+        if not include_xpac:
+            # Add filter to exclude xpac works
+            s = s.exclude("term", is_xpac=True)
+
     if q:
         # canonical id match
         s, canonical_id_found = search_canonical_id_single(index_name, s, q)
@@ -105,6 +113,7 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
         preference = clean_preference(q)
         s = s.params(preference=preference)
 
+    print(s.to_dict())
     response = s.execute()
 
     result = OrderedDict()

@@ -35,14 +35,16 @@ from publishers.fields import fields_dict as publishers_fields_dict
 from settings import (
     AUTHORS_INDEX,
     CONCEPTS_INDEX,
+    DEFAULT_DATA_VERSION,
     FUNDERS_INDEX,
     INSTITUTIONS_INDEX,
     KEYWORDS_INDEX,
     LICENSES_INDEX,
     PUBLISHERS_INDEX,
     SOURCES_INDEX,
+    SUBFIELDS_INDEX,
     TOPICS_INDEX,
-    WORKS_INDEX, SUBFIELDS_INDEX,
+    WORKS_INDEX,
 )
 from sources.fields import fields_dict as sources_fields_dict
 from topics.fields import fields_dict as topics_fields_dict
@@ -65,7 +67,7 @@ def autocomplete_full():
     filter_results = []
 
     connection = get_data_version_connection(request)
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    data_version = request.args.get('data_version') or request.args.get('data-version', DEFAULT_DATA_VERSION)
     entities_to_indeces = get_indices(data_version)
     if hide_works and hide_works.lower() == "true":
         entities_to_indeces.pop("work")
@@ -101,6 +103,12 @@ def autocomplete_full():
 
     # Exclude deleted author ID
     s = s.exclude("term", ids__openalex="https://openalex.org/A5317838346")
+
+    # filter xpac works for data version 2
+    if connection == 'walden' and not hide_works:
+        include_xpac = request.args.get('include_xpac') == 'true' or request.args.get('include-xpac') == 'true'
+        if not include_xpac:
+            s = s.exclude("term", is_xpac=True)
 
     if q:
         # canonical id match
@@ -193,11 +201,12 @@ def autocomplete_topics():
 )
 def autocomplete_works():
     connection = get_data_version_connection(request)
-    data_version = request.args.get('data_version') or request.args.get('data-version', '1')
+    data_version = request.args.get('data_version') or request.args.get('data-version', DEFAULT_DATA_VERSION)
     if data_version == '2':
         index_name = 'works-v26'
     else:
         index_name = WORKS_INDEX
+
     result = single_entity_autocomplete(works_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
     return message_schema.dump(result)
