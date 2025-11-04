@@ -44,7 +44,8 @@ def works():
     default_filters = None
     if connection == 'walden':
         current_filter = request.args.get('filter', '')
-        if 'is_xpac:' not in current_filter and 'is-xpac:' not in current_filter:
+        if ('is_xpac:' not in current_filter and 'is-xpac:' not in current_filter
+            and 'include_xpac:true' not in current_filter and 'include-xpac:true' not in current_filter):
             # User didn't specify, add default filter
             default_filters = [{'is_xpac': 'false'}]
 

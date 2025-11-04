@@ -11,6 +11,8 @@ from settings import MAX_IDS_IN_FILTER
 def filter_records(fields_dict, filter_params, s, sample=None):
     for filter in filter_params:
         for key, value in filter.items():
+            if key == 'include_xpac' or key == 'include-xpac':
+                continue
             field = get_field(fields_dict, key)
 
             # multiple OR queries have | in the param values
