@@ -13,6 +13,8 @@ def validate_params(request):
         "data-version",
         "filter",
         "format",
+        "include_xpac",
+        "include-xpac",
         "group_by",
         "group-by",
         "group_bys",
