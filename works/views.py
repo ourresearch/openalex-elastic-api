@@ -41,7 +41,14 @@ def works():
     connection = get_data_version_connection(request)
     index_name = 'works-v26' if connection == 'walden' else WORKS_INDEX
 
-    result = shared_view(request, fields_dict, index_name, default_sort, connection)
+    default_filters = None
+    if connection == 'walden':
+        current_filter = request.args.get('filter', '')
+        if 'is_xpac:' not in current_filter and 'is-xpac:' not in current_filter:
+            # User didn't specify, add default filter
+            default_filters = [{'is_xpac': 'false'}]
+
+    result = shared_view(request, fields_dict, index_name, default_sort, connection, default_filters=default_filters)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)

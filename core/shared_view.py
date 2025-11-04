@@ -20,11 +20,20 @@ from core.sort import get_sort_fields, sort_with_cursor, sort_with_sample
 from core.utils import get_data_version_connection, get_field
 
 
-def shared_view(request, fields_dict, index_name, default_sort, connection=None):
+def shared_view(request, fields_dict, index_name, default_sort, connection=None, default_filters=None):
     """Primary function used to search, filter, and aggregate across all entities."""
     if connection is None:
         connection = get_data_version_connection(request)
     params = parse_params(request)
+
+    # Merge default filters with user filters
+    if default_filters:
+        if params["filters"] is None:
+            params["filters"] = default_filters
+        else:
+            # Add default filters that aren't already specified by user
+            params["filters"] = default_filters + params["filters"]
+
     s = construct_query(params, fields_dict, index_name, default_sort, connection)
     response = execute_search(s, params)
     result = format_response(response, params, index_name, fields_dict, s, connection)
