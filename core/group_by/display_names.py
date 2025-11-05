@@ -19,6 +19,47 @@ Code to alter display names for group by fields.
 """
 
 
+# Static mapping of SDG IDs to display names
+# These 17 SDGs are permanent and never change
+SDG_DISPLAY_NAMES = {
+    "https://openalex.org/sdgs/1": "No poverty",
+    "https://openalex.org/sdgs/2": "Zero hunger",
+    "https://openalex.org/sdgs/3": "Good health and well-being",
+    "https://openalex.org/sdgs/4": "Quality education",
+    "https://openalex.org/sdgs/5": "Gender equality",
+    "https://openalex.org/sdgs/6": "Clean water and sanitation",
+    "https://openalex.org/sdgs/7": "Affordable and clean energy",
+    "https://openalex.org/sdgs/8": "Decent work and economic growth",
+    "https://openalex.org/sdgs/9": "Industry, innovation and infrastructure",
+    "https://openalex.org/sdgs/10": "Reduced inequalities",
+    "https://openalex.org/sdgs/11": "Sustainable cities and communities",
+    "https://openalex.org/sdgs/12": "Responsible consumption and production",
+    "https://openalex.org/sdgs/13": "Climate action",
+    "https://openalex.org/sdgs/14": "Life below water",
+    "https://openalex.org/sdgs/15": "Life on land",
+    "https://openalex.org/sdgs/16": "Peace, justice, and strong institutions",
+    "https://openalex.org/sdgs/17": "Partnerships for the goals",
+    # Also support metadata.un.org URLs which appear in v2
+    "https://metadata.un.org/sdg/1": "No poverty",
+    "https://metadata.un.org/sdg/2": "Zero hunger",
+    "https://metadata.un.org/sdg/3": "Good health and well-being",
+    "https://metadata.un.org/sdg/4": "Quality education",
+    "https://metadata.un.org/sdg/5": "Gender equality",
+    "https://metadata.un.org/sdg/6": "Clean water and sanitation",
+    "https://metadata.un.org/sdg/7": "Affordable and clean energy",
+    "https://metadata.un.org/sdg/8": "Decent work and economic growth",
+    "https://metadata.un.org/sdg/9": "Industry, innovation and infrastructure",
+    "https://metadata.un.org/sdg/10": "Reduced inequalities",
+    "https://metadata.un.org/sdg/11": "Sustainable cities and communities",
+    "https://metadata.un.org/sdg/12": "Responsible consumption and production",
+    "https://metadata.un.org/sdg/13": "Climate action",
+    "https://metadata.un.org/sdg/14": "Life below water",
+    "https://metadata.un.org/sdg/15": "Life on land",
+    "https://metadata.un.org/sdg/16": "Peace, justice, and strong institutions",
+    "https://metadata.un.org/sdg/17": "Partnerships for the goals",
+}
+
+
 def get_id_display_names(ids, connection='default'):
     """Takes a list of ids and returns a dict with id[display_name]"""
     if not ids or (ids[0] == "unknown" and len(ids) == 1):
@@ -89,27 +130,15 @@ def get_display_names_award_ids(ids, connection='default'):
 
 
 def get_display_names_sdgs(ids, connection='default'):
+    """
+    Returns display names for SDG IDs using the in-memory cache/static mapping.
+    No index queries needed since there are only 17 SDGs that never change.
+    Multiple queries to works index would be needed if we used the SDG IDs in the works index.
+    """
     results = {}
-    ms = MultiSearch(index=WORKS_INDEX, using=connection)
     for sdg_id in ids:
-        s = Search()
-        s = s.filter("term", sustainable_development_goals__id__lower=sdg_id)
-        s = s.source(
-            [
-                "sustainable_development_goals.id",
-                "sustainable_development_goals.display_name",
-            ]
-        )
-        ms = ms.add(s)
-    responses = ms.execute()
-    for sdg_id in ids:
-        for response in responses:
-            for item in response:
-                if sdg_id in results:
-                    break
-                for sdg in item.sustainable_development_goals:
-                    if sdg.id == sdg_id:
-                        results[sdg.id] = sdg.display_name
+        if sdg_id in SDG_DISPLAY_NAMES:
+            results[sdg_id] = SDG_DISPLAY_NAMES[sdg_id]
     return results
 
 
