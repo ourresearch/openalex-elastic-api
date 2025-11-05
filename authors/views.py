@@ -7,9 +7,7 @@ from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
 from core.shared_view import shared_view
-from core.utils import (get_flattened_fields, get_valid_fields, is_cached,
-                        process_only_fields)
-from extensions import cache
+from core.utils import (get_flattened_fields, get_valid_fields, process_only_fields)
 from settings import AUTHORS_INDEX
 
 blueprint = Blueprint("authors", __name__)
@@ -18,9 +16,6 @@ blueprint = Blueprint("authors", __name__)
 @blueprint.route("/authors")
 @blueprint.route("/entities/authors")
 @blueprint.route("/people")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def authors():
     index_name = AUTHORS_INDEX
     default_sort = ["-works_count", "id"]

@@ -8,9 +8,7 @@ from core.schemas import (FiltersWrapperSchema, HistogramWrapperSchema,
                           StatsWrapperSchema)
 from core.shared_view import shared_view
 from core.stats_view import shared_stats_view
-from core.utils import (get_flattened_fields, get_valid_fields, is_cached,
-                        process_only_fields)
-from extensions import cache
+from core.utils import (get_flattened_fields, get_valid_fields, process_only_fields)
 from institutions.fields import fields_dict
 from institutions.schemas import InstitutionsSchema, MessageSchema
 from settings import INSTITUTIONS_INDEX
@@ -20,9 +18,6 @@ blueprint = Blueprint("institutions", __name__)
 
 @blueprint.route("/institutions")
 @blueprint.route("/entities/institutions")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def institutions():
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, InstitutionsSchema)

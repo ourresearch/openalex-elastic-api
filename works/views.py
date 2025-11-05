@@ -8,9 +8,7 @@ from core.schemas import FiltersWrapperSchema, StatsWrapperSchema
 from core.shared_view import shared_view
 from core.stats_view import shared_stats_view
 from core.utils import (get_data_version_connection, get_entity_counts,
-                        get_flattened_fields, get_valid_fields, is_cached,
-                        process_only_fields)
-from extensions import cache
+                        get_flattened_fields, get_valid_fields, process_only_fields)
 from settings import WORKS_INDEX
 from works.fields import fields_dict
 from works.schemas import MessageSchema, WorksSchema
@@ -31,9 +29,6 @@ def index():
 
 @blueprint.route("/works")
 @blueprint.route("/entities/works")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def works():
     default_sort = ["-cited_by_percentile_year.max", "-cited_by_count", "id"]
     only_fields = process_only_fields(request, WorksSchema)

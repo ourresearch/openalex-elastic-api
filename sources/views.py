@@ -5,9 +5,7 @@ from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
 from core.shared_view import shared_view
-from core.utils import (get_flattened_fields, get_valid_fields, is_cached,
-                        process_only_fields)
-from extensions import cache
+from core.utils import (get_flattened_fields, get_valid_fields, process_only_fields)
 from settings import SOURCES_INDEX
 from sources.fields import fields_dict
 from sources.schemas import MessageSchema, SourcesSchema
@@ -18,9 +16,6 @@ blueprint = Blueprint("sources", __name__)
 @blueprint.route("/sources")
 @blueprint.route("/entities/sources")
 @blueprint.route("/journals", endpoint="journals_view")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def sources():
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, SourcesSchema)
