@@ -20,7 +20,7 @@ def decode_cursor(encoded_cursor, return_json=True):
     try:
         decoded_cursor = base64.b64decode(encoded_cursor)
         cursor_utf8 = decoded_cursor.decode("utf8")
-        cursor_str = cursor_utf8.replace('"', "").replace("'", '"')
+        cursor_str = cursor_utf8.replace('"', "").replace("'", '"').replace("None", "null")
 
         if return_json:
             return list(json.loads(cursor_str))
