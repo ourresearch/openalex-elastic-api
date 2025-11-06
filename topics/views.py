@@ -9,10 +9,8 @@ from core.shared_view import shared_view
 from core.utils import (
     get_flattened_fields,
     get_valid_fields,
-    is_cached,
     process_only_fields,
 )
-from extensions import cache
 from topics.fields import fields_dict
 from topics.schemas import TopicsSchema, MessageSchema
 from settings import TOPICS_INDEX
@@ -22,9 +20,6 @@ blueprint = Blueprint("topics", __name__)
 
 @blueprint.route("/topics")
 @blueprint.route("/entities/topics")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def topics():
     index_name = TOPICS_INDEX
     default_sort = ["-works_count", "id"]

@@ -8,10 +8,8 @@ from core.shared_view import shared_view
 from core.utils import (
     get_flattened_fields,
     get_valid_fields,
-    is_cached,
     process_only_fields,
 )
-from extensions import cache
 from institution_types.fields import fields_dict
 from institution_types.schemas import InstitutionTypesSchema, MessageSchema
 from settings import INSTITUTION_TYPES_INDEX
@@ -21,9 +19,6 @@ blueprint = Blueprint("institution_types", __name__)
 
 @blueprint.route("/institution-types")
 @blueprint.route("/entities/institution-types")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def institution_types():
     index_name = INSTITUTION_TYPES_INDEX
     default_sort = ["-works_count", "id"]

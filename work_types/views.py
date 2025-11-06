@@ -9,10 +9,8 @@ from core.shared_view import shared_view
 from core.utils import (
     get_flattened_fields,
     get_valid_fields,
-    is_cached,
     process_only_fields,
 )
-from extensions import cache
 from work_types.fields import fields_dict
 from work_types.schemas import TypesSchema, MessageSchema
 from settings import WORK_TYPES_INDEX
@@ -23,9 +21,6 @@ blueprint = Blueprint("types", __name__)
 @blueprint.route("/types")
 @blueprint.route("/work-types")
 @blueprint.route("/entities/work-types")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def types():
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, TypesSchema)

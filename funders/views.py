@@ -6,9 +6,7 @@ from core.filters_view import shared_filter_view
 from core.histogram import shared_histogram_view
 from core.schemas import FiltersWrapperSchema, HistogramWrapperSchema
 from core.shared_view import shared_view
-from core.utils import (get_flattened_fields, get_valid_fields, is_cached,
-                        process_only_fields)
-from extensions import cache
+from core.utils import (get_flattened_fields, get_valid_fields, process_only_fields)
 from funders.fields import fields_dict
 from funders.schemas import FundersSchema, MessageSchema
 from settings import FUNDERS_INDEX
@@ -18,9 +16,6 @@ blueprint = Blueprint("funders", __name__)
 
 @blueprint.route("/funders")
 @blueprint.route("/entities/funders")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def funders():
     index_name = FUNDERS_INDEX
     default_sort = ["-works_count", "id"]

@@ -119,9 +119,6 @@ def build_fulltext_query(search_terms, index_name):
 
 
 @blueprint.route("/funder-search")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def funder_search():
     # Search works index on default connection
     import settings

@@ -9,10 +9,8 @@ from core.shared_view import shared_view
 from core.utils import (
     get_flattened_fields,
     get_valid_fields,
-    is_cached,
     process_only_fields,
 )
-from extensions import cache
 from domains.fields import fields_dict
 from domains.schemas import DomainsSchema, MessageSchema
 from settings import DOMAINS_INDEX
@@ -22,9 +20,6 @@ blueprint = Blueprint("domains", __name__)
 
 @blueprint.route("/domains")
 @blueprint.route("/entities/domains")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def domains():
     index_name = DOMAINS_INDEX
     default_sort = ["-works_count", "id"]

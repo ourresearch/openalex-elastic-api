@@ -3,8 +3,7 @@ from flask import Blueprint, request
 from locations.fields import fields_dict
 from locations.schemas import LocationsSchema, MessageSchema
 from core.shared_view import shared_view
-from core.utils import is_cached, process_only_fields
-from extensions import cache
+from core.utils import process_only_fields
 
 blueprint = Blueprint("locations", __name__)
 
@@ -13,9 +12,6 @@ LOCATIONS_INDEX = "locations-v1"
 
 @blueprint.route("/locations")
 @blueprint.route("/v2/locations")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def locations():
     index_name = LOCATIONS_INDEX
     default_sort = ["work_id", "native_id"]

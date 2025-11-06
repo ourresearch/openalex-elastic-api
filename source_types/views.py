@@ -8,10 +8,8 @@ from core.shared_view import shared_view
 from core.utils import (
     get_flattened_fields,
     get_valid_fields,
-    is_cached,
     process_only_fields,
 )
-from extensions import cache
 from source_types.fields import fields_dict
 from source_types.schemas import SourceTypesSchema, MessageSchema
 from settings import SOURCE_TYPES_INDEX
@@ -21,9 +19,6 @@ blueprint = Blueprint("source_types", __name__)
 
 @blueprint.route("/source-types")
 @blueprint.route("/entities/source-types")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def source_types():
     index_name = SOURCE_TYPES_INDEX
     default_sort = ["-works_count", "id"]

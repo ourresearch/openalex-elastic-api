@@ -6,9 +6,8 @@ from core.filters_view import shared_filter_view
 from core.histogram import shared_histogram_view
 from core.schemas import FiltersWrapperSchema, HistogramWrapperSchema
 from core.shared_view import shared_view
-from core.utils import (get_flattened_fields, get_valid_fields, is_cached,
+from core.utils import (get_flattened_fields, get_valid_fields,
                         process_only_fields)
-from extensions import cache
 from publishers.fields import fields_dict
 from publishers.schemas import MessageSchema, PublishersSchema
 from settings import PUBLISHERS_INDEX
@@ -18,9 +17,6 @@ blueprint = Blueprint("publishers", __name__)
 
 @blueprint.route("/publishers")
 @blueprint.route("/entities/publishers")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def publishers():
     only_fields = process_only_fields(request, PublishersSchema)
     default_sort = ["-works_count", "id"]

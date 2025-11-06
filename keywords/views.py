@@ -9,10 +9,8 @@ from core.shared_view import shared_view
 from core.utils import (
     get_flattened_fields,
     get_valid_fields,
-    is_cached,
     process_only_fields,
 )
-from extensions import cache
 from keywords.fields import fields_dict
 from keywords.schemas import KeywordsSchema, MessageSchema
 from settings import KEYWORDS_INDEX
@@ -22,9 +20,6 @@ blueprint = Blueprint("keywords", __name__)
 
 @blueprint.route("/keywords")
 @blueprint.route("/entities/keywords")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def fields():
     index_name = KEYWORDS_INDEX
     default_sort = ["-works_count", "id"]

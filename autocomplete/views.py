@@ -12,7 +12,6 @@ from autocomplete.shared import (
 )
 from autocomplete.utils import (
     AUTOCOMPLETE_SOURCE,
-    is_cached_autocomplete,
     strip_punctuation,
 )
 from autocomplete.full import (
@@ -25,7 +24,6 @@ from concepts.fields import fields_dict as concepts_fields_dict
 from core.exceptions import APIQueryParamsError
 from core.preference import clean_preference
 from core.utils import get_data_version_connection
-from extensions import cache
 from funders.fields import fields_dict as funders_fields_dict
 from institutions.fields import fields_dict as institutions_fields_dict
 from keywords.fields import fields_dict as keywords_fields_dict
@@ -54,11 +52,6 @@ blueprint = Blueprint("complete", __name__)
 
 
 @blueprint.route("/autocomplete")
-@cache.cached(
-    timeout=24 * 60 * 60 * 7,
-    query_string=True,
-    unless=lambda: not is_cached_autocomplete(request),
-)
 def autocomplete_full():
     validate_full_autocomplete_params(request)
     q = request.args.get("q")
@@ -144,11 +137,6 @@ def autocomplete_full():
 
 
 @blueprint.route("/autocomplete/authors")
-@cache.cached(
-    timeout=24 * 60 * 60 * 7,
-    query_string=True,
-    unless=lambda: not is_cached_autocomplete(request),
-)
 def autocomplete_authors():
     connection = get_data_version_connection(request)
     index_name = AUTHORS_INDEX
@@ -194,11 +182,6 @@ def autocomplete_topics():
 
 
 @blueprint.route("/autocomplete/works")
-@cache.cached(
-    timeout=24 * 60 * 60 * 7,
-    query_string=True,
-    unless=lambda: not is_cached_autocomplete(request),
-)
 def autocomplete_works():
     connection = get_data_version_connection(request)
     data_version = request.args.get('data_version') or request.args.get('data-version', DEFAULT_DATA_VERSION)

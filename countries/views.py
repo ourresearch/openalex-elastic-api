@@ -9,10 +9,8 @@ from core.shared_view import shared_view
 from core.utils import (
     get_flattened_fields,
     get_valid_fields,
-    is_cached,
     process_only_fields,
 )
-from extensions import cache
 from countries.fields import fields_dict
 from countries.schemas import CountriesSchema, MessageSchema
 from settings import COUNTRIES_INDEX
@@ -22,9 +20,6 @@ blueprint = Blueprint("countries", __name__)
 
 @blueprint.route("/countries")
 @blueprint.route("/entities/countries")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def countries():
     index_name = COUNTRIES_INDEX
     default_sort = ["-works_count", "id"]

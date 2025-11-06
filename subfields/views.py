@@ -9,10 +9,8 @@ from core.shared_view import shared_view
 from core.utils import (
     get_flattened_fields,
     get_valid_fields,
-    is_cached,
     process_only_fields,
 )
-from extensions import cache
 from subfields.fields import fields_dict
 from subfields.schemas import SubfieldsSchema, MessageSchema
 from settings import SUBFIELDS_INDEX
@@ -22,9 +20,6 @@ blueprint = Blueprint("subfields", __name__)
 
 @blueprint.route("/subfields")
 @blueprint.route("/entities/subfields")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def subfields():
     index_name = SUBFIELDS_INDEX
     default_sort = ["-works_count", "id"]

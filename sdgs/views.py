@@ -9,10 +9,8 @@ from core.shared_view import shared_view
 from core.utils import (
     get_flattened_fields,
     get_valid_fields,
-    is_cached,
     process_only_fields,
 )
-from extensions import cache
 from sdgs.fields import fields_dict
 from sdgs.schemas import SdgsSchema, MessageSchema
 from settings import SDGS_INDEX
@@ -22,9 +20,6 @@ blueprint = Blueprint("sdgs", __name__)
 
 @blueprint.route("/sdgs")
 @blueprint.route("/entities/sdgs")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def sdgs():
     index_name = SDGS_INDEX
     default_sort = ["-works_count", "id"]

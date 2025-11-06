@@ -7,9 +7,7 @@ from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
 from core.shared_view import shared_view
-from core.utils import (get_flattened_fields, get_valid_fields, is_cached,
-                        process_only_fields)
-from extensions import cache
+from core.utils import (get_flattened_fields, get_valid_fields, process_only_fields)
 from settings import CONCEPTS_INDEX
 
 blueprint = Blueprint("concepts", __name__)
@@ -17,9 +15,6 @@ blueprint = Blueprint("concepts", __name__)
 
 @blueprint.route("/concepts")
 @blueprint.route("/entities/concepts")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def concepts():
     index_name = CONCEPTS_INDEX
     default_sort = ["-works_count", "id"]

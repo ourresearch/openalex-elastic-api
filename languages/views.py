@@ -9,10 +9,8 @@ from core.shared_view import shared_view
 from core.utils import (
     get_flattened_fields,
     get_valid_fields,
-    is_cached,
     process_only_fields,
 )
-from extensions import cache
 from languages.fields import fields_dict
 from languages.schemas import LanguagesSchema, MessageSchema
 from settings import LANGUAGES_INDEX
@@ -22,9 +20,6 @@ blueprint = Blueprint("languages", __name__)
 
 @blueprint.route("/languages")
 @blueprint.route("/entities/languages")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def languages():
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, LanguagesSchema)

@@ -9,10 +9,8 @@ from core.shared_view import shared_view
 from core.utils import (
     get_flattened_fields,
     get_valid_fields,
-    is_cached,
     process_only_fields,
 )
-from extensions import cache
 from continents.fields import fields_dict
 from continents.schemas import ContinentsSchema, MessageSchema
 from settings import CONTINENTS_INDEX
@@ -22,9 +20,6 @@ blueprint = Blueprint("continents", __name__)
 
 @blueprint.route("/continents")
 @blueprint.route("/entities/continents")
-@cache.cached(
-    timeout=24 * 60 * 60, query_string=True, unless=lambda: not is_cached(request)
-)
 def continents():
     index_name = CONTINENTS_INDEX
     default_sort = ["-works_count", "id"]
