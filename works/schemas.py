@@ -1,4 +1,5 @@
 import json
+import logging
 
 from marshmallow import fields, INCLUDE, Schema, post_dump, pre_dump
 
@@ -12,6 +13,33 @@ from core.schemas import (
     hide_relevance,
     relevance_score,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _parse_abstract_inverted_index(abstract_inverted_index_str):
+    """
+    Parse abstract_inverted_index JSON string and handle malformed data gracefully.
+
+    Args:
+        abstract_inverted_index_str: JSON string containing the abstract inverted index
+
+    Returns:
+        Parsed JSON object, or None if parsing fails
+    """
+    if not abstract_inverted_index_str:
+        return None
+
+    try:
+        parsed = json.loads(abstract_inverted_index_str)
+        # Some records may have the data nested under "InvertedIndex" key
+        return parsed.get("InvertedIndex", parsed)
+    except json.JSONDecodeError as e:
+        logger.warning(
+            f"Failed to parse abstract_inverted_index JSON: {e}. "
+            f"Data preview: {abstract_inverted_index_str[:100]}..."
+        )
+        return None
 
 
 class AuthorSchema(Schema):
@@ -340,7 +368,7 @@ class WorksSchema(Schema):
     related_works = fields.List(fields.Str())
     abstract_inverted_index = fields.Function(
         lambda obj: (
-            json.loads(obj.abstract_inverted_index).get("InvertedIndex", json.loads(obj.abstract_inverted_index))
+            _parse_abstract_inverted_index(obj.abstract_inverted_index)
             if hasattr(obj, "abstract_inverted_index") and obj.abstract_inverted_index is not None
             else None
         )
