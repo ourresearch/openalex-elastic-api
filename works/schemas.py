@@ -159,6 +159,7 @@ class SourceSchema(Schema):
     host_organization_lineage = fields.List(fields.Str())
     host_organization_lineage_names = fields.List(fields.Str())
     type = fields.Str()
+    raw_type = fields.Str()
 
     class Meta:
         ordered = True
