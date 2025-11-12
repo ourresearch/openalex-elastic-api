@@ -5,12 +5,12 @@ class APIError(Exception):
 
 
 class APIPaginationError(APIError):
-    code = 403
+    code = 400
     description = "Pagination error."
 
 
 class APIQueryParamsError(APIError):
-    code = 403
+    code = 400
     description = "Invalid query parameters error."
 
 
@@ -20,5 +20,5 @@ class APISearchError(APIError):
 
 
 class HighAuthorCountError(APIError):
-    code = 403
+    code = 400
     description = "High author count limitation."
