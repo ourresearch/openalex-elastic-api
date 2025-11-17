@@ -1,9 +1,7 @@
-from elasticsearch_dsl import MultiSearch, Search
 from iso3166 import countries
 from marshmallow import Schema, fields, pre_dump
 
 from core.schemas import GroupBySchema, MetaSchema
-from settings import WORKS_INDEX
 
 
 class AutoCompleteSchema(Schema):

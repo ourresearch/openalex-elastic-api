@@ -20,7 +20,7 @@ def get_indices(data_version='1'):
         "sdgs": settings.SDGS_INDEX,
         "source": settings.SOURCES_INDEX,
         "topic": settings.TOPICS_INDEX,
-        "work": settings.WORKS_INDEX if data_version != '2' else 'works-v26',
+        "work": settings.WORKS_INDEX_LEGACY if data_version != '2' else settings.WORKS_INDEX_WALDEN,
         "work_type": settings.WORK_TYPES_INDEX,
     }
     return entities_to_indeces

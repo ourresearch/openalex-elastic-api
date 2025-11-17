@@ -129,7 +129,7 @@ def get_index_name_by_id(openalex_id):
     elif clean_id.startswith("T"):
         index_name = settings.TOPICS_INDEX
     elif clean_id.startswith("W"):
-        index_name = settings.WORKS_INDEX
+        index_name = settings.WORKS_INDEX_LEGACY
     return index_name
 
 
@@ -256,7 +256,7 @@ def get_entity_counts(request=None, connection=None):
         connection = 'default'
 
     # Use different index for works when using walden connection (data-version=2)
-    works_index = 'works-v26' if connection == 'walden' else settings.WORKS_INDEX
+    works_index = settings.WORKS_INDEX_WALDEN if connection == 'walden' else settings.WORKS_INDEX_LEGACY
 
     entities_to_indices = {
         "authors": settings.AUTHORS_INDEX,

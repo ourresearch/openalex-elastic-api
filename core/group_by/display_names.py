@@ -10,7 +10,7 @@ from settings import (
     KEYWORDS_INDEX,
     LICENSES_INDEX,
     SUBFIELDS_INDEX,
-    WORKS_INDEX,
+    WORKS_INDEX_LEGACY,
 )
 
 
@@ -110,7 +110,7 @@ def get_display_names_host_organization(ids, connection='default'):
 
 def get_display_names_award_ids(ids, connection='default'):
     results = {}
-    ms = MultiSearch(index=WORKS_INDEX, using=connection)
+    ms = MultiSearch(index=WORKS_INDEX_LEGACY, using=connection)
     for award_id in ids:
         s = Search()
         s = s.filter("term", grants__award_id__keyword=award_id)

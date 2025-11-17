@@ -20,7 +20,7 @@ def delete_merged_works():
                 continue
             ids_to_delete.append(row["merge_from_id"])
             if len(ids_to_delete) == 100:
-                s = Search(index=settings.WORKS_INDEX)
+                s = Search(index=settings.WORKS_INDEX_LEGACY)
                 s = s.filter("terms", id=ids_to_delete)
                 s = s.extra(size=1000)
                 s.delete()
@@ -29,7 +29,7 @@ def delete_merged_works():
             total = total + 1
 
         if ids_to_delete:
-            s = Search(index=settings.WORKS_INDEX)
+            s = Search(index=settings.WORKS_INDEX_LEGACY)
             s = s.filter("terms", id=ids_to_delete)
             s.delete()
             print(f"deleted {total} records")

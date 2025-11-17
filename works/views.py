@@ -9,7 +9,7 @@ from core.shared_view import shared_view
 from core.stats_view import shared_stats_view
 from core.utils import (get_data_version_connection, get_entity_counts,
                         get_flattened_fields, get_valid_fields, process_only_fields)
-from settings import WORKS_INDEX
+from settings import WORKS_INDEX_LEGACY, WORKS_INDEX_WALDEN
 from works.fields import fields_dict
 from works.schemas import MessageSchema, WorksSchema
 
@@ -34,7 +34,7 @@ def works():
     only_fields = process_only_fields(request, WorksSchema)
 
     connection = get_data_version_connection(request)
-    index_name = 'works-v26' if connection == 'walden' else WORKS_INDEX
+    index_name = WORKS_INDEX_WALDEN if connection == 'walden' else WORKS_INDEX_LEGACY
 
     default_filters = None
     if connection == 'walden':
@@ -56,7 +56,7 @@ def works():
 
 @blueprint.route("/v2/works")
 def v2_works():
-    index_name = 'works-v26'
+    index_name = WORKS_INDEX_WALDEN
     default_sort = ["-cited_by_percentile_year.max", "-cited_by_count", "id"]
     only_fields = process_only_fields(request, WorksSchema)
     result = shared_view(request, fields_dict, index_name, default_sort, connection='walden')
@@ -66,7 +66,7 @@ def v2_works():
 
 @blueprint.route("/works/filters/<path:params>")
 def works_filters(params):
-    index_name = WORKS_INDEX
+    index_name = WORKS_INDEX_LEGACY
     results = shared_filter_view(request, params, fields_dict, index_name)
     filters_schema = FiltersWrapperSchema()
     return filters_schema.dump(results)
@@ -80,7 +80,7 @@ def works_stats():
         "cited_by_count",
         "referenced_works_count",
     ]
-    index_name = WORKS_INDEX
+    index_name = WORKS_INDEX_LEGACY
     entity_name = "works"
     result = shared_stats_view(
         request, fields_dict, index_name, stats_fields, entity_name

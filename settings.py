@@ -45,7 +45,8 @@ SOURCE_TYPES_INDEX = "source-types-v1"
 SUBFIELDS_INDEX = "subfields-v2"
 TOPICS_INDEX = "topics-v4"
 WORK_TYPES_INDEX = "work-types-v1"
-WORKS_INDEX = "works-v26-*,-*invalid-data"
+WORKS_INDEX_LEGACY = "works-v26-*,-*invalid-data"
+WORKS_INDEX_WALDEN = "works-v26"
 GROUPBY_VALUES_INDEX = "groupby_values"
 
 DO_NOT_GROUP_BY = [

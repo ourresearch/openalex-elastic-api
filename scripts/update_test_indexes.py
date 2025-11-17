@@ -4,7 +4,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 
 from settings import (AUTHORS_INDEX, CONCEPTS_INDEX, INSTITUTIONS_INDEX,
-                      PUBLISHERS_INDEX, SOURCES_INDEX, WORKS_INDEX)
+                      PUBLISHERS_INDEX, SOURCES_INDEX, WORKS_INDEX_LEGACY)
 
 INDEXES = [
     AUTHORS_INDEX,
@@ -12,7 +12,7 @@ INDEXES = [
     INSTITUTIONS_INDEX,
     PUBLISHERS_INDEX,
     SOURCES_INDEX,
-    WORKS_INDEX,
+    WORKS_INDEX_LEGACY,
 ]
 
 

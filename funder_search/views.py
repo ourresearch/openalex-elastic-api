@@ -125,7 +125,7 @@ def funder_search():
     from core.shared_view import construct_query, execute_search, format_response
 
     connection = 'default'
-    index_name = settings.WORKS_INDEX
+    index_name = settings.WORKS_INDEX_LEGACY
     default_sort = ["_score", "publication_date", "id"]
 
     params = parse_params(request)

@@ -2,7 +2,7 @@ from multiprocessing import Pool
 from elasticsearch.helpers import bulk
 from elasticsearch_dsl import Search, connections
 from elasticsearch.exceptions import ConflictError
-from settings import ES_URL, WORKS_INDEX
+from settings import ES_URL, WORKS_INDEX_LEGACY
 
 BATCH_SIZE = 100
 
@@ -28,7 +28,7 @@ def remove_duplicates(work_ids):
 
 
 def find_id_and_prepare_delete(work_id):
-    s = Search(index=WORKS_INDEX)
+    s = Search(index=WORKS_INDEX_LEGACY)
     formatted_id = f"https://openalex.org/{work_id}"
 
     s = s.filter("term", id=formatted_id).source(False)

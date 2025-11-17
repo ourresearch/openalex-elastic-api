@@ -42,7 +42,8 @@ from settings import (
     SOURCES_INDEX,
     SUBFIELDS_INDEX,
     TOPICS_INDEX,
-    WORKS_INDEX,
+    WORKS_INDEX_LEGACY,
+    WORKS_INDEX_WALDEN
 )
 from sources.fields import fields_dict as sources_fields_dict
 from topics.fields import fields_dict as topics_fields_dict
@@ -186,9 +187,9 @@ def autocomplete_works():
     connection = get_data_version_connection(request)
     data_version = request.args.get('data_version') or request.args.get('data-version', DEFAULT_DATA_VERSION)
     if data_version == '2':
-        index_name = 'works-v26'
+        index_name = WORKS_INDEX_WALDEN
     else:
-        index_name = WORKS_INDEX
+        index_name = WORKS_INDEX_LEGACY
 
     result = single_entity_autocomplete(works_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
