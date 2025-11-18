@@ -21,7 +21,8 @@ def get_data_version_connection(request):
 
 def get_valid_fields(fields_dict):
     valid_fields = sorted(list(fields_dict.keys()))
-    valid_fields.remove("from_updated_date")
+    if "from_updated_date" in valid_fields:
+        valid_fields.remove("from_updated_date")
     return valid_fields
 
 
