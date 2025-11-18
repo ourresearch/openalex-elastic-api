@@ -159,7 +159,6 @@ class SourceSchema(Schema):
     host_organization_lineage = fields.List(fields.Str())
     host_organization_lineage_names = fields.List(fields.Str())
     type = fields.Str()
-    raw_type = fields.Str()
 
     class Meta:
         ordered = True
@@ -216,6 +215,7 @@ class LocationSchema(Schema):
     is_accepted = fields.Bool()
     is_published = fields.Bool()
     raw_source_name = fields.Str()
+    raw_type = fields.Str()
 
     def get_id(self, obj):
         native_id = getattr(obj, 'native_id', '')

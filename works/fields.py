@@ -704,7 +704,7 @@ fields = [
         custom_es_field="best_oa_location.license_id.keyword",
     ),
     TermField(param="best_oa_location.source.type"),
-    TermField(param="best_oa_location.source.raw_type"),
+    TermField(param="best_oa_location.raw_type"),
     TermField(
         param="best_oa_location.version",
         docstring="The version of the work that is available Open Access",
@@ -802,7 +802,7 @@ fields = [
         param="locations.license_id", custom_es_field="locations.license_id.keyword"
     ),
     TermField(param="locations.source.type"),
-    TermField(param="locations.source.raw_type"),
+    TermField(param="locations.raw_type"),
     TermField(param="locations.version"),
     TermField(param="mag", custom_es_field="ids.mag"),
     TermField(param="oa_status", alias="open_access.oa_status"),
@@ -839,7 +839,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["source.type"],
         alternate_names=ALTERNATE_NAMES.get("source.type", None),
     ),
-    TermField(param="primary_location.source.raw_type"),
+    TermField(param="primary_location.raw_type"),
     TermField(param="primary_location.version"),
     TermField(
         param="primary_topic.domain.id", custom_es_field="primary_topic.domain.id"
