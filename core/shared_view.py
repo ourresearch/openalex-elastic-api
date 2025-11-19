@@ -149,6 +149,9 @@ def apply_sorting(params, fields_dict, default_sort, index_name, s):
     elif is_search_query and not params["sort"] and index_name.startswith("funder-search"):
         # Sort by relevance score for funder-search
         s = s.sort("_score", "doi")
+    elif is_search_query and not params["sort"] and index_name.startswith("awards"):
+        # Sort by relevance score for awards (no works_count field)
+        s = s.sort("_score", "id")
     elif is_search_query and not params["sort"]:
         s = s.sort("_score", "-works_count", "id")
     elif not params["group_by"]:

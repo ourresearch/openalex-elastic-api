@@ -336,6 +336,14 @@ def full_search_query(index_name, search_terms):
             secondary_field="alternate_titles",
             tertiary_field="description",
         )
+    elif index_name.lower().startswith("awards"):
+        search_oa = SearchOpenAlex(
+            search_terms=search_terms,
+            primary_field="title",
+            secondary_field="description",
+        )
+        # Skip citation boost for awards since it doesn't have cited_by_count
+        return search_oa.primary_secondary_match_query()
     elif index_name.lower().startswith("institutions"):
         search_oa = SearchOpenAlex(
             search_terms=search_terms,

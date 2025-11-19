@@ -8,9 +8,6 @@ from core.schemas import (
     relevance_score,
 )
 
-# Import docstrings from fields
-from awards.fields import DOCSTRINGS
-
 class AffiliationIdSchema(Schema):
     id = fields.Str()
     type = fields.Str()
@@ -20,6 +17,7 @@ class AffiliationIdSchema(Schema):
         ordered = True
         unknown = INCLUDE
 
+
 class AffiliationSchema(Schema):
     name = fields.Str()
     country = fields.Str(default=None)
@@ -28,6 +26,7 @@ class AffiliationSchema(Schema):
     class Meta:
         ordered = True
         unknown = INCLUDE
+
 
 class InvestigatorSchema(Schema):
     given_name = fields.Str(default=None)
@@ -40,63 +39,52 @@ class InvestigatorSchema(Schema):
         ordered = True
         unknown = INCLUDE
 
-class FunderIdsSchema(Schema):
-    ror_id = fields.Str(default=None)
-    doi = fields.Str(default=None)
+
+class FunderSchema(Schema):
+    id = fields.Str()
+    display_name = fields.Str()
+    ror = fields.Str()
+    doi = fields.Str()
 
     class Meta:
         ordered = True
         unknown = INCLUDE
 
+
 class AwardsSchema(Schema):
-    # Core identifiers
-    id = fields.Str(metadata={"description": DOCSTRINGS["id"]})
-    funder_award_id = fields.Str(attribute="award_id", default=None, metadata={"description": DOCSTRINGS["award_id"]})
+    id = fields.Str()
+    display_name = fields.Str(default=None)
+    description = fields.Str(default=None)
+    funder_award_id = fields.Str(attribute="award_id", default=None)
     
     # Funded outputs
-    funded_outputs = fields.List(fields.Str(), default=None, metadata={"description": DOCSTRINGS["funded_outputs"]})
-    funded_outputs_count = fields.Int(default=None, metadata={"description": DOCSTRINGS["funded_outputs_count"]})
-    
-    # Award details
-    title = fields.Str(metadata={"description": DOCSTRINGS["title"]})
-    description = fields.Str(default=None, metadata={"description": DOCSTRINGS["description"]})
+    funded_outputs = fields.List(fields.Str(), default=None)
+    funded_outputs_count = fields.Int(default=None)
     
     # Funding information (flat structure as per actual document)
-    amount = fields.Float(default=None, metadata={"description": DOCSTRINGS["amount"]})
-    currency = fields.Str(default=None, metadata={"description": DOCSTRINGS["currency"]})
-    funder_id = fields.Str(default=None, metadata={"description": "The funder's OpenAlex ID"})
-    funder_name = fields.Str(default=None, metadata={"description": "The name of the funding organization"})
-    funding_type = fields.Str(default=None, metadata={"description": "The type of funding provided"})
-    funder_scheme = fields.Str(default=None, metadata={"description": "The specific funding scheme or program"})
-    funder_ids = fields.Nested(FunderIdsSchema, default=None, metadata={"description": "The funder's external identifiers"})
+    amount = fields.Float(default=None)
+    currency = fields.Str(default=None)
+    funder = fields.Nested(FunderSchema)
+    funding_type = fields.Str(default=None)
+    funder_scheme = fields.Str(default=None)
     
     # Dates
-    start_date = fields.Str(default=None, metadata={"description": DOCSTRINGS["start_date"]})
-    end_date = fields.Str(default=None, metadata={"description": DOCSTRINGS["end_date"]})
-    planned_end_date = fields.Str(default=None, metadata={"description": DOCSTRINGS["planned_end_date"]})
-    accepted_date = fields.Str(default=None, metadata={"description": DOCSTRINGS["accepted_date"]})
-    approved_date = fields.Str(default=None, metadata={"description": DOCSTRINGS["approved_date"]})
-    issued_date = fields.Str(default=None, metadata={"description": DOCSTRINGS["issued_date"]})
+    start_date = fields.Str(default=None)
+    end_date = fields.Str(default=None)
+    start_year = fields.Int(default=None)
+    end_year = fields.Int(default=None)
     
     # URLs and identifiers
-    landing_page = fields.Str(default=None, metadata={"description": DOCSTRINGS["landing_page"]})
-    doi_url = fields.Str(default=None, metadata={"description": DOCSTRINGS["doi_url"]})
-    doi = fields.Str(default=None, metadata={"description": "The Digital Object Identifier for the project"})
-    
-    # Publisher and metadata
-    publisher = fields.Str(default=None, metadata={"description": DOCSTRINGS["publisher"]})
-    member_id = fields.Str(default=None, metadata={"description": "The member ID associated with the project"})
-    provenance = fields.Str(default=None, metadata={"description": DOCSTRINGS["provenance"]})
+    landing_page_url = fields.Str(default=None)
+    doi = fields.Str(default=None)
     
     # Investigator information
-    lead_investigator = fields.Nested(InvestigatorSchema, default=None, metadata={"description": DOCSTRINGS["lead_investigator"]})
-    co_lead_investigator = fields.Nested(InvestigatorSchema, default=None, metadata={"description": DOCSTRINGS["co_lead_investigator"]})
-    investigators = fields.List(fields.Nested(InvestigatorSchema), default=None, metadata={"description": DOCSTRINGS["investigators"]})
-    
-    # Timestamps
-    deposited_timestamp = fields.Str(default=None, metadata={"description": DOCSTRINGS["deposited_timestamp"]})
-    created_timestamp = fields.Str(default=None, metadata={"description": DOCSTRINGS["created_timestamp"]})
-    indexed_timestamp = fields.Str(default=None, metadata={"description": DOCSTRINGS["indexed_timestamp"]})
+    lead_investigator = fields.Nested(InvestigatorSchema, default=None)
+    co_lead_investigator = fields.Nested(InvestigatorSchema, default=None)
+    investigators = fields.List(fields.Nested(InvestigatorSchema), default=None)
+
+    updated_date = fields.Str(default=None)
+    created_date = fields.Str(default=None)
     
     # Computed fields
     relevance_score = fields.Method("get_relevance_score")
@@ -111,6 +99,7 @@ class AwardsSchema(Schema):
 
     class Meta:
         ordered = True
+
 
 class MessageSchema(Schema):
     meta = fields.Nested(MetaSchema)

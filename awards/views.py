@@ -5,9 +5,9 @@ from awards.schemas import AwardsSchema, MessageSchema
 from core.shared_view import shared_view
 from core.utils import process_only_fields
 
-blueprint = Blueprint("awards", __name__)
+from settings import AWARDS_INDEX
 
-AWARDS_INDEX = "awards-v1"
+blueprint = Blueprint("awards", __name__)
 
 
 @blueprint.route("/awards")

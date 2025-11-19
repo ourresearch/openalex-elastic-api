@@ -77,11 +77,6 @@ fields = [
         unique_id="award_search",
     ),
     TermField(
-        param="title", 
-        custom_es_field="title",
-        docstring=DOCSTRINGS["title"]
-    ),
-    TermField(
         param="description", 
         custom_es_field="description",
         docstring=DOCSTRINGS["description"]
@@ -99,8 +94,7 @@ fields = [
         docstring=DOCSTRINGS["currency"]
     ),
     OpenAlexIDField(
-        param="funder_id",
-        custom_es_field="funder_id",
+        param="funder.id",
         docstring="The funder's OpenAlex ID",
     ),
     TermField(
@@ -119,13 +113,13 @@ fields = [
         docstring="The specific funding scheme or program"
     ),
     TermField(
-        param="funder_ids.ror_id", 
-        custom_es_field="funder_ids.ror_id",
+        param="funder.ror",
+        custom_es_field="funder.ror",
         docstring="The ROR ID of the funding organization"
     ),
     TermField(
-        param="funder_ids.doi", 
-        custom_es_field="funder_ids.doi",
+        param="funder.doi",
+        custom_es_field="funder.doi",
         docstring="The DOI of the funding organization"
     ),
     # Dates
