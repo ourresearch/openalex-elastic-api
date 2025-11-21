@@ -46,7 +46,7 @@ SUBFIELDS_INDEX = "subfields-v2"
 TOPICS_INDEX = "topics-v4"
 WORK_TYPES_INDEX = "work-types-v1"
 WORKS_INDEX_LEGACY = "works-v26-*,-*invalid-data"
-WORKS_INDEX_WALDEN = "works-v27"
+WORKS_INDEX_WALDEN = "works-v28"
 GROUPBY_VALUES_INDEX = "groupby_values"
 
 DO_NOT_GROUP_BY = [
