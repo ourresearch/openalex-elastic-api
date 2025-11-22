@@ -394,6 +394,11 @@ fields = [
         custom_es_field="authorships.institutions.lineage",
     ),
     OpenAlexIDField(
+        param="awards.id",
+        docstring="The OpenAlex IDs of awards associated with this work",
+        documentation_link="https://docs.openalex.org/api-entities/works/work-object#awards",
+    ),
+    OpenAlexIDField(
         param="awards.funder_id",
         docstring="The OpenAlex IDs of funders for awards associated with this work",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#awards",
@@ -760,11 +765,6 @@ fields = [
         param="grants.award_id",
         docstring="The award IDs listed in the work's grants",
         documentation_link="https://docs.openalex.org/api-entities/works/work-object#grants",
-    ),
-    TermField(
-        param="awards.id",
-        docstring="The OpenAlex IDs of awards associated with this work",
-        documentation_link="https://docs.openalex.org/api-entities/works/work-object#awards",
     ),
     TermField(
         param="awards.funder_award_id",
