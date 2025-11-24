@@ -335,6 +335,12 @@ fields = [
         custom_es_field="primary_location.source.issn",
     ),
     DateField(
+        param="created_date"
+    ),
+    DateField(
+        param="updated_date"
+    ),
+    DateField(
         param="from_created_date",
         custom_es_field="created_date",
     ),
