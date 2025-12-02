@@ -85,6 +85,8 @@ class AwardsSchema(Schema):
     co_lead_investigator = fields.Nested(InvestigatorSchema, default=None)
     investigators = fields.List(fields.Nested(InvestigatorSchema), default=None)
 
+    works_api_url = fields.Str(default=None)
+
     updated_date = fields.Str(default=None)
     created_date = fields.Str(default=None)
     
