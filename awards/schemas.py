@@ -56,6 +56,7 @@ class AwardsSchema(Schema):
     display_name = fields.Str(default=None)
     description = fields.Str(default=None)
     funder_award_id = fields.Str(default=None)
+    funder = fields.Nested(FunderSchema)
     
     # Funded outputs
     funded_outputs = fields.List(fields.Str(), default=None)
@@ -64,7 +65,6 @@ class AwardsSchema(Schema):
     # Funding information (flat structure as per actual document)
     amount = fields.Float(default=None)
     currency = fields.Str(default=None)
-    funder = fields.Nested(FunderSchema)
     funding_type = fields.Str(default=None)
     funder_scheme = fields.Str(default=None)
     
