@@ -55,7 +55,7 @@ class AwardsSchema(Schema):
     id = fields.Str()
     display_name = fields.Str(default=None)
     description = fields.Str(default=None)
-    funder_award_id = fields.Str(attribute="award_id", default=None)
+    funder_award_id = fields.Str(default=None)
     
     # Funded outputs
     funded_outputs = fields.List(fields.Str(), default=None)
@@ -77,6 +77,8 @@ class AwardsSchema(Schema):
     # URLs and identifiers
     landing_page_url = fields.Str(default=None)
     doi = fields.Str(default=None)
+
+    provenance = fields.Str(default=None)
     
     # Investigator information
     lead_investigator = fields.Nested(InvestigatorSchema, default=None)

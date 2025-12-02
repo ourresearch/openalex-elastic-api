@@ -68,8 +68,10 @@ fields = [
         custom_es_field="id"
     ),
     TermField(
-        param="funder_award_id",
-        custom_es_field="funder_award_id"
+        param="funder_award_id"
+    ),
+    TermField(
+        param="provenance"
     ),
     TermField(
         param="lead_investigator.given_name", 

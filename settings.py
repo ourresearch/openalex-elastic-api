@@ -26,7 +26,7 @@ USERS_API_URL = os.environ.get("USERS_API_URL")
 # indexes
 AUTHORS_INDEX = "authors-v16"
 AUTHORS_INDEX_OLD = "authors-v10"
-AWARDS_INDEX = "awards-v2"
+AWARDS_INDEX = "awards-v3"
 CONCEPTS_INDEX = "concepts-v8"
 CONTINENTS_INDEX = "continents-v1"
 COUNTRIES_INDEX = "countries-v2"
