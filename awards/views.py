@@ -16,7 +16,7 @@ def awards():
     connection = 'walden'
     
     index_name = AWARDS_INDEX
-    default_sort = ["id"]
+    default_sort = ["-funded_outputs_count", "id"]
     only_fields = process_only_fields(request, AwardsSchema)
     result = shared_view(request, fields_dict, index_name, default_sort, connection)
     message_schema = MessageSchema(only=only_fields)
