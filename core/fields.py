@@ -1020,9 +1020,6 @@ class TermField(Field):
     def es_field(self) -> str:
         if self.custom_es_field:
             field = self.custom_es_field
-        elif self.param == "doi":
-            # Special case for DOI: use ids.doi directly without .lower
-            field = "ids.doi"
         elif self.alias:
             field = self.alias.replace(".", "__") + "__lower"
         elif "." in self.param:
