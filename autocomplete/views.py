@@ -98,12 +98,6 @@ def autocomplete_full():
     # Exclude deleted author ID
     s = s.exclude("term", ids__openalex="https://openalex.org/A5317838346")
 
-    # filter xpac works for data version 2
-    if connection == 'walden' and not hide_works:
-        include_xpac = request.args.get('include_xpac') == 'true' or request.args.get('include-xpac') == 'true'
-        if not include_xpac:
-            s = s.exclude("term", is_xpac=True)
-
     if q:
         # canonical id match
         s, canonical_id_found = search_canonical_id_full(s, q)
