@@ -566,15 +566,18 @@ class TermField(Field):
                 formatted_values.append(formatted_val)
 
             # For DOI, we need to handle both v1 (full URL) and v2 (short form)
+            # DOIs are stored lowercase, so we must lowercase the query values
             if self.param == "doi":
                 expanded_values = []
                 for val in values:
                     if "doi.org" in val:
-                        short_doi = val.replace("https://doi.org/", "")
-                        expanded_values.extend([val, short_doi])
+                        short_doi = val.replace("https://doi.org/", "").lower()
+                        full_doi = val.lower()
+                        expanded_values.extend([full_doi, short_doi])
                     else:
-                        full_doi = f"https://doi.org/{val}"
-                        expanded_values.extend([val, full_doi])
+                        short_doi = val.lower()
+                        full_doi = f"https://doi.org/{val}".lower()
+                        expanded_values.extend([short_doi, full_doi])
                 formatted_values = expanded_values
 
         kwargs = {self.es_field(): formatted_values}
@@ -651,9 +654,9 @@ class TermField(Field):
                 return f"https://openalex.org/{self.value}"
         elif self.param == "doi":
             if "doi.org" in self.value:
-                return self.value
+                return self.value.lower()
             else:
-                return f"https://doi.org/{self.value}"
+                return f"https://doi.org/{self.value}".lower()
         elif self.param == "display_name":
             return self.value
         elif self.param == "language":
@@ -989,15 +992,16 @@ class TermField(Field):
             # Special handling for DOI to support both data versions:
             # v1: stores full URL like "https://doi.org/10.1590/..."
             # v2: stores short form like "10.1590/..."
+            # DOIs are stored lowercase, so we must lowercase the query value
             if "doi.org" in self.value:
                 # Already a full URL, extract the short form
-                short_doi = self.value.replace("https://doi.org/", "")
-                full_doi = self.value
+                short_doi = self.value.replace("https://doi.org/", "").lower()
+                full_doi = self.value.lower()
             else:
                 # Short form, create the full URL
-                short_doi = self.value
-                full_doi = f"https://doi.org/{self.value}"
-            
+                short_doi = self.value.lower()
+                full_doi = f"https://doi.org/{self.value}".lower()
+
             # Query both formats with OR
             q = Q("term", **{self.es_field(): full_doi}) | Q("term", **{self.es_field(): short_doi})
         elif self.param in id_params:
