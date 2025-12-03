@@ -491,6 +491,13 @@ class SearchField(Field):
                 is_author_name_query=True,
             )
             q = search_oa.build_query()
+        elif self.param == "display_name.search" and self.index == "awards":
+            # Awards doesn't have cited_by_count, so skip citation boost
+            search_oa = SearchOpenAlex(
+                search_terms=self.value,
+                primary_field=self.es_field(),
+            )
+            q = search_oa.primary_match_query()
         elif self.param == "display_name.search.no_stem":
             search_oa = SearchOpenAlex(
                 search_terms=self.value,

@@ -1,6 +1,7 @@
 from core.fields import (
     OpenAlexIDField,
     RangeField,
+    SearchField,
     TermField,
 )
 
@@ -29,6 +30,9 @@ fields = [
         param="start_year",
         docstring="The year when the project officially begins"
     ),
+    SearchField(param="default.search", index="awards"),
+    SearchField(param="description.search", custom_es_field="description", index="awards"),
+    SearchField(param="display_name.search", custom_es_field="display_name", index="awards"),
     TermField(
         param="currency",
         custom_es_field="currency"

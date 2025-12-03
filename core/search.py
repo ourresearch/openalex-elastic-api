@@ -339,7 +339,7 @@ def full_search_query(index_name, search_terms):
     elif index_name.lower().startswith("awards"):
         search_oa = SearchOpenAlex(
             search_terms=search_terms,
-            primary_field="title",
+            primary_field="display_name",
             secondary_field="description",
         )
         # Skip citation boost for awards since it doesn't have cited_by_count
