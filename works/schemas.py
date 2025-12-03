@@ -129,6 +129,7 @@ class HasContentSchema(Schema):
 
 class AwardsSchema(Schema):
     id = fields.Str()
+    display_name = fields.Str()
     funder_award_id = fields.Str()
     funder_id = fields.Str()
     funder_display_name = fields.Str()
