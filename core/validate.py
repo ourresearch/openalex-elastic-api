@@ -138,7 +138,7 @@ def validate_group_by(field, params):
         "field.id",
         "fields.id",
         "hierarchy_level",
-        "grants_count",
+        "awards_count",
         "level",
         "countries_distinct_count",
         "institutions_distinct_count",
