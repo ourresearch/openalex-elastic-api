@@ -27,7 +27,7 @@ class FundersSchema(Schema):
     image_url = fields.Str(dump_default=None)
     image_thumbnail_url = fields.Str(dump_default=None)
     relevance_score = fields.Method("get_relevance_score")
-    grants_count = fields.Int()
+    awards_count = fields.Int()
     works_count = fields.Int()
     cited_by_count = fields.Int()
     summary_stats = fields.Nested(SummaryStatsSchema, dump_default=None)
