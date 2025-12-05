@@ -449,11 +449,6 @@ fields = [
         docstring="The funders listed in the work's grants",
     ),
     OpenAlexIDField(
-        param="grants.funder",
-        docstring="The funders listed in the work's grants",
-        documentation_link="https://docs.openalex.org/api-entities/funders",
-    ),
-    OpenAlexIDField(
         param="ids.openalex",
         docstring="The OpenAlex ID for a work",
         documentation_link="https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
@@ -767,11 +762,6 @@ fields = [
     TermField(param="institutions.ror", alias="authorships.institutions.ror"),
     TermField(param="institutions.type", alias="authorships.institutions.type"),
     TermField(param="keywords.id", custom_es_field="keywords.id"),
-    TermField(
-        param="grants.award_id",
-        docstring="The award IDs listed in the work's grants",
-        documentation_link="https://docs.openalex.org/api-entities/works/work-object#grants",
-    ),
     TermField(
         param="awards.funder_award_id",
         docstring="The funder's award ID for awards associated with this work",

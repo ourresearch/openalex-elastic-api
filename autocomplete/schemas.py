@@ -163,7 +163,7 @@ class AutoCompleteSchema(Schema):
             "authors": "authorships.author.id",
             "concepts": "concepts.id",
             "countries": "authorships.countries",
-            "funders": "grants.funder",
+            "funders": "awards.funder_id",
             "institutions": "authorships.institutions.lineage",
             "keywords": "keywords.id",
             "languages": "language",

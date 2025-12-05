@@ -114,15 +114,6 @@ class CitationNormalizedPercentileSchema(Schema):
     class Meta:
         ordered = True
 
-
-class GrantsSchema(Schema):
-    funder = fields.Str()
-    funder_display_name = fields.Str()
-    award_id = fields.Str()
-
-    class Meta:
-        ordered = True
-
 class HasContentSchema(Schema):
     pdf = fields.Bool()
     grobid_xml = fields.Bool()
@@ -359,7 +350,6 @@ class WorksSchema(Schema):
     locations = fields.Nested(LocationSchema, many=True)
     best_oa_location = fields.Nested(LocationSchema)
     sustainable_development_goals = fields.Nested(SDGSchema, many=True)
-    grants = fields.List(fields.Nested(GrantsSchema))
     awards = fields.Nested(AwardsSchema, many=True)
     funders = fields.Nested(FundersSchema, many=True)
     datasets = fields.List(fields.Str())

@@ -1,6 +1,6 @@
 import iso3166
 import pycountry
-from elasticsearch_dsl import Search, Q, MultiSearch
+from elasticsearch_dsl import Search, Q
 from iso4217 import Currency
 
 from core.utils import get_index_name_by_id, normalize_openalex_id
@@ -9,8 +9,7 @@ from settings import (
     FIELDS_INDEX,
     KEYWORDS_INDEX,
     LICENSES_INDEX,
-    SUBFIELDS_INDEX,
-    WORKS_INDEX_LEGACY,
+    SUBFIELDS_INDEX
 )
 
 
@@ -108,27 +107,6 @@ def get_display_names_host_organization(ids, connection='default'):
     return results
 
 
-def get_display_names_award_ids(ids, connection='default'):
-    results = {}
-    ms = MultiSearch(index=WORKS_INDEX_LEGACY, using=connection)
-    for award_id in ids:
-        s = Search()
-        s = s.filter("term", grants__award_id__keyword=award_id)
-        s = s.source(["grants"])
-        ms = ms.add(s)
-    responses = ms.execute()
-    for response in responses:
-        # get count for each query
-        count = response.hits.total.value
-        for item in response:
-            for grant in item.grants:
-                if grant.award_id in ids:
-                    results[
-                        grant.award_id
-                    ] = f"{grant.funder_display_name} ({grant.award_id})"
-    return results
-
-
 def get_display_names_sdgs(ids, connection='default'):
     """
     Returns display names for SDG IDs using the in-memory cache/static mapping.
@@ -204,7 +182,6 @@ def get_display_name_mapping(keys, group_by, connection='default'):
         "field.id": get_display_names_keywords_licenses_topics,
         "fields.id": get_display_names_keywords_licenses_topics,
         "keywords.id": get_display_names_keywords_licenses_topics,
-        "grants.award_id": get_display_names_award_ids,
         "sustainable_development_goals.id": get_display_names_sdgs,
         "license": get_display_names_keywords_licenses_topics,
         "license_id": get_display_names_keywords_licenses_topics,
@@ -232,8 +209,6 @@ def requires_display_name_conversion(group_by):
     )
     exact_matches = (
         "authorships.institutions.lineage",
-        "grants.award_id",
-        "grants.funder",
         "last_known_institutions.lineage",
     )
     return group_by.endswith(endings) or group_by in exact_matches
