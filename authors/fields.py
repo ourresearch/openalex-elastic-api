@@ -119,6 +119,7 @@ fields = [
     TermField(param="affiliations.institution.country_code"),
     TermField(param="affiliations.institution.ror"),
     TermField(param="affiliations.institution.type"),
+    TermField(param="block_key"),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(
         param="last_known_institutions.country_code",

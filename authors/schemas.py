@@ -38,6 +38,18 @@ class InstitutionSchema(Schema):
         ordered = True
         unknown = INCLUDE
 
+class ParsedLongestNameSchema(Schema):
+    first =fields.Str()
+    middle =fields.Str()
+    last = fields.Str()
+    suffix = fields.Str()
+    nickname = fields.Str()
+
+    class Meta:
+        ordered = True
+        unknown = INCLUDE
+
+
 
 class AffiliationSchema(Schema):
     institution = fields.Nested(InstitutionSchema)
@@ -63,6 +75,9 @@ class AuthorsSchema(Schema):
     topic_share = fields.List(fields.Nested(TopicSchema))
     x_concepts = fields.List(fields.Nested(XConceptsSchema))
     counts_by_year = fields.List(fields.Nested(CountsByYearSchema))
+    longest_name = fields.Str()
+    parsed_longest_name = fields.Nested(ParsedLongestNameSchema)
+    block_key = fields.Str()
     works_api_url = fields.Str()
     updated_date = fields.Str()
     created_date = fields.Str(dump_default=None)

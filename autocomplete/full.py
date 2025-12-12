@@ -8,7 +8,7 @@ from autocomplete.shared import is_year_query
 
 def get_indices(data_version='1'):
     entities_to_indeces = {
-        "author": settings.AUTHORS_INDEX,
+        "author": settings.AUTHORS_INDEX_LEGACY if data_version != '2' else settings.AUTHORS_INDEX_WALDEN,
         "concept": settings.CONCEPTS_INDEX,
         "countries": settings.COUNTRIES_INDEX,
         "institution": settings.INSTITUTIONS_INDEX,

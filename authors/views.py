@@ -7,8 +7,8 @@ from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.schemas import FiltersWrapperSchema
 from core.shared_view import shared_view
-from core.utils import (get_flattened_fields, get_valid_fields, process_only_fields)
-from settings import AUTHORS_INDEX
+from core.utils import (get_data_version_connection, get_flattened_fields, get_valid_fields, process_only_fields)
+from settings import AUTHORS_INDEX_LEGACY, AUTHORS_INDEX_WALDEN
 
 blueprint = Blueprint("authors", __name__)
 
@@ -17,10 +17,11 @@ blueprint = Blueprint("authors", __name__)
 @blueprint.route("/entities/authors")
 @blueprint.route("/people")
 def authors():
-    index_name = AUTHORS_INDEX
+    connection = get_data_version_connection(request)
+    index_name = AUTHORS_INDEX_WALDEN if connection == 'walden' else AUTHORS_INDEX_LEGACY
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, AuthorsSchema)
-    result = shared_view(request, fields_dict, index_name, default_sort)
+    result = shared_view(request, fields_dict, index_name, default_sort, connection=connection)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
@@ -31,7 +32,8 @@ def authors():
 @blueprint.route("/authors/filters/<path:params>")
 @blueprint.route("/people/filters/<path:params>")
 def authors_filters(params):
-    index_name = AUTHORS_INDEX
+    connection = get_data_version_connection(request)
+    index_name = AUTHORS_INDEX_WALDEN if connection == 'walden' else AUTHORS_INDEX_LEGACY
     results = shared_filter_view(request, params, fields_dict, index_name)
     filters_schema = FiltersWrapperSchema()
     return filters_schema.dump(results)

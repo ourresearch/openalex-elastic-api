@@ -31,7 +31,8 @@ from licenses.fields import fields_dict as licenses_fields_dict
 from subfields.fields import fields_dict as subfields_fields_dict
 from publishers.fields import fields_dict as publishers_fields_dict
 from settings import (
-    AUTHORS_INDEX,
+    AUTHORS_INDEX_LEGACY,
+    AUTHORS_INDEX_WALDEN,
     CONCEPTS_INDEX,
     DEFAULT_DATA_VERSION,
     FUNDERS_INDEX,
@@ -134,7 +135,7 @@ def autocomplete_full():
 @blueprint.route("/autocomplete/authors")
 def autocomplete_authors():
     connection = get_data_version_connection(request)
-    index_name = AUTHORS_INDEX
+    index_name = AUTHORS_INDEX_WALDEN if connection == 'walden' else AUTHORS_INDEX_LEGACY
     result = single_entity_autocomplete(authors_fields_dict, index_name, request, connection)
     message_schema = MessageSchema()
     return message_schema.dump(result)

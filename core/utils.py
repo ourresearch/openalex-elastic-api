@@ -107,7 +107,7 @@ def set_number_param(request, param, default):
     return result
 
 
-def get_index_name_by_id(openalex_id):
+def get_index_name_by_id(openalex_id, connection=None):
     """Takes an openalex ID and returns an appropriate index."""
     clean_id = normalize_openalex_id(openalex_id)
     if not clean_id:
@@ -118,7 +118,7 @@ def get_index_name_by_id(openalex_id):
     if clean_id.startswith("G"):
         index_name = settings.AWARDS_INDEX
     elif clean_id.startswith("A"):
-        index_name = settings.AUTHORS_INDEX
+        index_name = settings.AUTHORS_INDEX_WALDEN if connection == 'walden' else settings.AUTHORS_INDEX_LEGACY
     elif clean_id.startswith("C"):
         index_name = settings.CONCEPTS_INDEX
     elif clean_id.startswith("I"):
@@ -130,7 +130,7 @@ def get_index_name_by_id(openalex_id):
     elif clean_id.startswith("T"):
         index_name = settings.TOPICS_INDEX
     elif clean_id.startswith("W"):
-        index_name = settings.WORKS_INDEX_LEGACY
+        index_name = settings.WORKS_INDEX_WALDEN if connection == 'walden' else settings.WORKS_INDEX_LEGACY
     return index_name
 
 
@@ -256,11 +256,12 @@ def get_entity_counts(request=None, connection=None):
     elif connection is None:
         connection = 'default'
 
-    # Use different index for works when using walden connection (data-version=2)
+    # Use different index for works and authors when using walden connection (data-version=2)
     works_index = settings.WORKS_INDEX_WALDEN if connection == 'walden' else settings.WORKS_INDEX_LEGACY
+    authors_index = settings.AUTHORS_INDEX_WALDEN if connection == 'walden' else settings.AUTHORS_INDEX_LEGACY
 
     entities_to_indices = {
-        "authors": settings.AUTHORS_INDEX,
+        "authors": authors_index,
         "institutions": settings.INSTITUTIONS_INDEX,
         "sources": settings.SOURCES_INDEX,
         "publishers": settings.PUBLISHERS_INDEX,
