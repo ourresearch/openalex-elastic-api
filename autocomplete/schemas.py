@@ -42,7 +42,7 @@ class AutoCompleteSchema(Schema):
     def set_author_hint_institution(self, data):
         for obj in data:
             if "authors" in obj.meta.index:
-                for last_known_institution in obj.last_known_institutions[0:1]:
+                for last_known_institution in (obj.last_known_institutions or [])[0:1]:
                     if last_known_institution:
                         institution_display_name = (
                             last_known_institution.display_name
