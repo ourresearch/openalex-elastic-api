@@ -25,6 +25,7 @@ def filter_records(fields_dict, filter_params, s, sample=None):
                 and "search" not in field.param
                 and type(field).__name__ != "RangeField"
                 and type(field).__name__ != "BooleanField"
+                and type(field).__name__ != "TermField"
             ):
                 s = handle_and_query(field, s, value)
 
