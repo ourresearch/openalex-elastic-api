@@ -16,6 +16,21 @@ There are three places in the `Work` object where you can find locations:
 * [`best_oa_location`](./#best_oa_location): The best available open access location of this work.
 * [`locations`](./#locations): A list of all of the locations where this work lives. This will include the two locations above if availabe, and can also include other locations.
 
+### `id`
+
+_String:_ A unique identifier for this location. The format is `prefix:identifier`, where the prefix indicates the provenance of the location:
+
+* `doi:` — from Crossref or DataCite
+* `pmid:` — from PubMed
+* `mag:` — from Microsoft Academic Graph
+* `pmh:` — from OAI-PMH repository harvesting
+
+This identifier is globally unique across all locations.
+
+```json
+id: "doi:10.1590/s1678-77572010000100010"
+```
+
 ### `is_accepted`
 
 _Boolean:_ `true` if this location's [`version`](location-object.md#version) is either `acceptedVersion` or `publishedVersion`; otherwise `false`.
@@ -58,6 +73,14 @@ _String:_ The location's publishing license. This can be a [Creative Commons](ht
 license: "cc-by"
 ```
 
+### `license_id`
+
+_String:_ The OpenAlex ID for this license, if available.
+
+```json
+license_id: "https://openalex.org/licenses/cc-by"
+```
+
 ### source
 
 _Object:_ Information about the source of this location, as a [`DehydratedSource`](../../sources/source-object.md#the-dehydratedsource-object) object.
@@ -65,15 +88,30 @@ _Object:_ Information about the source of this location, as a [`DehydratedSource
 The concept of a source is meant to capture a certain social relationship between the host organization and a version of a work. When an organization puts the work on the internet, there is an understanding that they have, at some level, endorsed the work. This level varies, and can be very different depending on the source!
 
 ```json
-source {
+source: {
     id: "https://openalex.org/S125754415",
     display_name: "Proceedings of the National Academy of Sciences of the United States of America",
     issn_l: "0027-8424",
     issn: ["1091-6490", "0027-8424"],
+    is_oa: false,
+    is_in_doaj: false,
+    is_core: true,
     host_organization: "https://openalex.org/P4310320052",
+    host_organization_name: "National Academy of Sciences",
+    host_organization_lineage: ["https://openalex.org/P4310320052"],
+    host_organization_lineage_names: ["National Academy of Sciences"],
     type: "journal"
 }
 ```
+
+The source object includes these additional fields:
+
+* `is_oa`: _Boolean_ — whether this source is fully open access
+* `is_in_doaj`: _Boolean_ — whether this source is indexed in the [Directory of Open Access Journals](https://doaj.org/)
+* `is_core`: _Boolean_ — whether this source is indexed in [CORE](https://core.ac.uk/)
+* `host_organization_name`: _String_ — the name of the host organization
+* `host_organization_lineage`: _List_ — OpenAlex IDs of the host organization's parent organizations
+* `host_organization_lineage_names`: _List_ — names of the host organization's parent organizations
 
 ### pdf\_url
 
@@ -93,6 +131,14 @@ _String:_ The version of the work, based on the [DRIVER Guidelines versioning sc
 
 ```json
 version: "publishedVersion"
+```
+
+### `raw_source_name`
+
+_String:_ The name of the source as it originally appeared in the metadata, before normalization.
+
+```json
+raw_source_name: "Journal of Applied Oral Science"
 ```
 
 ### raw\_type

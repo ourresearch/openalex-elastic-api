@@ -47,6 +47,25 @@ Newer works are more likely to have an abstract inverted index. For example, ove
 The `host_venue` and `alternate_host_venues` properties have been deprecated in favor of [`primary_location`](./#primary_location) and [`locations`](./#locations). The attributes `host_venue` and `alternate_host_venues` are no longer available in the Work object, and trying to access them in filters or group-bys will return an error.
 {% endhint %}
 
+### `awards`
+
+_List:_ List of [`Award`](award-object.md) objects representing awards or grants associated with this work.
+
+This replaces the older `grants` property, which has been removed. The new `awards` and [`funders`](./#funders) properties provide much more comprehensive funding data.
+
+```json
+awards: [
+    {
+        id: "https://openalex.org/A4320000001",
+        display_name: "Research Grant for Climate Studies",
+        funder_award_id: "ABI 1661218",
+        funder_id: "https://openalex.org/F4320306076",
+        funder_display_name: "National Science Foundation",
+        doi: "https://doi.org/10.xxxx/award.123"
+    }
+]
+```
+
 ### `authorships`
 
 _List:_ List of [`Authorship`](authorship-object.md) objects, each representing an author and their institution. [Limited to](../../authors/limitations.md) the first 100 authors to maintain API performance.
@@ -184,15 +203,13 @@ biblio: {
 
 _Object:_ The percentile of this work's citation count normalized by work type, publication year, and subfield. This field represents the same information as the FWCI expressed as a percentile. Learn more in the reference article: [Field Weighted Citation Impact (FWCI)](https://help.openalex.org/hc/en-us/articles/24735753007895-Field-Weighted-Citation-Impact-FWCI).
 
-```
+```json
 citation_normalized_percentile: {
-        value: 0.999948,
-        is_in_top_1_percent: true,
-        is_in_top_10_percent": true
+    value: 0.999948,
+    is_in_top_1_percent: true,
+    is_in_top_10_percent: true
 }
 ```
-
-
 
 ### `cited_by_count`
 
@@ -200,6 +217,17 @@ _Integer:_ The number of citations to this work. These are the times that other 
 
 ```json
 cited_by_count: 382
+```
+
+### `cited_by_percentile_year`
+
+_Object:_ The percentile rank of this work's citation count compared to other works published in the same year. Contains `min` and `max` values representing the percentile range.
+
+```json
+cited_by_percentile_year: {
+    min: 89,
+    max: 96
+}
 ```
 
 ### `concepts`
@@ -343,25 +371,49 @@ _Float:_ The Field-weighted Citation Impact (FWCI), calculated for a work as the
 fwci: 76.992
 ```
 
-### `grants`
+### `funders`
 
-_List:_ List of grant objects, which include the [`Funder`](../../funders/) and the award ID, if available. Our grants data comes from Crossref, and is currently fairly limited.
+_List:_ List of [`Funder`](funder-object.md) objects representing the funders of this work.
+
+This replaces the older `grants` property, which has been removed. The new `funders` and [`awards`](./#awards) properties provide much more comprehensive funding data.
 
 ```json
-grants: [
-    // grant for which we have the grant details:
+funders: [
     {
-        funder: "https://openalex.org/F4320306076",
-        funder_display_name: "National Science Foundation",
-        award_id: "ABI 1661218",
+        id: "https://openalex.org/F4320306076",
+        display_name: "National Science Foundation",
+        ror: "https://ror.org/021nxhr62"
     },
-    // grant for which we do not have the details:
     {
-        funder: "https://openalex.org/F4320306084",
-        funder_display_name: "U.S. Department of Energy",
-        award_id: null,
-    },
+        id: "https://openalex.org/F4320306084",
+        display_name: "U.S. Department of Energy",
+        ror: "https://ror.org/01bj3aw27"
+    }
 ]
+```
+
+### `grants` (deprecated)
+
+{% hint style="danger" %}
+The `grants` property has been removed and replaced by [`funders`](./#funders) and [`awards`](./#awards), which provide much more comprehensive funding data.
+{% endhint %}
+
+### `has_content`
+
+_Object:_ Information about available full-text content for this work.
+
+{% hint style="warning" %}
+This field is for experimental internal use and is likely to disappear without notice.
+{% endhint %}
+
+* `pdf`: _Boolean_ — whether a PDF is available
+* `grobid_xml`: _Boolean_ — whether GROBID-parsed XML is available
+
+```json
+has_content: {
+    pdf: true,
+    grobid_xml: false
+}
 ```
 
 ### `host_venue` (deprecated)
@@ -446,13 +498,27 @@ We identify works that have been retracted using the public [Retraction Watch da
 is_retracted: false 
 ```
 
+### `is_xpac`
+
+_Boolean:_ True if this work is part of the XPAC (Expansion Pack) dataset.
+
+XPAC works are the 190+ million works added with the [Walden update](https://blog.openalex.org/openalex-rewrite-walden-launch/). These are primarily datasets and records from individual repositories. The data quality on XPAC works is generally not as high as on other works, but it will improve over time.
+
+By default, XPAC works are excluded from API results. To include them, use the [`include_xpac=true`](../../../how-to-use-the-api/xpac.md) parameter.
+
+For more details, see the [XPAC documentation](../../../how-to-use-the-api/xpac.md) and the [Walden release notes](https://docs.google.com/document/d/1SPZ7QFcPddCHYt1pZP1UCIuqbfBY22lSHwgPA8RQyUY/edit?tab=t.0).
+
+```json
+is_xpac: false 
+```
+
 ### `keywords`
 
 _List of objects:_ Short phrases identified based on works' Topics. For background on how Keywords are identified, see [the Keywords page at OpenAlex help pages](https://help.openalex.org/how-it-works/keywords).
 
 The score for each keyword represents the similarity score of that keyword to the title and abstract text of the work.
 
-We provide up to 5 keywords per work, for all keywords with scores above a certain threshold.
+We provide keywords for all keywords with scores above a certain threshold.
 
 ```json
 [
@@ -486,14 +552,6 @@ A few things to keep in mind about this:
 
 ```json
 language: "en"
-```
-
-### `license`
-
-_String:_ The license applied to this work at this host. Most toll-access works don't have an explicit license (they're under "all rights reserved" copyright), so this field generally has content only if `is_oa` is `true`.
-
-```json
-license: "cc-by"
 ```
 
 ### `locations`
@@ -613,17 +671,17 @@ The top ranked [`Topic`](../../topics/) for this work. This is the same as the f
 primary_topic: {
     id: "https://openalex.org/T12419",
     display_name: "Analysis of Cardiac and Respiratory Sounds",
-    score: 	0.9997,
+    score: 0.9997,
     subfield: {
-        id: 2740,
+        id: "https://openalex.org/subfields/2740",
         display_name: "Pulmonary and Respiratory Medicine"
-    }
+    },
     field: {
-        id: 27,
+        id: "https://openalex.org/fields/27",
         display_name: "Medicine"
-    }
+    },
     domain: {
-        id: 4,
+        id: "https://openalex.org/domains/4",
         display_name: "Health Sciences"
     }
 }
@@ -663,6 +721,14 @@ referenced_works: [
     "https://openalex.org/W2115339903",
     "https://openalex.org/W2031754690"
 ]
+```
+
+### `referenced_works_count`
+
+_Integer:_ The number of works that this work cites. This is the length of the [`referenced_works`](./#referenced_works) list.
+
+```json
+referenced_works_count: 5
 ```
 
 ### `related_works`
@@ -708,20 +774,20 @@ topics: [
     {
         id: "https://openalex.org/T12419",
         display_name: "Analysis of Cardiac and Respiratory Sounds",
-        score: 	0.9997,
+        score: 0.9997,
         subfield: {
-            id: 2740,
+            id: "https://openalex.org/subfields/2740",
             display_name: "Pulmonary and Respiratory Medicine"
-        }
+        },
         field: {
-            id: 27,
+            id: "https://openalex.org/fields/27",
             display_name: "Medicine"
-        }
+        },
         domain: {
-            id: 4,
+            id: "https://openalex.org/domains/4",
             display_name: "Health Sciences"
         }
-    }
+    },
     ...
 ]
 ```

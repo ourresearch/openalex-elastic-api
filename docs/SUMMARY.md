@@ -10,6 +10,8 @@
 * [📄 Works](api-entities/works/README.md)
   * [Work object](api-entities/works/work-object/README.md)
     * [Authorship object](api-entities/works/work-object/authorship-object.md)
+    * [Award object](api-entities/works/work-object/award-object.md)
+    * [Funder object](api-entities/works/work-object/funder-object.md)
     * [Location object](api-entities/works/work-object/location-object.md)
   * [Get a single work](api-entities/works/get-a-single-work.md)
   * [Get lists of works](api-entities/works/get-lists-of-works.md)

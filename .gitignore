@@ -11,6 +11,8 @@ venv/
 .DS_Store
 scripts/logs
 localdata/
+local_data/
+
 scratch/
 
 # vscode editor
