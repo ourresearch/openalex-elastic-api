@@ -49,7 +49,7 @@ The `host_venue` and `alternate_host_venues` properties have been deprecated in 
 
 ### `awards`
 
-_List:_ List of [`Award`](award-object.md) objects representing awards or grants associated with this work.
+_List:_ List of dehydrated [`Award`](../../awards/award-object.md) objects representing awards or grants associated with this work.
 
 This replaces the older `grants` property, which has been removed. The new `awards` and [`funders`](./#funders) properties provide much more comprehensive funding data.
 
@@ -373,7 +373,7 @@ fwci: 76.992
 
 ### `funders`
 
-_List:_ List of [`Funder`](funder-object.md) objects representing the funders of this work.
+_List:_ List of dehydrated [`Funder`](../../funders/funder-object.md) objects representing the funders of this work.
 
 This replaces the older `grants` property, which has been removed. The new `funders` and [`awards`](./#awards) properties provide much more comprehensive funding data.
 
