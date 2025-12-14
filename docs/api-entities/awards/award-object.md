@@ -7,7 +7,7 @@ These are the fields in an award object. When you use the API to get a single aw
 _String:_ The OpenAlex ID for this award.
 
 ```json
-id: "https://openalex.org/G1929887790"
+id: "https://openalex.org/G5453342221"
 ```
 
 ### `display_name`
@@ -15,7 +15,7 @@ id: "https://openalex.org/G1929887790"
 _String:_ The name or title of the award, if available.
 
 ```json
-display_name: "Research Grant for Climate Studies"
+display_name: "Implementation of activities described in the Roadmap to Fusion during Horizon 2020 through a Joint programme of the members of the EUROfusion consortium"
 ```
 
 ### `description`
@@ -23,7 +23,7 @@ display_name: "Research Grant for Climate Studies"
 _String:_ A description of the award, if available.
 
 ```json
-description: "Funding for research on climate change impacts"
+description: "A Roadmap to the realization of fusion energy was adopted by the EFDA system at the end of 2012. The roadmap aims at achieving all the necessary know-how to start the construction of a demonstration power plant (DEMO) by 2030..."
 ```
 
 ### `funder_award_id`
@@ -31,7 +31,7 @@ description: "Funding for research on climate change impacts"
 _String:_ The award identifier as assigned by the funder (e.g., the grant number).
 
 ```json
-funder_award_id: "ABI 1661218"
+funder_award_id: "633053"
 ```
 
 ### `funder`
@@ -45,10 +45,9 @@ _Object:_ Information about the funder that issued this award. Contains:
 
 ```json
 funder: {
-    id: "https://openalex.org/F4320306076",
-    display_name: "National Science Foundation",
-    ror: "https://ror.org/021nxhr62",
-    doi: "https://doi.org/10.13039/100000001"
+    id: "https://openalex.org/F4320337670",
+    display_name: "H2020 Euratom",
+    doi: "https://doi.org/10.13039/100010687"
 }
 ```
 
@@ -58,8 +57,10 @@ _List:_ A list of OpenAlex Work IDs that were funded by this award.
 
 ```json
 funded_outputs: [
-    "https://openalex.org/W3016825602",
-    "https://openalex.org/W2753353163"
+    "https://openalex.org/W2959949293",
+    "https://openalex.org/W3181133739",
+    "https://openalex.org/W2755925992",
+    // ... and more
 ]
 ```
 
@@ -68,7 +69,7 @@ funded_outputs: [
 _Integer:_ The number of works funded by this award.
 
 ```json
-funded_outputs_count: 2
+funded_outputs_count: 1350
 ```
 
 ### `amount`
@@ -76,7 +77,7 @@ funded_outputs_count: 2
 _Float:_ The monetary amount of the award, if available.
 
 ```json
-amount: 500000.00
+amount: 678800000.0
 ```
 
 ### `currency`
@@ -84,7 +85,7 @@ amount: 500000.00
 _String:_ The currency of the award amount (e.g., "USD", "EUR"), if available.
 
 ```json
-currency: "USD"
+currency: "EUR"
 ```
 
 ### `funding_type`
@@ -100,7 +101,7 @@ funding_type: "grant"
 _String:_ The specific funding scheme or program under which the award was made, if available.
 
 ```json
-funder_scheme: "Division of Biological Infrastructure"
+funder_scheme: "EURATOM"
 ```
 
 ### `start_date`
@@ -108,7 +109,7 @@ funder_scheme: "Division of Biological Infrastructure"
 _String:_ The start date of the award, formatted as an ISO 8601 date string, if available.
 
 ```json
-start_date: "2020-01-01"
+start_date: "2014-01-01"
 ```
 
 ### `end_date`
@@ -116,7 +117,7 @@ start_date: "2020-01-01"
 _String:_ The end date of the award, formatted as an ISO 8601 date string, if available.
 
 ```json
-end_date: "2023-12-31"
+end_date: "2022-12-31"
 ```
 
 ### `start_year`
@@ -124,7 +125,7 @@ end_date: "2023-12-31"
 _Integer:_ The year when the award started, if available.
 
 ```json
-start_year: 2020
+start_year: 2014
 ```
 
 ### `end_year`
@@ -132,7 +133,7 @@ start_year: 2020
 _Integer:_ The year when the award ends or ended, if available.
 
 ```json
-end_year: 2023
+end_year: 2022
 ```
 
 ### `landing_page_url`
@@ -140,7 +141,7 @@ end_year: 2023
 _String:_ A URL for the award's landing page, if available.
 
 ```json
-landing_page_url: "https://www.nsf.gov/awardsearch/showAward?AWD_ID=1661218"
+landing_page_url: "https://cordis.europa.eu/project/id/633053"
 ```
 
 ### `doi`
@@ -148,7 +149,7 @@ landing_page_url: "https://www.nsf.gov/awardsearch/showAward?AWD_ID=1661218"
 _String:_ The DOI for this award, if available.
 
 ```json
-doi: "https://doi.org/10.xxxx/award.123"
+doi: "https://doi.org/10.3030/633053"
 ```
 
 ### `provenance`
@@ -156,7 +157,7 @@ doi: "https://doi.org/10.xxxx/award.123"
 _String:_ The source of this award data.
 
 ```json
-provenance: "crossref_work.grants"
+provenance: "crossref_work"
 ```
 
 ### `lead_investigator`
@@ -202,7 +203,7 @@ _List:_ A list of all investigators associated with this award. Each investigato
 _String:_ A URL that returns a list of works funded by this award.
 
 ```json
-works_api_url: "https://api.openalex.org/works?filter=awards.id:G1929887790"
+works_api_url: "https://api.openalex.org/works?filter=awards.id:G5453342221"
 ```
 
 ### `created_date`
@@ -210,7 +211,7 @@ works_api_url: "https://api.openalex.org/works?filter=awards.id:G1929887790"
 _String:_ The date this Award object was created in the OpenAlex dataset, expressed as an ISO 8601 date string.
 
 ```json
-created_date: "2025-12-02T00:36:59.534947"
+created_date: "2022-12-12T12:41:08"
 ```
 
 ### `updated_date`
@@ -218,5 +219,5 @@ created_date: "2025-12-02T00:36:59.534947"
 _String:_ The last time anything in this award object changed, expressed as an ISO 8601 date string.
 
 ```json
-updated_date: "2025-12-02T00:36:59.534947"
+updated_date: "2022-12-14T06:02:06"
 ```

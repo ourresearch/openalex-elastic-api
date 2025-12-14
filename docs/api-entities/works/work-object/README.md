@@ -56,12 +56,12 @@ This replaces the older `grants` property, which has been removed. The new `awar
 ```json
 awards: [
     {
-        id: "https://openalex.org/A4320000001",
-        display_name: "Research Grant for Climate Studies",
-        funder_award_id: "ABI 1661218",
-        funder_id: "https://openalex.org/F4320306076",
-        funder_display_name: "National Science Foundation",
-        doi: "https://doi.org/10.xxxx/award.123"
+        id: "https://openalex.org/G5453342221",
+        display_name: "Implementation of activities described in the Roadmap to Fusion during Horizon 2020 through a Joint programme of the members of the EUROfusion consortium",
+        funder_award_id: "633053",
+        funder_id: "https://openalex.org/F4320337670",
+        funder_display_name: "H2020 Euratom",
+        doi: "https://doi.org/10.3030/633053"
     }
 ]
 ```
