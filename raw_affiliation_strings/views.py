@@ -135,7 +135,8 @@ def raw_affiliation_strings():
             unmatched_institution_ids.append(str(parsed_id))
     
     # Build Elasticsearch query using elasticsearch-dsl
-    es = connections.get_connection('default')
+    # Use 'walden' connection where this index lives
+    es = connections.get_connection('walden')
     s = Search(index=settings.RAW_AFFILIATION_STRINGS_INDEX, using=es)
     
     # Build query parts
