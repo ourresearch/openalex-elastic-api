@@ -201,9 +201,9 @@ def raw_affiliation_strings():
     # Set size
     s = s.extra(size=PER_PAGE, track_total_hits=True)
     
-    # Add sorting for cursor pagination (sort by _id for consistency)
+    # Add sorting for cursor pagination (use _doc for efficiency since _id sorting is disabled)
     if not sample:
-        s = s.sort({"_id": "asc"})
+        s = s.sort("_doc")
     
     # Handle cursor-based pagination
     if cursor and cursor != "*":
