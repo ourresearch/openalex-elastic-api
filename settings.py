@@ -49,7 +49,7 @@ WORK_TYPES_INDEX = "work-types-v1"
 WORKS_INDEX_LEGACY = "works-v26-*,-*invalid-data"
 WORKS_INDEX_WALDEN = "works-v28"
 GROUPBY_VALUES_INDEX = "groupby_values"
-RAW_AFFILIATION_STRINGS_INDEX = "raw-affiliation-strings-v1"
+RAW_AFFILIATION_STRINGS_INDEX = "raw-affiliation-strings-v2"
 
 DO_NOT_GROUP_BY = [
     "biblio.first_page",

@@ -34,9 +34,57 @@ def parse_institution_id(id_str):
         return None
 
 
-def format_institution_id(id_int):
-    """Convert integer institution ID to fully-qualified format."""
-    return f"https://openalex.org/I{id_int}"
+def format_institution_id(id_str):
+    """Convert institution ID to fully-qualified format."""
+    # IDs already have I prefix in v2 index
+    if id_str.startswith("I"):
+        return f"https://openalex.org/{id_str}"
+    return f"https://openalex.org/I{id_str}"
+
+
+def parse_works_count(value):
+    """
+    Parse works_count filter value.
+    Formats:
+    - "42" -> exact match
+    - "42-" -> >= 42
+    - "-42" -> <= 42
+    - "42-100" -> between 42 and 100 inclusive
+    Returns dict with 'gte' and/or 'lte' keys, or 'exact' key.
+    """
+    if not value:
+        return None
+    value = str(value).strip()
+    
+    # Check for range format "X-Y"
+    if "-" in value:
+        # Handle "-42" (less than or equal)
+        if value.startswith("-"):
+            try:
+                return {"lte": int(value[1:])}
+            except ValueError:
+                return None
+        
+        # Handle "42-" (greater than or equal)
+        if value.endswith("-"):
+            try:
+                return {"gte": int(value[:-1])}
+            except ValueError:
+                return None
+        
+        # Handle "42-100" (between)
+        parts = value.split("-", 1)
+        if len(parts) == 2:
+            try:
+                return {"gte": int(parts[0]), "lte": int(parts[1])}
+            except ValueError:
+                return None
+    
+    # Exact match
+    try:
+        return {"exact": int(value)}
+    except ValueError:
+        return None
 
 
 def encode_cursor(cursor_value):
@@ -65,8 +113,9 @@ def raw_affiliation_strings():
     
     Query params:
     - q: text query to match against raw_affiliation_string (supports phrase search, OR, exclusion, wildcards)
-    - matched-institutions: comma-separated institution IDs to filter by (must be in institution_ids OR institution_ids_override)
-    - unmatched-institutions: comma-separated institution IDs to exclude (must NOT be in institution_ids NOR institution_ids_override)
+    - matched-institutions: comma-separated institution IDs to filter by (must be in institution_ids_final)
+    - unmatched-institutions: comma-separated institution IDs to exclude (must NOT be in institution_ids_final)
+    - works_count: filter by works count (e.g., 42, 42-, -42, 42-100)
     - page: page number (1-indexed, max 100)
     - cursor: cursor for cursor-based pagination (use * to start)
     - sample: random sample size (max 10,000)
@@ -78,6 +127,7 @@ def raw_affiliation_strings():
     q = request.args.get("q", "").strip()
     matched_institutions_param = request.args.get("matched-institutions", "").strip()
     unmatched_institutions_param = request.args.get("unmatched-institutions", "").strip()
+    works_count_param = request.args.get("works_count", "").strip()
     page_param = request.args.get("page", "1")
     cursor = request.args.get("cursor")
     sample_param = request.args.get("sample", "").strip()
@@ -117,6 +167,16 @@ def raw_affiliation_strings():
             f"Maximum page is {MAX_OFFSET_PAGE}. Use cursor pagination for deeper results."
         )
     
+    # Parse works_count filter
+    works_count_filter = None
+    if works_count_param:
+        works_count_filter = parse_works_count(works_count_param)
+        if works_count_filter is None:
+            raise APIQueryParamsError(
+                f"Invalid works_count format: {works_count_param}. "
+                "Use: 42 (exact), 42- (>=), -42 (<=), or 42-100 (range)."
+            )
+    
     # Parse institution IDs
     matched_institution_ids = []
     if matched_institutions_param:
@@ -124,7 +184,8 @@ def raw_affiliation_strings():
             parsed_id = parse_institution_id(id_str.strip())
             if parsed_id is None:
                 raise APIQueryParamsError(f"Invalid institution ID: {id_str}")
-            matched_institution_ids.append(str(parsed_id))
+            # Format as "I{id}" for matching against institution_ids_final
+            matched_institution_ids.append(f"I{parsed_id}")
     
     unmatched_institution_ids = []
     if unmatched_institutions_param:
@@ -132,7 +193,8 @@ def raw_affiliation_strings():
             parsed_id = parse_institution_id(id_str.strip())
             if parsed_id is None:
                 raise APIQueryParamsError(f"Invalid institution ID: {id_str}")
-            unmatched_institution_ids.append(str(parsed_id))
+            # Format as "I{id}" for matching against institution_ids_final
+            unmatched_institution_ids.append(f"I{parsed_id}")
     
     # Build Elasticsearch query using elasticsearch-dsl
     # Use 'walden' connection where this index lives
@@ -151,26 +213,28 @@ def raw_affiliation_strings():
             default_operator="AND"
         ))
     
-    # Filter for matched institutions (must be in either institution_ids OR institution_ids_override)
+    # Filter for matched institutions (must be in institution_ids_final)
     if matched_institution_ids:
-        must_queries.append(Q(
-            "bool",
-            should=[
-                Q("terms", institution_ids=matched_institution_ids),
-                Q("terms", institution_ids_override=matched_institution_ids)
-            ],
-            minimum_should_match=1
-        ))
+        must_queries.append(Q("terms", institution_ids_final=matched_institution_ids))
     
-    # Filter for unmatched institutions (must NOT be in institution_ids NOR institution_ids_override)
+    # Filter for unmatched institutions (must NOT be in institution_ids_final)
     if unmatched_institution_ids:
         must_queries.append(Q(
             "bool",
-            must_not=[
-                Q("terms", institution_ids=unmatched_institution_ids),
-                Q("terms", institution_ids_override=unmatched_institution_ids)
-            ]
+            must_not=[Q("terms", institution_ids_final=unmatched_institution_ids)]
         ))
+    
+    # Filter for works_count
+    if works_count_filter:
+        if "exact" in works_count_filter:
+            must_queries.append(Q("term", works_count=works_count_filter["exact"]))
+        else:
+            range_params = {}
+            if "gte" in works_count_filter:
+                range_params["gte"] = works_count_filter["gte"]
+            if "lte" in works_count_filter:
+                range_params["lte"] = works_count_filter["lte"]
+            must_queries.append(Q("range", works_count=range_params))
     
     # Combine query parts
     if must_queries:
@@ -238,20 +302,22 @@ def raw_affiliation_strings():
         source = hit.to_dict()
         
         # Convert institution IDs to fully-qualified format
-        institution_ids = [
-            format_institution_id(int(id_str)) 
-            for id_str in source.get("institution_ids", [])
-            if id_str
+        # IDs in v2 already have "I" prefix, filter out "-1" (no match)
+        institution_ids_final = [
+            format_institution_id(id_str)
+            for id_str in source.get("institution_ids_final", [])
+            if id_str and id_str != "-1"
         ]
         institution_ids_override = [
-            format_institution_id(int(id_str)) 
+            format_institution_id(id_str)
             for id_str in source.get("institution_ids_override", [])
-            if id_str
+            if id_str and id_str != "-1"
         ]
         
         results.append({
             "raw_affiliation_string": source.get("raw_affiliation_string", ""),
-            "institution_ids": institution_ids,
+            "works_count": source.get("works_count", 0),
+            "institution_ids_final": institution_ids_final,
             "institution_ids_override": institution_ids_override,
             "countries": source.get("countries", [])
         })
