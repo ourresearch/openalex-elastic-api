@@ -265,9 +265,9 @@ def raw_affiliation_strings():
     # Set size
     s = s.extra(size=PER_PAGE, track_total_hits=True)
     
-    # Add sorting for cursor pagination (use _doc for efficiency since _id sorting is disabled)
+    # Sort by works_count descending (highest first), with _doc as tiebreaker for cursor pagination
     if not sample:
-        s = s.sort("_doc")
+        s = s.sort("-works_count", "_doc")
     
     # Handle cursor-based pagination
     if cursor and cursor != "*":
