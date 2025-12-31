@@ -5,6 +5,7 @@ Provides bidirectional translation between URL, OQL, and OQO query formats.
 """
 
 import json
+import time
 import concurrent.futures
 
 import requests
@@ -205,14 +206,14 @@ def get_natural_language_query(natural_language_query: str):
     URL path param:
     - natural_language_query: Natural language description of the query
     
-    Response: Same format as /query endpoint
+    Response: Same format as /query endpoint, plus meta.timing information
     """
     try:
-        oqo_dict = convert_natural_language_to_oqo(natural_language_query)
+        oqo_dict, timing_meta = convert_natural_language_to_oqo(natural_language_query)
         
         # Check for error response from model
         if "error" in oqo_dict:
-            return jsonify({"msg": oqo_dict["error"]}), 400
+            return jsonify({"msg": oqo_dict["error"], "meta": {"timing": timing_meta}}), 400
         
         # Parse the OQO
         entity_type = oqo_dict.get("get_rows", "works")
@@ -241,6 +242,7 @@ def get_natural_language_query(natural_language_query: str):
             }), 400
         
         response = render_all_formats(oqo, validation_result)
+        response["meta"] = {"timing": timing_meta}
         return jsonify(response), 200
         
     except Exception as e:
@@ -256,14 +258,25 @@ def get_natural_language_query(natural_language_query: str):
         }), 500
 
 
-def convert_natural_language_to_oqo(natural_language_query: str) -> dict:
+def convert_natural_language_to_oqo(natural_language_query: str) -> tuple[dict, dict]:
     """
     Use OpenAI to convert natural language to OQO format.
     Uses stored prompt with variables and handles tool calls for entity resolution.
+    
+    Returns:
+        tuple: (oqo_dict, timing_meta)
     """
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
     
+    # Timing tracking
+    timing = {
+        "openai_calls": [],
+        "tool_calls": [],
+    }
+    total_start = time.time()
+    
     # Initial call with stored prompt and variables
+    openai_start = time.time()
     response = client.responses.create(
         model=OPENAI_MODEL,
         prompt={
@@ -277,6 +290,12 @@ def convert_natural_language_to_oqo(natural_language_query: str) -> dict:
         reasoning=REASONING_CONFIG,
         store=True
     )
+    openai_elapsed = time.time() - openai_start
+    timing["openai_calls"].append({
+        "call_number": 1,
+        "duration_ms": round(openai_elapsed * 1000, 1),
+        "had_tool_calls": any(item.type == "function_call" for item in response.output)
+    })
     
     # Process tool calls in a loop until we get a final response
     max_iterations = 5
@@ -284,7 +303,7 @@ def convert_natural_language_to_oqo(natural_language_query: str) -> dict:
     while response.output and any(item.type == "function_call" for item in response.output):
         iteration += 1
         if iteration > max_iterations:
-            return {"error": "Too many tool call iterations"}
+            return {"error": "Too many tool call iterations"}, timing
         
         tool_calls = [item for item in response.output if item.type == "function_call"]
         
@@ -304,13 +323,30 @@ def convert_natural_language_to_oqo(natural_language_query: str) -> dict:
                 follow_up_input.append({
                     "type": "function_call",
                     "id": item.id,
-                    "call_id": item.call_id,
+                    "call_id": tool_call.call_id,
                     "name": item.name,
                     "arguments": item.arguments
                 })
         
         # Execute tool calls in parallel and add outputs
+        tool_start = time.time()
         tool_results = execute_tool_calls_parallel(tool_calls)
+        tool_elapsed = time.time() - tool_start
+        
+        tool_call_info = {
+            "iteration": iteration,
+            "num_calls": len(tool_calls),
+            "duration_ms": round(tool_elapsed * 1000, 1),
+            "calls": [
+                {
+                    "entity_type": json.loads(tc.arguments).get("entity_type"),
+                    "query": json.loads(tc.arguments).get("query")
+                }
+                for tc in tool_calls
+            ]
+        }
+        timing["tool_calls"].append(tool_call_info)
+        
         for tool_call, result in zip(tool_calls, tool_results):
             follow_up_input.append({
                 "type": "function_call_output",
@@ -319,6 +355,7 @@ def convert_natural_language_to_oqo(natural_language_query: str) -> dict:
             })
         
         # Make follow-up call with full conversation
+        openai_start = time.time()
         response = client.responses.create(
             model=OPENAI_MODEL,
             prompt={
@@ -332,15 +369,28 @@ def convert_natural_language_to_oqo(natural_language_query: str) -> dict:
             reasoning=REASONING_CONFIG,
             store=True
         )
+        openai_elapsed = time.time() - openai_start
+        timing["openai_calls"].append({
+            "call_number": len(timing["openai_calls"]) + 1,
+            "duration_ms": round(openai_elapsed * 1000, 1),
+            "had_tool_calls": any(item.type == "function_call" for item in response.output)
+        })
+    
+    # Calculate totals
+    timing["total_openai_ms"] = round(sum(c["duration_ms"] for c in timing["openai_calls"]), 1)
+    timing["total_tool_calls_ms"] = round(sum(c["duration_ms"] for c in timing["tool_calls"]), 1)
+    timing["total_elapsed_ms"] = round((time.time() - total_start) * 1000, 1)
+    timing["num_openai_calls"] = len(timing["openai_calls"])
+    timing["num_tool_call_rounds"] = len(timing["tool_calls"])
     
     # Extract the final text response containing OQO JSON
     for item in response.output:
         if item.type == "message":
             for content in item.content:
                 if content.type == "output_text":
-                    return json.loads(content.text)
+                    return json.loads(content.text), timing
     
-    return {"error": "No valid response from model"}
+    return {"error": "No valid response from model"}, timing
 
 
 def execute_tool_calls_parallel(tool_calls: list) -> list:
@@ -366,10 +416,10 @@ def normalize_openalex_id(full_id: str) -> str:
     return short_id
 
 
-def execute_resolve_entity(tool_call) -> list:
+def execute_resolve_entity(tool_call) -> dict:
     """
     Execute a resolve_entity tool call by hitting the OpenAlex API.
-    Returns the results array from the API response with normalized IDs.
+    Returns the single best matching ID: {"id": "i123456"}
     """
     args = json.loads(tool_call.arguments)
     entity_type = args.get("entity_type", "works")
@@ -377,16 +427,10 @@ def execute_resolve_entity(tool_call) -> list:
     
     url = f"https://api.openalex.org/{entity_type}"
     
-    # Select fields vary by entity type - works don't have works_count
-    if entity_type == "works":
-        select_fields = "id,display_name,relevance_score"
-    else:
-        select_fields = "id,display_name,relevance_score,works_count"
-    
     params = {
         "search": query,
-        "select": select_fields,
-        "per_page": 5
+        "select": "id",
+        "per_page": 1
     }
     
     try:
@@ -395,11 +439,9 @@ def execute_resolve_entity(tool_call) -> list:
         data = resp.json()
         results = data.get("results", [])
         
-        # Normalize IDs to short format (e.g., a5023888391 instead of https://openalex.org/A5023888391)
-        for result in results:
-            if "id" in result:
-                result["id"] = normalize_openalex_id(result["id"])
-        
-        return results
+        if results:
+            return {"id": normalize_openalex_id(results[0]["id"])}
+        else:
+            return {"id": None}
     except Exception as e:
-        return [{"error": str(e)}]
+        return {"error": str(e)}
