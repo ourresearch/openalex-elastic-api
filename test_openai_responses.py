@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Test script to verify OpenAI Responses API with tool calling.
-Run: python test_openai_responses.py
+Test script to verify OpenAI Responses API with stored prompts.
+Uses the correct API pattern from OpenAI playground.
+Run: python test_openai_responses_v2.py
 """
 
 import os
@@ -13,25 +14,22 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 OPENAI_MODEL = "gpt-5"
 OPENAI_PROMPT_ID = "pmpt_69549fae727481958ec7aaa4ee976b5a06d01a66a3e9b225"
 
-RESOLVE_ENTITY_TOOL = {
-    "type": "function",
-    "name": "resolve_entity",
-    "description": "Look up OpenAlex entity IDs by searching for entities matching a query",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "entity_type": {
-                "type": "string",
-                "description": "The type of entity to search for (e.g., works, authors, institutions, sources, topics, funders, publishers)"
-            },
-            "query": {
-                "type": "string",
-                "description": "The search query to find matching entities"
-            }
-        },
-        "required": ["entity_type", "query"]
-    }
+# Shared config for API calls
+TEXT_CONFIG = {
+    "format": {
+        "type": "json_schema",
+        "name": "OpenAlex_Query_Object",
+        "strict": False,
+        "schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    "verbosity": "low"
 }
+
+REASONING_CONFIG = {"summary": "auto"}
 
 
 def execute_resolve_entity(entity_type: str, query: str) -> list:
@@ -75,18 +73,21 @@ def test_natural_language_query(query: str):
     
     client = OpenAI(api_key=OPENAI_API_KEY)
     
-    messages = [
-        {"role": "user", "content": query}
-    ]
-    
-    # Initial call
+    # Initial call with stored prompt and variables
     print("\n1. Making initial OpenAI Responses API call...")
     try:
         response = client.responses.create(
             model=OPENAI_MODEL,
-            instructions=OPENAI_PROMPT_ID,
-            input=messages,
-            tools=[RESOLVE_ENTITY_TOOL]
+            prompt={
+                "id": OPENAI_PROMPT_ID,
+                "variables": {
+                    "query": query
+                }
+            },
+            input=[],
+            text=TEXT_CONFIG,
+            reasoning=REASONING_CONFIG,
+            store=True
         )
         print(f"   Success! Got {len(response.output)} output items")
     except Exception as e:
@@ -102,7 +103,7 @@ def test_natural_language_query(query: str):
         if hasattr(item, 'arguments'):
             print(f"       arguments={item.arguments}")
     
-    # Process tool calls
+    # Process tool calls in a loop
     iteration = 0
     max_iterations = 5
     
@@ -115,6 +116,28 @@ def test_natural_language_query(query: str):
         tool_calls = [item for item in response.output if item.type == "function_call"]
         print(f"\n3.{iteration} Processing {len(tool_calls)} tool call(s)...")
         
+        # Build input for follow-up: previous output items + tool call outputs
+        follow_up_input = []
+        
+        # Add all items from previous response output
+        for item in response.output:
+            if item.type == "reasoning":
+                follow_up_input.append({
+                    "type": "reasoning",
+                    "id": item.id,
+                    "summary": [{"type": "summary_text", "text": s.text} for s in (item.summary or [])],
+                    "encrypted_content": getattr(item, 'encrypted_content', '')
+                })
+            elif item.type == "function_call":
+                follow_up_input.append({
+                    "type": "function_call",
+                    "id": item.id,
+                    "call_id": item.call_id,
+                    "name": item.name,
+                    "arguments": item.arguments
+                })
+        
+        # Execute tool calls and add outputs
         for tool_call in tool_calls:
             print(f"   Tool call: {tool_call.name}")
             print(f"   call_id: {tool_call.call_id}")
@@ -124,27 +147,29 @@ def test_natural_language_query(query: str):
             # Execute the tool call
             result = execute_resolve_entity(args.get("entity_type"), args.get("query"))
             
-            # Add to messages
-            messages.append({
-                "type": "function_call",
-                "call_id": tool_call.call_id,
-                "name": tool_call.name,
-                "arguments": tool_call.arguments
-            })
-            messages.append({
+            # Add function_call_output to input
+            follow_up_input.append({
                 "type": "function_call_output",
                 "call_id": tool_call.call_id,
                 "output": json.dumps(result)
             })
         
-        # Continue conversation
+        # Make follow-up call with full conversation
         print(f"\n4.{iteration} Making follow-up OpenAI call...")
         try:
             response = client.responses.create(
                 model=OPENAI_MODEL,
-                instructions=OPENAI_PROMPT_ID,
-                input=messages,
-                tools=[RESOLVE_ENTITY_TOOL]
+                prompt={
+                    "id": OPENAI_PROMPT_ID,
+                    "version": OPENAI_PROMPT_VERSION,
+                    "variables": {
+                        "query": query
+                    }
+                },
+                input=follow_up_input,
+                text=TEXT_CONFIG,
+                reasoning=REASONING_CONFIG,
+                store=True
             )
             print(f"   Success! Got {len(response.output)} output items")
             for i, item in enumerate(response.output):
@@ -161,10 +186,10 @@ def test_natural_language_query(query: str):
             for content in item.content:
                 print(f"   Content type: {content.type}")
                 if content.type == "output_text":
-                    print(f"\n   OUTPUT TEXT:\n   {content.text[:500]}...")
+                    print(f"\n   OUTPUT TEXT:\n{content.text}")
                     try:
                         result = json.loads(content.text)
-                        print(f"\n   PARSED JSON (keys): {list(result.keys())}")
+                        print(f"\n   PARSED JSON SUCCESS!")
                         return result
                     except json.JSONDecodeError as e:
                         print(f"   JSON parse error: {e}")
@@ -176,7 +201,6 @@ def test_natural_language_query(query: str):
 
 
 if __name__ == "__main__":
-    # Test with a simple query
     result = test_natural_language_query("papers from harvard in 2025 about climate change")
     
     if result:

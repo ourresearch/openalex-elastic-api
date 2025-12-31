@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://openalex.org/schemas/oqo/v1.0",
-  "title": "OpenAlex Query Object (OQO)",
+  "name": "OpenAlex_Query_Object",
   "description": "The canonical JSON representation for OpenAlex queries. OQO serves as the intermediate format for bidirectional translation between URL parameters, OQL (human-readable query language), and programmatic JSON access.",
   "type": "object",
   "required": ["get_rows"],
