@@ -181,23 +181,21 @@ OPENAI_PROMPT_ID = "pmpt_69549fae727481958ec7aaa4ee976b5a06d01a66a3e9b225"
 
 RESOLVE_ENTITY_TOOL = {
     "type": "function",
-    "function": {
-        "name": "resolve_entity",
-        "description": "Look up OpenAlex entity IDs by searching for entities matching a query",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "entity_type": {
-                    "type": "string",
-                    "description": "The type of entity to search for (e.g., works, authors, institutions, sources, topics, funders, publishers)"
-                },
-                "query": {
-                    "type": "string",
-                    "description": "The search query to find matching entities"
-                }
+    "name": "resolve_entity",
+    "description": "Look up OpenAlex entity IDs by searching for entities matching a query",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "entity_type": {
+                "type": "string",
+                "description": "The type of entity to search for (e.g., works, authors, institutions, sources, topics, funders, publishers)"
             },
-            "required": ["entity_type", "query"]
-        }
+            "query": {
+                "type": "string",
+                "description": "The search query to find matching entities"
+            }
+        },
+        "required": ["entity_type", "query"]
     }
 }
 
