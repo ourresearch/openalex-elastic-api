@@ -291,7 +291,6 @@ def convert_natural_language_to_oqo(natural_language_query: str) -> dict:
         for tool_call, result in zip(tool_calls, tool_results):
             messages.append({
                 "type": "function_call",
-                "id": tool_call.id,
                 "call_id": tool_call.call_id,
                 "name": tool_call.name,
                 "arguments": tool_call.arguments
