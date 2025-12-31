@@ -273,7 +273,7 @@ def convert_natural_language_to_oqo(natural_language_query: str) -> dict:
     # Initial call to OpenAI with function calling
     response = client.responses.create(
         model=OPENAI_MODEL,
-        instructions={"id": OPENAI_PROMPT_ID},
+        instructions=OPENAI_PROMPT_ID,
         input=messages,
         tools=[RESOLVE_ENTITY_TOOL]
     )
@@ -302,7 +302,7 @@ def convert_natural_language_to_oqo(natural_language_query: str) -> dict:
         # Continue the conversation
         response = client.responses.create(
             model=OPENAI_MODEL,
-            instructions={"id": OPENAI_PROMPT_ID},
+            instructions=OPENAI_PROMPT_ID,
             input=messages,
             tools=[RESOLVE_ENTITY_TOOL]
         )
