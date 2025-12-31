@@ -353,10 +353,23 @@ def execute_tool_calls_parallel(tool_calls: list) -> list:
         return [future.result() for future in futures]
 
 
+def normalize_openalex_id(full_id: str) -> str:
+    """
+    Convert full OpenAlex ID URL to short format.
+    
+    Example: https://openalex.org/A5023888391 -> a5023888391
+    """
+    if not full_id:
+        return full_id
+    # Extract the ID part after the last slash and lowercase it
+    short_id = full_id.split("/")[-1].lower()
+    return short_id
+
+
 def execute_resolve_entity(tool_call) -> list:
     """
     Execute a resolve_entity tool call by hitting the OpenAlex API.
-    Returns the results array from the API response.
+    Returns the results array from the API response with normalized IDs.
     """
     args = json.loads(tool_call.arguments)
     entity_type = args.get("entity_type", "works")
@@ -380,6 +393,13 @@ def execute_resolve_entity(tool_call) -> list:
         resp = requests.get(url, params=params, timeout=10)
         resp.raise_for_status()
         data = resp.json()
-        return data.get("results", [])
+        results = data.get("results", [])
+        
+        # Normalize IDs to short format (e.g., a5023888391 instead of https://openalex.org/A5023888391)
+        for result in results:
+            if "id" in result:
+                result["id"] = normalize_openalex_id(result["id"])
+        
+        return results
     except Exception as e:
         return [{"error": str(e)}]
