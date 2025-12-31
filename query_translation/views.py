@@ -323,7 +323,6 @@ def convert_natural_language_to_oqo(natural_language_query: str) -> dict:
             model=OPENAI_MODEL,
             prompt={
                 "id": OPENAI_PROMPT_ID,
-                "version": OPENAI_PROMPT_VERSION,
                 "variables": {
                     "query": natural_language_query
                 }
