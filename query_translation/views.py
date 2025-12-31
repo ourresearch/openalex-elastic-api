@@ -323,7 +323,7 @@ def convert_natural_language_to_oqo(natural_language_query: str) -> tuple[dict, 
                 follow_up_input.append({
                     "type": "function_call",
                     "id": item.id,
-                    "call_id": tool_call.call_id,
+                    "call_id": item.call_id,
                     "name": item.name,
                     "arguments": item.arguments
                 })
