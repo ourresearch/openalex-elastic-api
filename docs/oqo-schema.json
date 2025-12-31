@@ -1,0 +1,391 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openalex.org/schemas/oqo/v1.0",
+  "title": "OpenAlex Query Object (OQO)",
+  "description": "The canonical JSON representation for OpenAlex queries. OQO serves as the intermediate format for bidirectional translation between URL parameters, OQL (human-readable query language), and programmatic JSON access.",
+  "type": "object",
+  "required": ["get_rows"],
+  "additionalProperties": false,
+  "properties": {
+    "get_rows": {
+      "$ref": "#/$defs/EntityType",
+      "description": "The entity type to retrieve. This determines what kind of records are returned (works, authors, institutions, etc.)."
+    },
+    "filter_rows": {
+      "type": "array",
+      "description": "Filters applied to the rows being retrieved. Top-level array items are implicitly joined with AND.",
+      "items": {
+        "$ref": "#/$defs/Filter"
+      },
+      "default": []
+    },
+    "sort_by_column": {
+      "type": ["string", "null"],
+      "description": "The column/field to sort results by. Must be a valid sortable field for the entity type.",
+      "examples": ["cited_by_count", "publication_year", "fwci", "display_name", "works_count"]
+    },
+    "sort_by_order": {
+      "type": ["string", "null"],
+      "enum": ["asc", "desc", null],
+      "description": "Sort direction. 'asc' for ascending, 'desc' for descending.",
+      "default": null
+    },
+    "sample": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "maximum": 10000,
+      "description": "Return a random sample of N results instead of all matching results. Useful for exploratory analysis.",
+      "default": null
+    }
+  },
+
+  "$defs": {
+    "EntityType": {
+      "type": "string",
+      "description": "Valid OpenAlex entity types. Native entities have OpenAlex-minted IDs (e.g., W123, A456). Non-native entities use external identifiers (e.g., country codes, type slugs).",
+      "enum": [
+        "works",
+        "authors",
+        "institutions",
+        "sources",
+        "publishers",
+        "funders",
+        "topics",
+        "keywords",
+        "concepts",
+        "awards",
+        "countries",
+        "continents",
+        "domains",
+        "fields",
+        "subfields",
+        "sdgs",
+        "languages",
+        "licenses",
+        "types",
+        "source-types",
+        "institution-types",
+        "locations",
+        "oa-statuses"
+      ],
+      "x-native-entities": {
+        "description": "Entities with OpenAlex-minted IDs (prefix + numeric ID)",
+        "entities": {
+          "works": { "prefix": "W", "example": "works/W2741809807" },
+          "authors": { "prefix": "A", "example": "authors/A5023888391" },
+          "institutions": { "prefix": "I", "example": "institutions/I136199984" },
+          "sources": { "prefix": "S", "example": "sources/S137773608" },
+          "publishers": { "prefix": "P", "example": "publishers/P4310319908" },
+          "funders": { "prefix": "F", "example": "funders/F4320332161" },
+          "topics": { "prefix": "T", "example": "topics/T10012" },
+          "concepts": { "prefix": "C", "example": "concepts/C86803240" },
+          "awards": { "prefix": "G", "example": "awards/G5453342221" }
+        }
+      },
+      "x-non-native-entities": {
+        "description": "Entities with external or well-known identifiers",
+        "entities": [
+          "countries",
+          "continents", 
+          "domains",
+          "fields",
+          "subfields",
+          "sdgs",
+          "languages",
+          "licenses",
+          "types",
+          "source-types",
+          "institution-types",
+          "keywords",
+          "locations",
+          "oa-statuses"
+        ],
+        "examples": {
+          "countries": "countries/de",
+          "sdgs": "sdgs/13",
+          "types": "types/article",
+          "languages": "languages/en",
+          "oa-statuses": "oa-statuses/gold"
+        }
+      }
+    },
+
+    "Filter": {
+      "description": "A filter can be either a leaf filter (single condition) or a branch filter (boolean combination of filters).",
+      "oneOf": [
+        { "$ref": "#/$defs/LeafFilter" },
+        { "$ref": "#/$defs/BranchFilter" }
+      ]
+    },
+
+    "LeafFilter": {
+      "type": "object",
+      "description": "A single filter condition. Specifies a column, value, and comparison operator.",
+      "required": ["column_id", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "column_id": {
+          "type": "string",
+          "description": "The filter field/column identifier. Must be a valid filterable field for the entity type. Uses dot notation for nested fields.",
+          "examples": [
+            "publication_year",
+            "type",
+            "open_access.is_oa",
+            "authorships.institutions.lineage",
+            "authorships.author.id",
+            "primary_location.source.id",
+            "cited_by_count",
+            "fwci",
+            "title_and_abstract.search",
+            "sustainable_development_goals.id"
+          ]
+        },
+        "value": {
+          "description": "The value to filter by. For entity IDs, use normalized format: entityName/id (e.g., 'institutions/I136199984', 'countries/de', 'sdgs/13'). For other values: integer for counts/years, boolean for flags, null for unknown/missing.",
+          "oneOf": [
+            { "type": "string" },
+            { "type": "integer" },
+            { "type": "number" },
+            { "type": "boolean" },
+            { "type": "null" }
+          ],
+          "examples": ["types/article", "institutions/I136199984", "countries/de", "sdgs/13", 2024, true, null]
+        },
+        "operator": {
+          "$ref": "#/$defs/Operator",
+          "description": "The comparison operator. Defaults to 'is' (exact match) if not specified.",
+          "default": "is"
+        }
+      }
+    },
+
+    "BranchFilter": {
+      "type": "object",
+      "description": "A boolean combination of filters. Allows AND/OR grouping of multiple conditions.",
+      "required": ["join", "filters"],
+      "additionalProperties": false,
+      "properties": {
+        "join": {
+          "type": "string",
+          "enum": ["and", "or"],
+          "description": "'and' requires all child filters to match. 'or' requires at least one child filter to match."
+        },
+        "filters": {
+          "type": "array",
+          "description": "Array of child filters (can be leaf or branch filters, enabling nested boolean logic).",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Filter"
+          }
+        }
+      }
+    },
+
+    "Operator": {
+      "type": "string",
+      "description": "Comparison operators for filter conditions.",
+      "enum": [
+        "is",
+        "is not",
+        ">",
+        ">=",
+        "<",
+        "<=",
+        "contains",
+        "does not contain"
+      ],
+      "x-operator-categories": {
+        "equality": {
+          "operators": ["is", "is not"],
+          "description": "Exact match or negation. Default operator.",
+          "url_syntax": {
+            "is": "field:value",
+            "is not": "field:!value"
+          }
+        },
+        "comparison": {
+          "operators": [">", ">=", "<", "<="],
+          "description": "Numeric/date comparisons for range filters.",
+          "url_syntax": {
+            ">=": "field:value-",
+            "<=": "field:-value",
+            "range": "field:min-max"
+          }
+        },
+        "text": {
+          "operators": ["contains", "does not contain"],
+          "description": "Text search operators for search fields."
+        }
+      },
+      "default": "is"
+    }
+  },
+
+  "examples": [
+    {
+      "description": "Simple type filter",
+      "value": {
+        "get_rows": "works",
+        "filter_rows": [
+          { "column_id": "type", "value": "types/article" }
+        ]
+      }
+    },
+    {
+      "description": "Multiple filters with AND (implicit at top level)",
+      "value": {
+        "get_rows": "works",
+        "filter_rows": [
+          { "column_id": "type", "value": "types/article" },
+          { "column_id": "publication_year", "value": 2024, "operator": ">=" },
+          { "column_id": "open_access.is_oa", "value": true }
+        ]
+      }
+    },
+    {
+      "description": "OR within same field (type is article OR book)",
+      "value": {
+        "get_rows": "works",
+        "filter_rows": [
+          {
+            "join": "or",
+            "filters": [
+              { "column_id": "type", "value": "types/article" },
+              { "column_id": "type", "value": "types/book" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "description": "AND within same field (co-authorship: institution A AND institution B)",
+      "value": {
+        "get_rows": "works",
+        "filter_rows": [
+          { "column_id": "authorships.institutions.lineage", "value": "institutions/I33213144" },
+          { "column_id": "authorships.institutions.lineage", "value": "institutions/I103163165" }
+        ]
+      }
+    },
+    {
+      "description": "Nested boolean: Harvard AND (Stanford OR MIT)",
+      "value": {
+        "get_rows": "works",
+        "filter_rows": [
+          { "column_id": "authorships.institutions.lineage", "value": "institutions/I136199984" },
+          {
+            "join": "or",
+            "filters": [
+              { "column_id": "authorships.institutions.lineage", "value": "institutions/I97018004" },
+              { "column_id": "authorships.institutions.lineage", "value": "institutions/I63966007" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "description": "Negation (type is NOT article)",
+      "value": {
+        "get_rows": "works",
+        "filter_rows": [
+          { "column_id": "type", "value": "types/article", "operator": "is not" }
+        ]
+      }
+    },
+    {
+      "description": "Range filter with sort",
+      "value": {
+        "get_rows": "works",
+        "filter_rows": [
+          { "column_id": "publication_year", "value": 2020, "operator": ">=" },
+          { "column_id": "publication_year", "value": 2024, "operator": "<=" }
+        ],
+        "sort_by_column": "cited_by_count",
+        "sort_by_order": "desc"
+      }
+    },
+    {
+      "description": "Search filter",
+      "value": {
+        "get_rows": "works",
+        "filter_rows": [
+          { "column_id": "title_and_abstract.search", "value": "machine learning", "operator": "contains" }
+        ]
+      }
+    },
+    {
+      "description": "Null/unknown value filter",
+      "value": {
+        "get_rows": "works",
+        "filter_rows": [
+          { "column_id": "language", "value": null }
+        ]
+      }
+    },
+    {
+      "description": "Sample random results",
+      "value": {
+        "get_rows": "works",
+        "filter_rows": [
+          { "column_id": "publication_year", "value": 2024, "operator": ">=" }
+        ],
+        "sample": 100
+      }
+    },
+    {
+      "description": "Authors query with institution filter",
+      "value": {
+        "get_rows": "authors",
+        "filter_rows": [
+          { "column_id": "last_known_institutions.id", "value": "institutions/I136199984" }
+        ]
+      }
+    },
+    {
+      "description": "Institutions query with country filter",
+      "value": {
+        "get_rows": "institutions",
+        "filter_rows": [
+          { "column_id": "country_code", "value": "countries/us" }
+        ]
+      }
+    },
+    {
+      "description": "Complex OA compliance query",
+      "value": {
+        "get_rows": "works",
+        "filter_rows": [
+          { "column_id": "authorships.institutions.lineage", "value": "institutions/I241749" },
+          { "column_id": "open_access.oa_status", "value": "oa-statuses/gold" },
+          { "column_id": "type", "value": "types/article" }
+        ],
+        "sort_by_column": "fwci",
+        "sort_by_order": "desc"
+      }
+    },
+    {
+      "description": "SDG research query",
+      "value": {
+        "get_rows": "works",
+        "filter_rows": [
+          {
+            "join": "or",
+            "filters": [
+              { "column_id": "sustainable_development_goals.id", "value": "sdgs/13" },
+              { "column_id": "sustainable_development_goals.id", "value": "sdgs/7" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "description": "Awards/funders query",
+      "value": {
+        "get_rows": "works",
+        "filter_rows": [
+          { "column_id": "awards.funder.id", "value": "funders/F4320332161" }
+        ]
+      }
+    }
+  ]
+}
