@@ -4,8 +4,14 @@ Flask Blueprint for /query endpoint.
 Provides bidirectional translation between URL, OQL, and OQO query formats.
 """
 
-from flask import Blueprint, jsonify, request
+import json
+import concurrent.futures
 
+import requests
+from flask import Blueprint, jsonify, request
+from openai import OpenAI
+
+import settings
 from query_translation.oqo import OQO, filter_from_dict
 from query_translation.url_parser import parse_url_to_oqo
 from query_translation.url_renderer import render_oqo_to_url, URLRenderError, can_render_to_url
@@ -170,3 +176,180 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult):
     }
 
 
+OPENAI_MODEL = "gpt-5"
+OPENAI_PROMPT_ID = "pmpt_69549fae727481958ec7aaa4ee976b5a06d01a66a3e9b225"
+
+RESOLVE_ENTITY_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "resolve_entity",
+        "description": "Look up OpenAlex entity IDs by searching for entities matching a query",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "entity_type": {
+                    "type": "string",
+                    "description": "The type of entity to search for (e.g., works, authors, institutions, sources, topics, funders, publishers)"
+                },
+                "query": {
+                    "type": "string",
+                    "description": "The search query to find matching entities"
+                }
+            },
+            "required": ["entity_type", "query"]
+        }
+    }
+}
+
+
+@blueprint.route("/query/natural-language/<path:natural_language_query>", methods=["GET"])
+def get_natural_language_query(natural_language_query: str):
+    """
+    Convert a natural language query to OQO using OpenAI, then return all formats.
+    
+    URL path param:
+    - natural_language_query: Natural language description of the query
+    
+    Response: Same format as /query endpoint
+    """
+    try:
+        oqo_dict = convert_natural_language_to_oqo(natural_language_query)
+        
+        # Check for error response from model
+        if "error" in oqo_dict:
+            return jsonify({"msg": oqo_dict["error"]}), 400
+        
+        # Parse the OQO
+        entity_type = oqo_dict.get("get_rows", "works")
+        oqo, parse_error = parse_oqo_input(entity_type, oqo_dict)
+        
+        if parse_error:
+            return jsonify({
+                "url": None,
+                "oql": None,
+                "oqo": None,
+                "validation": {
+                    "valid": False,
+                    "errors": [{"type": "parse_error", "message": parse_error}],
+                    "warnings": []
+                }
+            }), 400
+        
+        validation_result = validate_oqo(oqo)
+        
+        if not validation_result.valid:
+            return jsonify({
+                "url": None,
+                "oql": None,
+                "oqo": oqo.to_dict(),
+                "validation": validation_result.to_dict()
+            }), 400
+        
+        response = render_all_formats(oqo, validation_result)
+        return jsonify(response), 200
+        
+    except Exception as e:
+        return jsonify({
+            "url": None,
+            "oql": None,
+            "oqo": None,
+            "validation": {
+                "valid": False,
+                "errors": [{"type": "internal_error", "message": str(e)}],
+                "warnings": []
+            }
+        }), 500
+
+
+def convert_natural_language_to_oqo(natural_language_query: str) -> dict:
+    """
+    Use OpenAI to convert natural language to OQO format.
+    Handles function calling for entity resolution with parallel execution.
+    """
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    
+    messages = [
+        {"role": "user", "content": natural_language_query}
+    ]
+    
+    # Initial call to OpenAI with function calling
+    response = client.responses.create(
+        model=OPENAI_MODEL,
+        instructions={"id": OPENAI_PROMPT_ID},
+        input=messages,
+        tools=[RESOLVE_ENTITY_TOOL]
+    )
+    
+    # Process tool calls in a loop until we get a final response
+    while response.output and any(item.type == "function_call" for item in response.output):
+        tool_calls = [item for item in response.output if item.type == "function_call"]
+        
+        # Execute all tool calls in parallel
+        tool_results = execute_tool_calls_parallel(tool_calls)
+        
+        # Build the conversation with tool results
+        for tool_call, result in zip(tool_calls, tool_results):
+            messages.append({
+                "type": "function_call",
+                "id": tool_call.id,
+                "call_id": tool_call.call_id,
+                "name": tool_call.name,
+                "arguments": tool_call.arguments
+            })
+            messages.append({
+                "type": "function_call_output",
+                "call_id": tool_call.call_id,
+                "output": json.dumps(result)
+            })
+        
+        # Continue the conversation
+        response = client.responses.create(
+            model=OPENAI_MODEL,
+            instructions={"id": OPENAI_PROMPT_ID},
+            input=messages,
+            tools=[RESOLVE_ENTITY_TOOL]
+        )
+    
+    # Extract the final text response containing OQO JSON
+    for item in response.output:
+        if item.type == "message":
+            for content in item.content:
+                if content.type == "output_text":
+                    return json.loads(content.text)
+    
+    return {"error": "No valid response from model"}
+
+
+def execute_tool_calls_parallel(tool_calls: list) -> list:
+    """Execute multiple tool calls in parallel and return results in order."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [
+            executor.submit(execute_resolve_entity, tool_call)
+            for tool_call in tool_calls
+        ]
+        return [future.result() for future in futures]
+
+
+def execute_resolve_entity(tool_call) -> list:
+    """
+    Execute a resolve_entity tool call by hitting the OpenAlex API.
+    Returns the results array from the API response.
+    """
+    args = json.loads(tool_call.arguments)
+    entity_type = args.get("entity_type", "works")
+    query = args.get("query", "")
+    
+    url = f"https://api.openalex.org/{entity_type}"
+    params = {
+        "search": query,
+        "select": "id,display_name,relevance_score,works_count",
+        "per_page": 5
+    }
+    
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("results", [])
+    except Exception as e:
+        return [{"error": str(e)}]
