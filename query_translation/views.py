@@ -179,6 +179,23 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult):
 OPENAI_MODEL = "gpt-5"
 OPENAI_PROMPT_ID = "pmpt_69549fae727481958ec7aaa4ee976b5a06d01a66a3e9b225"
 
+# Fallback instructions if stored prompt doesn't return JSON
+OPENAI_INSTRUCTIONS_SUFFIX = """
+
+CRITICAL: You MUST respond with ONLY a valid JSON object in OQO (OpenAlex Query Object) format. No explanatory text, no markdown, no links - ONLY the JSON object.
+
+Example OQO format:
+{
+  "get_rows": "works",
+  "filter_works": [
+    {"column_id": "authorships.institutions.id", "value": "I136199984"},
+    {"column_id": "publication_year", "value": 2025}
+  ]
+}
+
+Use the resolve_entity tool to look up OpenAlex IDs for institutions, authors, topics, etc. Then construct and return ONLY the OQO JSON.
+"""
+
 RESOLVE_ENTITY_TOOL = {
     "type": "function",
     "name": "resolve_entity",
@@ -271,19 +288,33 @@ def convert_natural_language_to_oqo(natural_language_query: str) -> dict:
     ]
     
     # Initial call to OpenAI with function calling
+    print("Making initial OpenAI request...", flush=True)
     response = client.responses.create(
         model=OPENAI_MODEL,
         instructions=OPENAI_PROMPT_ID,
         input=messages,
         tools=[RESOLVE_ENTITY_TOOL]
     )
+    print(f"Got response with {len(response.output)} output items", flush=True)
+    
+    # Debug: log output types
+    for i, item in enumerate(response.output):
+        print(f"Output item {i}: type={item.type}", flush=True)
     
     # Process tool calls in a loop until we get a final response
+    max_iterations = 5
+    iteration = 0
     while response.output and any(item.type == "function_call" for item in response.output):
+        iteration += 1
+        if iteration > max_iterations:
+            return {"error": "Too many tool call iterations"}
+        
         tool_calls = [item for item in response.output if item.type == "function_call"]
+        print(f"Iteration {iteration}: Processing {len(tool_calls)} tool calls", flush=True)
         
         # Execute all tool calls in parallel
         tool_results = execute_tool_calls_parallel(tool_calls)
+        print(f"Tool calls completed", flush=True)
         
         # Build the conversation with tool results
         for tool_call, result in zip(tool_calls, tool_results):
@@ -300,20 +331,28 @@ def convert_natural_language_to_oqo(natural_language_query: str) -> dict:
             })
         
         # Continue the conversation
+        print("Making follow-up OpenAI request...", flush=True)
         response = client.responses.create(
             model=OPENAI_MODEL,
             instructions=OPENAI_PROMPT_ID,
             input=messages,
             tools=[RESOLVE_ENTITY_TOOL]
         )
+        print(f"Got response with {len(response.output)} output items", flush=True)
+        for i, item in enumerate(response.output):
+            print(f"Output item {i}: type={item.type}", flush=True)
     
     # Extract the final text response containing OQO JSON
+    print("Extracting final response...", flush=True)
     for item in response.output:
         if item.type == "message":
             for content in item.content:
                 if content.type == "output_text":
+                    print(f"Found output_text: {content.text[:100]}...", flush=True)
                     return json.loads(content.text)
     
+    # Debug: show what we actually got
+    print(f"No valid response found. Output types: {[item.type for item in response.output]}", flush=True)
     return {"error": "No valid response from model"}
 
 
@@ -337,9 +376,16 @@ def execute_resolve_entity(tool_call) -> list:
     query = args.get("query", "")
     
     url = f"https://api.openalex.org/{entity_type}"
+    
+    # Select fields vary by entity type - works don't have works_count
+    if entity_type == "works":
+        select_fields = "id,display_name,relevance_score"
+    else:
+        select_fields = "id,display_name,relevance_score,works_count"
+    
     params = {
         "search": query,
-        "select": "id,display_name,relevance_score,works_count",
+        "select": select_fields,
         "per_page": 5
     }
     
