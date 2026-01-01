@@ -229,17 +229,22 @@ class OQLRenderer:
     
     def _format_entity_value(self, entity_id: str) -> str:
         """
-        Format an entity ID with its display name.
+        Format an entity ID with its display name, using short ID format.
         
-        Example: "countries/ca" -> "Canada [countries/ca]"
+        Example: "countries/ca" -> "Canada [ca]"
+        Example: "sdgs/2" -> "Zero Hunger [2]"
+        Example: "institutions/I136199984" -> "[I136199984]" (no display name available)
         """
         display_name = self._resolve_entity_display_name(entity_id)
         
+        # Extract the short ID (part after the slash)
+        short_id = entity_id.split("/", 1)[1] if "/" in entity_id else entity_id
+        
         if display_name:
-            return f"{display_name} [{entity_id}]"
+            return f"{display_name} [{short_id}]"
         else:
-            # Fallback: just bracket the ID
-            return f"[{entity_id}]"
+            # Fallback: just bracket the short ID
+            return f"[{short_id}]"
     
     def _resolve_entity_display_name(self, entity_id: str) -> Optional[str]:
         """

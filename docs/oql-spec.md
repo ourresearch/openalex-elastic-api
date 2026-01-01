@@ -85,7 +85,7 @@ Works where open_access.is_oa is true and sustainable_development_goals.id is [s
 Uses display names for columns and includes display names before bracketed IDs:
 
 ```
-Works where it's Open Access and Sustainable Development Goals is Zero Hunger [sdgs/2] and Country is Canada [countries/ca] and it's from Global South and year >= 2020
+Works where it's Open Access and Sustainable Development Goals is Zero Hunger [2] and Country is Canada [ca] and it's from Global South and year >= 2020
 ```
 
 ### 2.3 Key Differences
@@ -94,7 +94,7 @@ Works where it's Open Access and Sustainable Development Goals is Zero Hunger [s
 |--------|-----------|----------------|
 | Column names | `open_access.is_oa` | `Open Access` (display name) |
 | Boolean filters | `open_access.is_oa is true` | `it's Open Access` |
-| Entity values | `[sdgs/2]` | `Zero Hunger [sdgs/2]` |
+| Entity values | `[sdgs/2]` | `Zero Hunger [2]` |
 
 ---
 
@@ -120,18 +120,18 @@ The display name comes from the column's `displayName` in the config.
 
 For filters that select entities, the format includes an optional display name before the bracketed ID:
 
-**Technical** (ID only in brackets):
+**Technical** (namespaced ID in brackets - accepted for backward compatibility):
 ```
 sustainable_development_goals.id is [sdgs/2]
 authorships.countries is [countries/ca]
 authorships.institutions.lineage is [institutions/I136199984]
 ```
 
-**Human-Readable** (display name + ID in brackets):
+**Human-Readable** (display name + short ID in brackets - preferred output):
 ```
-Sustainable Development Goals is Zero Hunger [sdgs/2]
-Country is Canada [countries/ca]
-institution is Harvard University [institutions/I136199984]
+Sustainable Development Goals is Zero Hunger [2]
+Country is Canada [ca]
+institution is Harvard University [I136199984]
 ```
 
 **IMPORTANT**: The bracketed ID is **always required** and is the source of truth. The display name before it is optional for input but preferred for output.
@@ -189,36 +189,42 @@ language is not null
 
 ### 4.1 Format
 
+Preferred output format (short ID):
 ```
-[{entity_type}/{id}]
+[{short_id}]
+```
+
+Backward-compatible input format (namespaced ID):
+```
+[{entity_type}/{short_id}]
 ```
 
 ### 4.2 Examples
 
-| Entity Type | Bracketed ID |
-|-------------|--------------|
-| institutions | `[institutions/I136199984]` |
-| authors | `[authors/A5023888391]` |
-| works | `[works/W2741809807]` |
-| sources | `[sources/S137773608]` |
-| topics | `[topics/T10012]` |
-| funders | `[funders/F4320332161]` |
-| publishers | `[publishers/P4310319908]` |
-| types | `[types/article]` |
-| countries | `[countries/ca]` |
-| sdgs | `[sdgs/2]` |
-| oa-statuses | `[oa-statuses/gold]` |
-| languages | `[languages/en]` |
+| Entity Type | Preferred Output | Also Accepted (Input) |
+|-------------|------------------|----------------------|
+| institutions | `[I136199984]` | `[institutions/I136199984]` |
+| authors | `[A5023888391]` | `[authors/A5023888391]` |
+| works | `[W2741809807]` | `[works/W2741809807]` |
+| sources | `[S137773608]` | `[sources/S137773608]` |
+| topics | `[T10012]` | `[topics/T10012]` |
+| funders | `[F4320332161]` | `[funders/F4320332161]` |
+| publishers | `[P4310319908]` | `[publishers/P4310319908]` |
+| types | `[article]` | `[types/article]` |
+| countries | `[ca]` | `[countries/ca]` |
+| sdgs | `[2]` | `[sdgs/2]` |
+| oa-statuses | `[gold]` | `[oa-statuses/gold]` |
+| languages | `[en]` | `[languages/en]` |
 
 ### 4.3 With Display Names (Preferred Output)
 
-When outputting OQL, include the display name before the bracketed ID:
+When outputting OQL, include the display name before the bracketed short ID:
 
 ```
-Harvard University [institutions/I136199984]
-Zero Hunger [sdgs/2]
-Canada [countries/ca]
-article [types/article]
+Harvard University [I136199984]
+Zero Hunger [2]
+Canada [ca]
+article [article]
 ```
 
 ---
@@ -238,7 +244,7 @@ Works where it's Open Access and year >= 2024 and Country is Canada [countries/c
 OR requires parentheses:
 
 ```
-Works where (type is article [types/article] or type is book [types/book])
+Works where (type is article [article] or type is book [book])
 ```
 
 ### 5.3 Nested Boolean
@@ -246,7 +252,7 @@ Works where (type is article [types/article] or type is book [types/book])
 Complex boolean expressions are supported:
 
 ```
-Works where institution is Harvard University [institutions/I136199984] and (institution is Stanford University [institutions/I97018004] or institution is MIT [institutions/I63966007])
+Works where institution is Harvard University [I136199984] and (institution is Stanford University [I97018004] or institution is MIT [I63966007])
 ```
 
 **Note**: Nested boolean cannot always be expressed in URL format.
@@ -308,7 +314,7 @@ The following mappings are used to convert between technical column_ids and disp
 
 **OQL**:
 ```
-Works where it's Open Access and Sustainable Development Goals is Zero Hunger [sdgs/2] and Country is Canada [countries/ca] and it's from Global South and year >= 2020
+Works where it's Open Access and Sustainable Development Goals is Zero Hunger [2] and Country is Canada [ca] and it's from Global South and year >= 2020
 ```
 
 **OQO**:
@@ -338,7 +344,7 @@ Same OQO as above.
 
 **OQL**:
 ```
-Works where (type is article [types/article] or type is book [types/book])
+Works where (type is article [article] or type is book [book])
 ```
 
 **OQO**:
@@ -380,7 +386,7 @@ Works where title & abstract contains "machine learning" and year >= 2020; sampl
 
 **OQL**:
 ```
-Works where type is not article [types/article]
+Works where type is not article [article]
 ```
 
 Or human-readable for boolean:
@@ -421,8 +427,10 @@ When parsing, if a display name appears before a bracketed ID, it is validated b
 
 Valid inputs:
 ```
-Country is Canada [countries/ca]    ✓ (display name + ID)
-Country is [countries/ca]           ✓ (ID only)
+Country is Canada [ca]              ✓ (display name + short ID - preferred)
+Country is [ca]                     ✓ (short ID only)
+Country is Canada [countries/ca]    ✓ (namespaced ID - backward compatible)
+Country is [countries/ca]           ✓ (namespaced ID only - backward compatible)
 Country is Canada                   ✗ (no ID - error)
 ```
 

@@ -59,7 +59,7 @@ class TestOQLRenderer:
         assert result == "Works where it's from Global South"
     
     def test_entity_value_with_display_name(self):
-        """Test entity values include display name before bracketed ID."""
+        """Test entity values include display name before bracketed short ID."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -67,10 +67,10 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "Works where Country is Canada [countries/ca]"
+        assert result == "Works where Country is Canada [ca]"
     
     def test_entity_value_sdg(self):
-        """Test SDG entity value with display name."""
+        """Test SDG entity value with display name and short ID."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -78,10 +78,10 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "Works where Sustainable Development Goals is Zero Hunger [sdgs/2]"
+        assert result == "Works where Sustainable Development Goals is Zero Hunger [2]"
     
     def test_entity_value_type(self):
-        """Test work type entity value."""
+        """Test work type entity value with short ID."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -89,7 +89,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "Works where type is Article [types/article]"
+        assert result == "Works where type is Article [article]"
     
     def test_comparison_filter(self):
         """Test comparison filters use display names."""
@@ -137,7 +137,7 @@ class TestOQLRenderer:
         result = render_oqo_to_oql(oqo)
         assert "it's Open Access" in result
         assert "year >= 2020" in result
-        assert "Canada [countries/ca]" in result
+        assert "Canada [ca]" in result
         assert " and " in result
     
     def test_or_branch_filter(self):
@@ -156,8 +156,8 @@ class TestOQLRenderer:
         )
         result = render_oqo_to_oql(oqo)
         assert result.startswith("Works where (")
-        assert "Article [types/article]" in result
-        assert "Book [types/book]" in result
+        assert "Article [article]" in result
+        assert "Book [book]" in result
         assert " or " in result
     
     def test_sort_with_display_name(self):
@@ -186,7 +186,7 @@ class TestOQLRenderer:
         assert "; sample 100" in result
     
     def test_negation(self):
-        """Test negation operator."""
+        """Test negation operator with short ID."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -194,7 +194,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert "is not Article [types/article]" in result
+        assert "is not Article [article]" in result
     
     def test_complex_query(self):
         """Test the example from the user's request."""
@@ -211,8 +211,8 @@ class TestOQLRenderer:
         result = render_oqo_to_oql(oqo)
         
         assert "it's Open Access" in result
-        assert "Zero Hunger [sdgs/2]" in result
-        assert "Canada [countries/ca]" in result
+        assert "Zero Hunger [2]" in result
+        assert "Canada [ca]" in result
         assert "it's from Global South" in result
         assert "year >= 2020" in result
 
@@ -395,6 +395,55 @@ class TestOQLParser:
         assert "authorships.countries" in column_ids
         assert "institutions.is_global_south" in column_ids
         assert "publication_year" in column_ids
+    
+    def test_parse_short_id_country(self):
+        """Test parsing short ID without entity type prefix."""
+        oql = "Works where Country is Canada [ca]"
+        oqo = parse_oql_to_oqo(oql)
+        
+        f = oqo.filter_rows[0]
+        assert f.column_id == "authorships.countries"
+        assert f.value == "countries/ca"  # Should be expanded to full ID
+    
+    def test_parse_short_id_sdg(self):
+        """Test parsing short SDG ID."""
+        oql = "Works where Sustainable Development Goals is Zero Hunger [2]"
+        oqo = parse_oql_to_oqo(oql)
+        
+        f = oqo.filter_rows[0]
+        assert f.column_id == "sustainable_development_goals.id"
+        assert f.value == "sdgs/2"  # Should be expanded to full ID
+    
+    def test_parse_short_id_type(self):
+        """Test parsing short type ID."""
+        oql = "Works where type is [article]"
+        oqo = parse_oql_to_oqo(oql)
+        
+        f = oqo.filter_rows[0]
+        assert f.column_id == "type"
+        assert f.value == "types/article"  # Should be expanded to full ID
+    
+    def test_parse_short_id_institution(self):
+        """Test parsing short institution ID."""
+        oql = "Works where institution is Harvard University [I136199984]"
+        oqo = parse_oql_to_oqo(oql)
+        
+        f = oqo.filter_rows[0]
+        assert f.column_id == "authorships.institutions.lineage"
+        assert f.value == "institutions/I136199984"  # Should be expanded to full ID
+    
+    def test_parse_complex_with_short_ids(self):
+        """Test parsing complex query with short IDs (new preferred format)."""
+        oql = "Works where it's Open Access and Sustainable Development Goals is Zero Hunger [2] and Country is Canada [ca] and it's from Global South and year >= 2020"
+        oqo = parse_oql_to_oqo(oql)
+        
+        assert oqo.get_rows == "works"
+        assert len(oqo.filter_rows) == 5
+        
+        # Check that short IDs were expanded correctly
+        values = {f.column_id: f.value for f in oqo.filter_rows if isinstance(f, LeafFilter)}
+        assert values["sustainable_development_goals.id"] == "sdgs/2"
+        assert values["authorships.countries"] == "countries/ca"
 
 
 class TestRoundTrip:
@@ -524,5 +573,5 @@ class TestEdgeCases:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        # Should fall back to just bracketed ID
-        assert "[institutions/I136199984]" in result
+        # Should fall back to just bracketed short ID
+        assert "[I136199984]" in result

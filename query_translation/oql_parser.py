@@ -90,6 +90,30 @@ VALID_ENTITY_TYPES = {
     "institution-types", "institution types", "awards", "locations", "oa-statuses"
 }
 
+# Column ID to entity type prefix mapping (for expanding short IDs)
+COLUMN_TO_ENTITY_TYPE: Dict[str, str] = {
+    "authorships.countries": "countries",
+    "authorships.institutions.continent": "continents",
+    "authorships.institutions.lineage": "institutions",
+    "authorships.author.id": "authors",
+    "primary_location.source.id": "sources",
+    "primary_location.source.type": "source-types",
+    "primary_location.source.publisher_lineage": "publishers",
+    "primary_topic.id": "topics",
+    "primary_topic.subfield.id": "subfields",
+    "primary_topic.field.id": "fields",
+    "primary_topic.domain.id": "domains",
+    "grants.funder": "funders",
+    "awards.funder.id": "funders",
+    "sustainable_development_goals.id": "sdgs",
+    "language": "languages",
+    "type": "types",
+    "keywords.id": "keywords",
+    "concepts.id": "concepts",
+    "open_access.oa_status": "oa-statuses",
+    "best_oa_location.license": "licenses",
+}
+
 # Operators in order of precedence (longest first for matching)
 OPERATORS = [
     "is not",
@@ -445,8 +469,8 @@ class OQLParser:
                 # Resolve column name
                 column_id = self._resolve_column(column_part)
                 
-                # Parse value
-                value, extracted_op = self._parse_value(value_part, op)
+                # Parse value (pass column_id for short ID expansion)
+                value, extracted_op = self._parse_value(value_part, op, column_id)
                 
                 # Map operator
                 operator = self._normalize_operator(extracted_op or op)
@@ -472,16 +496,19 @@ class OQLParser:
         # Return as-is (might be a valid column_id)
         return column_str
     
-    def _parse_value(self, value_str: str, operator: str) -> Tuple[Any, Optional[str]]:
+    def _parse_value(self, value_str: str, operator: str, column_id: Optional[str] = None) -> Tuple[Any, Optional[str]]:
         """
         Parse a filter value.
         
         Handles:
-        - Bracketed IDs: [countries/ca], Canada [countries/ca]
+        - Bracketed IDs: [countries/ca], Canada [countries/ca], [ca], Canada [ca]
         - Quoted strings: "machine learning"
         - Numbers: 2020, 100.5
         - Booleans: true, false
         - Null: null, unknown
+        
+        For short IDs (without entity type prefix), the entity type is inferred
+        from the column_id being filtered.
         
         Returns:
             Tuple of (parsed_value, modified_operator)
@@ -493,10 +520,15 @@ class OQLParser:
             return None, None
         
         # Check for bracketed ID with optional display name before it
-        # Pattern: "Display Name [entity_type/id]" or "[entity_type/id]"
+        # Pattern: "Display Name [entity_type/id]" or "[entity_type/id]" or "[short_id]"
         bracket_match = re.search(r'\[([^\]]+)\]', value_str)
         if bracket_match:
             entity_id = bracket_match.group(1)
+            # If ID doesn't contain a slash, it's a short ID - expand it
+            if "/" not in entity_id and column_id:
+                entity_type = COLUMN_TO_ENTITY_TYPE.get(column_id)
+                if entity_type:
+                    entity_id = f"{entity_type}/{entity_id}"
             return entity_id, None
         
         # Check for quoted string
