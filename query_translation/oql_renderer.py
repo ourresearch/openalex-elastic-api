@@ -155,8 +155,11 @@ class OQLRenderer:
         operator = f.operator
         
         # Check for boolean filter with special "it's" format
-        if column_id in BOOLEAN_COLUMNS and isinstance(value, bool):
-            return self._render_boolean_filter(column_id, value, operator)
+        # Handle both actual booleans and string representations ("true"/"false")
+        if column_id in BOOLEAN_COLUMNS:
+            bool_value = self._normalize_boolean(value)
+            if bool_value is not None:
+                return self._render_boolean_filter(column_id, bool_value, operator)
         
         # Get display name for column
         column_display = COLUMN_DISPLAY_NAMES.get(column_id, column_id)
@@ -183,6 +186,21 @@ class OQLRenderer:
             return f"{column_display} does not contain {value_str}"
         else:
             return f"{column_display} {operator} {value_str}"
+    
+    def _normalize_boolean(self, value: Any) -> Optional[bool]:
+        """
+        Normalize a value to a boolean, handling string representations.
+        
+        Returns None if value is not a boolean or boolean-like string.
+        """
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            if value.lower() == "true":
+                return True
+            if value.lower() == "false":
+                return False
+        return None
     
     def _render_boolean_filter(self, column_id: str, value: bool, operator: str) -> str:
         """
