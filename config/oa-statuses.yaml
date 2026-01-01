@@ -1,0 +1,81 @@
+id: oa-statuses
+icon: mdi-lock-open-outline
+name: oa-statuses
+nameSingular: oa status
+displayName: Open Access statuses
+displayNameSingular: Open Access status
+descr: Open Access status
+eg: gold
+placeholder: Search OA statuses
+filterName: OA status
+filterKey: open_access.oa_status
+descrFull: The Open Access status of a work, indicating how and where it is freely available.
+hasAutocomplete: false
+isNative: false
+idRegex: (?:https:\/\/openalex\.org\/oa-statuses\/|oa-statuses\/)([a-zA-Z]+)
+showOnEntityPage:
+  - id
+  - display_name
+  - description
+showOnTablePage:
+  - id
+  - display_name
+columns:
+  id:
+    id: id
+    subjectEntity: oa-statuses
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    entityId: oa-statuses
+    objectEntity:
+    displayName: OA status
+    isId: true
+    type: string
+    actions:
+      - filter
+      - column
+    icon: mdi-lock-open-outline
+    descr: The unique identifier for the OA status in OpenAlex.
+  display_name:
+    id: display_name
+    isColumnMandatory: true
+    subjectEntity: oa-statuses
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: OA status name
+    type: string
+    actions: []
+    category: other
+    icon: mdi-lock-open-outline
+    descr: The name of the OA status.
+  description:
+    id: description
+    subjectEntity: oa-statuses
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: description
+    type: string
+    actions:
+      - column
+    icon: mdi-lock-open-outline
+    descr: A description of the OA status.
+
+values:
+  - id: oa-statuses/closed
+    display_name: closed
+  - id: oa-statuses/green
+    display_name: green
+  - id: oa-statuses/bronze
+    display_name: bronze
+  - id: oa-statuses/hybrid
+    display_name: hybrid
+  - id: oa-statuses/gold
+    display_name: gold
