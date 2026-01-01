@@ -457,8 +457,104 @@ Entity display names are fetched from the API or cached.
 
 ---
 
-## 12. Related Documentation
+## 12. Normalized Output OQL
+
+The `/query` endpoint returns OQL in a **normalized output** format. This normalized form is:
+- Generated from canonical OQO via deterministic rendering
+- A strict subset of acceptable input OQL
+- Always parseable by the OQL parser (roundtrip-safe)
+
+### 12.1 Normalization Rules
+
+1. **Entity type**: Capitalized, multi-word types use spaces (e.g., `Source Types`)
+2. **Boolean filters**: Use `it's [not] {displayName}` format
+3. **Entity values**: Include display name before bracketed short ID (e.g., `Canada [ca]`)
+4. **Operators**: Standard spacing around operators
+5. **Null values**: Rendered as `unknown`
+6. **Text values**: Quoted with double quotes
+7. **OR groups**: Always parenthesized
+8. **Top-level AND**: No parentheses, joined by ` and `
+
+### 12.2 Entity-Only Statements (No Filters)
+
+An OQL statement may omit the `where` clause if there are no filters:
+
+```
+Works
+Works; sort by citations desc
+Works; sample 100
+```
+
+This produces all entities of that type (subject to sort/sample).
+
+---
+
+## 13. oql_render (UI Render Tree)
+
+The `/query` endpoint returns an `oql_render` field containing a structured tree representation of the normalized OQL. This enables UI rendering without client-side parsing.
+
+### 13.1 Purpose
+
+- **Pretty UI rendering**: Color-coded, clickable, tooltipped query display
+- **Grammar-less rendering**: Client concatenates text segments without grammar rules
+- **Semantic metadata**: Each node carries metadata for tooltips and interactions
+
+### 13.2 Structure
+
+```json
+{
+  "version": "1.0",
+  "entity": { "id": "works", "text": "Works" },
+  "where_keyword": " where ",
+  "where": { ... },       // ExprNode (group or clause)
+  "directives": [ ... ]   // sort, sample
+}
+```
+
+### 13.3 Node Types
+
+- **GroupNode**: Boolean group with `join`, `prefix`, `suffix`, `joiner`, `children`
+- **ClauseNode**: Leaf clause with `segments` array and `meta` object
+- **Segment**: Renderable text piece with `kind` (column, operator, value, id, keyword, text)
+
+### 13.4 Invariant A
+
+**Critical invariant**: `stringify(oql_render) === oql`
+
+A trivial stringify function that concatenates all text from the tree must produce exactly the same string as the `oql` field. This ensures the tree is accurate and complete.
+
+### 13.5 Example
+
+For the query `Works where year >= 2020`:
+
+```json
+{
+  "version": "1.0",
+  "entity": { "id": "works", "text": "Works" },
+  "where_keyword": " where ",
+  "where": {
+    "type": "clause",
+    "clause_kind": "comparison",
+    "segments": [
+      { "kind": "column", "text": "year" },
+      { "kind": "operator", "text": " >= " },
+      { "kind": "value", "text": "2020" }
+    ],
+    "meta": {
+      "column_id": "publication_year",
+      "operator": ">=",
+      "value": 2020
+    }
+  },
+  "directives": []
+}
+```
+
+---
+
+## 14. Related Documentation
 
 - `query-format-translation-spec.md` — Complete translation system (URL ↔ OQO ↔ OQL)
 - `oqo-schema.json` — JSON Schema for OQO format
 - `oqo-column-reference.md` — Complete list of valid column_ids by entity type
+- `oql_render_tree.py` — Python data model for oql_render

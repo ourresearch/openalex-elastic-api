@@ -17,6 +17,8 @@ from query_translation.oqo import OQO, filter_from_dict
 from query_translation.url_parser import parse_url_to_oqo
 from query_translation.url_renderer import render_oqo_to_url, URLRenderError, can_render_to_url
 from query_translation.oql_renderer import render_oqo_to_oql
+from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
+from query_translation.oqo_canonicalizer import canonicalize_oqo
 from query_translation.validator import validate_oqo, ValidationError, ValidationResult
 
 
@@ -148,24 +150,28 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult):
     """Render OQO to all output formats."""
     warnings = list(validation_result.warnings)
     
+    # Canonicalize OQO for deterministic output
+    canonical_oqo = canonicalize_oqo(oqo)
+    
     # Render to URL
     url_output = None
     try:
-        url_output = render_oqo_to_url(oqo)
+        url_output = render_oqo_to_url(canonical_oqo)
     except URLRenderError as e:
         warnings.append(ValidationError(
-            type="url_not_expressible",
+            type="url_not_representable",
             message=str(e)
         ))
     
-    # Render to OQL
-    oql_output = render_oqo_to_oql(oqo)
+    # Render to OQL and oql_render tree
+    oql_output, oql_render_tree = render_oqo_to_oql_and_tree(canonical_oqo)
     
     # Build response
     return {
         "url": url_output,
         "oql": oql_output,
-        "oqo": oqo.to_dict(),
+        "oql_render": oql_render_tree.to_dict(),
+        "oqo": canonical_oqo.to_dict(),
         "validation": {
             "valid": True,
             "errors": [],
