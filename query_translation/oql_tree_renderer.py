@@ -70,6 +70,29 @@ BOOLEAN_COLUMNS: Dict[str, str] = {
     "open_access.any_repository_has_fulltext": "has repository fulltext",
 }
 
+# Column ID to entity type mapping (for constructing full entity IDs)
+COLUMN_ENTITY_TYPES: Dict[str, str] = {
+    "authorships.institutions.lineage": "institutions",
+    "authorships.author.id": "authors",
+    "authorships.countries": "countries",
+    "authorships.institutions.continent": "continents",
+    "primary_location.source.id": "sources",
+    "primary_location.source.publisher_lineage": "publishers",
+    "primary_topic.id": "topics",
+    "primary_topic.subfield.id": "subfields",
+    "primary_topic.field.id": "fields",
+    "primary_topic.domain.id": "domains",
+    "grants.funder": "funders",
+    "awards.funder.id": "funders",
+    "sustainable_development_goals.id": "sdgs",
+    "language": "languages",
+    "keywords.id": "keywords",
+    "concepts.id": "concepts",
+    "type": "types",
+    "open_access.oa_status": "oa-statuses",
+    "best_oa_location.license": "licenses",
+}
+
 # Sort column display names
 SORT_DISPLAY_NAMES: Dict[str, str] = {
     "cited_by_count": "citations",
@@ -214,8 +237,13 @@ class OQLTreeRenderer:
                     meta=SegmentMeta(value=None)
                 ))
             elif isinstance(value, str) and "/" in value:
-                # Entity value
+                # Entity value with full ID (e.g., "institutions/i33213144")
                 value_entity = self._format_entity_segments(value, segments)
+            elif isinstance(value, str) and column_id in COLUMN_ENTITY_TYPES:
+                # Entity value with short ID - construct full ID from column type
+                entity_type = COLUMN_ENTITY_TYPES[column_id]
+                full_entity_id = f"{entity_type}/{value}"
+                value_entity = self._format_entity_segments(full_entity_id, segments)
             else:
                 value_str = self._format_simple_value(value)
                 segments.append(Segment(
@@ -297,6 +325,8 @@ class OQLTreeRenderer:
         if operator in (">", ">=", "<", "<="):
             return "comparison"
         if isinstance(value, str) and "/" in value:
+            return "entity"
+        if column_id in COLUMN_ENTITY_TYPES:
             return "entity"
         return "other"
     
