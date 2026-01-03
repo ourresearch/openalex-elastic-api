@@ -37,16 +37,20 @@ def safe_get_display_name(entity_id: str):
     Only queries Elasticsearch for entities that actually exist there.
     Non-native types (types, languages, countries, etc.) return None
     and are handled by the renderer's built-in lookup tables.
+
+    The entity_id comes in as "institutions/i33213144" but get_display_name
+    expects just the short ID "i33213144" (it prepends https://openalex.org/).
     """
     if not entity_id or "/" not in entity_id:
         return None
 
-    entity_type = entity_id.split("/")[0]
+    entity_type, short_id = entity_id.split("/", 1)
     if entity_type not in NATIVE_ENTITY_TYPES:
         return None  # Let default resolver handle it
 
     try:
-        return _get_display_name(entity_id)
+        # Pass just the short ID - get_display_name prepends the URL
+        return _get_display_name(short_id)
     except Exception:
         return None
 
