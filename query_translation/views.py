@@ -23,14 +23,28 @@ from query_translation.validator import validate_oqo, ValidationError, Validatio
 from core.utils import get_display_name as _get_display_name
 
 
+# Entity types that exist in Elasticsearch and can be looked up
+NATIVE_ENTITY_TYPES = {
+    "institutions", "authors", "sources", "publishers", "funders",
+    "topics", "subfields", "fields", "domains", "keywords", "concepts"
+}
+
+
 def safe_get_display_name(entity_id: str):
     """
-    Safely resolve entity display name, returning None on any error.
+    Resolve entity display name from Elasticsearch for native entity types.
 
-    This wraps get_display_name to handle non-native entity types
-    (like types/article, languages/en) that don't exist in Elasticsearch.
-    The OQL renderer's default resolver will handle those cases.
+    Only queries Elasticsearch for entities that actually exist there.
+    Non-native types (types, languages, countries, etc.) return None
+    and are handled by the renderer's built-in lookup tables.
     """
+    if not entity_id or "/" not in entity_id:
+        return None
+
+    entity_type = entity_id.split("/")[0]
+    if entity_type not in NATIVE_ENTITY_TYPES:
+        return None  # Let default resolver handle it
+
     try:
         return _get_display_name(entity_id)
     except Exception:
