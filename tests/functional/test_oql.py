@@ -573,5 +573,5 @@ class TestEdgeCases:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        # Should fall back to just bracketed short ID
-        assert "[I136199984]" in result
+        # Should fall back to just the short ID (without brackets)
+        assert "I136199984" in result

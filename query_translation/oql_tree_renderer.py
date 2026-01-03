@@ -344,33 +344,49 @@ class OQLTreeRenderer:
     def _format_entity_segments(self, entity_id: str, segments: List[Segment]) -> Optional[EntityValue]:
         """
         Format an entity ID by adding segments for display name and bracketed ID.
-        
+
+        Always creates a "value" segment with clean text (display_name or short_id).
+        The bracketed ID segment is only added when there's a display_name, since
+        otherwise the ID is already shown in the value segment.
+
+        Metadata always includes:
+        - entity_id: full ID like "institutions/i19820366"
+        - entity_short_id: short ID like "i19820366"
+        - entity_display_name: human name like "Harvard University" (may be None)
+        - entity_display_id: bracketed ID like "[i19820366]"
+
         Returns the EntityValue for metadata.
         """
         display_name = self._resolve_entity_display_name(entity_id)
         short_id = entity_id.split("/", 1)[1] if "/" in entity_id else entity_id
-        
+        display_id = f"[{short_id}]"
+
+        # Always create a value segment - use display_name if available, else short_id
+        value_text = display_name if display_name else short_id
+        segments.append(Segment(
+            kind="value",
+            text=value_text,
+            meta=SegmentMeta(
+                entity_id=entity_id,
+                entity_short_id=short_id,
+                entity_display_name=display_name,  # May be None
+                entity_display_id=display_id       # Always "[short_id]"
+            )
+        ))
+
+        # Only add bracketed ID when we have a display_name (otherwise redundant)
         if display_name:
+            segments.append(Segment(kind="text", text=" "))
             segments.append(Segment(
-                kind="value",
-                text=display_name,
+                kind="id",
+                text=display_id,
                 meta=SegmentMeta(
                     entity_id=entity_id,
                     entity_short_id=short_id,
-                    entity_display_name=display_name
+                    entity_display_id=display_id
                 )
             ))
-            segments.append(Segment(kind="text", text=" "))
-        
-        segments.append(Segment(
-            kind="id",
-            text=f"[{short_id}]",
-            meta=SegmentMeta(
-                entity_id=entity_id,
-                entity_short_id=short_id
-            )
-        ))
-        
+
         return EntityValue(
             id=entity_id,
             short_id=short_id,

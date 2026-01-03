@@ -20,6 +20,7 @@ from query_translation.oql_renderer import render_oqo_to_oql
 from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 from query_translation.validator import validate_oqo, ValidationError, ValidationResult
+from core.utils import get_display_name
 
 
 blueprint = Blueprint("query_translation", __name__)
@@ -164,7 +165,11 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult):
         ))
     
     # Render to OQL and oql_render tree
-    oql_output, oql_render_tree = render_oqo_to_oql_and_tree(canonical_oqo)
+    # Pass get_display_name as entity resolver to include display names in oql_render
+    oql_output, oql_render_tree = render_oqo_to_oql_and_tree(
+        canonical_oqo,
+        entity_resolver=get_display_name
+    )
     
     # Build response
     return {

@@ -44,8 +44,9 @@ class SegmentMeta:
     value: Optional[TypedValue] = None
     entity_id: Optional[str] = None
     entity_short_id: Optional[str] = None
-    entity_display_name: Optional[str] = None
-    
+    entity_display_name: Optional[str] = None  # Human-readable name, e.g., "Harvard University"
+    entity_display_id: Optional[str] = None    # Bracketed ID for display, e.g., "[i19820366]"
+
     def to_dict(self) -> Dict[str, Any]:
         result = {}
         if self.column_id is not None:
@@ -60,6 +61,8 @@ class SegmentMeta:
             result["entity_short_id"] = self.entity_short_id
         if self.entity_display_name is not None:
             result["entity_display_name"] = self.entity_display_name
+        if self.entity_display_id is not None:
+            result["entity_display_id"] = self.entity_display_id
         return result
 
 
