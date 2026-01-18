@@ -1,6 +1,6 @@
 # API Overview
 
-The API is the primary way to get OpenAlex data. It's free and requires no authentication. The daily limit for API calls is 100,000 requests per user per day. For best performance, [add your email](rate-limits-and-authentication.md#the-polite-pool) to all API requests, like `mailto=example@domain.com`.
+The API is the primary way to get OpenAlex data. It's free and requires no authentication. The API uses a credit-based rate limiting system—free users get 100,000 credits per day. For best performance, [add your email](rate-limits-and-authentication.md#the-polite-pool) to all API requests, like `mailto=example@domain.com`.
 
 ## Learn more about the API
 

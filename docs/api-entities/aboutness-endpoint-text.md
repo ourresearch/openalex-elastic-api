@@ -44,4 +44,4 @@ Example response for that last one:
 }
 ```
 
-Queries are limited to between 20 and 2000 characters. The endpoints are rate limited to 1 per second and 1000 requests per day.
+Queries are limited to between 20 and 2000 characters. The endpoint is rate limited to 1 request per second. Each request costs 1,000 credits (see [rate limits](../how-to-use-the-api/rate-limits-and-authentication.md)).

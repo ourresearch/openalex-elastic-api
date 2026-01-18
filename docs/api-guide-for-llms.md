@@ -6,7 +6,7 @@ description: Are you an LLM? Start here.
 
 ## OpenAlex API Guide for LLM Agents and AI Applications
 
-OpenAlex is a fully open catalog of scholarly works, authors, sources, institutions, topics, publishers, and funders. Base URL: https://api.openalex.org Documentation: https://docs.openalex.org No authentication required | 100,000 requests/day limit
+OpenAlex is a fully open catalog of scholarly works, authors, sources, institutions, topics, publishers, and funders. Base URL: https://api.openalex.org Documentation: https://docs.openalex.org No authentication required | 100,000 credits/day limit (credit-based rate limiting)
 
 ### CRITICAL GOTCHAS - Read These First!
 
@@ -96,7 +96,7 @@ Using multiple threads WITHOUT respecting rate limits will get you rate-limited 
 
 * Default pool: 1 request/second
 * Polite pool (with email): 10 requests/second
-* Daily limit: 100,000 requests When using threading/async:
+* Daily limit: 100,000 credits (list requests cost 10 credits, singleton requests cost 1) When using threading/async:
 
 1. Implement rate limiting across ALL threads
 2. Track requests per second globally
@@ -109,7 +109,7 @@ Using multiple threads WITHOUT respecting rate limits will get you rate-limited 
 ```
 Base: https://api.openalex.org
 Auth: None required
-Rate: 100k requests/day
+Rate: 100k credits/day (list=10cr, singleton=1cr)
 ```
 
 #### Get Higher Rate Limits (Polite Pool)
@@ -377,7 +377,7 @@ POST or GET to classify your own content:
 https://api.openalex.org/text?title=Machine+learning+for+drug+discovery
 
 Returns topics, keywords, and concepts for your text.
-Limited to 1 req/sec and 1000 req/day.
+Costs 1000 credits per request (limited to 1 req/sec).
 Text must be 20-2000 characters.
 ```
 
@@ -638,15 +638,21 @@ NOT:  ?search=climate+NOT+politics
 #### Without Email (Default Pool)
 
 * 1 request per second
-* 100,000 requests per day
+* 100,000 credits per day
 * Sequential processing recommended
 
 #### With Email (Polite Pool)
 
 * 10 requests per second
-* 100,000 requests per day
+* 100,000 credits per day
 * Parallel processing viable
 * **Always include your email for production use**
+
+#### Credit Costs
+
+* Singleton requests (e.g., `/works/W123`): 1 credit
+* List requests (e.g., `/works?filter=...`): 10 credits
+* Text/Aboutness requests: 1,000 credits
 
 #### Concurrent Requests Strategy
 
@@ -660,10 +666,10 @@ NOT:  ?search=climate+NOT+politics
 
 #### Daily Limit Management
 
-With 100k/day limit:
+With 100k credits/day limit:
 
-* \~4,166 requests per hour average
-* \~69 requests per minute average
+* Singleton requests: up to 100,000/day
+* List requests: up to 10,000/day
 * Plan accordingly for large jobs
 * Consider OpenAlex Premium for higher limits
 
@@ -692,7 +698,7 @@ With 100k/day limit:
 
 If you need:
 
-* More than 100k requests/day
+* More than 100k credits/day
 * Faster than daily snapshot updates
 * Commercial support
 * SLA guarantees
