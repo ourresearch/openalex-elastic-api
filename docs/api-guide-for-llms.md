@@ -6,7 +6,7 @@ description: Are you an LLM? Start here.
 
 ## OpenAlex API Guide for LLM Agents and AI Applications
 
-OpenAlex is a fully open catalog of scholarly works, authors, sources, institutions, topics, publishers, and funders. Base URL: https://api.openalex.org Documentation: https://docs.openalex.org No authentication required | 100,000 credits/day limit (credit-based rate limiting)
+OpenAlex is a fully open catalog of scholarly works, authors, sources, institutions, topics, publishers, and funders. Base URL: https://api.openalex.org Documentation: https://docs.openalex.org API key required (free at openalex.org/settings/api) | 100,000 credits/day with key
 
 ### CRITICAL GOTCHAS - Read These First!
 
@@ -94,13 +94,14 @@ Using multiple threads WITHOUT respecting rate limits will get you rate-limited 
 
 #### ✅ DO: Respect rate limits even across concurrent requests
 
-* Default pool: 1 request/second
-* Polite pool (with email): 10 requests/second
-* Daily limit: 100,000 credits (list requests cost 10 credits, singleton requests cost 1) When using threading/async:
+* Max 100 requests per second
+* Daily limit: 100,000 credits (list requests cost 10 credits, singleton requests cost 1)
+
+When using threading/async:
 
 1. Implement rate limiting across ALL threads
 2. Track requests per second globally
-3. Add your email to requests for 10x higher limits
+3. Get an API key for higher credit limits
 
 ### Quick Reference
 
@@ -108,19 +109,19 @@ Using multiple threads WITHOUT respecting rate limits will get you rate-limited 
 
 ```
 Base: https://api.openalex.org
-Auth: None required
-Rate: 100k credits/day (list=10cr, singleton=1cr)
+Auth: API key required (free at openalex.org/settings/api)
+Rate: 100k credits/day with key, 100 credits/day without (list=10cr, singleton=1cr)
 ```
 
-#### Get Higher Rate Limits (Polite Pool)
+#### Get Higher Credit Limits
 
-Add your email to ANY parameter:
+For higher daily credit limits, subscribe to [OpenAlex Premium](https://openalex.org/pricing) and use your API key:
 
 ```
-https://api.openalex.org/works?mailto=yourname@example.edu
+https://api.openalex.org/works?api_key=YOUR_API_KEY
 ```
 
-This increases your rate limit from 1 req/sec → 10 req/sec Always do this for production applications!
+Academic researchers can often get increased limits for free—contact [support@openalex.org](mailto:support@openalex.org).
 
 #### Entity Endpoints
 
@@ -138,6 +139,7 @@ This increases your rate limit from 1 req/sec → 10 req/sec Always do this for 
 #### Essential Query Parameters
 
 ```
+api_key=        - Your API key (required, get free at openalex.org/settings/api)
 filter=         - Filter results (see filter syntax below)
 search=         - Full-text search across title/abstract/fulltext
 sort=           - Sort results (e.g., cited_by_count:desc)
@@ -147,7 +149,6 @@ sample=         - Get random results (e.g., sample=50)
 seed=           - Seed for reproducible sampling
 select=         - Limit returned fields (e.g., select=id,title)
 group_by=       - Aggregate results by a field
-mailto=         - Your email (gets you into polite pool)
 ```
 
 ### Filter Syntax
@@ -458,23 +459,23 @@ FAST:  ?select=id,title,publication_year
 from concurrent.futures import ThreadPoolExecutor
 import time
 
-rate_limiter = RateLimiter(10)  # 10 req/sec with polite pool
+rate_limiter = RateLimiter(100)  # max 100 req/sec
 
 def fetch_page(page_num):
     rate_limiter.wait()  # Ensure we don't exceed rate limit
-    return requests.get(f"...&page={page_num}&mailto=you@example.edu")
+    return requests.get(f"...&page={page_num}&api_key=YOUR_KEY")
 
 with ThreadPoolExecutor(max_workers=10) as executor:
     results = executor.map(fetch_page, range(1, 101))
 ```
 
-#### 5. Add Email for 10x Speed Boost
+#### 5. Get an API Key for Heavy Usage
 
 ```
-WITHOUT: 1 request/second max
-WITH:    10 requests/second max
+FREE:    100,000 credits/day
+PREMIUM: Higher limits (varies by plan)
 
-Just add: &mailto=yourname@example.edu
+Get an API key: https://openalex.org/pricing
 ```
 
 ### Handling Errors
@@ -635,18 +636,23 @@ NOT:  ?search=climate+NOT+politics
 
 ### Rate Limiting Best Practices
 
-#### Without Email (Default Pool)
+#### Without API Key
 
-* 1 request per second
+* 100 credits per day (for testing only)
+* Max 100 requests per second
+* Not suitable for production use
+
+#### With Free API Key
+
 * 100,000 credits per day
-* Sequential processing recommended
+* Max 100 requests per second
+* Get your free key at [openalex.org/settings/api](https://openalex.org/settings/api)
 
-#### With Email (Polite Pool)
+#### With Premium API Key
 
-* 10 requests per second
-* 100,000 credits per day
-* Parallel processing viable
-* **Always include your email for production use**
+* Higher credit limits (varies by plan)
+* Max 100 requests per second
+* Contact [support@openalex.org](mailto:support@openalex.org) for academic waivers
 
 #### Credit Costs
 
@@ -682,7 +688,7 @@ With 100k credits/day limit:
 5. ❌ No error handling → ✅ Implement retry with backoff
 6. ❌ Ignoring rate limits in threads → ✅ Global rate limiting
 7. ❌ Trying to group by multiple fields → ✅ Multiple queries + combine
-8. ❌ Not including email → ✅ Add mailto= for 10x speed
+8. ❌ No API key for heavy usage → ✅ Get API key for higher credit limits
 9. ❌ Fetching all fields → ✅ Use select= for needed fields only
 10. ❌ Assuming instant responses → ✅ Add timeouts (30s recommended)
 

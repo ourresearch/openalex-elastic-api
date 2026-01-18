@@ -1,13 +1,13 @@
 # API Overview
 
-The API is the primary way to get OpenAlex data. It's free and requires no authentication. The API uses a credit-based rate limiting system—free users get 100,000 credits per day. For best performance, [add your email](rate-limits-and-authentication.md#the-polite-pool) to all API requests, like `mailto=example@domain.com`.
+The API is the primary way to get OpenAlex data. It's free but requires an API key (also free). Get yours at [openalex.org/settings/api](https://openalex.org/settings/api). With your free key, you get 100,000 credits per day.
 
 ## Learn more about the API
 
 * [Get single entities](get-single-entities/)
 * [Get lists of entities](get-lists-of-entities/) — Learn how to use [paging](get-lists-of-entities/paging.md), [filtering](get-lists-of-entities/filter-entity-lists.md), and [sorting](get-lists-of-entities/sort-entity-lists.md)
 * [Get groups of entities](get-groups-of-entities.md) — Group and count entities in different ways
-* [Rate limits and authentication](rate-limits-and-authentication.md) — Learn about joining the [polite pool](rate-limits-and-authentication.md#the-polite-pool)
+* [Rate limits and authentication](rate-limits-and-authentication.md) — Learn about credit costs and API keys
 * [Tutorials ](../additional-help/tutorials.md)— Hands-on examples with code
 
 ## Client Libraries

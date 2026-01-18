@@ -14,10 +14,15 @@ The API uses a credit-based rate limiting system. Different endpoint types consu
 
 ## Rate limits
 
+{% hint style="warning" %}
+**Starting February 13, 2026, an API key is required** to use the OpenAlex API. API keys are free—[get yours here](https://openalex.org/settings/api). See the [announcement](https://groups.google.com/g/openalex-users/c/rI1GIAySpVQ) for details.
+{% endhint %}
+
 The limits are:
 
-* max **100,000 credits** per day for free users, and also
-* max **100 requests** per second (regardless of credit cost).
+* **Without an API key:** 100 credits per day (for testing and demos only)
+* **With a free API key:** 100,000 credits per day
+* **All users:** max 100 requests per second (regardless of credit cost)
 
 For example, with 100,000 credits you can make:
 - 100,000 singleton requests (like `/works/W123`), or
@@ -26,7 +31,7 @@ For example, with 100,000 credits you can make:
 
 If you exceed your daily credits or make more than 100 requests per second, you'll get `429` errors instead of useful data.
 
-Are those rate limits too low for you? No problem! We can raise those limits as high as you need if you subscribe to [our Premium plan](https://openalex.org/pricing). Premium users get significantly more credits per day. And if you're an academic researcher we can likely help you out for free; just drop us a line at [support@openalex.org](mailto:support@openalex.org).
+Need higher limits? Subscribe to [OpenAlex Premium](https://openalex.org/pricing) for significantly more credits per day. Academic researchers can often get increased limits for free—contact [support@openalex.org](mailto:support@openalex.org).
 
 {% hint style="info" %}
 Are you scrolling through a list of entities, calling the API for each? You can go way faster by squishing 50 requests into one using our [OR syntax](get-lists-of-entities/filter-entity-lists.md#addition-or). Here's [a tutorial](https://blog.ourresearch.org/fetch-multiple-dois-in-one-openalex-api-request/) showing how.
@@ -72,26 +77,20 @@ Response:
 }
 ```
 
-## The polite pool
-
-The OpenAlex API doesn't require authentication. However, it is helpful for us to know who's behind each API call, for two reasons:
-
-* It allows us to get in touch with the user if something's gone wrong--for instance, their script has run amok and we've needed to start blocking or throttling their usage.
-* It lets us report back to our funders, which helps us keep the lights on.
-
-Like Crossref (whose approach we are shamelessly stealing), we separate API users into two pools, the polite pool and the common pool. The polite pool has more consistent response times. It's where you want to be.
-
-To get into the polite pool, you just have to give us an email where we can contact you. You can give us this email in one of two ways:
-
-* Add the `mailto=you@example.com` parameter in your API request, like this: [`https://api.openalex.org/works?mailto=you@example.com`](https://api.openalex.org/works?mailto=you@example.com)
-* Add `mailto:you@example.com` somewhere in your User-Agent request header.
-
 ## Authentication
 
-You don't need an API key to use OpenAlex. However, [premium users](https://help.openalex.org/hc/en-us/articles/24397762024087-Pricing) do get an API key, which grants higher API limits and enables the use of special filters like [`from_updated_date`](../api-entities/works/filter-works.md#from_updated_date). Using the API key is simple; just add it to your URL using the api\_key param.
+An API key is required to use the OpenAlex API. The good news: API keys are free! Here's how to get one:
 
-* Get a list of all works, using the api key 424242:\
-  [`https://api.openalex.org/works?api_key=424242`](https://api.openalex.org/works?api_key=424242)
+1. Create a free account at [openalex.org](https://openalex.org)
+2. Go to [openalex.org/settings/api](https://openalex.org/settings/api) to get your key
+3. Add `api_key=YOUR_KEY` to your API calls
+
+Example:
+* [`https://api.openalex.org/works?api_key=YOUR_KEY`](https://api.openalex.org/works?api_key=YOUR_KEY)
+
+Without an API key, you're limited to just 100 credits per day—enough for quick tests, but not for real work. With a free API key, you get 100,000 credits per day.
+
+[Premium users](https://openalex.org/pricing) get even higher limits and access to special filters like [`from_updated_date`](../api-entities/works/filter-works.md#from_updated_date).
 
 
 

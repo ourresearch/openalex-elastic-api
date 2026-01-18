@@ -14,7 +14,7 @@ Learn more at our general help center article: [About the data](https://help.ope
 
 ## Access
 
-We offer a fast, modern REST API to get OpenAlex data programmatically. It's free and requires no authentication. The API uses a credit-based rate limiting system—free users get 100,000 credits per day. For best performance, [add your email](how-to-use-the-api/rate-limits-and-authentication.md#the-polite-pool) to all API requests, like `mailto=example@domain.com`. [Learn more](how-to-use-the-api/api-overview.md)
+We offer a fast, modern REST API to get OpenAlex data programmatically. It's free but requires an API key (also free). Get yours at [openalex.org/settings/api](https://openalex.org/settings/api). With your free key, you get 100,000 credits per day. [Learn more](how-to-use-the-api/api-overview.md)
 
 There is also a complete database snapshot available to download. [Learn more about the data snapshot here.](download-all-data/openalex-snapshot.md)
 
