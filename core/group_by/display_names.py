@@ -65,9 +65,9 @@ def get_id_display_names(ids, connection='default'):
         return None
 
     if ids[0] == "unknown" and len(ids) > 1:
-        index_name = get_index_name_by_id(ids[1])
+        index_name = get_index_name_by_id(ids[1], connection=connection)
     else:
-        index_name = get_index_name_by_id(ids[0])
+        index_name = get_index_name_by_id(ids[0], connection=connection)
     s = Search(index=index_name, using=connection)
     s = s.extra(size=500)
     s = s.source(["id", "display_name"])
