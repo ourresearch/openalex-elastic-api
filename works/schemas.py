@@ -374,8 +374,9 @@ class WorksSchema(Schema):
     def pre_dump(self, data, **kwargs):
         """If single record, display authorships_full rather than truncated list."""
         if "single_record" in self.context and self.context["single_record"]:
-            if "authorships_full" in data:
+            if hasattr(data, "authorships_full"):
                 data.authorships = data.authorships_full
+            if hasattr(data, "authorships_truncated"):
                 del data.authorships_truncated
         return data
 
