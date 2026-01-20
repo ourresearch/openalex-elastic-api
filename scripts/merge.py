@@ -8,7 +8,7 @@ import settings
 
 
 def add_merged_works():
-    es = Elasticsearch([settings.ES_URL], timeout=30)
+    es = Elasticsearch([settings.ES_URL_WALDEN], timeout=30)
     # open csv with gzip
     with gzip.open("merge-works.csv.gz", "rt") as f:
         reader = csv.DictReader(f)

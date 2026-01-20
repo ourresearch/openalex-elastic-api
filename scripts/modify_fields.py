@@ -9,7 +9,7 @@ Run with: python -m scripts.modify_fields
 
 
 def alter_records():
-    es = Elasticsearch([settings.ES_URL], timeout=30)
+    es = Elasticsearch([settings.ES_URL_WALDEN], timeout=30)
     s = Search(index=settings.PUBLISHERS_INDEX)
     s = s.extra(size=10000)
     s = s.filter(Q("exists", field="parent_publisher"))
@@ -29,5 +29,5 @@ def alter_records():
 
 
 if __name__ == "__main__":
-    connections.create_connection(hosts=[settings.ES_URL], timeout=30)
+    connections.create_connection(hosts=[settings.ES_URL_WALDEN], timeout=30)
     alter_records()

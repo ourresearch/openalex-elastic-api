@@ -2,12 +2,12 @@ from multiprocessing import Pool
 from elasticsearch.helpers import bulk
 from elasticsearch_dsl import Search, connections
 from elasticsearch.exceptions import ConflictError
-from settings import ES_URL, WORKS_INDEX_LEGACY
+from settings import ES_URL_WALDEN, WORKS_INDEX_LEGACY
 
 BATCH_SIZE = 100
 
 def init_es():
-    connections.create_connection(hosts=[ES_URL], timeout=30, alias='default')
+    connections.create_connection(hosts=[ES_URL_WALDEN], timeout=30, alias='default')
 
 def remove_duplicates(work_ids):
 

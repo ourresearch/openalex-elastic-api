@@ -2,7 +2,7 @@ from pathlib import Path
 
 from elasticsearch_dsl import Q, Search, connections
 
-from settings import ES_URL, WORKS_INDEX_LEGACY
+from settings import ES_URL_WALDEN, WORKS_INDEX_LEGACY
 
 
 def get_ids():
@@ -25,5 +25,5 @@ def get_ids():
 
 
 if __name__ == "__main__":
-    connections.create_connection(hosts=[ES_URL], timeout=600)
+    connections.create_connection(hosts=[ES_URL_WALDEN], timeout=600)
     get_ids()

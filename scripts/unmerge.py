@@ -31,5 +31,5 @@ def delete_batch(batch):
 
 
 if __name__ == "__main__":
-    connections.create_connection(hosts=[settings.ES_URL], timeout=30)
+    connections.create_connection(hosts=[settings.ES_URL_WALDEN], timeout=30)
     unmerge()

@@ -3,7 +3,7 @@ from elasticsearch_dsl import Q
 from core.knn import KNNQuery
 import requests
 
-from settings import ES_URL
+from settings import ES_URL_WALDEN
 
 
 class SearchOpenAlex:
@@ -503,7 +503,7 @@ def get_vector(text):
     """
     Use the minilm-l12-v2 model to get embeddings.
     """
-    url = f"{ES_URL}/_ml/trained_models/sentence-transformers__all-minilm-l12-v2/_infer"
+    url = f"{ES_URL_WALDEN}/_ml/trained_models/sentence-transformers__all-minilm-l12-v2/_infer"
     data = {"docs": [{"text_field": text}]}
     response = requests.post(url, json=data)
     result = response.json()["inference_results"][0]["predicted_value"]

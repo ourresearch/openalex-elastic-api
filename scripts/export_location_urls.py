@@ -25,7 +25,7 @@ logger = root_logger.getChild(__name__)
 
 from elasticsearch_dsl import Q, Search, connections
 
-from settings import ES_URL, WORKS_INDEX_LEGACY
+from settings import ES_URL_WALDEN, WORKS_INDEX_LEGACY
 
 
 def get_ids():
@@ -61,7 +61,7 @@ def get_ids():
 
 
 def main(args):
-    connections.create_connection(hosts=[ES_URL], timeout=600)
+    connections.create_connection(hosts=[ES_URL_WALDEN], timeout=600)
     logging.getLogger("elasticsearch").setLevel(logging.WARNING)
     get_ids()
 

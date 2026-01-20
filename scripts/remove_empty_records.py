@@ -27,7 +27,7 @@ def delete_from_elastic(record_id):
 
 
 if __name__ == "__main__":
-    connections.create_connection(hosts=[settings.ES_URL], timeout=30)
+    connections.create_connection(hosts=[settings.ES_URL_WALDEN], timeout=30)
     connections.get_connection().indices.refresh(index=settings.AUTHORS_INDEX)
     for i in range(0, 10):
         print(f"iteration {i}")
