@@ -26,7 +26,7 @@ USERS_API_URL = os.environ.get("USERS_API_URL")
 
 # indexes
 AUTHORS_INDEX_WALDEN = "authors-v17"
-AUTHORS_INDEX_LEGACY = "authors-v16"
+AUTHORS_INDEX_LEGACY = "authors-v17"
 AUTHORS_INDEX_OLD = "authors-v10"
 AWARDS_INDEX = "awards-v3"
 CONCEPTS_INDEX = "concepts-v8"
@@ -47,7 +47,7 @@ SOURCE_TYPES_INDEX = "source-types-v1"
 SUBFIELDS_INDEX = "subfields-v2"
 TOPICS_INDEX = "topics-v4"
 WORK_TYPES_INDEX = "work-types-v1"
-WORKS_INDEX_LEGACY = "works-v26-*,-*invalid-data"
+WORKS_INDEX_LEGACY = "works-v30"
 WORKS_INDEX_WALDEN = "works-v30"
 GROUPBY_VALUES_INDEX = "groupby_values"
 RAW_AFFILIATION_STRINGS_INDEX = "raw-affiliation-strings-v2"

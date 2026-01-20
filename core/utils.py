@@ -8,15 +8,7 @@ from core.exceptions import APIQueryParamsError
 
 
 def get_data_version_connection(request):
-    data_version = (
-        request.args.get('data_version') or
-        request.args.get('data-version', settings.DEFAULT_DATA_VERSION)
-    )
-
-    if data_version == '2':
-        return 'walden'
-    else:
-        return 'default'
+    return 'walden'
 
 
 def get_valid_fields(fields_dict):

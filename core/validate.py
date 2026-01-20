@@ -37,6 +37,12 @@ def validate_params(request):
             raise APIQueryParamsError(
                 f"{arg} is not a valid parameter. Valid parameters are: {', '.join(valid_params)}."
             )
+    data_version = request.args.get('data_version') or request.args.get('data-version')
+    if data_version == '1':
+        raise APIQueryParamsError(
+            "data-version=1 is deprecated and no longer supported. "
+            "Please remove the data-version parameter to use the current version of the API."
+        )
     if any(
         [
             "host_venue" in value or "alternate_host_venues" in value

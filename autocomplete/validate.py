@@ -21,6 +21,12 @@ def validate_entity_autocomplete_params(request):
             raise APIQueryParamsError(
                 f"{arg} is not a valid parameter for the entity autocomplete endpoint. Valid parameters are: {', '.join(valid_params)}."
             )
+    data_version = request.args.get('data_version') or request.args.get('data-version')
+    if data_version == '1':
+        raise APIQueryParamsError(
+            "data-version=1 is deprecated and no longer supported. "
+            "Please remove the data-version parameter to use the current version of the API."
+        )
 
 
 def validate_full_autocomplete_params(request):
@@ -42,3 +48,9 @@ def validate_full_autocomplete_params(request):
             raise APIQueryParamsError(
                 f"{arg} is not a valid parameter for the full autocomplete endpoint. Valid parameters are: {', '.join(valid_params)}."
             )
+    data_version = request.args.get('data_version') or request.args.get('data-version')
+    if data_version == '1':
+        raise APIQueryParamsError(
+            "data-version=1 is deprecated and no longer supported. "
+            "Please remove the data-version parameter to use the current version of the API."
+        )
