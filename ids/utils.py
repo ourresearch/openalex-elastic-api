@@ -282,21 +282,6 @@ def normalize_scopus_id(scopus_id):
         return None
 
 
-def get_merged_id(index_name, full_openalex_id):
-    merged_id = None
-    s = Search(index=index_name)
-    if is_author_openalex_id(full_openalex_id):
-        s = s.filter(Q("term", id=full_openalex_id))
-    else:
-        s = s.filter(Q("term", id__keyword=full_openalex_id))
-    response = s.execute()
-    for item in response:
-        if "merge_into_id" in item:
-            merged_id = item.merge_into_id
-            merged_id = normalize_openalex_id(merged_id)
-    return merged_id
-
-
 def process_id_only_fields(request, schema):
     schema_fields = [f for f in schema._declared_fields]
     only_fields = request.args.get("select")

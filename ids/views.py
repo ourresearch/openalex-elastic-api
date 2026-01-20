@@ -17,7 +17,6 @@ from fields.schemas import FieldsSchema
 from funders.schemas import FundersSchema
 from ids.ui_format import format_as_ui, is_ui_format
 from ids.utils import (
-    get_merged_id,
     is_author_openalex_id,
     is_award_openalex_id,
     is_concept_openalex_id,
@@ -110,13 +109,6 @@ def works_id_get(id):
 
         query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
-        if s.count() == 0:
-            # check if document is merged
-            merged_id = get_merged_id("merge-works", full_openalex_id)
-            if merged_id:
-                return redirect(
-                    url_for("ids.works_id_get", id=merged_id, **request.args), code=301
-                )
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"W{clean_id}"
@@ -324,14 +316,6 @@ def authors_id_get(id):
         full_author_id = f"https://openalex.org/A{author_id}"
         query = Q("term", ids__openalex=full_author_id)
         s = s.filter(query)
-        if s.count() == 0:
-            # check if document is merged
-            merged_id = get_merged_id("merge-authors-v1", full_author_id)
-            if merged_id:
-                return redirect(
-                    url_for("ids.authors_id_get", id=merged_id, **request.args),
-                    code=301,
-                )
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"A{clean_id}"
@@ -414,13 +398,6 @@ def institutions_id_get(id):
         # Execute search and check if document exists
         response = s.execute()
         if not response.hits:  # Check if any hits were returned
-            # check if document is merged
-            merged_id = get_merged_id("merge-institutions", full_openalex_id)
-            if merged_id:
-                return redirect(
-                    url_for("ids.institutions_id_get", id=merged_id, **request.args),
-                    code=301,
-                )
             abort(404)
 
     elif id.startswith("mag:"):
@@ -503,14 +480,6 @@ def concepts_id_get(id):
         full_openalex_id = f"https://openalex.org/C{clean_id}"
         query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
-        if s.count() == 0:
-            # check if document is merged
-            merged_id = get_merged_id("merge-concepts", full_openalex_id)
-            if merged_id:
-                return redirect(
-                    url_for("ids.concepts_id_get", id=merged_id, **request.args),
-                    code=301,
-                )
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"C{clean_id}"
@@ -593,14 +562,6 @@ def funders_id_get(id):
         full_openalex_id = f"https://openalex.org/F{clean_id}"
         query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
-        if s.count() == 0:
-            # check if document is merged
-            merged_id = get_merged_id("merge-funders", full_openalex_id)
-            if merged_id:
-                return redirect(
-                    url_for("ids.funders_id_get", id=merged_id, **request.args),
-                    code=301,
-                )
     elif id.startswith("ror:") or ("ror.org" in id):
         clean_ror = normalize_ror(id)
         if not clean_ror:
@@ -666,14 +627,6 @@ def publishers_id_get(id):
         else:
             query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
-        if s.count() == 0:
-            # check if document is merged
-            merged_id = get_merged_id("merge-publishers", full_openalex_id)
-            if merged_id:
-                return redirect(
-                    url_for("ids.publishers_id_get", id=merged_id, **request.args),
-                    code=301,
-                )
     elif id.startswith("ror:") or ("ror.org" in id):
         clean_ror = normalize_ror(id)
         if not clean_ror:
@@ -763,16 +716,6 @@ def sources_id_get(id):
         else:
             query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
-        # Check if document exists
-        if s.count() == 0:
-            # check if document is merged
-            merged_id = get_merged_id("merge-sources", full_openalex_id)
-            if merged_id:
-                return redirect(
-                    url_for("ids.sources_id_get", id=merged_id, **request.args),
-                    code=301,
-                )
-
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"S{clean_id}"
