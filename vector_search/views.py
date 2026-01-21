@@ -122,21 +122,21 @@ def build_filter_string(filters: dict) -> str:
         else:
             clauses.append(f"publication_year = {int(year_filter)}")
 
-    # Boolean filters: storage-optimized endpoints expect 1/0 for boolean columns
+    # Boolean filters: storage-optimized endpoints expect unquoted true/false
     if "is_oa" in filters:
-        is_oa_val = 1 if str(filters["is_oa"]).lower() == "true" else 0
+        is_oa_val = "true" if str(filters["is_oa"]).lower() == "true" else "false"
         clauses.append(f"is_oa = {is_oa_val}")
 
     if "has_abstract" in filters:
-        has_abstract_val = 1 if str(filters["has_abstract"]).lower() == "true" else 0
+        has_abstract_val = "true" if str(filters["has_abstract"]).lower() == "true" else "false"
         clauses.append(f"has_abstract = {has_abstract_val}")
 
     if "has_content_pdf" in filters:
-        has_pdf_val = 1 if str(filters["has_content_pdf"]).lower() == "true" else 0
+        has_pdf_val = "true" if str(filters["has_content_pdf"]).lower() == "true" else "false"
         clauses.append(f"has_content_pdf = {has_pdf_val}")
 
     if "has_content_grobid_xml" in filters:
-        has_grobid_val = 1 if str(filters["has_content_grobid_xml"]).lower() == "true" else 0
+        has_grobid_val = "true" if str(filters["has_content_grobid_xml"]).lower() == "true" else "false"
         clauses.append(f"has_content_grobid_xml = {has_grobid_val}")
 
     return " AND ".join(clauses) if clauses else None
