@@ -86,53 +86,59 @@ def embed_query(text: str) -> list:
     return response.data[0].embedding
 
 
-def build_filter_dict(filters: dict) -> dict:
+def build_filter_string(filters: dict) -> str:
     """
-    Build filter dict for VectorSearchClient.
+    Build SQL-style filter string for storage-optimized Vector Search endpoints.
 
-    The SDK uses a dict format like:
-    {"column_name op": value} where op is one of: <, <=, >, >=, =, !=, LIKE, NOT LIKE
+    Storage-optimized endpoints require string filters like:
+    "publication_year >= 2023 AND is_oa = true"
 
     Args:
-        filters: Dict with publication_year, type, is_oa keys
+        filters: Dict with publication_year, is_oa, has_abstract,
+                 has_content_pdf, has_content_grobid_xml keys
 
     Returns:
-        Dict suitable for VectorSearchClient filters parameter
+        SQL-style filter string or None
     """
     if not filters:
         return None
 
-    filter_dict = {}
+    clauses = []
 
     if "publication_year" in filters:
         year_filter = str(filters["publication_year"])
         if year_filter.startswith(">="):
-            filter_dict["publication_year >="] = int(year_filter[2:])
+            clauses.append(f"publication_year >= {int(year_filter[2:])}")
         elif year_filter.startswith("<="):
-            filter_dict["publication_year <="] = int(year_filter[2:])
+            clauses.append(f"publication_year <= {int(year_filter[2:])}")
         elif year_filter.startswith(">"):
-            filter_dict["publication_year >"] = int(year_filter[1:])
+            clauses.append(f"publication_year > {int(year_filter[1:])}")
         elif year_filter.startswith("<"):
-            filter_dict["publication_year <"] = int(year_filter[1:])
+            clauses.append(f"publication_year < {int(year_filter[1:])}")
         elif "-" in year_filter:
             start, end = year_filter.split("-")
-            filter_dict["publication_year >="] = int(start)
-            filter_dict["publication_year <="] = int(end)
+            clauses.append(f"publication_year >= {int(start)}")
+            clauses.append(f"publication_year <= {int(end)}")
         else:
-            filter_dict["publication_year"] = int(year_filter)
-
-    if "type" in filters:
-        filter_dict["type"] = filters["type"]
+            clauses.append(f"publication_year = {int(year_filter)}")
 
     if "is_oa" in filters:
         is_oa_val = str(filters["is_oa"]).lower() == "true"
-        filter_dict["is_oa"] = is_oa_val
+        clauses.append(f"is_oa = {str(is_oa_val).lower()}")
 
     if "has_abstract" in filters:
         has_abstract_val = str(filters["has_abstract"]).lower() == "true"
-        filter_dict["has_abstract"] = has_abstract_val
+        clauses.append(f"has_abstract = {str(has_abstract_val).lower()}")
 
-    return filter_dict if filter_dict else None
+    if "has_content_pdf" in filters:
+        has_pdf_val = str(filters["has_content_pdf"]).lower() == "true"
+        clauses.append(f"has_content_pdf = {str(has_pdf_val).lower()}")
+
+    if "has_content_grobid_xml" in filters:
+        has_grobid_val = str(filters["has_content_grobid_xml"]).lower() == "true"
+        clauses.append(f"has_content_grobid_xml = {str(has_grobid_val).lower()}")
+
+    return " AND ".join(clauses) if clauses else None
 
 
 def search_vectors(
@@ -154,15 +160,15 @@ def search_vectors(
     vsc = get_vector_search_client()
     index = vsc.get_index(VECTOR_SEARCH_ENDPOINT, VECTOR_SEARCH_INDEX)
 
-    # Build filter dict
-    filter_dict = build_filter_dict(filters)
+    # Build filter string for storage-optimized endpoint
+    filter_str = build_filter_string(filters)
 
     # Perform similarity search
     results = index.similarity_search(
         query_vector=query_embedding,
         num_results=num_results,
         columns=["work_id"],
-        filters=filter_dict
+        filters=filter_str
     )
 
     # Parse results: work_id is first column, score is last column
@@ -214,13 +220,24 @@ def parse_filter(filter_str: str) -> dict:
     - publication_year:2023
     - publication_year:>2020
     - publication_year:2020-2023
-    - type:article
     - is_oa:true
+    - has_abstract:true
+    - has_content.pdf:true
+    - has_content.grobid_xml:true
 
     Returns dict of filter key-value pairs.
     """
     if not filter_str:
         return {}
+
+    # Map API filter names to internal names (dots to underscores for column names)
+    filter_name_map = {
+        "publication_year": "publication_year",
+        "is_oa": "is_oa",
+        "has_abstract": "has_abstract",
+        "has_content.pdf": "has_content_pdf",
+        "has_content.grobid_xml": "has_content_grobid_xml",
+    }
 
     filters = {}
     for part in filter_str.split(","):
@@ -230,10 +247,25 @@ def parse_filter(filter_str: str) -> dict:
         key = key.strip()
         value = value.strip()
 
-        if key in ["publication_year", "type", "is_oa", "has_abstract"]:
-            filters[key] = value
+        if key in filter_name_map:
+            filters[filter_name_map[key]] = value
 
     return filters
+
+
+def normalize_filter_dict(filters: dict) -> dict:
+    """
+    Normalize filter dict keys from API format to internal format.
+    Maps dots to underscores (e.g., has_content.pdf -> has_content_pdf).
+    """
+    filter_name_map = {
+        "publication_year": "publication_year",
+        "is_oa": "is_oa",
+        "has_abstract": "has_abstract",
+        "has_content.pdf": "has_content_pdf",
+        "has_content.grobid_xml": "has_content_grobid_xml",
+    }
+    return {filter_name_map.get(k, k): v for k, v in filters.items() if k in filter_name_map}
 
 
 @blueprint.route("/find/works", methods=["GET", "POST"])
@@ -249,15 +281,20 @@ def find_works():
         "count": 25,
         "filter": {
             "publication_year": ">2020",
-            "type": "article",
-            "is_oa": true
+            "is_oa": true,
+            "has_content.pdf": true
         }
     }
 
     Parameters:
         query: Search text (required, max 10,000 chars)
         count: Number of results (1-100, default 25)
-        filter: Optional filters (publication_year, type, is_oa, has_abstract)
+        filter: Optional filters:
+            - publication_year: e.g., "2023", ">2020", ">=2020", "2020-2023"
+            - is_oa: true/false
+            - has_abstract: true/false
+            - has_content.pdf: true/false
+            - has_content.grobid_xml: true/false
 
     Returns:
     {
@@ -281,6 +318,8 @@ def find_works():
         filters = data.get("filter", {})
         if isinstance(filters, str):
             filters = parse_filter(filters)
+        else:
+            filters = normalize_filter_dict(filters)
     else:
         query = request.args.get("query", "").strip()
         count = request.args.get("count", DEFAULT_COUNT, type=int)
