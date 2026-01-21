@@ -187,12 +187,12 @@ def hydrate_works(work_ids: list) -> dict:
     response = s.execute()
     print(f"[vector_search] hydrate_works: ES returned {len(response.hits)} hits")
 
-    # Build lookup dict mapping integer work_id to work object
+    # Build lookup dict mapping string work_id to work object
     works = {}
     for hit in response.hits:
-        # Extract integer ID from URL (e.g., "https://openalex.org/W4286979530" -> 4286979530)
-        int_id = int(hit.id.split("/W")[-1])
-        works[int_id] = hit.to_dict()
+        # Extract ID from URL (e.g., "https://openalex.org/W4286979530" -> "4286979530")
+        str_id = hit.id.split("/W")[-1]
+        works[str_id] = hit.to_dict()
 
     return works
 
