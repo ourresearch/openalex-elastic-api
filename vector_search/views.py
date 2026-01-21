@@ -26,8 +26,8 @@ blueprint = Blueprint("vector_search", __name__)
 EMBEDDING_MODEL = "text-embedding-3-small"
 VECTOR_SEARCH_ENDPOINT = "openalex-vector-search"
 VECTOR_SEARCH_INDEX = "openalex.vector_search.work_embeddings_index"
-DEFAULT_PER_PAGE = 100
-MAX_PER_PAGE = 100
+DEFAULT_COUNT = 25
+MAX_COUNT = 100
 WORKS_INDEX = settings.WORKS_INDEX_WALDEN
 
 
@@ -227,12 +227,12 @@ def find_works():
     """
     Semantic similarity search over OpenAlex works.
 
-    GET /find/works?query=...&per_page=10&filter=publication_year:>2020
+    GET /find/works?query=...&count=25&filter=publication_year:>2020
 
     POST /find/works
     {
         "query": "full text query...",
-        "per_page": 10,
+        "count": 25,
         "filter": {
             "publication_year": ">2020",
             "type": "article",
@@ -240,10 +240,15 @@ def find_works():
         }
     }
 
+    Parameters:
+        query: Search text (required, max 10,000 chars)
+        count: Number of results (1-100, default 25)
+        filter: Optional filters (publication_year, type, is_oa, has_abstract)
+
     Returns:
     {
         "meta": {
-            "count": 10,
+            "count": 25,
             "query": "..."
         },
         "results": [
@@ -258,13 +263,13 @@ def find_works():
     if request.method == "POST":
         data = request.get_json() or {}
         query = data.get("query", "").strip()
-        per_page = data.get("per_page", DEFAULT_PER_PAGE)
+        count = data.get("count", DEFAULT_COUNT)
         filters = data.get("filter", {})
         if isinstance(filters, str):
             filters = parse_filter(filters)
     else:
         query = request.args.get("query", "").strip()
-        per_page = request.args.get("per_page", DEFAULT_PER_PAGE, type=int)
+        count = request.args.get("count", DEFAULT_COUNT, type=int)
         filter_str = request.args.get("filter", "")
         filters = parse_filter(filter_str)
 
@@ -275,16 +280,16 @@ def find_works():
     if len(query) > 10000:
         raise APIQueryParamsError("query must be at most 10,000 characters")
 
-    # Validate per_page
+    # Validate count
     try:
-        per_page = int(per_page)
+        count = int(count)
     except (ValueError, TypeError):
-        raise APIQueryParamsError("per_page must be an integer")
+        raise APIQueryParamsError("count must be an integer")
 
-    if per_page < 1:
-        raise APIQueryParamsError("per_page must be at least 1")
-    if per_page > MAX_PER_PAGE:
-        raise APIQueryParamsError(f"per_page must be at most {MAX_PER_PAGE}")
+    if count < 1:
+        raise APIQueryParamsError("count must be at least 1")
+    if count > MAX_COUNT:
+        raise APIQueryParamsError(f"count must be at most {MAX_COUNT}")
 
     # Step 1: Embed query
     try:
@@ -296,7 +301,7 @@ def find_works():
     try:
         vector_results = search_vectors(
             query_embedding=query_embedding,
-            num_results=per_page,
+            num_results=count,
             filters=filters
         )
     except Exception as e:
@@ -330,7 +335,6 @@ def find_works():
         "meta": {
             "count": len(results),
             "query": query,
-            "per_page": per_page,
             "filters_applied": filters if filters else None
         },
         "results": results
