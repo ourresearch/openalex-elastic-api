@@ -118,6 +118,12 @@ class HasContentSchema(Schema):
     pdf = fields.Bool()
     grobid_xml = fields.Bool()
 
+
+class ContentUrlsSchema(Schema):
+    pdf = fields.Str()
+    grobid_xml = fields.Str()
+
+
 class AwardsSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
@@ -355,6 +361,7 @@ class WorksSchema(Schema):
     datasets = fields.List(fields.Str())
     versions = fields.List(fields.Str())
     has_content = fields.Nested(HasContentSchema)
+    content_urls = fields.Method("get_content_urls")
     referenced_works_count = fields.Int()
     referenced_works = fields.List(fields.Str())
     related_works = fields.List(fields.Str())
@@ -387,6 +394,31 @@ class WorksSchema(Schema):
     @staticmethod
     def get_relevance_score(obj):
         return relevance_score(obj)
+
+    @staticmethod
+    def get_content_urls(obj):
+        has_content = getattr(obj, "has_content", None)
+        if not has_content:
+            return None
+
+        has_pdf = getattr(has_content, "pdf", False)
+        has_grobid = getattr(has_content, "grobid_xml", False)
+
+        if not has_pdf and not has_grobid:
+            return None
+
+        # Extract work ID from full URL (e.g., "https://openalex.org/W2741809807" -> "W2741809807")
+        work_id = obj.id.split("/")[-1] if hasattr(obj, "id") else None
+        if not work_id:
+            return None
+
+        result = {}
+        if has_pdf:
+            result["pdf"] = f"https://api.openalex.org/content/{work_id}/pdf"
+        if has_grobid:
+            result["grobid_xml"] = f"https://api.openalex.org/content/{work_id}/grobid-xml"
+
+        return result if result else None
 
     class Meta:
         ordered = True
