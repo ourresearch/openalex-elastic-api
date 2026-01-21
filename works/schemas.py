@@ -414,9 +414,9 @@ class WorksSchema(Schema):
 
         result = {}
         if has_pdf:
-            result["pdf"] = f"https://api.openalex.org/content/{work_id}/pdf"
+            result["pdf"] = f"https://content.openalex.org/works/{work_id}.pdf"
         if has_grobid:
-            result["grobid_xml"] = f"https://api.openalex.org/content/{work_id}/grobid-xml"
+            result["grobid_xml"] = f"https://content.openalex.org/works/{work_id}.grobid-xml"
 
         return result if result else None
 
