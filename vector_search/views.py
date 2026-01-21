@@ -161,27 +161,32 @@ def hydrate_works(work_ids: list) -> dict:
     Fetch full work objects from Elasticsearch.
 
     Args:
-        work_ids: List of OpenAlex work IDs
+        work_ids: List of OpenAlex work IDs (integers or strings)
 
     Returns:
-        Dict mapping work_id to work object
+        Dict mapping work_id (integer) to work object
     """
     if not work_ids:
         return {}
+
+    # Convert integer work_ids to OpenAlex URL format for ES query
+    openalex_ids = [f"https://openalex.org/W{wid}" for wid in work_ids]
 
     es = connections.get_connection('walden')
     s = Search(index=WORKS_INDEX, using=es)
 
     # Search by ID
-    s = s.query(Q("terms", id=work_ids))
+    s = s.query(Q("terms", id=openalex_ids))
     s = s.extra(size=len(work_ids))
 
     response = s.execute()
 
-    # Build lookup dict
+    # Build lookup dict mapping integer work_id to work object
     works = {}
     for hit in response.hits:
-        works[hit.id] = hit.to_dict()
+        # Extract integer ID from URL (e.g., "https://openalex.org/W4286979530" -> 4286979530)
+        int_id = int(hit.id.split("/W")[-1])
+        works[int_id] = hit.to_dict()
 
     return works
 
