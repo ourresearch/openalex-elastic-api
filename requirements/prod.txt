@@ -1,5 +1,6 @@
 beautifulsoup4==4.14.2
 databricks-sql-connector==2.5.2
+databricks-vectorsearch>=0.40
 elasticsearch-dsl==8.9.0
 flask==2.1.2
 Flask_JWT_Extended==4.7.1
