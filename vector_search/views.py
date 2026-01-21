@@ -153,9 +153,7 @@ def search_vectors(
 
     # Parse results: work_id is first column, score is last column
     data_array = results.get('result', {}).get('data_array', [])
-    parsed = [{"work_id": row[0], "score": row[-1]} for row in data_array]
-    print(f"[vector_search] search_vectors: got {len(parsed)} results, first 3: {parsed[:3]}")
-    return parsed
+    return [{"work_id": row[0], "score": row[-1]} for row in data_array]
 
 
 def hydrate_works(work_ids: list) -> dict:
@@ -169,31 +167,27 @@ def hydrate_works(work_ids: list) -> dict:
         Dict mapping work_id (integer) to work object
     """
     if not work_ids:
-        print(f"[vector_search] hydrate_works: no work_ids provided")
         return {}
 
-    # Convert integer work_ids to OpenAlex URL format for ES query
+    # Convert work_ids to OpenAlex URL format for ES query
     openalex_ids = [f"https://openalex.org/W{wid}" for wid in work_ids]
-    print(f"[vector_search] hydrate_works: querying {len(openalex_ids)} IDs, first 3: {openalex_ids[:3]}")
 
     es = connections.get_connection('walden')
     s = Search(index=WORKS_INDEX, using=es)
-    print(f"[vector_search] hydrate_works: using index {WORKS_INDEX}")
 
     # Search by ID
     s = s.query(Q("terms", id=openalex_ids))
     s = s.extra(size=len(work_ids))
 
     response = s.execute()
-    print(f"[vector_search] hydrate_works: ES returned {len(response.hits)} hits")
 
-    # Build lookup dict mapping string work_id to Hit object (not dict)
+    # Build lookup dict mapping string work_id to Hit object
     # WorksSchema expects Hit objects with .meta attribute
     works = {}
     for hit in response.hits:
         # Extract ID from URL (e.g., "https://openalex.org/W4286979530" -> "4286979530")
         str_id = hit.id.split("/W")[-1]
-        works[str_id] = hit  # Keep as Hit object, not dict
+        works[str_id] = hit
 
     return works
 
@@ -317,7 +311,6 @@ def find_works():
 
     # Step 4: Build response
     results = []
-    serialization_errors = []
     works_schema = WorksSchema()
 
     for vr in vector_results:
@@ -326,29 +319,19 @@ def find_works():
         work_data = works.get(work_id)
 
         if work_data:
-            try:
-                # Serialize using works schema for consistent output
-                serialized_work = works_schema.dump(work_data)
-                results.append({
-                    "score": round(score, 4),
-                    "work": serialized_work
-                })
-            except Exception as e:
-                serialization_errors.append({"work_id": work_id, "error": str(e)})
+            # Serialize using works schema for consistent output
+            serialized_work = works_schema.dump(work_data)
+            results.append({
+                "score": round(score, 4),
+                "work": serialized_work
+            })
 
     return jsonify({
         "meta": {
             "count": len(results),
             "query": query,
             "per_page": per_page,
-            "filters_applied": filters if filters else None,
-            "_debug": {
-                "vector_results_count": len(vector_results),
-                "first_vector_results": vector_results[:3] if vector_results else [],
-                "work_ids_count": len(work_ids),
-                "hydrated_count": len(works),
-                "serialization_errors": serialization_errors
-            }
+            "filters_applied": filters if filters else None
         },
         "results": results
     })
