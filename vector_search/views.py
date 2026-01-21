@@ -14,6 +14,7 @@ Flow:
 from flask import Blueprint, jsonify, request
 from openai import OpenAI
 from databricks.vector_search.client import VectorSearchClient
+from databricks import sql
 from elasticsearch_dsl import Search, Q, connections
 
 import settings
@@ -29,6 +30,7 @@ VECTOR_SEARCH_INDEX = "openalex.vector_search.work_embeddings_index"
 DEFAULT_COUNT = 25
 MAX_COUNT = 100
 WORKS_INDEX = settings.WORKS_INDEX_WALDEN
+TOTAL_WORKS_WITH_ABSTRACTS = 217_000_000
 
 
 def get_openai_client():
@@ -52,6 +54,18 @@ def get_vector_search_client():
         workspace_url=f"https://{host}",
         personal_access_token=token
     )
+
+
+def get_embedding_count():
+    """Query Databricks for current embedding count."""
+    with sql.connect(
+        server_hostname=settings.DATABRICKS_HOST,
+        http_path=settings.DATABRICKS_HTTP_PATH,
+        access_token=settings.DATABRICKS_TOKEN,
+    ) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM openalex.vector_search.work_embeddings")
+            return cursor.fetchone()[0]
 
 
 def embed_query(text: str) -> list:
@@ -373,9 +387,25 @@ def find_works_health():
     except Exception:
         pass
 
+    # Get embedding count
+    embeddings = None
+    try:
+        current_count = get_embedding_count()
+        embeddings = {
+            "current": current_count,
+            "target": TOTAL_WORKS_WITH_ABSTRACTS,
+            "percent_complete": round(100 * current_count / TOTAL_WORKS_WITH_ABSTRACTS, 2)
+        }
+    except Exception:
+        pass
+
     all_healthy = all(checks.values())
 
-    return jsonify({
+    response = {
         "status": "healthy" if all_healthy else "degraded",
         "checks": checks
-    }), 200 if all_healthy else 503
+    }
+    if embeddings:
+        response["embeddings"] = embeddings
+
+    return jsonify(response), 200 if all_healthy else 503
