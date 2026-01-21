@@ -153,7 +153,9 @@ def search_vectors(
 
     # Parse results: work_id is first column, score is last column
     data_array = results.get('result', {}).get('data_array', [])
-    return [{"work_id": row[0], "score": row[-1]} for row in data_array]
+    parsed = [{"work_id": row[0], "score": row[-1]} for row in data_array]
+    print(f"[vector_search] search_vectors: got {len(parsed)} results, first 3: {parsed[:3]}")
+    return parsed
 
 
 def hydrate_works(work_ids: list) -> dict:
@@ -167,19 +169,23 @@ def hydrate_works(work_ids: list) -> dict:
         Dict mapping work_id (integer) to work object
     """
     if not work_ids:
+        print(f"[vector_search] hydrate_works: no work_ids provided")
         return {}
 
     # Convert integer work_ids to OpenAlex URL format for ES query
     openalex_ids = [f"https://openalex.org/W{wid}" for wid in work_ids]
+    print(f"[vector_search] hydrate_works: querying {len(openalex_ids)} IDs, first 3: {openalex_ids[:3]}")
 
     es = connections.get_connection('walden')
     s = Search(index=WORKS_INDEX, using=es)
+    print(f"[vector_search] hydrate_works: using index {WORKS_INDEX}")
 
     # Search by ID
     s = s.query(Q("terms", id=openalex_ids))
     s = s.extra(size=len(work_ids))
 
     response = s.execute()
+    print(f"[vector_search] hydrate_works: ES returned {len(response.hits)} hits")
 
     # Build lookup dict mapping integer work_id to work object
     works = {}
