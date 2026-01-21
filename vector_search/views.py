@@ -316,6 +316,7 @@ def find_works():
 
     # Step 4: Build response
     results = []
+    serialization_errors = []
     works_schema = WorksSchema()
 
     for vr in vector_results:
@@ -332,7 +333,7 @@ def find_works():
                     "work": serialized_work
                 })
             except Exception as e:
-                print(f"[vector_search] Failed to serialize work {work_id}: {e}")
+                serialization_errors.append({"work_id": work_id, "error": str(e)})
 
     return jsonify({
         "meta": {
@@ -344,7 +345,8 @@ def find_works():
                 "vector_results_count": len(vector_results),
                 "first_vector_results": vector_results[:3] if vector_results else [],
                 "work_ids_count": len(work_ids),
-                "hydrated_count": len(works)
+                "hydrated_count": len(works),
+                "serialization_errors": serialization_errors
             }
         },
         "results": results
