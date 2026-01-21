@@ -122,22 +122,30 @@ def build_filter_string(filters: dict) -> str:
         else:
             clauses.append(f"publication_year = {int(year_filter)}")
 
-    # Boolean filters: storage-optimized endpoints expect unquoted true/false
+    # Boolean filters: use SQL IS TRUE/IS FALSE syntax
     if "is_oa" in filters:
-        is_oa_val = "true" if str(filters["is_oa"]).lower() == "true" else "false"
-        clauses.append(f"is_oa = {is_oa_val}")
+        if str(filters["is_oa"]).lower() == "true":
+            clauses.append("is_oa IS TRUE")
+        else:
+            clauses.append("is_oa IS FALSE")
 
     if "has_abstract" in filters:
-        has_abstract_val = "true" if str(filters["has_abstract"]).lower() == "true" else "false"
-        clauses.append(f"has_abstract = {has_abstract_val}")
+        if str(filters["has_abstract"]).lower() == "true":
+            clauses.append("has_abstract IS TRUE")
+        else:
+            clauses.append("has_abstract IS FALSE")
 
     if "has_content_pdf" in filters:
-        has_pdf_val = "true" if str(filters["has_content_pdf"]).lower() == "true" else "false"
-        clauses.append(f"has_content_pdf = {has_pdf_val}")
+        if str(filters["has_content_pdf"]).lower() == "true":
+            clauses.append("has_content_pdf IS TRUE")
+        else:
+            clauses.append("has_content_pdf IS FALSE")
 
     if "has_content_grobid_xml" in filters:
-        has_grobid_val = "true" if str(filters["has_content_grobid_xml"]).lower() == "true" else "false"
-        clauses.append(f"has_content_grobid_xml = {has_grobid_val}")
+        if str(filters["has_content_grobid_xml"]).lower() == "true":
+            clauses.append("has_content_grobid_xml IS TRUE")
+        else:
+            clauses.append("has_content_grobid_xml IS FALSE")
 
     return " AND ".join(clauses) if clauses else None
 
