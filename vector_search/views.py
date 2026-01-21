@@ -309,7 +309,10 @@ def find_works():
 
     # Step 3: Hydrate from Elasticsearch
     work_ids = [r["work_id"] for r in vector_results]
-    works = hydrate_works(work_ids)
+    try:
+        works = hydrate_works(work_ids)
+    except Exception as e:
+        raise APIQueryParamsError(f"Hydration failed: {str(e)}")
 
     # Step 4: Build response
     results = []
@@ -321,12 +324,15 @@ def find_works():
         work_data = works.get(work_id)
 
         if work_data:
-            # Serialize using works schema for consistent output
-            serialized_work = works_schema.dump(work_data)
-            results.append({
-                "score": round(score, 4),
-                "work": serialized_work
-            })
+            try:
+                # Serialize using works schema for consistent output
+                serialized_work = works_schema.dump(work_data)
+                results.append({
+                    "score": round(score, 4),
+                    "work": serialized_work
+                })
+            except Exception as e:
+                print(f"[vector_search] Failed to serialize work {work_id}: {e}")
 
     return jsonify({
         "meta": {
