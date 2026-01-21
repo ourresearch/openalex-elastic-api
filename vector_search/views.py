@@ -187,12 +187,13 @@ def hydrate_works(work_ids: list) -> dict:
     response = s.execute()
     print(f"[vector_search] hydrate_works: ES returned {len(response.hits)} hits")
 
-    # Build lookup dict mapping string work_id to work object
+    # Build lookup dict mapping string work_id to Hit object (not dict)
+    # WorksSchema expects Hit objects with .meta attribute
     works = {}
     for hit in response.hits:
         # Extract ID from URL (e.g., "https://openalex.org/W4286979530" -> "4286979530")
         str_id = hit.id.split("/W")[-1]
-        works[str_id] = hit.to_dict()
+        works[str_id] = hit  # Keep as Hit object, not dict
 
     return works
 
