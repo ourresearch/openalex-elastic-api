@@ -339,7 +339,13 @@ def find_works():
             "count": len(results),
             "query": query,
             "per_page": per_page,
-            "filters_applied": filters if filters else None
+            "filters_applied": filters if filters else None,
+            "_debug": {
+                "vector_results_count": len(vector_results),
+                "first_vector_results": vector_results[:3] if vector_results else [],
+                "work_ids_count": len(work_ids),
+                "hydrated_count": len(works)
+            }
         },
         "results": results
     })
