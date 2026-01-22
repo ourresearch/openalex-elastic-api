@@ -303,6 +303,20 @@ _List:_ [OpenAlex IDs](../../../how-to-use-the-api/get-single-entities/#the-open
 corresponding_institution_ids: ["https://openalex.org/I4210123613"]
 ```
 
+### `content_url`
+
+_String:_ A URL for downloading full-text content (PDF or GROBID XML) for this work. Only present when [`has_content.pdf`](./#has_content) or `has_content.grobid_xml` is `true`.
+
+```json
+content_url: "https://api.openalex.org/content/W2741809807"
+```
+
+Append `/pdf` or `/grobid-xml` to download specific formats. See [Get content](../get-content.md) for details.
+
+{% hint style="info" %}
+This field is only available through the API. It is not included in the [snapshot](../../../download-all-data/openalex-snapshot.md) data.
+{% endhint %}
+
 ### `countries_distinct_count`
 
 _Integer:_ Number of distinct `country_codes` among the [`authorships`](authorship-object.md#institutions) for this work.
@@ -400,19 +414,17 @@ The `grants` property has been removed and replaced by [`funders`](./#funders) a
 
 ### `has_content`
 
-_Object:_ Information about available full-text content for this work.
+_Object:_ Information about downloadable full-text content for this work. See [Get content](../get-content.md) for how to download these files.
 
-{% hint style="warning" %}
-This field is for experimental internal use and is likely to disappear without notice.
-{% endhint %}
+* `pdf`: _Boolean_ — whether a PDF is available for download
+* `grobid_xml`: _Boolean_ — whether GROBID-parsed XML is available for download
 
-* `pdf`: _Boolean_ — whether a PDF is available
-* `grobid_xml`: _Boolean_ — whether GROBID-parsed XML is available
+About 60 million works have `has_content.pdf: true`. Use this as a [filter](../filter-works.md) to find works with downloadable content.
 
 ```json
 has_content: {
     pdf: true,
-    grobid_xml: false
+    grobid_xml: true
 }
 ```
 

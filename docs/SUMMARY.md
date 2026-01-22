@@ -17,6 +17,7 @@
   * [Search works](api-entities/works/search-works.md)
   * [Group works](api-entities/works/group-works.md)
   * [Get N-grams](api-entities/works/get-n-grams.md)
+  * [Get content](api-entities/works/get-content.md)
 * [👩 Authors](api-entities/authors/README.md)
   * [Author object](api-entities/authors/author-object.md)
   * [Get a single author](api-entities/authors/get-a-single-author.md)

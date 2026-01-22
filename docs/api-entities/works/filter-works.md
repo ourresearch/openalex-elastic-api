@@ -61,6 +61,8 @@ The `host_venue` and `alternate_host_venues` properties have been deprecated in 
 * [`fwci`](./work-object/README.md#fwci)
 * [`grants.award_id`](work-object/#grants) — Award IDs for grants
 * [`grants.funder`](work-object/#grants) — Funding organizations linked to grants for a work
+* [`has_content.pdf`](work-object/#has_content)
+* [`has_content.grobid_xml`](work-object/#has_content)
 * [`has_fulltext`](work-object/#has\_fulltext)
 * [`ids.pmcid`](work-object/#ids)
 * [`ids.pmid`](work-object/#ids) (alias: `pmid`)
@@ -285,6 +287,24 @@ Returns: works that have or lack an abstract, depending on the given value.
 
 * Get the works that have abstracts:\
   [`https://api.openalex.org/works?filter=has_abstract:true`](https://api.openalex.org/works?filter=has\_abstract:true)
+
+#### `has_content.pdf`
+
+Value: a Boolean (`true` or `false`)
+
+Returns: works that have a downloadable PDF available via the [content endpoint](get-content.md).
+
+* Get works with downloadable PDFs:\
+  [`https://api.openalex.org/works?filter=has_content.pdf:true`](https://api.openalex.org/works?filter=has_content.pdf:true)
+
+#### `has_content.grobid_xml`
+
+Value: a Boolean (`true` or `false`)
+
+Returns: works that have downloadable GROBID-parsed XML via the [content endpoint](get-content.md).
+
+* Get works with downloadable GROBID XML:\
+  [`https://api.openalex.org/works?filter=has_content.grobid_xml:true`](https://api.openalex.org/works?filter=has_content.grobid_xml:true)
 
 #### `has_doi`
 
