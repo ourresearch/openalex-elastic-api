@@ -305,7 +305,7 @@ corresponding_institution_ids: ["https://openalex.org/I4210123613"]
 
 ### `content_url`
 
-_String:_ A URL for downloading full-text content (PDF or GROBID XML) for this work. Only present when [`has_content.pdf`](./#has_content) or `has_content.grobid_xml` is `true`.
+_String:_ A URL for downloading full-text content (PDF or TEI XML) for this work. Only present when [`has_content.pdf`](./#has_content) or `has_content.grobid_xml` is `true`.
 
 ```json
 content_url: "https://content.openalex.org/works/W2741809807"
@@ -417,7 +417,7 @@ The `grants` property has been removed and replaced by [`funders`](./#funders) a
 _Object:_ Information about downloadable full-text content for this work. See [Get content](../../../how-to-use-the-api/get-content.md) for how to download these files.
 
 * `pdf`: _Boolean_ — whether a PDF is available for download
-* `grobid_xml`: _Boolean_ — whether GROBID-parsed XML is available for download
+* `grobid_xml`: _Boolean_ — whether TEI XML is available for download
 
 About 60 million works have `has_content.pdf: true`. Use this as a [filter](../filter-works.md) to find works with downloadable content.
 

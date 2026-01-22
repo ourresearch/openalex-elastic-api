@@ -18,7 +18,7 @@ Some endpoints consume significantly more credits than standard queries:
 
 | Endpoint | Credits | Daily limit (free) | Notes |
 |----------|---------|-------------------|-------|
-| [Content downloads](get-content.md) | 100 | \~1,000 files | PDF or GROBID XML |
+| [Content downloads](get-content.md) | 100 | \~1,000 files | PDF or TEI XML |
 | Aboutness (`/text`) | 1,000 | \~100 requests | Topic classification |
 | Vector search | 1,000 | \~100 requests | Coming soon |
 

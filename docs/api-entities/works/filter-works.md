@@ -301,9 +301,9 @@ Returns: works that have a downloadable PDF available via the [content endpoint]
 
 Value: a Boolean (`true` or `false`)
 
-Returns: works that have downloadable GROBID-parsed XML via the [content endpoint](../../how-to-use-the-api/get-content.md).
+Returns: works that have downloadable TEI XML via the [content endpoint](../../how-to-use-the-api/get-content.md).
 
-* Get works with downloadable GROBID XML:\
+* Get works with downloadable TEI XML:\
   [`https://api.openalex.org/works?filter=has_content.grobid_xml:true`](https://api.openalex.org/works?filter=has_content.grobid_xml:true)
 
 #### `has_doi`
