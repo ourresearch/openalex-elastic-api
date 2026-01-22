@@ -308,10 +308,10 @@ corresponding_institution_ids: ["https://openalex.org/I4210123613"]
 _String:_ A URL for downloading full-text content (PDF or GROBID XML) for this work. Only present when [`has_content.pdf`](./#has_content) or `has_content.grobid_xml` is `true`.
 
 ```json
-content_url: "https://api.openalex.org/content/W2741809807"
+content_url: "https://content.openalex.org/works/W2741809807"
 ```
 
-Append `/pdf` or `/grobid-xml` to download specific formats. See [Get content](../get-content.md) for details.
+Append `.pdf` or `.grobid-xml` to download specific formats. See [Get content](../../../how-to-use-the-api/get-content.md) for details.
 
 {% hint style="info" %}
 This field is only available through the API. It is not included in the [snapshot](../../../download-all-data/openalex-snapshot.md) data.
@@ -414,7 +414,7 @@ The `grants` property has been removed and replaced by [`funders`](./#funders) a
 
 ### `has_content`
 
-_Object:_ Information about downloadable full-text content for this work. See [Get content](../get-content.md) for how to download these files.
+_Object:_ Information about downloadable full-text content for this work. See [Get content](../../../how-to-use-the-api/get-content.md) for how to download these files.
 
 * `pdf`: _Boolean_ — whether a PDF is available for download
 * `grobid_xml`: _Boolean_ — whether GROBID-parsed XML is available for download

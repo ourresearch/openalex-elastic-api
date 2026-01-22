@@ -8,7 +8,7 @@ The API uses a credit-based rate limiting system. Different endpoint types consu
 |---------------|---------|---------------------|
 | Singleton | `/works/W123`, `/works/W123/ngrams` | 1 |
 | List | `/works?filter=...`, `/autocomplete/works` | 10 |
-| Content | [`/content/{id}/pdf`](../api-entities/works/get-content.md), `/content/{id}/grobid-xml` | 100 |
+| Content | [`content.openalex.org/works/{id}.pdf`](get-content.md) | 100 |
 | Vector | Vector searches (future) | 1,000 |
 | Text (Aboutness) | `/text/topics?title=...` | 1,000 |
 
@@ -18,7 +18,7 @@ Some endpoints consume significantly more credits than standard queries:
 
 | Endpoint | Credits | Daily limit (free) | Notes |
 |----------|---------|-------------------|-------|
-| [Content downloads](../api-entities/works/get-content.md) | 100 | \~1,000 files | PDF or GROBID XML |
+| [Content downloads](get-content.md) | 100 | \~1,000 files | PDF or GROBID XML |
 | Aboutness (`/text`) | 1,000 | \~100 requests | Topic classification |
 | Vector search | 1,000 | \~100 requests | Coming soon |
 

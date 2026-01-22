@@ -16,7 +16,7 @@ The structure of each entity type is documented here: [Work](../api-entities/wor
 {% hint style="info" %}
 **API-only fields**: Some Work properties are only available through the API and not included in the snapshot:
 
-* `content_url` — use the [content endpoint](../api-entities/works/get-content.md) directly with work IDs from the snapshot
+* `content_url` — use the [content endpoint](../how-to-use-the-api/get-content.md) directly with work IDs from the snapshot
 {% endhint %}
 
 {% hint style="info" %}

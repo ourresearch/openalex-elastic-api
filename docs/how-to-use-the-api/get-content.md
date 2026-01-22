@@ -7,7 +7,7 @@ description: Download PDFs and machine-readable XML for OpenAlex works
 OpenAlex provides downloadable full-text content for approximately 60 million works. This includes PDFs and GROBID-parsed XML (TEI format).
 
 {% hint style="warning" %}
-Content downloads cost **100 credits per file**. A free API key provides 100,000 credits/day, so you can download about 1,000 files per day. See [rate limits](../../how-to-use-the-api/rate-limits-and-authentication.md) for details.
+Content downloads cost **100 credits per file**. A free API key provides 100,000 credits/day, so you can download about 1,000 files per day. See [rate limits](rate-limits-and-authentication.md) for details.
 {% endhint %}
 
 ## Content coverage
@@ -17,14 +17,10 @@ About 60 million works have downloadable content:
 * **\~60M PDFs** — original PDF files
 * **\~43M GROBID XML** — machine-readable structured text (TEI format)
 
-You can find works with content using the [`has_content`](work-object/#has_content) filter:
+You can find works with content using the [`has_content`](../api-entities/works/work-object/#has_content) filter:
 
 * Works with PDFs: [`https://api.openalex.org/works?filter=has_content.pdf:true`](https://api.openalex.org/works?filter=has_content.pdf:true)
 * Works with GROBID XML: [`https://api.openalex.org/works?filter=has_content.grobid_xml:true`](https://api.openalex.org/works?filter=has_content.grobid_xml:true)
-
-{% hint style="info" %}
-Having content available doesn't necessarily mean the content is open access. We have obtained content through various legal means. The [`open_access`](work-object/#open_access) field tells you about OA status.
-{% endhint %}
 
 ## Downloading content for a single work
 
@@ -33,18 +29,18 @@ Get a time-limited download URL for a specific work:
 ### PDF
 
 ```
-GET https://api.openalex.org/content/{work_id}/pdf?api_key=YOUR_KEY
+GET https://content.openalex.org/works/{work_id}.pdf?api_key=YOUR_KEY
 ```
 
-Example: [`https://api.openalex.org/content/W2741809807/pdf`](https://api.openalex.org/content/W2741809807/pdf)
+Example: [`https://content.openalex.org/works/W2741809807.pdf`](https://content.openalex.org/works/W2741809807.pdf)
 
 ### GROBID XML
 
 ```
-GET https://api.openalex.org/content/{work_id}/grobid-xml?api_key=YOUR_KEY
+GET https://content.openalex.org/works/{work_id}.grobid-xml?api_key=YOUR_KEY
 ```
 
-Example: [`https://api.openalex.org/content/W2741809807/grobid-xml`](https://api.openalex.org/content/W2741809807/grobid-xml)
+Example: [`https://content.openalex.org/works/W2741809807.grobid-xml`](https://content.openalex.org/works/W2741809807.grobid-xml)
 
 The response is a `302 redirect` to a time-limited (5-minute) download URL. Follow the redirect to download the file.
 
@@ -55,12 +51,12 @@ The response is a `302 redirect` to a time-limited (5-minute) download URL. Foll
 
 ### Error responses
 
-| Status | Meaning                                       |
-| ------ | --------------------------------------------- |
-| 302    | Success — follow redirect to download         |
+| Status | Meaning                                         |
+| ------ | ----------------------------------------------- |
+| 302    | Success — follow redirect to download           |
 | 404    | Work exists but no content available (1 credit) |
-| 404    | Work does not exist                           |
-| 429    | Rate limit exceeded                           |
+| 404    | Work does not exist                             |
+| 429    | Rate limit exceeded                             |
 
 ## Examples
 
@@ -87,7 +83,7 @@ work_ids = ["W4388482763", "W4386073691", ...]  # from step 1
 for work_id in work_ids:
     # Get signed URL (follows redirect automatically)
     r = requests.get(
-        f"https://api.openalex.org/content/{work_id}/pdf",
+        f"https://content.openalex.org/works/{work_id}.pdf",
         params={"api_key": "YOUR_KEY"},
         allow_redirects=True
     )
@@ -132,12 +128,13 @@ import requests
 from concurrent.futures import ThreadPoolExecutor
 
 API_KEY = "YOUR_KEY"
-BASE_URL = "https://api.openalex.org"
+CONTENT_URL = "https://content.openalex.org"
+API_URL = "https://api.openalex.org"
 
 def download_pdf(work_id):
     # TODO: add retry logic, timeout handling, 404 handling
     r = requests.get(
-        f"{BASE_URL}/content/{work_id}/pdf",
+        f"{CONTENT_URL}/works/{work_id}.pdf",
         params={"api_key": API_KEY},
         allow_redirects=True
     )
@@ -147,7 +144,7 @@ def download_pdf(work_id):
 def get_works_page(cursor):
     # TODO: add retry logic for API errors
     r = requests.get(
-        f"{BASE_URL}/works",
+        f"{API_URL}/works",
         params={
             "filter": "has_content.pdf:true",
             "select": "id",
@@ -179,15 +176,15 @@ Each work with content includes a `content_url` field that provides direct acces
 ```json
 {
   "id": "https://openalex.org/W2741809807",
-  "content_url": "https://api.openalex.org/content/W2741809807",
+  "content_url": "https://content.openalex.org/works/W2741809807",
   // ... other fields
 }
 ```
 
-Append `/pdf` or `/grobid-xml` to download specific formats.
+Append `.pdf` or `.grobid-xml` to download specific formats.
 
 {% hint style="info" %}
-`content_url` is only available through the API, not in the [snapshot](../../download-all-data/openalex-snapshot.md).
+`content_url` is only available through the API, not in the [snapshot](../download-all-data/openalex-snapshot.md).
 {% endhint %}
 
 ## What is GROBID XML?
@@ -203,8 +200,8 @@ This is useful for text mining, citation analysis, and building knowledge graphs
 
 ## Credit costs
 
-| Action                                      | Credits     |
-| ------------------------------------------- | ----------- |
-| Download PDF or GROBID XML (success)        | 100         |
-| Query for unavailable content (404)         | 1           |
-| List works with content (via `/works` API)  | 10 per page |
+| Action                                     | Credits     |
+| ------------------------------------------ | ----------- |
+| Download PDF or GROBID XML (success)       | 100         |
+| Query for unavailable content (404)        | 1           |
+| List works with content (via `/works` API) | 10 per page |

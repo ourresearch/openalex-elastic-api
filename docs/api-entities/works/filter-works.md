@@ -292,7 +292,7 @@ Returns: works that have or lack an abstract, depending on the given value.
 
 Value: a Boolean (`true` or `false`)
 
-Returns: works that have a downloadable PDF available via the [content endpoint](get-content.md).
+Returns: works that have a downloadable PDF available via the [content endpoint](../../how-to-use-the-api/get-content.md).
 
 * Get works with downloadable PDFs:\
   [`https://api.openalex.org/works?filter=has_content.pdf:true`](https://api.openalex.org/works?filter=has_content.pdf:true)
@@ -301,7 +301,7 @@ Returns: works that have a downloadable PDF available via the [content endpoint]
 
 Value: a Boolean (`true` or `false`)
 
-Returns: works that have downloadable GROBID-parsed XML via the [content endpoint](get-content.md).
+Returns: works that have downloadable GROBID-parsed XML via the [content endpoint](../../how-to-use-the-api/get-content.md).
 
 * Get works with downloadable GROBID XML:\
   [`https://api.openalex.org/works?filter=has_content.grobid_xml:true`](https://api.openalex.org/works?filter=has_content.grobid_xml:true)

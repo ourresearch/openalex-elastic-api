@@ -17,7 +17,6 @@
   * [Search works](api-entities/works/search-works.md)
   * [Group works](api-entities/works/group-works.md)
   * [Get N-grams](api-entities/works/get-n-grams.md)
-  * [Get content](api-entities/works/get-content.md)
 * [👩 Authors](api-entities/authors/README.md)
   * [Author object](api-entities/authors/author-object.md)
   * [Get a single author](api-entities/authors/get-a-single-author.md)
@@ -97,6 +96,7 @@
   * [Select fields](how-to-use-the-api/get-lists-of-entities/select-fields.md)
   * [Sample entity lists](how-to-use-the-api/get-lists-of-entities/sample-entity-lists.md)
   * [Autocomplete entities](how-to-use-the-api/get-lists-of-entities/autocomplete-entities.md)
+* [Get content](how-to-use-the-api/get-content.md)
 * [Get groups of entities](how-to-use-the-api/get-groups-of-entities.md)
 * [Rate limits and authentication](how-to-use-the-api/rate-limits-and-authentication.md)
 
