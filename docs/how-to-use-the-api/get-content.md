@@ -4,59 +4,88 @@ description: Download PDFs and machine-readable XML for OpenAlex works
 
 # Get content
 
-OpenAlex provides downloadable full-text content for approximately 60 million works. This includes PDFs and GROBID-parsed XML (TEI format).
+OpenAlex includes links to publisher-hosted and repository-hosted full text for about 60 million [Open Access](../api-entities/works/work-object/#open\_access) works. But downloading from all those different sources can be inconvenient.
+
+So we've cached copies of these files. We've got:
+
+* **PDF** (60M): You can download PDFs directly from us.
+* **XML** (43M): We've also parsed the PDFs (using [Grobid](https://github.com/kermitt2/grobid)) into [TEI XML](https://tei-c.org/), a format for representing the sections and semantics of scholarly papers.
+* **Markdown**: coming soon.
 
 {% hint style="warning" %}
-Content downloads cost **100 credits per file**. A free API key provides 100,000 credits/day, so you can download about 1,000 files per day. See [rate limits](rate-limits-and-authentication.md) for details.
+Content downloads require an API key and cost **100 credits per file**. See [rate limits](rate-limits-and-authentication.md) for details.
 {% endhint %}
 
-## Content coverage
+## Getting content
 
-About 60 million works have downloadable content:
+### Get content for a single work
 
-* **\~60M PDFs** — original PDF files
-* **\~43M GROBID XML** — machine-readable structured text (TEI format)
-
-You can find works with content using the [`has_content`](../api-entities/works/work-object/#has_content) filter:
-
-* Works with PDFs: [`https://api.openalex.org/works?filter=has_content.pdf:true`](https://api.openalex.org/works?filter=has_content.pdf:true)
-* Works with GROBID XML: [`https://api.openalex.org/works?filter=has_content.grobid_xml:true`](https://api.openalex.org/works?filter=has_content.grobid_xml:true)
-
-## Downloading content for a single work
-
-Get a time-limited download URL for a specific work:
-
-### PDF
+The URL pattern is simple:
 
 ```
-GET https://content.openalex.org/works/{work_id}.pdf?api_key=YOUR_KEY
+https://content.openalex.org/works/{work_id}.pdf?api_key=YOUR_KEY
 ```
 
-Example: [`https://content.openalex.org/works/W2741809807.pdf`](https://content.openalex.org/works/W2741809807.pdf)
+Replace `{work_id}` with any OpenAlex work ID (like `W2741809807`), and you'll download the PDF. Use `.grobid-xml` instead of `.pdf` to get the TEI XML version. If you don't specify an extension, it'll default to `.pdf`.
 
-### GROBID XML
+Examples:
+
+* PDF: [`https://content.openalex.org/works/W2741809807.pdf?api_key=YOUR_KEY`](https://content.openalex.org/works/W2741809807.pdf?api_key=YOUR_KEY)
+* TEI XML: [`https://content.openalex.org/works/W2741809807.grobid-xml?api_key=YOUR_KEY`](https://content.openalex.org/works/W2741809807.grobid-xml?api_key=YOUR_KEY)
+
+### How it works
+
+When you request content, here's what happens:
+
+1. We check if we have the requested file. If not, you get a `404` and are charged just 1 credit.
+2. If we have the file, we verify your API key has enough credits.
+3. We generate a [presigned URL](https://developers.cloudflare.com/r2/api/s3/presigned-urls/)—a temporary, authenticated link that grants access to the file on [Cloudflare R2](https://developers.cloudflare.com/r2/) where it's stored.
+4. We return a `302 redirect` to that presigned URL. Your browser or HTTP client follows the redirect automatically.
+5. Cloudflare verifies the signature and serves the file directly from their global edge network.
+
+This approach is more scalable than streaming files through our servers. Since content is served directly from Cloudflare's edge infrastructure, downloads are fast regardless of where you are.
+
+The presigned URL expires after 5 minutes. If you need to download the same file again, just hit the content endpoint again to get a fresh URL (but it will cost another 100 credits).
+
+## Finding works with content
+
+There are three ways to find works that have downloadable content:
+
+### The YOLO method
+
+Just plug a work ID into the URL template and see what happens. If we have it, great. If not, you'll get a 404 (and pay 1 credit for the lookup). Not recommended, but it works.
+
+### Check the work object
+
+If you already have a [work object](../api-entities/works/work-object/) from the API, look for the [`content_url`](../api-entities/works/work-object/#content\_url) field. If it's present, we have content available. Just append `.pdf` or `.grobid-xml` and add your API key:
+
+```json
+{
+  "id": "https://openalex.org/W2741809807",
+  "content_url": "https://content.openalex.org/works/W2741809807",
+  ...
+}
+```
+
+This is convenient when you're already working with work objects—no need to construct URLs yourself.
+
+### Use the has\_content filter
+
+This is the most powerful approach. Use the [`has_content`](../api-entities/works/filter-works.md#has\_content.pdf) filter to find works with downloadable content, combined with any other filters you want.
+
+For example, find works about frogs that have PDFs:
 
 ```
-GET https://content.openalex.org/works/{work_id}.grobid-xml?api_key=YOUR_KEY
+https://api.openalex.org/works?filter=default.search:frogs,has_content.pdf:true
 ```
 
-Example: [`https://content.openalex.org/works/W2741809807.grobid-xml`](https://content.openalex.org/works/W2741809807.grobid-xml)
+Or works with CC-BY licenses published since 2024:
 
-The response is a `302 redirect` to a time-limited (5-minute) download URL. Follow the redirect to download the file.
+```
+https://api.openalex.org/works?filter=has_content.pdf:true,license.id:cc-by,publication_year:2024-
+```
 
-**Response headers**:
-
-* `Location`: The presigned download URL (valid for 5 minutes)
-* `X-RateLimit-Credits-Used`: Credits consumed (100 for success, 1 for 404)
-
-### Error responses
-
-| Status | Meaning                                         |
-| ------ | ----------------------------------------------- |
-| 302    | Success — follow redirect to download           |
-| 404    | Work exists but no content available (1 credit) |
-| 404    | Work does not exist                             |
-| 429    | Rate limit exceeded                             |
+Then iterate through the results, grab each `content_url`, append `.pdf`, add your API key, and download. You can run 100 requests in parallel without any issues.
 
 ## Examples
 
@@ -67,10 +96,10 @@ Say you want to use an LLM to synthesize research on microplastics in drinking w
 **Step 1: Find relevant works with PDFs**
 
 ```
-GET https://api.openalex.org/works?filter=default.search:microplastics%20drinking%20water,has_content.pdf:true&select=id,title,content_url&api_key=YOUR_KEY
+GET https://api.openalex.org/works?filter=default.search:microplastics%20drinking%20water,has_content.pdf:true&select=id,title,content_url&per_page=100&api_key=YOUR_KEY
 ```
 
-This returns \~800 works. Page through using `cursor=*` to collect all `content_url` values.
+This returns \~800 works. Page through using `cursor=*` to collect all `content_url` values. We use `select=id,title,content_url` to minimize response size. We also use `per_page=100` to get 100 works per page, which means fewer API calls (faster and cheaper).
 
 **Step 2: Download and convert to text**
 
@@ -94,17 +123,16 @@ for work_id in work_ids:
 
     # Convert to markdown (using marker, pdftotext, or similar)
     subprocess.run(["marker", f"{work_id}.pdf", "-o", f"{work_id}.md"])
+
+    # feed it to your LLM and synthesize the knowledge
+    profit()
 ```
 
-Now you have a text corpus ready for RAG or LLM synthesis.
+Now you have a text corpus ready for RAG or LLM synthesis. Vibe a query interface and you've got your own real-time semantic search engine with results synthesis.
 
-### Example: Download all 60 million PDFs
+### Example: Download millions of PDFs
 
-For large-scale downloads, you'll need an enterprise credit pack. [Contact us](mailto:steve@ourresearch.org) for pricing.
-
-{% hint style="info" %}
-OpenAlex data is free per the [POSI principles](https://opendataservices.coop/projects/posi/). Services like high-volume API access are not. This keeps OpenAlex sustainable.
-{% endhint %}
+Downloading millions of PDFs requires a lot of credits. You'll need a one-time credit pack—[contact us](mailto:steve@ourresearch.org) for pricing.
 
 Once you have credits, here's the approach:
 
@@ -114,7 +142,9 @@ Once you have credits, here's the approach:
 GET https://api.openalex.org/works?filter=has_content.pdf:true&select=id,content_url&per_page=100&cursor=*&api_key=YOUR_KEY
 ```
 
-Use `select=id,content_url` to minimize response size. Each page gives you 100 works.
+{% hint style="info" %}
+Here's where you can limit your downloads to Creative Commons licensed works, certain topics, certain years--anything that our powerful filter syntax allows.
+{% endhint %}
 
 **Step 2: Download in parallel**
 
@@ -167,41 +197,12 @@ with ThreadPoolExecutor(max_workers=50) as executor:
         executor.map(download_pdf, work_ids)
 ```
 
-**Performance**: At 100 downloads/second, you'll finish in about a week. We recommend staying under 100 requests/second for reliable performance.
-
-## Using content\_url directly
-
-Each work with content includes a `content_url` field that provides direct access to the content endpoint:
-
-```json
-{
-  "id": "https://openalex.org/W2741809807",
-  "content_url": "https://content.openalex.org/works/W2741809807",
-  // ... other fields
-}
-```
-
-Append `.pdf` or `.grobid-xml` to download specific formats.
-
-{% hint style="info" %}
-`content_url` is only available through the API, not in the [snapshot](../download-all-data/openalex-snapshot.md).
-{% endhint %}
-
-## What is GROBID XML?
-
-[GROBID](https://github.com/kermitt2/grobid) is a machine learning library that extracts structured information from PDFs. The output is TEI-encoded XML containing:
-
-* Full text with section structure
-* References/citations
-* Tables and figures (metadata)
-* Author and affiliation information
-
-This is useful for text mining, citation analysis, and building knowledge graphs.
+**Performance**: At 100 downloads/second, you can download all 60M PDFs in about 10 days. We recommend staying under 100 requests/second for reliable performance.
 
 ## Credit costs
 
 | Action                                     | Credits     |
 | ------------------------------------------ | ----------- |
-| Download PDF or GROBID XML (success)       | 100         |
+| Download PDF or TEI XML (success)          | 100         |
 | Query for unavailable content (404)        | 1           |
 | List works with content (via `/works` API) | 10 per page |
