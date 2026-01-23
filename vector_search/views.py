@@ -75,8 +75,11 @@ def embed_query(query_text: str) -> list:
         with conn.cursor() as cursor:
             cursor.execute(f"SELECT ai_query('{EMBEDDING_MODEL}', '{escaped}')")
             result = cursor.fetchone()
-            # Result is a list of floats
-            return result[0]
+            embedding = result[0]
+            # Convert numpy array to list of Python floats if needed
+            if hasattr(embedding, 'tolist'):
+                return embedding.tolist()
+            return [float(x) for x in embedding]
 
 
 def build_filter_string(filters: dict) -> str:
