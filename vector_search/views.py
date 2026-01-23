@@ -5,13 +5,15 @@ Endpoint: /find/works
 Cost: 1000 credits per query
 
 Flow:
-1. Search Databricks Mosaic AI Vector Search with query text (Databricks embeds automatically)
-2. Hydrate results from Elasticsearch
-3. Return full work objects with similarity scores
+1. Embed query text using Databricks GTE model
+2. Search Databricks Mosaic AI Vector Search with query vector
+3. Hydrate results from Elasticsearch
+4. Return full work objects with similarity scores
 """
 
 from flask import Blueprint, jsonify, request
 from databricks.vector_search.client import VectorSearchClient
+from databricks import sql as databricks_sql
 from elasticsearch_dsl import Search, Q, connections
 
 import settings
@@ -21,7 +23,8 @@ from works.schemas import WorksSchema
 blueprint = Blueprint("vector_search", __name__)
 
 # Configuration
-EMBEDDING_MODEL = "databricks-gte-large-en"  # Managed by Databricks
+EMBEDDING_MODEL = "databricks-gte-large-en"
+EMBEDDING_DIMENSION = 1024
 VECTOR_SEARCH_ENDPOINT = "openalex-vector-search"
 VECTOR_SEARCH_INDEX = "openalex.vector_search.work_embeddings_index"
 DEFAULT_COUNT = 25
@@ -44,6 +47,36 @@ def get_vector_search_client():
         personal_access_token=token,
         disable_notice=True
     )
+
+
+def embed_query(query_text: str) -> list:
+    """
+    Embed query text using Databricks GTE model via SQL warehouse.
+
+    Args:
+        query_text: Text to embed (will be truncated to 2000 chars)
+
+    Returns:
+        List of floats (1024-dimensional embedding)
+    """
+    # Truncate to stay within model limits
+    truncated = query_text[:2000]
+
+    # Escape single quotes for SQL
+    escaped = truncated.replace("'", "''")
+
+    host = settings.DATABRICKS_HOST.replace("https://", "").replace("http://", "")
+
+    with databricks_sql.connect(
+        server_hostname=host,
+        http_path=settings.DATABRICKS_HTTP_PATH,
+        access_token=settings.DATABRICKS_TOKEN
+    ) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(f"SELECT ai_query('{EMBEDDING_MODEL}', '{escaped}')")
+            result = cursor.fetchone()
+            # Result is a list of floats
+            return result[0]
 
 
 def build_filter_string(filters: dict) -> str:
@@ -118,25 +151,30 @@ def search_vectors(
     """
     Search Databricks Vector Search for similar works.
 
-    With managed embeddings, Databricks handles query embedding automatically.
+    Uses self-managed embeddings: we embed the query using ai_query,
+    then search with the query vector.
 
     Args:
-        query_text: Query text (Databricks embeds it using databricks-gte-large-en)
+        query_text: Query text (we embed it using databricks-gte-large-en)
         num_results: Number of results to return
         filters: Optional metadata filters (publication_year, type, is_oa, has_abstract)
 
     Returns:
         List of dicts with work_id and score
     """
+    # Step 1: Embed the query text
+    query_vector = embed_query(query_text)
+
+    # Step 2: Search with the query vector
     vsc = get_vector_search_client()
     index = vsc.get_index(VECTOR_SEARCH_ENDPOINT, VECTOR_SEARCH_INDEX)
 
     # Build filter string for storage-optimized endpoint
     filter_str = build_filter_string(filters)
 
-    # Perform similarity search with text query (Databricks handles embedding)
+    # Perform similarity search with query vector
     results = index.similarity_search(
-        query_text=query_text,
+        query_vector=query_vector,
         num_results=num_results,
         columns=["work_id"],
         filters=filter_str
