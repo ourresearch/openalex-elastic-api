@@ -5,16 +5,13 @@ Endpoint: /find/works
 Cost: 1000 credits per query
 
 Flow:
-1. Embed query text using OpenAI text-embedding-3-small
-2. Search Databricks Mosaic AI Vector Search for similar work IDs
-3. Hydrate results from Elasticsearch
-4. Return full work objects with similarity scores
+1. Search Databricks Mosaic AI Vector Search with query text (Databricks embeds automatically)
+2. Hydrate results from Elasticsearch
+3. Return full work objects with similarity scores
 """
 
 from flask import Blueprint, jsonify, request
-from openai import OpenAI
 from databricks.vector_search.client import VectorSearchClient
-from databricks import sql
 from elasticsearch_dsl import Search, Q, connections
 
 import settings
@@ -24,21 +21,13 @@ from works.schemas import WorksSchema
 blueprint = Blueprint("vector_search", __name__)
 
 # Configuration
-EMBEDDING_MODEL = "text-embedding-3-small"
+EMBEDDING_MODEL = "databricks-gte-large-en"  # Managed by Databricks
 VECTOR_SEARCH_ENDPOINT = "openalex-vector-search"
 VECTOR_SEARCH_INDEX = "openalex.vector_search.work_embeddings_index"
 DEFAULT_COUNT = 25
 MAX_COUNT = 100
 WORKS_INDEX = settings.WORKS_INDEX_WALDEN
 TOTAL_WORKS_WITH_ABSTRACTS = 217_000_000
-
-
-def get_openai_client():
-    """Get OpenAI client."""
-    api_key = settings.OPENAI_API_KEY
-    if not api_key:
-        raise APIQueryParamsError("OpenAI API key not configured")
-    return OpenAI(api_key=api_key)
 
 
 def get_vector_search_client():
@@ -52,38 +41,9 @@ def get_vector_search_client():
 
     return VectorSearchClient(
         workspace_url=f"https://{host}",
-        personal_access_token=token
+        personal_access_token=token,
+        disable_notice=True
     )
-
-
-def get_embedding_count():
-    """Query Databricks for current embedding count."""
-    with sql.connect(
-        server_hostname=settings.DATABRICKS_HOST,
-        http_path=settings.DATABRICKS_HTTP_PATH,
-        access_token=settings.DATABRICKS_TOKEN,
-    ) as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM openalex.vector_search.work_embeddings")
-            return cursor.fetchone()[0]
-
-
-def embed_query(text: str) -> list:
-    """
-    Embed query text using OpenAI text-embedding-3-small.
-
-    Args:
-        text: Query text to embed
-
-    Returns:
-        List of floats (1536 dimensions)
-    """
-    client = get_openai_client()
-    response = client.embeddings.create(
-        model=EMBEDDING_MODEL,
-        input=text
-    )
-    return response.data[0].embedding
 
 
 def build_filter_string(filters: dict) -> str:
@@ -151,15 +111,17 @@ def build_filter_string(filters: dict) -> str:
 
 
 def search_vectors(
-    query_embedding: list,
+    query_text: str,
     num_results: int = 10,
     filters: dict = None
 ) -> list:
     """
     Search Databricks Vector Search for similar works.
 
+    With managed embeddings, Databricks handles query embedding automatically.
+
     Args:
-        query_embedding: Query vector (1536 dimensions)
+        query_text: Query text (Databricks embeds it using databricks-gte-large-en)
         num_results: Number of results to return
         filters: Optional metadata filters (publication_year, type, is_oa, has_abstract)
 
@@ -172,9 +134,9 @@ def search_vectors(
     # Build filter string for storage-optimized endpoint
     filter_str = build_filter_string(filters)
 
-    # Perform similarity search
+    # Perform similarity search with text query (Databricks handles embedding)
     results = index.similarity_search(
-        query_vector=query_embedding,
+        query_text=query_text,
         num_results=num_results,
         columns=["work_id"],
         filters=filter_str
@@ -353,16 +315,10 @@ def find_works():
     if count > MAX_COUNT:
         raise APIQueryParamsError(f"count must be at most {MAX_COUNT}")
 
-    # Step 1: Embed query
-    try:
-        query_embedding = embed_query(query)
-    except Exception as e:
-        raise APIQueryParamsError(f"Failed to embed query: {str(e)}")
-
-    # Step 2: Vector search
+    # Step 1: Vector search (Databricks handles query embedding automatically)
     try:
         vector_results = search_vectors(
-            query_embedding=query_embedding,
+            query_text=query,
             num_results=count,
             filters=filters
         )
@@ -407,23 +363,31 @@ def find_works():
 def find_works_health():
     """Health check endpoint."""
     checks = {
-        "openai": False,
         "databricks": False,
         "elasticsearch": False
     }
+    index_status = None
 
-    # Check OpenAI
-    try:
-        client = get_openai_client()
-        checks["openai"] = True
-    except Exception:
-        pass
-
-    # Check Databricks Vector Search
+    # Check Databricks Vector Search and get index status
     try:
         vsc = get_vector_search_client()
         index = vsc.get_index(VECTOR_SEARCH_ENDPOINT, VECTOR_SEARCH_INDEX)
         checks["databricks"] = True
+
+        # Get index sync status
+        desc = index.describe()
+        status = desc.get("status", {})
+        index_status = {
+            "ready": status.get("ready", False),
+            "state": status.get("detailed_state", "UNKNOWN"),
+            "indexed_row_count": status.get("indexed_row_count"),
+            "embedding_model": EMBEDDING_MODEL
+        }
+        # Include sync progress if available
+        prov_status = status.get("provisioning_status", {})
+        sync_progress = prov_status.get("initial_pipeline_sync_progress", {})
+        if sync_progress:
+            index_status["sync_progress"] = round(sync_progress.get("sync_progress_completion", 0) * 100, 2)
     except Exception:
         pass
 
@@ -435,25 +399,13 @@ def find_works_health():
     except Exception:
         pass
 
-    # Get embedding count
-    embeddings = None
-    try:
-        current_count = get_embedding_count()
-        embeddings = {
-            "current": current_count,
-            "target": TOTAL_WORKS_WITH_ABSTRACTS,
-            "percent_complete": round(100 * current_count / TOTAL_WORKS_WITH_ABSTRACTS, 2)
-        }
-    except Exception:
-        pass
-
     all_healthy = all(checks.values())
 
     response = {
         "status": "healthy" if all_healthy else "degraded",
         "checks": checks
     }
-    if embeddings:
-        response["embeddings"] = embeddings
+    if index_status:
+        response["index"] = index_status
 
     return jsonify(response), 200 if all_healthy else 503
