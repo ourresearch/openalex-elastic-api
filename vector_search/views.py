@@ -11,6 +11,8 @@ Flow:
 4. Return full work objects with similarity scores
 """
 
+import time
+
 from flask import Blueprint, jsonify, request
 from databricks.vector_search.client import VectorSearchClient
 from databricks import sql as databricks_sql
@@ -150,7 +152,7 @@ def search_vectors(
     query_text: str,
     num_results: int = 10,
     filters: dict = None
-) -> list:
+) -> tuple:
     """
     Search Databricks Vector Search for similar works.
 
@@ -163,12 +165,19 @@ def search_vectors(
         filters: Optional metadata filters (publication_year, type, is_oa, has_abstract)
 
     Returns:
-        List of dicts with work_id and score
+        Tuple of (results list, timing dict)
+        - results: List of dicts with work_id and score
+        - timing: Dict with embed_ms and search_ms
     """
+    timing = {}
+
     # Step 1: Embed the query text
+    t0 = time.time()
     query_vector = embed_query(query_text)
+    timing["embed_ms"] = round((time.time() - t0) * 1000)
 
     # Step 2: Search with the query vector
+    t0 = time.time()
     vsc = get_vector_search_client()
     index = vsc.get_index(VECTOR_SEARCH_ENDPOINT, VECTOR_SEARCH_INDEX)
 
@@ -182,10 +191,11 @@ def search_vectors(
         columns=["work_id"],
         filters=filter_str
     )
+    timing["search_ms"] = round((time.time() - t0) * 1000)
 
     # Parse results: work_id is first column, score is last column
     data_array = results.get('result', {}).get('data_array', [])
-    return [{"work_id": row[0], "score": row[-1]} for row in data_array]
+    return [{"work_id": row[0], "score": row[-1]} for row in data_array], timing
 
 
 def hydrate_works(work_ids: list) -> dict:
@@ -356,24 +366,31 @@ def find_works():
     if count > MAX_COUNT:
         raise APIQueryParamsError(f"count must be at most {MAX_COUNT}")
 
-    # Step 1: Vector search (Databricks handles query embedding automatically)
+    total_start = time.time()
+    timing = {}
+
+    # Step 1: Vector search (includes embedding)
     try:
-        vector_results = search_vectors(
+        vector_results, vector_timing = search_vectors(
             query_text=query,
             num_results=count,
             filters=filters
         )
+        timing.update(vector_timing)
     except Exception as e:
         raise APIQueryParamsError(f"Vector search failed: {str(e)}")
 
-    # Step 3: Hydrate from Elasticsearch
+    # Step 2: Hydrate from Elasticsearch
+    t0 = time.time()
     work_ids = [r["work_id"] for r in vector_results]
     try:
         works = hydrate_works(work_ids)
     except Exception as e:
         raise APIQueryParamsError(f"Hydration failed: {str(e)}")
+    timing["hydrate_ms"] = round((time.time() - t0) * 1000)
 
-    # Step 4: Build response
+    # Step 3: Build response
+    t0 = time.time()
     results = []
     works_schema = WorksSchema()
 
@@ -389,12 +406,15 @@ def find_works():
                 "score": round(score, 4),
                 "work": serialized_work
             })
+    timing["serialize_ms"] = round((time.time() - t0) * 1000)
+    timing["total_ms"] = round((time.time() - total_start) * 1000)
 
     return jsonify({
         "meta": {
             "count": len(results),
             "query": query,
-            "filters_applied": filters if filters else None
+            "filters_applied": filters if filters else None,
+            "timing": timing
         },
         "results": results
     })
