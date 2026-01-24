@@ -420,6 +420,23 @@ def find_works():
     })
 
 
+def get_embeddings_count():
+    """Get count of embeddings from the source table."""
+    try:
+        host = settings.DATABRICKS_HOST.replace("https://", "").replace("http://", "")
+        with databricks_sql.connect(
+            server_hostname=host,
+            http_path=settings.DATABRICKS_HTTP_PATH,
+            access_token=settings.DATABRICKS_TOKEN
+        ) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT COUNT(*) FROM openalex.vector_search.work_embeddings_v2")
+                result = cursor.fetchone()
+                return result[0] if result else None
+    except Exception:
+        return None
+
+
 @blueprint.route("/find/works/health", methods=["GET"])
 def find_works_health():
     """Health check endpoint."""
@@ -442,13 +459,33 @@ def find_works_health():
             "ready": status.get("ready", False),
             "state": status.get("detailed_state", "UNKNOWN"),
             "indexed_row_count": status.get("indexed_row_count"),
-            "embedding_model": EMBEDDING_MODEL
+            "embedding_model": EMBEDDING_MODEL,
+            "total_works_with_abstracts": TOTAL_WORKS_WITH_ABSTRACTS
         }
-        # Include sync progress if available
+
+        # Get sync progress - check both initial sync and triggered update paths
+        sync_completion = None
+
+        # Path 1: Initial pipeline sync (during first sync)
         prov_status = status.get("provisioning_status", {})
-        sync_progress = prov_status.get("initial_pipeline_sync_progress", {})
-        if sync_progress:
-            index_status["sync_progress"] = round(sync_progress.get("sync_progress_completion", 0) * 100, 2)
+        initial_sync = prov_status.get("initial_pipeline_sync_progress", {})
+        if initial_sync:
+            sync_completion = initial_sync.get("sync_progress_completion")
+
+        # Path 2: Triggered update (during manual syncs)
+        triggered_status = status.get("triggered_update_status", {})
+        triggered_progress = triggered_status.get("triggered_update_progress", {})
+        if triggered_progress:
+            sync_completion = triggered_progress.get("sync_progress_completion")
+
+        if sync_completion is not None:
+            index_status["sync_progress"] = round(sync_completion * 100, 1)
+
+        # Get actual embeddings count from table
+        embeddings_count = get_embeddings_count()
+        if embeddings_count:
+            index_status["embeddings_count"] = embeddings_count
+
     except Exception:
         pass
 
