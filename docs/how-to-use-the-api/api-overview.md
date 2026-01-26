@@ -4,11 +4,21 @@ The API is the primary way to get OpenAlex data. It's free but requires an API k
 
 ## Learn more about the API
 
+OpenAlex offers four service types, each optimized for different use cases:
+
 * [Get single entities](get-single-entities/)
 * [Get lists of entities](get-lists-of-entities/) — Learn how to use [paging](get-lists-of-entities/paging.md), [filtering](get-lists-of-entities/filter-entity-lists.md), and [sorting](get-lists-of-entities/sort-entity-lists.md)
-* [Get groups of entities](get-groups-of-entities.md) — Group and count entities in different ways
+  * [Get groups of entities](get-groups-of-entities.md) — Group and count entities in different ways
+* [Find similar works](find-similar-works.md) — AI-powered semantic search
+* [Get content](get-content.md) — Download PDFs and TEI XML
+
+{% hint style="info" %}
+Each service type has a different credit cost. Single entity lookups cost 1 credit, list queries cost 10 credits per page, content downloads cost 100 credits per file, and semantic search costs 1,000 credits per query. See [Rate limits and authentication](rate-limits-and-authentication.md) for details.
+{% endhint %}
+
+See also:
 * [Rate limits and authentication](rate-limits-and-authentication.md) — Learn about credit costs and API keys
-* [Tutorials ](../additional-help/tutorials.md)— Hands-on examples with code
+* [Tutorials](../additional-help/tutorials.md) — Hands-on examples with code
 
 ## Client Libraries
 
