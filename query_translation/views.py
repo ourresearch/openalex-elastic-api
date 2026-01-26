@@ -62,14 +62,14 @@ blueprint = Blueprint("query_translation", __name__)
 def get_query():
     """
     Get query in all formats.
-    
+
     Query params:
     - entity_type: works, authors, etc. (default: works)
     - filter: URL filter string
-    - sort: URL sort string  
+    - sort: URL sort string
     - sample: Sample size (integer)
     - oqo: JSON string of OQO object (alternative to filter/sort)
-    
+
     Response:
     {
         "url": {"filter": "...", "sort": "...", "sample": null},
@@ -78,63 +78,65 @@ def get_query():
         "validation": {"valid": true, "errors": [], "warnings": []}
     }
     """
-    entity_type = request.args.get("entity_type", "works")
-    filter_string = request.args.get("filter")
-    sort_string = request.args.get("sort")
-    sample = request.args.get("sample", type=int)
-    oqo_json = request.args.get("oqo")
-    
-    try:
-        oqo = None
-        parse_error = None
-        
-        if oqo_json:
-            # Parse OQO from JSON query param
-            oqo, parse_error = parse_oqo_input(entity_type, oqo_json)
-        else:
-            # Parse from URL filter/sort params
-            oqo, parse_error = parse_url_input(entity_type, {
-                "filter": filter_string,
-                "sort": sort_string,
-                "sample": sample
-            })
-        
-        if parse_error:
-            return jsonify({
-                "url": None,
-                "oql": None,
-                "oqo": None,
-                "validation": {
-                    "valid": False,
-                    "errors": [{"type": "parse_error", "message": parse_error}],
-                    "warnings": []
-                }
-            }), 400
-        
-        validation_result = validate_oqo(oqo)
-        
-        if not validation_result.valid:
-            return jsonify({
-                "url": None,
-                "oql": None,
-                "oqo": oqo.to_dict(),
-                "validation": validation_result.to_dict()
-            }), 400
-        
-        response = render_all_formats(oqo, validation_result)
-        return jsonify(response), 200
-        
-    except Exception as e:
-        return jsonify({
-            "url": None,
-            "oql": None,
-            "oqo": None,
-            "validation": {
-                "valid": False,
-                "errors": [{"type": "internal_error", "message": str(e)}],
-                "warnings": []
-            }
-        }), 500
+    return jsonify({"error": "Not found"}), 404
+
+    # entity_type = request.args.get("entity_type", "works")
+    # filter_string = request.args.get("filter")
+    # sort_string = request.args.get("sort")
+    # sample = request.args.get("sample", type=int)
+    # oqo_json = request.args.get("oqo")
+    #
+    # try:
+    #     oqo = None
+    #     parse_error = None
+    #
+    #     if oqo_json:
+    #         # Parse OQO from JSON query param
+    #         oqo, parse_error = parse_oqo_input(entity_type, oqo_json)
+    #     else:
+    #         # Parse from URL filter/sort params
+    #         oqo, parse_error = parse_url_input(entity_type, {
+    #             "filter": filter_string,
+    #             "sort": sort_string,
+    #             "sample": sample
+    #         })
+    #
+    #     if parse_error:
+    #         return jsonify({
+    #             "url": None,
+    #             "oql": None,
+    #             "oqo": None,
+    #             "validation": {
+    #                 "valid": False,
+    #                 "errors": [{"type": "parse_error", "message": parse_error}],
+    #                 "warnings": []
+    #             }
+    #         }), 400
+    #
+    #     validation_result = validate_oqo(oqo)
+    #
+    #     if not validation_result.valid:
+    #         return jsonify({
+    #             "url": None,
+    #             "oql": None,
+    #             "oqo": oqo.to_dict(),
+    #             "validation": validation_result.to_dict()
+    #         }), 400
+    #
+    #     response = render_all_formats(oqo, validation_result)
+    #     return jsonify(response), 200
+    #
+    # except Exception as e:
+    #     return jsonify({
+    #         "url": None,
+    #         "oql": None,
+    #         "oqo": None,
+    #         "validation": {
+    #             "valid": False,
+    #             "errors": [{"type": "internal_error", "message": str(e)}],
+    #             "warnings": []
+    #         }
+    #     }), 500
 
 
 def parse_url_input(entity_type: str, input_data):
@@ -245,60 +247,62 @@ REASONING_CONFIG = {"summary": "auto"}
 def get_natural_language_query(natural_language_query: str):
     """
     Convert a natural language query to OQO using OpenAI, then return all formats.
-    
+
     URL path param:
     - natural_language_query: Natural language description of the query
-    
+
     Response: Same format as /query endpoint, plus meta.timing information
     """
-    try:
-        oqo_dict, timing_meta = convert_natural_language_to_oqo(natural_language_query)
-        
-        # Check for error response from model
-        if "error" in oqo_dict:
-            return jsonify({"msg": oqo_dict["error"], "meta": {"timing": timing_meta}}), 400
-        
-        # Parse the OQO
-        entity_type = oqo_dict.get("get_rows", "works")
-        oqo, parse_error = parse_oqo_input(entity_type, oqo_dict)
-        
-        if parse_error:
-            return jsonify({
-                "url": None,
-                "oql": None,
-                "oqo": None,
-                "validation": {
-                    "valid": False,
-                    "errors": [{"type": "parse_error", "message": parse_error}],
-                    "warnings": []
-                }
-            }), 400
-        
-        validation_result = validate_oqo(oqo)
-        
-        if not validation_result.valid:
-            return jsonify({
-                "url": None,
-                "oql": None,
-                "oqo": oqo.to_dict(),
-                "validation": validation_result.to_dict()
-            }), 400
-        
-        response = render_all_formats(oqo, validation_result)
-        response["meta"] = {"timing": timing_meta}
-        return jsonify(response), 200
-        
-    except Exception as e:
-        return jsonify({
-            "url": None,
-            "oql": None,
-            "oqo": None,
-            "validation": {
-                "valid": False,
-                "errors": [{"type": "internal_error", "message": str(e)}],
-                "warnings": []
-            }
-        }), 500
+    return jsonify({"error": "Not found"}), 404
+
+    # try:
+    #     oqo_dict, timing_meta = convert_natural_language_to_oqo(natural_language_query)
+    #
+    #     # Check for error response from model
+    #     if "error" in oqo_dict:
+    #         return jsonify({"msg": oqo_dict["error"], "meta": {"timing": timing_meta}}), 400
+    #
+    #     # Parse the OQO
+    #     entity_type = oqo_dict.get("get_rows", "works")
+    #     oqo, parse_error = parse_oqo_input(entity_type, oqo_dict)
+    #
+    #     if parse_error:
+    #         return jsonify({
+    #             "url": None,
+    #             "oql": None,
+    #             "oqo": None,
+    #             "validation": {
+    #                 "valid": False,
+    #                 "errors": [{"type": "parse_error", "message": parse_error}],
+    #                 "warnings": []
+    #             }
+    #         }), 400
+    #
+    #     validation_result = validate_oqo(oqo)
+    #
+    #     if not validation_result.valid:
+    #         return jsonify({
+    #             "url": None,
+    #             "oql": None,
+    #             "oqo": oqo.to_dict(),
+    #             "validation": validation_result.to_dict()
+    #         }), 400
+    #
+    #     response = render_all_formats(oqo, validation_result)
+    #     response["meta"] = {"timing": timing_meta}
+    #     return jsonify(response), 200
+    #
+    # except Exception as e:
+    #     return jsonify({
+    #         "url": None,
+    #         "oql": None,
+    #         "oqo": None,
+    #         "validation": {
+    #             "valid": False,
+    #             "errors": [{"type": "internal_error", "message": str(e)}],
+    #             "warnings": []
+    #         }
+    #     }), 500
 
 
 def convert_natural_language_to_oqo(natural_language_query: str) -> tuple[dict, dict]:
