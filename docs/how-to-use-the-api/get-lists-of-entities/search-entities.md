@@ -60,6 +60,14 @@ You might be tempted to use the search filter to power an autocomplete or typeah
 👍 [`https://api.openalex.org/autocomplete/institutions?q=Florida`](https://api.openalex.org/autocomplete/institutions?q=Florida)
 {% endhint %}
 
-{% hint style="info" %}
-**Looking for semantic search?** The keyword search described on this page finds works containing specific words. If you want to find works that are *conceptually similar*—even when they use different terminology—check out [Find similar works](../find-similar-works.md), which uses AI embeddings to match by meaning.
-{% endhint %}
+## Keyword search vs. semantic search
+
+The keyword search described on this page finds works containing specific words or phrases. Use it when you know the exact terminology you're looking for, or when you need to combine search with other filters and sorting options.
+
+If you want to find works that are *conceptually similar*—even when they use different terminology—use [Find similar works](../find-similar-works.md) instead. Semantic search uses AI embeddings to match by meaning, so a query about "machine learning in healthcare" will find relevant papers even if they use terms like "AI-driven diagnosis" or "computational medicine."
+
+| Use keyword search when... | Use semantic search when... |
+|----------------------------|----------------------------|
+| You know the exact terms to search for | You want conceptually related works |
+| You need to combine with filters/sorting | You're exploring a new research area |
+| You want to search specific fields | Your query is a sentence or paragraph |

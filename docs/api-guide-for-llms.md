@@ -133,7 +133,14 @@ Academic researchers can often get increased limits for free—contact [support@
 /topics         - Subject classifications (3-level hierarchy)
 /publishers     - Publishing organizations
 /funders        - Funding agencies
-/text           - Tag your own text with OpenAlex topics/keywords (POST)
+```
+
+#### Special Endpoints
+
+```
+/find/works                         - Semantic search using AI embeddings
+content.openalex.org/works/{id}.pdf - Download PDFs and TEI XML
+/text                               - (Deprecated) Tag text with topics/keywords
 ```
 
 #### Essential Query Parameters
@@ -370,9 +377,36 @@ https://api.openalex.org/autocomplete/works?q=neural+networks
 Typically returns in ~200ms
 ```
 
-#### Tag Your Own Text (/text endpoint)
+#### Find Similar Works (Semantic Search)
 
 ```
+Find conceptually related works using AI embeddings:
+
+GET:
+https://api.openalex.org/find/works?query=machine+learning+for+drug+discovery&api_key=YOUR_KEY
+
+POST (for longer queries up to 10,000 chars):
+curl -X POST "https://api.openalex.org/find/works?api_key=YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Your long query text here..."}'
+
+With filters:
+https://api.openalex.org/find/works?query=climate+change&filter=publication_year:>2020,is_oa:true&count=50&api_key=YOUR_KEY
+
+Parameters:
+- query: Text to find similar works for (required, max 10,000 chars)
+- count: Number of results (1-100, default 25)
+- filter: Narrow by publication_year, is_oa, has_abstract, etc.
+
+Costs 1000 credits per request. Returns works ranked by similarity score (0-1).
+Only works with abstracts are indexed (~217M works). English-optimized.
+```
+
+#### Tag Your Own Text (/text endpoint) — DEPRECATED
+
+```
+⚠️ This endpoint is deprecated and not recommended for new projects.
+
 POST or GET to classify your own content:
 
 https://api.openalex.org/text?title=Machine+learning+for+drug+discovery
@@ -658,7 +692,9 @@ NOT:  ?search=climate+NOT+politics
 
 * Singleton requests (e.g., `/works/W123`): 1 credit
 * List requests (e.g., `/works?filter=...`): 10 credits
-* Text/Aboutness requests: 1,000 credits
+* Content downloads (e.g., `content.openalex.org/works/{id}.pdf`): 100 credits
+* Semantic search (`/find/works`): 1,000 credits
+* Text/Aboutness requests (deprecated): 1,000 credits
 
 #### Concurrent Requests Strategy
 
@@ -713,4 +749,4 @@ See: https://openalex.org/pricing
 
 ***
 
-Last updated: 2025-10-13 Maintained for: LLM agents, AI applications, and automated tools
+Last updated: 2026-01-26 Maintained for: LLM agents, AI applications, and automated tools

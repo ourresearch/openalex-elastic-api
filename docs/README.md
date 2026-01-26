@@ -8,13 +8,15 @@ This is the **technical documentation for OpenAlex,** including the [**OpenAlex 
 
 The OpenAlex dataset describes scholarly [_entities_ ](api-entities/entities-overview.md)and how those entities are connected to each other. Types of entities include [works](api-entities/works/), [authors](api-entities/authors/), [sources](api-entities/sources/), [institutions](api-entities/institutions/), [topics](api-entities/topics/), [publishers](api-entities/publishers/), and [funders](api-entities/funders/).
 
-Together, these make a huge web (or more technically, heterogeneous directed [graph](https://en.wikipedia.org/wiki/Graph_theory)) of hundreds of millions of entities and billions of connections between them all.
+Together, these make a huge web (or more technically, heterogeneous directed [graph](https://en.wikipedia.org/wiki/Graph_theory)) of hundreds of millions of entities and billions of connections between them all. You can access this data through four service types: [get single entities](how-to-use-the-api/get-single-entities/), [get lists of entities](how-to-use-the-api/get-lists-of-entities/), [find similar works](how-to-use-the-api/find-similar-works.md) using semantic search, and [download full-text content](how-to-use-the-api/get-content.md).
 
 Learn more at our general help center article: [About the data](https://help.openalex.org/hc/en-us/articles/24397285563671-About-the-data)
 
 ## Access
 
 We offer a fast, modern REST API to get OpenAlex data programmatically. It's free but requires an API key (also free). Get yours at [openalex.org/settings/api](https://openalex.org/settings/api). With your free key, you get 100,000 credits per day. [Learn more](how-to-use-the-api/api-overview.md)
+
+Different API operations consume different amounts of credits. See [rate limits and authentication](how-to-use-the-api/rate-limits-and-authentication.md) for details.
 
 There is also a complete database snapshot available to download. [Learn more about the data snapshot here.](download-all-data/openalex-snapshot.md)
 

@@ -132,6 +132,10 @@ Returns: works whose abstract includes the given string. See the [search page](.
 
 * Get works with abstracts that mention "artificial intelligence": [`https://api.openalex.org/works?filter=abstract.search:artificial%20intelligence`](https://api.openalex.org/works?filter=abstract.search:artificial%20intelligence)
 
+{% hint style="info" %}
+This searches for keyword matches. To find conceptually related works using AI, try [semantic search](../../how-to-use-the-api/find-similar-works.md).
+{% endhint %}
+
 #### `authors_count`
 
 Number of authors for a work
@@ -211,6 +215,10 @@ Value: a search string
 
 This works the same as using the [`search` parameter](search-works.md#search-works) for Works.
 
+{% hint style="info" %}
+This searches for keyword matches. To find conceptually related works using AI, try [semantic search](../../how-to-use-the-api/find-similar-works.md).
+{% endhint %}
+
 #### `display_name.search` (alias: `title.search`)
 
 Text search across titles for works
@@ -275,6 +283,10 @@ Returns: works whose fulltext includes the given string. Fulltext search is avai
 
 {% hint style="info" %}
 We combined some n-grams before storing them in our search database, so querying for an exact phrase using quotes does not always work well.
+{% endhint %}
+
+{% hint style="info" %}
+This searches for keyword matches. To find conceptually related works using AI, try [semantic search](../../how-to-use-the-api/find-similar-works.md).
 {% endhint %}
 
 #### `has_abstract`
@@ -482,6 +494,10 @@ Value: a search string
 Returns: works whose [`display_name`](work-object/#display\_name) (title) or abstract includes the given string; see the [search page](../../how-to-use-the-api/get-lists-of-entities/search-entities.md) for details.
 
 * Get works with title or abstract mentioning "gum disease": [`https://api.openalex.org/works?filter=title_and_abstract.search:gum%20disease`](https://api.openalex.org/works?filter=title\_and\_abstract.search:gum%20disease)
+
+{% hint style="info" %}
+This searches for keyword matches. To find conceptually related works using AI, try [semantic search](../../how-to-use-the-api/find-similar-works.md).
+{% endhint %}
 
 #### `to_created_date`
 
