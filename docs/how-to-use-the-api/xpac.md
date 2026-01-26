@@ -1,9 +1,8 @@
 ---
 description: Access 190M+ new works in OpenAlex
-icon: layer-plus
 ---
 
-# XPAC
+# :icon-layer-plus: XPAC
 
 On November 4, 2025, we added over 190 million new works to OpenAlex as part of [a rewrite codenamed Walden](https://blog.openalex.org/openalex-rewrite-walden-launch/). This expansion pack (XPAC for short) includes all of DataCite, plus thousands of institutional and subject-area repositories.
 

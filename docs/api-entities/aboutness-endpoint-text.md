@@ -1,5 +1,9 @@
 # Aboutness endpoint (/text)
 
+{% hint style="warning" %}
+**Experimental endpoint.** This endpoint is experimental and not suitable for production use. The API, response format, and behavior may change without notice. If you're interested in using this endpoint in production, please [contact us](mailto:support@openalex.org) so we can understand your use case and prioritize accordingly.
+{% endhint %}
+
 You can use the `/text` API endpoint to tag your own free text with OpenAlex's "aboutness" assignments—topics, keywords, and concepts.
 
 Accepts a `title` and optional `abstract` in the GET params or as a POST request. The results are straight from the model, with 0 values truncated.

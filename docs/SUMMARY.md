@@ -79,12 +79,10 @@
   * [Filter concepts](api-entities/concepts/filter-concepts.md)
   * [Search concepts](api-entities/concepts/search-concepts.md)
   * [Group concepts](api-entities/concepts/group-concepts.md)
-* [Aboutness endpoint (/text)](api-entities/aboutness-endpoint-text.md)
 
 ## How to use the API
 
 * [API Overview](how-to-use-the-api/api-overview.md)
-* [xpac](how-to-use-the-api/xpac.md)
 * [Get single entities](how-to-use-the-api/get-single-entities/README.md)
   * [Random result](how-to-use-the-api/get-single-entities/random-result.md)
   * [Select fields](how-to-use-the-api/get-single-entities/select-fields.md)
@@ -99,6 +97,8 @@
 * [Get content](how-to-use-the-api/get-content.md)
 * [Find similar works](how-to-use-the-api/find-similar-works.md)
 * [Get groups of entities](how-to-use-the-api/get-groups-of-entities.md)
+* [Aboutness endpoint (/text)](api-entities/aboutness-endpoint-text.md)
+* [xpac](how-to-use-the-api/xpac.md)
 * [Rate limits and authentication](how-to-use-the-api/rate-limits-and-authentication.md)
 
 ## Download all data

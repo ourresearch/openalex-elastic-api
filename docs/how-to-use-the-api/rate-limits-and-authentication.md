@@ -6,7 +6,7 @@ The API uses a credit-based rate limiting system. Different endpoint types consu
 
 | Endpoint Type | Example | Credits per Request |
 |---------------|---------|---------------------|
-| Singleton | `/works/W123`, `/works/W123/ngrams` | 1 |
+| Singleton | `/works/W123` | 1 |
 | List | `/works?filter=...`, `/autocomplete/works` | 10 |
 | Content | [`content.openalex.org/works/{id}.pdf`](get-content.md) | 100 |
 | Vector | Vector searches (future) | 1,000 |
