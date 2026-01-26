@@ -13,9 +13,9 @@ Flow:
 
 import time
 
+import requests as http_requests
 from flask import Blueprint, jsonify, request
 from databricks.vector_search.client import VectorSearchClient
-from databricks import sql as databricks_sql
 from elasticsearch_dsl import Search, Q, connections
 
 import settings
@@ -53,7 +53,10 @@ def get_vector_search_client():
 
 def embed_query(query_text: str) -> list:
     """
-    Embed query text using Databricks GTE model via SQL warehouse.
+    Embed query text using Databricks GTE model via Foundation Model API.
+
+    Uses direct REST API call to model serving endpoint for low latency
+    (typically <200ms vs 1-2s via SQL warehouse).
 
     Args:
         query_text: Text to embed (will be truncated to 2000 chars)
@@ -64,24 +67,26 @@ def embed_query(query_text: str) -> list:
     # Truncate to stay within model limits
     truncated = query_text[:2000]
 
-    # Escape single quotes for SQL
-    escaped = truncated.replace("'", "''")
-
     host = settings.DATABRICKS_HOST.replace("https://", "").replace("http://", "")
+    url = f"https://{host}/serving-endpoints/{EMBEDDING_MODEL}/invocations"
 
-    with databricks_sql.connect(
-        server_hostname=host,
-        http_path=settings.DATABRICKS_HTTP_PATH,
-        access_token=settings.DATABRICKS_TOKEN
-    ) as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(f"SELECT ai_query('{EMBEDDING_MODEL}', '{escaped}')")
-            result = cursor.fetchone()
-            embedding = result[0]
-            # Convert numpy array to list of Python floats if needed
-            if hasattr(embedding, 'tolist'):
-                return embedding.tolist()
-            return [float(x) for x in embedding]
+    headers = {
+        "Authorization": f"Bearer {settings.DATABRICKS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    # Foundation Model API expects {"input": "text"} or {"input": ["text1", "text2"]}
+    payload = {"input": truncated}
+
+    response = http_requests.post(url, headers=headers, json=payload, timeout=30)
+    response.raise_for_status()
+
+    result = response.json()
+
+    # Response format: {"data": [{"embedding": [...], "index": 0}], "model": "...", ...}
+    embedding = result["data"][0]["embedding"]
+
+    return [float(x) for x in embedding]
 
 
 def build_filter_string(filters: dict) -> str:
