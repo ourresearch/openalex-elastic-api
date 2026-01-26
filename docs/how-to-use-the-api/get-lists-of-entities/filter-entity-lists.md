@@ -79,3 +79,7 @@ The filters for each entity can be found here:
 * [Concepts](../../api-entities/concepts/filter-concepts.md)
 * [Publishers](../../api-entities/publishers/filter-publishers.md)
 * [Funders](../../api-entities/funders/filter-funders.md)
+
+{% hint style="info" %}
+**Looking for text search?** Filters match exact attribute values. If you want to search for words in titles, abstracts, or other text fields, see [Search entities](search-entities.md). Or, for AI-powered semantic search that finds conceptually related works even when they use different terminology, check out [Find similar works](../find-similar-works.md).
+{% endhint %}

@@ -59,3 +59,7 @@ You might be tempted to use the search filter to power an autocomplete or typeah
 
 👍 [`https://api.openalex.org/autocomplete/institutions?q=Florida`](https://api.openalex.org/autocomplete/institutions?q=Florida)
 {% endhint %}
+
+{% hint style="info" %}
+**Looking for semantic search?** The keyword search described on this page finds works containing specific words. If you want to find works that are *conceptually similar*—even when they use different terminology—check out [Find similar works](../find-similar-works.md), which uses AI embeddings to match by meaning.
+{% endhint %}
