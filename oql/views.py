@@ -157,8 +157,8 @@ def serve_config(data, filename):
     else:
         response = make_response(jsonify(data))
 
-    # Cache config for 60 seconds - this is static data that only changes on deploy
-    response.headers['Cache-Control'] = 'public, max-age=60'
+    # Cache config for 5 minutes - this is static data that only changes on deploy
+    response.headers['Cache-Control'] = 'public, max-age=300'
     return response
 
 
