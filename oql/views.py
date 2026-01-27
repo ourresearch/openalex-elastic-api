@@ -154,9 +154,12 @@ def serve_config(data, filename):
         response.headers['Content-Type'] = 'application/yaml'
         response.headers[
             'Content-Disposition'] = f'attachment; filename={filename}.yaml'
-        return response
     else:
-        return jsonify(data)
+        response = make_response(jsonify(data))
+
+    # Cache config for 60 seconds - this is static data that only changes on deploy
+    response.headers['Cache-Control'] = 'public, max-age=60'
+    return response
 
 
 @blueprint.route("/entities/config", methods=["GET"])
