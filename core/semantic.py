@@ -19,7 +19,7 @@ def call_embeddings_api(text):
 
     data = {"input": text, "model": "text-embedding-3-large", "dimensions": 256}
 
-    response = requests.post(url, headers=headers, json=data)
+    response = requests.post(url, headers=headers, json=data, timeout=10)
     embedding = response.json()["data"][0]["embedding"]
     return embedding
 
@@ -54,7 +54,8 @@ def format_response(work_ids_with_scores, response_time):
         f"W{str(work_id)}" for work_id, _ in work_ids_with_scores
     )
     r = requests.get(
-        "https://api.openalex.org/works?filter=ids.openalex:{0}".format(joined_work_ids)
+        "https://api.openalex.org/works?filter=ids.openalex:{0}".format(joined_work_ids),
+        timeout=10,
     )
     response_json = r.json()
 

@@ -6,8 +6,8 @@ The API uses a credit-based rate limiting system. Different endpoint types consu
 
 | Endpoint Type | Example | Credits per Request |
 |---------------|---------|---------------------|
-| Singleton | `/works/W123` | 1 |
-| List | `/works?filter=...`, `/autocomplete/works` | 10 |
+| Singleton | `/works/W123`, `/works/W123/ngrams` | 0 (free) |
+| List | `/works?filter=...`, `/autocomplete/works` | 1 |
 | Content | [`content.openalex.org/works/{id}.pdf`](get-content.md) | 100 |
 | Vector | Vector searches (future) | 1,000 |
 | Text (Aboutness) | `/text/topics?title=...` | 1,000 |
@@ -39,8 +39,8 @@ The limits are:
 * **All users:** max 100 requests per second (regardless of credit cost)
 
 For example, with 100,000 credits you can make:
-- 100,000 singleton requests (like `/works/W123`), or
-- 10,000 list requests (like `/works?filter=type:article`), or
+- Unlimited singleton requests (like `/works/W123`) — they're free!
+- 100,000 list requests (like `/works?filter=type:article`), or
 - Any combination that adds up to 100,000 credits
 
 If you exceed your daily credits or make more than 100 requests per second, you'll get `429` errors instead of useful data.
@@ -81,8 +81,8 @@ Response:
     "resets_at": "2024-01-02T00:00:00.000Z",
     "resets_in_seconds": 43200,
     "credit_costs": {
-      "singleton": 1,
-      "list": 10,
+      "singleton": 0,
+      "list": 1,
       "content": 100,
       "vector": 1000,
       "text": 1000
