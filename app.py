@@ -109,8 +109,8 @@ def register_blueprints(app):
 def register_extensions(app):
     db.init_app(app)
     sentry_sdk.init(dsn=os.environ.get("SENTRY_DSN"), integrations=[FlaskIntegration()])
-    connections.create_connection('default', hosts=[settings.ES_URL_WALDEN], timeout=30)
-    connections.create_connection('walden', hosts=[settings.ES_URL_WALDEN], timeout=30)
+    connections.create_connection('default', hosts=[settings.ES_URL_WALDEN], timeout=15)
+    connections.create_connection('walden', hosts=[settings.ES_URL_WALDEN], timeout=15)
     cache.init_app(app)
 
 
