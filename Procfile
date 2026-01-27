@@ -1,1 +1,1 @@
-web: gunicorn "app:create_app()" -w $WEB_WORKERS_PER_DYNO --timeout 45 --graceful-timeout 15 --max-requests 500 --max-requests-jitter 50 --worker-tmp-dir /dev/shm --preload --log-level warning
+web: gunicorn "app:create_app()" -w $WEB_WORKERS_PER_DYNO --timeout 20 --graceful-timeout 15 --max-requests 500 --max-requests-jitter 50 --worker-tmp-dir /dev/shm --preload --log-level warning
