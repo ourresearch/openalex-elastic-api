@@ -1,24 +1,18 @@
-name: Deploy and Smoke Test
+name: Post-Deploy Smoke Test
 
 on:
   push:
     branches: [master]
 
 jobs:
-  deploy:
+  smoke-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to Heroku
-        uses: akhileshns/heroku-deploy@v3.13.15
-        with:
-          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: openalex-elastic-api
-          heroku_email: ${{ secrets.HEROKU_EMAIL }}
-
-      - name: Wait for deployment to stabilize
-        run: sleep 30
+      # Heroku auto-deploys via GitHub hook - wait for it to complete
+      - name: Wait for Heroku deploy
+        run: sleep 120
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -37,7 +31,7 @@ jobs:
         if: failure()
         uses: slackapi/slack-github-action@v1.27.0
         with:
-          channel-id: 'CRRBCGH36'  # #alerts channel
+          channel-id: 'CRRBCGH36'
           slack-message: |
             :rotating_light: *Smoke tests failed after deploy!*
 
