@@ -129,6 +129,52 @@ def create_app(config_object="settings"):
             "message": "If you see this, the HTTP request completed without being killed by Gunicorn timeout"
         })
 
+    # Test endpoint that uses actual ES client (job #29)
+    # Usage: GET /_test/es_loop?seconds=60
+    # This tests if ES queries bypass Gunicorn timeout
+    @app.route('/_test/es_loop')
+    def test_es_loop():
+        from elasticsearch_dsl import Search
+        target_seconds = request.args.get('seconds', default=60, type=int)
+        target_seconds = min(target_seconds, 300)
+
+        start_time = time.time()
+        app.logger.warning(f"[TIMEOUT TEST] Starting ES loop for {target_seconds}s")
+
+        queries_made = 0
+        try:
+            while time.time() - start_time < target_seconds:
+                # Simple ES query that should take ~100ms
+                s = Search(index="works-v28-*")
+                s = s.query("match", display_name="machine learning")
+                s = s[:1]  # Only fetch 1 result
+                response = s.execute()
+                queries_made += 1
+                if queries_made % 10 == 0:
+                    app.logger.warning(f"[TIMEOUT TEST] ES query {queries_made}, elapsed: {time.time() - start_time:.2f}s")
+        except Exception as e:
+            elapsed = time.time() - start_time
+            app.logger.warning(f"[TIMEOUT TEST] ES loop error after {elapsed:.2f}s: {e}")
+            return jsonify({
+                "test": "es_loop_verification",
+                "requested_seconds": target_seconds,
+                "actual_elapsed_seconds": round(elapsed, 2),
+                "es_queries_made": queries_made,
+                "error": str(e),
+                "message": "ES loop encountered an error"
+            })
+
+        elapsed = time.time() - start_time
+        app.logger.warning(f"[TIMEOUT TEST] ES loop completed after {elapsed:.2f}s ({queries_made} queries)")
+
+        return jsonify({
+            "test": "es_loop_verification",
+            "requested_seconds": target_seconds,
+            "actual_elapsed_seconds": round(elapsed, 2),
+            "es_queries_made": queries_made,
+            "message": "If you see this, the ES queries completed without being killed by Gunicorn timeout"
+        })
+
     return app
 
 
