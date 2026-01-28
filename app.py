@@ -91,6 +91,35 @@ def create_app(config_object="settings"):
             "message": "If you see this, the request completed successfully without being killed by Gunicorn timeout"
         })
 
+    # Test endpoint that simulates external HTTP call (like ES query)
+    # Usage: GET /_test/http_wait?seconds=60
+    @app.route('/_test/http_wait')
+    def test_http_wait():
+        import requests as http_requests
+        wait_seconds = request.args.get('seconds', default=60, type=int)
+        wait_seconds = min(wait_seconds, 300)
+
+        start_time = time.time()
+        app.logger.warning(f"[TIMEOUT TEST] Starting HTTP wait for {wait_seconds}s")
+
+        # httpbin.org/delay returns after N seconds - simulates external API call
+        try:
+            resp = http_requests.get(f"https://httpbin.org/delay/{wait_seconds}", timeout=wait_seconds + 10)
+            status = resp.status_code
+        except Exception as e:
+            status = f"error: {e}"
+
+        elapsed = time.time() - start_time
+        app.logger.warning(f"[TIMEOUT TEST] HTTP wait completed after {elapsed:.2f}s")
+
+        return jsonify({
+            "test": "http_wait_verification",
+            "requested_wait_seconds": wait_seconds,
+            "actual_elapsed_seconds": round(elapsed, 2),
+            "httpbin_status": status,
+            "message": "If you see this, the HTTP request completed without being killed by Gunicorn timeout"
+        })
+
     return app
 
 
