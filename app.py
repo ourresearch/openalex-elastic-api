@@ -1,8 +1,9 @@
 import os
+import time
 
 import sentry_sdk
 from elasticsearch_dsl import connections
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_jwt_extended import JWTManager
 from sentry_sdk.integrations.flask import FlaskIntegration
 
@@ -65,6 +66,30 @@ def create_app(config_object="settings"):
         response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = '*'
         return response
+
+    # Test endpoint for timeout behavior verification (job #29)
+    # Usage: GET /_test/sleep?seconds=60
+    # This helps verify whether Gunicorn kills workers after --timeout seconds
+    @app.route('/_test/sleep')
+    def test_sleep():
+        sleep_seconds = request.args.get('seconds', default=60, type=int)
+        # Cap at 5 minutes to prevent abuse
+        sleep_seconds = min(sleep_seconds, 300)
+
+        start_time = time.time()
+        app.logger.warning(f"[TIMEOUT TEST] Starting sleep for {sleep_seconds}s")
+
+        time.sleep(sleep_seconds)
+
+        elapsed = time.time() - start_time
+        app.logger.warning(f"[TIMEOUT TEST] Completed after {elapsed:.2f}s")
+
+        return jsonify({
+            "test": "timeout_verification",
+            "requested_sleep_seconds": sleep_seconds,
+            "actual_elapsed_seconds": round(elapsed, 2),
+            "message": "If you see this, the request completed successfully without being killed by Gunicorn timeout"
+        })
 
     return app
 
