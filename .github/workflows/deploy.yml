@@ -31,7 +31,7 @@ jobs:
         if: failure()
         uses: slackapi/slack-github-action@v1.27.0
         with:
-          channel-id: 'CRRBCGH36'
+          channel-id: 'CESFJUHGD'  # #general
           slack-message: |
             :rotating_light: *Smoke tests failed after deploy!*
 
