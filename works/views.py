@@ -22,7 +22,7 @@ def index():
         {
             "version": "0.1",
             "documentation_url": "/docs",
-            "msg": "Do panic",
+            "msg": "Don't panic",
         }
     )
 
