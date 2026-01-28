@@ -619,6 +619,11 @@ fields = [
         param="raw_affiliation_strings.search",
         custom_es_field="authorships.raw_affiliation_strings",
     ),
+    TermField(
+        param="raw_affiliation_strings",
+        custom_es_field="authorships.raw_affiliation_strings.keyword",
+        docstring="Exact match on raw affiliation strings",
+    ),
     SearchField(
         param="raw_author_name.search",
         custom_es_field="authorships.raw_author_name",
