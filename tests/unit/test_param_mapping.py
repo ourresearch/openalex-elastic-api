@@ -1,3 +1,6 @@
+import pytest
+
+from core.exceptions import APIQueryParamsError
 from core.utils import map_filter_params, map_sort_params
 
 
@@ -54,6 +57,32 @@ class TestFilterParamMapping:
             {"publication_year": "2021"},
             {"title.search": "book 1: how to win friends"},
         ]
+
+    def test_filter_mapping_rejects_empty_value(self, client):
+        with pytest.raises(APIQueryParamsError) as exc_info:
+            map_filter_params("doi:")
+        assert "Invalid filter value for 'doi'" in str(exc_info.value)
+        assert "cannot be empty" in str(exc_info.value)
+
+    def test_filter_mapping_rejects_none_value(self, client):
+        with pytest.raises(APIQueryParamsError) as exc_info:
+            map_filter_params("doi:None")
+        assert "Invalid filter value for 'doi'" in str(exc_info.value)
+
+    def test_filter_mapping_rejects_null_value(self, client):
+        with pytest.raises(APIQueryParamsError) as exc_info:
+            map_filter_params("doi:null")
+        assert "Invalid filter value for 'doi'" in str(exc_info.value)
+
+    def test_filter_mapping_rejects_undefined_value(self, client):
+        with pytest.raises(APIQueryParamsError) as exc_info:
+            map_filter_params("doi:undefined")
+        assert "Invalid filter value for 'doi'" in str(exc_info.value)
+
+    def test_filter_mapping_rejects_empty_in_middle(self, client):
+        with pytest.raises(APIQueryParamsError) as exc_info:
+            map_filter_params("publication_year:2020,doi:,cited_by_count:>10")
+        assert "Invalid filter value for 'doi'" in str(exc_info.value)
 
 
 class TestSortParamMapping:

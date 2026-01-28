@@ -40,6 +40,12 @@ def map_filter_params(filter_params):
             for param in params:
                 key, value = param.split(":", 1)
                 key = key.replace("-", "_")  # convert key to underscore
+                # Reject empty or placeholder values
+                if not value or value.lower() in ("none", "null", "undefined"):
+                    raise APIQueryParamsError(
+                        f"Invalid filter value for '{key}': value cannot be empty or '{value}'. "
+                        f"Use a valid value like filter={key}:your_value"
+                    )
                 results.append({key: value})
         except ValueError:
             raise APIQueryParamsError(f"Invalid query parameter in {param}.")
