@@ -99,24 +99,31 @@ def parse_filter_string(filter_string: str) -> List[FilterType]:
 
 def split_filter_string(filter_string: str) -> List[str]:
     """
-    Split a filter string by commas, handling the case where
-    the same field appears multiple times (AND logic).
+    Split a filter string by commas, but respect quoted strings.
+    Commas inside double quotes are not treated as separators.
+
+    Example:
+        'type:article,raw_affiliation_strings.search:"Dept of Chemistry, UCLA"'
+        -> ['type:article', 'raw_affiliation_strings.search:"Dept of Chemistry, UCLA"']
     """
     parts = []
     current = ""
-    depth = 0
-    
+    in_quotes = False
+
     for char in filter_string:
-        if char == "," and depth == 0:
+        if char == '"':
+            in_quotes = not in_quotes
+            current += char
+        elif char == "," and not in_quotes:
             if current:
                 parts.append(current)
             current = ""
         else:
             current += char
-    
+
     if current:
         parts.append(current)
-    
+
     return parts
 
 

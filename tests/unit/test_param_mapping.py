@@ -41,6 +41,24 @@ class TestFilterParamMapping:
             {"title.search": '"covid-19 deaths"'},
         ]
 
+    def test_filter_mapping_with_commas_inside_quotes(self, client):
+        """Test that commas inside quoted strings are preserved, not split."""
+        filter_params = 'type:article,raw_affiliation_strings.search:"Department of Chemistry, University of California, Berkeley"'
+        parsed_params = map_filter_params(filter_params)
+        assert parsed_params == [
+            {"type": "article"},
+            {"raw_affiliation_strings.search": '"Department of Chemistry, University of California, Berkeley"'},
+        ]
+
+    def test_filter_mapping_with_multiple_quoted_values(self, client):
+        """Test multiple filters with commas inside quotes."""
+        filter_params = 'title.search:"Machine Learning, Deep Learning",raw_affiliation_strings.search:"Dept of CS, MIT, Cambridge, MA"'
+        parsed_params = map_filter_params(filter_params)
+        assert parsed_params == [
+            {"title.search": '"Machine Learning, Deep Learning"'},
+            {"raw_affiliation_strings.search": '"Dept of CS, MIT, Cambridge, MA"'},
+        ]
+
     def test_filter_mapping_with_multiple_colons(self, client):
         filter_params = "publication-year:2020,title.search:book 1: how to win friends"
         parsed_params = map_filter_params(filter_params)
