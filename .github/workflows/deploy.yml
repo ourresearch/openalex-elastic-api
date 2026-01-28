@@ -1,0 +1,49 @@
+name: Deploy and Smoke Test
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Heroku
+        uses: akhileshns/heroku-deploy@v3.13.15
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: openalex-elastic-api
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+
+      - name: Wait for deployment to stabilize
+        run: sleep 30
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: pip install pytest requests
+
+      - name: Run smoke tests
+        env:
+          OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
+        run: pytest tests/smoke/test_post_deploy.py -v --tb=short --noconftest
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          channel-id: 'CRRBCGH36'  # #alerts channel
+          slack-message: |
+            :rotating_light: *Smoke tests failed after deploy!*
+
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+
+            <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View failed workflow>
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
