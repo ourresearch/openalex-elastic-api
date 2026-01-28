@@ -108,8 +108,8 @@ def autocomplete_full():
 
     s = s.source(AUTOCOMPLETE_SOURCE)
     preference = clean_preference(q)
-    s = s.params(preference=preference, timeout='5s')
-    response = s.execute()
+    s = s.params(preference=preference)
+    response = s.params(timeout='5s').execute()
 
     result = OrderedDict()
     result["meta"] = {

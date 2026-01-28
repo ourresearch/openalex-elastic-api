@@ -103,12 +103,10 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
 
         s = s.source(AUTOCOMPLETE_SOURCE)
         preference = clean_preference(q)
-        s = s.params(preference=preference, timeout='5s')
-    else:
-        s = s.params(timeout='5s')
+        s = s.params(preference=preference)
 
     print(s.to_dict())
-    response = s.execute()
+    response = s.params(timeout='5s').execute()
 
     result = OrderedDict()
     result["meta"] = {
