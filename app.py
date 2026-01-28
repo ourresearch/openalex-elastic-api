@@ -93,6 +93,7 @@ def create_app(config_object="settings"):
 
     # Test endpoint that simulates external HTTP call (like ES query)
     # Usage: GET /_test/http_wait?seconds=60
+    # Note: httpbin.org caps at 10s, so we loop to reach requested duration
     @app.route('/_test/http_wait')
     def test_http_wait():
         import requests as http_requests
@@ -100,23 +101,31 @@ def create_app(config_object="settings"):
         wait_seconds = min(wait_seconds, 300)
 
         start_time = time.time()
-        app.logger.warning(f"[TIMEOUT TEST] Starting HTTP wait for {wait_seconds}s")
+        app.logger.warning(f"[TIMEOUT TEST] Starting HTTP wait for {wait_seconds}s (looped)")
 
-        # httpbin.org/delay returns after N seconds - simulates external API call
+        # httpbin.org caps at 10s, so loop multiple calls to reach target duration
+        calls_made = 0
+        statuses = []
         try:
-            resp = http_requests.get(f"https://httpbin.org/delay/{wait_seconds}", timeout=wait_seconds + 10)
-            status = resp.status_code
+            while time.time() - start_time < wait_seconds:
+                remaining = wait_seconds - (time.time() - start_time)
+                delay = min(10, max(1, int(remaining)))  # httpbin caps at 10s
+                resp = http_requests.get(f"https://httpbin.org/delay/{delay}", timeout=delay + 10)
+                statuses.append(resp.status_code)
+                calls_made += 1
+                app.logger.warning(f"[TIMEOUT TEST] Call {calls_made} completed, elapsed: {time.time() - start_time:.2f}s")
         except Exception as e:
-            status = f"error: {e}"
+            statuses.append(f"error: {e}")
 
         elapsed = time.time() - start_time
-        app.logger.warning(f"[TIMEOUT TEST] HTTP wait completed after {elapsed:.2f}s")
+        app.logger.warning(f"[TIMEOUT TEST] HTTP wait completed after {elapsed:.2f}s ({calls_made} calls)")
 
         return jsonify({
             "test": "http_wait_verification",
             "requested_wait_seconds": wait_seconds,
             "actual_elapsed_seconds": round(elapsed, 2),
-            "httpbin_status": status,
+            "httpbin_calls_made": calls_made,
+            "httpbin_statuses": statuses,
             "message": "If you see this, the HTTP request completed without being killed by Gunicorn timeout"
         })
 
