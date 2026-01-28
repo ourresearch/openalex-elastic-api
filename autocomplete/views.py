@@ -108,7 +108,7 @@ def autocomplete_full():
 
     s = s.source(AUTOCOMPLETE_SOURCE)
     preference = clean_preference(q)
-    s = s.params(preference=preference)
+    s = s.params(preference=preference, timeout='5s')
     response = s.execute()
 
     result = OrderedDict()
@@ -249,6 +249,7 @@ def autocomplete_institutions_country():
     # get countries and citation sums from elastic transform
     s = Search(index="institutions-countries-transform-v1", using=connection).extra(size=500)
     s = s.query("match_all")
+    s = s.params(timeout='5s')
     response = s.execute()
     country_sums = {
         h["_source"]["country_code"]["lower"]: int(
@@ -312,6 +313,7 @@ def autocomplete_institutions_type():
     )
     a.metric("cited_by_sum", "sum", field="cited_by_count")
     s.aggs.bucket("groupby", a)
+    s = s.params(timeout='5s')
     response = s.execute()
     buckets = response.aggregations.groupby.buckets
 
