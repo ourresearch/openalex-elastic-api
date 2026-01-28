@@ -1,7 +1,7 @@
 """
 Vector Search endpoint for semantic similarity search over OpenAlex works.
 
-Endpoint: /find/works
+Endpoint: /discover/works
 Cost: 1000 credits per query
 """
 
@@ -289,14 +289,14 @@ def normalize_filter_dict(filters: dict) -> dict:
     return {filter_name_map.get(k, k): v for k, v in filters.items() if k in filter_name_map}
 
 
-@blueprint.route("/find/works", methods=["GET", "POST"])
-def find_works():
+@blueprint.route("/discover/works", methods=["GET", "POST"])
+def discover_works():
     """
     Semantic similarity search over OpenAlex works.
 
-    GET /find/works?query=...&count=25&filter=publication_year:>2020
+    GET /discover/works?query=...&count=25&filter=publication_year:>2020
 
-    POST /find/works
+    POST /discover/works
     {
         "query": "full text query...",
         "count": 25,
@@ -437,8 +437,8 @@ def get_embeddings_count():
         return None
 
 
-@blueprint.route("/find/works/health", methods=["GET"])
-def find_works_health():
+@blueprint.route("/discover/works/health", methods=["GET"])
+def discover_works_health():
     """Health check endpoint."""
     checks = {
         "databricks": False,
