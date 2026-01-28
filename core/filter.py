@@ -42,8 +42,20 @@ def filter_records(fields_dict, filter_params, s, sample=None):
     return s
 
 
+BLOCKED_AUTHOR_IDS = {"A9999999999", "a9999999999"}
+
+
 def handle_or_query(field, fields_dict, s, value, sample):
     or_queries = []
+
+    # Silently filter out blocked author IDs (e.g., null author placeholder)
+    if field.param in ("authorships.author.id", "author.id"):
+        values = value.split("|")
+        values = [v for v in values if v.upper().replace("HTTPS://OPENALEX.ORG/", "") not in BLOCKED_AUTHOR_IDS]
+        if not values:
+            # All values were filtered out, return unchanged search
+            return s
+        value = "|".join(values)
 
     if len(value.split("|")) > MAX_IDS_IN_FILTER:
         raise APIQueryParamsError(
