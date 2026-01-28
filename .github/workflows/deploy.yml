@@ -2,7 +2,7 @@ name: Deploy and Smoke Test
 
 on:
   push:
-    branches: [main]
+    branches: [master]
 
 jobs:
   deploy:
