@@ -23,8 +23,8 @@ fields = [
         param="id",
         entity_type="subfields",
     ),
-    RangeField(param="domain.id"),
-    RangeField(param="field.id"),
+    TermField(param="domain.id"),
+    TermField(param="field.id"),
     RangeField(param="works_count"),
     SearchField(param="default.search", index="subfields"),
     SearchField(
