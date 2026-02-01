@@ -28,6 +28,9 @@ def validate_params(request):
         "seed",
         "search",
         "select",
+        # TEMPORARY SHIM: semantic=true triggers vector search
+        # TODO: Replace with filter=search.semantic:query syntax
+        "semantic",
         "sort",
         "warm",
     ]
