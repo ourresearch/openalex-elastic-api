@@ -1,0 +1,76 @@
+# Full-text PDFs
+
+OpenAlex has cached copies of full-text content for about 60 million works:
+
+* **60M PDFs** — Original PDF files
+* **43M TEI XML** — Machine-readable structured text parsed by [Grobid](https://github.com/kermitt2/grobid)
+
+This page covers bulk download options. For downloading individual files via the API, see [Get content](../how-to-use-the-api/get-content.md).
+
+## Storage details
+
+The full-text archive is approximately **270 TB** total:
+
+| Format | Files | Size |
+|--------|-------|------|
+| PDF | 60M | ~250 TB |
+| TEI XML | 43M | ~20 TB |
+
+Files are stored on [Cloudflare R2](https://developers.cloudflare.com/r2/), which has **zero egress fees**—you only pay for storage, not bandwidth.
+
+## Download options
+
+### Option 1: API (up to ~10K files)
+
+Use the [content API](../how-to-use-the-api/get-content.md) to download files one at a time. Each download costs 100 credits.
+
+With a free API key (100K credits/day), you can download about 1,000 files per day. Good for research projects, building small corpora, or sampling.
+
+### Option 2: Bulk sync (millions of files)
+
+For large-scale downloads, we provide direct access to the R2 storage bucket. You get time-limited credentials and use standard S3 tools to sync.
+
+**Pricing:**
+
+| Package | Price | Access |
+|---------|-------|--------|
+| One-time download | $50,000 | 30-day R2 read access |
+| Ongoing sync | $10,000/year | Persistent R2 read access |
+
+[Contact us](mailto:steve@ourresearch.org) to get started.
+
+**How it works:**
+
+1. We generate R2 API credentials with read-only access
+2. You sync using the AWS CLI (R2 is S3-compatible):
+
+```bash
+aws s3 sync s3://openalex-pdfs ./pdfs \
+  --endpoint-url https://a452eddbbe06eb7d02f4879cee70d29c.r2.cloudflarestorage.com
+```
+
+3. For ongoing sync, run periodically to get new files
+
+**Performance:** At typical network speeds, expect 1-2 weeks to download the full archive. The R2 credentials we provide will have an expiration date matching your package.
+
+## File naming
+
+Files are named by UUID, not work ID:
+
+```
+openalex-pdfs/
+├── 3a07228e-de2a-4c37-955d-b1411a498328.pdf
+├── 7b12f4a1-8c9d-4e5f-a2b3-c4d5e6f7a8b9.pdf
+└── ...
+
+openalex-grobid-xml/
+├── 3a07228e-de2a-4c37-955d-b1411a498328.xml.gz
+├── 7b12f4a1-8c9d-4e5f-a2b3-c4d5e6f7a8b9.xml.gz
+└── ...
+```
+
+To map work IDs to file UUIDs, use the [snapshot data](snapshot-data-format.md). The `locations` array in each work contains `pdf_url` fields that include the UUID.
+
+## Licensing
+
+The PDFs themselves retain their original copyright. OpenAlex does not grant any additional rights to the content. Many files are Open Access, but not all—check each work's [`open_access`](../api-entities/works/work-object/#open_access) field for licensing information.
