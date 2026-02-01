@@ -2,7 +2,7 @@
 description: Download PDFs and machine-readable XML for OpenAlex works
 ---
 
-# Get content
+# Download PDF content
 
 OpenAlex includes links to publisher-hosted and repository-hosted full text for about 60 million [Open Access](../api-entities/works/work-object/#open\_access) works. But downloading from all those different sources can be inconvenient.
 
@@ -16,11 +16,9 @@ So we've cached copies of these files. We've got:
 Content downloads require an API key and cost **100 credits per file**. See [rate limits](rate-limits-and-authentication.md) for details.
 {% endhint %}
 
-## Getting content
+## Get content for a single work
 
-### Get content for a single work
-
-The URL pattern is simple:
+Let's say you have an OpenAlex work ID and you want to download its full-text PDF. The URL pattern is simple:
 
 ```
 https://content.openalex.org/works/{work_id}.pdf?api_key=YOUR_KEY
@@ -37,7 +35,7 @@ Examples:
 
 When you request content, here's what happens:
 
-1. We check if we have the requested file. If not, you get a `404` and are charged just 1 credit.
+1. We check if we have the requested file. If not, you get a `404`.
 2. If we have the file, we verify your API key has enough credits.
 3. We generate a [presigned URL](https://developers.cloudflare.com/r2/api/s3/presigned-urls/)—a temporary, authenticated link that grants access to the file on [Cloudflare R2](https://developers.cloudflare.com/r2/) where it's stored.
 4. We return a `302 redirect` to that presigned URL. Your browser or HTTP client follows the redirect automatically.
@@ -47,13 +45,23 @@ This approach is more scalable than streaming files through our servers. Since c
 
 The presigned URL expires after 5 minutes. If you need to download the same file again, just hit the content endpoint again to get a fresh URL (but it will cost another 100 credits).
 
-## Finding works with content
+## Get content for many works
 
-There are three ways to find works that have downloadable content:
+If you have a list of OpenAlex work IDs, you can iterate through them and download each file one at a time using the endpoint above.
+
+For higher volume (millions of downloads), you can use a script that downloads files in parallel.
+
+For the complete archive (all 60M files), you can sync directly from our storage bucket.
+
+See [Full-text PDFs](../download-all-data/full-text-pdfs.md) for details on all these approaches.
+
+## Finding content
+
+It's easy to download content if you already know which works you want. But what if you need to find works that have downloadable content? There are three methods:
 
 ### The YOLO method
 
-Just plug a work ID into the URL template and see what happens. If we have it, great. If not, you'll get a 404 (and pay 1 credit for the lookup). Not recommended, but it works.
+Just plug a work ID into the URL template and see what happens. If we have it, great. If not, you'll get a 404. Not recommended, but it works.
 
 ### Check the work object
 
@@ -87,9 +95,11 @@ https://api.openalex.org/works?filter=has_content.pdf:true,license.id:cc-by,publ
 
 Then iterate through the results, grab each `content_url`, append `.pdf`, add your API key, and download. You can run 100 requests in parallel without any issues.
 
-## Examples
+{% hint style="info" %}
+**Downloading more than a few thousand files?** Check out the script approach in [Full-text PDFs](../download-all-data/full-text-pdfs.md#option-2-script-up-to-a-few-million-files) for a ready-to-use parallel downloader.
+{% endhint %}
 
-### Example: Build a corpus for AI synthesis
+## Example: Build a corpus for AI synthesis
 
 Say you want to use an LLM to synthesize research on microplastics in drinking water. Here's how to collect the PDFs:
 
@@ -130,79 +140,14 @@ for work_id in work_ids:
 
 Now you have a text corpus ready for RAG or LLM synthesis. Vibe a query interface and you've got your own real-time semantic search engine with results synthesis.
 
-### Example: Download millions of PDFs
-
-Downloading millions of PDFs requires a lot of credits. You'll need a one-time credit pack—[contact us](mailto:steve@ourresearch.org) for pricing.
-
-Once you have credits, here's the approach:
-
-**Step 1: Page through all works with PDFs**
-
-```
-GET https://api.openalex.org/works?filter=has_content.pdf:true&select=id,content_url&per_page=100&cursor=*&api_key=YOUR_KEY
-```
-
 {% hint style="info" %}
-Here's where you can limit your downloads to Creative Commons licensed works, certain topics, certain years--anything that our powerful filter syntax allows.
+**Want to download these faster?** Use the parallel download script from [Full-text PDFs](../download-all-data/full-text-pdfs.md#option-2-script-up-to-a-few-million-files). Just change the filter to `default.search:microplastics%20drinking%20water,has_content.pdf:true`.
 {% endhint %}
-
-**Step 2: Download in parallel**
-
-```python
-"""
-Proof-of-concept bulk downloader.
-TODO: You (or your agent) must add error handling, retries,
-rate limiting, 404 handling, network timeouts, and resume logic.
-"""
-import requests
-from concurrent.futures import ThreadPoolExecutor
-
-API_KEY = "YOUR_KEY"
-CONTENT_URL = "https://content.openalex.org"
-API_URL = "https://api.openalex.org"
-
-def download_pdf(work_id):
-    # TODO: add retry logic, timeout handling, 404 handling
-    r = requests.get(
-        f"{CONTENT_URL}/works/{work_id}.pdf",
-        params={"api_key": API_KEY},
-        allow_redirects=True
-    )
-    with open(f"pdfs/{work_id}.pdf", "wb") as f:
-        f.write(r.content)
-
-def get_works_page(cursor):
-    # TODO: add retry logic for API errors
-    r = requests.get(
-        f"{API_URL}/works",
-        params={
-            "filter": "has_content.pdf:true",
-            "select": "id",
-            "per_page": 100,
-            "cursor": cursor,
-            "api_key": API_KEY
-        }
-    )
-    data = r.json()
-    return data["results"], data["meta"].get("next_cursor")
-
-# Main loop
-cursor = "*"
-with ThreadPoolExecutor(max_workers=50) as executor:
-    while cursor:
-        works, cursor = get_works_page(cursor)
-        work_ids = [w["id"].split("/")[-1] for w in works]
-
-        # Download 100 PDFs in parallel
-        executor.map(download_pdf, work_ids)
-```
-
-**Performance**: At 100 downloads/second, you can download all 60M PDFs in about 10 days. We recommend staying under 100 requests/second for reliable performance.
 
 ## Credit costs
 
-| Action                                     | Credits     |
-| ------------------------------------------ | ----------- |
-| Download PDF or TEI XML (success)          | 100         |
-| Query for unavailable content (404)        | 1           |
-| List works with content (via `/works` API) | 10 per page |
+| Action | Credits |
+| ------ | ------- |
+| Get a work by ID | 0 |
+| List/filter works | 1 |
+| Download PDF or TEI XML | 100 |

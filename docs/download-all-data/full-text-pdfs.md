@@ -5,7 +5,7 @@ OpenAlex has cached copies of full-text content for about 60 million works:
 * **60M PDFs** — Original PDF files
 * **43M TEI XML** — Machine-readable structured text parsed by [Grobid](https://github.com/kermitt2/grobid)
 
-This page covers bulk download options. For downloading individual files via the API, see [Get content](../how-to-use-the-api/get-content.md).
+This page covers bulk download options. For downloading individual files via the API, see [Download PDF content](../how-to-use-the-api/get-content.md).
 
 ## Storage details
 
@@ -16,8 +16,6 @@ The full-text archive is approximately **270 TB** total:
 | PDF | 60M | ~250 TB |
 | TEI XML | 43M | ~20 TB |
 
-Files are stored on [Cloudflare R2](https://developers.cloudflare.com/r2/), which has **zero egress fees**—you only pay for storage, not bandwidth.
-
 ## Download options
 
 ### Option 1: API (up to ~10K files)
@@ -26,23 +24,69 @@ Use the [content API](../how-to-use-the-api/get-content.md) to download files on
 
 With a free API key (100K credits/day), you can download about 1,000 files per day. Good for research projects, building small corpora, or sampling.
 
-### Option 2: Bulk sync (millions of files)
+### Option 2: Script (up to a few million files)
 
-For large-scale downloads, we provide direct access to the R2 storage bucket. You get time-limited credentials and use standard S3 tools to sync.
+For larger downloads, write a script that iterates through work IDs and downloads each file via the API. Standard credit rates apply (100 credits per download).
 
-**Pricing:**
+Here's a basic Python example:
 
-| Package | Price | Access |
-|---------|-------|--------|
-| One-time download | $50,000 | 30-day R2 read access |
-| Ongoing sync | $10,000/year | Persistent R2 read access |
+```python
+import requests
+from concurrent.futures import ThreadPoolExecutor
 
-[Contact us](mailto:steve@ourresearch.org) to get started.
+API_KEY = "YOUR_KEY"
+
+def download_pdf(work_id):
+    r = requests.get(
+        f"https://content.openalex.org/works/{work_id}.pdf",
+        params={"api_key": API_KEY},
+        allow_redirects=True
+    )
+    if r.status_code == 200:
+        with open(f"pdfs/{work_id}.pdf", "wb") as f:
+            f.write(r.content)
+
+def get_works_page(cursor):
+    r = requests.get(
+        "https://api.openalex.org/works",
+        params={
+            "filter": "has_content.pdf:true",
+            "select": "id",
+            "per_page": 100,
+            "cursor": cursor,
+            "api_key": API_KEY
+        }
+    )
+    data = r.json()
+    return data["results"], data["meta"].get("next_cursor")
+
+# Download in parallel
+cursor = "*"
+with ThreadPoolExecutor(max_workers=50) as executor:
+    while cursor:
+        works, cursor = get_works_page(cursor)
+        work_ids = [w["id"].split("/")[-1] for w in works]
+        executor.map(download_pdf, work_ids)
+```
+
+Add your own error handling, retries, and resume logic. At 100 downloads/second, you can download a few million files in a few days.
+
+### Option 3: Complete archive sync
+
+For downloading the complete archive (all 60M files), we provide direct access to the storage bucket. You get time-limited credentials and use standard S3 tools to sync.
+
+Files are stored on [Cloudflare R2](https://developers.cloudflare.com/r2/), which is fully compatible with the S3 API. You can use the AWS CLI, boto3, or any S3-compatible tool.
+
+**One-time download:** 30-day R2 read access to sync the complete archive.
+
+**Ongoing sync:** Persistent R2 read access is included with our enterprise subscription.
+
+See the [pricing page](https://openalex.org/pricing) for details, or [contact us](mailto:steve@ourresearch.org) to get started.
 
 **How it works:**
 
 1. We generate R2 API credentials with read-only access
-2. You sync using the AWS CLI (R2 is S3-compatible):
+2. You sync using the AWS CLI:
 
 ```bash
 aws s3 sync s3://openalex-pdfs ./pdfs \
@@ -51,7 +95,7 @@ aws s3 sync s3://openalex-pdfs ./pdfs \
 
 3. For ongoing sync, run periodically to get new files
 
-**Performance:** At typical network speeds, expect 1-2 weeks to download the full archive. The R2 credentials we provide will have an expiration date matching your package.
+At typical network speeds, expect 1-2 weeks to download the full archive.
 
 ## File naming
 
