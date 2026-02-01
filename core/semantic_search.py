@@ -200,21 +200,29 @@ def semantic_search_works(
     timing["search_ms"] = round((time.time() - t0) * 1000)
 
     # Step 5: Format results
+    # We need to convert raw ES response to format WorksSchema expects
+    # The schema works with Hit-like objects or dicts with proper structure
     t0 = time.time()
-    # Import here to avoid circular import (works.views imports this module)
     from works.schemas import WorksSchema
+    from elasticsearch_dsl.utils import AttrDict
+
     works_schema = WorksSchema()
     results = []
 
     for hit in response['hits']['hits']:
-        # Convert ES hit to schema-compatible format
-        work_data = hit['_source']
-        work_data['meta'] = {'score': hit['_score']}
+        # Convert raw dict to AttrDict which behaves like Hit objects
+        # This allows WorksSchema to access fields as attributes
+        work_data = AttrDict(hit['_source'])
+        work_data.meta = AttrDict({'score': hit['_score'], 'id': hit['_id']})
 
-        serialized = works_schema.dump(work_data)
-        # Add score to the result
-        serialized['relevance_score'] = round(hit['_score'], 4)
-        results.append(serialized)
+        try:
+            serialized = works_schema.dump(work_data)
+            # Add relevance score to the result
+            serialized['relevance_score'] = round(hit['_score'], 4)
+            results.append(serialized)
+        except Exception as e:
+            # Skip works that fail serialization, log for debugging
+            print(f"Failed to serialize work {hit.get('_id')}: {e}")
 
     timing["serialize_ms"] = round((time.time() - t0) * 1000)
     timing["total_ms"] = round((time.time() - total_start) * 1000)
