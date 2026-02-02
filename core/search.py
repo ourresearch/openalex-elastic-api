@@ -9,8 +9,8 @@ import requests
 from settings import ES_URL_WALDEN
 
 # Search complexity limits
-MAX_SEARCH_LENGTH = 400
-MAX_OR_TERMS = 10
+MAX_SEARCH_LENGTH = 2500
+MAX_OR_TERMS = 40
 
 
 def validate_search_query(search_terms):
