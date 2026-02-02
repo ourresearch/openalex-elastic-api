@@ -16,7 +16,9 @@ So we've cached copies of these files. We've got:
 Content downloads require an API key and cost **100 credits per file**. See [rate limits](rate-limits-and-authentication.md) for details.
 {% endhint %}
 
-## Get content for a single work
+## Download content
+
+### Single work
 
 Let's say you have an OpenAlex work ID and you want to download its full-text PDF. The URL pattern is simple:
 
@@ -30,6 +32,25 @@ Examples:
 
 * PDF: [`https://content.openalex.org/works/W2741809807.pdf?api_key=YOUR_KEY`](https://content.openalex.org/works/W2741809807.pdf?api_key=YOUR_KEY)
 * TEI XML: [`https://content.openalex.org/works/W2741809807.grobid-xml?api_key=YOUR_KEY`](https://content.openalex.org/works/W2741809807.grobid-xml?api_key=YOUR_KEY)
+
+### Multiple works
+
+If you have a list of OpenAlex work IDs, you can iterate through them and download each file one at a time using the endpoint above.
+
+For higher volume (thousands to millions of downloads), use our command-line tool:
+
+```bash
+pip install openalex-content-downloader
+
+openalex-content download \
+  --api-key YOUR_KEY \
+  --output ./pdfs \
+  --filter "has_content.pdf:true"
+```
+
+The tool handles parallel downloads, automatic retries, and checkpointing so you can resume interrupted downloads. See [Full-text PDFs](../download-all-data/full-text-pdfs.md#option-2-command-line-tool-up-to-a-few-million-files) for usage examples.
+
+For the complete archive (all 60M files), you can sync directly from our storage bucket. See [Full-text PDFs](../download-all-data/full-text-pdfs.md#option-3-complete-archive-sync) for details.
 
 ### How it works
 
@@ -45,17 +66,7 @@ This approach is more scalable than streaming files through our servers. Since c
 
 The presigned URL expires after 5 minutes. If you need to download the same file again, just hit the content endpoint again to get a fresh URL (but it will cost another 100 credits).
 
-## Get content for many works
-
-If you have a list of OpenAlex work IDs, you can iterate through them and download each file one at a time using the endpoint above.
-
-For higher volume (millions of downloads), you can use a script that downloads files in parallel.
-
-For the complete archive (all 60M files), you can sync directly from our storage bucket.
-
-See [Full-text PDFs](../download-all-data/full-text-pdfs.md) for details on all these approaches.
-
-## Finding content
+## Find content to download
 
 It's easy to download content if you already know which works you want. But what if you need to find works that have downloadable content? There are three methods:
 
@@ -90,13 +101,13 @@ https://api.openalex.org/works?filter=default.search:frogs,has_content.pdf:true
 Or works with CC-BY licenses published since 2024:
 
 ```
-https://api.openalex.org/works?filter=has_content.pdf:true,license.id:cc-by,publication_year:2024-
+https://api.openalex.org/works?filter=has_content.pdf:true,best_oa_location.license:cc-by,publication_year:2024-
 ```
 
 Then iterate through the results, grab each `content_url`, append `.pdf`, add your API key, and download. You can run 100 requests in parallel without any issues.
 
 {% hint style="info" %}
-**Downloading more than a few thousand files?** Check out the script approach in [Full-text PDFs](../download-all-data/full-text-pdfs.md#option-2-script-up-to-a-few-million-files) for a ready-to-use parallel downloader.
+**Downloading more than a few thousand files?** Use the [command-line tool](../download-all-data/full-text-pdfs.md#option-2-command-line-tool-up-to-a-few-million-files)—it handles parallel downloads, retries, and checkpointing automatically.
 {% endhint %}
 
 ## Example: Build a corpus for AI synthesis
@@ -141,7 +152,7 @@ for work_id in work_ids:
 Now you have a text corpus ready for RAG or LLM synthesis. Vibe a query interface and you've got your own real-time semantic search engine with results synthesis.
 
 {% hint style="info" %}
-**Want to download these faster?** Use the parallel download script from [Full-text PDFs](../download-all-data/full-text-pdfs.md#option-2-script-up-to-a-few-million-files). Just change the filter to `default.search:microplastics%20drinking%20water,has_content.pdf:true`.
+**Want to download these faster?** Use the [command-line tool](../download-all-data/full-text-pdfs.md#option-2-command-line-tool-up-to-a-few-million-files): `openalex-content download --filter "default.search:microplastics drinking water,has_content.pdf:true"`
 {% endhint %}
 
 ## Credit costs

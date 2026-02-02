@@ -311,7 +311,13 @@ _String:_ A URL for downloading full-text content (PDF or TEI XML) for this work
 content_url: "https://content.openalex.org/works/W2741809807"
 ```
 
-Append `.pdf` or `.grobid-xml` to download specific formats. See [Get content](../../../how-to-use-the-api/get-content.md) for details.
+Append `.pdf` or `.grobid-xml` to download specific formats, and include your API key:
+
+```
+https://content.openalex.org/works/W2741809807.pdf?api_key=YOUR_KEY
+```
+
+See [Get content](../../../how-to-use-the-api/get-content.md) for details.
 
 {% hint style="info" %}
 This field is only available through the API. It is not included in the [snapshot](../../../download-all-data/openalex-snapshot.md) data.

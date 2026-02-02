@@ -24,52 +24,54 @@ Use the [content API](../how-to-use-the-api/get-content.md) to download files on
 
 With a free API key (100K credits/day), you can download about 1,000 files per day. Good for research projects, building small corpora, or sampling.
 
-### Option 2: Script (up to a few million files)
+### Option 2: Command-line tool (up to a few million files)
 
-For larger downloads, write a script that iterates through work IDs and downloads each file via the API. Standard credit rates apply (100 credits per download).
+For larger downloads, use our command-line tool. It handles parallel downloads, automatic retries, checkpointing, and resume—so you don't have to build all that yourself.
 
-Here's a basic Python example:
+**Install:**
 
-```python
-import requests
-from concurrent.futures import ThreadPoolExecutor
-
-API_KEY = "YOUR_KEY"
-
-def download_pdf(work_id):
-    r = requests.get(
-        f"https://content.openalex.org/works/{work_id}.pdf",
-        params={"api_key": API_KEY},
-        allow_redirects=True
-    )
-    if r.status_code == 200:
-        with open(f"pdfs/{work_id}.pdf", "wb") as f:
-            f.write(r.content)
-
-def get_works_page(cursor):
-    r = requests.get(
-        "https://api.openalex.org/works",
-        params={
-            "filter": "has_content.pdf:true",
-            "select": "id",
-            "per_page": 100,
-            "cursor": cursor,
-            "api_key": API_KEY
-        }
-    )
-    data = r.json()
-    return data["results"], data["meta"].get("next_cursor")
-
-# Download in parallel
-cursor = "*"
-with ThreadPoolExecutor(max_workers=50) as executor:
-    while cursor:
-        works, cursor = get_works_page(cursor)
-        work_ids = [w["id"].split("/")[-1] for w in works]
-        executor.map(download_pdf, work_ids)
+```bash
+pip install openalex-content-downloader
 ```
 
-Add your own error handling, retries, and resume logic. At 100 downloads/second, you can download a few million files in a few days.
+**Basic usage:**
+
+```bash
+# Download all PDFs with available content
+openalex-content download --api-key YOUR_KEY --output ./pdfs
+
+# Check your credit balance
+openalex-content status --api-key YOUR_KEY
+```
+
+**Example: Download 2026 works with Creative Commons licenses**
+
+```bash
+openalex-content download \
+  --api-key YOUR_KEY \
+  --output ./cc-pdfs-2026 \
+  --filter "publication_year:2026,best_oa_location.license:cc-by"
+```
+
+**Example: Download PDFs for a specific topic**
+
+```bash
+openalex-content download \
+  --api-key YOUR_KEY \
+  --output ./climate-pdfs \
+  --filter "topics.id:T10325"
+```
+
+The tool uses the same [filter syntax](../api-entities/works/filter-works.md) as the API, so you can combine any filters you want.
+
+**Key features:**
+
+* Parallel downloads with configurable concurrency (up to 200 workers)
+* Automatic checkpointing—resume interrupted downloads without re-downloading
+* Progress tracking with live stats
+* Works with any OpenAlex filter
+
+Standard credit rates apply (100 credits per download). At 100 downloads/second, you can download a few million files in a few days.
 
 ### Option 3: Complete archive sync
 
@@ -117,4 +119,16 @@ To map work IDs to file UUIDs, use the [snapshot data](snapshot-data-format.md).
 
 ## Licensing
 
-The PDFs themselves retain their original copyright. OpenAlex does not grant any additional rights to the content. Many files are Open Access, but not all—check each work's [`open_access`](../api-entities/works/work-object/#open_access) field for licensing information.
+The PDFs retain their original copyright. OpenAlex does not grant any additional rights to the content—we're just providing access to files we've collected.
+
+To check the license for a specific work, use the [`best_oa_location.license`](../api-entities/works/work-object/#best_oa_location) field in the API. This tells you the license associated with the work's best open access location (e.g., `cc-by`, `cc-by-nc`, `cc0`, or `null` if unknown).
+
+**Filter by license:**
+
+You can use the API to find works with a specific license:
+
+```
+https://api.openalex.org/works?filter=has_content.pdf:true,best_oa_location.license:cc-by
+```
+
+This returns works that have downloadable PDFs and are licensed under [CC BY](https://creativecommons.org/licenses/by/4.0/).
