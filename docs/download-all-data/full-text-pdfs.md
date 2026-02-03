@@ -40,7 +40,8 @@ pip install openalex-official
 openalex download \
   --api-key YOUR_KEY \
   --output ./climate-pdfs \
-  --filter "topics.id:T10325,has_content.pdf:true"
+  --filter "topics.id:T10325,has_content.pdf:true" \
+  --content pdf
 ```
 
 **Example: Download 2026 works with Creative Commons licenses**
@@ -49,12 +50,23 @@ openalex download \
 openalex download \
   --api-key YOUR_KEY \
   --output ./cc-pdfs-2026 \
-  --filter "publication_year:2026,best_oa_location.license:cc-by,has_content.pdf:true"
+  --filter "publication_year:2026,best_oa_location.license:cc-by,has_content.pdf:true" \
+  --content pdf
+```
+
+**Example: Download metadata + PDFs + TEI XML**
+
+```bash
+openalex download \
+  --api-key YOUR_KEY \
+  --output ./my-corpus \
+  --filter "topics.id:T10325,has_content.pdf:true" \
+  --content pdf,xml
 ```
 
 See the [OpenAlex CLI page](openalex-cli.md) for more examples and full documentation.
 
-Standard credit rates apply (100 credits per download). At full speed, you can download a few million files in a few days.
+Standard credit rates apply (100 credits per content file download; metadata is free). At full speed, you can download a few million files in a few days.
 
 ### Option 3: Complete archive sync
 
