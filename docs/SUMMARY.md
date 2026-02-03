@@ -106,6 +106,7 @@
 * [OpenAlex snapshot](download-all-data/openalex-snapshot.md)
 * [Snapshot data format](download-all-data/snapshot-data-format.md)
 * [Download to your machine](download-all-data/download-to-your-machine.md)
+* [OpenAlex CLI](download-all-data/openalex-cli.md)
 * [Full-text PDFs](download-all-data/full-text-pdfs.md)
 * [Upload to your database](download-all-data/upload-to-your-database/README.md)
   * [Load to a data warehouse](download-all-data/upload-to-your-database/load-to-a-data-warehouse.md)
