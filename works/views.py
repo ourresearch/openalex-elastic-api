@@ -3,9 +3,7 @@ from flask import Blueprint, jsonify, request
 from combined_config import all_entities_config
 from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
-from core.params import parse_params
 from core.semantic import semantic_search
-from core.semantic_search import semantic_search_works
 from core.schemas import FiltersWrapperSchema, StatsWrapperSchema
 from core.shared_view import shared_view
 from core.stats_view import shared_stats_view
@@ -35,52 +33,11 @@ def works():
     """
     List and search works.
 
-    Supports semantic (vector) search when `semantic=true` parameter is provided.
-
-    TEMPORARY SHIM: The `semantic=true` parameter triggers ES kNN vector search
-    instead of text search. This is a temporary API signature for testing.
-    Long-term plan: Use `filter=search.semantic:query` syntax instead.
-
-    Examples:
-        GET /works?search=machine+learning
-        GET /works?search=machine+learning&semantic=true
-        GET /works?search=climate+change&semantic=true&filter=is_oa:true
+    Supports multiple search modes via dot notation:
+        GET /works?search=machine+learning                    (text search)
+        GET /works?search.semantic=machine+learning            (vector search)
+        GET /works?search.semantic=climate+change&filter=is_oa:true  (vector + filters)
     """
-    # Check for semantic search flag
-    # TEMPORARY SHIM: This triggers vector search instead of text search
-    # TODO: Replace with filter=search.semantic:query syntax
-    is_semantic = request.args.get('semantic', '').lower() == 'true'
-    search_query = request.args.get('search', '')
-
-    if is_semantic and search_query:
-        # Use semantic (vector) search
-        connection = get_data_version_connection(request)
-        index_name = WORKS_INDEX_WALDEN if connection == 'walden' else WORKS_INDEX_LEGACY
-
-        # Parse filters for pre-filtering
-        params = parse_params(request)
-        filter_params = params.get('filters')
-
-        # Add default is_xpac filter if not specified
-        if connection == 'walden':
-            current_filter = request.args.get('filter', '')
-            include_xpac = request.args.get('include_xpac') == 'true' or request.args.get('include-xpac') == 'true'
-            if 'is_xpac:' not in current_filter and 'is-xpac:' not in current_filter and not include_xpac:
-                if filter_params is None:
-                    filter_params = []
-                filter_params.append({'is_xpac': 'false'})
-
-        result = semantic_search_works(
-            query_text=search_query,
-            filter_params=filter_params,
-            fields_dict=fields_dict,
-            per_page=params.get('per_page', 25),
-            index_name=index_name,
-            connection=connection
-        )
-        return jsonify(result)
-
-    # Standard text search / list
     default_sort = ["-cited_by_percentile_year.max", "-cited_by_count", "id"]
     only_fields = process_only_fields(request, WorksSchema)
 
@@ -90,15 +47,12 @@ def works():
     default_filters = None
     if connection == 'walden':
         current_filter = request.args.get('filter', '')
-        # Check for include_xpac as a boolean parameter
         include_xpac = request.args.get('include_xpac') == 'true' or request.args.get('include-xpac') == 'true'
 
         if 'is_xpac:' not in current_filter and 'is-xpac:' not in current_filter and not include_xpac:
-            # User didn't specify, add default filter
             default_filters = [{'is_xpac': 'false'}]
 
     result = shared_view(request, fields_dict, index_name, default_sort, connection, default_filters=default_filters)
-    # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
     message_schema = MessageSchema(only=only_fields)

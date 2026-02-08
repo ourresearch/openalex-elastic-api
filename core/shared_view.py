@@ -102,7 +102,16 @@ def set_cursor_pagination(params, s):
 def add_search_query(params, index_name, s):
     if params["search"] and params["search"] != '""':
         validate_search_query(params["search"])
-        search_query = full_search_query(index_name, params["search"])
+
+        if params.get("search_type") == "semantic" and index_name.lower().startswith("works"):
+            # Semantic (vector) search — build kNN query
+            search_query = full_search_query(
+                index_name, params["search"], search_type="semantic"
+            )
+        else:
+            # Default text search (or non-works entities)
+            search_query = full_search_query(index_name, params["search"])
+
         if params["sample"]:
             s = s.filter(search_query)
         else:

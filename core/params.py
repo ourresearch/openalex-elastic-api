@@ -6,6 +6,10 @@ from core.validate import validate_export_format, validate_params
 def parse_params(request):
     """Extract and validate parameters from the request."""
     validate_params(request)
+
+    # Determine search type and query from search.* dot notation params
+    search_type, search_query = _extract_search_params(request)
+
     params = {
         "apc_sum": request.args.get("apc_sum"),
         "cited_by_count_sum": request.args.get("cited_by_count_sum"),
@@ -19,9 +23,33 @@ def parse_params(request):
         "sample": request.args.get("sample", type=int),
         "seed": request.args.get("seed"),
         "q": request.args.get("q"),
-        "search": request.args.get("search"),
+        "search": search_query,
+        "search_type": search_type,
         "sort": map_sort_params(request.args.get("sort")),
     }
     if params["group_bys"]:
         params["group_bys"] = params["group_bys"].split(",")
     return params
+
+
+def _extract_search_params(request):
+    """
+    Extract search type and query from request args.
+
+    Supports dot notation:
+        search=query          -> ("default", "query")
+        search.semantic=query -> ("semantic", "query")
+        search.exact=query    -> ("exact", "query")
+        (no search param)     -> (None, None)
+    """
+    # Check for dot notation params first
+    if request.args.get("search.semantic"):
+        return "semantic", request.args.get("search.semantic")
+    if request.args.get("search.exact"):
+        return "exact", request.args.get("search.exact")
+
+    # Fall back to bare search param
+    if request.args.get("search"):
+        return "default", request.args.get("search")
+
+    return None, None

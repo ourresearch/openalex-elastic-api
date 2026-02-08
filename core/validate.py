@@ -2,6 +2,11 @@ import settings
 from core.exceptions import APIQueryParamsError
 
 
+# Search parameter prefixes that are accepted via dot notation
+SEARCH_PARAM_PREFIX = "search."
+VALID_SEARCH_TYPES = ["search", "search.semantic", "search.exact"]
+
+
 def validate_params(request):
     valid_params = [
         "apc_sum",
@@ -28,15 +33,26 @@ def validate_params(request):
         "seed",
         "search",
         "select",
-        # TEMPORARY SHIM: semantic=true triggers vector search
-        # TODO: Replace with filter=search.semantic:query syntax
-        "semantic",
         "sort",
         "warm",
     ]
     hidden_valid_params = ["bypass_cache"]
     for arg in request.args:
+        # Accept any search.* param (dot notation)
+        if arg.startswith(SEARCH_PARAM_PREFIX):
+            if arg not in VALID_SEARCH_TYPES:
+                raise APIQueryParamsError(
+                    f"'{arg}' is not a valid search parameter. "
+                    f"Valid search parameters are: {', '.join(VALID_SEARCH_TYPES)}."
+                )
+            continue
         if arg not in valid_params and arg not in hidden_valid_params:
+            # Catch deprecated semantic=true parameter
+            if arg == "semantic":
+                raise APIQueryParamsError(
+                    "The semantic=true parameter is deprecated. "
+                    "Use search.semantic=your+query instead."
+                )
             raise APIQueryParamsError(
                 f"{arg} is not a valid parameter. Valid parameters are: {', '.join(valid_params)}."
             )
@@ -112,16 +128,36 @@ def validate_sample_param(request):
 
 
 def validate_search_param(request):
-    if "search" in request.args and any(
-        [word.startswith("!") for word in request.args.get("search").split()]
-    ):
+    # Collect all search params present in the request
+    search_params_present = []
+    if "search" in request.args:
+        search_params_present.append("search")
+    for arg in request.args:
+        if arg.startswith(SEARCH_PARAM_PREFIX):
+            search_params_present.append(arg)
+
+    # Only one search param allowed per request
+    if len(search_params_present) > 1:
         raise APIQueryParamsError(
-            f"The search parameter does not support the ! operator. Problem value: {request.args.get('search')}"
+            "Only one search parameter allowed per request. "
+            f"You provided: {', '.join(search_params_present)}. "
+            "Use search, search.semantic, or search.exact (not multiple)."
         )
-    elif "search" in request.args and "|" in request.args.get("search"):
-        raise APIQueryParamsError(
-            f"The search parameter does not support the | operator. Problem value: {request.args.get('search')}"
-        )
+
+    # Validate the search value (whichever param it came from)
+    search_value = None
+    for param in search_params_present:
+        search_value = request.args.get(param)
+
+    if search_value:
+        if any(word.startswith("!") for word in search_value.split()):
+            raise APIQueryParamsError(
+                f"The search parameter does not support the ! operator. Problem value: {search_value}"
+            )
+        elif "|" in search_value:
+            raise APIQueryParamsError(
+                f"The search parameter does not support the | operator. Problem value: {search_value}"
+            )
 
 
 def validate_export_format(export_format):
