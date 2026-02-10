@@ -3,41 +3,9 @@ import re
 from elasticsearch_dsl import Q
 
 from core.knn import KNNQuery
-from core.exceptions import APIQueryParamsError
 import requests
 
 from settings import ES_URL_WALDEN
-
-# Search complexity limits
-MAX_SEARCH_LENGTH = 2500
-MAX_OR_TERMS = 40
-
-
-def validate_search_query(search_terms):
-    """
-    Validate search query complexity to prevent expensive ES queries.
-    Raises APIQueryParamsError if the query is too complex.
-    """
-    if not search_terms:
-        return
-
-    # Check length
-    if len(search_terms) > MAX_SEARCH_LENGTH:
-        raise APIQueryParamsError(
-            f"Search query too long ({len(search_terms)} characters). "
-            f"Maximum length is {MAX_SEARCH_LENGTH} characters. "
-            "Try using specific keywords instead of full text passages."
-        )
-
-    # Count OR operators (case insensitive)
-    or_count = len(re.findall(r'\bOR\b', search_terms, re.IGNORECASE))
-
-    if or_count > MAX_OR_TERMS:
-        raise APIQueryParamsError(
-            f"Search query has too many OR terms ({or_count}). "
-            f"Maximum is {MAX_OR_TERMS}. "
-            "Try simplifying your query with fewer alternatives."
-        )
 
 
 class SearchOpenAlex:

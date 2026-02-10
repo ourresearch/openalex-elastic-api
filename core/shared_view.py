@@ -15,7 +15,7 @@ from core.group_by.buckets import add_meta_sums, create_group_by_buckets
 from core.paginate import get_pagination
 from core.params import parse_params
 from core.preference import clean_preference, set_preference_for_filter_search
-from core.search import check_is_search_query, full_search_query, validate_search_query
+from core.search import check_is_search_query, full_search_query
 from core.sort import get_sort_fields, sort_with_cursor, sort_with_sample
 from core.utils import get_data_version_connection, get_field
 
@@ -101,8 +101,6 @@ def set_cursor_pagination(params, s):
 
 def add_search_query(params, index_name, s):
     if params["search"] and params["search"] != '""':
-        validate_search_query(params["search"])
-
         if params.get("search_type") == "semantic" and index_name.lower().startswith("works"):
             # Semantic (vector) search — build kNN query
             search_query = full_search_query(
