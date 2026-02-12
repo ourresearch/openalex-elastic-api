@@ -152,8 +152,9 @@ def add_semantic_search(params, fields_dict, s):
     )
     s = s.update_from_dict({"knn": knn.to_dict()})
 
-    # Citation boost via rescore (only when returning hits, not group_by)
-    if not (params.get("group_by") or params.get("group_bys")):
+    # Citation boost via rescore (only when returning hits, not group_by).
+    # Rescore is incompatible with explicit sort, so skip if user specified sort.
+    if not (params.get("group_by") or params.get("group_bys") or params.get("sort")):
         s = _add_citation_rescore(s)
 
     s = s.params(preference=clean_preference(params["search"]))
@@ -259,7 +260,10 @@ def apply_sorting(params, fields_dict, default_sort, index_name, s):
 
         s = s.sort(*sort_fields)
     elif is_search_query and not params["sort"] and index_name.startswith("works"):
-        s = s.sort("_score", "publication_date", "id")
+        # Skip explicit sort when rescore is active (semantic search) —
+        # ES doesn't allow sort + rescore together. Rescore sorts by _score implicitly.
+        if "rescore" not in s.to_dict():
+            s = s.sort("_score", "publication_date", "id")
     elif is_search_query and not params["sort"] and index_name.startswith("funder-search"):
         # Sort by relevance score for funder-search
         s = s.sort("_score", "doi")
