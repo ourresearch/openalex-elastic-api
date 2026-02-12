@@ -263,7 +263,7 @@ def raw_affiliation_strings():
         s = s.query(base_query)
     
     # Set size
-    s = s.extra(size=PER_PAGE, track_total_hits=True)
+    s = s.extra(size=PER_PAGE)
     
     # Sort by works_count descending (highest first), with _doc as tiebreaker for cursor pagination
     if not sample:
@@ -288,12 +288,17 @@ def raw_affiliation_strings():
     
     # Execute search
     try:
+        s = s.params(timeout='10s')
         response = s.execute()
     except Exception as e:
         raise APIQueryParamsError(f"Search error: {str(e)}")
-    
-    # Extract results
-    total = response.hits.total.value
+
+    # Get exact total via lightweight _count API (avoids track_total_hits cost on cold cache)
+    try:
+        count_response = es.count(index=settings.RAW_AFFILIATION_STRINGS_INDEX, body={"query": s.to_dict()["query"]})
+        total = count_response["count"]
+    except Exception:
+        total = response.hits.total.value
     took = response.took
     
     # Format results
