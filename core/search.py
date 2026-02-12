@@ -321,18 +321,7 @@ class SearchOpenAlex:
         self.search_terms = self.search_terms.replace("<", "").replace(">", "")
 
 
-def full_search_query(index_name, search_terms, search_type=None):
-    # Semantic (vector) search for works
-    if search_type == "semantic" and index_name.lower().startswith("works"):
-        from core.semantic_search import embed_query, VECTOR_FIELD
-        query_vector = embed_query(search_terms)
-        knn_query = KNNQuery(VECTOR_FIELD, query_vector, 100, similarity=0.5)
-        search_oa = SearchOpenAlex(
-            search_terms=search_terms,
-            is_semantic_query=True,
-        )
-        return search_oa.citation_boost_query(knn_query, scaling_type="log")
-
+def full_search_query(index_name, search_terms):
     if index_name.lower().startswith("authors"):
         search_oa = SearchOpenAlex(
             search_terms=search_terms,

@@ -12,10 +12,12 @@ from core.group_by.filter import filter_group_by
 from core.group_by.utils import parse_group_by
 from core.group_by.search import search_group_by_strings_with_q
 from core.group_by.buckets import add_meta_sums, create_group_by_buckets
+from core.knn import KNNQueryWithFilter
 from core.paginate import get_pagination
 from core.params import parse_params
 from core.preference import clean_preference, set_preference_for_filter_search
-from core.search import check_is_search_query, full_search_query
+from core.search import check_is_search_query, full_search_query, validate_search_query
+from core.semantic_search import embed_query, VECTOR_FIELD
 from core.sort import get_sort_fields, sort_with_cursor, sort_with_sample
 from core.utils import get_data_version_connection, get_field
 
@@ -51,9 +53,18 @@ def construct_query(params, fields_dict, index_name, default_sort, connection):
 
     s = set_cursor_pagination(params, s)
 
-    s = add_search_query(params, index_name, s)
+    is_semantic = (
+        params.get("search_type") == "semantic"
+        and params.get("search")
+        and params["search"] != '""'
+        and index_name.lower().startswith("works")
+    )
 
-    s = apply_filters(params, fields_dict, s)
+    if is_semantic:
+        s = add_semantic_search(params, fields_dict, s)
+    else:
+        s = add_search_query(params, index_name, s)
+        s = apply_filters(params, fields_dict, s)
 
     s = apply_sorting(params, fields_dict, default_sort, index_name, s)
 
@@ -101,14 +112,9 @@ def set_cursor_pagination(params, s):
 
 def add_search_query(params, index_name, s):
     if params["search"] and params["search"] != '""':
-        if params.get("search_type") == "semantic" and index_name.lower().startswith("works"):
-            # Semantic (vector) search — build kNN query
-            search_query = full_search_query(
-                index_name, params["search"], search_type="semantic"
-            )
-        else:
-            # Default text search (or non-works entities)
-            search_query = full_search_query(index_name, params["search"])
+        validate_search_query(params["search"])
+
+        search_query = full_search_query(index_name, params["search"])
 
         if params["sample"]:
             s = s.filter(search_query)
@@ -116,6 +122,109 @@ def add_search_query(params, index_name, s):
             s = s.query(search_query)
         s = s.params(preference=clean_preference(params["search"]))
     return s
+
+
+# Filter keys that represent search operations — cannot be combined with semantic search
+SEARCH_FILTER_KEYS = {
+    "abstract.search", "default.search", "display_name.search",
+    "fulltext.search", "keyword.search", "raw_affiliation_strings.search",
+    "raw_author_name.search", "title.search", "title_and_abstract.search",
+}
+
+
+def add_semantic_search(params, fields_dict, s):
+    """Build top-level kNN with pre-filtering for semantic search."""
+    validate_search_query(params["search"])
+
+    # Only one search mechanism at a time
+    _reject_search_filters(params)
+
+    query_vector = embed_query(params["search"])
+
+    # Build filter dict from user params (reuses existing filter_records logic)
+    filter_dict = _build_knn_filter(params, fields_dict)
+
+    # Build kNN with pre-filter
+    knn = KNNQueryWithFilter(
+        field=VECTOR_FIELD,
+        query_vector=query_vector,
+        k=100,
+        num_candidates=150,
+        filter_query=filter_dict,
+        similarity=0.5,
+    )
+    s = s.update_from_dict({"knn": knn.to_dict()})
+
+    # Citation boost via rescore (only when returning hits, not group_by)
+    if not (params.get("group_by") or params.get("group_bys")):
+        s = _add_citation_rescore(s)
+
+    s = s.params(preference=clean_preference(params["search"]))
+    return s
+
+
+def _reject_search_filters(params):
+    """Raise error if semantic search is combined with search-type filters."""
+    if not params.get("filters"):
+        return
+    for f in params["filters"]:
+        for key in f:
+            if key in SEARCH_FILTER_KEYS or key.endswith(".search"):
+                raise APIQueryParamsError(
+                    f"Cannot combine search.semantic with filter={key}. "
+                    "Use only one search method per request."
+                )
+
+
+def _build_knn_filter(params, fields_dict):
+    """Build ES filter dict from user params for kNN pre-filtering.
+
+    Uses a temporary Search object + existing filter_records() to build
+    the filter query, then extracts the dict representation.
+    """
+    if not params.get("filters"):
+        return None
+
+    temp_s = Search()
+    temp_s = filter_records(fields_dict, params["filters"], temp_s, params.get("sample"))
+    temp_dict = temp_s.to_dict()
+
+    if "query" in temp_dict:
+        return temp_dict["query"]
+    return None
+
+
+def _add_citation_rescore(s, window_size=100):
+    """Add citation-count rescore to re-rank semantic results.
+
+    Replicates the existing citation_boost_query(scaling_type="log") behavior:
+    final_score = similarity * (1 + log(cited_by_count))
+    """
+    return s.extra(rescore={
+        "window_size": window_size,
+        "query": {
+            "rescore_query": {
+                "function_score": {
+                    "query": {"match_all": {}},
+                    "functions": [{
+                        "script_score": {
+                            "script": {
+                                "source": (
+                                    "if (doc['cited_by_count'].size() == 0 || "
+                                    "doc['cited_by_count'].value <= 1) { return 0.5; } "
+                                    "else { return 1 + Math.log(doc['cited_by_count'].value); }"
+                                )
+                            }
+                        }
+                    }],
+                    "boost_mode": "replace"
+                }
+            },
+            "query_weight": 1.0,
+            "rescore_query_weight": 1.0,
+            "score_mode": "multiply"
+        }
+    })
 
 
 def apply_filters(params, fields_dict, s):
