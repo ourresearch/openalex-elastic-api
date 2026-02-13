@@ -34,6 +34,7 @@ def snapshots_root():
     base = settings.SNAPSHOTS_BASE_URL
     results = [
         {"type": "daily", "url": _pass_api_key(f"{base}/snapshots/daily")},
+        {"type": "monthly", "url": "https://openalex.s3.amazonaws.com/browse.html"},
     ]
     return jsonify({
         "meta": {"count": len(results)},
