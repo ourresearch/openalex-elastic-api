@@ -85,8 +85,7 @@ def daily_snapshot_entities(date):
                 entity_map[entity_name] = {
                     "entity": entity_name,
                     "records": 0,
-                    "jsonl": None,
-                    "parquet": None,
+                    "formats": {},
                 }
 
             if not manifest_files:
@@ -99,7 +98,7 @@ def daily_snapshot_entities(date):
             meta = f.get("meta", {})
             filename = f["url"].rsplit("/", 1)[-1]
             size = meta.get("content_length")
-            entity_map[entity_name][fmt] = {
+            entity_map[entity_name]["formats"][fmt] = {
                 "size_bytes": size,
                 "size_display": _human_size(size),
                 "url": _pass_api_key(
