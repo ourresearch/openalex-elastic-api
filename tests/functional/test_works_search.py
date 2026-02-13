@@ -77,3 +77,11 @@ class TestWorksSearch:
         assert json_data["message"] == (
             "Search filters do not support the ! operator. Problem value: !zoo"
         )
+
+    def test_works_search_wildcard(self, client):
+        res = client.get("/works?search=analys*")
+        assert res.status_code == 200
+
+    def test_works_filter_search_wildcard(self, client):
+        res = client.get("/works?filter=display_name.search:analys*")
+        assert res.status_code == 200

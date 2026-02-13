@@ -61,6 +61,7 @@ class SearchOpenAlex:
             query=f"{self.search_terms}",
             default_operator="AND",
             default_field=self.primary_field,
+            allow_leading_wildcard=False,
         ) | Q(
             "match_phrase",
             **{self.primary_field: {"query": self.search_terms, "boost": 2}},
@@ -68,14 +69,14 @@ class SearchOpenAlex:
 
     def primary_match_query(self):
         """Searches with 'and' and phrase queries, with phrase boosted by 2."""
-        if self.is_boolean_search() or self.has_phrase():
-            self.remove_wildcard_characters()
+        if self.is_boolean_search() or self.has_phrase() or self.has_wildcard():
             self.clean_search_terms()
             return Q(
                 "query_string",
                 query=self.search_terms,
                 default_field=self.primary_field,
                 default_operator="AND",
+                allow_leading_wildcard=False,
             )
         else:
             return Q(
@@ -88,20 +89,21 @@ class SearchOpenAlex:
 
     def primary_secondary_match_query(self):
         """Searches primary and secondary fields."""
-        if self.is_boolean_search() or self.has_phrase():
-            self.remove_wildcard_characters()
+        if self.is_boolean_search() or self.has_phrase() or self.has_wildcard():
             self.clean_search_terms()
             return Q(
                 "query_string",
                 query=self.search_terms,
                 default_field=self.primary_field,
                 default_operator="AND",
+                allow_leading_wildcard=False,
             ) | Q(
                 "query_string",
                 query=self.search_terms,
                 default_field=self.secondary_field,
                 boost=0.10,
                 default_operator="AND",
+                allow_leading_wildcard=False,
             )
         else:
             return (
@@ -149,8 +151,7 @@ class SearchOpenAlex:
             tertiary_match_boost = 0.05
             tertiary_phrase_boost = 0.1
 
-        if self.is_boolean_search() or self.has_phrase():
-            self.remove_wildcard_characters()
+        if self.is_boolean_search() or self.has_phrase() or self.has_wildcard():
             self.clean_search_terms()
             return (
                 Q(
@@ -158,6 +159,7 @@ class SearchOpenAlex:
                     query=self.search_terms,
                     default_field=self.primary_field,
                     default_operator="AND",
+                    allow_leading_wildcard=False,
                 )
                 | Q(
                     "query_string",
@@ -165,6 +167,7 @@ class SearchOpenAlex:
                     default_field=self.secondary_field,
                     boost=0.5,
                     default_operator="AND",
+                    allow_leading_wildcard=False,
                 )
                 | Q(
                     "query_string",
@@ -172,6 +175,7 @@ class SearchOpenAlex:
                     default_field=self.tertiary_field,
                     boost=tertiary_match_boost,
                     default_operator="AND",
+                    allow_leading_wildcard=False,
                 )
             )
         else:
@@ -299,11 +303,17 @@ class SearchOpenAlex:
         boolean_words = [" AND ", " OR ", " NOT "]
         return any(word in self.search_terms for word in boolean_words)
 
-    def remove_wildcard_characters(self):
-        """Remove characters used for wildcard, regex, or fuzzy search."""
-        self.search_terms = (
-            self.search_terms.replace("*", "").replace("?", "").replace("~", "")
-        )
+    def has_wildcard(self):
+        """Detect intentional wildcard/fuzzy patterns in search terms.
+
+        Matches (with minimum 3-character prefix to prevent expensive expansions):
+        - * after 3+ word characters: machin*, chem*stry (but NOT a*, th*)
+        - * before 3+ word characters: *machine (blocked by ES, but detected)
+        - ? between two word characters only: wom?n (avoids 'therapy?' false positive)
+        - ~ after 3+ word characters: term~2, machine~1 (but NOT a~2)
+        - ~ after closing quote: "phrase"~5 (proximity search)
+        """
+        return bool(re.search(r'\w{3,}\*|\*\w{3,}|\w\?\w|\w{3,}~|"~', self.search_terms))
 
     def clean_search_terms(self):
         self.search_terms = (
