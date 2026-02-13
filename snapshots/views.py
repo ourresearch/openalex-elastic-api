@@ -29,21 +29,8 @@ def _pass_api_key(url):
     return url
 
 
-@blueprint.route("/snapshots")
-def snapshots_root():
-    base = settings.SNAPSHOTS_BASE_URL
-    results = [
-        {"type": "daily", "url": _pass_api_key(f"{base}/snapshots/daily")},
-        {"type": "monthly", "url": "https://openalex.s3.amazonaws.com/browse.html"},
-    ]
-    return jsonify({
-        "meta": {"count": len(results)},
-        "results": results,
-    })
-
-
-@blueprint.route("/snapshots/daily")
-def daily_snapshots():
+@blueprint.route("/changefiles")
+def changefiles():
     """List available dates."""
     dates = get_available_dates()
     base = settings.SNAPSHOTS_BASE_URL
@@ -52,7 +39,7 @@ def daily_snapshots():
     for d in dates:
         results.append({
             "date": d,
-            "url": _pass_api_key(f"{base}/snapshots/daily/{d}"),
+            "url": _pass_api_key(f"{base}/changefiles/{d}"),
         })
 
     return jsonify({
@@ -61,8 +48,8 @@ def daily_snapshots():
     })
 
 
-@blueprint.route("/snapshots/daily/<date>")
-def daily_snapshot_entities(date):
+@blueprint.route("/changefiles/<date>")
+def changefile_entities(date):
     """List entities for a given date with download URLs for each format."""
     base = settings.SNAPSHOTS_BASE_URL
 
@@ -74,7 +61,7 @@ def daily_snapshot_entities(date):
             manifests[fmt] = manifest
 
     if not manifests:
-        raise APIQueryParamsError(f"No snapshot found for date={date}")
+        raise APIQueryParamsError(f"No changefile found for date={date}")
 
     entity_map = {}
     for fmt, manifest in manifests.items():
@@ -101,7 +88,7 @@ def daily_snapshot_entities(date):
                 "size_bytes": size,
                 "size_display": _human_size(size),
                 "url": _pass_api_key(
-                    f"{base}/snapshots/daily/{date}/{filename}"
+                    f"{base}/changefiles/{date}/{filename}"
                 ),
             }
 
@@ -113,9 +100,9 @@ def daily_snapshot_entities(date):
     })
 
 
-@blueprint.route("/snapshots/daily/<date>/<filename>")
-def daily_snapshot_download(date, filename):
-    """Redirect to pre-signed S3 URL. URL like: authors_2026-02-11.parquet"""
+@blueprint.route("/changefiles/<date>/<filename>")
+def changefile_download(date, filename):
+    """Redirect to pre-signed S3 URL."""
     # Determine format from filename
     if filename.endswith(".jsonl.gz"):
         fmt = "jsonl"
@@ -129,7 +116,7 @@ def daily_snapshot_download(date, filename):
     manifest = get_manifest(date, fmt)
     if manifest is None:
         raise APIQueryParamsError(
-            f"No snapshot found for date={date}, format={fmt}"
+            f"No changefile found for date={date}, format={fmt}"
         )
 
     for ent in manifest.get("entities", []):
