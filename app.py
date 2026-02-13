@@ -32,6 +32,7 @@ import query_translation
 import raw_affiliation_strings
 import settings
 import sdgs
+import snapshots
 import sources
 import source_types
 import subfields
@@ -96,6 +97,7 @@ def register_blueprints(app):
     app.register_blueprint(query_translation.views.blueprint)
     app.register_blueprint(raw_affiliation_strings.views.blueprint)
     app.register_blueprint(sdgs.views.blueprint)
+    app.register_blueprint(snapshots.views.blueprint)
     app.register_blueprint(sources.views.blueprint)
     app.register_blueprint(source_types.views.blueprint)
     app.register_blueprint(subfields.views.blueprint)

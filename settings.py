@@ -109,3 +109,6 @@ CONTINENT_NAMES = [
 VERSIONS = ["null", "acceptedVersion", "submittedVersion", "publishedVersion"]
 
 MAX_IDS_IN_FILTER = 100
+
+# Snapshots
+SNAPSHOTS_S3_BUCKET = os.environ.get("SNAPSHOTS_S3_BUCKET", "openalex-snapshots")
