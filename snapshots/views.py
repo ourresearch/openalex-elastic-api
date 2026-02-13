@@ -10,6 +10,15 @@ blueprint = Blueprint("snapshots", __name__)
 VALID_FORMATS = {"jsonl", "parquet"}
 
 
+def _base_url():
+    """Return the public-facing base URL, respecting proxy headers."""
+    forwarded_host = request.headers.get("X-Forwarded-Host")
+    if forwarded_host:
+        scheme = request.headers.get("X-Forwarded-Proto", "https")
+        return f"{scheme}://{forwarded_host}"
+    return request.host_url.rstrip("/")
+
+
 def _pass_api_key(url):
     """Append the caller's api_key to a URL if present."""
     api_key = request.args.get("api_key")
@@ -32,7 +41,7 @@ def daily_snapshots():
 def _list_dates():
     """Return available snapshot dates with format links."""
     dates = get_available_dates()
-    base = request.host_url.rstrip("/")
+    base = _base_url()
 
     results = []
     for d in dates:
@@ -64,7 +73,7 @@ def _list_files(date, fmt):
         )
 
     entity_filter = request.args.get("entity")
-    base = request.host_url.rstrip("/")
+    base = _base_url()
     entities = manifest.get("entities", [])
 
     results = []
