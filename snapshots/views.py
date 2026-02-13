@@ -80,15 +80,20 @@ def daily_snapshot_entities(date):
         for ent in manifest.get("entities", []):
             entity_name = ent["entity"]
             manifest_files = ent.get("files", [])
+
+            if entity_name not in entity_map:
+                entity_map[entity_name] = {
+                    "entity": entity_name,
+                    "records": 0,
+                    "jsonl": None,
+                    "parquet": None,
+                }
+
             if not manifest_files:
                 continue
 
-            if entity_name not in entity_map:
-                meta = manifest_files[0].get("meta", {})
-                entity_map[entity_name] = {
-                    "entity": entity_name,
-                    "records": meta.get("record_count"),
-                }
+            meta = manifest_files[0].get("meta", {})
+            entity_map[entity_name]["records"] = meta.get("record_count")
 
             f = manifest_files[0]
             meta = f.get("meta", {})
