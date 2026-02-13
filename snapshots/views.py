@@ -2,21 +2,13 @@ import re
 
 from flask import Blueprint, jsonify, redirect, request
 
+import settings
 from core.exceptions import APIQueryParamsError
 from snapshots.s3 import generate_presigned_url, get_available_dates, get_manifest
 
 blueprint = Blueprint("snapshots", __name__)
 
 VALID_FORMATS = {"jsonl", "parquet"}
-
-
-def _base_url():
-    """Return the public-facing base URL, respecting proxy headers."""
-    forwarded_host = request.headers.get("X-Forwarded-Host")
-    if forwarded_host:
-        scheme = request.headers.get("X-Forwarded-Proto", "https")
-        return f"{scheme}://{forwarded_host}"
-    return request.host_url.rstrip("/")
 
 
 def _pass_api_key(url):
@@ -41,7 +33,7 @@ def daily_snapshots():
 def _list_dates():
     """Return available snapshot dates with format links."""
     dates = get_available_dates()
-    base = _base_url()
+    base = settings.SNAPSHOTS_BASE_URL
 
     results = []
     for d in dates:
@@ -73,7 +65,7 @@ def _list_files(date, fmt):
         )
 
     entity_filter = request.args.get("entity")
-    base = _base_url()
+    base = settings.SNAPSHOTS_BASE_URL
     entities = manifest.get("entities", [])
 
     results = []
