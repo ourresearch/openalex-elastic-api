@@ -21,12 +21,10 @@ def _human_size(size_bytes):
 
 
 def _pass_api_key(url):
-    """Append the caller's api_key to a URL if present."""
-    api_key = request.args.get("api_key")
-    if api_key:
-        sep = "&" if "?" in url else "?"
-        return f"{url}{sep}api_key={api_key}"
-    return url
+    """Append the caller's api_key to a URL, using placeholder if not provided."""
+    api_key = request.args.get("api_key", "YOUR_API_KEY")
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}api_key={api_key}"
 
 
 @blueprint.route("/changefiles")
