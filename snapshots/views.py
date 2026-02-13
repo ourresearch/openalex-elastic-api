@@ -88,17 +88,16 @@ def daily_snapshot_entities(date):
                 entity_map[entity_name] = {
                     "entity": entity_name,
                     "records": meta.get("record_count"),
-                    "formats": {},
                 }
 
             f = manifest_files[0]
             meta = f.get("meta", {})
             filename = f["url"].rsplit("/", 1)[-1]
             size = meta.get("content_length")
-            entity_map[entity_name]["formats"][fmt] = {
+            entity_map[entity_name][fmt] = {
                 "size_bytes": size,
                 "size_display": _human_size(size),
-                "download_url": _pass_api_key(
+                "url": _pass_api_key(
                     f"{base}/snapshots/daily/{date}/{filename}"
                 ),
             }
@@ -106,7 +105,7 @@ def daily_snapshot_entities(date):
     results = [entity_map[name] for name in sorted(entity_map)]
 
     return jsonify({
-        "meta": {"date": date, "count": len(results)},
+        "meta": {"count": len(results), "date": date},
         "results": results,
     })
 
