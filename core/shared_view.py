@@ -16,7 +16,7 @@ from core.knn import KNNQueryWithFilter
 from core.paginate import get_pagination
 from core.params import parse_params
 from core.preference import clean_preference, set_preference_for_filter_search
-from core.search import check_is_search_query, full_search_query
+from core.search import check_is_search_query, full_search_query, full_search_query_exact
 from core.semantic_search import embed_query, VECTOR_FIELD
 from core.sort import get_sort_fields, sort_with_cursor, sort_with_sample
 from core.utils import get_data_version_connection, get_field
@@ -112,7 +112,10 @@ def set_cursor_pagination(params, s):
 
 def add_search_query(params, index_name, s):
     if params["search"] and params["search"] != '""':
-        search_query = full_search_query(index_name, params["search"])
+        if params.get("search_type") == "exact" and index_name.lower().startswith("works"):
+            search_query = full_search_query_exact(params["search"])
+        else:
+            search_query = full_search_query(index_name, params["search"])
 
         if params["sample"]:
             s = s.filter(search_query)

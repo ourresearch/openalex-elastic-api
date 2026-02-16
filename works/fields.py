@@ -587,8 +587,8 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
     ),
     SearchField(
-        param="abstract.search.no_stem",
-        custom_es_field="abstract.nostem",
+        param="abstract.search.exact",
+        custom_es_field="abstract.no_stem",
         docstring="Free text search within the work's abstract only, without stemming",
         documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
     ),
@@ -600,7 +600,7 @@ fields = [
     ),
     SearchField(param="display_name.search"),
     SearchField(
-        param="display_name.search.no_stem", custom_es_field="display_name.nostem"
+        param="display_name.search.exact", custom_es_field="display_name.no_stem"
     ),
     SearchField(
         param="fulltext.search",
@@ -608,6 +608,12 @@ fields = [
         docstring="Free text search within the work's full text (body) only",
         documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
         alternate_names=["body", "full", "text"],
+    ),
+    SearchField(
+        param="fulltext.search.exact",
+        custom_es_field="fulltext.no_stem",
+        docstring="Free text search within the work's full text (body) only, without stemming",
+        documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
     ),
     SearchField(
         param="keyword.search",
@@ -639,8 +645,8 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
     ),
     SearchField(
-        param="title.search.no_stem",
-        custom_es_field="display_name.nostem",
+        param="title.search.exact",
+        custom_es_field="display_name.no_stem",
         docstring="Free text search within the work's title only, without stemming",
         documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
     ),
@@ -650,7 +656,7 @@ fields = [
         documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
     ),
     SearchField(
-        param="title_and_abstract.search.no_stem",
+        param="title_and_abstract.search.exact",
         docstring="Free text search within the work's title and abstract, without stemming",
         documentation_link="https://docs.openalex.org/api-entities/works/search-works#search-a-specific-field",
     ),

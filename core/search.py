@@ -485,18 +485,34 @@ def full_search_query(index_name, search_terms):
     return search_query
 
 
+def full_search_query_exact(search_terms):
+    """Full search query for works using no_stem fields (no stemming)."""
+    search_oa = SearchOpenAlex(
+        search_terms=search_terms,
+        primary_field="display_name.no_stem",
+        secondary_field="abstract.no_stem",
+        tertiary_field="fulltext.no_stem",
+    )
+    return search_oa.build_query()
+
+
 def check_is_search_query(filter_params, search):
     search_keys = [
         "abstract.search",
+        "abstract.search.exact",
         "default.search",
         "display_name.search",
+        "display_name.search.exact",
         "fulltext.search",
+        "fulltext.search.exact",
         "keyword.search",
         "raw_affiliation_strings.search",
         "raw_author_name.search",
         "semantic.search",
         "title.search",
+        "title.search.exact",
         "title_and_abstract.search",
+        "title_and_abstract.search.exact",
     ]
 
     if search and search != '""':
