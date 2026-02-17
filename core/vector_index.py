@@ -314,6 +314,9 @@ def vector_semantic_search(params, index_name, connection):
     # Validate filters
     validate_vector_filters(params)
 
+    import time
+    t0 = time.time()
+
     # Embed query
     query_vector = embed_query(params["search"])
 
@@ -325,8 +328,10 @@ def vector_semantic_search(params, index_name, connection):
     num_candidates = max(k * 2, 75)
     vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates)
 
-    # Hydrate full docs from works-v32
+    # Hydrate full docs from works-v33
     hits = hydrate_results(vector_results, connection)
+
+    db_response_time_ms = int((time.time() - t0) * 1000)
 
     # Paginate
     page = params.get("page", 1) or 1
@@ -347,7 +352,7 @@ def vector_semantic_search(params, index_name, connection):
     result = OrderedDict()
     result["meta"] = {
         "count": len(hits),
-        "db_response_time_ms": 0,
+        "db_response_time_ms": db_response_time_ms,
         "page": page,
         "per_page": per_page,
         "groups_count": None,
