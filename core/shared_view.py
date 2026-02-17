@@ -20,6 +20,7 @@ from core.search import check_is_search_query, full_search_query, full_search_qu
 from core.semantic_search import embed_query, VECTOR_FIELD
 from core.sort import get_sort_fields, sort_with_cursor, sort_with_sample
 from core.utils import get_data_version_connection, get_field
+from core.vector_index import vector_semantic_search
 
 
 def shared_view(request, fields_dict, index_name, default_sort, connection=None, default_filters=None):
@@ -35,6 +36,16 @@ def shared_view(request, fields_dict, index_name, default_sort, connection=None,
         else:
             # Add default filters that aren't already specified by user
             params["filters"] = default_filters + params["filters"]
+
+    # Two-phase semantic search via dedicated vector index
+    is_semantic = (
+        params.get("search_type") == "semantic"
+        and params.get("search")
+        and params["search"] != '""'
+        and index_name.lower().startswith("works")
+    )
+    if is_semantic and settings.USE_VECTOR_INDEX:
+        return vector_semantic_search(params, index_name, connection)
 
     s = construct_query(params, fields_dict, index_name, default_sort, connection)
     response = execute_search(s, params)
