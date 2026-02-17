@@ -305,6 +305,12 @@ def vector_semantic_search(params, index_name, connection):
             f"Received per_page={per_page}."
         )
 
+    # Strip is_xpac default filter — vector index only contains non-xpac works
+    if params.get("filters"):
+        params["filters"] = [
+            f for f in params["filters"] if "is_xpac" not in f
+        ]
+
     # Validate filters
     validate_vector_filters(params)
 
