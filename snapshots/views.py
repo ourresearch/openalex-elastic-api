@@ -82,11 +82,12 @@ def changefile_entities(date):
             meta = f.get("meta", {})
             filename = f["url"].rsplit("/", 1)[-1]
             size = meta.get("content_length")
+            content_base = settings.SNAPSHOTS_CONTENT_URL
             entity_map[entity_name]["formats"][fmt] = {
                 "size_bytes": size,
                 "size_display": _human_size(size),
                 "url": _pass_api_key(
-                    f"{base}/changefiles/{date}/{filename}"
+                    f"{content_base}/changefiles/{date}/{filename}"
                 ),
             }
 

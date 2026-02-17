@@ -113,3 +113,4 @@ MAX_IDS_IN_FILTER = 100
 # Snapshots
 SNAPSHOTS_S3_BUCKET = os.environ.get("SNAPSHOTS_S3_BUCKET", "openalex-snapshots")
 SNAPSHOTS_BASE_URL = os.environ.get("SNAPSHOTS_BASE_URL", "https://api.openalex.org")
+SNAPSHOTS_CONTENT_URL = os.environ.get("SNAPSHOTS_CONTENT_URL", "https://content.openalex.org")
