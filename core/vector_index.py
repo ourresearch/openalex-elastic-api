@@ -22,6 +22,14 @@ logger = logging.getLogger(__name__)
 
 # Maps API filter param names to vector index field names.
 # These are the only filters supported for semantic search.
+#
+# DISABLED FILTERS (data exists in index but excluded for performance):
+#   "authorships.institutions.country_code" → "country_codes"
+#       Matches millions of docs; kNN pre-filter scan across 96 segments/shard
+#       takes 15-20s, which ties up a Heroku dyno and blocks other requests.
+#   "cited_by_count" → "cited_by_count"
+#       Range queries (e.g. >100) match millions of docs; same timeout issue.
+#       Exact match works but is rarely useful. Disabled for consistency.
 FILTER_FIELD_MAP = {
     "publication_year": "publication_year",
     "type": "type",
@@ -29,10 +37,10 @@ FILTER_FIELD_MAP = {
     "language": "language",
     "authorships.author.id": "author_ids",
     "authorships.institutions.id": "institution_ids",
-    "authorships.institutions.country_code": "country_codes",
+    # "authorships.institutions.country_code": "country_codes",  # DISABLED: broad filter, 15-20s kNN timeout
     "is_retracted": "is_retracted",
     "primary_location.source.id": "source_id",
-    "cited_by_count": "cited_by_count",
+    # "cited_by_count": "cited_by_count",  # DISABLED: range queries too slow for kNN pre-filter
     "funders.id": "funder_ids",
     "has_fulltext": "has_fulltext",
     "has_abstract": "has_abstract",
@@ -45,7 +53,8 @@ SUPPORTED_VECTOR_FILTERS = set(FILTER_FIELD_MAP.keys())
 _BOOLEAN_FIELDS = {"is_oa", "is_retracted", "has_fulltext", "has_abstract"}
 
 # Fields that support range queries (integer)
-_RANGE_FIELDS = {"publication_year", "cited_by_count"}
+# NOTE: cited_by_count removed — range queries on broad fields cause kNN timeouts
+_RANGE_FIELDS = {"publication_year"}
 
 # Fields that contain OpenAlex IDs (need normalization to full URLs)
 _ID_FIELDS = {
@@ -56,7 +65,8 @@ _ID_FIELDS = {
 # Non-ID keyword fields where values must be lowercased to match indexed data.
 # (In works-v32, the .lower subfield handles case-insensitivity automatically;
 # the vector index stores lowercase values and uses plain keyword type.)
-_LOWERCASE_FIELDS = {"type", "language", "authorships.institutions.country_code"}
+# NOTE: country_code removed — disabled as a supported filter
+_LOWERCASE_FIELDS = {"type", "language"}
 
 # Fields that store license values as full URLs (e.g., "https://openalex.org/licenses/cc-by")
 _LICENSE_FIELDS = {"primary_location.license"}
@@ -233,7 +243,7 @@ def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75):
         "size": k,
     }
 
-    response = es.search(index=settings.WORKS_VECTOR_INDEX, body=body, request_timeout=60)
+    response = es.search(index=settings.WORKS_VECTOR_INDEX, body=body)
 
     results = []
     for hit in response["hits"]["hits"]:
