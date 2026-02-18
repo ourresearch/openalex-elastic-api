@@ -4,7 +4,11 @@ from core.exceptions import APIQueryParamsError
 
 # Search parameter prefixes that are accepted via dot notation
 SEARCH_PARAM_PREFIX = "search."
-VALID_SEARCH_TYPES = ["search", "search.semantic", "search.exact"]
+VALID_SEARCH_TYPES = [
+    "search", "search.semantic", "search.exact",
+    "search.title", "search.title.exact",
+    "search.title_and_abstract", "search.title_and_abstract.exact",
+]
 
 
 def validate_params(request):

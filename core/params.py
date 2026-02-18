@@ -7,8 +7,8 @@ def parse_params(request):
     """Extract and validate parameters from the request."""
     validate_params(request)
 
-    # Determine search type and query from search.* dot notation params
-    search_type, search_query = _extract_search_params(request)
+    # Determine search type, scope, and query from search.* dot notation params
+    search_type, search_scope, search_query = _extract_search_params(request)
 
     params = {
         "apc_sum": request.args.get("apc_sum"),
@@ -25,6 +25,7 @@ def parse_params(request):
         "q": request.args.get("q"),
         "search": search_query,
         "search_type": search_type,
+        "search_scope": search_scope,
         "sort": map_sort_params(request.args.get("sort")),
     }
     if params["group_bys"]:
@@ -34,22 +35,35 @@ def parse_params(request):
 
 def _extract_search_params(request):
     """
-    Extract search type and query from request args.
+    Extract search type, scope, and query from request args.
 
-    Supports dot notation:
-        search=query          -> ("default", "query")
-        search.semantic=query -> ("semantic", "query")
-        search.exact=query    -> ("exact", "query")
-        (no search param)     -> (None, None)
+    Returns (search_type, search_scope, search_query):
+        search=query                         -> ("default", None, "query")
+        search.semantic=query                -> ("semantic", None, "query")
+        search.exact=query                   -> ("exact", None, "query")
+        search.title=query                   -> ("default", "title", "query")
+        search.title.exact=query             -> ("exact", "title", "query")
+        search.title_and_abstract=query      -> ("default", "title_and_abstract", "query")
+        search.title_and_abstract.exact=query-> ("exact", "title_and_abstract", "query")
+        (no search param)                    -> (None, None, None)
     """
-    # Check for dot notation params first
+    # Check for field-scoped params first
+    for scope in ("title_and_abstract", "title"):
+        exact_key = f"search.{scope}.exact"
+        default_key = f"search.{scope}"
+        if request.args.get(exact_key):
+            return "exact", scope, request.args.get(exact_key)
+        if request.args.get(default_key):
+            return "default", scope, request.args.get(default_key)
+
+    # Non-scoped dot notation params
     if request.args.get("search.semantic"):
-        return "semantic", request.args.get("search.semantic")
+        return "semantic", None, request.args.get("search.semantic")
     if request.args.get("search.exact"):
-        return "exact", request.args.get("search.exact")
+        return "exact", None, request.args.get("search.exact")
 
     # Fall back to bare search param
     if request.args.get("search"):
-        return "default", request.args.get("search")
+        return "default", None, request.args.get("search")
 
-    return None, None
+    return None, None, None

@@ -496,6 +496,34 @@ def full_search_query_exact(search_terms):
     return search_oa.build_query()
 
 
+def scoped_search_query(search_terms, scope, search_type):
+    """Build a search query scoped to specific fields.
+
+    scope: "title" or "title_and_abstract"
+    search_type: "default" (stemmed) or "exact" (no stemming)
+    """
+    is_exact = search_type == "exact"
+
+    if scope == "title":
+        field = "display_name.no_stem" if is_exact else "display_name"
+        search_oa = SearchOpenAlex(
+            search_terms=search_terms,
+            primary_field=field,
+        )
+    elif scope == "title_and_abstract":
+        primary = "display_name.no_stem" if is_exact else "display_name"
+        secondary = "abstract.no_stem" if is_exact else "abstract"
+        search_oa = SearchOpenAlex(
+            search_terms=search_terms,
+            primary_field=primary,
+            secondary_field=secondary,
+        )
+    else:
+        raise ValueError(f"Unknown search scope: {scope}")
+
+    return search_oa.build_query()
+
+
 def check_is_search_query(filter_params, search):
     search_keys = [
         "abstract.search",
