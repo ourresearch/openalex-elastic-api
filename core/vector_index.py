@@ -7,6 +7,7 @@ Phase 2: mget full docs from works-v32, merge scores, citation rescore
 This replaces single-index kNN on works-v32 (72 shards, HNSW can't stay warm).
 """
 
+import logging
 import math
 from collections import OrderedDict
 
@@ -16,6 +17,8 @@ import settings
 from core.exceptions import APIQueryParamsError
 from core.semantic_search import embed_query, VECTOR_FIELD
 from core.utils import get_full_openalex_id
+
+logger = logging.getLogger(__name__)
 
 # Maps API filter param names to vector index field names.
 # These are the only filters supported for semantic search.
@@ -54,6 +57,9 @@ _ID_FIELDS = {
 # (In works-v32, the .lower subfield handles case-insensitivity automatically;
 # the vector index stores lowercase values and uses plain keyword type.)
 _LOWERCASE_FIELDS = {"type", "language", "authorships.institutions.country_code"}
+
+# Fields that store license values as full URLs (e.g., "https://openalex.org/licenses/cc-by")
+_LICENSE_FIELDS = {"primary_location.license"}
 
 # Filter keys that are search operations (incompatible with semantic search)
 _SEARCH_FILTER_KEYS = {
@@ -151,11 +157,14 @@ def _build_single_filter(key, field_name, value):
 
     # Keyword fields — handle OR (pipe-separated) values
     # Normalize OpenAlex IDs to full URLs (e.g., "S1980519" → "https://openalex.org/S1980519")
+    # Normalize license values to full URLs (e.g., "cc-by" → "https://openalex.org/licenses/cc-by")
     # Lowercase non-ID keyword fields to match indexed data (vector index has no .lower subfield)
     if "|" in str(value):
         values = [v.strip() for v in str(value).split("|") if v.strip()]
         if key in _ID_FIELDS:
             values = [get_full_openalex_id(v) or v for v in values]
+        elif key in _LICENSE_FIELDS:
+            values = [_normalize_license(v) for v in values]
         elif key in _LOWERCASE_FIELDS:
             values = [v.lower() for v in values]
         return {"terms": {field_name: values}}
@@ -163,6 +172,8 @@ def _build_single_filter(key, field_name, value):
     str_value = str(value)
     if key in _ID_FIELDS:
         str_value = get_full_openalex_id(str_value) or str_value
+    elif key in _LICENSE_FIELDS:
+        str_value = _normalize_license(str_value)
     elif key in _LOWERCASE_FIELDS:
         str_value = str_value.lower()
     return {"term": {field_name: str_value}}
@@ -189,6 +200,13 @@ def _build_range_filter(field_name, value):
 
     # Exact match
     return {"term": {field_name: int(value)}}
+
+
+def _normalize_license(value):
+    """Normalize license value to full OpenAlex URL if needed."""
+    if value.startswith("https://"):
+        return value
+    return f"https://openalex.org/licenses/{value}"
 
 
 def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75):
@@ -317,19 +335,31 @@ def vector_semantic_search(params, index_name, connection):
     import time
     t0 = time.time()
 
-    # Embed query
-    query_vector = embed_query(params["search"])
+    try:
+        # Embed query
+        query_vector = embed_query(params["search"])
 
-    # Build filter
-    filter_dict = build_vector_filter(params)
+        # Build filter
+        filter_dict = build_vector_filter(params)
+    except Exception:
+        logger.exception("vector_semantic_search failed during embed/filter build, filters=%s", params.get("filters"))
+        raise
 
     # Execute kNN on vector index
     k = MAX_SEMANTIC_RESULTS
     num_candidates = max(k * 2, 75)
-    vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates)
+    try:
+        vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates)
+    except Exception:
+        logger.exception("vector_semantic_search kNN failed, filter_dict=%s", filter_dict)
+        raise
 
     # Hydrate full docs from works-v33
-    hits = hydrate_results(vector_results, connection)
+    try:
+        hits = hydrate_results(vector_results, connection)
+    except Exception:
+        logger.exception("vector_semantic_search hydrate failed, %d vector results", len(vector_results))
+        raise
 
     db_response_time_ms = int((time.time() - t0) * 1000)
 
