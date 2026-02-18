@@ -342,7 +342,7 @@ def vector_semantic_search(params, index_name, connection):
         # Build filter
         filter_dict = build_vector_filter(params)
     except Exception:
-        logger.exception("vector_semantic_search failed during embed/filter build, filters=%s", params.get("filters"))
+        import traceback; print(f"VECTOR_SEARCH_ERROR embed/filter: {traceback.format_exc()}", flush=True)
         raise
 
     # Execute kNN on vector index
@@ -351,14 +351,14 @@ def vector_semantic_search(params, index_name, connection):
     try:
         vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates)
     except Exception:
-        logger.exception("vector_semantic_search kNN failed, filter_dict=%s", filter_dict)
+        import traceback; print(f"VECTOR_SEARCH_ERROR kNN: filter={filter_dict} {traceback.format_exc()}", flush=True)
         raise
 
     # Hydrate full docs from works-v33
     try:
         hits = hydrate_results(vector_results, connection)
     except Exception:
-        logger.exception("vector_semantic_search hydrate failed, %d vector results", len(vector_results))
+        import traceback; print(f"VECTOR_SEARCH_ERROR hydrate: {traceback.format_exc()}", flush=True)
         raise
 
     db_response_time_ms = int((time.time() - t0) * 1000)
