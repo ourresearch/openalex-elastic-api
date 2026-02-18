@@ -233,7 +233,7 @@ def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75):
         "size": k,
     }
 
-    response = es.search(index=settings.WORKS_VECTOR_INDEX, body=body)
+    response = es.search(index=settings.WORKS_VECTOR_INDEX, body=body, request_timeout=60)
 
     results = []
     for hit in response["hits"]["hits"]:
@@ -342,7 +342,7 @@ def vector_semantic_search(params, index_name, connection):
         # Build filter
         filter_dict = build_vector_filter(params)
     except Exception:
-        import traceback; print(f"VECTOR_SEARCH_ERROR embed/filter: {traceback.format_exc()}", flush=True)
+        import traceback; print(f"VECTOR_ERR embed/filter: {traceback.format_exc()}", flush=True)
         raise
 
     # Execute kNN on vector index
@@ -351,14 +351,14 @@ def vector_semantic_search(params, index_name, connection):
     try:
         vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates)
     except Exception:
-        import traceback, sys; tb = traceback.format_exc(); lines = [l.strip() for l in tb.strip().split('\n') if l.strip()]; print(f"VECTOR_ERR_kNN filter={filter_dict}", flush=True); [print(f"VECTOR_ERR_kNN {l}", flush=True) for l in lines[-10:]]
+        import traceback; print(f"VECTOR_ERR kNN filter={filter_dict}: {type(e).__name__}: {e}", flush=True)
         raise
 
     # Hydrate full docs from works-v33
     try:
         hits = hydrate_results(vector_results, connection)
     except Exception:
-        import traceback; print(f"VECTOR_SEARCH_ERROR hydrate: {traceback.format_exc()}", flush=True)
+        import traceback; print(f"VECTOR_ERR hydrate: {type(e).__name__}: {e}", flush=True)
         raise
 
     db_response_time_ms = int((time.time() - t0) * 1000)
