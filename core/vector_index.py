@@ -351,7 +351,7 @@ def vector_semantic_search(params, index_name, connection):
     try:
         vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates)
     except Exception:
-        import traceback; print(f"VECTOR_SEARCH_ERROR kNN: filter={filter_dict} {traceback.format_exc()}", flush=True)
+        import traceback, sys; tb = traceback.format_exc(); lines = [l.strip() for l in tb.strip().split('\n') if l.strip()]; print(f"VECTOR_ERR_kNN filter={filter_dict}", flush=True); [print(f"VECTOR_ERR_kNN {l}", flush=True) for l in lines[-10:]]
         raise
 
     # Hydrate full docs from works-v33
