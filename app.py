@@ -1,3 +1,4 @@
+import json
 import os
 import time
 
@@ -66,6 +67,23 @@ def create_app(config_object="settings"):
         response.headers['Access-Control-Allow-Origin'] = '*'
         response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = '*'
+        return response
+
+    @app.after_request
+    def inject_cost_usd(response):
+        cost_header = request.headers.get("X-Cost-USD")
+        if (
+            cost_header is not None
+            and response.content_type
+            and "application/json" in response.content_type
+        ):
+            try:
+                data = response.get_json(silent=True)
+                if data and isinstance(data, dict) and "meta" in data:
+                    data["meta"]["cost_usd"] = float(cost_header)
+                    response.data = json.dumps(data)
+            except (ValueError, TypeError):
+                pass
         return response
 
     return app
