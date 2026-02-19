@@ -1,30 +1,30 @@
 # Rate limits and authentication
 
-The API uses a credit-based rate limiting system. Different endpoint types consume different amounts of credits per request.
+The API uses simple, transparent pricing. Different endpoint types cost different amounts per request.
 
-## Credit costs by endpoint type
+## Endpoint pricing
 
-| Endpoint Type | Example | Credits per Request |
+| Endpoint Type | Example | Cost per 1,000 calls |
 |---------------|---------|---------------------|
-| Singleton | `/works/W123`, `/works/W123/ngrams` | 0 (free) |
-| List | `/works?filter=...`, `/autocomplete/works` | 1 |
-| Content | [`content.openalex.org/works/{id}.pdf`](get-content.md) | 100 |
-| Search | `/works?search=cancer`, `/works?filter=title.search:...` | 10 |
-| Vector | `/search/works`, `/vector/search` | 10 |
-| Text (Aboutness) | `/text/topics?title=...` | 100 |
+| Singleton | `/works/W123`, `/works/W123/ngrams` | Free |
+| List | `/works?filter=...`, `/autocomplete/works` | $0.10 |
+| Search | `/works?search=cancer`, `/works?filter=title.search:...` | $1.00 |
+| Vector | `/search/works`, `/vector/search` | $1.00 |
+| Content | [`content.openalex.org/works/{id}.pdf`](get-content.md) | $10.00 |
+| Text (Aboutness) | `/text/topics?title=...` | $10.00 |
 
 ### High-cost endpoints
 
-Some endpoints consume significantly more credits than standard queries:
+Some endpoints cost significantly more than standard queries:
 
-| Endpoint | Credits | Daily limit (free) | Notes |
-|----------|---------|-------------------|-------|
-| [Content downloads](get-content.md) | 100 | \~1,000 files | PDF or TEI XML |
-| Aboutness (`/text`) | 100 | \~1,000 requests | Topic classification |
-| Vector search | 10 | \~10,000 requests | Semantic search |
+| Endpoint | Cost per call | Daily limit (free) | Notes |
+|----------|--------------|-------------------|-------|
+| [Content downloads](get-content.md) | $0.01 | ~1,000 files | PDF or TEI XML |
+| Aboutness (`/text`) | $0.01 | ~1,000 requests | Topic classification |
+| Vector search | $0.001 | ~10,000 requests | Semantic search |
 
 {% hint style="warning" %}
-**Planning bulk content downloads?** Downloading all 60M available PDFs would require 6 billion credits. [Contact us](mailto:steve@ourresearch.org) about enterprise credit packs for large-scale projects.
+**Planning bulk content downloads?** Downloading all 60M available PDFs would cost ~$600,000. [Contact us](mailto:steve@ourresearch.org) about enterprise pricing for large-scale projects.
 {% endhint %}
 
 ## Rate limits
@@ -35,18 +35,18 @@ Some endpoints consume significantly more credits than standard queries:
 
 The limits are:
 
-* **Without an API key:** 100 credits per day (for testing and demos only)
-* **With a free API key:** 100,000 credits per day
-* **All users:** max 100 requests per second (regardless of credit cost)
+* **Without an API key:** $0.01/day API budget (for testing and demos only)
+* **With a free API key:** $10/day API budget
+* **All users:** max 100 requests per second (regardless of cost)
 
-For example, with 100,000 credits you can make:
+For example, with a $10/day budget you can make:
 - Unlimited singleton requests (like `/works/W123`) — they're free!
 - 100,000 list requests (like `/works?filter=type:article`), or
-- Any combination that adds up to 100,000 credits
+- Any combination that adds up to $10
 
-If you exceed your daily credits or make more than 100 requests per second, you'll get `429` errors instead of useful data.
+If you exceed your daily budget or make more than 100 requests per second, you'll get `429` errors instead of useful data.
 
-Need higher limits? Subscribe to [OpenAlex Premium](https://openalex.org/pricing) for significantly more credits per day. Academic researchers can often get increased limits for free—contact [support@openalex.org](mailto:support@openalex.org).
+Need a higher budget? Subscribe to [OpenAlex Premium](https://openalex.org/pricing) for significantly more. Academic researchers can often get increased limits for free—contact [support@openalex.org](mailto:support@openalex.org).
 
 {% hint style="info" %}
 Are you scrolling through a list of entities, calling the API for each? You can go way faster by squishing 50 requests into one using our [OR syntax](get-lists-of-entities/filter-entity-lists.md#addition-or). Here's [a tutorial](https://blog.ourresearch.org/fetch-multiple-dois-in-one-openalex-api-request/) showing how.
@@ -58,10 +58,11 @@ Every API response includes headers showing your current rate limit status:
 
 | Header | Description |
 |--------|-------------|
-| `X-RateLimit-Limit` | Your total daily credit limit |
-| `X-RateLimit-Remaining` | Credits remaining for today |
-| `X-RateLimit-Credits-Used` | Credits consumed by this request |
-| `X-RateLimit-Reset` | Seconds until your credits reset (midnight UTC) |
+| `X-RateLimit-Limit-USD` | Your total daily API budget in USD |
+| `X-RateLimit-Remaining-USD` | Budget remaining for today in USD |
+| `X-RateLimit-Cost-USD` | Cost of this request in USD |
+| `X-RateLimit-Prepaid-Remaining-USD` | Prepaid balance remaining in USD |
+| `X-RateLimit-Reset` | Seconds until your budget resets (midnight UTC) |
 
 ## Check your rate limit status
 
@@ -76,17 +77,21 @@ Response:
 {
   "api_key": "abc...xyz",
   "rate_limit": {
-    "credits_limit": 100000,
-    "credits_used": 1234,
-    "credits_remaining": 98766,
-    "resets_at": "2024-01-02T00:00:00.000Z",
+    "daily_budget_usd": 10.0,
+    "daily_used_usd": 0.1234,
+    "daily_remaining_usd": 9.8766,
+    "prepaid_balance_usd": 0,
+    "prepaid_remaining_usd": 0,
+    "prepaid_expires_at": null,
+    "resets_at": "2026-02-19T00:00:00.000Z",
     "resets_in_seconds": 43200,
-    "credit_costs": {
+    "endpoint_costs_usd": {
       "singleton": 0,
-      "list": 1,
-      "content": 100,
-      "vector": 10,
-      "text": 100
+      "list": 0.0001,
+      "search": 0.001,
+      "content": 0.01,
+      "vector": 0.001,
+      "text": 0.01
     }
   }
 }
@@ -103,9 +108,9 @@ An API key is required to use the OpenAlex API. The good news: API keys are free
 Example:
 * [`https://api.openalex.org/works?api_key=YOUR_KEY`](https://api.openalex.org/works?api_key=YOUR_KEY)
 
-Without an API key, you're limited to just 100 credits per day—enough for quick tests, but not for real work. With a free API key, you get 100,000 credits per day.
+Without an API key, you're limited to just $0.01/day—enough for quick tests, but not for real work. With a free API key, you get $10/day of API budget.
 
-[Premium users](https://openalex.org/pricing) get even higher limits and access to special filters like [`from_updated_date`](../api-entities/works/filter-works.md#from_updated_date).
+[Premium users](https://openalex.org/pricing) get even higher budgets and access to special filters like [`from_updated_date`](../api-entities/works/filter-works.md#from_updated_date).
 
 
 
