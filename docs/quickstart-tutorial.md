@@ -107,7 +107,7 @@ Sometimes you want to find works that are *about* the same topic, even if they u
 Let's find papers related to "machine learning applications in healthcare":
 
 * Find semantically similar works\
-  [`https://api.openalex.org/find/works?query=machine+learning+applications+in+healthcare&api_key=YOUR_KEY`](https://api.openalex.org/find/works?query=machine+learning+applications+in+healthcare&api_key=YOUR_KEY)
+  [`https://api.openalex.org/works?search.semantic=machine+learning+applications+in+healthcare&api_key=YOUR_KEY`](https://api.openalex.org/works?search.semantic=machine+learning+applications+in+healthcare&api_key=YOUR_KEY)
 
 This will find relevant papers even if they use terms like "AI-driven medical diagnosis" or "deep learning for clinical data"—concepts that are related but use different words.
 

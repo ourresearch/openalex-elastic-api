@@ -9,7 +9,7 @@ The API uses simple, transparent pricing. Different endpoint types cost differen
 | Singleton | `/works/W123`, `/works/W123/ngrams` | Free |
 | List | `/works?filter=...`, `/autocomplete/works` | $0.10 |
 | Search | `/works?search=cancer`, `/works?filter=title.search:...` | $1.00 |
-| Vector | `/search/works`, `/vector/search` | $1.00 |
+| Semantic | `/works?search.semantic=...` | $10.00 |
 | Content | [`content.openalex.org/works/{id}.pdf`](get-content.md) | $10.00 |
 | Text (Aboutness) | `/text/topics?title=...` | $10.00 |
 
@@ -21,7 +21,7 @@ Some endpoints cost significantly more than standard queries:
 |----------|--------------|-------------------|-------|
 | [Content downloads](get-content.md) | $0.01 | ~1,000 files | PDF or TEI XML |
 | Aboutness (`/text`) | $0.01 | ~1,000 requests | Topic classification |
-| Vector search | $0.001 | ~10,000 requests | Semantic search |
+| Semantic search | $0.01 | ~1,000 requests | `?search.semantic=` |
 
 {% hint style="warning" %}
 **Planning bulk content downloads?** Downloading all 60M available PDFs would cost ~$600,000. [Contact us](mailto:steve@ourresearch.org) about enterprise pricing for large-scale projects.
@@ -90,7 +90,7 @@ Response:
       "list": 0.0001,
       "search": 0.001,
       "content": 0.01,
-      "vector": 0.001,
+      "semantic": 0.01,
       "text": 0.01
     }
   }

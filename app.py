@@ -39,7 +39,6 @@ import source_types
 import subfields
 import suggest
 import topics
-import vector_search
 import works
 import work_types
 from core.exceptions import APIError
@@ -121,7 +120,6 @@ def register_blueprints(app):
     app.register_blueprint(subfields.views.blueprint)
     app.register_blueprint(suggest.views.blueprint)
     app.register_blueprint(topics.views.blueprint)
-    app.register_blueprint(vector_search.views.blueprint)
     app.register_blueprint(works.views.blueprint)
     app.register_blueprint(work_types.views.blueprint)
     return None

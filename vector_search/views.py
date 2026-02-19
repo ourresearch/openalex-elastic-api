@@ -1,8 +1,9 @@
 """
-Vector Search endpoint for semantic similarity search over OpenAlex works.
+Vector Search module for semantic similarity search over OpenAlex works.
 
-Endpoint: /discover/works
-Cost: 1000 credits per query
+The /discover/works endpoint has been removed. Semantic search is now
+accessed via the search.semantic query parameter on entity endpoints.
+Cost: 100 credits per query
 """
 
 import time

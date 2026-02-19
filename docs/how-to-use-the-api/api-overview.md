@@ -13,7 +13,7 @@ OpenAlex offers four service types, each optimized for different use cases:
 * [Get content](get-content.md) — Download PDFs and TEI XML
 
 {% hint style="info" %}
-Each service type has a different credit cost. Single entity lookups cost 1 credit, list queries cost 10 credits per page, content downloads cost 100 credits per file, and semantic search costs 1,000 credits per query. See [Rate limits and authentication](rate-limits-and-authentication.md) for details.
+Each service type has a different credit cost. Single entity lookups are free, list queries cost 1 credit, search queries cost 10 credits, content downloads cost 100 credits per file, and semantic search costs 100 credits per query. See [Rate limits and authentication](rate-limits-and-authentication.md) for details.
 {% endhint %}
 
 See also:
