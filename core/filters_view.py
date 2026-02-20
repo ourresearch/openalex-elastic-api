@@ -76,6 +76,11 @@ def filter_records_filters_view(fields_dict, filter_params, ms, index_name):
 
             field = get_field(fields_dict, key)
 
+            # Strip surrounding quotes from non-search values
+            # (quotes preserve commas during parsing but aren't part of the value)
+            if value.startswith('"') and value.endswith('"') and "search" not in field.param:
+                value = value[1:-1]
+
             # OR queries have | in the param values
             if "|" in value:
                 or_queries = []

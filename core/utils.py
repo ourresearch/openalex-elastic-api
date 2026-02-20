@@ -63,8 +63,8 @@ def map_filter_params(filter_params):
     """
     Split filter params by comma, then map to a dictionary based on key:value.
     Respects quoted strings - commas inside double quotes are preserved.
-    Quotes are stripped from values after parsing, except for search fields
-    where quotes indicate phrase search.
+    Quotes are kept on values so filter_records can distinguish quoted single
+    values (spaces are literal) from unquoted multi-values (spaces mean AND).
     """
     if filter_params:
         try:
@@ -73,10 +73,10 @@ def map_filter_params(filter_params):
             for param in params:
                 key, value = param.split(":", 1)
                 key = key.replace("-", "_")  # convert key to underscore
-                # Strip surrounding quotes from value (used to preserve commas)
-                # but NOT for search fields where quotes indicate phrase search
-                if value.startswith('"') and value.endswith('"') and ".search" not in key:
-                    value = value[1:-1]
+                # Keep surrounding quotes on non-search values so filter_records
+                # can distinguish quoted single values (spaces are literal) from
+                # unquoted multi-values (spaces mean AND).  Quotes are stripped
+                # later in filter_records before the ES query is built.
                 # Reject empty or placeholder values
                 if not value or value.lower() in ("none", "null", "undefined"):
                     raise APIQueryParamsError(

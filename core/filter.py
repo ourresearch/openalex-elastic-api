@@ -15,6 +15,16 @@ def filter_records(fields_dict, filter_params, s, sample=None):
                 continue
             field = get_field(fields_dict, key)
 
+            # Quoted non-search values are single exact values (spaces are
+            # literal, not AND operators).  Strip the quotes and skip the
+            # space-split AND logic below.
+            is_quoted = (
+                value.startswith('"') and value.endswith('"')
+                and "search" not in field.param
+            )
+            if is_quoted:
+                value = value[1:-1]
+
             # multiple OR queries have | in the param values
             if "|" in value:
                 s = handle_or_query(field, fields_dict, s, value, sample)
@@ -22,6 +32,7 @@ def filter_records(fields_dict, filter_params, s, sample=None):
             # multiple AND queries have + in the param values which is converted to a space
             elif (
                 " " in value
+                and not is_quoted
                 and "search" not in field.param
                 and type(field).__name__ != "RangeField"
                 and type(field).__name__ != "BooleanField"
