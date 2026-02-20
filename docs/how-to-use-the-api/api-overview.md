@@ -13,7 +13,7 @@ OpenAlex offers four service types, each optimized for different use cases:
 * [Get content](get-content.md) — Download PDFs and TEI XML
 
 {% hint style="info" %}
-Each service type has a different cost. Single entity lookups are free, list queries cost $0.0001, search queries cost $0.001, semantic search costs $0.001 per query, and content downloads cost $0.01 per file. See [Rate limits and authentication](rate-limits-and-authentication.md) for details.
+Each service type has a different cost. Single entity lookups are free, list queries cost $0.0001, search queries (including semantic search) cost $0.001, and content downloads cost $0.01 per file. See [Rate limits and authentication](rate-limits-and-authentication.md) for details.
 {% endhint %}
 
 See also:

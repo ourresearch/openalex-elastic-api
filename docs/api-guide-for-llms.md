@@ -110,7 +110,7 @@ When using threading/async:
 ```
 Base: https://api.openalex.org
 Auth: API key required (free at openalex.org/settings/api)
-Rate: $1/day with key, $0.01/day without (singleton=free, list=$0.0001, search=$0.001, content=$0.01)
+Rate: $1/day with key, $0.01/day without (singleton=free, list=$0.0001, search/semantic=$0.001, content=$0.01)
 ```
 
 #### Get a Higher Budget
@@ -138,9 +138,8 @@ Academic researchers can often get increased limits for free—contact [support@
 #### Special Endpoints
 
 ```
-/works?search.semantic=              - Semantic search using AI embeddings ($0.001/query)
-content.openalex.org/works/{id}.pdf - Download PDFs and TEI XML
-/text                               - (Deprecated) Tag text with topics/keywords
+content.openalex.org/works/{id}.pdf - Download PDFs and TEI XML ($0.01/file)
+/text                               - (Deprecated) Tag text with topics/keywords ($0.01/req)
 ```
 
 #### Essential Query Parameters
@@ -681,8 +680,7 @@ NOT:  ?search=climate+NOT+politics
 
 * Singleton requests (e.g., `/works/W123`): Free
 * List requests (e.g., `/works?filter=...`): $0.0001
-* Search requests (e.g., `/works?search=...`): $0.001
-* Semantic search (`?search.semantic=`): $0.001
+* Search requests (e.g., `/works?search=...`, `/works?search.semantic=...`): $0.001
 * Content downloads (e.g., `content.openalex.org/works/{id}.pdf`): $0.01
 * Text/Aboutness requests (`/text`): $0.01
 
