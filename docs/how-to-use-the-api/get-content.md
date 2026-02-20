@@ -13,7 +13,7 @@ So we've cached copies of these files. We've got:
 * **Markdown**: coming soon.
 
 {% hint style="warning" %}
-Content downloads require an API key and cost **100 credits per file**. See [rate limits](rate-limits-and-authentication.md) for details.
+Content downloads require an API key and cost **$0.01 per file**. See [rate limits](rate-limits-and-authentication.md) for details.
 {% endhint %}
 
 ## Download content
@@ -57,14 +57,14 @@ For the complete archive (all 60M files), you can sync directly from our storage
 When you request content, here's what happens:
 
 1. We check if we have the requested file. If not, you get a `404`.
-2. If we have the file, we verify your API key has enough credits.
+2. If we have the file, we verify your API key has enough budget remaining.
 3. We generate a [presigned URL](https://developers.cloudflare.com/r2/api/s3/presigned-urls/)—a temporary, authenticated link that grants access to the file on [Cloudflare R2](https://developers.cloudflare.com/r2/) where it's stored.
 4. We return a `302 redirect` to that presigned URL. Your browser or HTTP client follows the redirect automatically.
 5. Cloudflare verifies the signature and serves the file directly from their global edge network.
 
 This approach is more scalable than streaming files through our servers. Since content is served directly from Cloudflare's edge infrastructure, downloads are fast regardless of where you are.
 
-The presigned URL expires after 5 minutes. If you need to download the same file again, just hit the content endpoint again to get a fresh URL (but it will cost another 100 credits).
+The presigned URL expires after 5 minutes. If you need to download the same file again, just hit the content endpoint again to get a fresh URL (but it will cost another $0.01).
 
 ## Find content to download
 
@@ -155,10 +155,10 @@ Now you have a text corpus ready for RAG or LLM synthesis. Vibe a query interfac
 **Want to download these faster?** Use the [command-line tool](../download-all-data/full-text-pdfs.md#option-2-command-line-tool-up-to-a-few-million-files): `openalex-content download --filter "default.search:microplastics drinking water,has_content.pdf:true"`
 {% endhint %}
 
-## Credit costs
+## Costs
 
-| Action | Credits |
-| ------ | ------- |
-| Get a work by ID | 0 |
-| List/filter works | 1 |
-| Download PDF or TEI XML | 100 |
+| Action | Cost |
+| ------ | ---- |
+| Get a work by ID | Free |
+| List/filter works | $0.0001 |
+| Download PDF or TEI XML | $0.01 |

@@ -20,9 +20,9 @@ The full-text archive is approximately **270 TB** total:
 
 ### Option 1: API (up to ~10K files)
 
-Use the [content API](../how-to-use-the-api/get-content.md) to download files one at a time. Each download costs 100 credits.
+Use the [content API](../how-to-use-the-api/get-content.md) to download files one at a time. Each download costs $0.01.
 
-With a free API key (100K credits/day), you can download about 1,000 files per day. Good for research projects, building small corpora, or sampling.
+With a free API key ($1/day budget), you can download about 100 files per day. Good for research projects, building small corpora, or sampling.
 
 ### Option 2: OpenAlex CLI (up to a few million files)
 
@@ -66,7 +66,7 @@ openalex download \
 
 See the [OpenAlex CLI page](openalex-cli.md) for more examples and full documentation.
 
-Standard credit rates apply (100 credits per content file download; metadata is free). At full speed, you can download a few million files in a few days.
+Standard rates apply ($0.01 per content file download; metadata is free). At full speed, you can download a few million files in a few days.
 
 ### Option 3: Complete archive sync
 

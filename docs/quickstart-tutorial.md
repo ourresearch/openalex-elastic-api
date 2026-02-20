@@ -128,7 +128,7 @@ Not all works have content available—check the `has_content` field on a work t
 → _This is an example of [getting content](how-to-use-the-api/get-content.md)_
 
 {% hint style="info" %}
-Different service types have different credit costs. See [Rate limits and authentication](how-to-use-the-api/rate-limits-and-authentication.md) for details.
+Different service types have different costs. See [Rate limits and authentication](how-to-use-the-api/rate-limits-and-authentication.md) for details.
 {% endhint %}
 
 ## What's next?

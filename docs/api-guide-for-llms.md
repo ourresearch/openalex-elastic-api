@@ -6,7 +6,7 @@ description: Are you an LLM? Start here.
 
 ## OpenAlex API Guide for LLM Agents and AI Applications
 
-OpenAlex is a fully open catalog of scholarly works, authors, sources, institutions, topics, publishers, and funders. Base URL: https://api.openalex.org Documentation: https://docs.openalex.org API key required (free at openalex.org/settings/api) | 100,000 credits/day with key
+OpenAlex is a fully open catalog of scholarly works, authors, sources, institutions, topics, publishers, and funders. Base URL: https://api.openalex.org Documentation: https://docs.openalex.org API key required (free at openalex.org/settings/api) | $1/day free budget with key
 
 ### CRITICAL GOTCHAS - Read These First!
 
@@ -95,13 +95,13 @@ Using multiple threads WITHOUT respecting rate limits will get you rate-limited 
 #### ✅ DO: Respect rate limits even across concurrent requests
 
 * Max 100 requests per second
-* Daily limit: 100,000 credits (list requests cost 10 credits, singleton requests cost 1)
+* Daily budget: $1/day (list requests cost $0.0001, search costs $0.001, singletons are free)
 
 When using threading/async:
 
 1. Implement rate limiting across ALL threads
 2. Track requests per second globally
-3. Get an API key for higher credit limits
+3. Get an API key for higher daily budget
 
 ### Quick Reference
 
@@ -110,12 +110,12 @@ When using threading/async:
 ```
 Base: https://api.openalex.org
 Auth: API key required (free at openalex.org/settings/api)
-Rate: 100k credits/day with key, 100 credits/day without (list=10cr, singleton=1cr)
+Rate: $1/day with key, $0.01/day without (singleton=free, list=$0.0001, search=$0.001, content=$0.01)
 ```
 
-#### Get Higher Credit Limits
+#### Get a Higher Budget
 
-For higher daily credit limits, subscribe to [OpenAlex Premium](https://openalex.org/pricing) and use your API key:
+For a higher daily budget, subscribe to [OpenAlex Premium](https://openalex.org/pricing) and use your API key:
 
 ```
 https://api.openalex.org/works?api_key=YOUR_API_KEY
@@ -138,7 +138,7 @@ Academic researchers can often get increased limits for free—contact [support@
 #### Special Endpoints
 
 ```
-/works?search.semantic=              - Semantic search using AI embeddings (10 credits)
+/works?search.semantic=              - Semantic search using AI embeddings ($0.001/query)
 content.openalex.org/works/{id}.pdf - Download PDFs and TEI XML
 /text                               - (Deprecated) Tag text with topics/keywords
 ```
@@ -387,7 +387,7 @@ https://api.openalex.org/works?search.semantic=machine+learning+for+drug+discove
 With filters:
 https://api.openalex.org/works?search.semantic=climate+change&filter=publication_year:>2020,is_oa:true&api_key=YOUR_KEY
 
-Costs 10 credits per request ($0.001). Returns works ranked by similarity.
+Costs $0.001 per request. Returns works ranked by similarity.
 Only works with abstracts are indexed (~217M works). English-optimized.
 ```
 
@@ -401,7 +401,7 @@ POST or GET to classify your own content:
 https://api.openalex.org/text?title=Machine+learning+for+drug+discovery
 
 Returns topics, keywords, and concepts for your text.
-Costs 1000 credits per request (limited to 1 req/sec).
+Costs $0.01 per request (limited to 1 req/sec).
 Text must be 20-2000 characters.
 ```
 
@@ -495,8 +495,8 @@ with ThreadPoolExecutor(max_workers=10) as executor:
 #### 5. Get an API Key for Heavy Usage
 
 ```
-FREE:    100,000 credits/day
-PREMIUM: Higher limits (varies by plan)
+FREE:    $1/day budget
+PREMIUM: Higher budget (varies by plan)
 
 Get an API key: https://openalex.org/pricing
 ```
@@ -661,29 +661,30 @@ NOT:  ?search=climate+NOT+politics
 
 #### Without API Key
 
-* 100 credits per day (for testing only)
+* $0.01/day budget (for testing only)
 * Max 100 requests per second
 * Not suitable for production use
 
 #### With Free API Key
 
-* 100,000 credits per day
+* $1/day budget
 * Max 100 requests per second
 * Get your free key at [openalex.org/settings/api](https://openalex.org/settings/api)
 
 #### With Premium API Key
 
-* Higher credit limits (varies by plan)
+* Higher daily budget (varies by plan)
 * Max 100 requests per second
 * Contact [support@openalex.org](mailto:support@openalex.org) for academic waivers
 
-#### Credit Costs
+#### Endpoint Costs
 
-* Singleton requests (e.g., `/works/W123`): 1 credit
-* List requests (e.g., `/works?filter=...`): 10 credits
-* Content downloads (e.g., `content.openalex.org/works/{id}.pdf`): 100 credits
-* Semantic search (`?search.semantic=`): 10 credits
-* Text/Aboutness requests (deprecated): 1,000 credits
+* Singleton requests (e.g., `/works/W123`): Free
+* List requests (e.g., `/works?filter=...`): $0.0001
+* Search requests (e.g., `/works?search=...`): $0.001
+* Semantic search (`?search.semantic=`): $0.001
+* Content downloads (e.g., `content.openalex.org/works/{id}.pdf`): $0.01
+* Text/Aboutness requests (`/text`): $0.01
 
 #### Concurrent Requests Strategy
 
@@ -695,14 +696,16 @@ NOT:  ?search=climate+NOT+politics
 5. Back off if you hit limits
 ```
 
-#### Daily Limit Management
+#### Daily Budget Management
 
-With 100k credits/day limit:
+With $1/day budget:
 
-* Singleton requests: up to 100,000/day
+* Singleton requests: unlimited (free)
 * List requests: up to 10,000/day
+* Search requests: up to 1,000/day
+* Content downloads: up to 100/day
 * Plan accordingly for large jobs
-* Consider OpenAlex Premium for higher limits
+* Consider OpenAlex Premium for a higher budget
 
 ### Common Mistakes to Avoid
 
@@ -713,7 +716,7 @@ With 100k credits/day limit:
 5. ❌ No error handling → ✅ Implement retry with backoff
 6. ❌ Ignoring rate limits in threads → ✅ Global rate limiting
 7. ❌ Trying to group by multiple fields → ✅ Multiple queries + combine
-8. ❌ No API key for heavy usage → ✅ Get API key for higher credit limits
+8. ❌ No API key for heavy usage → ✅ Get API key for higher daily budget
 9. ❌ Fetching all fields → ✅ Use select= for needed fields only
 10. ❌ Assuming instant responses → ✅ Add timeouts (30s recommended)
 
@@ -729,7 +732,7 @@ With 100k credits/day limit:
 
 If you need:
 
-* More than 100k credits/day
+* More than $1/day budget
 * Faster than daily snapshot updates
 * Commercial support
 * SLA guarantees

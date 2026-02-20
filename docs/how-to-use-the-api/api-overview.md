@@ -1,6 +1,6 @@
 # API Overview
 
-The API is the primary way to get OpenAlex data. It's free but requires an API key (also free). Get yours at [openalex.org/settings/api](https://openalex.org/settings/api). With your free key, you get 100,000 credits per day.
+The API is the primary way to get OpenAlex data. It's free but requires an API key (also free). Get yours at [openalex.org/settings/api](https://openalex.org/settings/api). With your free key, you get $1/day of API budget.
 
 ## Learn more about the API
 
@@ -13,11 +13,11 @@ OpenAlex offers four service types, each optimized for different use cases:
 * [Get content](get-content.md) — Download PDFs and TEI XML
 
 {% hint style="info" %}
-Each service type has a different credit cost. Single entity lookups are free, list queries cost 1 credit, search queries cost 10 credits, content downloads cost 100 credits per file, and semantic search costs 10 credits per query. See [Rate limits and authentication](rate-limits-and-authentication.md) for details.
+Each service type has a different cost. Single entity lookups are free, list queries cost $0.0001, search queries cost $0.001, semantic search costs $0.001 per query, and content downloads cost $0.01 per file. See [Rate limits and authentication](rate-limits-and-authentication.md) for details.
 {% endhint %}
 
 See also:
-* [Rate limits and authentication](rate-limits-and-authentication.md) — Learn about credit costs and API keys
+* [Rate limits and authentication](rate-limits-and-authentication.md) — Learn about pricing and API keys
 * [Tutorials](../additional-help/tutorials.md) — Hands-on examples with code
 
 ## Client Libraries

@@ -18,13 +18,13 @@ Learn more at our general help center article: [About the data](https://help.ope
 
 ## Access
 
-We offer a fast, modern REST API to get OpenAlex data programmatically. It's free but requires an API key (also free). Get yours at [openalex.org/settings/api](https://openalex.org/settings/api). With your free key, you get 100,000 credits per day. [Learn more](how-to-use-the-api/api-overview.md)
+We offer a fast, modern REST API to get OpenAlex data programmatically. It's free but requires an API key (also free). Get yours at [openalex.org/settings/api](https://openalex.org/settings/api). With your free key, you get $1/day of API budget. [Learn more](how-to-use-the-api/api-overview.md)
 
-Different API operations consume different amounts of credits. See [rate limits and authentication](how-to-use-the-api/rate-limits-and-authentication.md) for details.
+Different API operations have different costs. See [rate limits and authentication](how-to-use-the-api/rate-limits-and-authentication.md) for details.
 
 There is also a complete database snapshot available to download. [Learn more about the data snapshot here.](download-all-data/openalex-snapshot.md)
 
-The API has a limit of 100,000 credits per day, and the snapshot is updated monthly. If you need a higher limit, or more frequent updates, please look into [**OpenAlex Premium.**](https://openalex.org/pricing)
+The API has a free budget of $1/day, and the snapshot is updated monthly. If you need a higher budget, or more frequent updates, please look into [**OpenAlex Premium.**](https://openalex.org/pricing)
 
 The web interface for OpenAlex, built directly on top of the API, is the quickest and easiest way to [get started with OpenAlex](https://help.openalex.org/getting-started).
 

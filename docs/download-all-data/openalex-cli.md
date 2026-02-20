@@ -86,14 +86,14 @@ Building a robust bulk downloader is harder than it looks. The CLI handles:
 
 At full speed, you can download thousands of works per hour.
 
-## Credit costs
+## Costs
 
-- **Metadata downloads are free** — The singleton API doesn't cost credits
-- **Content downloads cost 100 credits each** — PDFs and TEI XML
+- **Metadata downloads are free** — Singleton lookups have no cost
+- **Content downloads cost $0.01 each** — PDFs and TEI XML
 
-With a free API key (100K credits/day), you can download unlimited metadata and about 1,000 content files per day.
+With a free API key ($1/day budget), you can download unlimited metadata and about 100 content files per day.
 
-Need more content? [Contact us](mailto:steve@ourresearch.org) about enterprise credit packs for large-scale projects.
+Need more content? [Contact us](mailto:steve@ourresearch.org) about enterprise pricing for large-scale projects.
 
 ## Full documentation
 

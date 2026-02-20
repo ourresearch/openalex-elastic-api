@@ -4,14 +4,14 @@ The API uses simple, transparent pricing. Different endpoint types cost differen
 
 ## Endpoint pricing
 
-| Endpoint Type | Example | Cost per 1,000 calls |
-|---------------|---------|---------------------|
-| Singleton | `/works/W123`, `/works/W123/ngrams` | Free |
-| List | `/works?filter=...`, `/autocomplete/works` | $0.10 |
-| Search | `/works?search=cancer`, `/works?filter=title.search:...` | $1.00 |
-| Semantic | `/works?search.semantic=...` | $10.00 |
-| Content | [`content.openalex.org/works/{id}.pdf`](get-content.md) | $10.00 |
-| Text (Aboutness) | `/text/topics?title=...` | $10.00 |
+| Endpoint Type | Example | Cost per call | Cost per 1,000 calls |
+|---------------|---------|--------------|---------------------|
+| Singleton | `/works/W123`, `/works/W123/ngrams` | Free | Free |
+| List | `/works?filter=...`, `/autocomplete/works` | $0.0001 | $0.10 |
+| Search | `/works?search=cancer`, `/works?filter=title.search:...` | $0.001 | $1.00 |
+| Semantic | `/works?search.semantic=...` | $0.001 | $1.00 |
+| Content | [`content.openalex.org/works/{id}.pdf`](get-content.md) | $0.01 | $10.00 |
+| Text (Aboutness) | `/text/topics?title=...` | $0.01 | $10.00 |
 
 ### High-cost endpoints
 
@@ -19,9 +19,9 @@ Some endpoints cost significantly more than standard queries:
 
 | Endpoint | Cost per call | Daily limit (free) | Notes |
 |----------|--------------|-------------------|-------|
-| [Content downloads](get-content.md) | $0.01 | ~1,000 files | PDF or TEI XML |
-| Aboutness (`/text`) | $0.01 | ~1,000 requests | Topic classification |
-| Semantic search | $0.01 | ~1,000 requests | `?search.semantic=` |
+| [Content downloads](get-content.md) | $0.01 | ~100 files | PDF or TEI XML |
+| Aboutness (`/text`) | $0.01 | ~100 requests | Topic classification |
+| Semantic search | $0.001 | ~1,000 requests | `?search.semantic=` |
 
 {% hint style="warning" %}
 **Planning bulk content downloads?** Downloading all 60M available PDFs would cost ~$600,000. [Contact us](mailto:steve@ourresearch.org) about enterprise pricing for large-scale projects.
@@ -36,13 +36,13 @@ Some endpoints cost significantly more than standard queries:
 The limits are:
 
 * **Without an API key:** $0.01/day API budget (for testing and demos only)
-* **With a free API key:** $10/day API budget
+* **With a free API key:** $1/day API budget
 * **All users:** max 100 requests per second (regardless of cost)
 
-For example, with a $10/day budget you can make:
+For example, with a $1/day budget you can make:
 - Unlimited singleton requests (like `/works/W123`) — they're free!
-- 100,000 list requests (like `/works?filter=type:article`), or
-- Any combination that adds up to $10
+- 10,000 list requests (like `/works?filter=type:article`), or
+- Any combination that adds up to $1
 
 If you exceed your daily budget or make more than 100 requests per second, you'll get `429` errors instead of useful data.
 
@@ -77,9 +77,9 @@ Response:
 {
   "api_key": "abc...xyz",
   "rate_limit": {
-    "daily_budget_usd": 10.0,
+    "daily_budget_usd": 1.0,
     "daily_used_usd": 0.1234,
-    "daily_remaining_usd": 9.8766,
+    "daily_remaining_usd": 0.8766,
     "prepaid_balance_usd": 0,
     "prepaid_remaining_usd": 0,
     "prepaid_expires_at": null,
@@ -89,8 +89,8 @@ Response:
       "singleton": 0,
       "list": 0.0001,
       "search": 0.001,
+      "semantic": 0.001,
       "content": 0.01,
-      "semantic": 0.01,
       "text": 0.01
     }
   }
@@ -108,7 +108,7 @@ An API key is required to use the OpenAlex API. The good news: API keys are free
 Example:
 * [`https://api.openalex.org/works?api_key=YOUR_KEY`](https://api.openalex.org/works?api_key=YOUR_KEY)
 
-Without an API key, you're limited to just $0.01/day—enough for quick tests, but not for real work. With a free API key, you get $10/day of API budget.
+Without an API key, you're limited to just $0.01/day—enough for quick tests, but not for real work. With a free API key, you get $1/day of API budget.
 
 [Premium users](https://openalex.org/pricing) get even higher budgets and access to special filters like [`from_updated_date`](../api-entities/works/filter-works.md#from_updated_date).
 
