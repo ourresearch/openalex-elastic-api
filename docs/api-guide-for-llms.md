@@ -138,7 +138,7 @@ Academic researchers can often get increased limits for free—contact [support@
 #### Special Endpoints
 
 ```
-/works?search.semantic=              - Semantic search using AI embeddings (100 credits)
+/works?search.semantic=              - Semantic search using AI embeddings (10 credits)
 content.openalex.org/works/{id}.pdf - Download PDFs and TEI XML
 /text                               - (Deprecated) Tag text with topics/keywords
 ```
@@ -387,7 +387,7 @@ https://api.openalex.org/works?search.semantic=machine+learning+for+drug+discove
 With filters:
 https://api.openalex.org/works?search.semantic=climate+change&filter=publication_year:>2020,is_oa:true&api_key=YOUR_KEY
 
-Costs 100 credits per request ($0.01). Returns works ranked by similarity.
+Costs 10 credits per request ($0.001). Returns works ranked by similarity.
 Only works with abstracts are indexed (~217M works). English-optimized.
 ```
 
@@ -682,7 +682,7 @@ NOT:  ?search=climate+NOT+politics
 * Singleton requests (e.g., `/works/W123`): 1 credit
 * List requests (e.g., `/works?filter=...`): 10 credits
 * Content downloads (e.g., `content.openalex.org/works/{id}.pdf`): 100 credits
-* Semantic search (`?search.semantic=`): 100 credits
+* Semantic search (`?search.semantic=`): 10 credits
 * Text/Aboutness requests (deprecated): 1,000 credits
 
 #### Concurrent Requests Strategy

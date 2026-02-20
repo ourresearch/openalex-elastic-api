@@ -9,7 +9,7 @@ OpenAlex's standard [search](get-lists-of-entities/search-entities.md) uses keyw
 That's what `search.semantic` does. It uses AI embeddings to find semantically similar works based on meaning, not just keywords. Search for "machine learning applications in drug discovery" and you'll find relevant papers even if they say "AI-driven pharmaceutical research" or "computational approaches to medicine."
 
 {% hint style="warning" %}
-Semantic search requires an API key and costs **100 credits per query** ($0.01). See [rate limits](rate-limits-and-authentication.md) for details.
+Semantic search requires an API key and costs **10 credits per query** ($0.001). See [rate limits](rate-limits-and-authentication.md) for details.
 {% endhint %}
 
 ## How it works
@@ -92,4 +92,4 @@ You'll find works about plant genome modification, agricultural biotechnology, a
 
 | Action | Credits | USD |
 |--------|---------|-----|
-| Semantic search query | 100 | $0.01 |
+| Semantic search query | 10 | $0.001 |
