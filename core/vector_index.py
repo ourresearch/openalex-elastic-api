@@ -34,9 +34,13 @@ FILTER_FIELD_MAP = {
     "publication_year": "publication_year",
     "type": "type",
     "is_oa": "is_oa",
+    "open_access.is_oa": "is_oa",
     "language": "language",
     "authorships.author.id": "author_ids",
+    "author.id": "author_ids",
     "authorships.institutions.id": "institution_ids",
+    "institution.id": "institution_ids",
+    "institutions.id": "institution_ids",
     # "authorships.institutions.country_code": "country_codes",  # DISABLED: broad filter, 15-20s kNN timeout
     "is_retracted": "is_retracted",
     "primary_location.source.id": "source_id",
@@ -50,7 +54,7 @@ FILTER_FIELD_MAP = {
 SUPPORTED_VECTOR_FILTERS = set(FILTER_FIELD_MAP.keys())
 
 # Fields that are boolean in the vector index
-_BOOLEAN_FIELDS = {"is_oa", "is_retracted", "has_fulltext", "has_abstract"}
+_BOOLEAN_FIELDS = {"is_oa", "open_access.is_oa", "is_retracted", "has_fulltext", "has_abstract"}
 
 # Fields that support range queries (integer)
 # NOTE: cited_by_count removed — range queries on broad fields cause kNN timeouts
@@ -58,7 +62,8 @@ _RANGE_FIELDS = {"publication_year"}
 
 # Fields that contain OpenAlex IDs (need normalization to full URLs)
 _ID_FIELDS = {
-    "authorships.author.id", "authorships.institutions.id",
+    "authorships.author.id", "author.id",
+    "authorships.institutions.id", "institution.id", "institutions.id",
     "primary_location.source.id", "funders.id",
 }
 
