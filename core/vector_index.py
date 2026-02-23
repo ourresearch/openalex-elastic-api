@@ -262,7 +262,43 @@ def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75):
     return results
 
 
-def _text_boost_search(query_text, k=20, connection="walden"):
+# Maps vector index field names to works-v33 field names (only where they differ).
+# Vector index uses flat field names; works-v33 uses nested paths and .lower subfields.
+_VECTOR_TO_WORKS_FIELD = {
+    "is_oa": "open_access.is_oa",
+    "source_id": "primary_location.source.id",
+    "author_ids": "authorships.author.id",
+    "institution_ids": "authorships.institutions.id",
+    "funder_ids": "funders.id",
+    "license_id": "primary_location.license",
+    "type": "type.lower",
+    "language": "language.lower",
+}
+
+
+def _translate_filter_for_works(filter_dict):
+    """Translate a vector-index filter dict to use works-v33 field names."""
+    if not filter_dict:
+        return None
+
+    def _translate_clause(clause):
+        for query_type in ("term", "terms", "range"):
+            if query_type in clause:
+                field = next(iter(clause[query_type]))
+                new_field = _VECTOR_TO_WORKS_FIELD.get(field, field)
+                return {query_type: {new_field: clause[query_type][field]}}
+        return clause
+
+    result = {"bool": {}}
+    for key in ("must", "must_not"):
+        if key in filter_dict.get("bool", {}):
+            result["bool"][key] = [
+                _translate_clause(c) for c in filter_dict["bool"][key]
+            ]
+    return result if result["bool"] else None
+
+
+def _text_boost_search(query_text, k=20, connection="walden", filter_dict=None):
     """Fetch top-cited works matching query text from works-v33.
 
     Used to inject highly cited candidates into the kNN pool for short queries,
@@ -272,15 +308,29 @@ def _text_boost_search(query_text, k=20, connection="walden"):
     """
     es = connections.get_connection(connection)
 
-    body = {
-        "query": {
-            "match": {
-                "display_name": {
-                    "query": query_text,
-                    "operator": "and",
-                }
+    match_query = {
+        "match": {
+            "display_name": {
+                "query": query_text,
+                "operator": "and",
             }
-        },
+        }
+    }
+
+    # Apply user filters translated to works-v33 field names
+    works_filter = _translate_filter_for_works(filter_dict)
+    if works_filter:
+        query = {
+            "bool": {
+                "must": [match_query],
+                "filter": [works_filter],
+            }
+        }
+    else:
+        query = match_query
+
+    body = {
+        "query": query,
         "sort": [{"cited_by_count": {"order": "desc"}}],
         "_source": False,
         "fields": ["cited_by_count"],
@@ -411,7 +461,7 @@ def vector_semantic_search(params, index_name, connection):
     # Text-boost injection for short queries (≤ 3 words)
     if settings.SEMANTIC_TEXT_BOOST and len(params["search"].split()) <= 3:
         try:
-            text_boost_results = _text_boost_search(params["search"], k=20, connection=connection)
+            text_boost_results = _text_boost_search(params["search"], k=20, connection=connection, filter_dict=filter_dict)
             existing_ids = {r[0] for r in vector_results}
             for result in text_boost_results:
                 if result[0] not in existing_ids:
