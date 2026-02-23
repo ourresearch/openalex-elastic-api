@@ -262,6 +262,45 @@ def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75):
     return results
 
 
+def _text_boost_search(query_text, k=20, connection="walden"):
+    """Fetch top-cited works matching query text from works-v33.
+
+    Used to inject highly cited candidates into the kNN pool for short queries,
+    where embedding geometry bias causes generic low-citation works to dominate.
+
+    Returns list of (work_id, synthetic_knn_score, cited_by_count) tuples.
+    """
+    es = connections.get_connection(connection)
+
+    body = {
+        "query": {
+            "match": {
+                "display_name": {
+                    "query": query_text,
+                    "operator": "and",
+                }
+            }
+        },
+        "sort": [{"cited_by_count": {"order": "desc"}}],
+        "_source": False,
+        "fields": ["cited_by_count"],
+        "size": k,
+    }
+
+    response = es.search(index=settings.WORKS_INDEX_WALDEN, body=body)
+
+    results = []
+    for hit in response["hits"]["hits"]:
+        work_id = hit["_id"]
+        cited_by = 0
+        if "fields" in hit and "cited_by_count" in hit["fields"]:
+            cited_by = hit["fields"]["cited_by_count"][0] or 0
+        # Synthetic kNN score just above the similarity threshold
+        results.append((work_id, 0.55, cited_by))
+
+    return results
+
+
 def hydrate_results(vector_results, connection="walden"):
     """Fetch full work docs from works-v32 via mget, merge scores.
 
@@ -362,12 +401,25 @@ def vector_semantic_search(params, index_name, connection):
 
     # Execute kNN on vector index
     k = MAX_SEMANTIC_RESULTS
-    num_candidates = max(k * 2, 75)
+    num_candidates = max(k * 4, 200)
     try:
         vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates)
     except Exception:
         import traceback; print(f"VECTOR_ERR kNN filter={filter_dict}: {type(e).__name__}: {e}", flush=True)
         raise
+
+    # Text-boost injection for short queries (≤ 3 words)
+    if settings.SEMANTIC_TEXT_BOOST and len(params["search"].split()) <= 3:
+        try:
+            text_boost_results = _text_boost_search(params["search"], k=20, connection=connection)
+            existing_ids = {r[0] for r in vector_results}
+            for result in text_boost_results:
+                if result[0] not in existing_ids:
+                    vector_results.append(result)
+                    existing_ids.add(result[0])
+        except Exception:
+            import traceback; print(f"VECTOR_ERR text_boost: {traceback.format_exc()}", flush=True)
+            # Non-fatal: continue with kNN results only
 
     # Hydrate full docs from works-v33
     try:

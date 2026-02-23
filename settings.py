@@ -50,6 +50,7 @@ WORKS_INDEX_LEGACY = "works-v33"
 WORKS_INDEX_WALDEN = "works-v33"
 WORKS_VECTOR_INDEX = "works-vectors-v1"
 USE_VECTOR_INDEX = os.environ.get("USE_VECTOR_INDEX", "false").lower() == "true"
+SEMANTIC_TEXT_BOOST = os.environ.get("SEMANTIC_TEXT_BOOST", "true").lower() == "true"
 GROUPBY_VALUES_INDEX = "groupby_values"
 RAW_AFFILIATION_STRINGS_INDEX = "raw-affiliation-strings-v2"
 
