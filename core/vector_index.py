@@ -367,13 +367,50 @@ def hydrate_results(vector_results, connection="walden"):
     es = connections.get_connection(connection)
     work_ids = [r[0] for r in vector_results]
 
-    # Build score map with citation rescore
+    # Build score map with citation rescore.
+    #
+    # We use a saturation function with a relevance gate to combine kNN
+    # similarity with citation count. The goal: citations should act as a
+    # tiebreaker among similarly-relevant results, not override relevance.
+    #
+    # Formula:
+    #   citation_signal = cited_by / (cited_by + PIVOT)        — bounded 0..1 (saturation)
+    #   relevance_strength = (knn - FLOOR) / (1 - FLOOR)       — 0 at threshold, 1 at perfect match
+    #   citation_factor = 1 + MAX_BOOST * relevance_strength * citation_signal
+    #   final_score = knn_score * citation_factor
+    #
+    # Why saturation (not log):
+    #   log(cited_by) is unbounded and steep at low values — a 45-cite paper
+    #   gets a 4.8x boost, enough to outrank a more-relevant 5-cite paper.
+    #   Saturation is bounded (max boost = 1 + MAX_BOOST) and flattens out,
+    #   so 10K cites isn't much different from 1K.
+    #
+    # Why relevance-gated:
+    #   Without the gate, a low-relevance/high-citation result can leapfrog a
+    #   high-relevance/low-citation one. The gate scales citation influence by
+    #   how far above the similarity floor the kNN score is. A result barely
+    #   above threshold gets almost no citation boost regardless of cite count.
+    #
+    # Tuning (all env vars, no deploy needed):
+    #   CITATION_PIVOT (default 100) — citation count that gives 50% of max boost.
+    #       Lower = citations matter sooner. Higher = only blockbuster papers get boosted.
+    #   CITATION_MAX_BOOST (default 0.5) — max multiplicative boost from citations.
+    #       0.5 means a maximally-cited, maximally-relevant paper scores 1.5x its kNN score.
+    #   CITATION_KNN_FLOOR (default 0.5) — kNN similarity threshold (matches ES kNN similarity param).
+    #       Results at this score get zero citation boost.
+    #
+    # Previous formula was: `knn_score * (1 + ln(cited_by))` with a 0.5x penalty
+    # for uncited works. That gave a 45-cite paper a 9.6x advantage over uncited,
+    # causing ranking failures like chess papers outranking boxing papers.
+    pivot = settings.CITATION_PIVOT
+    max_boost = settings.CITATION_MAX_BOOST
+    knn_floor = settings.CITATION_KNN_FLOOR
+
     score_map = {}
     for work_id, knn_score, cited_by in vector_results:
-        if cited_by <= 1:
-            citation_factor = 0.5
-        else:
-            citation_factor = 1 + math.log(cited_by)
+        citation_signal = cited_by / (cited_by + pivot) if cited_by > 0 else 0.0
+        relevance_strength = max(0.0, min(1.0, (knn_score - knn_floor) / (1.0 - knn_floor)))
+        citation_factor = 1.0 + max_boost * relevance_strength * citation_signal
         score_map[work_id] = knn_score * citation_factor
 
     # mget full docs from works-v32

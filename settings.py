@@ -51,6 +51,12 @@ WORKS_INDEX_WALDEN = "works-v33"
 WORKS_VECTOR_INDEX = "works-vectors-v1"
 USE_VECTOR_INDEX = os.environ.get("USE_VECTOR_INDEX", "false").lower() == "true"
 SEMANTIC_TEXT_BOOST = os.environ.get("SEMANTIC_TEXT_BOOST", "true").lower() == "true"
+
+# Citation rescoring parameters for semantic search.
+# See core/vector_index.py hydrate_results() for how these are used.
+CITATION_PIVOT = int(os.environ.get("CITATION_PIVOT", "100"))
+CITATION_MAX_BOOST = float(os.environ.get("CITATION_MAX_BOOST", "0.5"))
+CITATION_KNN_FLOOR = float(os.environ.get("CITATION_KNN_FLOOR", "0.5"))
 GROUPBY_VALUES_INDEX = "groupby_values"
 RAW_AFFILIATION_STRINGS_INDEX = "raw-affiliation-strings-v2"
 
