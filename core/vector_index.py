@@ -345,8 +345,8 @@ def _text_boost_search(query_text, k=20, connection="walden", filter_dict=None):
         cited_by = 0
         if "fields" in hit and "cited_by_count" in hit["fields"]:
             cited_by = hit["fields"]["cited_by_count"][0] or 0
-        # Synthetic kNN score just above the similarity threshold
-        results.append((work_id, 0.55, cited_by))
+        # Placeholder score — caller overrides with median kNN score
+        results.append((work_id, 0.0, cited_by))
 
     return results
 
@@ -495,15 +495,24 @@ def vector_semantic_search(params, index_name, connection):
         import traceback; print(f"VECTOR_ERR kNN filter={filter_dict}: {type(e).__name__}: {e}", flush=True)
         raise
 
-    # Text-boost injection for short queries (≤ 3 words)
+    # Text-boost injection for short queries (≤ 3 words).
+    # Injects highly-cited boolean-match results into the kNN pool so that
+    # landmark papers aren't drowned out by low-citation embedding neighbors.
+    # We assign them the median kNN score so they start competitive and the
+    # citation rescorer can push highly-cited ones to the top.
     if settings.SEMANTIC_TEXT_BOOST and len(params["search"].split()) <= 3:
         try:
             text_boost_results = _text_boost_search(params["search"], k=20, connection=connection, filter_dict=filter_dict)
+
+            # Use median kNN score so text-boost results aren't buried
+            knn_scores = sorted([r[1] for r in vector_results], reverse=True)
+            median_knn_score = knn_scores[len(knn_scores) // 2] if knn_scores else 0.55
+
             existing_ids = {r[0] for r in vector_results}
-            for result in text_boost_results:
-                if result[0] not in existing_ids:
-                    vector_results.append(result)
-                    existing_ids.add(result[0])
+            for work_id, _, cited_by in text_boost_results:
+                if work_id not in existing_ids:
+                    vector_results.append((work_id, median_knn_score, cited_by))
+                    existing_ids.add(work_id)
         except Exception:
             import traceback; print(f"VECTOR_ERR text_boost: {traceback.format_exc()}", flush=True)
             # Non-fatal: continue with kNN results only
