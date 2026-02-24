@@ -488,7 +488,7 @@ def vector_semantic_search(params, index_name, connection):
 
     # Execute kNN on vector index
     k = MAX_SEMANTIC_RESULTS
-    num_candidates = max(k * 4, 200)
+    num_candidates = max(k * 2, 75)
     try:
         vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates)
     except Exception:
