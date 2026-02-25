@@ -63,7 +63,7 @@ def filter_records_filters_view(fields_dict, filter_params, ms, index_name):
             if key == "search":
                 search_query = full_search_query(index_name, value)
                 s = s.query(search_query)
-                field_meta = {"key": key, "type": "FullSearchField", "values": []}
+                field_meta = {"key": key, "type": "FullSearchField", "is_negated": False, "values": []}
                 field_meta["values"].append(
                     {
                         "value": value,

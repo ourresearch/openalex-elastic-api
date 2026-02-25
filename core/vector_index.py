@@ -491,7 +491,7 @@ def vector_semantic_search(params, index_name, connection):
     num_candidates = max(k * 2, 75)
     try:
         vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates)
-    except Exception:
+    except Exception as e:
         import traceback; print(f"VECTOR_ERR kNN filter={filter_dict}: {type(e).__name__}: {e}", flush=True)
         raise
 
@@ -520,7 +520,7 @@ def vector_semantic_search(params, index_name, connection):
     # Hydrate full docs from works-v33
     try:
         hits = hydrate_results(vector_results, connection)
-    except Exception:
+    except Exception as e:
         import traceback; print(f"VECTOR_ERR hydrate: {type(e).__name__}: {e}", flush=True)
         raise
 

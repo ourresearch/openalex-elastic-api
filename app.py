@@ -70,7 +70,7 @@ def create_app(config_object="settings"):
 
     @app.after_request
     def inject_cost_usd(response):
-        cost_header = request.headers.get("X-Cost-USD")
+        cost_header = response.headers.get("X-Cost-USD") or request.headers.get("X-Cost-USD")
         if (
             cost_header is not None
             and response.content_type
@@ -80,7 +80,7 @@ def create_app(config_object="settings"):
                 data = response.get_json(silent=True)
                 if data and isinstance(data, dict) and "meta" in data:
                     data["meta"]["cost_usd"] = float(cost_header)
-                    response.data = json.dumps(data)
+                    response.data = json.dumps(data, sort_keys=False)
             except (ValueError, TypeError):
                 pass
         return response
