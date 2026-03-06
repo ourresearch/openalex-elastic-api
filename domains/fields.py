@@ -27,7 +27,7 @@ fields = [
     SearchField(
         param="display_name.search",
         docstring="Free text search among domains' names",
-        documentation_link="https://docs.openalex.org/api-entities/topics/search-topics#search-a-specific-field",
+        documentation_link="https://developers.openalex.org/guides/searching",
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
 ]

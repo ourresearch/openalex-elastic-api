@@ -15,7 +15,7 @@ DOCSTRINGS = {
 
 # shared documentation_links for when multiple fields share the same link (such as aliases)
 DOCUMENTATION_LINKS = {
-    "openalex": "https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
+    "openalex": "https://developers.openalex.org/guides/get",
 }
 
 
@@ -64,7 +64,7 @@ fields = [
     SearchField(
         param="display_name.search",
         docstring="Free text search among publishers' names",
-        documentation_link="https://docs.openalex.org/api-entities/publishers/search-publishers#search-a-specific-field",
+        documentation_link="https://developers.openalex.org/guides/searching",
     ),
     TermField(param="country_codes", custom_es_field="country_codes.lower"),
     TermField(

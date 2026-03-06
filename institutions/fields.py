@@ -19,10 +19,10 @@ DOCSTRINGS = {
 
 # shared documentation_links for when multiple fields share the same link (such as aliases)
 DOCUMENTATION_LINKS = {
-    "is_global_south": "https://docs.openalex.org/api-entities/geo/regions",
-    "openalex": "https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
-    "concept": "https://docs.openalex.org/api-entities/concepts",
-    "type": "https://docs.openalex.org/api-entities/institutions/institution-object#type",
+    "is_global_south": "https://developers.openalex.org/api-reference/countries",
+    "openalex": "https://developers.openalex.org/guides/get",
+    "concept": "https://developers.openalex.org/api-reference/concepts",
+    "type": "https://developers.openalex.org/api-reference/institutions",
 }
 
 
@@ -109,19 +109,19 @@ fields = [
     SearchField(
         param="display_name.search",
         docstring="Free text search among institutions' names",
-        documentation_link="https://docs.openalex.org/api-entities/institutions/search-institutions#search-a-specific-field",
+        documentation_link="https://developers.openalex.org/guides/searching",
     ),
     TermField(
         param="country_code",
         docstring="The country where the institution is located",
-        documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#country_code",
+        documentation_link="https://developers.openalex.org/api-reference/institutions",
         alternate_names=ALTERNATE_NAMES.get("country", None),
     ),
     TermField(
         param=f"continent",
         custom_es_field="country_code",
         docstring="The continent where the institution is located",
-        documentation_link="https://docs.openalex.org/api-entities/geo/continents",
+        documentation_link="https://developers.openalex.org/api-reference/continents",
         alternate_names=ALTERNATE_NAMES.get("continent", None),
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),

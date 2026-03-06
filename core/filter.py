@@ -71,7 +71,7 @@ def handle_or_query(field, fields_dict, s, value, sample):
         raise APIQueryParamsError(
             f"Maximum number of values exceeded for {field.param}. Decrease values to {MAX_IDS_IN_FILTER} or "
             f"below, or consider downloading the full dataset at "
-            f"https://docs.openalex.org/download-snapshot"
+            f"https://developers.openalex.org/download/snapshot-format"
         )
 
     # raise error if trying to use | between filters like filter=institutions.country_code:fr|host_venue.issn:0957-1558
@@ -148,7 +148,7 @@ def handle_and_query(field, s, value):
         raise APIQueryParamsError(
             f"Maximum number of values exceeded for {field.param}. Decrease values to {MAX_IDS_IN_FILTER} or "
             f"below, or consider downloading the full dataset at "
-            f"https://docs.openalex.org/download-snapshot"
+            f"https://developers.openalex.org/download/snapshot-format"
         )
 
     for and_value in value.split(" "):

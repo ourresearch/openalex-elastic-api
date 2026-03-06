@@ -19,9 +19,9 @@ DOCSTRINGS = {
 
 # shared documentation_links for when multiple fields share the same link (such as aliases)
 DOCUMENTATION_LINKS = {
-    "openalex": "https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
-    "concept": "https://docs.openalex.org/api-entities/concepts",
-    "type": "https://docs.openalex.org/api-entities/sources/source-object#type",
+    "openalex": "https://developers.openalex.org/guides/get",
+    "concept": "https://developers.openalex.org/api-reference/concepts",
+    "type": "https://developers.openalex.org/api-reference/sources",
 }
 
 fields = [
@@ -29,13 +29,13 @@ fields = [
     BooleanField(
         param="is_in_doaj",
         docstring="The journal is in DOAJ, the Directory of Open Access Journals",
-        documentation_link="https://docs.openalex.org/api-entities/sources/source-object#is_in_doaj",
+        documentation_link="https://developers.openalex.org/api-reference/sources",
         alternate_names=ALTERNATE_NAMES.get("source.is_in_doaj", None),
     ),
     BooleanField(
         param="is_oa",
         docstring="The source is currently Open Access",
-        documentation_link="https://docs.openalex.org/api-entities/sources/source-object#is_oa",
+        documentation_link="https://developers.openalex.org/api-reference/sources",
         alternate_names=ALTERNATE_NAMES.get("is_oa", None),
     ),
     BooleanField(
@@ -134,7 +134,7 @@ fields = [
     SearchField(
         param="display_name.search",
         docstring="Free text search among sources' names",
-        documentation_link="https://docs.openalex.org/api-entities/sources/search-sources#search-a-specific-field",
+        documentation_link="https://developers.openalex.org/guides/searching",
     ),
     TermField(
         param="apc_prices.currency",

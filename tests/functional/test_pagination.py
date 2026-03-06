@@ -48,7 +48,7 @@ class TestBasicPagination:
         assert json_data["error"] == "Pagination error."
         assert (
             json_data["message"]
-            == "Maximum results size of 10,000 records is exceeded. Cursor pagination is required for records beyond 10,000. See: https://docs.openalex.org/api#cursor-paging"
+            == "Maximum results size of 10,000 records is exceeded. Cursor pagination is required for records beyond 10,000. See: https://developers.openalex.org/guides/page-through-results"
         )
 
 

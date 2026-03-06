@@ -17,8 +17,8 @@ DOCSTRINGS = {
 
 # shared documentation_links for when multiple fields share the same link (such as aliases)
 DOCUMENTATION_LINKS = {
-    "openalex": "https://docs.openalex.org/how-to-use-the-api/get-single-entities#the-openalex-id",
-    "concept": "https://docs.openalex.org/api-entities/concepts",
+    "openalex": "https://developers.openalex.org/guides/get",
+    "concept": "https://developers.openalex.org/api-reference/concepts",
 }
 
 fields = [
@@ -26,7 +26,7 @@ fields = [
         param="has_orcid",
         custom_es_field="ids.orcid",
         docstring="The author has an ORCID",
-        documentation_link="https://docs.openalex.org/api-entities/authors/author-object#orcid",
+        documentation_link="https://developers.openalex.org/api-reference/authors",
         alternate_names=ALTERNATE_NAMES.get("orcid", None),
     ),
     BooleanField(
@@ -72,7 +72,7 @@ fields = [
     OpenAlexIDField(
         param="last_known_institutions.id",
         docstring="The institution to which the author most recently claimed affiliation",
-        documentation_link="https://docs.openalex.org/api-entities/authors/author-object#last_known_institutions",
+        documentation_link="https://developers.openalex.org/api-reference/authors",
     ),
     OpenAlexIDField(
         param="last_known_institutions.lineage",
@@ -114,7 +114,7 @@ fields = [
         param="display_name.search",
         unique_id="author_search",
         docstring="Free text search among authors' names",
-        documentation_link="https://docs.openalex.org/api-entities/authors/search-authors#search-a-specific-field",
+        documentation_link="https://developers.openalex.org/guides/searching",
     ),
     TermField(param="affiliations.institution.country_code"),
     TermField(param="affiliations.institution.ror"),
@@ -124,27 +124,27 @@ fields = [
     TermField(
         param="last_known_institutions.country_code",
         docstring="The country of the author's last known institution",
-        documentation_link="https://docs.openalex.org/api-entities/authors/author-object#last_known_institutions",
+        documentation_link="https://developers.openalex.org/api-reference/authors",
         alternate_names=ALTERNATE_NAMES.get("country", None),
     ),
     TermField(
         param="last_known_institutions.continent",
         custom_es_field="last_known_institutions.country_code",
         docstring="The continent of the author's last known institution",
-        documentation_link="https://docs.openalex.org/api-entities/authors/author-object#last_known_institutions",
+        documentation_link="https://developers.openalex.org/api-reference/authors",
         alternate_names=ALTERNATE_NAMES.get("continent", None),
     ),
     TermField(param="last_known_institutions.ror"),
     TermField(
         param="last_known_institutions.type",
         docstring="""The type of the author's last known institution. For example, universities are type "Education," and hospitals are type "Healthcare".""",
-        documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#type",
+        documentation_link="https://developers.openalex.org/api-reference/institutions",
         alternate_names=ALTERNATE_NAMES.get("institution.type", None),
     ),
         TermField(
         param="last_known_institutions.type",
         docstring="""The type of the author's last known institution. For example, universities are type "Education," and hospitals are type "Healthcare".""",
-        documentation_link="https://docs.openalex.org/api-entities/institutions/institution-object#type",
+        documentation_link="https://developers.openalex.org/api-reference/institutions",
         alternate_names=ALTERNATE_NAMES.get("institution.type", None),
     ),
     TermField(param="parsed_longest_name.first"),
