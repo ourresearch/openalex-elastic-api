@@ -19,7 +19,7 @@ DOCSTRINGS = {
     "source.is_in_doaj": "The work is published in a journal that is in DOAJ, the Directory of Open Access Journals",
     "is_accepted": "The work has {location_type} that has been accepted for publication",
     "is_published": "The work has {location_type} that has been published",
-    "has_abstract": "Abstract is available for the work",
+    "has_abstract": "The work has an abstract (abstract_inverted_index is not null)",
     "has_doi": "The work has a DOI (Digital Object Identifier). Usually, this means that a work has been indexed by Crossref.",
     "has_fulltext": "The work has full text available to search",
     "has_orcid": "The work has at least one author with an ORCID",
@@ -139,7 +139,7 @@ fields = [
     BooleanField("citation_normalized_percentile.is_in_top_10_percent"),
     BooleanField(
         param="has_abstract",
-        custom_es_field="abstract",
+        custom_es_field="abstract_inverted_index",
         docstring=DOCSTRINGS["has_abstract"],
         documentation_link=DOCUMENTATION_LINKS["has_abstract"],
         alternate_names=ALTERNATE_NAMES.get("has_abstract", None),

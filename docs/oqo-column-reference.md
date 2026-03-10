@@ -65,7 +65,7 @@ All entity IDs in OQO use a normalized format: `entityName/id`
 | `is_retracted` | Work has been retracted | `{"column_id": "is_retracted", "value": false}` |
 | `is_paratext` | Work is paratext (TOC, cover, etc.) | `{"column_id": "is_paratext", "value": false}` |
 | `has_doi` | Work has a DOI | `{"column_id": "has_doi", "value": true}` |
-| `has_abstract` | Abstract is available | `{"column_id": "has_abstract", "value": true}` |
+| `has_abstract` | Work has an abstract (abstract_inverted_index is not null) | `{"column_id": "has_abstract", "value": true}` |
 | `has_fulltext` | Full text is searchable | `{"column_id": "has_fulltext", "value": true}` |
 | `has_orcid` | At least one author has ORCID | `{"column_id": "has_orcid", "value": true}` |
 | `has_pmid` | Work is in PubMed | `{"column_id": "has_pmid", "value": true}` |

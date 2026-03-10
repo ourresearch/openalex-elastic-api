@@ -35,6 +35,8 @@ abstract_inverted_index: {
 }
 ```
 
+You can use the [`has_abstract`](../filter-works.md#has\_abstract) filter to get works that have or lack an abstract.
+
 #### Abstract inverted index coverage
 
 Newer works are more likely to have an abstract inverted index. For example, over 60% of works in 2022 have abstract data, compared to 45% for works older than 2000. Full chart is below:

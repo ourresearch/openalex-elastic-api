@@ -291,7 +291,7 @@ This searches for keyword matches. To find conceptually related works using AI, 
 
 #### `has_abstract`
 
-Works that have an abstract available
+Works that have an abstract available. Specifically, this is `true` when the work's [`abstract_inverted_index`](work-object/#abstract\_inverted\_index) is not null.
 
 Value: a Boolean (`true` or `false`)
 
