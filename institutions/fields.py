@@ -129,6 +129,11 @@ fields = [
     TermField(param="topics.id"),
     TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),
     TermField(
+        param="status",
+        docstring="The institution's status: active, inactive, or withdrawn",
+        documentation_link="https://developers.openalex.org/api-reference/institutions",
+    ),
+    TermField(
         param="type",
         docstring=DOCSTRINGS["type"],
         documentation_link=DOCUMENTATION_LINKS["type"],

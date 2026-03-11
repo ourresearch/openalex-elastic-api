@@ -122,6 +122,23 @@ columns:
       - filter
     icon: mdi-earth
     descr: The country where the institution is located
+  status:
+    id: status
+    subjectEntity: institutions
+    operators:
+      - is
+      - is not
+    defaultOperator: is
+    objectEntity:
+    displayName: Status
+    redshiftDisplayColumn: status
+    redshiftFilterColumn: status
+    type: string
+    actions:
+      - column
+      - filter
+    icon: mdi-checkbox-marked-circle-outline
+    descr: The institution's ROR status (active, inactive, or withdrawn)
   type:
     id: type
     subjectEntity: institutions

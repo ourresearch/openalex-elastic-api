@@ -22,6 +22,7 @@ You can filter using these attributes of the `Institution` entity object (click 
 * [`repositories.host_organization_lineage`](institution-object.md#repositories): OpenAlex ID for an [`Institution`](README.md)
 * [`repositories.id`](institution-object.md#repositories): the OpenAlex ID of a repository (a [`Source`](../sources/README.md))
 * [`ror`](institution-object.md#ror): the ROR ID of the Institution
+* [`status`](institution-object.md#status)
 * [`summary_stats.2yr_mean_citedness`](institution-object.md#summary_stats) (accepts float, null, !null, can use range queries such as < >)
 * [`summary_stats.h_index`](institution-object.md#summary_stats) (accepts integer, null, !null, can use range queries)
 * [`summary_stats.i10_index`](institution-object.md#summary_stats) (accepts integer, null, !null, can use range queries)

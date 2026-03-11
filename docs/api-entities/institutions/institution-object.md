@@ -288,6 +288,20 @@ The ROR (Research Organization Registry) identifier is a globally unique ID for 
 ror: "https://ror.org/0130frc33"
 ```
 
+### `status`
+
+_String:_ The institution's status, which is derived directly from the [ROR `status` field](https://ror.readme.io/docs/ror-data-structure). Possible values are:
+
+* `active`: The institution is currently operating.
+* `inactive`: The institution has ceased operations or ceased producing research outputs.
+* `withdrawn`: The ROR record was created in error or is no longer in scope.
+
+Institutions without a ROR ID default to `active`.
+
+```json
+status: "active"
+```
+
 ### `summary_stats`
 
 _Object:_ Citation metrics for this institution
