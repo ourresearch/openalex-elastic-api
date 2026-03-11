@@ -89,8 +89,7 @@ class BooleanField(Field):
             elif self.value.lower().strip() == "false":
                 q = ~query
         elif (
-            self.param == "has_abstract"
-            or self.param == "has_embeddings"
+            self.param == "has_embeddings"
             or self.param == "has_pdf_url"
             or self.param == "has_raw_affiliation_strings"
             or self.param == "has_references"

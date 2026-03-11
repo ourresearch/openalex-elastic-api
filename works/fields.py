@@ -139,7 +139,6 @@ fields = [
     BooleanField("citation_normalized_percentile.is_in_top_10_percent"),
     BooleanField(
         param="has_abstract",
-        custom_es_field="abstract_inverted_index",
         docstring=DOCSTRINGS["has_abstract"],
         documentation_link=DOCUMENTATION_LINKS["has_abstract"],
         alternate_names=ALTERNATE_NAMES.get("has_abstract", None),
