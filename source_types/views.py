@@ -42,9 +42,10 @@ def source_types():
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
-    inject_descriptions(result["results"])
     message_schema = MessageSchema(only=only_fields)
-    return message_schema.dump(result)
+    dumped = message_schema.dump(result)
+    inject_descriptions(dumped["results"])
+    return dumped
 
 
 @blueprint.route("/source-types/filters/<path:params>")
