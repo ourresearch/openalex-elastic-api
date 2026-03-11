@@ -16,6 +16,23 @@ from settings import INSTITUTION_TYPES_INDEX
 
 blueprint = Blueprint("institution_types", __name__)
 
+DESCRIPTIONS = {
+    "education": "Universities, colleges, and medical schools that educate and employ researchers (e.g., Harvard, Oxford).",
+    "healthcare": "Hospitals and medical centers like Mass General and Johns Hopkins Medicine — not medical schools.",
+    "facility": "Specialized research facilities like national laboratories, telescopes, and particle accelerators.",
+    "government": "Government agencies that conduct or fund research, like CNRS or the U.S. Geological Survey.",
+    "company": "For-profit companies involved in research, from Google to small biotech firms.",
+    "nonprofit": "Non-governmental organizations like the Max Planck Society that conduct or fund research.",
+    "archive": "Museums, libraries, and zoos that steward research and cultural heritage materials.",
+    "other": "Organizations like university presses that don't fit the standard ROR categories.",
+}
+
+
+def inject_descriptions(results):
+    for item in results:
+        short_id = item.get("id", "").split("/")[-1]
+        item["description"] = DESCRIPTIONS.get(short_id)
+
 
 @blueprint.route("/institution-types")
 @blueprint.route("/entities/institution-types")
@@ -27,6 +44,7 @@ def institution_types():
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
+    inject_descriptions(result["results"])
     message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
 

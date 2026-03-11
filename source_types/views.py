@@ -16,6 +16,21 @@ from settings import SOURCE_TYPES_INDEX
 
 blueprint = Blueprint("source_types", __name__)
 
+DESCRIPTIONS = {
+    "journal": "Peer-reviewed periodicals like Nature or The Lancet that publish research on a regular schedule.",
+    "repository": "Open archives like Zenodo, PubMed, and Figshare where researchers deposit papers, data, and preprints.",
+    "ebook platform": "Digital platforms hosting scholarly books and monographs.",
+    "book series": "Numbered collections of scholarly books published under a shared series title.",
+    "conference": "Proceedings and abstracts from academic conferences, like IEEE and IOP Conference Series.",
+    "other": "Sources that don't fit the standard categories above.",
+}
+
+
+def inject_descriptions(results):
+    for item in results:
+        short_id = item.get("id", "").split("/")[-1]
+        item["description"] = DESCRIPTIONS.get(short_id)
+
 
 @blueprint.route("/source-types")
 @blueprint.route("/entities/source-types")
@@ -27,6 +42,7 @@ def source_types():
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
+    inject_descriptions(result["results"])
     message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
 

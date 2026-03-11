@@ -10,7 +10,7 @@ OA_STATUSES = [
     {
         "id": "https://openalex.org/oa-statuses/closed",
         "display_name": "closed",
-        "description": "Not open access. The work is not freely available to read.",
+        "description": "Not open access; the work is not freely available to read.",
         "works_count": None,
         "cited_by_count": None,
         "works_api_url": "https://api.openalex.org/works?filter=open_access.oa_status:closed",
@@ -20,7 +20,7 @@ OA_STATUSES = [
     {
         "id": "https://openalex.org/oa-statuses/green",
         "display_name": "green",
-        "description": "Published in a toll-access journal, but archived in an open access repository such as ArXiv or an institutional repository. Green OA works may be preprints or published versions, and can have any license or no license.",
+        "description": "In a toll-access journal but archived in a repository like ArXiv; may be a preprint, with any license or none.",
         "works_count": None,
         "cited_by_count": None,
         "works_api_url": "https://api.openalex.org/works?filter=open_access.oa_status:green",
@@ -30,7 +30,7 @@ OA_STATUSES = [
     {
         "id": "https://openalex.org/oa-statuses/bronze",
         "display_name": "bronze",
-        "description": "Free to read on the publisher's website, but without a clearly-identified open license. Bronze articles may have a delay between publication and free availability, and publishers can remove access at any time.",
+        "description": "Free to read on the publisher's site but without an open license; access can be removed at any time.",
         "works_count": None,
         "cited_by_count": None,
         "works_api_url": "https://api.openalex.org/works?filter=open_access.oa_status:bronze",
@@ -40,7 +40,7 @@ OA_STATUSES = [
     {
         "id": "https://openalex.org/oa-statuses/hybrid",
         "display_name": "hybrid",
-        "description": "Free to read on the publisher's website with an open license, but published in a subscription journal. Hybrid articles are typically published via an article processing charge (APC).",
+        "description": "Free on the publisher's site with an open license, but in a subscription journal; typically published via an APC.",
         "works_count": None,
         "cited_by_count": None,
         "works_api_url": "https://api.openalex.org/works?filter=open_access.oa_status:hybrid",
@@ -50,7 +50,7 @@ OA_STATUSES = [
     {
         "id": "https://openalex.org/oa-statuses/gold",
         "display_name": "gold",
-        "description": "Free to read on the publisher's website with an open license, published in a fully Open Access journal. Gold journals (also called OA journals) publish all articles as open access.",
+        "description": "Free with an open license in a fully Open Access journal where all articles are open access.",
         "works_count": None,
         "cited_by_count": None,
         "works_api_url": "https://api.openalex.org/works?filter=open_access.oa_status:gold",

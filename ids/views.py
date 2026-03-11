@@ -39,6 +39,7 @@ from ids.utils import (
     process_id_only_fields,
 )
 from institution_types.schemas import InstitutionTypesSchema
+from institution_types.views import DESCRIPTIONS as INSTITUTION_TYPE_DESCRIPTIONS
 from institutions.schemas import InstitutionsSchema
 from keywords.schemas import KeywordsSchema
 from languages.schemas import LanguagesSchema
@@ -47,6 +48,7 @@ from locations.schemas import LocationsSchema
 from publishers.schemas import PublishersSchema
 from sources.schemas import SourcesSchema
 from source_types.schemas import SourceTypesSchema
+from source_types.views import DESCRIPTIONS as SOURCE_TYPE_DESCRIPTIONS
 from sdgs.schemas import SdgsSchema
 from subfields.schemas import SubfieldsSchema
 from topics.schemas import TopicsSchema
@@ -927,9 +929,13 @@ def countries_id_get(id):
 @blueprint.route("/institution-types/<path:id>")
 @blueprint.route("/entities/institution-types/<path:id>")
 def institution_types_id_get(id):
-    return get_by_openalex_external_id(
+    result = get_by_openalex_external_id(
         settings.INSTITUTION_TYPES_INDEX, InstitutionTypesSchema, id
     )
+    if isinstance(result, dict):
+        short_id = result.get("id", "").split("/")[-1]
+        result["description"] = INSTITUTION_TYPE_DESCRIPTIONS.get(short_id)
+    return result
 
 
 @blueprint.route("/languages/<path:id>")
@@ -948,9 +954,13 @@ def types_id_get(id):
 @blueprint.route("/source-types/<path:id>")
 @blueprint.route("/entities/source-types/<path:id>")
 def source_types_id_get(id):
-    return get_by_openalex_external_id(
+    result = get_by_openalex_external_id(
         settings.SOURCE_TYPES_INDEX, SourceTypesSchema, id
     )
+    if isinstance(result, dict):
+        short_id = result.get("id", "").split("/")[-1]
+        result["description"] = SOURCE_TYPE_DESCRIPTIONS.get(short_id)
+    return result
 
 
 @blueprint.route("/domains/<path:id>")
