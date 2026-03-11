@@ -44,6 +44,7 @@ from institutions.schemas import InstitutionsSchema
 from keywords.schemas import KeywordsSchema
 from languages.schemas import LanguagesSchema
 from licenses.schemas import LicensesSchema
+from licenses.views import DISPLAY_NAMES as LICENSE_DISPLAY_NAMES, DESCRIPTIONS as LICENSE_DESCRIPTIONS
 from locations.schemas import LocationsSchema
 from publishers.schemas import PublishersSchema
 from sources.schemas import SourcesSchema
@@ -1037,7 +1038,14 @@ def keywords_v2_id_get(id):
 @blueprint.route("/licenses/<path:id>")
 @blueprint.route("/entities/licenses/<path:id>")
 def licenses_id_get(id):
-    return get_by_openalex_external_id(settings.LICENSES_INDEX, LicensesSchema, id)
+    result = get_by_openalex_external_id(settings.LICENSES_INDEX, LicensesSchema, id)
+    if isinstance(result, dict):
+        short_id = result.get("id", "").split("/")[-1]
+        if short_id in LICENSE_DISPLAY_NAMES:
+            result["display_name"] = LICENSE_DISPLAY_NAMES[short_id]
+        if short_id in LICENSE_DESCRIPTIONS:
+            result["description"] = LICENSE_DESCRIPTIONS[short_id]
+    return result
 
 
 # Location

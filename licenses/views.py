@@ -17,6 +17,40 @@ from settings import LICENSES_INDEX
 
 blueprint = Blueprint("licenses", __name__)
 
+DISPLAY_NAMES = {
+    "cc-by": "CC-BY",
+    "cc-by-sa": "CC-BY-SA",
+    "cc-by-nc": "CC-BY-NC",
+    "cc-by-nc-sa": "CC-BY-NC-SA",
+    "cc-by-nd": "CC-BY-ND",
+    "cc-by-nc-nd": "CC-BY-NC-ND",
+}
+
+DESCRIPTIONS = {
+    "cc-by": "Reuse allowed with credit to the creator, including commercial use.",
+    "cc-by-sa": "Reuse with credit, including commercial use, but adaptations must keep the same license.",
+    "cc-by-nc": "Reuse with credit for non-commercial purposes only.",
+    "cc-by-nc-sa": "Reuse with credit for non-commercial purposes; adaptations must keep the same license.",
+    "cc-by-nd": "Sharing with credit, including commercial use, but no adaptations.",
+    "cc-by-nc-nd": "Sharing with credit, but no commercial use and no adaptations.",
+    "public-domain": "No rights reserved; the work is in the public domain with no restrictions on reuse.",
+    "other-oa": "A license that looks open but we don't have it listed anywhere.",
+    "publisher-specific-oa": "Any idiosyncratic open license unique to a single publisher.",
+    "mit": "A simple permissive license requiring only copyright notice preservation.",
+    "apache-2-0": "A permissive license requiring copyright notices and providing patent rights.",
+    "gpl-v3": "A copyleft license requiring that modified versions also be open-source under the same terms.",
+    "isc": "A permissive license functionally equivalent to MIT and BSD 2-Clause.",
+}
+
+
+def inject_overrides(results):
+    for item in results:
+        short_id = item.get("id", "").split("/")[-1]
+        if short_id in DISPLAY_NAMES:
+            item["display_name"] = DISPLAY_NAMES[short_id]
+        if short_id in DESCRIPTIONS:
+            item["description"] = DESCRIPTIONS[short_id]
+
 
 @blueprint.route("/licenses")
 @blueprint.route("/entities/licenses")
@@ -27,6 +61,7 @@ def licenses():
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
+    inject_overrides(result["results"])
     message_schema = MessageSchema(only=only_fields)
     return message_schema.dump(result)
 
