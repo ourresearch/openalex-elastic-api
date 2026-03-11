@@ -64,15 +64,15 @@ OA_STATUSES_BY_ID = {s["display_name"]: s for s in OA_STATUSES}
 
 
 def _check_unsupported_params():
-    """Check for filter/group_by params and raise error if present."""
+    """Check for filter/group_by params and raise error if present.
+    Note: sort, page, per_page are silently ignored (static list of 5 items).
+    """
     if request.args.get("filter"):
         raise APIQueryParamsError("Filtering is not supported for the oa-statuses endpoint.")
     if request.args.get("group_by") or request.args.get("group-by"):
         raise APIQueryParamsError("Grouping is not supported for the oa-statuses endpoint.")
     if request.args.get("search"):
         raise APIQueryParamsError("Search is not supported for the oa-statuses endpoint.")
-    if request.args.get("sort"):
-        raise APIQueryParamsError("Sorting is not supported for the oa-statuses endpoint.")
 
 
 @blueprint.route("/oa-statuses")
