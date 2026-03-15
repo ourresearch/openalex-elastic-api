@@ -133,25 +133,6 @@ class BooleanField(Field):
                     | Q("exists", field="ids.doi")
                     | Q("exists", field="ids.arxiv")
                 )
-        elif self.param == "has_abstract":
-            # Workaround: has_abstract boolean is wrong in ES for ~12M
-            # Elsevier/Springer non-OA works (abstract text exists but
-            # abstract_inverted_index was suppressed). Exclude at query time.
-            self.validate_true_false()
-            suppressed = (
-                Q(
-                    "terms",
-                    primary_location__source__host_organization_lineage=[
-                        "https://openalex.org/P4310320990",
-                        "https://openalex.org/P4310319965",
-                    ],
-                )
-                & ~Q("term", open_access__is_oa="true")
-            )
-            if self.value.lower().strip() == "true":
-                q = Q("term", has_abstract="true") & ~suppressed
-            elif self.value.lower().strip() == "false":
-                q = Q("term", has_abstract="false") | suppressed
         elif self.value == "null":
             q = ~Q("exists", field=self.es_sort_field())
         elif self.value == "!null":
