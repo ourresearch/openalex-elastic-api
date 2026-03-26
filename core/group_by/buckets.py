@@ -153,7 +153,10 @@ def create_boolean_group_by_buckets(bucket_keys, group_by_field, s):
 def create_pagination_group_by_buckets(
     bucket_keys, group_by_field, include_unknown, missing, params, s, after_key
 ):
-    sources = [{"sub_key": {"terms": {"field": group_by_field}}}]
+    terms_source = {"field": group_by_field}
+    if include_unknown and missing is not None:
+        terms_source["missing_bucket"] = True
+    sources = [{"sub_key": {"terms": terms_source}}]
 
     composite_agg = A("composite", sources=sources, size=params["per_page"])
 
@@ -235,6 +238,8 @@ def transform_paginated_buckets(buckets):
     for b in buckets:
         if isinstance(b.key, AttrDict):
             b.key = b.key["sub_key"]
+        if b.key is None:
+            b.key = "unknown"
     return buckets
 
 
