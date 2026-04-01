@@ -9,6 +9,7 @@ DATABRICKS_TOKEN = os.environ.get("DATABRICKS_TOKEN")
 DEFAULT_DATA_VERSION = '2'
 ENV = os.environ.get("FLASK_ENV", "production")
 ES_URL_WALDEN = os.environ.get("ES_URL_WALDEN", "http://elastic:testpass@127.0.0.1:9200")
+ES_VECTOR_SEARCH_URL = os.environ.get("ES_VECTOR_SEARCH_URL")
 DEBUG = ENV == "development"
 JSON_SORT_KEYS = False
 SECRET_KEY = os.environ.get("SECRET_KEY")

@@ -229,7 +229,7 @@ def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75):
 
     Returns list of (work_id, score) tuples sorted by score descending.
     """
-    es = connections.get_connection("walden")
+    es = connections.get_connection("vector")
 
     knn_body = {
         "field": VECTOR_FIELD,

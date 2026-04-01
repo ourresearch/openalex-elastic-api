@@ -130,6 +130,8 @@ def register_extensions(app):
     sentry_sdk.init(dsn=os.environ.get("SENTRY_DSN"), integrations=[FlaskIntegration()])
     connections.create_connection('default', hosts=[settings.ES_URL_WALDEN], timeout=15)
     connections.create_connection('walden', hosts=[settings.ES_URL_WALDEN], timeout=15)
+    if settings.ES_VECTOR_SEARCH_URL:
+        connections.create_connection('vector', hosts=[settings.ES_VECTOR_SEARCH_URL], timeout=15)
     cache.init_app(app)
 
 
