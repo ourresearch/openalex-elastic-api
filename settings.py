@@ -25,8 +25,8 @@ OPEN_ALEX_API_KEY = os.environ.get("OPEN_ALEX_API_KEY")
 USERS_API_URL = os.environ.get("USERS_API_URL")
 
 # indexes
-AUTHORS_INDEX_WALDEN = "authors-v17"
-AUTHORS_INDEX_LEGACY = "authors-v17"
+AUTHORS_INDEX_WALDEN = "authors-v18"
+AUTHORS_INDEX_LEGACY = "authors-v18"
 AUTHORS_INDEX_OLD = "authors-v10"
 AWARDS_INDEX = "awards-v3"
 CONCEPTS_INDEX = "concepts-v9"
