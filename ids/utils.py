@@ -153,8 +153,8 @@ class NoDoiException(Exception):
 
 def is_orcid(orcid):
     if re.search(
-        r"orcid:\d{4}-\d{4}-\d{4}-\d{3}[\dX]", orcid.lower().strip()
-    ) or re.search(r"orcid.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]", orcid.lower().strip()):
+        r"orcid:\d{4}-\d{4}-\d{4}-\d{3}[\dx]", orcid.lower().strip()
+    ) or re.search(r"orcid.org/\d{4}-\d{4}-\d{4}-\d{3}[\dx]", orcid.lower().strip()):
         return True
 
 
