@@ -87,10 +87,10 @@ class TestFilterParamMapping:
             map_filter_params("doi:None")
         assert "Invalid filter value for 'doi'" in str(exc_info.value)
 
-    def test_filter_mapping_rejects_null_value(self, client):
-        with pytest.raises(APIQueryParamsError) as exc_info:
-            map_filter_params("doi:null")
-        assert "Invalid filter value for 'doi'" in str(exc_info.value)
+    def test_filter_mapping_allows_null_value(self, client):
+        """null is a valid filter value meaning 'field does not exist'."""
+        result = map_filter_params("doi:null")
+        assert result == [{"doi": "null"}]
 
     def test_filter_mapping_rejects_undefined_value(self, client):
         with pytest.raises(APIQueryParamsError) as exc_info:

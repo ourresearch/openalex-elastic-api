@@ -78,7 +78,7 @@ def map_filter_params(filter_params):
                 # unquoted multi-values (spaces mean AND).  Quotes are stripped
                 # later in filter_records before the ES query is built.
                 # Reject empty or placeholder values
-                if not value or value.lower() in ("none", "null", "undefined"):
+                if not value or value.lower() in ("none", "undefined"):
                     raise APIQueryParamsError(
                         f"Invalid filter value for '{key}': value cannot be empty or '{value}'. "
                         f"Use a valid value like filter={key}:your_value"
