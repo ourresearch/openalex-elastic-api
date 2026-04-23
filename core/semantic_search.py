@@ -50,14 +50,14 @@ def embed_query(query_text: str) -> list:
         raise APIQueryParamsError("Semantic search is not configured")
 
     host = host.replace("https://", "").replace("http://", "")
-    url = f"https://{host}/serving-endpoints/{EMBEDDING_MODEL}/invocations"
+    url = f"https://{host}/mlflow/v1/embeddings"
 
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
 
-    payload = {"input": truncated}
+    payload = {"model": EMBEDDING_MODEL, "input": truncated}
 
     try:
         response = http_requests.post(url, headers=headers, json=payload, timeout=30)
