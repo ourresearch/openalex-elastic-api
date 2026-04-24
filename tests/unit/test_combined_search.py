@@ -100,14 +100,6 @@ class TestValidateSearchParam:
         with pytest.raises(APIQueryParamsError, match="search.semantic cannot be combined"):
             validate_search_param(req)
 
-    def test_duplicate_param_rejected(self):
-        req = FakeRequest([
-            ("search.title", "X"),
-            ("search.title", "Y"),
-        ])
-        with pytest.raises(APIQueryParamsError, match="Duplicate search parameter"):
-            validate_search_param(req)
-
     def test_same_scope_different_type_rejected(self):
         req = FakeRequest({
             "search.title": "hello",

@@ -140,13 +140,9 @@ def validate_search_param(request):
         if arg.startswith(SEARCH_PARAM_PREFIX):
             search_params_present.append(arg)
 
-    # Check for duplicate param names (e.g. search.title=X&search.title=Y)
-    for param in search_params_present:
-        if len(request.args.getlist(param)) > 1:
-            raise APIQueryParamsError(
-                f"Duplicate search parameter: '{param}' appears more than once. "
-                "Each search parameter can only be used once per request."
-            )
+    # Note: duplicate param names (e.g. search.title=X&search.title=Y) are
+    # deduplicated by the Cloudflare API proxy before reaching Flask, so
+    # Flask only ever sees one value per param name. No validation needed here.
 
     # Cap at 7 search params (one per valid search type)
     if len(search_params_present) > 7:

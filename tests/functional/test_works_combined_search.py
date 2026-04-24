@@ -43,13 +43,6 @@ class TestWorksCombinedSearch:
         assert res.status_code == 400
         assert "search.semantic cannot be combined" in json_data["message"]
 
-    def test_duplicate_param_rejected(self, client):
-        """search.title=X&search.title=Y (duplicate param) is rejected."""
-        res = client.get("/works?search.title=X&search.title=Y")
-        json_data = res.get_json()
-        assert res.status_code == 400
-        assert "Duplicate search parameter" in json_data["message"]
-
     def test_combined_search_with_sort(self, client):
         """Combined search with explicit sort works."""
         res = client.get(
