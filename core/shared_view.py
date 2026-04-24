@@ -15,8 +15,8 @@ from core.group_by.buckets import add_meta_sums, create_group_by_buckets
 from core.knn import KNNQueryWithFilter
 from core.paginate import get_pagination
 from core.params import parse_params
-from core.preference import clean_preference, set_preference_for_filter_search
-from core.search import check_is_search_query, full_search_query, full_search_query_exact, scoped_search_query
+from core.preference import clean_preference, combine_preferences, set_preference_for_filter_search
+from core.search import SearchOpenAlex, check_is_search_query, full_search_query, full_search_query_exact, scoped_search_query
 from core.semantic_search import embed_query, VECTOR_FIELD
 from core.sort import get_sort_fields, sort_with_cursor, sort_with_sample
 from core.utils import get_data_version_connection, get_field
@@ -122,9 +122,47 @@ def set_cursor_pagination(params, s):
 
 
 def add_search_query(params, index_name, s):
-    if params["search"] and params["search"] != '""':
-        search_scope = params.get("search_scope")
-        search_type = params.get("search_type")
+    searches = params.get("searches", [])
+
+    if len(searches) <= 1:
+        # Single search (or no search) — existing behavior unchanged
+        if params["search"] and params["search"] != '""':
+            search_scope = params.get("search_scope")
+            search_type = params.get("search_type")
+
+            if search_scope and not index_name.lower().startswith("works"):
+                raise APIQueryParamsError(
+                    f"search.{search_scope} is only supported for /works."
+                )
+
+            if search_scope:
+                search_query = scoped_search_query(
+                    params["search"], search_scope, search_type
+                )
+            elif search_type == "exact" and index_name.lower().startswith("works"):
+                search_query = full_search_query_exact(params["search"])
+            else:
+                search_query = full_search_query(index_name, params["search"])
+
+            if params["sample"]:
+                s = s.filter(search_query)
+            else:
+                s = s.query(search_query)
+            s = s.params(preference=clean_preference(params["search"]))
+        return s
+
+    # Multiple searches — AND sub-queries with single citation boost
+    from elasticsearch_dsl import Q
+
+    sub_queries = []
+    preference_parts = []
+    for search_item in searches:
+        query_str = search_item["search"]
+        search_scope = search_item["search_scope"]
+        search_type = search_item["search_type"]
+
+        if not query_str or query_str == '""':
+            continue
 
         if search_scope and not index_name.lower().startswith("works"):
             raise APIQueryParamsError(
@@ -132,19 +170,31 @@ def add_search_query(params, index_name, s):
             )
 
         if search_scope:
-            search_query = scoped_search_query(
-                params["search"], search_scope, search_type
+            sub_query = scoped_search_query(
+                query_str, search_scope, search_type, skip_citation_boost=True
             )
         elif search_type == "exact" and index_name.lower().startswith("works"):
-            search_query = full_search_query_exact(params["search"])
+            sub_query = full_search_query_exact(query_str, skip_citation_boost=True)
         else:
-            search_query = full_search_query(index_name, params["search"])
+            sub_query = full_search_query(
+                index_name, query_str, skip_citation_boost=True
+            )
 
-        if params["sample"]:
-            s = s.filter(search_query)
-        else:
-            s = s.query(search_query)
-        s = s.params(preference=clean_preference(params["search"]))
+        sub_queries.append(sub_query)
+        preference_parts.append(query_str)
+
+    if not sub_queries:
+        return s
+
+    combined = Q("bool", must=sub_queries)
+    boosted = SearchOpenAlex.citation_boost_query(combined)
+
+    if params["sample"]:
+        s = s.filter(boosted)
+    else:
+        s = s.query(boosted)
+
+    s = s.params(preference=combine_preferences(preference_parts))
     return s
 
 

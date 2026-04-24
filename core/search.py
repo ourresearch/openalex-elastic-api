@@ -25,31 +25,32 @@ class SearchOpenAlex:
         self.is_author_name_query = is_author_name_query
         self.is_semantic_query = is_semantic_query
 
-    def build_query(self):
+    def build_query(self, skip_citation_boost=False):
         if not self.search_terms:
-            query = self.match_all()
-        elif (
+            return self.match_all()
+
+        if (
             self.primary_field == "authorships.raw_affiliation_strings"
             and len(self.search_terms.strip()) > 3
         ):
-            query_string_query = self.query_string_query()
-            query = self.citation_boost_query(query_string_query)
+            raw_query = self.query_string_query()
         elif self.is_author_name_query:
-            author_name_query = self.author_name_query()
-            query = self.citation_boost_query(author_name_query)
+            raw_query = self.author_name_query()
         elif self.primary_field and self.secondary_field and self.tertiary_field:
-            basic_query = self.primary_secondary_tertiary_match_query()
-            query = self.citation_boost_query(basic_query)
+            raw_query = self.primary_secondary_tertiary_match_query()
         elif self.primary_field and self.secondary_field:
-            basic_query = self.primary_secondary_match_query()
-            query = self.citation_boost_query(basic_query)
+            raw_query = self.primary_secondary_match_query()
         elif self.is_semantic_query:
-            semantic_query = self.semantic_query()
-            query = self.citation_boost_query(semantic_query, scaling_type="log")
+            raw_query = self.semantic_query()
+            if skip_citation_boost:
+                return raw_query
+            return self.citation_boost_query(raw_query, scaling_type="log")
         else:
-            basic_query = self.primary_match_query()
-            query = self.citation_boost_query(basic_query)
-        return query
+            raw_query = self.primary_match_query()
+
+        if skip_citation_boost:
+            return raw_query
+        return self.citation_boost_query(raw_query)
 
     @staticmethod
     def match_all():
@@ -331,7 +332,7 @@ class SearchOpenAlex:
         self.search_terms = self.search_terms.replace("<", "").replace(">", "")
 
 
-def full_search_query(index_name, search_terms):
+def full_search_query(index_name, search_terms, skip_citation_boost=False):
     if index_name.lower().startswith("authors"):
         search_oa = SearchOpenAlex(
             search_terms=search_terms,
@@ -481,11 +482,11 @@ def full_search_query(index_name, search_terms):
             return search_oa.primary_match_query()
     else:
         search_oa = SearchOpenAlex(search_terms=search_terms)
-    search_query = search_oa.build_query()
+    search_query = search_oa.build_query(skip_citation_boost=skip_citation_boost)
     return search_query
 
 
-def full_search_query_exact(search_terms):
+def full_search_query_exact(search_terms, skip_citation_boost=False):
     """Full search query for works using no_stem fields (no stemming)."""
     search_oa = SearchOpenAlex(
         search_terms=search_terms,
@@ -493,10 +494,10 @@ def full_search_query_exact(search_terms):
         secondary_field="abstract.no_stem",
         tertiary_field="fulltext.no_stem",
     )
-    return search_oa.build_query()
+    return search_oa.build_query(skip_citation_boost=skip_citation_boost)
 
 
-def scoped_search_query(search_terms, scope, search_type):
+def scoped_search_query(search_terms, scope, search_type, skip_citation_boost=False):
     """Build a search query scoped to specific fields.
 
     scope: "title" or "title_and_abstract"
@@ -521,7 +522,7 @@ def scoped_search_query(search_terms, scope, search_type):
     else:
         raise ValueError(f"Unknown search scope: {scope}")
 
-    return search_oa.build_query()
+    return search_oa.build_query(skip_citation_boost=skip_citation_boost)
 
 
 def check_is_search_query(filter_params, search):

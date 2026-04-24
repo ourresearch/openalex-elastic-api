@@ -2,7 +2,7 @@ from elasticsearch_dsl import MultiSearch, Search, Q
 
 import settings
 from core.filter import filter_records
-from core.search import full_search_query
+from core.search import full_search_query, scoped_search_query, full_search_query_exact, SearchOpenAlex
 from country_list import COUNTRIES_BY_CONTINENT
 
 
@@ -32,17 +32,10 @@ def group_by_continent(field, index_name, params, fields_dict):
         took = took + response.took
 
     # get unknown
-    s = Search(index=index_name)
-    if params["search"] and params["search"] != '""':
-        search_query = full_search_query(index_name, params["search"])
-        s = s.query(search_query)
-
-    # filter
-    if params["filters"]:
-        s = filter_records(fields_dict, params["filters"], s)
+    s = search_and_filter(fields_dict, index_name, params)
     s = s.query(~Q("exists", field=field.es_field()))
     response = s.execute()
-    unknown_count = s.count()
+    unknown_count = response.hits.total.value
     if (unknown_count and not params["q"]) or (
         unknown_count and params["q"] and params["q"].lower() in "unknown"
     ):
@@ -140,8 +133,28 @@ def group_by_best_open_version(field, index_name, params, fields_dict):
 
 
 def search_and_filter(fields_dict, index_name, params):
-    s = Search()
-    if params["search"] and params["search"] != '""':
+    s = Search(index=index_name)
+    searches = params.get("searches", [])
+    if len(searches) > 1:
+        # Multi-search: build sub-queries without citation boost, AND them, wrap once
+        sub_queries = []
+        for search_item in searches:
+            query_str = search_item["search"]
+            search_scope = search_item["search_scope"]
+            search_type = search_item["search_type"]
+            if not query_str or query_str == '""':
+                continue
+            if search_scope:
+                sub_queries.append(scoped_search_query(query_str, search_scope, search_type, skip_citation_boost=True))
+            elif search_type == "exact":
+                sub_queries.append(full_search_query_exact(query_str, skip_citation_boost=True))
+            else:
+                sub_queries.append(full_search_query(index_name, query_str, skip_citation_boost=True))
+        if sub_queries:
+            combined = Q("bool", must=sub_queries)
+            s = s.query(SearchOpenAlex.citation_boost_query(combined))
+    elif params["search"] and params["search"] != '""':
+        # Single search — existing behavior unchanged
         search_query = full_search_query(index_name, params["search"])
         s = s.query(search_query)
     # filter

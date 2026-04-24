@@ -9,6 +9,7 @@ def parse_params(request):
 
     # Determine search type, scope, and query from search.* dot notation params
     search_type, search_scope, search_query = _extract_search_params(request)
+    searches = _extract_all_search_params(request)
 
     params = {
         "apc_sum": request.args.get("apc_sum"),
@@ -26,11 +27,41 @@ def parse_params(request):
         "search": search_query,
         "search_type": search_type,
         "search_scope": search_scope,
+        "searches": searches,
         "sort": map_sort_params(request.args.get("sort")),
     }
     if params["group_bys"]:
         params["group_bys"] = params["group_bys"].split(",")
     return params
+
+
+def _extract_all_search_params(request):
+    """Extract all search params from the request as a list of dicts.
+
+    Each dict has keys: search (query string), search_type, search_scope.
+    Returns an empty list if no search params are present.
+    """
+    # Map param names to (search_type, search_scope)
+    param_map = {
+        "search": ("default", None),
+        "search.exact": ("exact", None),
+        "search.semantic": ("semantic", None),
+        "search.title": ("default", "title"),
+        "search.title.exact": ("exact", "title"),
+        "search.title_and_abstract": ("default", "title_and_abstract"),
+        "search.title_and_abstract.exact": ("exact", "title_and_abstract"),
+    }
+
+    results = []
+    for param_name, (search_type, search_scope) in param_map.items():
+        value = request.args.get(param_name)
+        if value:
+            results.append({
+                "search": value,
+                "search_type": search_type,
+                "search_scope": search_scope,
+            })
+    return results
 
 
 def _extract_search_params(request):

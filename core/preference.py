@@ -11,6 +11,15 @@ def clean_preference(preference):
     return preference
 
 
+def combine_preferences(search_strings):
+    """Combine multiple search strings into a single preference key.
+
+    Sorts strings for determinism, joins with '|', and cleans.
+    """
+    combined = "|".join(sorted(search_strings))
+    return clean_preference(combined)
+
+
 def set_preference_for_filter_search(filter_params, s):
     preference = None
     for filter_param in filter_params:

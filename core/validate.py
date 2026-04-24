@@ -140,28 +140,76 @@ def validate_search_param(request):
         if arg.startswith(SEARCH_PARAM_PREFIX):
             search_params_present.append(arg)
 
-    # Only one search param allowed per request
-    if len(search_params_present) > 1:
+    # Check for duplicate param names (e.g. search.title=X&search.title=Y)
+    for param in search_params_present:
+        if len(request.args.getlist(param)) > 1:
+            raise APIQueryParamsError(
+                f"Duplicate search parameter: '{param}' appears more than once. "
+                "Each search parameter can only be used once per request."
+            )
+
+    # Cap at 7 search params (one per valid search type)
+    if len(search_params_present) > 7:
         raise APIQueryParamsError(
-            "Only one search parameter allowed per request. "
-            f"You provided: {', '.join(search_params_present)}. "
-            "Use search, search.semantic, or search.exact (not multiple)."
+            f"Maximum 7 search parameters per request. "
+            f"You provided {len(search_params_present)}."
         )
 
-    # Validate the search value (whichever param it came from)
-    search_value = None
+    # Semantic search cannot be combined with other search types
+    if "search.semantic" in search_params_present and len(search_params_present) > 1:
+        raise APIQueryParamsError(
+            "search.semantic cannot be combined with other search parameters. "
+            "Use search.semantic alone."
+        )
+
+    # Same scope with different types not allowed
+    # (e.g. search.title + search.title.exact)
+    scopes_seen = {}
+    for param in search_params_present:
+        scope, search_type = _parse_search_param_name(param)
+        if scope in scopes_seen and scopes_seen[scope][0] != search_type:
+            raise APIQueryParamsError(
+                f"Cannot use both stemmed and exact search on the same scope: "
+                f"'{scopes_seen[scope][1]}' and '{param}'."
+            )
+        scopes_seen[scope] = (search_type, param)
+
+    # Validate each search value
     for param in search_params_present:
         search_value = request.args.get(param)
+        if search_value:
+            if any(word.startswith("!") for word in search_value.split()):
+                raise APIQueryParamsError(
+                    f"The search parameter does not support the ! operator. Problem value: {search_value}"
+                )
+            elif "|" in search_value:
+                raise APIQueryParamsError(
+                    f"The search parameter does not support the | operator. Problem value: {search_value}"
+                )
 
-    if search_value:
-        if any(word.startswith("!") for word in search_value.split()):
-            raise APIQueryParamsError(
-                f"The search parameter does not support the ! operator. Problem value: {search_value}"
-            )
-        elif "|" in search_value:
-            raise APIQueryParamsError(
-                f"The search parameter does not support the | operator. Problem value: {search_value}"
-            )
+
+def _parse_search_param_name(param_name):
+    """Extract (scope, search_type) from a search parameter name.
+
+    search                          -> ("bare", "default")
+    search.exact                    -> ("bare", "exact")
+    search.semantic                 -> ("semantic", "semantic")
+    search.title                    -> ("title", "default")
+    search.title.exact              -> ("title", "exact")
+    search.title_and_abstract       -> ("title_and_abstract", "default")
+    search.title_and_abstract.exact -> ("title_and_abstract", "exact")
+    """
+    if param_name == "search":
+        return "bare", "default"
+    if param_name == "search.exact":
+        return "bare", "exact"
+    if param_name == "search.semantic":
+        return "semantic", "semantic"
+
+    rest = param_name[len("search."):]
+    if rest.endswith(".exact"):
+        return rest[:-len(".exact")], "exact"
+    return rest, "default"
 
 
 def validate_export_format(export_format):
