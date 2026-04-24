@@ -633,6 +633,10 @@ fields = [
         param="raw_author_name.search",
         custom_es_field="authorships.raw_author_name",
     ),
+    TermField(
+        param="authorships.raw_orcid",
+        docstring="Exact match on the raw ORCID as provided by the source",
+    ),
     SearchField(
         param="semantic.search",
         custom_es_field="vector_embedding",

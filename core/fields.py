@@ -602,6 +602,7 @@ class TermField(Field):
             "openalex_id",
             "pmid",
             "pmcid",
+            "authorships.raw_orcid",
             "ror",
             "wikidata_id",
         ]
@@ -724,6 +725,7 @@ class TermField(Field):
             "openalex_id",
             "pmid",
             "pmcid",
+            "authorships.raw_orcid",
             "ror",
             "wikidata_id",
         ]
@@ -1040,7 +1042,7 @@ class TermField(Field):
         ) and "ncbi.nlm.nih.gov/pmc/articles" not in self.value:
             formatted = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{self.value}"
         elif (
-            self.param in ["author.orcid", "authorships.author.orcid", "orcid"]
+            self.param in ["author.orcid", "authorships.author.orcid", "orcid", "authorships.raw_orcid"]
             and "orcid.org" not in self.value
         ):
             formatted = f"https://orcid.org/{self.value}"
