@@ -30,20 +30,21 @@ def decode_cursor(encoded_cursor, return_json=True):
         raise APIPaginationError("Invalid cursor value")
 
 
-def get_cursor(response):
-    next_cursor = None
+def get_cursor(response, per_page):
     hits = response["hits"]["hits"]
-    last_record = hits[-1] if hits else None
-    if last_record and "sort" in last_record:
-        next_cursor = last_record["sort"]
-    return next_cursor
+    if len(hits) < per_page:
+        return None
+    last_record = hits[-1]
+    if "sort" not in last_record:
+        return None
+    return last_record["sort"]
 
 
 def get_next_cursor(params, response):
     if params.get("group_by"):
         elastic_cursor = get_group_by_after_key(params["group_by"], response)
     else:
-        elastic_cursor = get_cursor(response)
+        elastic_cursor = get_cursor(response, params["per_page"])
     next_cursor = encode_cursor(elastic_cursor) if elastic_cursor else None
     return next_cursor
 
