@@ -87,7 +87,12 @@ def get_group_by_results(
         or (field.param == "type" and "works" in index_name)
         or (field.param == "type" and "sources" in index_name)
     ):
-        results = [result for result in results if "openalex.org" in result["key"]]
+        results = [
+            result
+            for result in results
+            if "openalex.org" in result["key"]
+            or (include_unknown and result["key"] == "unknown")
+        ]
     return results
 
 
