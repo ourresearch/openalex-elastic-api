@@ -153,8 +153,6 @@ values:
     display_name: CC BY-NC
   - id: licenses/cc-by-nc-sa
     display_name: CC BY-NC-SA
-  - id: licenses/publisher-specific-oa
-    display_name: publisher specific open access
   - id: licenses/public-domain
     display_name: public domain (CC0)
   - id: licenses/cc-by-sa

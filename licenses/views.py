@@ -35,7 +35,6 @@ DESCRIPTIONS = {
     "cc-by-nc-nd": "Sharing with credit, but no commercial use and no adaptations.",
     "public-domain": "No rights reserved; the work is in the public domain with no restrictions on reuse.",
     "other-oa": "A license that looks open but we don't have it listed anywhere.",
-    "publisher-specific-oa": "Any idiosyncratic open license unique to a single publisher.",
     "mit": "A simple permissive license requiring only copyright notice preservation.",
     "apache-2-0": "A permissive license requiring copyright notices and providing patent rights.",
     "gpl-v3": "A copyleft license requiring that modified versions also be open-source under the same terms.",
