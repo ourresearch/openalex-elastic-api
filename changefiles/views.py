@@ -2,9 +2,9 @@ from flask import Blueprint, jsonify, redirect, request
 
 import settings
 from core.exceptions import APIQueryParamsError
-from snapshots.s3 import generate_presigned_url, get_available_dates, get_manifest
+from changefiles.s3 import generate_presigned_url, get_available_dates, get_manifest
 
-blueprint = Blueprint("snapshots", __name__)
+blueprint = Blueprint("changefiles", __name__)
 
 VALID_FORMATS = {"jsonl", "parquet"}
 
