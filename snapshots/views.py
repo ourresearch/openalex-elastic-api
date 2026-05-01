@@ -26,7 +26,7 @@ def _api_key_id(api_key):
     return "k_" + hashlib.sha256(api_key.encode()).hexdigest()[:12]
 
 
-@blueprint.route("/snapshots/credentials")
+@blueprint.route("/snapshots/credentials", methods=["POST"])
 def snapshots_credentials():
     """Return short-lived AWS STS credentials for syncing the full snapshot.
 
