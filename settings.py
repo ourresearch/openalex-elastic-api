@@ -125,3 +125,10 @@ MAX_IDS_IN_FILTER = 100
 SNAPSHOTS_S3_BUCKET = os.environ.get("SNAPSHOTS_S3_BUCKET", "openalex-snapshots")
 SNAPSHOTS_BASE_URL = os.environ.get("SNAPSHOTS_BASE_URL", "https://api.openalex.org")
 SNAPSHOTS_CONTENT_URL = os.environ.get("SNAPSHOTS_CONTENT_URL", "https://content.openalex.org")
+SNAPSHOTS_READER_ROLE_ARN = os.environ.get("SNAPSHOTS_READER_ROLE_ARN")
+SNAPSHOTS_CREDENTIALS_ENABLED = (
+    os.environ.get("SNAPSHOTS_CREDENTIALS_ENABLED", "False").lower() == "true"
+)
+SNAPSHOTS_SESSION_DURATION_SECONDS = int(
+    os.environ.get("SNAPSHOTS_SESSION_DURATION_SECONDS", "43200")
+)
