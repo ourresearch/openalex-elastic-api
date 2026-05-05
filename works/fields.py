@@ -90,7 +90,7 @@ DOCUMENTATION_LINKS = {
 fields = [
     BooleanField(
         param=f"authorships.institutions.is_global_south",
-        custom_es_field="authorships.institutions.country_code",
+        custom_es_field="authorships_full.institutions.country_code",
         docstring=DOCSTRINGS["is_global_south"],
         documentation_link=DOCUMENTATION_LINKS["is_global_south"],
         alternate_names=ALTERNATE_NAMES.get("is_global_south", None),
@@ -207,7 +207,7 @@ fields = [
     ),
     BooleanField(
         param="institutions.is_global_south",
-        custom_es_field="authorships.institutions.country_code",
+        custom_es_field="authorships_full.institutions.country_code",
         docstring=DOCSTRINGS["is_global_south"],
         documentation_link=DOCUMENTATION_LINKS["is_global_south"],
         alternate_names=ALTERNATE_NAMES.get("is_global_south", None),
@@ -390,13 +390,14 @@ fields = [
     ),
     OpenAlexIDField(
         param="authorships.institutions.id",
+        custom_es_field="authorships_full.institutions.id",
         docstring=DOCSTRINGS["institution"],
         documentation_link=DOCUMENTATION_LINKS["institution"],
         alternate_names=ALTERNATE_NAMES.get("institution", None),
     ),
     OpenAlexIDField(
         param="authorships.institutions.lineage",
-        custom_es_field="authorships.institutions.lineage",
+        custom_es_field="authorships_full.institutions.lineage",
     ),
     OpenAlexIDField(
         param="awards.id",
@@ -454,8 +455,8 @@ fields = [
     ),
     OpenAlexIDField(param="institution_assertions.id"),
     OpenAlexIDField(param="institution_assertions.lineage"),
-    OpenAlexIDField(param="institution.id", alias="authorships.institutions.id"),
-    OpenAlexIDField(param="institutions.id", alias="authorships.institutions.id"),
+    OpenAlexIDField(param="institution.id", alias="authorships_full.institutions.id"),
+    OpenAlexIDField(param="institutions.id", alias="authorships_full.institutions.id"),
     OpenAlexIDField(param="journal", custom_es_field="primary_location.source.id"),
     OpenAlexIDField(
         param="locations.source.id",
@@ -689,24 +690,27 @@ fields = [
     ),
     TermField(
         param="authorships.institutions.country_code",
+        alias="authorships_full.institutions.country_code",
         docstring=DOCSTRINGS["country"],
         documentation_link=DOCUMENTATION_LINKS["country"],
         alternate_names=ALTERNATE_NAMES.get("country", None),
     ),
     TermField(
         param=f"authorships.institutions.continent",
-        custom_es_field="authorships.institutions.country_code",
+        alias="authorships_full.institutions.country_code",
         docstring=DOCSTRINGS["continent"],
         documentation_link=DOCUMENTATION_LINKS["continent"],
         alternate_names=ALTERNATE_NAMES.get("continent", None),
     ),
     TermField(
         param="authorships.institutions.ror",
+        alias="authorships_full.institutions.ror",
         docstring="The work's authors' institutional affiliations, using ROR ID",
         documentation_link="https://developers.openalex.org/api-reference/institutions",
     ),
     TermField(
         param="authorships.institutions.type",
+        alias="authorships_full.institutions.type",
         docstring='The type of institutions affiliated with the work. For example, universities are type "Education," and hospitals are type "Healthcare".',
         documentation_link="https://developers.openalex.org/api-reference/institutions",
     ),
@@ -761,20 +765,20 @@ fields = [
     TermField(param="institution_assertions.type"),
     TermField(
         param="institutions.country_code",
-        alias="authorships.institutions.country_code",
+        alias="authorships_full.institutions.country_code",
         docstring=DOCSTRINGS["country"],
         documentation_link=DOCUMENTATION_LINKS["country"],
         alternate_names=ALTERNATE_NAMES.get("country", None),
     ),
     TermField(
         param="institutions.continent",
-        alias="authorships.institutions.country_code",
+        alias="authorships_full.institutions.country_code",
         docstring=DOCSTRINGS["continent"],
         documentation_link=DOCUMENTATION_LINKS["continent"],
         alternate_names=ALTERNATE_NAMES.get("continent", None),
     ),
-    TermField(param="institutions.ror", alias="authorships.institutions.ror"),
-    TermField(param="institutions.type", alias="authorships.institutions.type"),
+    TermField(param="institutions.ror", alias="authorships_full.institutions.ror"),
+    TermField(param="institutions.type", alias="authorships_full.institutions.type"),
     TermField(param="keywords.id", custom_es_field="keywords.id"),
     TermField(
         param="awards.funder_award_id",
