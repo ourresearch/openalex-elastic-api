@@ -2,10 +2,40 @@ import re
 
 from elasticsearch_dsl import Q
 
+from core.exceptions import APIQueryParamsError
 from core.knn import KNNQuery
 import requests
 
 from settings import ES_URL_WALDEN
+
+
+MAX_LONG_PHRASES_IN_OR = 3
+LONG_PHRASE_CHAR_THRESHOLD = 80
+QUOTED_PHRASE_RE = re.compile(r'"([^"]*)"')
+
+
+def validate_search_terms(search_terms):
+    """Reject queries that combine many long quoted phrases with OR.
+
+    Phrase queries on the works fulltext field have cost roughly proportional
+    to phrase token count times posting-list length. A handful of long phrases
+    OR'd together multiplies that cost across all clauses, which makes these
+    queries disproportionately expensive on Elasticsearch. Bulk citation
+    lookups should be issued as separate requests instead.
+    """
+    if not search_terms:
+        return
+    long_phrases = [
+        p for p in QUOTED_PHRASE_RE.findall(search_terms)
+        if len(p) > LONG_PHRASE_CHAR_THRESHOLD
+    ]
+    if len(long_phrases) > MAX_LONG_PHRASES_IN_OR:
+        raise APIQueryParamsError(
+            f"This search combines more than {MAX_LONG_PHRASES_IN_OR} long "
+            f"quoted phrases (>{LONG_PHRASE_CHAR_THRESHOLD} chars each) with "
+            "OR. Lots of long-phrase OR searches are not supported. Try "
+            "sending each phrase as a separate request."
+        )
 
 
 class SearchOpenAlex:

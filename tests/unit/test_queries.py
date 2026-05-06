@@ -1,8 +1,9 @@
 import pytest
 from elasticsearch_dsl import Search
 
+from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
-from core.search import SearchOpenAlex
+from core.search import SearchOpenAlex, validate_search_terms
 from core.sort import get_sort_fields
 from core.utils import map_filter_params, map_sort_params
 from works.fields import fields_dict
@@ -328,3 +329,64 @@ class TestWildcardQueryRouting:
         for clause in should:
             assert "query_string" in clause
             assert clause["query_string"]["allow_leading_wildcard"] is False
+
+
+SHORT_PHRASE = '"machine learning"'
+LONG_PHRASE_A = '"' + ("a" * 81) + '"'
+LONG_PHRASE_B = '"' + ("b" * 81) + '"'
+LONG_PHRASE_C = '"' + ("c" * 81) + '"'
+LONG_PHRASE_D = '"' + ("d" * 81) + '"'
+LONG_PHRASE_E = '"' + ("e" * 81) + '"'
+LONG_PHRASE_F = '"' + ("f" * 81) + '"'
+
+
+class TestValidateSearchTerms:
+    def test_empty_passes(self):
+        validate_search_terms("")
+        validate_search_terms(None)
+
+    def test_plain_text_passes(self):
+        validate_search_terms("machine learning neural networks")
+
+    def test_short_phrases_or_passes(self):
+        validate_search_terms(
+            ' OR '.join([f'"phrase {i}"' for i in range(30)])
+        )
+
+    def test_two_long_phrases_pass(self):
+        terms = ' OR '.join([LONG_PHRASE_A, LONG_PHRASE_B])
+        validate_search_terms(terms)
+
+    def test_three_long_phrases_at_boundary_pass(self):
+        terms = ' OR '.join([LONG_PHRASE_A, LONG_PHRASE_B, LONG_PHRASE_C])
+        validate_search_terms(terms)
+
+    def test_four_long_phrases_rejected(self):
+        terms = ' OR '.join([
+            LONG_PHRASE_A, LONG_PHRASE_B, LONG_PHRASE_C, LONG_PHRASE_D,
+        ])
+        with pytest.raises(APIQueryParamsError) as exc:
+            validate_search_terms(terms)
+        assert "separate request" in str(exc.value.args[0])
+
+    def test_six_long_phrases_rejected(self):
+        terms = ' OR '.join([
+            LONG_PHRASE_A, LONG_PHRASE_B, LONG_PHRASE_C,
+            LONG_PHRASE_D, LONG_PHRASE_E, LONG_PHRASE_F,
+        ])
+        with pytest.raises(APIQueryParamsError) as exc:
+            validate_search_terms(terms)
+        assert "separate request" in str(exc.value.args[0])
+
+    def test_many_short_with_few_long_passes(self):
+        short = ' OR '.join([f'"q{i}"' for i in range(20)])
+        long_part = ' OR '.join([LONG_PHRASE_A, LONG_PHRASE_B])
+        validate_search_terms(f"{short} OR {long_part}")
+
+    def test_phrase_at_threshold_not_counted_long(self):
+        exactly_80 = '"' + ("x" * 80) + '"'
+        terms = ' OR '.join([exactly_80] * 10)
+        validate_search_terms(terms)
+
+    def test_unquoted_long_strings_ignored(self):
+        validate_search_terms(("z" * 500) + " OR " + ("y" * 500))

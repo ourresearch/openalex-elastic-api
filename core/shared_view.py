@@ -16,7 +16,7 @@ from core.knn import KNNQueryWithFilter
 from core.paginate import get_pagination
 from core.params import parse_params
 from core.preference import clean_preference, combine_preferences, set_preference_for_filter_search
-from core.search import SearchOpenAlex, check_is_search_query, full_search_query, full_search_query_exact, scoped_search_query
+from core.search import SearchOpenAlex, check_is_search_query, full_search_query, full_search_query_exact, scoped_search_query, validate_search_terms
 from core.semantic_search import embed_query, VECTOR_FIELD
 from core.sort import get_sort_fields, sort_with_cursor, sort_with_sample
 from core.utils import get_data_version_connection, get_field
@@ -127,6 +127,7 @@ def add_search_query(params, index_name, s):
     if len(searches) <= 1:
         # Single search (or no search) — existing behavior unchanged
         if params["search"] and params["search"] != '""':
+            validate_search_terms(params["search"])
             search_scope = params.get("search_scope")
             search_type = params.get("search_type")
 
@@ -163,6 +164,8 @@ def add_search_query(params, index_name, s):
 
         if not query_str or query_str == '""':
             continue
+
+        validate_search_terms(query_str)
 
         if search_scope and not index_name.lower().startswith("works"):
             raise APIQueryParamsError(
