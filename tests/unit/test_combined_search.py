@@ -195,18 +195,39 @@ class TestExtractAllSearchParams:
 
 # ---- Preference Tests ----
 
-from core.preference import combine_preferences
+from core.preference import clean_preference, combine_preferences
 
 
 class TestCombinePreferences:
-    def test_single(self):
+    def test_single_is_stable_hash(self):
+        # Same input -> same fixed-length hex key (shard affinity preserved).
         result = combine_preferences(["hello"])
-        assert result == "hello"
+        assert result == clean_preference("hello")
+        assert result == combine_preferences(["hello"])
 
-    def test_multiple_sorted(self):
-        result = combine_preferences(["beta", "alpha"])
-        assert result == "alpha|beta"
+    def test_multiple_sorted_is_order_independent(self):
+        # Sorted before hashing, so input order does not change the key.
+        assert combine_preferences(["beta", "alpha"]) == combine_preferences(
+            ["alpha", "beta"]
+        )
+        assert combine_preferences(["beta", "alpha"]) == clean_preference(
+            "alpha|beta"
+        )
 
-    def test_underscore_prefix(self):
+    def test_distinct_queries_get_distinct_keys(self):
+        assert combine_preferences(["alpha"]) != combine_preferences(["beta"])
+
+    def test_underscore_prefix_not_reserved(self):
+        # Hex digest never starts with '_', so ES reserved prefixes are moot.
         result = combine_preferences(["_test"])
-        assert result == "underscoretest"
+        assert not result.startswith("_")
+
+    def test_long_query_yields_short_key(self):
+        # The whole point: a ~4 KB search must not produce a ~4 KB
+        # `preference` URL param (that overflowed ES's HTTP line -> 500).
+        result = clean_preference("climate OR " * 500)
+        assert len(result) == 40  # sha1 hex digest
+
+    def test_falsy_passthrough(self):
+        assert clean_preference("") == ""
+        assert clean_preference(None) is None

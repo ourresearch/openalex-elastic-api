@@ -404,6 +404,17 @@ def execute_search(s, params):
         except RequestError as e:
             if "search_after has" in str(e) and "sort has" in str(e):
                 raise APIPaginationError("Cursor value is invalid.")
+            # Defense-in-depth: the app->ES request line overflowing ES's
+            # http.max_initial_line_length (4096 B) used to surface as a raw
+            # 500. The preference value is now hashed (core/preference.py) so
+            # this should not fire for search, but if any path still produces
+            # an over-long ES request line, return a clear 4xx, not a 500.
+            if "too_long_http_line" in str(e):
+                raise APIQueryParamsError(
+                    "Your query is too long. Split a large Boolean query into "
+                    "smaller chunks, request each separately, and combine the "
+                    "returned IDs client-side."
+                )
             raise e
 
 
