@@ -3,7 +3,11 @@ from elasticsearch_dsl import Search
 
 from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
-from core.search import SearchOpenAlex, validate_search_terms
+from core.search import (
+    SearchOpenAlex,
+    normalize_search_input,
+    validate_search_terms,
+)
 from core.sort import get_sort_fields
 from core.utils import map_filter_params, map_sort_params
 from works.fields import fields_dict
@@ -390,3 +394,60 @@ class TestValidateSearchTerms:
 
     def test_unquoted_long_strings_ignored(self):
         validate_search_terms(("z" * 500) + " OR " + ("y" * 500))
+
+
+class TestSearchInputNormalization:
+    """oxjob #191.2 Case 6a: curly quotes / whitespace lookalikes must not
+    silently degrade phrase + boolean searches to keyword searches."""
+
+    def test_passthrough_plain_ascii(self):
+        assert normalize_search_input('"climate change"') == '"climate change"'
+        assert normalize_search_input("machine learning") == "machine learning"
+
+    def test_handles_empty_and_non_str(self):
+        assert normalize_search_input("") == ""
+        assert normalize_search_input(None) is None
+
+    def test_curly_double_quotes_to_straight(self):
+        assert normalize_search_input("“climate change”") == '"climate change"'
+
+    @pytest.mark.parametrize(
+        "curly",
+        [
+            "“climate change adaptation”",
+            '“BENZYL ALCOHOL” AND (“δp” OR “δd”)',
+        ],
+    )
+    def test_curly_phrase_detected_as_phrase(self, curly):
+        """Curly-quoted query must be recognized as a phrase, not keywords."""
+        assert SearchOpenAlex(search_terms=curly).has_phrase() is True
+
+    def test_curly_phrase_query_equals_straight_phrase_query(self):
+        """The whole point: curly == straight result query (no degradation)."""
+        curly = SearchOpenAlex(search_terms="“climate change”").build_query()
+        straight = SearchOpenAlex(search_terms='"climate change"').build_query()
+        assert curly.to_dict() == straight.to_dict()
+
+    def test_curly_boolean_detected(self):
+        """Boolean operators around curly quotes still trigger boolean path."""
+        oa = SearchOpenAlex(search_terms='“a” AND “b”')
+        assert oa.is_boolean_search() is True
+        assert oa.has_phrase() is True
+
+    def test_apostrophe_not_treated_as_phrase(self):
+        """Single curly apostrophe (children's) must NOT become a phrase."""
+        oa = SearchOpenAlex(search_terms="children’s literature")
+        assert oa.search_terms == "children's literature"
+        assert oa.has_phrase() is False
+        plain = SearchOpenAlex(search_terms="children's literature")
+        assert oa.build_query().to_dict() == plain.build_query().to_dict()
+
+    @pytest.mark.parametrize("ws", [" ", " ", " "])
+    def test_space_lookalikes_become_space(self, ws):
+        assert (
+            normalize_search_input(f'"climate{ws}change"') == '"climate change"'
+        )
+
+    @pytest.mark.parametrize("zw", ["​", "‌", "‍", "﻿", "­"])
+    def test_zero_width_chars_removed(self, zw):
+        assert normalize_search_input(f"climate{zw}change") == "climatechange"

@@ -38,6 +38,30 @@ def validate_search_terms(search_terms):
         )
 
 
+# Visually-similar Unicode punctuation that users paste from Word/web. Without
+# folding these to ASCII, query-syntax detection (phrase quotes, booleans)
+# is silently bypassed and exact-phrase searches degrade to keyword searches.
+_SEARCH_INPUT_TRANSLATION = {
+    # double-quote variants -> "
+    0x201C: '"', 0x201D: '"', 0x201E: '"', 0x201F: '"',
+    # single-quote / apostrophe variants -> ' (never a phrase delimiter here,
+    # so children’s etc. stay intact)
+    0x2018: "'", 0x2019: "'", 0x201A: "'", 0x201B: "'",
+    # whitespace lookalikes -> regular space
+    0x00A0: " ", 0x2002: " ", 0x2003: " ", 0x2004: " ", 0x2005: " ",
+    0x2006: " ", 0x2007: " ", 0x2008: " ", 0x2009: " ", 0x200A: " ",
+    0x202F: " ", 0x205F: " ", 0x3000: " ",
+    # zero-width / invisible -> removed
+    0x200B: None, 0x200C: None, 0x200D: None, 0xFEFF: None, 0x00AD: None,
+}
+
+
+def normalize_search_input(text):
+    if not text or not isinstance(text, str):
+        return text
+    return text.translate(_SEARCH_INPUT_TRANSLATION)
+
+
 class SearchOpenAlex:
     def __init__(
         self,
@@ -48,7 +72,7 @@ class SearchOpenAlex:
         is_author_name_query=False,
         is_semantic_query=False,
     ):
-        self.search_terms = search_terms
+        self.search_terms = normalize_search_input(search_terms)
         self.primary_field = primary_field if primary_field else "display_name"
         self.secondary_field = secondary_field
         self.tertiary_field = tertiary_field
@@ -363,6 +387,7 @@ class SearchOpenAlex:
 
 
 def full_search_query(index_name, search_terms, skip_citation_boost=False):
+    search_terms = normalize_search_input(search_terms)
     if index_name.lower().startswith("authors"):
         search_oa = SearchOpenAlex(
             search_terms=search_terms,
