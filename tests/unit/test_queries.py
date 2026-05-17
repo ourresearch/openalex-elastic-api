@@ -358,6 +358,133 @@ class TestQuotedExactFilter:
         # Must still hit the search analyzer path.
         assert "authorships.raw_affiliation_strings" in as_str
 
+    # --- Quoted values must also bypass TermField's null / !null / leading-!
+    # syntax: inside quotes, those are data, not operators.
+
+    def test_quoted_null_is_literal_term(self, client):
+        s = Search()
+        filter_params = map_filter_params('raw_affiliation_strings:"null"')
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "term": {
+                                "authorships.raw_affiliation_strings.keyword": "null"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_quoted_bang_null_is_literal_term(self, client):
+        s = Search()
+        filter_params = map_filter_params('raw_affiliation_strings:"!null"')
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "term": {
+                                "authorships.raw_affiliation_strings.keyword": "!null"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_quoted_leading_bang_is_literal_term(self, client):
+        s = Search()
+        filter_params = map_filter_params(
+            'raw_affiliation_strings:"!literal"'
+        )
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "term": {
+                                "authorships.raw_affiliation_strings.keyword": "!literal"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_unquoted_null_still_missing_query(self, client):
+        s = Search()
+        filter_params = map_filter_params("raw_affiliation_strings:null")
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "bool": {
+                                "must_not": [
+                                    {
+                                        "exists": {
+                                            "field": "authorships.raw_affiliation_strings.keyword"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_unquoted_bang_null_still_exists_query(self, client):
+        s = Search()
+        filter_params = map_filter_params("raw_affiliation_strings:!null")
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "exists": {
+                                "field": "authorships.raw_affiliation_strings.keyword"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_unquoted_leading_bang_still_negated_term(self, client):
+        s = Search()
+        filter_params = map_filter_params(
+            "raw_affiliation_strings:!literal"
+        )
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "bool": {
+                                "must_not": [
+                                    {
+                                        "term": {
+                                            "authorships.raw_affiliation_strings.keyword": "literal"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
 
 def test_sort_query(client):
     s = Search()

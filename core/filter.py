@@ -32,7 +32,14 @@ def filter_records(fields_dict, filter_params, s, sample=None):
             if is_quoted:
                 value = strip_outer_quotes_and_unescape(value)
                 field.value = value
-                s = s.filter(field.build_query())
+                # TermField has a literal path that skips its own null /
+                # !null / leading-! syntax; other field types fall back
+                # to their normal build_query() because they don't share
+                # that surface.
+                if isinstance(field, TermField):
+                    s = s.filter(field.build_literal_query())
+                else:
+                    s = s.filter(field.build_query())
                 continue
 
             # multiple OR queries have | in the param values
