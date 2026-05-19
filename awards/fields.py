@@ -98,9 +98,38 @@ fields = [
         docstring="The institutional affiliation of the lead investigator"
     ),
     TermField(
-        param="lead_investigator.affiliation.country", 
+        param="lead_investigator.affiliation.country",
         custom_es_field="lead_investigator.affiliation.country",
         docstring="The country of the lead investigator's affiliation"
+    ),
+    # Topic classification (oxjob #123.1). See PLAN.md for the ES nested-mapping
+    # caveat — single-field filters below work under auto-mapping; only compound
+    # per-element queries on topics[] would need a nested reindex.
+    OpenAlexIDField(param="primary_topic.id"),
+    OpenAlexIDField(param="topics.id"),
+    TermField(
+        param="primary_topic.domain.id",
+        custom_es_field="primary_topic.domain.id",
+    ),
+    TermField(
+        param="primary_topic.field.id",
+        custom_es_field="primary_topic.field.id",
+    ),
+    TermField(
+        param="primary_topic.subfield.id",
+        custom_es_field="primary_topic.subfield.id",
+    ),
+    TermField(
+        param="topics.domain.id",
+        custom_es_field="topics.domain.id",
+    ),
+    TermField(
+        param="topics.field.id",
+        custom_es_field="topics.field.id",
+    ),
+    TermField(
+        param="topics.subfield.id",
+        custom_es_field="topics.subfield.id",
     ),
 ]
 
