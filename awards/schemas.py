@@ -4,6 +4,7 @@ from core.schemas import (
     GroupBySchema,
     GroupBysSchema,
     MetaSchema,
+    TopicSchema,
     hide_relevance,
     relevance_score,
 )
@@ -87,9 +88,13 @@ class AwardsSchema(Schema):
 
     works_api_url = fields.Str(default=None)
 
+    # Topic classification (oxjob #123.1)
+    primary_topic = fields.Nested(TopicSchema, default=None)
+    topics = fields.Nested(TopicSchema, many=True, default=None)
+
     updated_date = fields.Str(default=None)
     created_date = fields.Str(default=None)
-    
+
     # Computed fields
     relevance_score = fields.Method("get_relevance_score")
 
