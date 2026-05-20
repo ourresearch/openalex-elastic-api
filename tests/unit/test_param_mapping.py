@@ -1,7 +1,13 @@
 import pytest
 
 from core.exceptions import APIQueryParamsError
-from core.utils import map_filter_params, map_sort_params
+from core.utils import (
+    is_wrapped_in_unescaped_quotes,
+    map_filter_params,
+    map_sort_params,
+    split_filter_string,
+    strip_outer_quotes_and_unescape,
+)
 
 
 class TestFilterParamMapping:
@@ -101,6 +107,59 @@ class TestFilterParamMapping:
         with pytest.raises(APIQueryParamsError) as exc_info:
             map_filter_params("publication_year:2020,doi:,cited_by_count:>10")
         assert "Invalid filter value for 'doi'" in str(exc_info.value)
+
+
+class TestQuoteHelpers:
+    """Direct coverage for the quote-aware helpers used by filter parsing."""
+
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            ('"abc"', True),
+            ('"a \\"b\\" c"', True),   # escaped inner quotes, real outer
+            ('"a\\""', True),           # `\"` is inner escape, trailing `"` closes
+            ('"a\\"', False),           # final `"` is escaped -> unbalanced
+            ('"abc', False),            # unbalanced
+            ('abc"', False),            # unbalanced
+            ('""', True),               # empty quoted value
+            ('"\\\\"', True),           # quoted single backslash
+        ],
+    )
+    def test_is_wrapped_in_unescaped_quotes(self, value, expected):
+        assert is_wrapped_in_unescaped_quotes(value) is expected
+
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            ('"abc"', "abc"),
+            ('"a \\"b\\" c"', 'a "b" c'),
+            ('"a\\\\b"', "a\\b"),       # `\\` -> `\`
+            ('"a\\nb"', "a\\nb"),      # other backslash escapes are left alone
+            ('""', ""),
+        ],
+    )
+    def test_strip_outer_quotes_and_unescape(self, value, expected):
+        assert strip_outer_quotes_and_unescape(value) == expected
+
+    def test_split_filter_string_keeps_escaped_quote_inside_quoted(self):
+        # `\"` inside the quoted region must not close the quote; the
+        # comma that follows is therefore part of the value.
+        parts = split_filter_string(
+            'raw_affiliation_strings:"a \\"b, c\\" d",type:article'
+        )
+        assert parts == [
+            'raw_affiliation_strings:"a \\"b, c\\" d"',
+            "type:article",
+        ]
+
+    def test_split_filter_string_plain_comma_in_quotes(self):
+        parts = split_filter_string(
+            'type:article,raw_affiliation_strings.search:"Dept, UCLA"'
+        )
+        assert parts == [
+            "type:article",
+            'raw_affiliation_strings.search:"Dept, UCLA"',
+        ]
 
 
 class TestSortParamMapping:

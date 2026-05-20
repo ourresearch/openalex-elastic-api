@@ -4,7 +4,11 @@ from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
 from core.fields import TermField
-from core.utils import get_field
+from core.utils import (
+    get_field,
+    is_wrapped_in_unescaped_quotes,
+    strip_outer_quotes_and_unescape,
+)
 from settings import MAX_IDS_IN_FILTER
 
 
@@ -15,15 +19,28 @@ def filter_records(fields_dict, filter_params, s, sample=None):
                 continue
             field = get_field(fields_dict, key)
 
-            # Quoted non-search values are single exact values (spaces are
-            # literal, not AND operators).  Strip the quotes and skip the
-            # space-split AND logic below.
+            # Quoted non-search values are single exact values: spaces are
+            # literal (not AND), `|` is literal (not OR), `*` is literal
+            # (not a wildcard), etc.  Strip the surrounding quotes,
+            # unescape `\"` -> `"` and `\\` -> `\`, then build the
+            # field's normal exact-match query directly, bypassing all
+            # operator parsing below.
             is_quoted = (
-                value.startswith('"') and value.endswith('"')
+                is_wrapped_in_unescaped_quotes(value)
                 and "search" not in field.param
             )
             if is_quoted:
-                value = value[1:-1]
+                value = strip_outer_quotes_and_unescape(value)
+                field.value = value
+                # TermField has a literal path that skips its own null /
+                # !null / leading-! syntax; other field types fall back
+                # to their normal build_query() because they don't share
+                # that surface.
+                if isinstance(field, TermField):
+                    s = s.filter(field.build_literal_query())
+                else:
+                    s = s.filter(field.build_query())
+                continue
 
             # multiple OR queries have | in the param values
             if "|" in value:
@@ -32,7 +49,6 @@ def filter_records(fields_dict, filter_params, s, sample=None):
             # multiple AND queries have + in the param values which is converted to a space
             elif (
                 " " in value
-                and not is_quoted
                 and "search" not in field.param
                 and type(field).__name__ != "RangeField"
                 and type(field).__name__ != "BooleanField"

@@ -568,6 +568,18 @@ class TermField(Field):
         kwargs = {self.es_field(): formatted_values}
         return Q("terms", **kwargs)
 
+    def build_literal_query(self):
+        """
+        Build a pure literal term query for a fully quoted exact filter.
+
+        Skips the null / !null / leading-! syntax handled by build_query()
+        so that quoted values are matched verbatim, while still applying
+        the per-param value normalization in _get_formatted_value() (DOI
+        URL expansion, ORCID URL prefix, etc.).
+        """
+        value = self._get_formatted_value()
+        return Q("term", **{self.es_field(): value})
+
     def _get_formatted_value(self):
         """
         Get the formatted value for a single term, handling all the special cases.

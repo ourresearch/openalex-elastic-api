@@ -34,15 +34,38 @@ def split_filter_string(filter_string):
     Split a filter string by commas, but respect quoted strings.
     Commas inside double quotes are not treated as separators.
 
-    Example:
+    Inside a quoted region, `\\"` and `\\\\` are escape sequences and do
+    NOT close the quoted region.  Both characters of each escape sequence
+    are preserved verbatim here; consumers strip the surrounding quotes
+    and then unescape the value via ``strip_outer_quotes_and_unescape``.
+
+    Examples:
         'type:article,raw_affiliation_strings.search:"Dept of Chemistry, UCLA"'
         -> ['type:article', 'raw_affiliation_strings.search:"Dept of Chemistry, UCLA"']
+
+        'raw_affiliation_strings:"a \\"b, c\\" d",type:article'
+        -> ['raw_affiliation_strings:"a \\"b, c\\" d"', 'type:article']
     """
     parts = []
     current = ""
     in_quotes = False
+    i = 0
+    n = len(filter_string)
 
-    for char in filter_string:
+    while i < n:
+        char = filter_string[i]
+        # Inside a quoted region, `\"` and `\\` are escape sequences.
+        # Keep both characters as-is so the unescaper can resolve them
+        # later; the next `"` does not toggle the quote state.
+        if (
+            in_quotes
+            and char == "\\"
+            and i + 1 < n
+            and filter_string[i + 1] in ('"', "\\")
+        ):
+            current += filter_string[i : i + 2]
+            i += 2
+            continue
         if char == '"':
             in_quotes = not in_quotes
             current += char
@@ -52,11 +75,54 @@ def split_filter_string(filter_string):
             current = ""
         else:
             current += char
+        i += 1
 
     if current:
         parts.append(current)
 
     return parts
+
+
+def is_wrapped_in_unescaped_quotes(value):
+    """
+    Return True iff ``value`` is wrapped in `"..."` where the trailing
+    `"` is not backslash-escaped.  Used to identify fully quoted exact
+    filter values, e.g. ``"Some Library | City"`` or ``"a \\"b\\" c"``.
+    """
+    if len(value) < 2 or value[0] != '"' or value[-1] != '"':
+        return False
+    # Count consecutive backslashes immediately before the final `"`.
+    # If the count is even (including 0), the quote is unescaped.
+    backslashes = 0
+    j = len(value) - 2
+    while j >= 0 and value[j] == "\\":
+        backslashes += 1
+        j -= 1
+    return backslashes % 2 == 0
+
+
+def strip_outer_quotes_and_unescape(value):
+    """
+    Strip the surrounding `"` from a quoted exact value and unescape
+    ``\\"`` -> ``"`` and ``\\\\`` -> ``\\``.  Any other backslash is left
+    verbatim.
+
+    Callers should first verify the value is properly quoted via
+    :func:`is_wrapped_in_unescaped_quotes`.
+    """
+    inner = value[1:-1]
+    out = []
+    i = 0
+    n = len(inner)
+    while i < n:
+        ch = inner[i]
+        if ch == "\\" and i + 1 < n and inner[i + 1] in ('"', "\\"):
+            out.append(inner[i + 1])
+            i += 2
+        else:
+            out.append(ch)
+            i += 1
+    return "".join(out)
 
 
 def map_filter_params(filter_params):

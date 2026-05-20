@@ -191,6 +191,301 @@ def test_filter_or_query(client):
     }
 
 
+class TestQuotedExactFilter:
+    """Quoted non-search filter values are single literal exact terms:
+    operator characters inside the quotes (| * etc.) must NOT be parsed
+    as OpenAlex filter syntax."""
+
+    def test_quoted_value_with_pipe_is_single_term(self, client):
+        s = Search()
+        filter_args = 'raw_affiliation_strings:"Some Library | Some City"'
+        filter_params = map_filter_params(filter_args)
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "term": {
+                                "authorships.raw_affiliation_strings.keyword": "Some Library | Some City"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_quoted_value_with_wildcard_is_literal(self, client):
+        s = Search()
+        filter_args = 'raw_affiliation_strings:"Some * Library"'
+        filter_params = map_filter_params(filter_args)
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "term": {
+                                "authorships.raw_affiliation_strings.keyword": "Some * Library"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_unquoted_pipe_still_or_query(self, client):
+        s = Search()
+        filter_args = "raw_affiliation_strings:Some Library|Other Library"
+        filter_params = map_filter_params(filter_args)
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "terms": {
+                                "authorships.raw_affiliation_strings.keyword": [
+                                    "Some Library",
+                                    "Other Library",
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_quoted_value_on_search_field_uses_search_path(self, client):
+        """Search fields must keep their existing behavior: the quoted value
+        is passed to SearchOpenAlex and not routed through the literal
+        exact-term path on the .keyword subfield."""
+        s = Search()
+        filter_args = 'raw_affiliation_strings.search:"Some Library | Some City"'
+        filter_params = map_filter_params(filter_args)
+        s = filter_records(fields_dict, filter_params, s)
+        as_str = str(s.to_dict())
+        # Must not be routed to the exact .keyword term query.
+        assert "authorships.raw_affiliation_strings.keyword" not in as_str
+        # Must still hit the search analyzer path.
+        assert "authorships.raw_affiliation_strings" in as_str
+
+    def test_comma_inside_quoted_does_not_split_filters(self, client):
+        """Comma inside a quoted exact value must not be treated as a
+        filter separator, regardless of the new escape support."""
+        filter_params = map_filter_params(
+            'raw_affiliation_strings:"a,b",type:article'
+        )
+        assert filter_params == [
+            {"raw_affiliation_strings": '"a,b"'},
+            {"type": "article"},
+        ]
+        s = Search()
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "term": {
+                                "authorships.raw_affiliation_strings.keyword": "a,b"
+                            }
+                        },
+                        {"term": {"type.lower": "article"}},
+                    ]
+                }
+            }
+        }
+
+    def test_escaped_quotes_inside_quoted_value(self, client):
+        r"""`raw_affiliation_strings:"a \"b\" c"` -> exact literal `a "b" c`."""
+        filter_params = map_filter_params(
+            'raw_affiliation_strings:"a \\"b\\" c"'
+        )
+        # The parsed value keeps the escape sequence verbatim.
+        assert filter_params == [
+            {"raw_affiliation_strings": '"a \\"b\\" c"'}
+        ]
+        s = Search()
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "term": {
+                                "authorships.raw_affiliation_strings.keyword": 'a "b" c'
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_pipe_inside_quoted_with_escaped_quotes_is_literal(self, client):
+        r"""`raw_affiliation_strings:"a \"b|c\" d"` must not become an OR query."""
+        filter_params = map_filter_params(
+            'raw_affiliation_strings:"a \\"b|c\\" d"'
+        )
+        s = Search()
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "term": {
+                                "authorships.raw_affiliation_strings.keyword": 'a "b|c" d'
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_escaped_quotes_on_search_field_pass_through(self, client):
+        r"""Search fields keep existing behavior: the value is passed to
+        the search analyzer with quotes intact and is not routed through
+        the literal exact-term path on `.keyword`."""
+        filter_params = map_filter_params(
+            'raw_affiliation_strings.search:"a \\"b\\" c"'
+        )
+        s = Search()
+        s = filter_records(fields_dict, filter_params, s)
+        as_str = str(s.to_dict())
+        # Must not be routed to the exact .keyword term query.
+        assert "authorships.raw_affiliation_strings.keyword" not in as_str
+        # Must still hit the search analyzer path.
+        assert "authorships.raw_affiliation_strings" in as_str
+
+    # --- Quoted values must also bypass TermField's null / !null / leading-!
+    # syntax: inside quotes, those are data, not operators.
+
+    def test_quoted_null_is_literal_term(self, client):
+        s = Search()
+        filter_params = map_filter_params('raw_affiliation_strings:"null"')
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "term": {
+                                "authorships.raw_affiliation_strings.keyword": "null"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_quoted_bang_null_is_literal_term(self, client):
+        s = Search()
+        filter_params = map_filter_params('raw_affiliation_strings:"!null"')
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "term": {
+                                "authorships.raw_affiliation_strings.keyword": "!null"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_quoted_leading_bang_is_literal_term(self, client):
+        s = Search()
+        filter_params = map_filter_params(
+            'raw_affiliation_strings:"!literal"'
+        )
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "term": {
+                                "authorships.raw_affiliation_strings.keyword": "!literal"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_unquoted_null_still_missing_query(self, client):
+        s = Search()
+        filter_params = map_filter_params("raw_affiliation_strings:null")
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "bool": {
+                                "must_not": [
+                                    {
+                                        "exists": {
+                                            "field": "authorships.raw_affiliation_strings.keyword"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_unquoted_bang_null_still_exists_query(self, client):
+        s = Search()
+        filter_params = map_filter_params("raw_affiliation_strings:!null")
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "exists": {
+                                "field": "authorships.raw_affiliation_strings.keyword"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    def test_unquoted_leading_bang_still_negated_term(self, client):
+        s = Search()
+        filter_params = map_filter_params(
+            "raw_affiliation_strings:!literal"
+        )
+        s = filter_records(fields_dict, filter_params, s)
+        assert s.to_dict() == {
+            "query": {
+                "bool": {
+                    "filter": [
+                        {
+                            "bool": {
+                                "must_not": [
+                                    {
+                                        "term": {
+                                            "authorships.raw_affiliation_strings.keyword": "literal"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+
 def test_sort_query(client):
     s = Search()
     filter_args = "host_venue.publisher:wiley,publication_year:>2015"
