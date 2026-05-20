@@ -102,34 +102,43 @@ fields = [
         custom_es_field="lead_investigator.affiliation.country",
         docstring="The country of the lead investigator's affiliation"
     ),
-    # Topic classification (oxjob #123.1). See PLAN.md for the ES nested-mapping
-    # caveat — single-field filters below work under auto-mapping; only compound
-    # per-element queries on topics[] would need a nested reindex.
-    OpenAlexIDField(param="primary_topic.id"),
-    OpenAlexIDField(param="topics.id"),
+    # Topic classification (oxjob #123.1). awards-v3 was created without an
+    # explicit mapping for these fields, so ES auto-mapped them as `text` with
+    # a `.keyword` sub-field. Query the `.keyword` variant to get term-equality
+    # semantics. The works index has these mapped as `keyword` directly, which
+    # is why works/fields.py doesn't need the `.keyword` suffix; awards-v3 will
+    # too once it's reindexed with an explicit mapping.
+    OpenAlexIDField(
+        param="primary_topic.id",
+        custom_es_field="primary_topic.id.keyword",
+    ),
+    OpenAlexIDField(
+        param="topics.id",
+        custom_es_field="topics.id.keyword",
+    ),
     TermField(
         param="primary_topic.domain.id",
-        custom_es_field="primary_topic.domain.id",
+        custom_es_field="primary_topic.domain.id.keyword",
     ),
     TermField(
         param="primary_topic.field.id",
-        custom_es_field="primary_topic.field.id",
+        custom_es_field="primary_topic.field.id.keyword",
     ),
     TermField(
         param="primary_topic.subfield.id",
-        custom_es_field="primary_topic.subfield.id",
+        custom_es_field="primary_topic.subfield.id.keyword",
     ),
     TermField(
         param="topics.domain.id",
-        custom_es_field="topics.domain.id",
+        custom_es_field="topics.domain.id.keyword",
     ),
     TermField(
         param="topics.field.id",
-        custom_es_field="topics.field.id",
+        custom_es_field="topics.field.id.keyword",
     ),
     TermField(
         param="topics.subfield.id",
-        custom_es_field="topics.subfield.id",
+        custom_es_field="topics.subfield.id.keyword",
     ),
 ]
 
