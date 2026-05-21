@@ -2,6 +2,7 @@ from core.fields import (
     DateField,
     DateTimeField,
     ExternalIDField,
+    LabelField,
     RangeField,
     SearchField,
     TermField,
@@ -28,7 +29,8 @@ fields = [
         docstring="Free text search among keywords' names",
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
-    TermField(param="display_name", custom_es_field="display_name.keyword")
+    TermField(param="display_name", custom_es_field="display_name.keyword"),
+    LabelField(entity_type="keywords"),
 ]
 
 fields_dict = {f.param: f for f in fields}

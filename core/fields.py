@@ -1180,9 +1180,65 @@ class ExternalIDField(Field):
             clean_value = clean_value.replace("https://openalex.org/", "")
         
         # Check if it's a valid format for this entity type
-        if not (clean_value.startswith(f"{self.entity_type}/") or 
+        if not (clean_value.startswith(f"{self.entity_type}/") or
                 "/" not in clean_value):  # Allow bare codes like "en", "us"
             raise APIQueryParamsError(
                 f"'{query}' is not a valid {self.entity_type} ID. Expected format: "
                 f"{self.entity_type}/code or https://openalex.org/{self.entity_type}/code"
             )
+
+
+class LabelField(Field):
+    """The `label:` filter: resolves a user-owned label ID into a list of entity
+    IDs via openalex-users-api and builds a `terms` clause on the entity's id.
+
+    Each entity registers its own LabelField instance with the matching
+    `entity_type` (e.g. "works" for /works). At resolve time the label's
+    entity_type must match this field's entity_type or the request 400s.
+
+    See core/label_resolver.py for the HTTP details. Multi-label intersection
+    happens in core/filter.py BEFORE LabelField.build_query() is called; this
+    class only handles a single positive or negated `label:` filter.
+    """
+
+    LABEL_ID_RE = re.compile(r"^!?label-[A-Za-z0-9]+$")
+
+    def __init__(self, entity_type, **kwargs):
+        kwargs.setdefault("param", "label")
+        super().__init__(**kwargs)
+        self.entity_type = entity_type
+
+    def es_field(self) -> str:
+        return "id"
+
+    def validate(self, query):
+        if not self.LABEL_ID_RE.match(query or ""):
+            raise APIQueryParamsError(
+                f"'{query}' is not a valid label id (expected 'label-...')."
+            )
+
+    def build_query(self):
+        from core.label_resolver import resolve_label
+
+        raw = self.value or ""
+        self.validate(raw)
+        negated = raw.startswith("!")
+        label_id = raw[1:] if negated else raw
+
+        label_entity_type, entity_ids = resolve_label(label_id)
+
+        # Deleted / nonexistent label → silently match 0 results (spec).
+        if label_entity_type is None:
+            q = Q("terms", id=[]) if not negated else Q("match_all")
+            return q
+
+        if label_entity_type != self.entity_type:
+            raise APIQueryParamsError(
+                f"label {label_id} is type '{label_entity_type}', "
+                f"not valid for /{self.entity_type}"
+            )
+
+        q = Q("terms", id=entity_ids)
+        if negated:
+            q = ~Q("bool", must=q)
+        return q

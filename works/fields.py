@@ -2,6 +2,7 @@ from core.fields import (
     BooleanField,
     DateField,
     DateTimeField,
+    LabelField,
     OpenAlexIDField,
     RangeField,
     SearchField,
@@ -879,6 +880,7 @@ fields = [
     ),
     TermField(param="type_crossref"),
     TermField(param="version", custom_es_field="locations.version"),
+    LabelField(entity_type="works"),
 ]
 
 fields_dict = {f.param: f for f in fields}

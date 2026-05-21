@@ -1,6 +1,7 @@
 from core.fields import (
     DateField,
     DateTimeField,
+    LabelField,
     OpenAlexIDField,
     RangeField,
     SearchField,
@@ -61,6 +62,7 @@ fields = [
     TermField(param="domain.id"),
     TermField(param="field.id"),
     TermField(param="subfield.id"),
+    LabelField(entity_type="topics"),
 ]
 
 fields_dict = {f.param: f for f in fields}

@@ -22,3 +22,8 @@ class APISearchError(APIError):
 class HighAuthorCountError(APIError):
     code = 400
     description = "High author count limitation."
+
+
+class LabelResolutionUnavailableError(APIError):
+    code = 503
+    description = "label resolution unavailable"

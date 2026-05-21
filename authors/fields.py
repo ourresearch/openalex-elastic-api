@@ -2,6 +2,7 @@ from core.fields import (
     BooleanField,
     DateField,
     DateTimeField,
+    LabelField,
     OpenAlexIDField,
     RangeField,
     SearchField,
@@ -155,6 +156,7 @@ fields = [
     TermField(param="scopus", alias="ids.scopus.keyword"),
     TermField(param="topics.id", custom_es_field="topics.id"),
     TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),
+    LabelField(entity_type="authors"),
 ]
 
 fields_dict = {f.param: f for f in fields}

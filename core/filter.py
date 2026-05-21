@@ -3,12 +3,15 @@ import re
 from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
-from core.fields import TermField
+from core.fields import LabelField, TermField
+from core.label_resolver import resolve_label
 from core.utils import get_field
 from settings import MAX_IDS_IN_FILTER
 
 
 def filter_records(fields_dict, filter_params, s, sample=None):
+    if filter_params:
+        s, filter_params = _apply_label_filters(fields_dict, filter_params, s)
     for filter in filter_params:
         for key, value in filter.items():
             if key == 'include_xpac' or key == 'include-xpac':
@@ -158,3 +161,75 @@ def handle_and_query(field, s, value):
     combined_and_query = Q("bool", must=and_queries)
     s = s.filter(combined_and_query)
     return s
+
+
+LABEL_ID_RE = re.compile(r"^!?label-[A-Za-z0-9]+$")
+
+
+def _apply_label_filters(fields_dict, filter_params, s):
+    """Pre-pass: collapse multiple positive `label:` filters into one ES `terms`
+    clause built from the server-side intersection of their entity-ID lists.
+
+    Negated `label:!L1` filters are passed through to the normal LabelField
+    path (each becomes its own `NOT terms` clause). All label filters are
+    validated to match the endpoint's entity type; mismatched types 400.
+
+    Returns (search, remaining filter_params) with all `label:` entries
+    consumed.
+    """
+    positives = []
+    negatives = []
+    other = []
+    for f in filter_params:
+        if "label" in f and len(f) == 1:
+            value = f["label"]
+            if not LABEL_ID_RE.match(value or ""):
+                raise APIQueryParamsError(
+                    f"'{value}' is not a valid label id (expected 'label-...')."
+                )
+            if value.startswith("!"):
+                negatives.append(value[1:])
+            else:
+                positives.append(value)
+        else:
+            other.append(f)
+
+    label_field = fields_dict.get("label")
+    if not isinstance(label_field, LabelField) and (positives or negatives):
+        # Endpoint doesn't expose the `label:` filter. Re-add to `other` so the
+        # normal loop produces the standard "not a valid field" error.
+        return s, filter_params
+
+    endpoint_entity_type = label_field.entity_type if label_field else None
+
+    def _check_type(label_id, label_entity_type):
+        if label_entity_type and label_entity_type != endpoint_entity_type:
+            raise APIQueryParamsError(
+                f"label {label_id} is type '{label_entity_type}', "
+                f"not valid for /{endpoint_entity_type}"
+            )
+
+    # Positive labels: resolve, validate types, intersect IDs.
+    if positives:
+        resolved = [(lid, resolve_label(lid)) for lid in positives]
+        # Validate entity types against endpoint.
+        for lid, (etype, _) in resolved:
+            _check_type(lid, etype)
+        # If any positive label is unknown / deleted, the intersection is empty.
+        if any(etype is None for _, (etype, _) in resolved):
+            ids = []
+        else:
+            sets = [set(ids) for _, (_, ids) in resolved]
+            ids = sorted(set.intersection(*sets)) if sets else []
+        s = s.filter(Q("terms", id=ids))
+
+    # Negated labels: each becomes its own NOT clause.
+    for lid in negatives:
+        etype, ids = resolve_label(lid)
+        if etype is None:
+            # Deleted label → nothing to exclude; skip.
+            continue
+        _check_type(lid, etype)
+        s = s.filter(~Q("bool", must=Q("terms", id=ids)))
+
+    return s, other

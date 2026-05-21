@@ -2,6 +2,7 @@ from core.fields import (
     BooleanField,
     DateField,
     DateTimeField,
+    LabelField,
     OpenAlexIDField,
     RangeField,
     SearchField,
@@ -71,6 +72,7 @@ fields = [
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="wikidata_id", alias="ids.wikidata"),
+    LabelField(entity_type="concepts"),
 ]
 
 fields_dict = {f.param: f for f in fields}
