@@ -41,7 +41,6 @@ class SearchLog(log_db.Model):
     entity = log_db.Column(log_db.String(50), nullable=True)
     filter_keys = log_db.Column(ARRAY(log_db.String(50)), nullable=True)
     has_nested_boolean = log_db.Column(log_db.Boolean, nullable=True)
-    has_lists = log_db.Column(log_db.Boolean, nullable=True)
     # end new fields
     sql = log_db.Column(log_db.Text, nullable=True)
     error_message = log_db.Column(log_db.Text, nullable=True)
@@ -63,7 +62,6 @@ class SearchLog(log_db.Model):
         self.query_json = query_obj.query
         self.filter_keys = query_obj.extract_filter_keys()
         self.has_nested_boolean = query_obj.has_nested_boolean()
-        self.has_lists = query_obj.has_lists()
 
         super().__init__(**kwargs)
 

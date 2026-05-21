@@ -1,10 +1,7 @@
 from datetime import datetime, timezone
-import requests
-import copy
 
 from sqlalchemy.engine.row import Row
 
-import settings
 from combined_config import all_entities_config
 from oql.elastic import ElasticQueryHandler
 from oql.redshift import RedshiftQueryHandler
@@ -214,115 +211,6 @@ class Query:
             for key, values in all_entities_config[self.entity]['columns'].items()
             if "sort" in (values.get("actions") or [])
         ]
-
-    def has_lists(self):
-        """ Returns true if the query contains filters that use user created lists."""
-        user_operators = [
-            "matches any item in label",
-            "matches every item in label"
-        ]
-
-        def does_filter_contain_user_data(filter_):
-            if "filters" in filter_:
-                return any(does_filter_contain_user_data(f) for f in filter_["filters"])
-            return filter_.get("operator") in user_operators
-
-        filters_to_check = (self.query.get("filter_works") or []) + (self.query.get("filter_aggs") or [])
-        #print(f"Checking filters: {filters_to_check}", flush=True)
-        return any(does_filter_contain_user_data(f) for f in filters_to_check)
-    
-    def rewrite_query_with_user_data(self, user_id, jwt_token):
-        """
-        Recursively walk through the query and replace any filters that have label components
-        with their equivalents that don't reference user labels.
-        """
-        def rewrite_filters(filters, case):
-            """
-            Recursive helper function to rewrite filters.
-            case is either "filter_works" or "filter_aggs"
-            """
-            rewritten_filters = []
-            for filter_obj in filters:
-                if "join" in filter_obj and "filters" in filter_obj:
-                    # Recursive case: rewrite the nested filters
-                    rewritten_filter = {
-                        "join": filter_obj["join"],
-                        "filters": rewrite_filters(filter_obj["filters"], case),
-                    }
-                    rewritten_filters.append(rewritten_filter)
-                else:
-                    # Terminal case: check if the operator matches a label condition
-                    operator = filter_obj.get("operator")
-                    # print(f"looking at operator: {operator}")
-                    if operator in ["matches any item in label", "matches every item in label"]:
-                        print("Found user data in query")
-                        label_id = filter_obj.get("value")
-                        #label = Collection.get_collection_by_id(label_id)
-
-                        headers = {"Authorization": jwt_token}
-                        url = f"{settings.USERS_API_URL}/user/{user_id}/collections/{label_id}"
-                        #print(f"Fetching label data from {url}")
-                        response = requests.get(url, headers=headers)
-                        label = response.json()
-
-                        if not label:
-                            raise ValueError(f"Label with ID {label_id} not found.")
-                        if not label["ids"]:
-                            raise ValueError(f"Label {label_id} contains no items.")
-
-                        #print("Label Data:")
-                        #print(label)
-
-                        # Determine the join type based on the operator
-                        join_type = "or" if operator == "matches any item in label" else "and"
-
-                        works_id_keys = {
-                            "authors": "authorships.author.id",
-                            "continents": "authorships.institutions.continent",
-                            "countries": "authorships.institutions.country",
-                            "domains": "primary_topic.domain.id",
-                            "fields": "primary_topic.field.id",
-                            "funders": "grants.funder",
-                            "institution-types": "authorships.institutions.type",
-                            "institutions": "authorships.institutions.lineage",
-                            "keywords": "keywords.id",
-                            "langauges": "language",
-                            "licenses": "MISSING",
-                            "publishers": "MISSING",
-                            "sdgs": "sustainable_developement_goals.id",
-                            "sources": "primary_location.source.id",
-                            "subfields": "primary_topic.subfield.id",
-                            "topics": "primary_topic.id",
-                            "work-types": "type",
-                        }
-
-                        column_id = works_id_keys[label["entity_type"]] if case == "filter_works" else "id"
-
-                        # Construct the rewritten filters for this label
-                        rewritten_label_filter = {
-                            "join": join_type,
-                            "filters": [
-                                {
-                                    "column_id": column_id,
-                                    "value": id_value,
-                                }
-                                for id_value in label["ids"]
-                            ],
-                        }
-                        rewritten_filters.append(rewritten_label_filter)
-                    else:
-                        rewritten_filters.append(filter_obj)
-
-            return rewritten_filters
-
-        # Start rewriting from self.query
-        query_rewritten = copy.deepcopy(self.query)  # Create a copy of the original query
-
-        for case in ["filter_works", "filter_aggs"]:
-            if case in query_rewritten:
-                query_rewritten[case] = rewrite_filters(query_rewritten[case], case)
-
-        return query_rewritten
 
     def extract_filter_keys(self):
         """

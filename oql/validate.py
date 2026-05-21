@@ -16,9 +16,7 @@ class OQOValidator:
                       '>=',
                       'is greater than or equal to',
                       '<=',
-                      'is less than or equal to',
-                      'matches any item in label',
-                      'matches every item in label'}
+                      'is less than or equal to'}
 
     def __init__(self, config: Optional[Dict] = None):
         self.ENTITIES_CONFIG = config or self._fetch_entities_config()

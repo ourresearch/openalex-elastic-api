@@ -29,12 +29,8 @@ search_queue = settings.SEARCH_QUEUE
 def create_search():
     raw_query = request.json.get("query")
     user_id = get_jwt_identity().get("user_id")
-    jwt_token = request.headers.get("Authorization")
     bypass_cache = request.json.get("bypass_cache", False)
     use_elastic = request.json.get("use_elastic", False)
-
-    #print("create_search")
-    #print(raw_query, flush=True)
 
     query = Query(raw_query)
 
@@ -45,14 +41,7 @@ def create_search():
         print(f"Invalid Query: {error}", flush=True)
         return jsonify({"error": "Invalid Query", "details": error, "query": raw_query}), 400
 
-    # print("query.to_dict()")
-    # print(query.to_dict(), flush=True)
     s = Search(query=query.to_dict(), bypass_cache=bypass_cache, use_elastic=use_elastic)
-    if query.has_lists():
-        print("Found user lists in query")
-        s.submitted_query = s.query
-        s.query = query.rewrite_query_with_user_data(user_id, jwt_token)
-        print(f"Rewritten Query: {s.query}", flush=True)
     s.redshift_sql = Query(s.query).get_sql()
     s.save()
 
