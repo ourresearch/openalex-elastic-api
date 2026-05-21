@@ -3,7 +3,7 @@ import re
 from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
-from core.fields import LabelField, TermField
+from core.fields import LabelField, TermField, _canonicalize_entity_ids
 from core.label_resolver import resolve_label
 from core.utils import get_field
 from settings import MAX_IDS_IN_FILTER
@@ -221,7 +221,7 @@ def _apply_label_filters(fields_dict, filter_params, s):
         else:
             sets = [set(ids) for _, (_, ids) in resolved]
             ids = sorted(set.intersection(*sets)) if sets else []
-        s = s.filter(Q("terms", id=ids))
+        s = s.filter(Q("terms", id=_canonicalize_entity_ids(ids)))
 
     # Negated labels: each becomes its own NOT clause.
     for lid in negatives:
@@ -230,6 +230,6 @@ def _apply_label_filters(fields_dict, filter_params, s):
             # Deleted label → nothing to exclude; skip.
             continue
         _check_type(lid, etype)
-        s = s.filter(~Q("bool", must=Q("terms", id=ids)))
+        s = s.filter(~Q("bool", must=Q("terms", id=_canonicalize_entity_ids(ids))))
 
     return s, other

@@ -115,7 +115,27 @@ class TestLabelField:
         f.value = "label-abc"
         q = f.build_query()
         body = q.to_dict()
-        assert body == {"terms": {"id": ["W1", "W2"]}}
+        # Short-form IDs from users-api are canonicalized to the full ES id URL.
+        assert body == {"terms": {"id": [
+            "https://openalex.org/W1",
+            "https://openalex.org/W2",
+        ]}}
+
+    def test_positive_already_full_urls_passthrough(self, monkeypatch):
+        monkeypatch.setattr(
+            label_resolver, "resolve_label",
+            lambda lid: ("works", [
+                "https://openalex.org/W1",
+                "https://openalex.org/W2",
+            ]),
+        )
+        f = LabelField(entity_type="works")
+        f.value = "label-abc"
+        q = f.build_query()
+        assert q.to_dict() == {"terms": {"id": [
+            "https://openalex.org/W1",
+            "https://openalex.org/W2",
+        ]}}
 
     def test_negated_wraps_not(self, monkeypatch):
         monkeypatch.setattr(label_resolver, "resolve_label",
@@ -195,11 +215,13 @@ class TestApplyLabelFilters:
         )
         body = s.to_dict()
         assert remaining == []
-        # Intersection is {W2, W3}; W1 and W4 must NOT appear in the query.
         text = str(body)
-        assert "W2" in text and "W3" in text
-        assert "W1" not in text
-        assert "W4" not in text
+        # Intersection is {W2, W3}, expanded to full URLs.
+        assert "https://openalex.org/W2" in text
+        assert "https://openalex.org/W3" in text
+        # W1 and W4 must NOT appear in the query at all.
+        assert "/W1" not in text
+        assert "/W4" not in text
 
     def test_wrong_entity_type_rejected(self, monkeypatch):
         monkeypatch.setattr(

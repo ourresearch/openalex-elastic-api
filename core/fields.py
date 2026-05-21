@@ -1199,6 +1199,10 @@ class LabelField(Field):
     See core/label_resolver.py for the HTTP details. Multi-label intersection
     happens in core/filter.py BEFORE LabelField.build_query() is called; this
     class only handles a single positive or negated `label:` filter.
+
+    users-api stores short-form IDs (e.g. `W2741809807`) but ES indexes the
+    canonical full URL (`https://openalex.org/W2741809807`), so we expand
+    before building the terms clause.
     """
 
     LABEL_ID_RE = re.compile(r"^!?label-[A-Za-z0-9]+$")
@@ -1238,7 +1242,20 @@ class LabelField(Field):
                 f"not valid for /{self.entity_type}"
             )
 
-        q = Q("terms", id=entity_ids)
+        q = Q("terms", id=_canonicalize_entity_ids(entity_ids))
         if negated:
             q = ~Q("bool", must=q)
         return q
+
+
+def _canonicalize_entity_ids(ids):
+    """Convert short-form OpenAlex IDs to the full-URL form ES indexes on."""
+    out = []
+    for v in ids or []:
+        if not v:
+            continue
+        if v.startswith("https://openalex.org/"):
+            out.append(v)
+        else:
+            out.append(f"https://openalex.org/{v}")
+    return out
