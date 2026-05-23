@@ -163,9 +163,6 @@ def handle_and_query(field, s, value):
     return s
 
 
-LABEL_ID_RE = re.compile(r"^!?label-[A-Za-z0-9]+$")
-
-
 def _apply_label_filters(fields_dict, filter_params, s):
     """Pre-pass: collapse multiple positive `label:` filters into one ES `terms`
     clause built from the server-side intersection of their entity-ID lists.
@@ -183,7 +180,7 @@ def _apply_label_filters(fields_dict, filter_params, s):
     for f in filter_params:
         if "label" in f and len(f) == 1:
             value = f["label"]
-            if not LABEL_ID_RE.match(value or ""):
+            if not LabelField.LABEL_ID_RE.match(value or ""):
                 raise APIQueryParamsError(
                     f"'{value}' is not a valid label id (expected 'label-...')."
                 )
@@ -196,8 +193,9 @@ def _apply_label_filters(fields_dict, filter_params, s):
 
     label_field = fields_dict.get("label")
     if not isinstance(label_field, LabelField) and (positives or negatives):
-        # Endpoint doesn't expose the `label:` filter. Re-add to `other` so the
-        # normal loop produces the standard "not a valid field" error.
+        # Endpoint doesn't expose the `label:` filter. Return the original
+        # filter_params so the normal loop produces the standard "not a valid
+        # field" error for the label entries.
         return s, filter_params
 
     endpoint_entity_type = label_field.entity_type if label_field else None

@@ -49,11 +49,8 @@ def resolve_label(label_id):
         if resp.status_code == 404:
             return (None, [])
 
-        if resp.status_code >= 500:
-            raise LabelResolutionUnavailableError(
-                f"users-api {resp.status_code} resolving label {label_id}"
-            )
-
+        # Anything other than 200 (including 5xx) is treated as users-api being
+        # unavailable; the Flask error handler turns that into a 503.
         if resp.status_code != 200:
             raise LabelResolutionUnavailableError(
                 f"users-api {resp.status_code} resolving label {label_id}"
