@@ -1205,7 +1205,7 @@ class LabelField(Field):
     before building the terms clause.
     """
 
-    LABEL_ID_RE = re.compile(r"^!?label-[A-Za-z0-9]+$")
+    LABEL_ID_RE = re.compile(r"^!?label-[A-Za-z0-9]{1,48}$")
 
     def __init__(self, entity_type, **kwargs):
         kwargs.setdefault("param", "label")

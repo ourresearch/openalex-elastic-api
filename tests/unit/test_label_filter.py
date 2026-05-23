@@ -283,3 +283,87 @@ class TestApplyLabelFilters:
         assert remaining == params
         # `s` should not have been touched (no filter clauses added).
         assert s2.to_dict() == s.to_dict()
+
+    def test_too_many_labels_rejected(self, monkeypatch):
+        # Should reject before any resolve_label call.
+        calls = []
+
+        def _track(lid):
+            calls.append(lid)
+            return ("works", ["W1"])
+
+        monkeypatch.setattr("core.filter.resolve_label", _track)
+        s = Search()
+        params = [{"label": f"label-L{i}"} for i in range(9)]
+        with pytest.raises(APIQueryParamsError) as exc:
+            _apply_label_filters(works_fields_dict, params, s)
+        assert "too many label" in str(exc.value)
+        assert calls == []  # fail fast — no outbound resolver calls
+
+    def test_duplicate_labels_deduped_before_resolving(self, monkeypatch):
+        calls = []
+
+        def _track(lid):
+            calls.append(lid)
+            return ("works", ["W1", "W2"])
+
+        monkeypatch.setattr("core.filter.resolve_label", _track)
+        s = Search()
+        # 12 copies of the same label — dedupes to 1, well under the cap of 8.
+        params = [{"label": "label-L1"}] * 12
+        _apply_label_filters(works_fields_dict, params, s)
+        assert calls == ["label-L1"]
+
+    def test_dedupe_counts_distinct_labels_against_cap(self, monkeypatch):
+        # Cap is on distinct labels — 9 duplicates of one label should pass.
+        monkeypatch.setattr(
+            "core.filter.resolve_label",
+            lambda lid: ("works", ["W1"]),
+        )
+        s = Search()
+        params = [{"label": "label-L1"}] * 9
+        s, remaining = _apply_label_filters(works_fields_dict, params, s)
+        assert remaining == []
+
+    def test_resolved_id_budget_enforced(self, monkeypatch):
+        # Two labels each returning 6000 IDs blows the 10K budget.
+        monkeypatch.setattr(
+            "core.filter.resolve_label",
+            lambda lid: ("works", [f"W{i}" for i in range(6000)]),
+        )
+        s = Search()
+        params = [{"label": "label-L1"}, {"label": "label-L2"}]
+        with pytest.raises(APIQueryParamsError) as exc:
+            _apply_label_filters(works_fields_dict, params, s)
+        assert "too many entities" in str(exc.value)
+
+    def test_negative_labels_also_count_against_request_cap(self, monkeypatch):
+        monkeypatch.setattr(
+            "core.filter.resolve_label",
+            lambda lid: ("works", ["W1"]),
+        )
+        s = Search()
+        # 5 positive + 5 negative = 10, over the cap of 8.
+        params = (
+            [{"label": f"label-P{i}"} for i in range(5)]
+            + [{"label": f"!label-N{i}"} for i in range(5)]
+        )
+        with pytest.raises(APIQueryParamsError) as exc:
+            _apply_label_filters(works_fields_dict, params, s)
+        assert "too many label" in str(exc.value)
+
+
+# ---------- LABEL_ID_RE format cap ----------
+
+class TestLabelIdRegex:
+    def test_short_id_accepted(self):
+        assert LabelField.LABEL_ID_RE.match("label-abc123")
+        assert LabelField.LABEL_ID_RE.match("!label-abc123")
+
+    def test_max_length_id_accepted(self):
+        # 48 chars after the `label-` prefix is the upper bound.
+        assert LabelField.LABEL_ID_RE.match("label-" + "a" * 48)
+
+    def test_oversize_id_rejected(self):
+        # 49 chars after the prefix should be rejected.
+        assert not LabelField.LABEL_ID_RE.match("label-" + "a" * 49)

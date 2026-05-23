@@ -163,6 +163,13 @@ def handle_and_query(field, s, value):
     return s
 
 
+# Per-request hard caps for the `label:` filter. Defenses against DoS-via-
+# request-amplification: each label triggers an outbound HTTP resolve to
+# users-api, and each resolved ID list becomes part of an ES `terms` clause.
+MAX_LABELS_PER_REQUEST = 8
+MAX_RESOLVED_IDS_PER_REQUEST = 10_000
+
+
 def _apply_label_filters(fields_dict, filter_params, s):
     """Pre-pass: collapse multiple positive `label:` filters into one ES `terms`
     clause built from the server-side intersection of their entity-ID lists.
@@ -191,6 +198,17 @@ def _apply_label_filters(fields_dict, filter_params, s):
         else:
             other.append(f)
 
+    # Dedupe (preserves first-seen order) so a repeated `label:L1` is one call,
+    # not N. Done before the count cap so the cap reflects distinct labels.
+    positives = list(dict.fromkeys(positives))
+    negatives = list(dict.fromkeys(negatives))
+
+    if len(positives) + len(negatives) > MAX_LABELS_PER_REQUEST:
+        raise APIQueryParamsError(
+            f"too many label: filters in one request "
+            f"(max {MAX_LABELS_PER_REQUEST})"
+        )
+
     label_field = fields_dict.get("label")
     if not isinstance(label_field, LabelField) and (positives or negatives):
         # Endpoint doesn't expose the `label:` filter. Return the original
@@ -207,9 +225,24 @@ def _apply_label_filters(fields_dict, filter_params, s):
                 f"not valid for /{endpoint_entity_type}"
             )
 
+    total_ids = 0
+
+    def _budget(count):
+        nonlocal total_ids
+        total_ids += count
+        if total_ids > MAX_RESOLVED_IDS_PER_REQUEST:
+            raise APIQueryParamsError(
+                f"label: filter resolved to too many entities "
+                f"(max {MAX_RESOLVED_IDS_PER_REQUEST})"
+            )
+
     # Positive labels: resolve, validate types, intersect IDs.
     if positives:
-        resolved = [(lid, resolve_label(lid)) for lid in positives]
+        resolved = []
+        for lid in positives:
+            etype, ids = resolve_label(lid)
+            _budget(len(ids))
+            resolved.append((lid, (etype, ids)))
         # Validate entity types against endpoint.
         for lid, (etype, _) in resolved:
             _check_type(lid, etype)
@@ -228,6 +261,7 @@ def _apply_label_filters(fields_dict, filter_params, s):
             # Deleted label → nothing to exclude; skip.
             continue
         _check_type(lid, etype)
+        _budget(len(ids))
         s = s.filter(~Q("bool", must=Q("terms", id=_canonicalize_entity_ids(ids))))
 
     return s, other

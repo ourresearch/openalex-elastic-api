@@ -12,7 +12,7 @@ from core.exceptions import APIQueryParamsError, LabelResolutionUnavailableError
 
 
 PER_PAGE = 200
-HTTP_TIMEOUT = 10
+HTTP_TIMEOUT = 5
 
 
 def resolve_label(label_id):
