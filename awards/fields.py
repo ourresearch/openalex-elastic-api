@@ -102,43 +102,78 @@ fields = [
         custom_es_field="lead_investigator.affiliation.country",
         docstring="The country of the lead investigator's affiliation"
     ),
-    # Topic classification (oxjob #123.1). awards-v3 was created without an
-    # explicit mapping for these fields, so ES auto-mapped them as `text` with
-    # a `.keyword` sub-field. Query the `.keyword` variant to get term-equality
-    # semantics. The works index has these mapped as `keyword` directly, which
-    # is why works/fields.py doesn't need the `.keyword` suffix; awards-v3 will
-    # too once it's reindexed with an explicit mapping.
+    # Topic classification (oxjob #123.1, finalized in #123.2). awards-v4 has
+    # `primary_topic` and `topics` declared as `nested`, with denormalized
+    # `primary_topic_full` and `topics_full` siblings (object mapping, `keyword`
+    # id fields) for fast term filtering. This mirrors the works pattern of
+    # `authorships` (nested) + `authorships_full` (denormalized). Filters route
+    # to the `_full` variants; the `.keyword` suffix workaround is no longer
+    # needed.
     OpenAlexIDField(
         param="primary_topic.id",
-        custom_es_field="primary_topic.id.keyword",
+        custom_es_field="primary_topic_full.id",
     ),
     OpenAlexIDField(
         param="topics.id",
-        custom_es_field="topics.id.keyword",
+        custom_es_field="topics_full.id",
     ),
     TermField(
         param="primary_topic.domain.id",
-        custom_es_field="primary_topic.domain.id.keyword",
+        custom_es_field="primary_topic_full.domain.id",
     ),
     TermField(
         param="primary_topic.field.id",
-        custom_es_field="primary_topic.field.id.keyword",
+        custom_es_field="primary_topic_full.field.id",
     ),
     TermField(
         param="primary_topic.subfield.id",
-        custom_es_field="primary_topic.subfield.id.keyword",
+        custom_es_field="primary_topic_full.subfield.id",
     ),
     TermField(
         param="topics.domain.id",
-        custom_es_field="topics.domain.id.keyword",
+        custom_es_field="topics_full.domain.id",
     ),
     TermField(
         param="topics.field.id",
-        custom_es_field="topics.field.id.keyword",
+        custom_es_field="topics_full.field.id",
     ),
     TermField(
         param="topics.subfield.id",
-        custom_es_field="topics.subfield.id.keyword",
+        custom_es_field="topics_full.subfield.id",
+    ),
+    # institution_awarded (oxjob #123.2). awards-v4 has `institution_awarded`
+    # as nested with a denormalized `institution_awarded_full` (object mapping)
+    # sibling for filtering. Filter set mirrors the works `institutions.*`
+    # subset.
+    OpenAlexIDField(
+        param="institution_awarded.id",
+        custom_es_field="institution_awarded_full.id",
+        docstring="The OpenAlex ID of the institution that received the award",
+    ),
+    TermField(
+        param="institution_awarded.ror",
+        custom_es_field="institution_awarded_full.ror",
+        docstring="The ROR ID of the institution that received the award",
+    ),
+    TermField(
+        param="institution_awarded.country_code",
+        custom_es_field="institution_awarded_full.country_code",
+        docstring="The country of the institution that received the award",
+    ),
+    TermField(
+        param="institution_awarded.continent",
+        alias="institution_awarded_full.country_code",
+        docstring="The continent of the institution that received the award",
+    ),
+    TermField(
+        param="institution_awarded.type",
+        custom_es_field="institution_awarded_full.type",
+        docstring="The type of the institution that received the award (e.g. education, healthcare)",
+    ),
+    OpenAlexIDField(
+        param="institution_awarded.lineage",
+        custom_es_field="institution_awarded_full.lineage",
+        docstring="The OpenAlex ID of an ancestor of the institution that received the award",
     ),
 ]
 
