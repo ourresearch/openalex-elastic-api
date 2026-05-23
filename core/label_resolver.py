@@ -5,14 +5,23 @@ Labels are user-owned named collections of one entity type each. See oxjob #228
 (`/works?filter=label:label-abc123`) resolves to a list of entity IDs via this
 module, which then becomes a `terms` clause in the ES query.
 """
+import logging
+
 import requests
 
 import settings
 from core.exceptions import APIQueryParamsError, LabelResolutionUnavailableError
 
 
+logger = logging.getLogger(__name__)
+
 PER_PAGE = 200
 HTTP_TIMEOUT = 5
+
+# Public-facing message for any 503. Internal details (hostname, status code,
+# JSON parse errors) go to the server log only — never to the response body
+# (security review M4).
+_UNAVAILABLE_MSG = "label resolution temporarily unavailable"
 
 
 def resolve_label(label_id):
@@ -44,7 +53,10 @@ def resolve_label(label_id):
                 timeout=HTTP_TIMEOUT,
             )
         except requests.RequestException as e:
-            raise LabelResolutionUnavailableError(str(e))
+            logger.warning(
+                "label resolver request failed for %s: %s", label_id, e,
+            )
+            raise LabelResolutionUnavailableError(_UNAVAILABLE_MSG)
 
         if resp.status_code == 404:
             return (None, [])
@@ -52,16 +64,18 @@ def resolve_label(label_id):
         # Anything other than 200 (including 5xx) is treated as users-api being
         # unavailable; the Flask error handler turns that into a 503.
         if resp.status_code != 200:
-            raise LabelResolutionUnavailableError(
-                f"users-api {resp.status_code} resolving label {label_id}"
+            logger.warning(
+                "users-api %s resolving label %s", resp.status_code, label_id,
             )
+            raise LabelResolutionUnavailableError(_UNAVAILABLE_MSG)
 
         try:
             payload = resp.json()
         except ValueError as e:
-            raise LabelResolutionUnavailableError(
-                f"users-api non-JSON response for label {label_id}: {e}"
+            logger.warning(
+                "users-api non-JSON response for label %s: %s", label_id, e,
             )
+            raise LabelResolutionUnavailableError(_UNAVAILABLE_MSG)
 
         label = payload.get("label") or {}
         entity_type = label.get("entity_type") or entity_type

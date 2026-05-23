@@ -86,18 +86,29 @@ class TestResolveLabel:
             label_resolver.requests, "get",
             lambda *a, **kw: _FakeResp(500),
         )
-        with pytest.raises(LabelResolutionUnavailableError):
+        with pytest.raises(LabelResolutionUnavailableError) as exc:
             label_resolver.resolve_label("label-broken")
+        # Public message must not leak the status code or label id.
+        assert "500" not in str(exc.value)
+        assert "label-broken" not in str(exc.value)
 
     def test_timeout_raises_unavailable(self, monkeypatch):
         monkeypatch.setattr(settings, "USERS_API_URL", "http://users-api.test")
 
         def _raise(*a, **kw):
-            raise requests.Timeout("slow")
+            # Real requests.ConnectionError messages typically include the
+            # HTTPSConnectionPool hostname — that must not reach the client.
+            raise requests.ConnectionError(
+                "HTTPSConnectionPool(host='internal-users-api.example.com', "
+                "port=443): Max retries exceeded"
+            )
 
         monkeypatch.setattr(label_resolver.requests, "get", _raise)
-        with pytest.raises(LabelResolutionUnavailableError):
+        with pytest.raises(LabelResolutionUnavailableError) as exc:
             label_resolver.resolve_label("label-slow")
+        # Hostname must not appear in the user-facing exception arg.
+        assert "internal-users-api" not in str(exc.value)
+        assert "HTTPSConnectionPool" not in str(exc.value)
 
     def test_missing_users_api_url_raises_query_params_error(self, monkeypatch):
         monkeypatch.setattr(settings, "USERS_API_URL", None)

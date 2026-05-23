@@ -147,7 +147,12 @@ def register_errorhandlers(app):
             response["message"] = err.args[0]
         # Add some logging so that we can monitor different types of errors
         app.logger.error("{}: {}".format(err.description, response["message"]))
-        return jsonify(response), err.code
+        headers = {}
+        # 503s get a Retry-After hint so polite clients back off rather than
+        # hammering during a users-api blip (security review M5).
+        if err.code == 503:
+            headers["Retry-After"] = "30"
+        return jsonify(response), err.code, headers
 
     app.errorhandler(APIError)(handle_exception)
 
