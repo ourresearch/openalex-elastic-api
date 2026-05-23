@@ -189,7 +189,7 @@ def _apply_label_filters(fields_dict, filter_params, s):
             value = f["label"]
             if not LabelField.LABEL_ID_RE.match(value or ""):
                 raise APIQueryParamsError(
-                    f"'{value}' is not a valid label id (expected 'label-...')."
+                    f"'{value}' is not a valid label id (expected 'label-...' or 'lab_...')."
                 )
             if value.startswith("!"):
                 negatives.append(value[1:])

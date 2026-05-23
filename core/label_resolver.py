@@ -8,6 +8,7 @@ module, which then becomes a `terms` clause in the ES query.
 import logging
 
 import requests
+from flask import request, has_request_context
 
 import settings
 from core.exceptions import APIQueryParamsError, LabelResolutionUnavailableError
@@ -44,12 +45,24 @@ def resolve_label(label_id):
     entity_type = None
     page = 1
 
+    # Labels v1.1 (oxjob #228, QA-040) made labels owner+admin-only. Forward
+    # the current request's Authorization header so users-api can authenticate
+    # the user (JWT for the GUI path, OpenAlex API key for the API path) and
+    # enforce the owner check. Without a request context (e.g. unit tests
+    # calling this directly), forward nothing — users-api will 401 → silent
+    # zero, same as an unauthenticated user.
+    auth_header = ""
+    if has_request_context():
+        auth_header = request.headers.get("Authorization", "") or ""
+    fwd_headers = {"Authorization": auth_header} if auth_header else {}
+
     while True:
         url = f"{base}/labels/{label_id}/entities"
         try:
             resp = requests.get(
                 url,
                 params={"page": page, "per_page": PER_PAGE},
+                headers=fwd_headers,
                 timeout=HTTP_TIMEOUT,
             )
         except requests.RequestException as e:
@@ -58,7 +71,11 @@ def resolve_label(label_id):
             )
             raise LabelResolutionUnavailableError(_UNAVAILABLE_MSG)
 
-        if resp.status_code == 404:
+        # 401 / 403 = caller has no access to this label; treat as a missing
+        # label so the filter silently matches zero. Same envelope as 404.
+        # (Avoids leaking the existence of private labels via a different
+        # error code to anon vs. authenticated probes.)
+        if resp.status_code in (401, 403, 404):
             return (None, [])
 
         # Anything other than 200 (including 5xx) is treated as users-api being

@@ -1205,7 +1205,10 @@ class LabelField(Field):
     before building the terms clause.
     """
 
-    LABEL_ID_RE = re.compile(r"^!?label-[A-Za-z0-9]{1,48}$")
+    # Two ID shapes — legacy `label-<12-char-shortuuid>` (Phase 1) and new
+    # `lab_<10-char-base58>` (oxjob #228 QA-039). Accept both; legacy rows
+    # continue to exist after the cutover.
+    LABEL_ID_RE = re.compile(r"^!?(label-|lab_)[A-Za-z0-9]{1,48}$")
 
     def __init__(self, entity_type, **kwargs):
         kwargs.setdefault("param", "label")
@@ -1218,7 +1221,7 @@ class LabelField(Field):
     def validate(self, query):
         if not self.LABEL_ID_RE.match(query or ""):
             raise APIQueryParamsError(
-                f"'{query}' is not a valid label id (expected 'label-...')."
+                f"'{query}' is not a valid label id (expected 'label-...' or 'lab_...')."
             )
 
     def build_query(self):
