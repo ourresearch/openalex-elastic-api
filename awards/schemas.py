@@ -52,6 +52,19 @@ class FunderSchema(Schema):
         unknown = INCLUDE
 
 
+class InstitutionAwardedSchema(Schema):
+    id = fields.Str()
+    display_name = fields.Str()
+    ror = fields.Str(default=None)
+    country_code = fields.Str(default=None)
+    type = fields.Str(default=None)
+    lineage = fields.List(fields.Str(), default=None)
+
+    class Meta:
+        ordered = True
+        unknown = INCLUDE
+
+
 class AwardsSchema(Schema):
     id = fields.Str()
     display_name = fields.Str(default=None)
@@ -91,6 +104,9 @@ class AwardsSchema(Schema):
     # Topic classification (oxjob #123.1)
     primary_topic = fields.Nested(TopicSchema, default=None)
     topics = fields.Nested(TopicSchema, many=True, default=None)
+
+    # Institution(s) that received the award (oxjob #123.2)
+    institution_awarded = fields.Nested(InstitutionAwardedSchema, many=True, default=None)
 
     updated_date = fields.Str(default=None)
     created_date = fields.Str(default=None)
