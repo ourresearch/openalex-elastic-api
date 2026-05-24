@@ -2,7 +2,7 @@ from core.fields import (
     BooleanField,
     DateField,
     DateTimeField,
-    LabelField,
+    CollectionField,
     OpenAlexIDField,
     PhraseField,
     RangeField,
@@ -157,7 +157,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["type"],
         alternate_names=ALTERNATE_NAMES.get("source.type", None),
     ),
-    LabelField(entity_type="sources"),
+    CollectionField(entity_type="sources"),
 ]
 
 fields_dict = {f.param: f for f in fields}

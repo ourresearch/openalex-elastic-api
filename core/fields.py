@@ -1188,30 +1188,31 @@ class ExternalIDField(Field):
             )
 
 
-class LabelField(Field):
-    """The `label:` filter: resolves a user-owned label ID into a list of entity
+class CollectionField(Field):
+    """The `collection:` filter: resolves a user-owned collection ID into a list of entity
     IDs via openalex-users-api and builds a `terms` clause on the entity's id.
 
-    Each entity registers its own LabelField instance with the matching
-    `entity_type` (e.g. "works" for /works). At resolve time the label's
+    Each entity registers its own CollectionField instance with the matching
+    `entity_type` (e.g. "works" for /works). At resolve time the collection's
     entity_type must match this field's entity_type or the request 400s.
 
-    See core/label_resolver.py for the HTTP details. Multi-label intersection
-    happens in core/filter.py BEFORE LabelField.build_query() is called; this
-    class only handles a single positive or negated `label:` filter.
+    See core/collection_resolver.py for the HTTP details. Multi-collection intersection
+    happens in core/filter.py BEFORE CollectionField.build_query() is called; this
+    class only handles a single positive or negated `collection:` filter.
 
     users-api stores short-form IDs (e.g. `W2741809807`) but ES indexes the
     canonical full URL (`https://openalex.org/W2741809807`), so we expand
     before building the terms clause.
     """
 
-    # Two ID shapes — legacy `label-<12-char-shortuuid>` (Phase 1) and new
-    # `lab_<10-char-base58>` (oxjob #228 QA-039). Accept both; legacy rows
-    # continue to exist after the cutover.
-    LABEL_ID_RE = re.compile(r"^!?(label-|lab_)[A-Za-z0-9]{1,48}$")
+    # Post-Phase-10 (oxjob #228 QA-042) collections all use the
+    # `col_<10-char-base58>` ID shape; legacy `label-...`/`lab_...` rows were
+    # swept to `col_*` by users-api migration 047. Range 1-48 leaves headroom
+    # for a future cap bump without touching the regex.
+    COLLECTION_ID_RE = re.compile(r"^!?col_[A-Za-z0-9]{1,48}$")
 
     def __init__(self, entity_type, **kwargs):
-        kwargs.setdefault("param", "label")
+        kwargs.setdefault("param", "collection")
         super().__init__(**kwargs)
         self.entity_type = entity_type
 
@@ -1219,29 +1220,29 @@ class LabelField(Field):
         return "id"
 
     def validate(self, query):
-        if not self.LABEL_ID_RE.match(query or ""):
+        if not self.COLLECTION_ID_RE.match(query or ""):
             raise APIQueryParamsError(
-                f"'{query}' is not a valid label id (expected 'label-...' or 'lab_...')."
+                f"'{query}' is not a valid collection id (expected 'col_...')."
             )
 
     def build_query(self):
-        from core.label_resolver import resolve_label
+        from core.collection_resolver import resolve_collection
 
         raw = self.value or ""
         self.validate(raw)
         negated = raw.startswith("!")
-        label_id = raw[1:] if negated else raw
+        collection_id = raw[1:] if negated else raw
 
-        label_entity_type, entity_ids = resolve_label(label_id)
+        collection_entity_type, entity_ids = resolve_collection(collection_id)
 
-        # Deleted / nonexistent label → silently match 0 results (spec).
-        if label_entity_type is None:
+        # Deleted / nonexistent collection → silently match 0 results (spec).
+        if collection_entity_type is None:
             q = Q("terms", id=[]) if not negated else Q("match_all")
             return q
 
-        if label_entity_type != self.entity_type:
+        if collection_entity_type != self.entity_type:
             raise APIQueryParamsError(
-                f"label {label_id} is type '{label_entity_type}', "
+                f"collection {collection_id} is type '{collection_entity_type}', "
                 f"not valid for /{self.entity_type}"
             )
 

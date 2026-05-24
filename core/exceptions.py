@@ -24,6 +24,6 @@ class HighAuthorCountError(APIError):
     description = "High author count limitation."
 
 
-class LabelResolutionUnavailableError(APIError):
+class CollectionResolutionUnavailableError(APIError):
     code = 503
-    description = "label resolution unavailable"
+    description = "collection resolution unavailable"

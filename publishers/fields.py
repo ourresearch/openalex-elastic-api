@@ -1,7 +1,7 @@
 from core.fields import (
     DateField,
     DateTimeField,
-    LabelField,
+    CollectionField,
     OpenAlexIDField,
     RangeField,
     SearchField,
@@ -85,7 +85,7 @@ fields = [
         custom_es_field="ids.wikidata.lower",
         unique_id="wikidata_entity",
     ),
-    LabelField(entity_type="publishers"),
+    CollectionField(entity_type="publishers"),
 ]
 
 fields_dict = {f.param: f for f in fields}

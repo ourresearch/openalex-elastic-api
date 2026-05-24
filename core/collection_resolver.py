@@ -1,8 +1,8 @@
-"""Resolve OpenAlex label IDs into entity-ID lists by calling openalex-users-api.
+"""Resolve OpenAlex collection IDs into entity-ID lists by calling openalex-users-api.
 
 Labels are user-owned named collections of one entity type each. See oxjob #228
-(labels-v1) for design notes. The `label:` filter syntax in elastic-api
-(`/works?filter=label:label-abc123`) resolves to a list of entity IDs via this
+(collections-v1) for design notes. The `collection:` filter syntax in elastic-api
+(`/works?filter=collection:collection-abc123`) resolves to a list of entity IDs via this
 module, which then becomes a `terms` clause in the ES query.
 """
 import logging
@@ -11,7 +11,7 @@ import requests
 from flask import request, has_request_context
 
 import settings
-from core.exceptions import APIQueryParamsError, LabelResolutionUnavailableError
+from core.exceptions import APIQueryParamsError, CollectionResolutionUnavailableError
 
 
 logger = logging.getLogger(__name__)
@@ -22,22 +22,22 @@ HTTP_TIMEOUT = 5
 # Public-facing message for any 503. Internal details (hostname, status code,
 # JSON parse errors) go to the server log only — never to the response body
 # (security review M4).
-_UNAVAILABLE_MSG = "label resolution temporarily unavailable"
+_UNAVAILABLE_MSG = "collection resolution temporarily unavailable"
 
 
-def resolve_label(label_id):
-    """Look up a label by ID and return (entity_type, [entity_ids]).
+def resolve_collection(collection_id):
+    """Look up a collection by ID and return (entity_type, [entity_ids]).
 
-    - Returns (None, []) for unknown / deleted labels (404 from users-api) so
+    - Returns (None, []) for unknown / deleted collections (404 from users-api) so
       filter callers can silently match zero results (spec: "Empty / nonexistent
-      / deleted label: silently matches 0 results. No error.").
-    - Raises LabelResolutionUnavailableError on users-api 5xx / timeout /
+      / deleted collection: silently matches 0 results. No error.").
+    - Raises CollectionResolutionUnavailableError on users-api 5xx / timeout /
       connection failure. The Flask error handler turns that into a 503.
     - Raises APIQueryParamsError if USERS_API_URL is not configured.
     """
     if not settings.USERS_API_URL:
         raise APIQueryParamsError(
-            "label: filter is not configured (USERS_API_URL unset)"
+            "collection: filter is not configured (USERS_API_URL unset)"
         )
 
     base = settings.USERS_API_URL.rstrip("/")
@@ -45,7 +45,7 @@ def resolve_label(label_id):
     entity_type = None
     page = 1
 
-    # Labels v1.1 (oxjob #228, QA-040) made labels owner+admin-only. Forward
+    # Labels v1.1 (oxjob #228, QA-040) made collections owner+admin-only. Forward
     # the current request's Authorization header so users-api can authenticate
     # the user (JWT for the GUI path, OpenAlex API key for the API path) and
     # enforce the owner check. Without a request context (e.g. unit tests
@@ -57,7 +57,7 @@ def resolve_label(label_id):
     fwd_headers = {"Authorization": auth_header} if auth_header else {}
 
     while True:
-        url = f"{base}/labels/{label_id}/entities"
+        url = f"{base}/collections/{collection_id}/entities"
         try:
             resp = requests.get(
                 url,
@@ -67,13 +67,13 @@ def resolve_label(label_id):
             )
         except requests.RequestException as e:
             logger.warning(
-                "label resolver request failed for %s: %s", label_id, e,
+                "collection resolver request failed for %s: %s", collection_id, e,
             )
-            raise LabelResolutionUnavailableError(_UNAVAILABLE_MSG)
+            raise CollectionResolutionUnavailableError(_UNAVAILABLE_MSG)
 
-        # 401 / 403 = caller has no access to this label; treat as a missing
-        # label so the filter silently matches zero. Same envelope as 404.
-        # (Avoids leaking the existence of private labels via a different
+        # 401 / 403 = caller has no access to this collection; treat as a missing
+        # collection so the filter silently matches zero. Same envelope as 404.
+        # (Avoids leaking the existence of private collections via a different
         # error code to anon vs. authenticated probes.)
         if resp.status_code in (401, 403, 404):
             return (None, [])
@@ -82,20 +82,20 @@ def resolve_label(label_id):
         # unavailable; the Flask error handler turns that into a 503.
         if resp.status_code != 200:
             logger.warning(
-                "users-api %s resolving label %s", resp.status_code, label_id,
+                "users-api %s resolving collection %s", resp.status_code, collection_id,
             )
-            raise LabelResolutionUnavailableError(_UNAVAILABLE_MSG)
+            raise CollectionResolutionUnavailableError(_UNAVAILABLE_MSG)
 
         try:
             payload = resp.json()
         except ValueError as e:
             logger.warning(
-                "users-api non-JSON response for label %s: %s", label_id, e,
+                "users-api non-JSON response for collection %s: %s", collection_id, e,
             )
-            raise LabelResolutionUnavailableError(_UNAVAILABLE_MSG)
+            raise CollectionResolutionUnavailableError(_UNAVAILABLE_MSG)
 
-        label = payload.get("label") or {}
-        entity_type = label.get("entity_type") or entity_type
+        collection = payload.get("collection") or {}
+        entity_type = collection.get("entity_type") or entity_type
         entity_ids.extend(payload.get("entity_ids") or [])
 
         meta = payload.get("meta") or {}

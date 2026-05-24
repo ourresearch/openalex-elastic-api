@@ -2,7 +2,7 @@ from core.fields import (
     DateField,
     DateTimeField,
     ExternalIDField,
-    LabelField,
+    CollectionField,
     RangeField,
     SearchField,
     TermField,
@@ -41,7 +41,7 @@ fields = [
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
-    LabelField(entity_type="sdgs"),
+    CollectionField(entity_type="sdgs"),
 ]
 
 fields_dict = {f.param: f for f in fields}

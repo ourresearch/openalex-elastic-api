@@ -2,7 +2,7 @@ from core.fields import (
     BooleanField,
     DateField,
     DateTimeField,
-    LabelField,
+    CollectionField,
     OpenAlexIDField,
     RangeField,
     SearchField,
@@ -94,7 +94,7 @@ fields = [
     ),
     TermField(param="ids.crossref", custom_es_field="ids.crossref"),
     TermField(param="ids.doi", custom_es_field="ids.doi.keyword"),
-    LabelField(entity_type="funders"),
+    CollectionField(entity_type="funders"),
 ]
 
 fields_dict = {f.param: f for f in fields}

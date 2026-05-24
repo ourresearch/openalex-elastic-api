@@ -3,15 +3,15 @@ import re
 from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
-from core.fields import LabelField, TermField, _canonicalize_entity_ids
-from core.label_resolver import resolve_label
+from core.fields import CollectionField, TermField, _canonicalize_entity_ids
+from core.collection_resolver import resolve_collection
 from core.utils import get_field
 from settings import MAX_IDS_IN_FILTER
 
 
 def filter_records(fields_dict, filter_params, s, sample=None):
     if filter_params:
-        s, filter_params = _apply_label_filters(fields_dict, filter_params, s)
+        s, filter_params = _apply_collection_filters(fields_dict, filter_params, s)
     for filter in filter_params:
         for key, value in filter.items():
             if key == 'include_xpac' or key == 'include-xpac':
@@ -163,42 +163,42 @@ def handle_and_query(field, s, value):
     return s
 
 
-# Per-request hard caps for the `label:` filter. Only one `label:` filter is
+# Per-request hard caps for the `collection:` filter. Only one `collection:` filter is
 # allowed per request — UI restriction (oxjob #228), also defense-in-depth
 # against perf risks of unioning multiple 1000-entity lists into a single ES
-# `terms` clause. Defenses against DoS-via-request-amplification: each label
+# `terms` clause. Defenses against DoS-via-request-amplification: each collection
 # triggers an outbound HTTP resolve to users-api, and each resolved ID list
 # becomes part of an ES `terms` clause.
-MAX_LABELS_PER_REQUEST = 1
+MAX_COLLECTIONS_PER_REQUEST = 1
 MAX_RESOLVED_IDS_PER_REQUEST = 10_000
 
 
-def _apply_label_filters(fields_dict, filter_params, s):
-    """Pre-pass: resolve a single positive or negated `label:` filter into an ES
+def _apply_collection_filters(fields_dict, filter_params, s):
+    """Pre-pass: resolve a single positive or negated `collection:` filter into an ES
     `terms` clause on entity id.
 
-    Only one `label:` filter is allowed per request (oxjob #228, multi-label
+    Only one `collection:` filter is allowed per request (oxjob #228, multi-collection
     intersection removed); >1 and `|`-OR within a value both 400 fail-fast.
 
-    Returns (search, remaining filter_params) with the `label:` entry
+    Returns (search, remaining filter_params) with the `collection:` entry
     consumed.
     """
     positives = []
     negatives = []
     other = []
     for f in filter_params:
-        if "label" in f and len(f) == 1:
-            value = f["label"] or ""
-            # OR within one label: filter (e.g. `label:L1|L2`) is rejected —
+        if "collection" in f and len(f) == 1:
+            value = f["collection"] or ""
+            # OR within one collection: filter (e.g. `collection:L1|L2`) is rejected —
             # would union the ID lists and could blow past MAX_RESOLVED_IDS.
             if "|" in value:
                 raise APIQueryParamsError(
-                    "OR (pipe) between label values is not supported. "
-                    "Only one label: filter is allowed per request."
+                    "OR (pipe) between collection values is not supported. "
+                    "Only one collection: filter is allowed per request."
                 )
-            if not LabelField.LABEL_ID_RE.match(value):
+            if not CollectionField.COLLECTION_ID_RE.match(value):
                 raise APIQueryParamsError(
-                    f"'{value}' is not a valid label id (expected 'label-...' or 'lab_...')."
+                    f"'{value}' is not a valid collection id (expected 'col_...')."
                 )
             if value.startswith("!"):
                 negatives.append(value[1:])
@@ -207,29 +207,29 @@ def _apply_label_filters(fields_dict, filter_params, s):
         else:
             other.append(f)
 
-    # Dedupe (preserves first-seen order) so a repeated `label:L1` is one call,
-    # not N. Done before the count cap so the cap reflects distinct labels.
+    # Dedupe (preserves first-seen order) so a repeated `collection:L1` is one call,
+    # not N. Done before the count cap so the cap reflects distinct collections.
     positives = list(dict.fromkeys(positives))
     negatives = list(dict.fromkeys(negatives))
 
-    if len(positives) + len(negatives) > MAX_LABELS_PER_REQUEST:
+    if len(positives) + len(negatives) > MAX_COLLECTIONS_PER_REQUEST:
         raise APIQueryParamsError(
-            "Only one label: filter is allowed per request."
+            "Only one collection: filter is allowed per request."
         )
 
-    label_field = fields_dict.get("label")
-    if not isinstance(label_field, LabelField) and (positives or negatives):
-        # Endpoint doesn't expose the `label:` filter. Return the original
+    collection_field = fields_dict.get("collection")
+    if not isinstance(collection_field, CollectionField) and (positives or negatives):
+        # Endpoint doesn't expose the `collection:` filter. Return the original
         # filter_params so the normal loop produces the standard "not a valid
-        # field" error for the label entries.
+        # field" error for the collection entries.
         return s, filter_params
 
-    endpoint_entity_type = label_field.entity_type if label_field else None
+    endpoint_entity_type = collection_field.entity_type if collection_field else None
 
-    def _check_type(label_id, label_entity_type):
-        if label_entity_type and label_entity_type != endpoint_entity_type:
+    def _check_type(collection_id, collection_entity_type):
+        if collection_entity_type and collection_entity_type != endpoint_entity_type:
             raise APIQueryParamsError(
-                f"label {label_id} is type '{label_entity_type}', "
+                f"collection {collection_id} is type '{collection_entity_type}', "
                 f"not valid for /{endpoint_entity_type}"
             )
 
@@ -240,26 +240,26 @@ def _apply_label_filters(fields_dict, filter_params, s):
         total_ids += count
         if total_ids > MAX_RESOLVED_IDS_PER_REQUEST:
             raise APIQueryParamsError(
-                f"label: filter resolved to too many entities "
+                f"collection: filter resolved to too many entities "
                 f"(max {MAX_RESOLVED_IDS_PER_REQUEST})"
             )
 
-    # Positive label (at most one — enforced above).
+    # Positive collection (at most one — enforced above).
     if positives:
         lid = positives[0]
-        etype, ids = resolve_label(lid)
+        etype, ids = resolve_collection(lid)
         _budget(len(ids))
-        # Unknown / deleted label → empty `terms` (silently matches 0; spec).
+        # Unknown / deleted collection → empty `terms` (silently matches 0; spec).
         if etype is None:
             ids = []
         else:
             _check_type(lid, etype)
         s = s.filter(Q("terms", id=_canonicalize_entity_ids(ids)))
 
-    # Negated label (at most one — enforced above, and only when positives is empty).
+    # Negated collection (at most one — enforced above, and only when positives is empty).
     if negatives:
         lid = negatives[0]
-        etype, ids = resolve_label(lid)
+        etype, ids = resolve_collection(lid)
         if etype is not None:
             _check_type(lid, etype)
             _budget(len(ids))
