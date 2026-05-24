@@ -163,22 +163,24 @@ def handle_and_query(field, s, value):
     return s
 
 
-# Per-request hard caps for the `label:` filter. Defenses against DoS-via-
-# request-amplification: each label triggers an outbound HTTP resolve to
-# users-api, and each resolved ID list becomes part of an ES `terms` clause.
-MAX_LABELS_PER_REQUEST = 8
+# Per-request hard caps for the `label:` filter. Only one `label:` filter is
+# allowed per request — UI restriction (oxjob #228), also defense-in-depth
+# against perf risks of unioning multiple 1000-entity lists into a single ES
+# `terms` clause. Defenses against DoS-via-request-amplification: each label
+# triggers an outbound HTTP resolve to users-api, and each resolved ID list
+# becomes part of an ES `terms` clause.
+MAX_LABELS_PER_REQUEST = 1
 MAX_RESOLVED_IDS_PER_REQUEST = 10_000
 
 
 def _apply_label_filters(fields_dict, filter_params, s):
-    """Pre-pass: collapse multiple positive `label:` filters into one ES `terms`
-    clause built from the server-side intersection of their entity-ID lists.
+    """Pre-pass: resolve a single positive or negated `label:` filter into an ES
+    `terms` clause on entity id.
 
-    Negated `label:!L1` filters are passed through to the normal LabelField
-    path (each becomes its own `NOT terms` clause). All label filters are
-    validated to match the endpoint's entity type; mismatched types 400.
+    Only one `label:` filter is allowed per request (oxjob #228, multi-label
+    intersection removed); >1 and `|`-OR within a value both 400 fail-fast.
 
-    Returns (search, remaining filter_params) with all `label:` entries
+    Returns (search, remaining filter_params) with the `label:` entry
     consumed.
     """
     positives = []
@@ -186,8 +188,15 @@ def _apply_label_filters(fields_dict, filter_params, s):
     other = []
     for f in filter_params:
         if "label" in f and len(f) == 1:
-            value = f["label"]
-            if not LabelField.LABEL_ID_RE.match(value or ""):
+            value = f["label"] or ""
+            # OR within one label: filter (e.g. `label:L1|L2`) is rejected —
+            # would union the ID lists and could blow past MAX_RESOLVED_IDS.
+            if "|" in value:
+                raise APIQueryParamsError(
+                    "OR (pipe) between label values is not supported. "
+                    "Only one label: filter is allowed per request."
+                )
+            if not LabelField.LABEL_ID_RE.match(value):
                 raise APIQueryParamsError(
                     f"'{value}' is not a valid label id (expected 'label-...' or 'lab_...')."
                 )
@@ -205,8 +214,7 @@ def _apply_label_filters(fields_dict, filter_params, s):
 
     if len(positives) + len(negatives) > MAX_LABELS_PER_REQUEST:
         raise APIQueryParamsError(
-            f"too many label: filters in one request "
-            f"(max {MAX_LABELS_PER_REQUEST})"
+            "Only one label: filter is allowed per request."
         )
 
     label_field = fields_dict.get("label")
@@ -236,32 +244,25 @@ def _apply_label_filters(fields_dict, filter_params, s):
                 f"(max {MAX_RESOLVED_IDS_PER_REQUEST})"
             )
 
-    # Positive labels: resolve, validate types, intersect IDs.
+    # Positive label (at most one — enforced above).
     if positives:
-        resolved = []
-        for lid in positives:
-            etype, ids = resolve_label(lid)
-            _budget(len(ids))
-            resolved.append((lid, (etype, ids)))
-        # Validate entity types against endpoint.
-        for lid, (etype, _) in resolved:
-            _check_type(lid, etype)
-        # If any positive label is unknown / deleted, the intersection is empty.
-        if any(etype is None for _, (etype, _) in resolved):
+        lid = positives[0]
+        etype, ids = resolve_label(lid)
+        _budget(len(ids))
+        # Unknown / deleted label → empty `terms` (silently matches 0; spec).
+        if etype is None:
             ids = []
         else:
-            sets = [set(ids) for _, (_, ids) in resolved]
-            ids = sorted(set.intersection(*sets)) if sets else []
+            _check_type(lid, etype)
         s = s.filter(Q("terms", id=_canonicalize_entity_ids(ids)))
 
-    # Negated labels: each becomes its own NOT clause.
-    for lid in negatives:
+    # Negated label (at most one — enforced above, and only when positives is empty).
+    if negatives:
+        lid = negatives[0]
         etype, ids = resolve_label(lid)
-        if etype is None:
-            # Deleted label → nothing to exclude; skip.
-            continue
-        _check_type(lid, etype)
-        _budget(len(ids))
-        s = s.filter(~Q("bool", must=Q("terms", id=_canonicalize_entity_ids(ids))))
+        if etype is not None:
+            _check_type(lid, etype)
+            _budget(len(ids))
+            s = s.filter(~Q("bool", must=Q("terms", id=_canonicalize_entity_ids(ids))))
 
     return s, other

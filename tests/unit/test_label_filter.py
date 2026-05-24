@@ -72,7 +72,7 @@ class TestResolveLabel:
             },
         }
 
-        def _fake_get(url, params=None, timeout=None):
+        def _fake_get(url, params=None, timeout=None, headers=None):
             return _FakeResp(200, pages[params["page"]])
 
         monkeypatch.setattr(label_resolver.requests, "get", _fake_get)
@@ -209,30 +209,25 @@ class TestApplyLabelFilters:
         assert remaining == []
         assert "W1" in str(body) and "W2" in str(body)
 
-    def test_two_positives_intersect_server_side(self, monkeypatch):
-        lookup = {
-            "label-L1": ("works", ["W1", "W2", "W3"]),
-            "label-L2": ("works", ["W2", "W3", "W4"]),
-        }
-        monkeypatch.setattr(
-            "core.filter.resolve_label",
-            lambda lid: lookup[lid],
-        )
+    def test_two_positives_rejected_single_label_only(self, monkeypatch):
+        # oxjob #228: multi-label intersection removed. Two positives now 400
+        # fail-fast before any resolver call.
+        calls = []
+
+        def _track(lid):
+            calls.append(lid)
+            return ("works", ["W1"])
+
+        monkeypatch.setattr("core.filter.resolve_label", _track)
         s = Search()
-        s, remaining = _apply_label_filters(
-            works_fields_dict,
-            [{"label": "label-L1"}, {"label": "label-L2"}],
-            s,
-        )
-        body = s.to_dict()
-        assert remaining == []
-        text = str(body)
-        # Intersection is {W2, W3}, expanded to full URLs.
-        assert "https://openalex.org/W2" in text
-        assert "https://openalex.org/W3" in text
-        # W1 and W4 must NOT appear in the query at all.
-        assert "/W1" not in text
-        assert "/W4" not in text
+        with pytest.raises(APIQueryParamsError) as exc:
+            _apply_label_filters(
+                works_fields_dict,
+                [{"label": "label-L1"}, {"label": "label-L2"}],
+                s,
+            )
+        assert "Only one label" in str(exc.value)
+        assert calls == []
 
     def test_wrong_entity_type_rejected(self, monkeypatch):
         monkeypatch.setattr(
@@ -247,25 +242,20 @@ class TestApplyLabelFilters:
         assert "type 'authors'" in str(exc.value)
         assert "/works" in str(exc.value)
 
-    def test_unknown_label_collapses_intersection_to_empty(self, monkeypatch):
-        lookup = {
-            "label-L1": ("works", ["W1", "W2"]),
-            "label-gone": (None, []),
-        }
+    def test_unknown_label_matches_zero(self, monkeypatch):
+        # Deleted/nonexistent label → silently empty `terms` (spec).
         monkeypatch.setattr(
             "core.filter.resolve_label",
-            lambda lid: lookup[lid],
+            lambda lid: (None, []),
         )
         s = Search()
         s, remaining = _apply_label_filters(
-            works_fields_dict,
-            [{"label": "label-L1"}, {"label": "label-gone"}],
-            s,
+            works_fields_dict, [{"label": "label-gone"}], s,
         )
         body = str(s.to_dict())
-        assert "W1" not in body and "W2" not in body
         # An empty `terms` is still present (matches zero).
         assert "terms" in body
+        assert remaining == []
 
     def test_negated_label(self, monkeypatch):
         monkeypatch.setattr(
@@ -296,7 +286,7 @@ class TestApplyLabelFilters:
         assert s2.to_dict() == s.to_dict()
 
     def test_too_many_labels_rejected(self, monkeypatch):
-        # Should reject before any resolve_label call.
+        # Single-label cap (=1); two distinct labels 400 fail-fast.
         calls = []
 
         def _track(lid):
@@ -305,13 +295,30 @@ class TestApplyLabelFilters:
 
         monkeypatch.setattr("core.filter.resolve_label", _track)
         s = Search()
-        params = [{"label": f"label-L{i}"} for i in range(9)]
+        params = [{"label": "label-L1"}, {"label": "label-L2"}]
         with pytest.raises(APIQueryParamsError) as exc:
             _apply_label_filters(works_fields_dict, params, s)
-        assert "too many label" in str(exc.value)
+        assert "Only one label" in str(exc.value)
         assert calls == []  # fail fast — no outbound resolver calls
 
+    def test_pipe_or_within_label_value_rejected(self, monkeypatch):
+        calls = []
+
+        def _track(lid):
+            calls.append(lid)
+            return ("works", ["W1"])
+
+        monkeypatch.setattr("core.filter.resolve_label", _track)
+        s = Search()
+        with pytest.raises(APIQueryParamsError) as exc:
+            _apply_label_filters(
+                works_fields_dict, [{"label": "label-L1|label-L2"}], s,
+            )
+        assert "OR (pipe)" in str(exc.value)
+        assert calls == []
+
     def test_duplicate_labels_deduped_before_resolving(self, monkeypatch):
+        # Repeated same label dedupes to 1 = within cap.
         calls = []
 
         def _track(lid):
@@ -320,48 +327,21 @@ class TestApplyLabelFilters:
 
         monkeypatch.setattr("core.filter.resolve_label", _track)
         s = Search()
-        # 12 copies of the same label — dedupes to 1, well under the cap of 8.
         params = [{"label": "label-L1"}] * 12
         _apply_label_filters(works_fields_dict, params, s)
         assert calls == ["label-L1"]
 
-    def test_dedupe_counts_distinct_labels_against_cap(self, monkeypatch):
-        # Cap is on distinct labels — 9 duplicates of one label should pass.
+    def test_positive_plus_negative_rejected(self, monkeypatch):
+        # 1 positive + 1 negative = 2 distinct, over the single-label cap.
         monkeypatch.setattr(
             "core.filter.resolve_label",
             lambda lid: ("works", ["W1"]),
         )
         s = Search()
-        params = [{"label": "label-L1"}] * 9
-        s, remaining = _apply_label_filters(works_fields_dict, params, s)
-        assert remaining == []
-
-    def test_resolved_id_budget_enforced(self, monkeypatch):
-        # Two labels each returning 6000 IDs blows the 10K budget.
-        monkeypatch.setattr(
-            "core.filter.resolve_label",
-            lambda lid: ("works", [f"W{i}" for i in range(6000)]),
-        )
-        s = Search()
-        params = [{"label": "label-L1"}, {"label": "label-L2"}]
+        params = [{"label": "label-P"}, {"label": "!label-N"}]
         with pytest.raises(APIQueryParamsError) as exc:
             _apply_label_filters(works_fields_dict, params, s)
-        assert "too many entities" in str(exc.value)
-
-    def test_negative_labels_also_count_against_request_cap(self, monkeypatch):
-        monkeypatch.setattr(
-            "core.filter.resolve_label",
-            lambda lid: ("works", ["W1"]),
-        )
-        s = Search()
-        # 5 positive + 5 negative = 10, over the cap of 8.
-        params = (
-            [{"label": f"label-P{i}"} for i in range(5)]
-            + [{"label": f"!label-N{i}"} for i in range(5)]
-        )
-        with pytest.raises(APIQueryParamsError) as exc:
-            _apply_label_filters(works_fields_dict, params, s)
-        assert "too many label" in str(exc.value)
+        assert "Only one label" in str(exc.value)
 
 
 # ---------- LABEL_ID_RE format cap ----------
