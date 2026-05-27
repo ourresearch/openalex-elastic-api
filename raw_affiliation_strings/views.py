@@ -224,6 +224,9 @@ def raw_affiliation_strings():
             must_not=[Q("terms", institution_ids_final=unmatched_institution_ids)]
         ))
     
+    # Exclude records with 0 works (easier to store them than delete; just filter them out)
+    must_queries.append(Q("range", works_count={"gt": 0}))
+
     # Filter for works_count
     if works_count_filter:
         if "exact" in works_count_filter:
