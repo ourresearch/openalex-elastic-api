@@ -23,6 +23,8 @@ ENTITY_ID_PARAM_TYPES = {
     "authorships.author.id": "authors",
     "corresponding_author_ids": "authors",
     # institutions
+    "affiliations.institution.id": "institutions",
+    "affiliations.institution.lineage": "institutions",
     "authorships.institutions.id": "institutions",
     "authorships.institutions.lineage": "institutions",
     "corresponding_institution_ids": "institutions",
@@ -30,6 +32,8 @@ ENTITY_ID_PARAM_TYPES = {
     "institutions.id": "institutions",
     "institution_assertions.id": "institutions",
     "institution_assertions.lineage": "institutions",
+    "last_known_institutions.id": "institutions",
+    "last_known_institutions.lineage": "institutions",
     "locations.source.host_institution_lineage": "institutions",
     "primary_location.source.host_institution_lineage": "institutions",
     # sources (journal/repository are sources at the index layer)

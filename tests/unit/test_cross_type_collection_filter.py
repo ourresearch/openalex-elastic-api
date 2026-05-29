@@ -335,3 +335,81 @@ class TestBuildTermsQuery:
         f = OpenAlexIDField(param="primary_location.source.id")
         with pytest.raises(APIQueryParamsError):
             f.build_terms_query(["bogus", "S123"])
+
+
+# ---------- author-side institution fields (Test 10 from #266 ACCEPTANCE.md) ----------
+#
+# These were missing from ENTITY_ID_PARAM_TYPES in the original Phase 3 ship —
+# caught by the 2026-05-29 prod ACCEPTANCE run. We verify the map + the
+# annotate_entity_types wiring directly here; the full /authors-endpoint
+# request path is verified via prod ACCEPTANCE Test 10 (creating a real
+# institutions collection and hitting /authors?filter=last_known_institutions.id:col_xxx).
+# Importing authors.fields at this level would race with test_combined_search.py's
+# module-level sys.modules['settings'] clobber, so we keep this test scoped to core/.
+
+class TestAuthorInstitutionEntityTypeMap:
+    AUTHOR_INST_FIELDS = [
+        "last_known_institutions.id",
+        "last_known_institutions.lineage",
+        "affiliations.institution.id",
+        "affiliations.institution.lineage",
+    ]
+
+    @pytest.mark.parametrize("param", AUTHOR_INST_FIELDS)
+    def test_param_is_in_entity_id_param_types(self, param):
+        from core.fields import ENTITY_ID_PARAM_TYPES
+        assert ENTITY_ID_PARAM_TYPES.get(param) == "institutions"
+
+    def test_annotate_entity_types_tags_the_new_fields(self):
+        # Mirror what authors/fields.py does: build the field objects, call
+        # annotate_entity_types, confirm each ends up with entity_type set.
+        from core.fields import OpenAlexIDField, annotate_entity_types
+        fields = [OpenAlexIDField(param=p) for p in self.AUTHOR_INST_FIELDS]
+        annotate_entity_types(fields)
+        for f in fields:
+            assert f.entity_type == "institutions", (
+                f"{f.param} did not get entity_type tagged"
+            )
+
+    def test_cross_type_filter_dispatches_institutions_collection(self, monkeypatch):
+        # Build a minimal fields_dict locally — same shape annotate_entity_types
+        # produces on a real endpoint — and run the full cross-type filter pre-pass
+        # against it. Exercises core.filter end-to-end without authors/ import.
+        from core.fields import OpenAlexIDField, annotate_entity_types
+        fs = [OpenAlexIDField(param=p) for p in self.AUTHOR_INST_FIELDS]
+        annotate_entity_types(fs)
+        fields_dict = {f.param: f for f in fs}
+
+        monkeypatch.setattr(
+            "core.filter.resolve_collection",
+            lambda lid: ("institutions", ["I100", "I200"]),
+        )
+        s = Search()
+        s, remaining = _apply_cross_type_collection_filters(
+            fields_dict,
+            [{"last_known_institutions.id": "col_inst"}],
+            s,
+        )
+        body = json.dumps(s.to_dict())
+        assert remaining == []
+        assert "https://openalex.org/I100" in body
+        assert "https://openalex.org/I200" in body
+
+    def test_cross_type_filter_rejects_type_mismatch_on_author_field(self, monkeypatch):
+        from core.fields import OpenAlexIDField, annotate_entity_types
+        fs = [OpenAlexIDField(param=p) for p in self.AUTHOR_INST_FIELDS]
+        annotate_entity_types(fs)
+        fields_dict = {f.param: f for f in fs}
+
+        monkeypatch.setattr(
+            "core.filter.resolve_collection",
+            lambda lid: ("works", ["W100"]),
+        )
+        with pytest.raises(APIQueryParamsError) as exc:
+            _apply_cross_type_collection_filters(
+                fields_dict,
+                [{"last_known_institutions.id": "col_wrong"}],
+                Search(),
+            )
+        msg = str(exc.value).lower()
+        assert "institutions" in msg and "works" in msg
