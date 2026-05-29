@@ -12,6 +12,7 @@ from settings import MAX_IDS_IN_FILTER
 def filter_records(fields_dict, filter_params, s, sample=None):
     if filter_params:
         s, filter_params = _apply_collection_filters(fields_dict, filter_params, s)
+        s, filter_params = _apply_cross_type_collection_filters(fields_dict, filter_params, s)
     for filter in filter_params:
         for key, value in filter.items():
             if key == 'include_xpac' or key == 'include-xpac':
@@ -266,3 +267,130 @@ def _apply_collection_filters(fields_dict, filter_params, s):
             s = s.filter(~Q("bool", must=Q("terms", id=_canonicalize_entity_ids(ids))))
 
     return s, other
+
+
+def _value_has_collection_ref(value):
+    """True if `value` contains a `col_xxx` segment anywhere."""
+    parts = re.split(r"[ |]", value or "")
+    return any(CollectionField.COLLECTION_ID_RE.match(p) for p in parts)
+
+
+def _value_is_pure_collection_ref(value):
+    """True iff value is exactly a single `col_xxx` or `!col_xxx`."""
+    return bool(CollectionField.COLLECTION_ID_RE.match(value or ""))
+
+
+def _apply_cross_type_collection_filters(fields_dict, filter_params, s):
+    """Pre-pass: resolve `<entity-id-field>:col_xxx` filters into terms clauses on
+    the target field. Runs after `_apply_collection_filters`.
+
+    Detection: any filter clause whose value is exactly `col_xxx` or `!col_xxx`,
+    against a Field instance with a non-None `entity_type`.
+
+    Rejects (Phase 0 decisions, oxjob #266):
+    - `col_xxx` mixed with literal IDs or other refs via `|` / ` ` in one value
+    - Multiple `col_xxx` entries on the same field across filter clauses (v1)
+    - `col_xxx` on a field with no `entity_type` (defense)
+    - `col_xxx` whose resolved entity_type doesn't match the field's
+
+    Behavior:
+    - Unknown / deleted collection → positive: match zero; negation: no-op (spec)
+    - Negation `!col_xxx` → wrap the resolved terms clause in `bool.must_not`
+    - Type check happens before the budget consumes IDs
+
+    Returns (search, remaining filter_params).
+    """
+    cross = []         # (field, raw_value)
+    remaining = []
+
+    for f in filter_params:
+        if len(f) != 1:
+            remaining.append(f)
+            continue
+        key, value = next(iter(f.items()))
+        if key in ("include_xpac", "include-xpac"):
+            remaining.append(f)
+            continue
+        if not _value_has_collection_ref(value):
+            remaining.append(f)
+            continue
+        if not _value_is_pure_collection_ref(value):
+            raise APIQueryParamsError(
+                f"'{value}' mixes a collection reference (col_...) with literal "
+                f"values or another reference. v1 supports only a single "
+                f"col_... per filter clause (no `|` / space mixing)."
+            )
+        field = fields_dict.get(key) or fields_dict.get(key.replace("-", "_"))
+        if field is None:
+            # Unknown field — let the main loop produce the standard
+            # "not a valid filter field" error.
+            remaining.append(f)
+            continue
+        if field.entity_type is None:
+            raise APIQueryParamsError(
+                f"The `{key}` filter does not support cross-type collection "
+                f"references (col_...). Use a same-type `collection:` filter "
+                f"or a literal value list."
+            )
+        cross.append((field, value))
+
+    if not cross:
+        return s, remaining
+
+    # Phase 0 decision: one col_... per (field, request) in v1.
+    seen = {}
+    for field, value in cross:
+        if field.param in seen:
+            raise APIQueryParamsError(
+                f"Multiple collection references for the `{field.param}` filter "
+                f"are not supported in v1."
+            )
+        seen[field.param] = value
+
+    total_ids = 0
+
+    def _budget(count):
+        nonlocal total_ids
+        total_ids += count
+        if total_ids > MAX_RESOLVED_IDS_PER_REQUEST:
+            raise APIQueryParamsError(
+                f"cross-type collection filters resolved to too many entities "
+                f"(max {MAX_RESOLVED_IDS_PER_REQUEST})"
+            )
+
+    for field, value in cross:
+        negate = value.startswith("!")
+        collection_id = value[1:] if negate else value
+
+        etype, ids = resolve_collection(collection_id)
+
+        # Unknown / deleted collection:
+        # - positive: silently match zero (spec)
+        # - negation: silently no-op (filter matches all docs)
+        if etype is None:
+            if negate:
+                continue
+            s = s.filter(Q("terms", **{field.es_field(): []}))
+            continue
+
+        if etype != field.entity_type:
+            raise APIQueryParamsError(
+                f"collection {collection_id} is type '{etype}', not valid for "
+                f"the `{field.param}` filter (expects '{field.entity_type}')."
+            )
+
+        _budget(len(ids))
+
+        if not ids:
+            if negate:
+                continue
+            s = s.filter(Q("terms", **{field.es_field(): []}))
+            continue
+
+        clause = field.build_terms_query(ids)
+        if negate:
+            s = s.filter(~Q("bool", must=clause))
+        else:
+            s = s.filter(clause)
+
+    return s, remaining
