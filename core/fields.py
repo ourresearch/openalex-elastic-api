@@ -11,6 +11,66 @@ from core.utils import get_full_openalex_id, normalize_openalex_id
 from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX_LEGACY
 
 
+# Cross-type collection filter (#266): maps filter params with unambiguous
+# entity-ID semantics to the users-api entity_type their values resolve to.
+# Set on each Field instance via Field.entity_type (also settable per-instance
+# in endpoint fields.py for endpoint-specific cases like `id` filters).
+# Source of truth for valid entity types: openalex-users-api collection_validators
+# SUPPORTED_ENTITY_TYPES — keep in sync if that set changes.
+ENTITY_ID_PARAM_TYPES = {
+    # authors
+    "author.id": "authors",
+    "authorships.author.id": "authors",
+    "corresponding_author_ids": "authors",
+    # institutions
+    "authorships.institutions.id": "institutions",
+    "authorships.institutions.lineage": "institutions",
+    "corresponding_institution_ids": "institutions",
+    "institution.id": "institutions",
+    "institutions.id": "institutions",
+    "institution_assertions.id": "institutions",
+    "institution_assertions.lineage": "institutions",
+    "locations.source.host_institution_lineage": "institutions",
+    "primary_location.source.host_institution_lineage": "institutions",
+    # sources (journal/repository are sources at the index layer)
+    "best_oa_location.source.id": "sources",
+    "journal": "sources",
+    "locations.source.id": "sources",
+    "primary_location.source.id": "sources",
+    "repository": "sources",
+    # publishers (lineage fields are publisher-typed)
+    "best_oa_location.source.host_organization_lineage": "publishers",
+    "locations.source.host_organization_lineage": "publishers",
+    "locations.source.publisher_lineage": "publishers",
+    "primary_location.source.host_organization_lineage": "publishers",
+    "primary_location.source.publisher_lineage": "publishers",
+    # concepts
+    "concept.id": "concepts",
+    "concepts.id": "concepts",
+    # topics
+    "primary_topic.id": "topics",
+    "topics.id": "topics",
+    # funders
+    "awards.funder_id": "funders",
+    "funders.id": "funders",
+    # SDGs
+    "sustainable_development_goals.id": "sdgs",
+    # keywords
+    "keywords.id": "keywords",
+}
+
+
+def annotate_entity_types(fields):
+    """Set Field.entity_type for fields whose param appears in
+    ENTITY_ID_PARAM_TYPES. Called from each endpoint's fields.py before the
+    fields_dict is built so cross-type collection filters work consistently.
+    Endpoint-specific cases (e.g. `id` filters) should be set on the Field
+    instance directly."""
+    for f in fields:
+        if f.entity_type is None and f.param in ENTITY_ID_PARAM_TYPES:
+            f.entity_type = ENTITY_ID_PARAM_TYPES[f.param]
+
+
 class Field(ABC):
     def __init__(
         self,
@@ -22,6 +82,7 @@ class Field(ABC):
         docstring="",
         documentation_link="",
         alternate_names=None,
+        entity_type=None,
     ):
         self.param = param
         self.alias = alias
@@ -34,6 +95,12 @@ class Field(ABC):
         self.alternate_names = (
             alternate_names  # optional list of strings, useful for search
         )
+        # Cross-type collection filter (#266): when set, allows
+        # `<param>:col_xxx` to resolve a collection of this entity type and
+        # apply it as a terms clause. None means the field does not support
+        # cross-type collection refs (defense for params where the indexed
+        # shape doesn't match any users-api entity_type).
+        self.entity_type = entity_type
 
     @abstractmethod
     def build_query(self):
@@ -1244,8 +1311,7 @@ class CollectionField(Field):
 
     def __init__(self, entity_type, **kwargs):
         kwargs.setdefault("param", "collection")
-        super().__init__(**kwargs)
-        self.entity_type = entity_type
+        super().__init__(entity_type=entity_type, **kwargs)
 
     def es_field(self) -> str:
         return "id"

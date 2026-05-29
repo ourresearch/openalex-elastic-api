@@ -7,6 +7,7 @@ from core.fields import (
     RangeField,
     SearchField,
     TermField,
+    annotate_entity_types,
 )
 from core.alternate_names import ALTERNATE_NAMES
 
@@ -158,5 +159,12 @@ fields = [
     TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),
     CollectionField(entity_type="authors"),
 ]
+
+# Cross-type collection filter (#266): annotate fields with unambiguous entity-ID
+# semantics. The canonical id-shaped params on /authors resolve to authors.
+annotate_entity_types(fields)
+for f in fields:
+    if f.param in ("id", "ids.openalex", "openalex", "openalex_id") and f.entity_type is None:
+        f.entity_type = "authors"
 
 fields_dict = {f.param: f for f in fields}

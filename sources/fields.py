@@ -8,6 +8,7 @@ from core.fields import (
     RangeField,
     SearchField,
     TermField,
+    annotate_entity_types,
 )
 from core.alternate_names import ALTERNATE_NAMES
 
@@ -159,5 +160,12 @@ fields = [
     ),
     CollectionField(entity_type="sources"),
 ]
+
+# Cross-type collection filter (#266): annotate fields with unambiguous entity-ID
+# semantics. The canonical id-shaped params on /sources resolve to sources.
+annotate_entity_types(fields)
+for f in fields:
+    if f.param in ("id", "ids.openalex", "openalex", "openalex_id") and f.entity_type is None:
+        f.entity_type = "sources"
 
 fields_dict = {f.param: f for f in fields}

@@ -7,6 +7,7 @@ from core.fields import (
     RangeField,
     SearchField,
     TermField,
+    annotate_entity_types,
 )
 from core.alternate_names import ALTERNATE_NAMES
 
@@ -882,5 +883,13 @@ fields = [
     TermField(param="version", custom_es_field="locations.version"),
     CollectionField(entity_type="works"),
 ]
+
+# Cross-type collection filter (#266): annotate Field.entity_type for fields
+# whose param has unambiguous entity-ID semantics. Endpoint-specific ID fields
+# (works' canonical id) are also tagged below.
+annotate_entity_types(fields)
+for f in fields:
+    if f.param in ("ids.openalex", "openalex", "openalex_id") and f.entity_type is None:
+        f.entity_type = "works"
 
 fields_dict = {f.param: f for f in fields}

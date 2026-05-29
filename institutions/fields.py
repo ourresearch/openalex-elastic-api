@@ -7,6 +7,7 @@ from core.fields import (
     RangeField,
     SearchField,
     TermField,
+    annotate_entity_types,
 )
 from core.alternate_names import ALTERNATE_NAMES
 
@@ -143,5 +144,12 @@ fields = [
     ),
     CollectionField(entity_type="institutions"),
 ]
+
+# Cross-type collection filter (#266): annotate fields with unambiguous entity-ID
+# semantics. The canonical id-shaped params on /institutions resolve to institutions.
+annotate_entity_types(fields)
+for f in fields:
+    if f.param in ("id", "ids.openalex", "openalex", "openalex_id") and f.entity_type is None:
+        f.entity_type = "institutions"
 
 fields_dict = {f.param: f for f in fields}
