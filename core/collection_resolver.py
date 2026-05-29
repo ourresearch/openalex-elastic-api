@@ -16,7 +16,12 @@ from core.exceptions import APIQueryParamsError, CollectionResolutionUnavailable
 
 logger = logging.getLogger(__name__)
 
-PER_PAGE = 200
+# Matches the per-collection cap in openalex-users-api (MAX_ENTITIES_PER_COLLECTION
+# = 1000), so a full at-cap collection resolves in a single round-trip. users-api
+# accepts up to 1000 since the matching deploy on 2026-05-29 (commit 03b481a).
+# If users-api silently caps lower, the loop below handles it by paginating —
+# correctness is unaffected, only latency.
+PER_PAGE = 1000
 HTTP_TIMEOUT = 5
 
 # Public-facing message for any 503. Internal details (hostname, status code,
