@@ -21,7 +21,19 @@ def authors():
     index_name = AUTHORS_INDEX_WALDEN if connection == 'walden' else AUTHORS_INDEX_LEGACY
     default_sort = ["-works_count", "id"]
     only_fields = process_only_fields(request, AuthorsSchema)
-    result = shared_view(request, fields_dict, index_name, default_sort, connection=connection)
+
+    # Hide authors emptied by curation (all their works reassigned away) until
+    # the daily "delete zero-works authors" process exists. Mirrors the
+    # is_xpac:false default on /works (works/views.py). Overridable: any
+    # explicit works_count filter (e.g. works_count:0) bypasses this so the
+    # cleanup job / debugging can still enumerate empties. Applied in
+    # shared_view before grouping, so it covers search, list, filter, and
+    # author group_bys. See oxjob #287 (Zendesk #8891).
+    default_filters = None
+    if 'works_count:' not in request.args.get('filter', '') and 'works-count:' not in request.args.get('filter', ''):
+        default_filters = [{'works_count': '>0'}]
+
+    result = shared_view(request, fields_dict, index_name, default_sort, connection=connection, default_filters=default_filters)
     # export option
     if is_group_by_export(request):
         return export_group_by(result, request)
