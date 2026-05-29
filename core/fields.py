@@ -337,6 +337,37 @@ class OpenAlexIDField(Field):
                 "Use a publisher ID with this convenience filter (OpenAlex ID that starts with P)."
             )
 
+    def _get_formatted_value(self):
+        """Return the indexed value for self.value, or None if invalid.
+        Mirrors TermField._get_formatted_value. For OpenAlexIDField this is
+        the canonical full-URL form."""
+        return get_full_openalex_id(self.value)
+
+    def build_terms_query(self, values):
+        """Build an ES terms query for multiple OpenAlex IDs.
+
+        Used by the cross-type collection filter (#266) to apply a resolved
+        collection's ID list as a single terms clause on this field. Mirrors
+        TermField.build_terms_query so the cross-type pre-pass can dispatch
+        polymorphically across field classes."""
+        formatted_values = []
+        for val in values:
+            self.value = val
+            formatted = self._get_formatted_value()
+            if formatted is None:
+                raise APIQueryParamsError(
+                    f"'{val}' is not a valid OpenAlex ID."
+                )
+            formatted_values.append(formatted)
+        if self.param in (
+            "authorships.institutions.id",
+            "authorships.institutions.lineage",
+        ):
+            field_name = self.es_field().replace("__", ".")
+        else:
+            field_name = self.es_field()
+        return Q("terms", **{field_name: formatted_values})
+
     @staticmethod
     def get_ids(openalex_id, category):
         full_openalex_id = get_full_openalex_id(openalex_id)
