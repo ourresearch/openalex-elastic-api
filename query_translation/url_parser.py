@@ -98,16 +98,23 @@ def parse_filter_string(filter_string: str) -> List[FilterType]:
     
     # Group filters by field to detect OR patterns
     field_groups: Dict[str, List[Tuple[str, str]]] = {}
-    
+
     for part in filter_parts:
         if ":" not in part:
             continue
-        
+
         # Split on first colon only (values might contain colons)
         colon_idx = part.index(":")
         field = part[:colon_idx]
         value = part[colon_idx + 1:]
-        
+
+        # `.search.exact:<v>` is the legacy URL surface for the spec's inline
+        # quoted-phrase form (§3.1): rewrite to `.search` column with the
+        # value double-quoted, which the parser treats as a phrase containment.
+        if field.endswith(".search.exact"):
+            field = field[: -len(".exact")]
+            value = f'"{value}"'
+
         if field not in field_groups:
             field_groups[field] = []
         field_groups[field].append((field, value))

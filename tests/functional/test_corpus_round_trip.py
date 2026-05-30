@@ -263,11 +263,6 @@ def skip_reason(row: Dict[str, Any]) -> Optional[str]:
     if re.search(r':\s*"[^"]+"', filt):
         return "OXURL uses quoted-phrase value (URL parser gap)"
 
-    # `.search.exact` is the URL surface for exact-phrase containment; the
-    # impl doesn't yet round-trip it to the spec's inline `"phrase"` form.
-    if ".search.exact:" in filt:
-        return "OXURL uses .search.exact (URL parser gap)"
-
     # Corpus quirk: a few rows note the user's intended `sample` in the OQO
     # cell but use `per-page=…` in the OXURL (pagination ≠ sampling — they
     # were conflated in authoring). The URL is parseable but won't round-trip
@@ -289,6 +284,10 @@ def normalize_filter_string(s: Optional[str]) -> Optional[str]:
 
     Top-level filter parts are AND-joined and commutative; OR within a value
     (`a|b`) is commutative too. We sort both levels for stable comparison.
+
+    Also collapses the `.search.exact:v` legacy URL surface to the canonical
+    `.search:"v"` inline quoted-phrase form (spec §3.1), so both URLs are
+    treated as equivalent.
     """
     if not s:
         return s
@@ -296,6 +295,9 @@ def normalize_filter_string(s: Optional[str]) -> Optional[str]:
     for part in s.split(","):
         if ":" in part:
             field, value = part.split(":", 1)
+            if field.endswith(".search.exact"):
+                field = field[: -len(".exact")]
+                value = f'"{value}"'
             if "|" in value:
                 value = "|".join(sorted(value.split("|")))
             parts.append(f"{field}:{value}")
