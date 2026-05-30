@@ -240,10 +240,13 @@ def skip_reason(row: Dict[str, Any]) -> Optional[str]:
     if re.search(r"\s+(AND|OR|NOT)\s+", filt):
         return "OXURL uses Lucene-style boolean inside search value (URL parser gap)"
 
-    # The URL parser doesn't yet handle `>value` / `<value` inline-operator
-    # prefixes on a filter value (only `value-` and `-value` ranges).
-    if re.search(r":[<>]", filt):
-        return "OXURL uses inline > / < operator prefix (URL parser gap)"
+    # B03's expected OQO normalizes `:>1975` (URL) to `>= 1976` (OQO) — a
+    # column-type-aware semantic rewrite (year is integer-typed). The URL
+    # parser does the strict syntactic mapping `:>v` → `>` and doesn't know
+    # column types; that normalization belongs to #294 (column registry sync).
+    # Skip just that one row.
+    if "publication_year:>1975" in filt:
+        return "corpus B03 normalizes URL `:>year` → OQO `>= year+1` (column-type semantic rewrite, owned by #294)"
 
     # Proximity (`"phrase"~N`) and wildcards (`*` / `?`) inside search values
     # don't parse as plain values today — the URL parser splits on commas and

@@ -158,6 +158,7 @@ def parse_single_filter(field: str, value: str) -> FilterType:
     - OR: value1|value2 -> BranchFilter with join="or"
     - Negation: !value -> is_negated=True (operator stays "is")
     - Ranges: 2020-2024, 2020-, -2024
+    - Inline ops: >value, <value, >=value, <=value
     - Null: null, !null
 
     For `.search`-suffix columns the default operator is `contains` (free-text
@@ -180,6 +181,12 @@ def parse_single_filter(field: str, value: str) -> FilterType:
     if value.startswith("!"):
         actual_value = value[1:]
         return LeafFilter(column_id=field, value=actual_value, operator=default_op, is_negated=True)
+
+    # Handle inline comparison-operator prefixes. Order matters: `>=` / `<=`
+    # are matched before the single-char `>` / `<`.
+    for prefix, op in (("<=", "<="), (">=", ">="), (">", ">"), ("<", "<")):
+        if value.startswith(prefix):
+            return LeafFilter(column_id=field, value=value[len(prefix):], operator=op)
 
     # Handle ranges
     range_filter = parse_range_value(field, value)
