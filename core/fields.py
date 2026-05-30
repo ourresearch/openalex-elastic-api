@@ -635,6 +635,22 @@ class TermField(Field):
         Build an Elasticsearch terms query (plural) for multiple values.
         More efficient than multiple bool/should queries.
         """
+        # `null` is a sentinel meaning "this field is missing", not a literal
+        # term value. Peel it out of the OR-list and turn it into an exists
+        # query, mirroring the single-value handling in build_query(). Without
+        # this, `null` lands in the ES `terms` clause as the literal string
+        # "null" and silently matches zero docs -- e.g. language:en|null
+        # returned the exact same set as language:en, dropping ~20M
+        # null-language works with no error. (oxjob #299)
+        has_null = any(v == "null" for v in values)
+        values = [v for v in values if v != "null"]
+        null_query = None
+        if has_null:
+            if self.param == "version":
+                null_query = ~Q("exists", field="locations.version")
+            else:
+                null_query = ~Q("exists", field=self.es_field().replace("__", "."))
+
         # Special handling for continents - expand each to country codes and flatten
         if "continent" in self.param:
             all_country_codes = []
@@ -667,8 +683,17 @@ class TermField(Field):
                         expanded_values.extend([short_doi, full_doi])
                 formatted_values = expanded_values
 
-        kwargs = {self.es_field(): formatted_values}
-        return Q("terms", **kwargs)
+        terms_query = None
+        if values:
+            kwargs = {self.es_field(): formatted_values}
+            terms_query = Q("terms", **kwargs)
+
+        # Combine the literal-value terms clause with the null/missing clause.
+        if terms_query is not None and null_query is not None:
+            return Q("bool", should=[terms_query, null_query], minimum_should_match=1)
+        if null_query is not None:
+            return null_query
+        return terms_query
 
     def _get_formatted_value(self):
         """

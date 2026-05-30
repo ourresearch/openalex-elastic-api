@@ -191,6 +191,55 @@ def test_filter_or_query(client):
     }
 
 
+def test_filter_or_query_with_null():
+    # `null` inside an OR-list must become a missing/exists clause, not a
+    # literal "null" term that matches zero docs. Regression for oxjob #299
+    # (language:en|null silently returned the same set as language:en).
+    s = Search()
+    filter_args = "language:en|null"
+    filter_params = map_filter_params(filter_args)
+    s = filter_records(fields_dict, filter_params, s)
+    assert s.to_dict() == {
+        "query": {
+            "bool": {
+                "filter": [
+                    {
+                        "bool": {
+                            "should": [
+                                {"terms": {"language.lower": ["en"]}},
+                                {
+                                    "bool": {
+                                        "must_not": [
+                                            {"exists": {"field": "language.lower"}}
+                                        ]
+                                    }
+                                },
+                            ],
+                            "minimum_should_match": 1,
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+
+def test_filter_or_query_null_only():
+    # An OR-list that is all `null` collapses to a single missing clause.
+    s = Search()
+    filter_params = map_filter_params("language:null|null")
+    s = filter_records(fields_dict, filter_params, s)
+    assert s.to_dict() == {
+        "query": {
+            "bool": {
+                "filter": [
+                    {"bool": {"must_not": [{"exists": {"field": "language.lower"}}]}}
+                ]
+            }
+        }
+    }
+
+
 def test_sort_query(client):
     s = Search()
     filter_args = "host_venue.publisher:wiley,publication_year:>2015"
