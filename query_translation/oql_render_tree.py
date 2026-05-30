@@ -249,11 +249,11 @@ class SampleDirective:
     prefix: str
     segments: List[Segment]
     meta: SampleMeta
-    
+
     @property
     def type(self) -> str:
         return "sample"
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": "sample",
@@ -263,7 +263,36 @@ class SampleDirective:
         }
 
 
-DirectiveNode = Union[SortDirective, SampleDirective]
+@dataclass
+class GroupByMeta:
+    """Metadata for group_by directive. List preserves dimension order (spec §8)."""
+    dimensions: List[Dict[str, Any]]  # [{column_id, column_display_name?}, ...]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"dimensions": list(self.dimensions)}
+
+
+@dataclass
+class GroupByDirective:
+    """group_by directive (Stage B). Renders `; group by col1, col2`."""
+    prefix: str
+    segments: List[Segment]
+    meta: GroupByMeta
+
+    @property
+    def type(self) -> str:
+        return "group_by"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "group_by",
+            "prefix": self.prefix,
+            "segments": [s.to_dict() for s in self.segments],
+            "meta": self.meta.to_dict()
+        }
+
+
+DirectiveNode = Union[SortDirective, SampleDirective, GroupByDirective]
 
 
 @dataclass

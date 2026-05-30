@@ -185,7 +185,17 @@ class OQOValidator:
                     message="Sample must be a positive integer",
                     location="sample"
                 ))
-        
+
+        # Validate group_by dims (spec §8 list; dim order meaningful).
+        for i, g in enumerate(oqo.group_by):
+            column_id = getattr(g, "column_id", None)
+            if not column_id or not isinstance(column_id, str):
+                errors.append(ValidationError(
+                    type="invalid_group_by",
+                    message="group_by dimension must have a non-empty string column_id",
+                    location=f"group_by[{i}].column_id",
+                ))
+
         return ValidationResult(
             valid=len(errors) == 0,
             errors=errors,

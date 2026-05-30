@@ -143,21 +143,24 @@ def parse_url_input(entity_type: str, input_data):
     """Parse URL format input."""
     try:
         if isinstance(input_data, dict):
-            # Input is already structured: {"filter": "...", "sort": "..."}
+            # Input is already structured: {"filter": "...", "sort": "...", "group_by": "..."}
             filter_string = input_data.get("filter")
             sort_string = input_data.get("sort")
             sample = input_data.get("sample")
+            group_by_string = input_data.get("group_by")
         else:
             # Input is just the filter string
             filter_string = input_data
             sort_string = None
             sample = None
-        
+            group_by_string = None
+
         oqo = parse_url_to_oqo(
             entity_type=entity_type,
             filter_string=filter_string,
             sort_string=sort_string,
-            sample=sample
+            sample=sample,
+            group_by_string=group_by_string,
         )
         return oqo, None
     except Exception as e:

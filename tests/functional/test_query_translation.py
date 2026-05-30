@@ -136,9 +136,33 @@ class TestURLParser:
             "works",
             filter_string="title.search:machine learning"
         )
-        
+
         assert oqo.filter_rows[0].column_id == "title.search"
         assert oqo.filter_rows[0].value == "machine learning"
+
+    def test_group_by_single_dim(self):
+        """Test parsing single-dimension group_by (live API form)."""
+        oqo = parse_url_to_oqo(
+            "works",
+            filter_string="is_retracted:true",
+            group_by_string="authorships.institutions.lineage",
+        )
+
+        assert len(oqo.group_by) == 1
+        assert oqo.group_by[0].column_id == "authorships.institutions.lineage"
+
+    def test_group_by_multi_dim(self):
+        """Test parsing multi-dimension group_by (spec §8; live API single-dim)."""
+        oqo = parse_url_to_oqo(
+            "works",
+            filter_string="publication_year:1976-",
+            group_by_string="primary_topic.id,publication_year",
+        )
+
+        assert len(oqo.group_by) == 2
+        # Dimension order is meaningful (spec §8) and preserved
+        assert oqo.group_by[0].column_id == "primary_topic.id"
+        assert oqo.group_by[1].column_id == "publication_year"
 
 
 class TestURLRenderer:
@@ -237,10 +261,38 @@ class TestURLRenderer:
             sort_by_column="cited_by_count",
             sort_by_order="desc"
         )
-        
+
         result = render_oqo_to_url(oqo)
-        
+
         assert result["sort"] == "cited_by_count:desc"
+
+    def test_group_by_rendering_single_dim(self):
+        """Test rendering single-dimension group_by."""
+        from query_translation.oqo import GroupBy
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[LeafFilter(column_id="is_retracted", value=True)],
+            group_by=[GroupBy(column_id="authorships.institutions.lineage")],
+        )
+
+        result = render_oqo_to_url(oqo)
+
+        assert result["group_by"] == "authorships.institutions.lineage"
+
+    def test_group_by_rendering_multi_dim(self):
+        """Test rendering multi-dim group_by (dim order preserved per spec §8)."""
+        from query_translation.oqo import GroupBy
+        oqo = OQO(
+            get_rows="works",
+            group_by=[
+                GroupBy(column_id="primary_topic.id"),
+                GroupBy(column_id="publication_year"),
+            ],
+        )
+
+        result = render_oqo_to_url(oqo)
+
+        assert result["group_by"] == "primary_topic.id,publication_year"
     
     def test_or_different_fields_fails(self):
         """Test that OR across different fields raises error."""

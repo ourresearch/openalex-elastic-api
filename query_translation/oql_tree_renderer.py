@@ -12,10 +12,11 @@ See oql-oqo-plan.md for specification.
 
 from typing import Optional, Dict, Any, Callable, Tuple, List
 
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy
 from query_translation.oql_render_tree import (
     OQLRenderTree, EntityHead, GroupNode, ClauseNode, Segment, SegmentMeta,
     ClauseMeta, GroupMeta, EntityValue, SortDirective, SampleDirective,
+    GroupByDirective, GroupByMeta,
     SortMeta, SampleMeta, ExprNode, stringify
 )
 
@@ -169,10 +170,13 @@ class OQLTreeRenderer:
         if oqo.sort_by_column:
             sort_directive = self._build_sort_directive(oqo.sort_by_column, oqo.sort_by_order or "desc")
             directives.append(sort_directive)
-        
+
         if oqo.sample:
             sample_directive = self._build_sample_directive(oqo.sample)
             directives.append(sample_directive)
+
+        if oqo.group_by:
+            directives.append(self._build_group_by_directive(oqo.group_by))
         
         # Build the tree
         tree = OQLRenderTree(
@@ -578,6 +582,31 @@ class OQLTreeRenderer:
                 )
             ],
             meta=SampleMeta(n=n)
+        )
+
+    def _build_group_by_directive(self, group_by: List[GroupBy]) -> GroupByDirective:
+        """Build a group_by directive. Dimension order is meaningful (spec §8)."""
+        dim_meta: List[Dict[str, Any]] = []
+        segments: List[Segment] = []
+
+        for i, g in enumerate(group_by):
+            display = COLUMN_DISPLAY_NAMES.get(g.column_id, g.column_id)
+            dim_meta.append({
+                "column_id": g.column_id,
+                "column_display_name": display,
+            })
+            if i > 0:
+                segments.append(Segment(kind="text", text=", "))
+            segments.append(Segment(
+                kind="column",
+                text=display,
+                meta=SegmentMeta(column_id=g.column_id),
+            ))
+
+        return GroupByDirective(
+            prefix="; group by ",
+            segments=segments,
+            meta=GroupByMeta(dimensions=dim_meta),
         )
 
 

@@ -17,25 +17,37 @@ class URLRenderError(Exception):
 def render_oqo_to_url(oqo: OQO) -> Dict[str, Any]:
     """
     Render an OQO object to URL format.
-    
+
     Args:
         oqo: The OQO object to render
-    
+
     Returns:
-        Dict with 'filter', 'sort', and 'sample' keys
-    
+        Dict with 'filter', 'sort', 'sample', and 'group_by' keys
+
     Raises:
         URLRenderError: If the OQO contains structures that cannot be
                        expressed in URL format (e.g., nested boolean logic)
     """
     filter_string = render_filters(oqo.filter_rows)
     sort_string = render_sort(oqo.sort_by_column, oqo.sort_by_order)
-    
+    group_by_string = render_group_by(oqo.group_by)
+
     return {
         "filter": filter_string if filter_string else None,
         "sort": sort_string if sort_string else None,
-        "sample": oqo.sample
+        "sample": oqo.sample,
+        "group_by": group_by_string if group_by_string else None,
     }
+
+
+def render_group_by(group_by) -> Optional[str]:
+    """Render a list of GroupBy dimensions to `col1,col2` URL form.
+
+    Dimension order is meaningful (spec §8) and preserved.
+    """
+    if not group_by:
+        return None
+    return ",".join(g.column_id for g in group_by)
 
 
 def render_filters(filters: List[FilterType]) -> Optional[str]:

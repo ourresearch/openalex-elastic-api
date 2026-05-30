@@ -12,7 +12,7 @@ import re
 from typing import Optional, Dict, List, Tuple, Any, Union
 from dataclasses import dataclass
 
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy
 
 
 @dataclass
@@ -179,19 +179,20 @@ class OQLParser:
         sort_by_column: Optional[str] = None
         sort_by_order: Optional[str] = None
         sample: Optional[int] = None
-        
+        group_by: List[GroupBy] = []
+
         # Check for "where" clause
         if remainder:
             remainder = remainder.strip()
-            
-            # Split by semicolons to separate filters from sort/sample
+
+            # Split by semicolons to separate filters from sort/sample/group_by
             parts = self._split_by_semicolon(remainder)
-            
+
             for i, part in enumerate(parts):
                 part = part.strip()
                 if not part:
                     continue
-                
+
                 if i == 0 and part.lower().startswith("where "):
                     # First part is the filter clause
                     filter_str = part[6:].strip()  # Remove "where "
@@ -205,16 +206,20 @@ class OQLParser:
                         sample = int(sample_str)
                     except ValueError:
                         self._add_error(f"Invalid sample value: {sample_str}")
-        
+                elif part.lower().startswith("group by "):
+                    group_by_str = part[9:].strip()  # Remove "group by "
+                    group_by = self._parse_group_by(group_by_str)
+
         if self._errors:
             raise OQLParseError("Failed to parse OQL", self._errors)
-        
+
         return OQO(
             get_rows=entity_type,
             filter_rows=filter_rows,
             sort_by_column=sort_by_column,
             sort_by_order=sort_by_order,
-            sample=sample
+            sample=sample,
+            group_by=group_by,
         )
     
     def _parse_entity_type(self, oql: str) -> Tuple[str, str]:
@@ -591,6 +596,22 @@ class OQLParser:
 
         return mappings.get(op_lower, op_lower), False
     
+    def _parse_group_by(self, group_by_str: str) -> List[GroupBy]:
+        """Parse a `group by col1, col2` clause into a list of GroupBy dims.
+
+        Dimension order is meaningful (spec §8) and preserved. Each dim is
+        resolved against the display-name map so "topic, year" works as well
+        as the technical column ids.
+        """
+        dims: List[GroupBy] = []
+        for raw in group_by_str.split(","):
+            name = raw.strip()
+            if not name:
+                continue
+            column_id = self._resolve_column(name)
+            dims.append(GroupBy(column_id=column_id))
+        return dims
+
     def _parse_sort(self, sort_str: str) -> Tuple[Optional[str], Optional[str]]:
         """Parse sort clause."""
         parts = sort_str.split()

@@ -7,45 +7,68 @@ Handles the traditional query parameter syntax:
 
 import re
 from typing import Dict, List, Optional, Tuple, Any
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy
 
 
 def parse_url_to_oqo(
     entity_type: str,
     filter_string: Optional[str] = None,
     sort_string: Optional[str] = None,
-    sample: Optional[int] = None
+    sample: Optional[int] = None,
+    group_by_string: Optional[str] = None,
 ) -> OQO:
     """
-    Parse URL filter/sort strings into an OQO object.
-    
+    Parse URL filter/sort/group_by strings into an OQO object.
+
     Args:
         entity_type: The entity type (e.g., "works", "authors")
         filter_string: The filter parameter value (e.g., "type:article,year:2024-")
         sort_string: The sort parameter value (e.g., "cited_by_count:desc")
         sample: Optional sample size
-    
+        group_by_string: The group_by parameter value. Single dim
+            ("primary_topic.id") or comma-separated for multi-dim
+            ("primary_topic.id,publication_year"). Live API is single-dim
+            (#297); spec is multi-dim — the translation impl round-trips both
+            faithfully.
+
     Returns:
         OQO object representing the query
     """
     filter_rows = []
-    
+
     if filter_string:
         filter_rows = parse_filter_string(filter_string)
-    
+
     sort_by_column = None
     sort_by_order = None
-    
+
     if sort_string:
         sort_by_column, sort_by_order = parse_sort_string(sort_string)
-    
+
+    group_by = []
+    if group_by_string:
+        group_by = parse_group_by_string(group_by_string)
+
     return OQO(
         get_rows=entity_type,
         filter_rows=filter_rows,
         sort_by_column=sort_by_column,
         sort_by_order=sort_by_order,
-        sample=sample
+        sample=sample,
+        group_by=group_by,
     )
+
+
+def parse_group_by_string(group_by_string: str) -> List[GroupBy]:
+    """Parse a `&group_by=col1,col2` URL value into a list of GroupBy dims.
+
+    Dimension order is meaningful (spec §8) and preserved.
+    """
+    return [
+        GroupBy(column_id=part.strip())
+        for part in group_by_string.split(",")
+        if part.strip()
+    ]
 
 
 def parse_filter_string(filter_string: str) -> List[FilterType]:

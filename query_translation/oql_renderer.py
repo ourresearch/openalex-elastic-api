@@ -150,11 +150,19 @@ class OQLRenderer:
             order = oqo.sort_by_order or "desc"
             sort_display = SORT_DISPLAY_NAMES.get(oqo.sort_by_column, oqo.sort_by_column)
             parts.append(f"; sort by {sort_display} {order}")
-        
+
         # Sample
         if oqo.sample:
             parts.append(f"; sample {oqo.sample}")
-        
+
+        # Group by (multi-dim per spec §8; live API is single-dim → #297)
+        if oqo.group_by:
+            dims = ", ".join(
+                COLUMN_DISPLAY_NAMES.get(g.column_id, g.column_id)
+                for g in oqo.group_by
+            )
+            parts.append(f"; group by {dims}")
+
         return "".join(parts)
     
     def _render_filter(self, f: FilterType) -> str:
