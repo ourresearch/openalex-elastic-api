@@ -23,10 +23,10 @@ class TestURLParser:
         oqo = parse_url_to_oqo("works", filter_string="type:article")
         
         assert oqo.get_rows == "works"
-        assert len(oqo.filter_works) == 1
-        assert oqo.filter_works[0].column_id == "type"
-        assert oqo.filter_works[0].value == "article"
-        assert oqo.filter_works[0].operator == "is"
+        assert len(oqo.filter_rows) == 1
+        assert oqo.filter_rows[0].column_id == "type"
+        assert oqo.filter_rows[0].value == "article"
+        assert oqo.filter_rows[0].operator == "is"
     
     def test_multiple_filters(self):
         """Test parsing multiple filters (AND)."""
@@ -35,14 +35,14 @@ class TestURLParser:
             filter_string="type:article,publication_year:2024"
         )
         
-        assert len(oqo.filter_works) == 2
+        assert len(oqo.filter_rows) == 2
     
     def test_or_filter(self):
         """Test parsing OR filter with pipe."""
         oqo = parse_url_to_oqo("works", filter_string="type:article|book")
         
-        assert len(oqo.filter_works) == 1
-        branch = oqo.filter_works[0]
+        assert len(oqo.filter_rows) == 1
+        branch = oqo.filter_rows[0]
         assert isinstance(branch, BranchFilter)
         assert branch.join == "or"
         assert len(branch.filters) == 2
@@ -51,51 +51,51 @@ class TestURLParser:
         """Test parsing negation with !."""
         oqo = parse_url_to_oqo("works", filter_string="type:!article")
         
-        assert oqo.filter_works[0].operator == "is not"
-        assert oqo.filter_works[0].value == "article"
+        assert oqo.filter_rows[0].operator == "is not"
+        assert oqo.filter_rows[0].value == "article"
     
     def test_range_gte(self):
         """Test parsing >= range (trailing dash)."""
         oqo = parse_url_to_oqo("works", filter_string="publication_year:2024-")
         
-        assert oqo.filter_works[0].operator == ">="
-        assert oqo.filter_works[0].value == "2024"
+        assert oqo.filter_rows[0].operator == ">="
+        assert oqo.filter_rows[0].value == "2024"
     
     def test_range_lte(self):
         """Test parsing <= range (leading dash)."""
         oqo = parse_url_to_oqo("works", filter_string="cited_by_count:-100")
         
-        assert oqo.filter_works[0].operator == "<="
-        assert oqo.filter_works[0].value == "100"
+        assert oqo.filter_rows[0].operator == "<="
+        assert oqo.filter_rows[0].value == "100"
     
     def test_range_both(self):
         """Test parsing bounded range."""
         oqo = parse_url_to_oqo("works", filter_string="publication_year:2020-2024")
         
         # Should create two filters: >= 2020 AND <= 2024
-        assert len(oqo.filter_works) == 2
-        operators = {f.operator for f in oqo.filter_works}
+        assert len(oqo.filter_rows) == 2
+        operators = {f.operator for f in oqo.filter_rows}
         assert operators == {">=", "<="}
     
     def test_null_value(self):
         """Test parsing null value."""
         oqo = parse_url_to_oqo("works", filter_string="language:null")
         
-        assert oqo.filter_works[0].value is None
-        assert oqo.filter_works[0].operator == "is"
+        assert oqo.filter_rows[0].value is None
+        assert oqo.filter_rows[0].operator == "is"
     
     def test_not_null_value(self):
         """Test parsing !null value."""
         oqo = parse_url_to_oqo("works", filter_string="language:!null")
         
-        assert oqo.filter_works[0].value is None
-        assert oqo.filter_works[0].operator == "is not"
+        assert oqo.filter_rows[0].value is None
+        assert oqo.filter_rows[0].operator == "is not"
     
     def test_boolean_value(self):
         """Test parsing boolean value."""
         oqo = parse_url_to_oqo("works", filter_string="is_oa:true")
         
-        assert oqo.filter_works[0].value == "true"
+        assert oqo.filter_rows[0].value == "true"
     
     def test_sort_parsing(self):
         """Test parsing sort parameter."""
@@ -125,8 +125,8 @@ class TestURLParser:
             filter_string="authorships.institutions.lineage:i33213144"
         )
         
-        assert oqo.filter_works[0].column_id == "authorships.institutions.lineage"
-        assert oqo.filter_works[0].value == "i33213144"
+        assert oqo.filter_rows[0].column_id == "authorships.institutions.lineage"
+        assert oqo.filter_rows[0].value == "i33213144"
     
     def test_search_filter(self):
         """Test parsing search filter."""
@@ -135,8 +135,8 @@ class TestURLParser:
             filter_string="title.search:machine learning"
         )
         
-        assert oqo.filter_works[0].column_id == "title.search"
-        assert oqo.filter_works[0].value == "machine learning"
+        assert oqo.filter_rows[0].column_id == "title.search"
+        assert oqo.filter_rows[0].value == "machine learning"
 
 
 class TestURLRenderer:
@@ -146,7 +146,7 @@ class TestURLRenderer:
         """Test rendering a simple filter."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[LeafFilter(column_id="type", value="article")]
+            filter_rows=[LeafFilter(column_id="type", value="article")]
         )
         
         result = render_oqo_to_url(oqo)
@@ -157,7 +157,7 @@ class TestURLRenderer:
         """Test rendering negation."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[LeafFilter(column_id="type", value="article", operator="is not")]
+            filter_rows=[LeafFilter(column_id="type", value="article", operator="is not")]
         )
         
         result = render_oqo_to_url(oqo)
@@ -168,7 +168,7 @@ class TestURLRenderer:
         """Test rendering >= range."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[LeafFilter(column_id="publication_year", value="2024", operator=">=")]
+            filter_rows=[LeafFilter(column_id="publication_year", value="2024", operator=">=")]
         )
         
         result = render_oqo_to_url(oqo)
@@ -179,7 +179,7 @@ class TestURLRenderer:
         """Test rendering <= range."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[LeafFilter(column_id="cited_by_count", value="100", operator="<=")]
+            filter_rows=[LeafFilter(column_id="cited_by_count", value="100", operator="<=")]
         )
         
         result = render_oqo_to_url(oqo)
@@ -190,7 +190,7 @@ class TestURLRenderer:
         """Test rendering OR with same field."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[
+            filter_rows=[
                 BranchFilter(
                     join="or",
                     filters=[
@@ -209,7 +209,7 @@ class TestURLRenderer:
         """Test rendering null value."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[LeafFilter(column_id="language", value=None)]
+            filter_rows=[LeafFilter(column_id="language", value=None)]
         )
         
         result = render_oqo_to_url(oqo)
@@ -220,7 +220,7 @@ class TestURLRenderer:
         """Test rendering !null value."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[LeafFilter(column_id="language", value=None, operator="is not")]
+            filter_rows=[LeafFilter(column_id="language", value=None, operator="is not")]
         )
         
         result = render_oqo_to_url(oqo)
@@ -231,7 +231,7 @@ class TestURLRenderer:
         """Test rendering sort."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[],
+            filter_rows=[],
             sort_by_column="cited_by_count",
             sort_by_order="desc"
         )
@@ -244,7 +244,7 @@ class TestURLRenderer:
         """Test that OR across different fields raises error."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[
+            filter_rows=[
                 BranchFilter(
                     join="or",
                     filters=[
@@ -262,7 +262,7 @@ class TestURLRenderer:
         """Test that nested boolean logic raises error."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[
+            filter_rows=[
                 BranchFilter(
                     join="or",
                     filters=[
@@ -385,14 +385,14 @@ class TestOQOModel:
         """Test OQO serialization."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[LeafFilter(column_id="type", value="article")],
+            filter_rows=[LeafFilter(column_id="type", value="article")],
             sort_by_column="cited_by_count",
             sort_by_order="desc"
         )
         d = oqo.to_dict()
         
         assert d["get_rows"] == "works"
-        assert len(d["filter_works"]) == 1
+        assert len(d["filter_rows"]) == 1
         assert d["sort_by_column"] == "cited_by_count"
         assert d["sort_by_order"] == "desc"
     
@@ -400,7 +400,7 @@ class TestOQOModel:
         """Test OQO deserialization."""
         d = {
             "get_rows": "works",
-            "filter_works": [
+            "filter_rows": [
                 {"column_id": "type", "value": "article"},
                 {
                     "join": "or",
@@ -416,9 +416,9 @@ class TestOQOModel:
         oqo = OQO.from_dict(d)
         
         assert oqo.get_rows == "works"
-        assert len(oqo.filter_works) == 2
-        assert isinstance(oqo.filter_works[0], LeafFilter)
-        assert isinstance(oqo.filter_works[1], BranchFilter)
+        assert len(oqo.filter_rows) == 2
+        assert isinstance(oqo.filter_rows[0], LeafFilter)
+        assert isinstance(oqo.filter_rows[1], BranchFilter)
 
 
 class TestValidator:
@@ -428,7 +428,7 @@ class TestValidator:
         """Test validation of a simple valid OQO."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[LeafFilter(column_id="type", value="article")]
+            filter_rows=[LeafFilter(column_id="type", value="article")]
         )
         
         result = validate_oqo(oqo)
@@ -440,7 +440,7 @@ class TestValidator:
         """Test validation rejects invalid entity type."""
         oqo = OQO(
             get_rows="widgets",
-            filter_works=[]
+            filter_rows=[]
         )
         
         result = validate_oqo(oqo)
@@ -452,7 +452,7 @@ class TestValidator:
         """Test validation rejects invalid operator."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[LeafFilter(column_id="type", value="article", operator="equals")]
+            filter_rows=[LeafFilter(column_id="type", value="article", operator="equals")]
         )
         
         result = validate_oqo(oqo)
@@ -464,7 +464,7 @@ class TestValidator:
         """Test validation rejects invalid sort order."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[],
+            filter_rows=[],
             sort_by_column="cited_by_count",
             sort_by_order="ascending"
         )
@@ -478,7 +478,7 @@ class TestValidator:
         """Test validation rejects invalid sample."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[],
+            filter_rows=[],
             sample=-1
         )
         
@@ -491,7 +491,7 @@ class TestValidator:
         """Test validation rejects empty branch filter."""
         oqo = OQO(
             get_rows="works",
-            filter_works=[BranchFilter(join="or", filters=[])]
+            filter_rows=[BranchFilter(join="or", filters=[])]
         )
         
         result = validate_oqo(oqo)
@@ -509,7 +509,7 @@ class TestEquivalence:
             "url": {"filter": "type:article"},
             "oqo": {
                 "get_rows": "works",
-                "filter_works": [{"column_id": "type", "value": "article"}]
+                "filter_rows": [{"column_id": "type", "value": "article"}]
             }
         },
         {
@@ -517,7 +517,7 @@ class TestEquivalence:
             "url": {"filter": "publication_year:2024-", "sort": "fwci:desc"},
             "oqo": {
                 "get_rows": "works",
-                "filter_works": [{"column_id": "publication_year", "value": "2024", "operator": ">="}],
+                "filter_rows": [{"column_id": "publication_year", "value": "2024", "operator": ">="}],
                 "sort_by_column": "fwci",
                 "sort_by_order": "desc"
             }
@@ -527,7 +527,7 @@ class TestEquivalence:
             "url": {"filter": "type:article|book"},
             "oqo": {
                 "get_rows": "works",
-                "filter_works": [{
+                "filter_rows": [{
                     "join": "or",
                     "filters": [
                         {"column_id": "type", "value": "article"},
@@ -560,4 +560,4 @@ class TestEquivalence:
         assert oqo_from_url.sort_by_order == oqo_from_dict.sort_by_order
         
         # Compare filter count
-        assert len(oqo_from_url.filter_works) == len(oqo_from_dict.filter_works)
+        assert len(oqo_from_url.filter_rows) == len(oqo_from_dict.filter_rows)
