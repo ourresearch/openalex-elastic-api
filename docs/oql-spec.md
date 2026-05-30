@@ -398,16 +398,25 @@ Works where it's not Open Access
 
 ## 9. Valid Operators
 
-| Operator | OQL Syntax | Use Case |
-|----------|------------|----------|
-| `is` | `column is value` | Exact match (default) |
-| `is not` | `column is not value` | Negation |
-| `>=` | `column >= value` | Greater than or equal |
-| `<=` | `column <= value` | Less than or equal |
-| `>` | `column > value` | Greater than |
-| `<` | `column < value` | Less than |
-| `contains` | `column contains value` | Text search |
-| `does not contain` | `column does not contain value` | Negative text search |
+> **Updated by #284 (OQO spec):** leaf operators are now strictly **affirmative**.
+> The `is not` and `does not contain` operators were **removed** — negation is the
+> per-node `is_negated` polarity bit (one negation mechanism; canonical form is
+> NNF). OQL still *renders* "column is not value" / "column does not contain value"
+> for a negated leaf, but the underlying OQO encodes `operator: is`/`contains` +
+> `is_negated: true`. See **[`docs/oqo-spec.md`](./oqo-spec.md)** §4 and
+> `docs/oqo-schema.json`. Values are **bare** (no `entity/id` prefix) — see
+> oqo-spec.md §2. This OQL doc (v1.1) still shows the older prefixed/bracketed-ID
+> and operator forms below and is pending a parallel refresh.
+
+| Operator | OQL Syntax (rendered) | Underlying OQO |
+|----------|------------|------|
+| `is` | `column is value` | `operator: is` |
+| `>=` | `column >= value` | `operator: >=` |
+| `<=` | `column <= value` | `operator: <=` |
+| `>` | `column > value` | `operator: >` |
+| `<` | `column < value` | `operator: <` |
+| `contains` | `column contains value` | `operator: contains` |
+| *(negation)* | `column is not value` / `column does not contain value` | same operator + `is_negated: true` |
 
 ---
 

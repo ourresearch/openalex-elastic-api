@@ -1,47 +1,93 @@
 """
-OQO Canonicalizer - Normalizes OQO for deterministic output.
+OQO Canonicalizer - Normalizes OQO into a deterministic canonical form.
 
-Canonicalization ensures:
-1. Typed values (int vs "int", bool vs "bool")
-2. Normalized entity IDs (lowercase, proper format)
-3. Flattened redundant AND groups
-4. Eliminated single-child groups
-5. Stable output for reliable tests
+The canonical form is used only where a *stable* representation is needed (cache
+keys, hashing, dedup, test fixtures). It NEVER replaces the user's OQO; rendering
+(OQO -> URL/OQL) preserves the user's operand order, and only invokes the
+canonicalizer when something needs a hash.
 
-See oql-oqo-plan.md Section 4 for canonicalization rules.
+Canonical form (per the #284 spec):
+1. Typed leaf values (string "true" -> bool, numeric strings -> int for numeric columns)
+2. **NNF (negation normal form)**: branch-level `is_negated` is pushed down to the
+   leaves via De Morgan (flip and<->or, toggle child polarity), double negation
+   cancels, so a canonical OQO carries `is_negated` only on leaves.
+3. Flattened nested same-join groups; single-child groups unwrapped; empty groups dropped.
+4. **Sorted** operands within every group and at the top level (AND/OR are commutative;
+   NOT lives only on leaves after NNF), giving order-independent output.
+
+Values are *bare* (the namespace is the column_id, resolved via the column
+registry) — there is no entity-id prefix normalization. See docs/oql-spec.md.
 """
 
+import json
 from typing import List, Union, Any
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
 
 
 def canonicalize_oqo(oqo: OQO) -> OQO:
     """
-    Canonicalize an OQO object for deterministic output.
-    
+    Canonicalize an OQO object into deterministic canonical form.
+
     Args:
         oqo: The OQO object to canonicalize
-    
+
     Returns:
         A new canonicalized OQO object
     """
     canonical_filters = []
     for f in oqo.filter_rows:
-        canonical_f = canonicalize_filter(f)
+        nnf_f = push_negation(f, negate=False)  # NNF first
+        canonical_f = canonicalize_filter(nnf_f)
         if canonical_f is not None:
             # Flatten if we get a single-child result that should be unwrapped
             if isinstance(canonical_f, list):
                 canonical_filters.extend(canonical_f)
             else:
                 canonical_filters.append(canonical_f)
-    
+
+    # Top-level filter_rows are an implicit AND -> commutative -> sort for stability
+    canonical_filters.sort(key=_sort_key)
+
     return OQO(
         get_rows=oqo.get_rows.lower(),  # Normalize entity type to lowercase
         filter_rows=canonical_filters,
         sort_by_column=oqo.sort_by_column,
         sort_by_order=oqo.sort_by_order,
-        sample=oqo.sample
+        sample=oqo.sample,
+        group_by=list(oqo.group_by),  # group_by order is meaningful (dim order) -> preserved
     )
+
+
+def push_negation(f: FilterType, negate: bool) -> FilterType:
+    """Push negation down to the leaves (De Morgan), producing NNF.
+
+    `negate` is the accumulated polarity from enclosing negated branches. A leaf
+    ends up with `is_negated = leaf.is_negated XOR negate`; a branch flips its
+    join (and<->or) and propagates the polarity when negated, then clears its own
+    `is_negated` (negation now lives on the leaves).
+    """
+    if isinstance(f, LeafFilter):
+        return LeafFilter(
+            column_id=f.column_id,
+            value=f.value,
+            operator=f.operator,
+            is_negated=bool(f.is_negated) ^ bool(negate),
+        )
+    if isinstance(f, BranchFilter):
+        eff = bool(f.is_negated) ^ bool(negate)
+        new_join = ("and" if f.join == "or" else "or") if eff else f.join
+        return BranchFilter(
+            join=new_join,
+            filters=[push_negation(c, eff) for c in f.filters],
+            is_negated=False,
+        )
+    return f
+
+
+def _sort_key(f: FilterType) -> str:
+    """Total order over filters for canonical operand sorting: the JSON of the
+    filter's dict with sorted keys. Stable and deterministic across runs."""
+    return json.dumps(f.to_dict(), sort_keys=True, ensure_ascii=True)
 
 
 def canonicalize_filter(f: FilterType) -> Union[FilterType, List[FilterType], None]:
@@ -63,31 +109,38 @@ def canonicalize_filter(f: FilterType) -> Union[FilterType, List[FilterType], No
 def canonicalize_leaf_filter(f: LeafFilter) -> LeafFilter:
     """
     Canonicalize a leaf filter.
-    
-    - Normalizes value types (string "true" -> bool True)
-    - Normalizes entity IDs
+
+    - Normalizes value types (string "true" -> bool True; numeric strings -> int)
+    - Preserves the `is_negated` polarity bit (already pushed to leaves by NNF)
+    - Values stay *bare* (no entity-id prefix normalization)
     """
     value = canonicalize_value(f.value, f.column_id)
     operator = f.operator or "is"
-    
+
     return LeafFilter(
         column_id=f.column_id,
         value=value,
-        operator=operator
+        operator=operator,
+        is_negated=bool(f.is_negated),
     )
 
 
 def canonicalize_value(value: Any, column_id: str) -> Any:
     """
     Canonicalize a filter value.
-    
+
     - Convert string booleans to actual booleans for boolean columns
     - Convert string integers to actual integers for numeric columns
-    - Normalize entity ID format
+
+    Values are *bare* — there is NO entity-id prefix normalization (the namespace
+    is the column_id, resolved via the column registry). This also means values
+    that legitimately contain "/" (e.g. a DOI like "10.1021/es052595+") pass
+    through untouched. Type coercion here is a stopgap keyed off a hardcoded
+    NUMERIC_COLUMNS set; the column registry (#294) is the eventual type authority.
     """
     if value is None:
         return None
-    
+
     # Boolean normalization
     if isinstance(value, str):
         lower_val = value.lower()
@@ -95,7 +148,7 @@ def canonicalize_value(value: Any, column_id: str) -> Any:
             return True
         if lower_val == "false":
             return False
-    
+
     # Integer normalization for known numeric columns
     if isinstance(value, str) and column_id in NUMERIC_COLUMNS:
         try:
@@ -106,55 +159,31 @@ def canonicalize_value(value: Any, column_id: str) -> Any:
                 return float(value)
         except ValueError:
             pass
-    
-    # Entity ID normalization
-    if isinstance(value, str) and "/" in value:
-        return normalize_entity_id(value)
-    
+
     return value
-
-
-def normalize_entity_id(entity_id: str) -> str:
-    """
-    Normalize an entity ID to canonical format.
-    
-    Examples:
-        - "Countries/CA" -> "countries/ca"
-        - "institutions/I123" -> "institutions/I123" (preserve case for OpenAlex IDs)
-        - "types/Article" -> "types/article"
-    """
-    if "/" not in entity_id:
-        return entity_id
-    
-    parts = entity_id.split("/", 1)
-    entity_type = parts[0].lower()
-    short_id = parts[1]
-    
-    # Preserve case for OpenAlex IDs (start with letter followed by numbers)
-    # Otherwise lowercase
-    if not (len(short_id) > 1 and short_id[0].isalpha() and short_id[1:].isdigit()):
-        short_id = short_id.lower()
-    
-    return f"{entity_type}/{short_id}"
 
 
 def canonicalize_branch_filter(f: BranchFilter) -> Union[FilterType, List[FilterType], None]:
     """
     Canonicalize a branch filter.
-    
+
     Rules:
     1. Recursively canonicalize children
     2. Remove empty children
-    3. Flatten single-child groups
-    4. Flatten nested same-join groups (AND inside AND)
+    3. Flatten nested same-join groups (AND inside AND)
+    4. Unwrap single-child groups
+    5. **Sort** children (AND/OR are commutative; NOT lives only on leaves after NNF)
+
+    Assumes the branch is already in NNF (branch-level negation pushed to leaves
+    by `push_negation`), so `is_negated` on a BranchFilter is not expected here.
     """
     canonical_children: List[FilterType] = []
-    
+
     for child in f.filters:
         canonical_child = canonicalize_filter(child)
         if canonical_child is None:
             continue
-        
+
         if isinstance(canonical_child, list):
             canonical_children.extend(canonical_child)
         elif isinstance(canonical_child, BranchFilter) and canonical_child.join == f.join:
@@ -162,18 +191,21 @@ def canonicalize_branch_filter(f: BranchFilter) -> Union[FilterType, List[Filter
             canonical_children.extend(canonical_child.filters)
         else:
             canonical_children.append(canonical_child)
-    
+
     # Empty group -> None
     if not canonical_children:
         return None
-    
+
     # Single child -> unwrap
     if len(canonical_children) == 1:
         return canonical_children[0]
-    
+
+    # Sort operands for order-independent canonical output
+    canonical_children.sort(key=_sort_key)
+
     return BranchFilter(
         join=f.join,
-        filters=canonical_children
+        filters=canonical_children,
     )
 
 

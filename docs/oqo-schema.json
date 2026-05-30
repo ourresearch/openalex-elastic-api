@@ -1,390 +1,350 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openalex.org/schemas/oqo/v1.0",
+  "$id": "https://openalex.org/schemas/oqo/v1.1",
   "name": "OpenAlex_Query_Object",
-  "description": "The canonical JSON representation for OpenAlex queries. OQO serves as the intermediate format for bidirectional translation between URL parameters, OQL (human-readable query language), and programmatic JSON access.",
+  "description": "The canonical JSON representation for OpenAlex queries. OQO is the intermediate format for bidirectional translation between URL parameters, OQL (human-readable query language), and programmatic JSON access. GENERATED from query_translation/oqo.py by query_translation/regen_schema.py — do not hand-edit. Entity values are BARE (the namespace is the column_id, resolved via the column registry): 'I136199984', 'de', 'article', '13' — never 'institutions/I136199984'. Negation is the per-node 'is_negated' polarity bit; the canonical form is NNF (negation on leaves only). JSON is the normative serialization; YAML is display-only and MUST round-trip to identical JSON (quote every string value on emit).",
   "type": "object",
-  "required": ["get_rows"],
+  "required": [
+    "get_rows"
+  ],
   "additionalProperties": false,
   "properties": {
     "get_rows": {
       "$ref": "#/$defs/EntityType",
-      "description": "The entity type to retrieve. This determines what kind of records are returned (works, authors, institutions, etc.)."
+      "description": "The entity type to retrieve (works, authors, institutions, ...)."
     },
     "filter_rows": {
       "type": "array",
-      "description": "Filters applied to the rows being retrieved. Top-level array items are implicitly joined with AND.",
+      "description": "Filters applied to the retrieved rows. Top-level items are implicitly AND-joined.",
       "items": {
         "$ref": "#/$defs/Filter"
       },
       "default": []
     },
+    "group_by": {
+      "type": "array",
+      "description": "Group-by dimensions (Stage B). A LIST, so multi-dimensional grouping (e.g. topic x year) is expressible; dimension order is meaningful. Live serving impl is single-dimension only (multi-dim deferred to #297).",
+      "items": {
+        "$ref": "#/$defs/GroupBy"
+      },
+      "default": []
+    },
     "sort_by_column": {
-      "type": ["string", "null"],
-      "description": "The column/field to sort results by. Must be a valid sortable field for the entity type.",
-      "examples": ["cited_by_count", "publication_year", "fwci", "display_name", "works_count"]
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Column/field to sort results by. Must be a valid sortable field for the entity.",
+      "examples": [
+        "cited_by_count",
+        "publication_year",
+        "fwci",
+        "display_name",
+        "works_count"
+      ]
     },
     "sort_by_order": {
-      "type": ["string", "null"],
-      "enum": ["asc", "desc", null],
-      "description": "Sort direction. 'asc' for ascending, 'desc' for descending.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "asc",
+        "desc",
+        null
+      ],
+      "description": "Sort direction. 'asc' ascending, 'desc' descending.",
       "default": null
     },
     "sample": {
-      "type": ["integer", "null"],
+      "type": [
+        "integer",
+        "null"
+      ],
       "minimum": 1,
       "maximum": 10000,
-      "description": "Return a random sample of N results instead of all matching results. Useful for exploratory analysis.",
+      "description": "Return a random sample of N results instead of all matches.",
       "default": null
     }
   },
-
   "$defs": {
     "EntityType": {
       "type": "string",
-      "description": "Valid OpenAlex entity types. Native entities have OpenAlex-minted IDs (e.g., W123, A456). Non-native entities use external identifiers (e.g., country codes, type slugs).",
+      "description": "Valid OpenAlex entity types (the OQO `get_rows`). Sourced from oqo.VALID_ENTITY_TYPES.",
       "enum": [
-        "works",
         "authors",
-        "institutions",
-        "sources",
-        "publishers",
-        "funders",
-        "topics",
-        "keywords",
-        "concepts",
         "awards",
-        "countries",
+        "concepts",
         "continents",
+        "countries",
         "domains",
         "fields",
-        "subfields",
-        "sdgs",
+        "funders",
+        "institution-types",
+        "institutions",
+        "keywords",
         "languages",
         "licenses",
-        "types",
-        "source-types",
-        "institution-types",
         "locations",
-        "oa-statuses"
-      ],
-      "x-native-entities": {
-        "description": "Entities with OpenAlex-minted IDs (prefix + numeric ID)",
-        "entities": {
-          "works": { "prefix": "W", "example": "works/W2741809807" },
-          "authors": { "prefix": "A", "example": "authors/A5023888391" },
-          "institutions": { "prefix": "I", "example": "institutions/I136199984" },
-          "sources": { "prefix": "S", "example": "sources/S137773608" },
-          "publishers": { "prefix": "P", "example": "publishers/P4310319908" },
-          "funders": { "prefix": "F", "example": "funders/F4320332161" },
-          "topics": { "prefix": "T", "example": "topics/T10012" },
-          "concepts": { "prefix": "C", "example": "concepts/C86803240" },
-          "awards": { "prefix": "G", "example": "awards/G5453342221" }
-        }
-      },
-      "x-non-native-entities": {
-        "description": "Entities with external or well-known identifiers",
-        "entities": [
-          "countries",
-          "continents", 
-          "domains",
-          "fields",
-          "subfields",
-          "sdgs",
-          "languages",
-          "licenses",
-          "types",
-          "source-types",
-          "institution-types",
-          "keywords",
-          "locations",
-          "oa-statuses"
-        ],
-        "examples": {
-          "countries": "countries/de",
-          "sdgs": "sdgs/13",
-          "types": "types/article",
-          "languages": "languages/en",
-          "oa-statuses": "oa-statuses/gold"
-        }
-      }
-    },
-
-    "Filter": {
-      "description": "A filter can be either a leaf filter (single condition) or a branch filter (boolean combination of filters).",
-      "oneOf": [
-        { "$ref": "#/$defs/LeafFilter" },
-        { "$ref": "#/$defs/BranchFilter" }
+        "oa-statuses",
+        "publishers",
+        "sdgs",
+        "source-types",
+        "sources",
+        "subfields",
+        "topics",
+        "types",
+        "works"
       ]
     },
-
+    "Filter": {
+      "description": "A leaf filter (single condition) or a branch filter (boolean combination).",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/LeafFilter"
+        },
+        {
+          "$ref": "#/$defs/BranchFilter"
+        }
+      ]
+    },
     "LeafFilter": {
       "type": "object",
-      "description": "A single filter condition. Specifies a column, value, and comparison operator.",
-      "required": ["column_id", "value"],
+      "description": "A single filter condition (a literal = atom + polarity).",
+      "required": [
+        "column_id",
+        "value"
+      ],
       "additionalProperties": false,
       "properties": {
         "column_id": {
           "type": "string",
-          "description": "The filter field/column identifier. Must be a valid filterable field for the entity type. Uses dot notation for nested fields.",
+          "description": "Filter field identifier; dot notation for nested fields. Valid columns/types come from the column registry, not this schema.",
           "examples": [
             "publication_year",
             "type",
             "open_access.is_oa",
             "authorships.institutions.lineage",
-            "authorships.author.id",
-            "primary_location.source.id",
-            "cited_by_count",
-            "fwci",
             "title_and_abstract.search",
             "sustainable_development_goals.id"
           ]
         },
         "value": {
-          "description": "The value to filter by. For entity IDs, use normalized format: entityName/id (e.g., 'institutions/I136199984', 'countries/de', 'sdgs/13'). For other values: integer for counts/years, boolean for flags, null for unknown/missing.",
+          "description": "BARE value (no entity prefix). Native IDs self-namespace via their letter prefix (A/W/I/S/F/T/...); non-native values are bare slugs/codes/ints disambiguated by column_id. String for ids/slugs/search, integer for counts/years, boolean for flags, null for missing.",
           "oneOf": [
-            { "type": "string" },
-            { "type": "integer" },
-            { "type": "number" },
-            { "type": "boolean" },
-            { "type": "null" }
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
           ],
-          "examples": ["types/article", "institutions/I136199984", "countries/de", "sdgs/13", 2024, true, null]
+          "examples": [
+            "article",
+            "I136199984",
+            "de",
+            "13",
+            2024,
+            true,
+            null
+          ]
         },
         "operator": {
           "$ref": "#/$defs/Operator",
-          "description": "The comparison operator. Defaults to 'is' (exact match) if not specified.",
+          "description": "Comparison operator. Defaults to 'is'. Strictly affirmative — negation is `is_negated`, never an operator.",
           "default": "is"
+        },
+        "is_negated": {
+          "type": "boolean",
+          "description": "Polarity bit. true = the negation of this leaf (the single negation mechanism; maps 1:1 to URL `!`). In canonical (NNF) form, negation lives only on leaves.",
+          "default": false
         }
       }
     },
-
     "BranchFilter": {
       "type": "object",
-      "description": "A boolean combination of filters. Allows AND/OR grouping of multiple conditions.",
-      "required": ["join", "filters"],
+      "description": "A boolean combination of filters (AND/OR), optionally negated.",
+      "required": [
+        "join",
+        "filters"
+      ],
       "additionalProperties": false,
       "properties": {
         "join": {
           "type": "string",
-          "enum": ["and", "or"],
-          "description": "'and' requires all child filters to match. 'or' requires at least one child filter to match."
+          "enum": [
+            "and",
+            "or"
+          ],
+          "description": "'and' requires all children; 'or' requires at least one."
         },
         "filters": {
           "type": "array",
-          "description": "Array of child filters (can be leaf or branch filters, enabling nested boolean logic).",
+          "description": "Child filters (leaf or branch), enabling nested boolean logic.",
           "minItems": 1,
           "items": {
             "$ref": "#/$defs/Filter"
           }
+        },
+        "is_negated": {
+          "type": "boolean",
+          "description": "Negate the whole branch. The canonicalizer pushes this to the leaves via De Morgan (NNF), so a canonical OQO has is_negated only on leaves.",
+          "default": false
         }
       }
     },
-
+    "GroupBy": {
+      "type": "object",
+      "description": "A single group-by dimension.",
+      "required": [
+        "column_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "column_id": {
+          "type": "string",
+          "description": "The column to group by.",
+          "examples": [
+            "primary_topic.id",
+            "publication_year",
+            "authorships.countries",
+            "sustainable_development_goals.id"
+          ]
+        }
+      }
+    },
     "Operator": {
       "type": "string",
-      "description": "Comparison operators for filter conditions.",
+      "description": "Leaf comparison operators (strictly affirmative). Sourced from oqo.VALID_OPERATORS. Negation is the `is_negated` bit, not an operator.",
       "enum": [
-        "is",
-        "is not",
-        ">",
-        ">=",
         "<",
         "<=",
+        ">",
+        ">=",
         "contains",
-        "does not contain"
+        "is"
       ],
-      "x-operator-categories": {
-        "equality": {
-          "operators": ["is", "is not"],
-          "description": "Exact match or negation. Default operator.",
-          "url_syntax": {
-            "is": "field:value",
-            "is not": "field:!value"
-          }
-        },
-        "comparison": {
-          "operators": [">", ">=", "<", "<="],
-          "description": "Numeric/date comparisons for range filters.",
-          "url_syntax": {
-            ">=": "field:value-",
-            "<=": "field:-value",
-            "range": "field:min-max"
-          }
-        },
-        "text": {
-          "operators": ["contains", "does not contain"],
-          "description": "Text search operators for search fields."
-        }
-      },
       "default": "is"
     }
   },
-
   "examples": [
     {
-      "description": "Simple type filter",
+      "description": "Type filter (bare value)",
       "value": {
         "get_rows": "works",
         "filter_rows": [
-          { "column_id": "type", "value": "types/article" }
+          {
+            "column_id": "type",
+            "value": "article"
+          }
         ]
       }
     },
     {
-      "description": "Multiple filters with AND (implicit at top level)",
+      "description": "AND of filters (implicit at top level), with range + boolean flag",
       "value": {
         "get_rows": "works",
         "filter_rows": [
-          { "column_id": "type", "value": "types/article" },
-          { "column_id": "publication_year", "value": 2024, "operator": ">=" },
-          { "column_id": "open_access.is_oa", "value": true }
+          {
+            "column_id": "type",
+            "value": "article"
+          },
+          {
+            "column_id": "publication_year",
+            "value": 2024,
+            "operator": ">="
+          },
+          {
+            "column_id": "open_access.is_oa",
+            "value": true
+          }
         ]
       }
     },
     {
-      "description": "OR within same field (type is article OR book)",
+      "description": "OR within a field (article OR review)",
       "value": {
         "get_rows": "works",
         "filter_rows": [
           {
             "join": "or",
             "filters": [
-              { "column_id": "type", "value": "types/article" },
-              { "column_id": "type", "value": "types/book" }
+              {
+                "column_id": "type",
+                "value": "article"
+              },
+              {
+                "column_id": "type",
+                "value": "review"
+              }
             ]
           }
         ]
       }
     },
     {
-      "description": "AND within same field (co-authorship: institution A AND institution B)",
+      "description": "Negation via is_negated (COVID NOT pediatric)",
       "value": {
         "get_rows": "works",
         "filter_rows": [
-          { "column_id": "authorships.institutions.lineage", "value": "institutions/I33213144" },
-          { "column_id": "authorships.institutions.lineage", "value": "institutions/I103163165" }
-        ]
-      }
-    },
-    {
-      "description": "Nested boolean: Harvard AND (Stanford OR MIT)",
-      "value": {
-        "get_rows": "works",
-        "filter_rows": [
-          { "column_id": "authorships.institutions.lineage", "value": "institutions/I136199984" },
           {
-            "join": "or",
-            "filters": [
-              { "column_id": "authorships.institutions.lineage", "value": "institutions/I97018004" },
-              { "column_id": "authorships.institutions.lineage", "value": "institutions/I63966007" }
-            ]
+            "column_id": "title_and_abstract.search",
+            "value": "covid",
+            "operator": "contains"
+          },
+          {
+            "column_id": "title_and_abstract.search",
+            "value": "pediatric",
+            "operator": "contains",
+            "is_negated": true
           }
         ]
       }
     },
     {
-      "description": "Negation (type is NOT article)",
+      "description": "Stage B: multi-dimensional group_by (topic x year)",
       "value": {
         "get_rows": "works",
         "filter_rows": [
-          { "column_id": "type", "value": "types/article", "operator": "is not" }
+          {
+            "column_id": "publication_year",
+            "value": 1976,
+            "operator": ">="
+          }
+        ],
+        "group_by": [
+          {
+            "column_id": "primary_topic.id"
+          },
+          {
+            "column_id": "publication_year"
+          }
         ]
       }
     },
     {
-      "description": "Range filter with sort",
+      "description": "Sort + sample (top-cited sample)",
       "value": {
         "get_rows": "works",
         "filter_rows": [
-          { "column_id": "publication_year", "value": 2020, "operator": ">=" },
-          { "column_id": "publication_year", "value": 2024, "operator": "<=" }
+          {
+            "column_id": "publication_year",
+            "value": 2024,
+            "operator": ">="
+          }
         ],
         "sort_by_column": "cited_by_count",
-        "sort_by_order": "desc"
-      }
-    },
-    {
-      "description": "Search filter",
-      "value": {
-        "get_rows": "works",
-        "filter_rows": [
-          { "column_id": "title_and_abstract.search", "value": "machine learning", "operator": "contains" }
-        ]
-      }
-    },
-    {
-      "description": "Null/unknown value filter",
-      "value": {
-        "get_rows": "works",
-        "filter_rows": [
-          { "column_id": "language", "value": null }
-        ]
-      }
-    },
-    {
-      "description": "Sample random results",
-      "value": {
-        "get_rows": "works",
-        "filter_rows": [
-          { "column_id": "publication_year", "value": 2024, "operator": ">=" }
-        ],
+        "sort_by_order": "desc",
         "sample": 100
-      }
-    },
-    {
-      "description": "Authors query with institution filter",
-      "value": {
-        "get_rows": "authors",
-        "filter_rows": [
-          { "column_id": "last_known_institutions.id", "value": "institutions/I136199984" }
-        ]
-      }
-    },
-    {
-      "description": "Institutions query with country filter",
-      "value": {
-        "get_rows": "institutions",
-        "filter_rows": [
-          { "column_id": "country_code", "value": "countries/us" }
-        ]
-      }
-    },
-    {
-      "description": "Complex OA compliance query",
-      "value": {
-        "get_rows": "works",
-        "filter_rows": [
-          { "column_id": "authorships.institutions.lineage", "value": "institutions/I241749" },
-          { "column_id": "open_access.oa_status", "value": "oa-statuses/gold" },
-          { "column_id": "type", "value": "types/article" }
-        ],
-        "sort_by_column": "fwci",
-        "sort_by_order": "desc"
-      }
-    },
-    {
-      "description": "SDG research query",
-      "value": {
-        "get_rows": "works",
-        "filter_rows": [
-          {
-            "join": "or",
-            "filters": [
-              { "column_id": "sustainable_development_goals.id", "value": "sdgs/13" },
-              { "column_id": "sustainable_development_goals.id", "value": "sdgs/7" }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "description": "Awards/funders query",
-      "value": {
-        "get_rows": "works",
-        "filter_rows": [
-          { "column_id": "awards.funder.id", "value": "funders/F4320332161" }
-        ]
       }
     }
   ]
