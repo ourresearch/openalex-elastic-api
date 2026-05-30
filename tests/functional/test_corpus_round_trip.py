@@ -170,16 +170,15 @@ def parse_oxurl_cell(cell: str) -> Optional[Dict[str, Optional[str]]]:
         return None
     entity_type, path_segment, query = m.group(1), m.group(2), m.group(3)
 
-    # Path-form like /authors/A5022654839 isn't a filter URL; skip.
-    if path_segment:
-        return None
-
     params: Dict[str, Optional[str]] = {
         "entity_type": entity_type,
         "filter": None,
         "sort": None,
         "sample": None,
         "group_by": None,
+        # Path-form `/authors/{id}` becomes a leading ids.openalex filter via
+        # url_parser.parse_url_to_oqo(path_id=…).
+        "path_id": path_segment,
     }
 
     if query:
@@ -229,7 +228,7 @@ def skip_reason(row: Dict[str, Any]) -> Optional[str]:
 
     url_params = parse_oxurl_cell(row["oxurl_cell"])
     if url_params is None:
-        return "OXURL is not a filter URL (path-form like /authors/{id})"
+        return "OXURL is not parseable"
 
     filt = url_params.get("filter") or ""
 
@@ -344,15 +343,23 @@ def test_corpus_row(row):
         sort_string=url_params.get("sort"),
         sample=url_params.get("sample"),
         group_by_string=url_params.get("group_by"),
+        path_id=url_params.get("path_id"),
     )
     ok, diff = oqo_equal(parsed_oqo, expected_oqo)
     assert ok, f"URL→OQO mismatch for {row['row_id']}:{diff}"
 
     # 2. OQO → URL semantically equal to original OXURL
     rendered = render_oqo_to_url(canonicalize_oqo(parsed_oqo))
-    assert normalize_filter_string(rendered.get("filter")) == normalize_filter_string(url_params.get("filter")), (
+    # For path-form rows, the rendered URL is the equivalent filter-form
+    # (ids.openalex:<id>). Normalize the expected URL to the filter-form for
+    # the comparison: prepend the path-form's implied filter.
+    expected_filter = url_params.get("filter")
+    if url_params.get("path_id"):
+        path_filter = f"ids.openalex:{url_params['path_id']}"
+        expected_filter = f"{path_filter},{expected_filter}" if expected_filter else path_filter
+    assert normalize_filter_string(rendered.get("filter")) == normalize_filter_string(expected_filter), (
         f"URL→OQO→URL filter mismatch for {row['row_id']}: "
-        f"expected={url_params.get('filter')!r} got={rendered.get('filter')!r}"
+        f"expected={expected_filter!r} got={rendered.get('filter')!r}"
     )
     assert (rendered.get("sort") or None) == (url_params.get("sort") or None), (
         f"sort mismatch for {row['row_id']}"
@@ -389,6 +396,7 @@ def test_corpus_row_schema(row):
         sort_string=url_params.get("sort"),
         sample=url_params.get("sample"),
         group_by_string=url_params.get("group_by"),
+        path_id=url_params.get("path_id"),
     )
 
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))

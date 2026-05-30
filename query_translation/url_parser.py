@@ -16,6 +16,7 @@ def parse_url_to_oqo(
     sort_string: Optional[str] = None,
     sample: Optional[int] = None,
     group_by_string: Optional[str] = None,
+    path_id: Optional[str] = None,
 ) -> OQO:
     """
     Parse URL filter/sort/group_by strings into an OQO object.
@@ -30,14 +31,21 @@ def parse_url_to_oqo(
             ("primary_topic.id,publication_year"). Live API is single-dim
             (#297); spec is multi-dim — the translation impl round-trips both
             faithfully.
+        path_id: Optional path-form entity id (e.g. "A5022654839" from the URL
+            `/authors/A5022654839`). Translates to a leading
+            `LeafFilter(column_id="ids.openalex", value=path_id)` so path-form
+            single-entity lookups round-trip cleanly to the spec form.
 
     Returns:
         OQO object representing the query
     """
     filter_rows = []
 
+    if path_id:
+        filter_rows.append(LeafFilter(column_id="ids.openalex", value=path_id))
+
     if filter_string:
-        filter_rows = parse_filter_string(filter_string)
+        filter_rows.extend(parse_filter_string(filter_string))
 
     sort_by_column = None
     sort_by_order = None
