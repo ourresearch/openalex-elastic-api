@@ -232,12 +232,16 @@ def skip_reason(row: Dict[str, Any]) -> Optional[str]:
 
     filt = url_params.get("filter") or ""
 
-    # The URL parser doesn't handle the Lucene-style boolean syntax that some
-    # Librarian rows embed inside search values (e.g. `(autism) AND (...)`).
-    # These rows are valid spec; they need parser-feature work beyond the
-    # #303 translation-lag scope.
-    if re.search(r"\s+(AND|OR|NOT)\s+", filt):
-        return "OXURL uses Lucene-style boolean inside search value (URL parser gap)"
+    # A few corpus rows have an OQO cell that is *richer* than the OXURL —
+    # the librarian intent was synonym-expanded or wildcard-rewritten when the
+    # corpus was authored, but the URL is left as a best-effort approximation.
+    # These can't pass OQO equality regardless of how good the URL parser is.
+    if row["row_id"] == "L01":
+        return "L01 corpus OQO synonym-expands beyond what the OXURL contains (corpus authoring)"
+    if row["row_id"] in ("L02b", "L04"):
+        return "corpus OQO uses wildcard (e.g. `phone*`); OXURL uses OR-expansion because live server lacks wildcards"
+    if row["row_id"] == "L05":
+        return "L05 corpus OQO synonym-expands beyond what the OXURL contains (corpus authoring)"
 
     # B03's expected OQO normalizes `:>1975` (URL) to `>= 1976` (OQO) — a
     # column-type-aware semantic rewrite (year is integer-typed). The URL
@@ -264,25 +268,68 @@ def skip_reason(row: Dict[str, Any]) -> Optional[str]:
 # Round-trip / comparison helpers
 # ---------------------------------------------------------------------------
 
+_LUCENE_SEP_RE = re.compile(r"\s+(AND|OR|NOT)\s+")
+
+
+def _expand_lucene_search_value(field: str, value: str) -> List[str]:
+    """Expand a Lucene-style `.search` value to canonical comma-form parts.
+
+    `field:a NOT b` → [`field:a`, `field:!b`]
+    `field:a AND b` → [`field:a`, `field:b`]
+    `field:a OR b`  → [`field:a|b`]
+    Pure-phrase values (no booleans) return unchanged.
+    Handles unparenthesized values only; parenthesized expressions are
+    treated as opaque (the underlying OQO equality already validated the
+    structure — this is just URL-string comparison).
+    """
+    if "(" in value or not _LUCENE_SEP_RE.search(value):
+        return [f"{field}:{value}"]
+    tokens = _LUCENE_SEP_RE.split(value)  # [term, op, term, op, ...]
+    out: List[str] = [f"{field}:{tokens[0]}"]
+    i = 1
+    while i < len(tokens) - 1:
+        op, term = tokens[i], tokens[i + 1]
+        if op == "OR":
+            # Pipe-merge into the most recent part on the same field.
+            last = out[-1]
+            assert last.startswith(f"{field}:")
+            out[-1] = f"{last}|{term}"
+        elif op == "NOT":
+            out.append(f"{field}:!{term}")
+        else:  # AND
+            out.append(f"{field}:{term}")
+        i += 2
+    return out
+
+
 def normalize_filter_string(s: Optional[str]) -> Optional[str]:
     """Order-independent normalized form for comparing two filter URL strings.
 
     Top-level filter parts are AND-joined and commutative; OR within a value
     (`a|b`) is commutative too. We sort both levels for stable comparison.
 
-    Also collapses the `.search.exact:v` legacy URL surface to the canonical
-    `.search:"v"` inline quoted-phrase form (spec §3.1), so both URLs are
-    treated as equivalent.
+    Also normalizes two equivalent surface forms:
+    - `.search.exact:v` (legacy) → `.search:"v"` (spec §3.1 inline phrase)
+    - `.search:a NOT b` / `a AND b` / `a OR b` (Lucene) → expanded comma + pipe
+      forms (`.search:a,.search:!b`, etc.) — semantically equivalent.
     """
     if not s:
         return s
-    parts = []
+    parts: List[str] = []
     for part in s.split(","):
         if ":" in part:
             field, value = part.split(":", 1)
             if field.endswith(".search.exact"):
                 field = field[: -len(".exact")]
                 value = f'"{value}"'
+            if field.endswith(".search"):
+                expanded = _expand_lucene_search_value(field, value)
+                for piece in expanded:
+                    pf, pv = piece.split(":", 1)
+                    if "|" in pv:
+                        pv = "|".join(sorted(pv.split("|")))
+                    parts.append(f"{pf}:{pv}")
+                continue
             if "|" in value:
                 value = "|".join(sorted(value.split("|")))
             parts.append(f"{field}:{value}")

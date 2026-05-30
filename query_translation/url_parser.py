@@ -175,10 +175,27 @@ def parse_single_filter(field: str, value: str) -> FilterType:
     - Ranges: 2020-2024, 2020-, -2024
     - Inline ops: >value, <value, >=value, <=value
     - Null: null, !null
+    - Lucene boolean in `.search` values: `a AND (b OR c) NOT d`
 
     For `.search`-suffix columns the default operator is `contains` (free-text
     matching); for all other columns it's `is` (exact equality).
     """
+    # Lucene-style boolean inside a .search value (AND/OR/NOT keywords,
+    # optionally with parens) lifts to a BranchFilter tree of contains-leaves.
+    # See _parse_search_boolean for grammar. A top-level AND-branch is
+    # flattened into a list — outer filter_rows is itself an implicit AND, so
+    # nesting an explicit AND-branch there is redundant and would diverge from
+    # the corpus's canonical shape.
+    if field.endswith(".search") and _SEARCH_BOOLEAN_KEYWORD_RE.search(value):
+        parsed = _parse_search_boolean(field, value)
+        if (
+            isinstance(parsed, BranchFilter)
+            and parsed.join == "and"
+            and not parsed.is_negated
+        ):
+            return list(parsed.filters)
+        return parsed
+
     # Handle OR (pipe) in values
     if "|" in value:
         return parse_or_values(field, value)
@@ -337,6 +354,172 @@ def parse_bounded_range(field: str, value: str) -> List[LeafFilter]:
     
     # Default: treat as exact match
     return [LeafFilter(column_id=field, value=value, operator="is")]
+
+
+# ---------------------------------------------------------------------------
+# Lucene-style boolean parsing inside `.search` values
+# ---------------------------------------------------------------------------
+#
+# Grammar (operator precedence: NOT > AND > OR; AND can be implicit before NOT):
+#   expr     := or_term ( OR or_term )*
+#   or_term  := and_unit ( AND? and_unit )*
+#   and_unit := NOT and_unit | atom
+#   atom     := '(' expr ')' | <phrase> | <quoted-phrase-with-optional-proximity>
+#
+# A `<phrase>` is any run of non-paren / non-boolean text — spaces are part of
+# the phrase (so `supply chain` inside `(supply chain)` is one contains leaf,
+# not AND(supply, chain)).
+
+_SEARCH_BOOLEAN_KEYWORD_RE = re.compile(r"(?:^|\s)(AND|OR|NOT)(?=\s|\()")
+
+
+def _tokenize_search_boolean(value: str) -> List[Tuple[str, str]]:
+    """Tokenize a Lucene-style search value into (kind, text) tokens.
+
+    Kinds: LPAREN, RPAREN, AND, OR, NOT, PHRASE (text run, may contain spaces).
+    """
+    tokens: List[Tuple[str, str]] = []
+    i, n = 0, len(value)
+    while i < n:
+        ch = value[i]
+        if ch.isspace():
+            i += 1
+            continue
+        if ch == "(":
+            tokens.append(("LPAREN", "("))
+            i += 1
+            continue
+        if ch == ")":
+            tokens.append(("RPAREN", ")"))
+            i += 1
+            continue
+        # Quoted phrase (with optional proximity suffix like `"phrase"~3`)
+        if ch == '"':
+            j = i + 1
+            while j < n and value[j] != '"':
+                j += 1
+            j = min(j + 1, n)  # include closing quote
+            # Optional proximity suffix
+            if j < n and value[j] == "~":
+                k = j + 1
+                while k < n and value[k].isdigit():
+                    k += 1
+                j = k
+            tokens.append(("PHRASE", value[i:j]))
+            i = j
+            continue
+        # Boolean keyword (uppercase, surrounded by word boundary)
+        for kw in ("AND", "OR", "NOT"):
+            end = i + len(kw)
+            if (value[i:end] == kw and (end == n or not value[end].isalnum())):
+                tokens.append((kw, kw))
+                i = end
+                break
+        else:
+            # Phrase: run up to next paren / boolean / quote
+            j = i
+            while j < n and value[j] not in '()"':
+                if value[j].isspace():
+                    # Lookahead: is the next non-space token a boolean keyword?
+                    k = j
+                    while k < n and value[k].isspace():
+                        k += 1
+                    if k < n and any(
+                        value[k:k + len(kw)] == kw
+                        and (k + len(kw) == n or not value[k + len(kw)].isalnum())
+                        for kw in ("AND", "OR", "NOT")
+                    ):
+                        break
+                    if k < n and value[k] in '()':
+                        break
+                j += 1
+            tokens.append(("PHRASE", value[i:j].strip()))
+            i = j
+    return tokens
+
+
+def _parse_search_boolean(field: str, value: str) -> FilterType:
+    """Parse a Lucene-style boolean search value into a BranchFilter tree.
+
+    All leaves are `LeafFilter(column_id=field, operator="contains")`.
+    NOT lifts to `is_negated=True` on the wrapped leaf or branch (the
+    canonicalizer pushes branch-level negation down to leaves).
+    """
+    tokens = _tokenize_search_boolean(value)
+    pos = [0]
+
+    def peek() -> Optional[Tuple[str, str]]:
+        return tokens[pos[0]] if pos[0] < len(tokens) else None
+
+    def consume() -> Tuple[str, str]:
+        t = tokens[pos[0]]
+        pos[0] += 1
+        return t
+
+    def parse_atom() -> FilterType:
+        tok = peek()
+        if tok is None:
+            return LeafFilter(column_id=field, value="", operator="contains")
+        kind, text = tok
+        if kind == "LPAREN":
+            consume()
+            inner = parse_expr()
+            if peek() and peek()[0] == "RPAREN":
+                consume()
+            return inner
+        if kind == "PHRASE":
+            consume()
+            # Strip surrounding double-quotes for the leaf value if it's a
+            # plain quoted phrase (no proximity suffix); proximity stays literal.
+            v = text
+            if v.startswith('"') and v.endswith('"') and "~" not in v:
+                v = v[1:-1]
+            return LeafFilter(column_id=field, value=v, operator="contains")
+        # Unexpected token (shouldn't happen for well-formed input)
+        consume()
+        return LeafFilter(column_id=field, value=text, operator="contains")
+
+    def parse_not() -> FilterType:
+        if peek() and peek()[0] == "NOT":
+            consume()
+            inner = parse_not()
+            if isinstance(inner, LeafFilter):
+                inner.is_negated = not inner.is_negated
+                return inner
+            # BranchFilter — toggle the polarity bit; canonicalizer pushes it down.
+            inner.is_negated = not inner.is_negated
+            return inner
+        return parse_atom()
+
+    def parse_and() -> FilterType:
+        left = parse_not()
+        operands = [left]
+        while True:
+            tok = peek()
+            if tok is None or tok[0] in ("RPAREN", "OR"):
+                break
+            if tok[0] == "AND":
+                consume()
+            # else: implicit AND (e.g. `covid NOT pediatric`)
+            operands.append(parse_not())
+        return operands[0] if len(operands) == 1 else BranchFilter(join="and", filters=operands)
+
+    def parse_expr() -> FilterType:
+        left = parse_and()
+        operands = [left]
+        while peek() and peek()[0] == "OR":
+            consume()
+            operands.append(parse_and())
+        return operands[0] if len(operands) == 1 else BranchFilter(join="or", filters=operands)
+
+    result = parse_expr()
+    # Top-level boolean tree: if it's an AND-branch, lift its children into the
+    # caller's filter_rows list. parse_filter_string puts a single returned
+    # FilterType in filter_rows; for the AND case we want them flattened.
+    # (BranchFilter with join="and" at the top is fine — canonicalizer handles
+    # both representations equivalently — but lifting matches the corpus shape
+    # where the expected OQO has the AND-leaves as siblings in filter_rows.)
+    return result
 
 
 def parse_sort_string(sort_string: str) -> Tuple[Optional[str], Optional[str]]:
