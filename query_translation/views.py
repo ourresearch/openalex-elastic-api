@@ -92,13 +92,14 @@ blueprint = Blueprint("query_translation", __name__)
 
 
 def _resolve_entity(entity_type: str, connection: str):
-    """Return (fields_dict, index_name, default_sort) for an OQO `get_rows`.
+    """Return (fields_dict, index_name, default_sort, MessageSchema) for an OQO `get_rows`.
 
     Raises APIQueryParamsError on unknown entity types so the caller surfaces a 400.
     """
     et = entity_type
     if et == "works":
         from works.fields import fields_dict
+        from works.schemas import MessageSchema
         from settings import WORKS_INDEX_LEGACY, WORKS_INDEX_WALDEN
 
         index_name = (
@@ -108,9 +109,10 @@ def _resolve_entity(entity_type: str, connection: str):
             "-cited_by_percentile_year.max",
             "-cited_by_count",
             "id",
-        ]
+        ], MessageSchema
     if et == "authors":
         from authors.fields import fields_dict
+        from authors.schemas import MessageSchema
         from settings import AUTHORS_INDEX_LEGACY, AUTHORS_INDEX_WALDEN
 
         index_name = (
@@ -118,102 +120,126 @@ def _resolve_entity(entity_type: str, connection: str):
             if connection == "walden"
             else AUTHORS_INDEX_LEGACY
         )
-        return fields_dict, index_name, ["-works_count", "id"]
+        return fields_dict, index_name, ["-works_count", "id"], MessageSchema
     if et == "institutions":
         from institutions.fields import fields_dict
+        from institutions.schemas import MessageSchema
         from settings import INSTITUTIONS_INDEX
 
-        return fields_dict, INSTITUTIONS_INDEX, ["-works_count", "id"]
+        return fields_dict, INSTITUTIONS_INDEX, ["-works_count", "id"], MessageSchema
     if et == "sources":
         from sources.fields import fields_dict
+        from sources.schemas import MessageSchema
         from settings import SOURCES_INDEX
 
-        return fields_dict, SOURCES_INDEX, ["-works_count", "id"]
+        return fields_dict, SOURCES_INDEX, ["-works_count", "id"], MessageSchema
     if et == "publishers":
         from publishers.fields import fields_dict
+        from publishers.schemas import MessageSchema
         from settings import PUBLISHERS_INDEX
 
-        return fields_dict, PUBLISHERS_INDEX, ["-works_count", "id"]
+        return fields_dict, PUBLISHERS_INDEX, ["-works_count", "id"], MessageSchema
     if et == "funders":
         from funders.fields import fields_dict
+        from funders.schemas import MessageSchema
         from settings import FUNDERS_INDEX
 
-        return fields_dict, FUNDERS_INDEX, ["-works_count", "id"]
+        return fields_dict, FUNDERS_INDEX, ["-works_count", "id"], MessageSchema
     if et == "topics":
         from topics.fields import fields_dict
+        from topics.schemas import MessageSchema
         from settings import TOPICS_INDEX
 
-        return fields_dict, TOPICS_INDEX, ["-works_count", "id"]
+        return fields_dict, TOPICS_INDEX, ["-works_count", "id"], MessageSchema
     if et == "keywords":
         from keywords.fields import fields_dict
+        from keywords.schemas import MessageSchema
         from settings import KEYWORDS_INDEX
 
-        return fields_dict, KEYWORDS_INDEX, ["-works_count", "id"]
+        return fields_dict, KEYWORDS_INDEX, ["-works_count", "id"], MessageSchema
     if et == "concepts":
         from concepts.fields import fields_dict
+        from concepts.schemas import MessageSchema
         from settings import CONCEPTS_INDEX
 
-        return fields_dict, CONCEPTS_INDEX, ["-works_count", "id"]
+        return fields_dict, CONCEPTS_INDEX, ["-works_count", "id"], MessageSchema
     if et == "sdgs":
         from sdgs.fields import fields_dict
+        from sdgs.schemas import MessageSchema
         from settings import SDGS_INDEX
 
-        return fields_dict, SDGS_INDEX, ["-works_count", "id"]
+        return fields_dict, SDGS_INDEX, ["-works_count", "id"], MessageSchema
     if et == "domains":
         from domains.fields import fields_dict
+        from domains.schemas import MessageSchema
         from settings import DOMAINS_INDEX
 
-        return fields_dict, DOMAINS_INDEX, ["-works_count", "id"]
+        return fields_dict, DOMAINS_INDEX, ["-works_count", "id"], MessageSchema
     if et == "fields":
         from fields.fields import fields_dict
+        from fields.schemas import MessageSchema
         from settings import FIELDS_INDEX
 
-        return fields_dict, FIELDS_INDEX, ["-works_count", "id"]
+        return fields_dict, FIELDS_INDEX, ["-works_count", "id"], MessageSchema
     if et == "subfields":
         from subfields.fields import fields_dict
+        from subfields.schemas import MessageSchema
         from settings import SUBFIELDS_INDEX
 
-        return fields_dict, SUBFIELDS_INDEX, ["-works_count", "id"]
+        return fields_dict, SUBFIELDS_INDEX, ["-works_count", "id"], MessageSchema
     if et == "countries":
         from countries.fields import fields_dict
+        from countries.schemas import MessageSchema
         from settings import COUNTRIES_INDEX
 
-        return fields_dict, COUNTRIES_INDEX, ["-works_count", "id"]
+        return fields_dict, COUNTRIES_INDEX, ["-works_count", "id"], MessageSchema
     if et == "continents":
         from continents.fields import fields_dict
+        from continents.schemas import MessageSchema
         from settings import CONTINENTS_INDEX
 
-        return fields_dict, CONTINENTS_INDEX, ["-works_count", "id"]
+        return fields_dict, CONTINENTS_INDEX, ["-works_count", "id"], MessageSchema
     if et == "languages":
         from languages.fields import fields_dict
+        from languages.schemas import MessageSchema
         from settings import LANGUAGES_INDEX
 
-        return fields_dict, LANGUAGES_INDEX, ["-works_count", "id"]
+        return fields_dict, LANGUAGES_INDEX, ["-works_count", "id"], MessageSchema
     if et == "licenses":
         from licenses.fields import fields_dict
+        from licenses.schemas import MessageSchema
         from settings import LICENSES_INDEX
 
-        return fields_dict, LICENSES_INDEX, ["-works_count", "id"]
+        return fields_dict, LICENSES_INDEX, ["-works_count", "id"], MessageSchema
     if et == "source-types":
         from source_types.fields import fields_dict
+        from source_types.schemas import MessageSchema
         from settings import SOURCE_TYPES_INDEX
 
-        return fields_dict, SOURCE_TYPES_INDEX, ["-works_count", "id"]
+        return fields_dict, SOURCE_TYPES_INDEX, ["-works_count", "id"], MessageSchema
     if et == "institution-types":
         from institution_types.fields import fields_dict
+        from institution_types.schemas import MessageSchema
         from settings import INSTITUTION_TYPES_INDEX
 
-        return fields_dict, INSTITUTION_TYPES_INDEX, ["-works_count", "id"]
+        return (
+            fields_dict,
+            INSTITUTION_TYPES_INDEX,
+            ["-works_count", "id"],
+            MessageSchema,
+        )
     if et in ("work-types", "types"):
         from work_types.fields import fields_dict
+        from work_types.schemas import MessageSchema
         from settings import WORK_TYPES_INDEX
 
-        return fields_dict, WORK_TYPES_INDEX, ["-works_count", "id"]
+        return fields_dict, WORK_TYPES_INDEX, ["-works_count", "id"], MessageSchema
     if et == "awards":
         from awards.fields import fields_dict
+        from awards.schemas import MessageSchema
         from settings import AWARDS_INDEX
 
-        return fields_dict, AWARDS_INDEX, ["-funded_outputs_count", "id"]
+        return fields_dict, AWARDS_INDEX, ["-funded_outputs_count", "id"], MessageSchema
 
     raise APIQueryParamsError(
         f"OQO get_rows='{entity_type}' is not a supported entity type."
@@ -392,10 +418,10 @@ def _execute_oqo(oqo_dict: dict):
             }
         ), 400
 
-    # Dispatch to per-entity fields_dict + index_name.
+    # Dispatch to per-entity fields_dict + index_name + serialization schema.
     connection = get_data_version_connection(request)
     try:
-        fields_dict, index_name, default_sort = _resolve_entity(
+        fields_dict, index_name, default_sort, MessageSchema = _resolve_entity(
             oqo.get_rows, connection
         )
     except APIQueryParamsError as e:
@@ -453,9 +479,12 @@ def _execute_oqo(oqo_dict: dict):
         )
 
     result = format_response(response, params, index_name, fields_dict, s, connection)
+    # Marshall the ES response objects into JSON-serializable dicts via the
+    # entity's MessageSchema — the same path the per-entity views use.
+    serialized = MessageSchema().dump(result)
     # Echo a canonicalized OQO so clients can confirm what we actually executed.
-    result["oqo"] = canonicalize_oqo(oqo).to_dict()
-    return jsonify(result), 200
+    serialized["oqo"] = canonicalize_oqo(oqo).to_dict()
+    return jsonify(serialized), 200
 
 
 def _error_response(message, error_type, status=400):
