@@ -1,26 +1,51 @@
 """
 Flask Blueprint for /query endpoint.
 
-Provides bidirectional translation between URL, OQL, and OQO query formats.
+Provides bidirectional translation between URL, OQL, and OQO query formats,
+plus a real execution surface (#306) that accepts an OQO directly and returns
+ES results — the same response shape as /works, /authors, etc.
 """
 
 import json
 import time
+import urllib.parse
 import concurrent.futures
+from collections import OrderedDict
 
 import requests
+from elasticsearch_dsl import Search
 from flask import Blueprint, jsonify, request
 from openai import OpenAI
 
 import settings
-from query_translation.oqo import OQO, filter_from_dict
-from query_translation.url_parser import parse_url_to_oqo
-from query_translation.url_renderer import render_oqo_to_url, URLRenderError, can_render_to_url
+from core.cursor import handle_cursor
+from core.exceptions import APIError, APIQueryParamsError
+from core.paginate import get_pagination, get_per_page
+from core.shared_view import (
+    apply_grouping,
+    apply_sorting,
+    execute_search,
+    format_response,
+    set_source,
+)
+from core.utils import get_data_version_connection
+from core.utils import get_display_name as _get_display_name
+from query_translation.oqo import OQO, VALID_OPERATORS, filter_from_dict
+from query_translation.oqo_canonicalizer import canonicalize_oqo
+from query_translation.oqo_to_es import OQOTranslationError, oqo_to_q
 from query_translation.oql_renderer import render_oqo_to_oql
 from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
-from query_translation.oqo_canonicalizer import canonicalize_oqo
-from query_translation.validator import validate_oqo, ValidationError, ValidationResult
-from core.utils import get_display_name as _get_display_name
+from query_translation.url_parser import parse_url_to_oqo
+from query_translation.url_renderer import (
+    URLRenderError,
+    can_render_to_url,
+    render_oqo_to_url,
+)
+from query_translation.validator import (
+    ValidationError,
+    ValidationResult,
+    validate_oqo,
+)
 
 
 # Entity types that exist in Elasticsearch and can be looked up
@@ -58,28 +83,453 @@ def safe_get_display_name(entity_id: str):
 blueprint = Blueprint("query_translation", __name__)
 
 
+# ---------------------------------------------------------------------------
+# Entity dispatch — maps OQO `get_rows` to (fields_dict, index_name, default_sort).
+#
+# Kept as a function (not a static dict) so we can lazily import per-entity
+# modules and pick walden vs legacy indexes based on request data version.
+# ---------------------------------------------------------------------------
+
+
+def _resolve_entity(entity_type: str, connection: str):
+    """Return (fields_dict, index_name, default_sort) for an OQO `get_rows`.
+
+    Raises APIQueryParamsError on unknown entity types so the caller surfaces a 400.
+    """
+    et = entity_type
+    if et == "works":
+        from works.fields import fields_dict
+        from settings import WORKS_INDEX_LEGACY, WORKS_INDEX_WALDEN
+
+        index_name = (
+            WORKS_INDEX_WALDEN if connection == "walden" else WORKS_INDEX_LEGACY
+        )
+        return fields_dict, index_name, [
+            "-cited_by_percentile_year.max",
+            "-cited_by_count",
+            "id",
+        ]
+    if et == "authors":
+        from authors.fields import fields_dict
+        from settings import AUTHORS_INDEX_LEGACY, AUTHORS_INDEX_WALDEN
+
+        index_name = (
+            AUTHORS_INDEX_WALDEN
+            if connection == "walden"
+            else AUTHORS_INDEX_LEGACY
+        )
+        return fields_dict, index_name, ["-works_count", "id"]
+    if et == "institutions":
+        from institutions.fields import fields_dict
+        from settings import INSTITUTIONS_INDEX
+
+        return fields_dict, INSTITUTIONS_INDEX, ["-works_count", "id"]
+    if et == "sources":
+        from sources.fields import fields_dict
+        from settings import SOURCES_INDEX
+
+        return fields_dict, SOURCES_INDEX, ["-works_count", "id"]
+    if et == "publishers":
+        from publishers.fields import fields_dict
+        from settings import PUBLISHERS_INDEX
+
+        return fields_dict, PUBLISHERS_INDEX, ["-works_count", "id"]
+    if et == "funders":
+        from funders.fields import fields_dict
+        from settings import FUNDERS_INDEX
+
+        return fields_dict, FUNDERS_INDEX, ["-works_count", "id"]
+    if et == "topics":
+        from topics.fields import fields_dict
+        from settings import TOPICS_INDEX
+
+        return fields_dict, TOPICS_INDEX, ["-works_count", "id"]
+    if et == "keywords":
+        from keywords.fields import fields_dict
+        from settings import KEYWORDS_INDEX
+
+        return fields_dict, KEYWORDS_INDEX, ["-works_count", "id"]
+    if et == "concepts":
+        from concepts.fields import fields_dict
+        from settings import CONCEPTS_INDEX
+
+        return fields_dict, CONCEPTS_INDEX, ["-works_count", "id"]
+    if et == "sdgs":
+        from sdgs.fields import fields_dict
+        from settings import SDGS_INDEX
+
+        return fields_dict, SDGS_INDEX, ["-works_count", "id"]
+    if et == "domains":
+        from domains.fields import fields_dict
+        from settings import DOMAINS_INDEX
+
+        return fields_dict, DOMAINS_INDEX, ["-works_count", "id"]
+    if et == "fields":
+        from fields.fields import fields_dict
+        from settings import FIELDS_INDEX
+
+        return fields_dict, FIELDS_INDEX, ["-works_count", "id"]
+    if et == "subfields":
+        from subfields.fields import fields_dict
+        from settings import SUBFIELDS_INDEX
+
+        return fields_dict, SUBFIELDS_INDEX, ["-works_count", "id"]
+    if et == "countries":
+        from countries.fields import fields_dict
+        from settings import COUNTRIES_INDEX
+
+        return fields_dict, COUNTRIES_INDEX, ["-works_count", "id"]
+    if et == "continents":
+        from continents.fields import fields_dict
+        from settings import CONTINENTS_INDEX
+
+        return fields_dict, CONTINENTS_INDEX, ["-works_count", "id"]
+    if et == "languages":
+        from languages.fields import fields_dict
+        from settings import LANGUAGES_INDEX
+
+        return fields_dict, LANGUAGES_INDEX, ["-works_count", "id"]
+    if et == "licenses":
+        from licenses.fields import fields_dict
+        from settings import LICENSES_INDEX
+
+        return fields_dict, LICENSES_INDEX, ["-works_count", "id"]
+    if et == "source-types":
+        from source_types.fields import fields_dict
+        from settings import SOURCE_TYPES_INDEX
+
+        return fields_dict, SOURCE_TYPES_INDEX, ["-works_count", "id"]
+    if et == "institution-types":
+        from institution_types.fields import fields_dict
+        from settings import INSTITUTION_TYPES_INDEX
+
+        return fields_dict, INSTITUTION_TYPES_INDEX, ["-works_count", "id"]
+    if et in ("work-types", "types"):
+        from work_types.fields import fields_dict
+        from settings import WORK_TYPES_INDEX
+
+        return fields_dict, WORK_TYPES_INDEX, ["-works_count", "id"]
+    if et == "awards":
+        from awards.fields import fields_dict
+        from settings import AWARDS_INDEX
+
+        return fields_dict, AWARDS_INDEX, ["-funded_outputs_count", "id"]
+
+    raise APIQueryParamsError(
+        f"OQO get_rows='{entity_type}' is not a supported entity type."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Synthetic params dict — mirrors what core/params.py:parse_params would produce
+# from a URL request, so we can reuse the downstream shared_view stages
+# (apply_sorting, apply_grouping, execute_search, format_response) untouched.
+# ---------------------------------------------------------------------------
+
+
+def _set_int_arg(request, name, default):
+    raw = request.args.get(name) or request.args.get(name.replace("-", "_"))
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        raise APIQueryParamsError(f"Param {name} must be an integer.")
+
+
+def _build_params_from_oqo(oqo: OQO, request):
+    """Synthesize the params dict that shared_view stages expect, from the OQO
+    plus transport-level args (per_page, cursor, page) carried on the request.
+
+    `filters` is set to None because filters are applied directly via the
+    pre-built Q (returned by the translator). `search`, `searches`, etc. are
+    None — the OQO surface doesn't expose ?search yet; that's a deliberate
+    follow-up.
+    """
+    sort = None
+    if oqo.sort_by_column:
+        sort = {oqo.sort_by_column: oqo.sort_by_order or "desc"}
+
+    group_by = None
+    if oqo.group_by:
+        if len(oqo.group_by) > 1:
+            raise APIQueryParamsError(
+                "Multi-dimensional group_by is in the OQO spec but not yet "
+                "supported by the live API. See oxjob #297."
+            )
+        group_by = oqo.group_by[0].column_id
+
+    return {
+        "apc_sum": None,
+        "cited_by_count_sum": None,
+        "cursor": request.args.get("cursor"),
+        "format": None,
+        "filters": None,
+        "group_by": group_by,
+        "group_bys": None,
+        "page": _set_int_arg(request, "page", 1),
+        "per_page": get_per_page(request),
+        "sample": oqo.sample,
+        "seed": request.args.get("seed"),
+        "q": None,
+        "search": None,
+        "search_type": None,
+        "search_scope": None,
+        "searches": [],
+        "sort": sort,
+    }
+
+
+# ---------------------------------------------------------------------------
+# /query — the OQO execution surface (#306)
+# ---------------------------------------------------------------------------
+
+
+@blueprint.route("/query", methods=["POST"])
+def post_query():
+    """Execute an OQO directly against Elasticsearch.
+
+    Request body: JSON OQO (see docs/oqo-schema.json).
+    Optional query-string params: per-page, cursor, page (transport-level
+    pagination, identical to the URL surface).
+
+    Response shape mirrors /works, /authors, etc.: {meta, group_by, results}.
+    Adds `"oqo"` (canonicalized echo of the input) for round-trip introspection.
+    """
+    if not request.is_json:
+        return _error_response(
+            "Request body must be JSON (Content-Type: application/json).",
+            "invalid_content_type",
+            status=400,
+        )
+
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return _error_response(
+            "Request body must be a JSON object representing an OQO.",
+            "invalid_body",
+            status=400,
+        )
+
+    return _execute_oqo(body)
+
+
+@blueprint.route("/query/oqo/<path:oqo_encoded>", methods=["GET"])
+def get_query_by_oqo(oqo_encoded: str):
+    """Path-form OQO read endpoint (cacheable).
+
+    The OQO carries the entity type (`get_rows`), so the route can't live under
+    an entity-specific prefix like `/works`. The path is `/query/oqo/<json>`,
+    where `<json>` is the URL-encoded JSON OQO.
+    """
+    try:
+        oqo_decoded = urllib.parse.unquote(oqo_encoded)
+        body = json.loads(oqo_decoded)
+    except ValueError as e:
+        return _error_response(
+            f"OQO path is not valid JSON: {e}",
+            "invalid_oqo_json",
+            status=400,
+        )
+
+    if not isinstance(body, dict):
+        return _error_response(
+            "OQO path must decode to a JSON object.",
+            "invalid_oqo_json",
+            status=400,
+        )
+
+    return _execute_oqo(body)
+
+
+def _execute_oqo(oqo_dict: dict):
+    """Shared body for the POST and GET-path-form handlers."""
+    # Parse the OQO from the raw dict. KeyError / TypeError / ValueError here
+    # are surface-level shape errors — return 400, not 500.
+    try:
+        oqo = OQO.from_dict(oqo_dict)
+    except (KeyError, TypeError, ValueError) as e:
+        return _error_response(
+            f"Could not parse OQO: {e}",
+            "invalid_oqo",
+            status=400,
+        )
+
+    # Validate the OQO against the field registry. Returns structured errors.
+    validation = validate_oqo(oqo)
+    if not validation.valid:
+        return jsonify(
+            {
+                "oqo": oqo.to_dict(),
+                "validation": validation.to_dict(),
+            }
+        ), 400
+
+    # Validate leaf operators explicitly (the validator already does this, but
+    # the schema-level check is "valid operator string" — we want to surface a
+    # 400 for any operator not in VALID_OPERATORS so we never trip a 500 down
+    # in the translator).
+    invalid_ops = _collect_invalid_operators(oqo.filter_rows)
+    if invalid_ops:
+        return jsonify(
+            {
+                "oqo": oqo.to_dict(),
+                "validation": {
+                    "valid": False,
+                    "errors": [
+                        {
+                            "type": "invalid_operator",
+                            "message": (
+                                f"Operator '{op}' is not valid. "
+                                f"Valid operators: {sorted(VALID_OPERATORS)}"
+                            ),
+                            "location": loc,
+                        }
+                        for (op, loc) in invalid_ops
+                    ],
+                    "warnings": [],
+                },
+            }
+        ), 400
+
+    # Dispatch to per-entity fields_dict + index_name.
+    connection = get_data_version_connection(request)
+    try:
+        fields_dict, index_name, default_sort = _resolve_entity(
+            oqo.get_rows, connection
+        )
+    except APIQueryParamsError as e:
+        return _error_response(str(e), "invalid_entity", status=400)
+
+    # Build the synthetic params dict that downstream shared_view stages expect.
+    try:
+        params = _build_params_from_oqo(oqo, request)
+    except APIQueryParamsError as e:
+        return _error_response(str(e), "invalid_params", status=400)
+
+    # Translate the OQO filter tree to a single ES Q (or None if no filters).
+    try:
+        oqo_q = oqo_to_q(oqo, fields_dict)
+    except OQOTranslationError as e:
+        return _error_response(str(e), "translation_error", status=400)
+
+    # Apply the standard works-walden is_xpac:false default unless the OQO
+    # already references is_xpac or the caller opts in via include_xpac=true.
+    extra_qs = []
+    if oqo.get_rows == "works" and connection == "walden":
+        include_xpac = (
+            request.args.get("include_xpac") == "true"
+            or request.args.get("include-xpac") == "true"
+        )
+        oqo_mentions_xpac = _oqo_mentions_column(oqo.filter_rows, "is_xpac")
+        if not include_xpac and not oqo_mentions_xpac:
+            from elasticsearch_dsl import Q
+
+            extra_qs.append(Q("term", is_xpac="false"))
+
+    # Build the Search object — same stages as construct_query() in shared_view,
+    # minus the search/filter stages we're replacing.
+    s = Search(index=index_name, using=connection)
+    s = set_source(index_name, s)
+    s = _set_size(params, s)
+    s = _set_cursor_pagination(params, s)
+    if oqo_q is not None:
+        s = s.filter(oqo_q)
+    for extra in extra_qs:
+        s = s.filter(extra)
+    s = apply_sorting(params, fields_dict, default_sort, index_name, s)
+    s = apply_grouping(params, fields_dict, s)
+
+    # Execute + format.
+    try:
+        response = execute_search(s, params)
+    except APIError:
+        raise
+    except Exception as e:  # pragma: no cover — defensive
+        return _error_response(
+            f"Elasticsearch error: {e}",
+            "es_error",
+            status=500,
+        )
+
+    result = format_response(response, params, index_name, fields_dict, s, connection)
+    # Echo a canonicalized OQO so clients can confirm what we actually executed.
+    result["oqo"] = canonicalize_oqo(oqo).to_dict()
+    return jsonify(result), 200
+
+
+def _error_response(message, error_type, status=400):
+    return jsonify(
+        {
+            "validation": {
+                "valid": False,
+                "errors": [
+                    {"type": error_type, "message": message, "location": None}
+                ],
+                "warnings": [],
+            }
+        }
+    ), status
+
+
+def _collect_invalid_operators(filter_rows, prefix="filter_rows"):
+    bad = []
+    for i, f in enumerate(filter_rows):
+        loc = f"{prefix}[{i}]"
+        if hasattr(f, "operator"):
+            if f.operator not in VALID_OPERATORS:
+                bad.append((f.operator, loc))
+        if hasattr(f, "filters"):
+            bad.extend(_collect_invalid_operators(f.filters, loc + ".filters"))
+    return bad
+
+
+def _oqo_mentions_column(filter_rows, column_id):
+    for f in filter_rows:
+        if hasattr(f, "column_id") and f.column_id == column_id:
+            return True
+        if hasattr(f, "filters") and _oqo_mentions_column(f.filters, column_id):
+            return True
+    return False
+
+
+def _set_size(params, s):
+    if params["group_by"]:
+        return s.extra(size=0, track_total_hits=True)
+    return s.extra(size=params["per_page"], track_total_hits=True)
+
+
+def _set_cursor_pagination(params, s):
+    if not params["group_by"]:
+        return handle_cursor(params["cursor"], params["page"], s)
+    return s
+
+
+# ---------------------------------------------------------------------------
+# Legacy /query GET (format-translation introspection) — deferred to a future
+# rev; the route below preserves a usable shape but is no longer the 404 stub.
+# ---------------------------------------------------------------------------
+
+
 @blueprint.route("/query", methods=["GET"])
 def get_query():
+    """Backwards-compat translation introspection.
+
+    No body — returns a small descriptor so existing callers don't 404.
+    To execute an OQO directly use `POST /query` (with a JSON body) or
+    `GET /query/oqo/<urlencoded_json>`.
     """
-    Get query in all formats.
+    return jsonify(
+        {
+            "msg": (
+                "POST /query with an OQO JSON body, or use "
+                "GET /query/oqo/<urlencoded_json> for the cacheable read form."
+            ),
+            "documentation_url": "/docs",
+        }
+    ), 200
 
-    Query params:
-    - entity_type: works, authors, etc. (default: works)
-    - filter: URL filter string
-    - sort: URL sort string
-    - sample: Sample size (integer)
-    - oqo: JSON string of OQO object (alternative to filter/sort)
-
-    Response:
-    {
-        "url": {"filter": "...", "sort": "...", "sample": null},
-        "oql": "Works where ...",
-        "oqo": {...},
-        "validation": {"valid": true, "errors": [], "warnings": []}
-    }
-    """
-    return jsonify({"error": "Not found"}), 404
-
+    # ---- legacy translation-introspection code, kept commented for reference ----
     # entity_type = request.args.get("entity_type", "works")
     # filter_string = request.args.get("filter")
     # sort_string = request.args.get("sort")
