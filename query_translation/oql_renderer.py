@@ -51,6 +51,31 @@ COLUMN_DISPLAY_NAMES: Dict[str, str] = {
     "best_oa_location.license": "license",
 }
 
+# Column ID -> entity-type namespace. Used to reconstruct the prefixed display
+# form ("Canada [ca]") from the bare OQO value ("ca"). Mirrors oql_tree_renderer.
+COLUMN_ENTITY_TYPES: Dict[str, str] = {
+    "authorships.institutions.lineage": "institutions",
+    "authorships.author.id": "authors",
+    "authorships.countries": "countries",
+    "authorships.institutions.continent": "continents",
+    "primary_location.source.id": "sources",
+    "primary_location.source.publisher_lineage": "publishers",
+    "primary_topic.id": "topics",
+    "primary_topic.subfield.id": "subfields",
+    "primary_topic.field.id": "fields",
+    "primary_topic.domain.id": "domains",
+    "grants.funder": "funders",
+    "awards.funder.id": "funders",
+    "sustainable_development_goals.id": "sdgs",
+    "language": "languages",
+    "keywords.id": "keywords",
+    "concepts.id": "concepts",
+    "type": "types",
+    "open_access.oa_status": "oa-statuses",
+    "best_oa_location.license": "licenses",
+}
+
+
 # Boolean columns that use "it's [not] {displayName}" format
 BOOLEAN_COLUMNS: Dict[str, str] = {
     "open_access.is_oa": "Open Access",
@@ -228,34 +253,47 @@ class OQLRenderer:
     def _format_value(self, value: Any, column_id: str) -> str:
         """
         Format a filter value for OQL output.
-        
-        For entity IDs, includes display name before bracketed ID.
+
+        Per the #284 spec, OQO values are *bare* (no namespace prefix). The
+        namespace is the column's responsibility (resolved via the column
+        registry, #294). The display-form prefix is reconstructed here for
+        rendering only — "Canada [ca]" — but the OQO value remains "ca".
+        Legacy prefixed values ("countries/ca") are tolerated for back-compat.
         """
         if value is None:
             return "unknown"
-        
+
         if isinstance(value, bool):
             return str(value).lower()
-        
+
         if isinstance(value, str):
-            # Check if this looks like an entity ID (contains /)
+            # Entity reference: column's namespace identifies the value as an
+            # entity ID. Reconstruct the full id ("countries/ca") only to look
+            # up a display name; what we *emit* is the bare short id in brackets.
+            entity_type = COLUMN_ENTITY_TYPES.get(column_id)
+            if entity_type:
+                short_id = value.split("/", 1)[1] if "/" in value else value
+                return self._format_entity_value(f"{entity_type}/{short_id}")
+
+            # Legacy: prefixed value on a column not in the namespace map -
+            # accept it and render from the prefixed form.
             if "/" in value and not value.startswith('"'):
                 return self._format_entity_value(value)
-            
+
             # Quote strings that contain spaces or special characters
             if " " in value or "," in value:
                 return f'"{value}"'
             return value
-        
+
         return str(value)
-    
+
     def _format_entity_value(self, entity_id: str) -> str:
         """
         Format an entity ID with its display name, using short ID format.
 
-        Example: "countries/ca" -> "Canada [ca]"
-        Example: "sdgs/2" -> "Zero Hunger [2]"
-        Example: "institutions/I136199984" -> "I136199984" (no display name, no brackets)
+        Takes a *full* entity_id ("countries/ca") for display-name lookup; the
+        rendered text is "Display [short_id]" or just "short_id" when the
+        display name can't be resolved.
         """
         display_name = self._resolve_entity_display_name(entity_id)
 

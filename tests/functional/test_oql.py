@@ -261,28 +261,30 @@ class TestOQLParser:
         """Test parsing bracketed ID without display name."""
         oql = "Works where Country is [countries/ca]"
         oqo = parse_oql_to_oqo(oql)
-        
+
         f = oqo.filter_rows[0]
         assert f.column_id == "authorships.countries"
-        assert f.value == "countries/ca"
-    
+        # New spec: value is bare; the namespace lives on column_id. Legacy
+        # prefixed input is tolerated but the namespace prefix is stripped.
+        assert f.value == "ca"
+
     def test_parse_bracketed_id_with_display_name(self):
         """Test parsing bracketed ID with display name."""
         oql = "Works where Country is Canada [countries/ca]"
         oqo = parse_oql_to_oqo(oql)
-        
+
         f = oqo.filter_rows[0]
         assert f.column_id == "authorships.countries"
-        assert f.value == "countries/ca"  # ID is the source of truth
-    
+        assert f.value == "ca"  # bare; namespace comes from column_id
+
     def test_parse_sdg_with_display_name(self):
         """Test parsing SDG with display name."""
         oql = "Works where Sustainable Development Goals is Zero Hunger [sdgs/2]"
         oqo = parse_oql_to_oqo(oql)
-        
+
         f = oqo.filter_rows[0]
         assert f.column_id == "sustainable_development_goals.id"
-        assert f.value == "sdgs/2"
+        assert f.value == "2"
     
     def test_parse_comparison_display_name(self):
         """Test parsing comparison with display name."""
@@ -377,10 +379,11 @@ class TestOQLParser:
         oqo = parse_oql_to_oqo(oql)
 
         f = oqo.filter_rows[0]
-        # New spec: negation is the is_negated polarity bit, not an operator.
+        # New spec: negation is the is_negated polarity bit, not an operator;
+        # value is bare (namespace lives on column_id).
         assert f.operator == "is"
         assert f.is_negated is True
-        assert f.value == "types/article"
+        assert f.value == "article"
     
     def test_parse_complex_human_readable(self):
         """Test parsing the human-readable example from the user's request."""
@@ -399,53 +402,52 @@ class TestOQLParser:
         assert "publication_year" in column_ids
     
     def test_parse_short_id_country(self):
-        """Test parsing short ID without entity type prefix."""
+        """Test parsing bare short ID (new-spec preferred form)."""
         oql = "Works where Country is Canada [ca]"
         oqo = parse_oql_to_oqo(oql)
-        
+
         f = oqo.filter_rows[0]
         assert f.column_id == "authorships.countries"
-        assert f.value == "countries/ca"  # Should be expanded to full ID
-    
+        assert f.value == "ca"  # bare; column_id carries the namespace
+
     def test_parse_short_id_sdg(self):
-        """Test parsing short SDG ID."""
+        """Test parsing bare short SDG ID."""
         oql = "Works where Sustainable Development Goals is Zero Hunger [2]"
         oqo = parse_oql_to_oqo(oql)
-        
+
         f = oqo.filter_rows[0]
         assert f.column_id == "sustainable_development_goals.id"
-        assert f.value == "sdgs/2"  # Should be expanded to full ID
-    
+        assert f.value == "2"
+
     def test_parse_short_id_type(self):
-        """Test parsing short type ID."""
+        """Test parsing bare short type ID."""
         oql = "Works where type is [article]"
         oqo = parse_oql_to_oqo(oql)
-        
+
         f = oqo.filter_rows[0]
         assert f.column_id == "type"
-        assert f.value == "types/article"  # Should be expanded to full ID
-    
+        assert f.value == "article"
+
     def test_parse_short_id_institution(self):
-        """Test parsing short institution ID."""
+        """Test parsing bare short institution ID."""
         oql = "Works where institution is Harvard University [I136199984]"
         oqo = parse_oql_to_oqo(oql)
-        
+
         f = oqo.filter_rows[0]
         assert f.column_id == "authorships.institutions.lineage"
-        assert f.value == "institutions/I136199984"  # Should be expanded to full ID
-    
+        assert f.value == "I136199984"
+
     def test_parse_complex_with_short_ids(self):
-        """Test parsing complex query with short IDs (new preferred format)."""
+        """Test parsing complex query with bare short IDs (new-spec preferred form)."""
         oql = "Works where it's Open Access and Sustainable Development Goals is Zero Hunger [2] and Country is Canada [ca] and it's from Global South and year >= 2020"
         oqo = parse_oql_to_oqo(oql)
-        
+
         assert oqo.get_rows == "works"
         assert len(oqo.filter_rows) == 5
-        
-        # Check that short IDs were expanded correctly
+
         values = {f.column_id: f.value for f in oqo.filter_rows if isinstance(f, LeafFilter)}
-        assert values["sustainable_development_goals.id"] == "sdgs/2"
-        assert values["authorships.countries"] == "countries/ca"
+        assert values["sustainable_development_goals.id"] == "2"
+        assert values["authorships.countries"] == "ca"
 
 
 class TestRoundTrip:
@@ -470,20 +472,20 @@ class TestRoundTrip:
         assert f.value is True
     
     def test_round_trip_entity_value(self):
-        """Test round-trip for entity value."""
+        """Test round-trip for entity value (bare per new spec)."""
         original = OQO(
             get_rows="works",
             filter_rows=[
-                LeafFilter(column_id="authorships.countries", value="countries/ca")
+                LeafFilter(column_id="authorships.countries", value="ca")
             ]
         )
-        
+
         oql = render_oqo_to_oql(original)
         parsed = parse_oql_to_oqo(oql)
-        
+
         f = parsed.filter_rows[0]
         assert f.column_id == "authorships.countries"
-        assert f.value == "countries/ca"
+        assert f.value == "ca"
     
     def test_round_trip_comparison(self):
         """Test round-trip for comparison filter."""
@@ -562,9 +564,10 @@ class TestEdgeCases:
         """Test native entity ID without display name in brackets."""
         oql = "Works where institution is [institutions/I136199984]"
         oqo = parse_oql_to_oqo(oql)
-        
+
         f = oqo.filter_rows[0]
-        assert f.value == "institutions/I136199984"
+        # New spec: value is bare; institution prefix is stripped.
+        assert f.value == "I136199984"
     
     def test_renderer_handles_native_entity_without_resolver(self):
         """Test renderer handles native entity without display name resolver."""

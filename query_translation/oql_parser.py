@@ -515,36 +515,37 @@ class OQLParser:
     def _parse_value(self, value_str: str, operator: str, column_id: Optional[str] = None) -> Tuple[Any, Optional[str]]:
         """
         Parse a filter value.
-        
+
         Handles:
-        - Bracketed IDs: [countries/ca], Canada [countries/ca], [ca], Canada [ca]
+        - Bracketed IDs: [ca], Canada [ca], [countries/ca], Canada [countries/ca]
         - Quoted strings: "machine learning"
         - Numbers: 2020, 100.5
         - Booleans: true, false
         - Null: null, unknown
-        
-        For short IDs (without entity type prefix), the entity type is inferred
-        from the column_id being filtered.
-        
+
+        Per the #284 spec, OQO `value` is always bare — the namespace lives
+        on the column_id (resolved via the column registry, #294). For legacy
+        prefixed bracketed IDs ([countries/ca]) we strip the prefix so the
+        emitted value is just `ca`. Display form may still show the bracket;
+        the OQO value is the source of truth.
+
         Returns:
             Tuple of (parsed_value, modified_operator)
         """
         value_str = value_str.strip()
-        
+
         # Check for "unknown" or "null"
         if value_str.lower() in ("null", "unknown"):
             return None, None
-        
+
         # Check for bracketed ID with optional display name before it
-        # Pattern: "Display Name [entity_type/id]" or "[entity_type/id]" or "[short_id]"
+        # Pattern: "Display Name [id]" or "[id]" or legacy "Display Name [type/id]"
         bracket_match = re.search(r'\[([^\]]+)\]', value_str)
         if bracket_match:
             entity_id = bracket_match.group(1)
-            # If ID doesn't contain a slash, it's a short ID - expand it
-            if "/" not in entity_id and column_id:
-                entity_type = COLUMN_TO_ENTITY_TYPE.get(column_id)
-                if entity_type:
-                    entity_id = f"{entity_type}/{entity_id}"
+            # Legacy prefixed form: strip the namespace; values are bare.
+            if "/" in entity_id:
+                entity_id = entity_id.split("/", 1)[1]
             return entity_id, None
         
         # Check for quoted string

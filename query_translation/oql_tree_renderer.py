@@ -244,14 +244,17 @@ class OQLTreeRenderer:
                     text="unknown",
                     meta=SegmentMeta(value=None)
                 ))
-            elif isinstance(value, str) and "/" in value:
-                # Entity value with full ID (e.g., "institutions/i33213144")
-                value_entity = self._format_entity_segments(value, segments)
             elif isinstance(value, str) and column_id in COLUMN_ENTITY_TYPES:
-                # Entity value with short ID - construct full ID from column type
+                # Entity reference. Spec: value is bare; namespace comes from
+                # column_id. Tolerate legacy prefixed values by stripping the
+                # prefix before reconstructing the full id for display lookup.
                 entity_type = COLUMN_ENTITY_TYPES[column_id]
-                full_entity_id = f"{entity_type}/{value}"
+                short_id = value.split("/", 1)[1] if "/" in value else value
+                full_entity_id = f"{entity_type}/{short_id}"
                 value_entity = self._format_entity_segments(full_entity_id, segments)
+            elif isinstance(value, str) and "/" in value:
+                # Legacy: prefixed value on a column not in the namespace map.
+                value_entity = self._format_entity_segments(value, segments)
             else:
                 value_str = self._format_simple_value(value)
                 segments.append(Segment(
