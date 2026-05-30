@@ -83,6 +83,14 @@ they are never in isolation — `column_id` disambiguates every one.
 Typed values: integers for counts/years, booleans for flags, `null` for
 unknown/missing. (See §6 on string-vs-typed in serialization.)
 
+**A value may also be a collection reference.** A `col_…` id (e.g. a user's
+"countries in the EU" collection) is a valid bare value; the server resolves it via
+the **cross-type collection filter** (`<field>:col_…`). Like a native ID, the
+`col_` prefix self-identifies, so it stays bare. This is the slick, shareable way
+to express a reusable entity set — e.g. `{column_id: "authorships.countries",
+value: "col_eu27"}` instead of a 27-code OR-list. The collection is a saved set of
+*entities* (countries, institutions, …) of the type the column expects.
+
 ---
 
 ## 3. Boolean structure: one unified tree
@@ -112,6 +120,28 @@ Example — `agile AND (supply chain OR value chain) AND (lead time OR cycle tim
 The same tree can span **different search fields per block** (`display_name.search`,
 `title_and_abstract.search`, `default.search`) — `column_id` is per-leaf. (This is
 exactly the shape of large real systematic-review strategies.)
+
+### 3.1 Quoting scopes a phrase to one sub-record; `~N` slop widens within it
+
+On the multi-valued affiliation/byline search fields (`raw_affiliation_strings.search`,
+`raw_author_name.search`), an **unquoted** multi-word value matches *work-scoped* —
+the words may land in *different* affiliations/bylines on the same work. A
+**quoted phrase** matches *sub-record-scoped*: ES inserts a large
+`position_increment_gap` between the repeated field's values, so a phrase (even
+with slop) cannot span two of them. This makes a single `contains` leaf express
+true **intra-affiliation co-occurrence**:
+
+- `raw_affiliation_strings.search: "london hospital"~5` — both words in the *same*
+  affiliation (the `~5` slop allows order/intervening words within that one string).
+- `raw_author_name.search: "john smith"~2` — byline middle-name recall ("John
+  Maynard Smith", "John P. Smith") without crossing co-authors.
+
+Caveat: slop is a precision/recall lever — it helps for rare strings and blows up
+recall on common ones (`"john smith"~1` ≈ 4× the hits), so apply it adaptively, not
+always-on (proven in oxjob #240). The inline `"phrase"~N` syntax is the same one
+from §3; this section just records *what it buys you* on the per-record search
+fields. (A future ES `nested` mapping would give exact, unbounded-distance
+co-occurrence; the quote+slop form is the representable-today answer.)
 
 ---
 
