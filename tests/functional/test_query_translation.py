@@ -50,8 +50,9 @@ class TestURLParser:
     def test_negation_filter(self):
         """Test parsing negation with !."""
         oqo = parse_url_to_oqo("works", filter_string="type:!article")
-        
-        assert oqo.filter_rows[0].operator == "is not"
+
+        assert oqo.filter_rows[0].operator == "is"
+        assert oqo.filter_rows[0].is_negated is True
         assert oqo.filter_rows[0].value == "article"
     
     def test_range_gte(self):
@@ -87,9 +88,10 @@ class TestURLParser:
     def test_not_null_value(self):
         """Test parsing !null value."""
         oqo = parse_url_to_oqo("works", filter_string="language:!null")
-        
+
         assert oqo.filter_rows[0].value is None
-        assert oqo.filter_rows[0].operator == "is not"
+        assert oqo.filter_rows[0].operator == "is"
+        assert oqo.filter_rows[0].is_negated is True
     
     def test_boolean_value(self):
         """Test parsing boolean value."""
@@ -157,11 +159,11 @@ class TestURLRenderer:
         """Test rendering negation."""
         oqo = OQO(
             get_rows="works",
-            filter_rows=[LeafFilter(column_id="type", value="article", operator="is not")]
+            filter_rows=[LeafFilter(column_id="type", value="article", is_negated=True)]
         )
-        
+
         result = render_oqo_to_url(oqo)
-        
+
         assert result["filter"] == "type:!article"
     
     def test_range_gte(self):
@@ -220,11 +222,11 @@ class TestURLRenderer:
         """Test rendering !null value."""
         oqo = OQO(
             get_rows="works",
-            filter_rows=[LeafFilter(column_id="language", value=None, operator="is not")]
+            filter_rows=[LeafFilter(column_id="language", value=None, is_negated=True)]
         )
-        
+
         result = render_oqo_to_url(oqo)
-        
+
         assert result["filter"] == "language:!null"
     
     def test_sort_rendering(self):
@@ -353,19 +355,29 @@ class TestOQOModel:
     
     def test_leaf_filter_to_dict_with_operator(self):
         """Test LeafFilter serialization with non-default operator."""
-        f = LeafFilter(column_id="type", value="article", operator="is not")
+        f = LeafFilter(column_id="title.search", value="ml", operator="contains")
         d = f.to_dict()
-        
-        assert d == {"column_id": "type", "value": "article", "operator": "is not"}
-    
+
+        assert d == {"column_id": "title.search", "value": "ml", "operator": "contains"}
+
+    def test_leaf_filter_to_dict_with_is_negated(self):
+        """Test LeafFilter serialization carries is_negated polarity bit."""
+        f = LeafFilter(column_id="type", value="article", is_negated=True)
+        d = f.to_dict()
+
+        # Operator is still the affirmative "is" (default, omitted); is_negated
+        # is the polarity bit. New spec: one negation mechanism.
+        assert d == {"column_id": "type", "value": "article", "is_negated": True}
+
     def test_leaf_filter_from_dict(self):
-        """Test LeafFilter deserialization."""
-        d = {"column_id": "type", "value": "article", "operator": "is not"}
+        """Test LeafFilter deserialization round-trips is_negated."""
+        d = {"column_id": "type", "value": "article", "is_negated": True}
         f = LeafFilter.from_dict(d)
-        
+
         assert f.column_id == "type"
         assert f.value == "article"
-        assert f.operator == "is not"
+        assert f.operator == "is"
+        assert f.is_negated is True
     
     def test_branch_filter_to_dict(self):
         """Test BranchFilter serialization."""

@@ -375,9 +375,11 @@ class TestOQLParser:
         """Test parsing negation."""
         oql = "Works where type is not [types/article]"
         oqo = parse_oql_to_oqo(oql)
-        
+
         f = oqo.filter_rows[0]
-        assert f.operator == "is not"
+        # New spec: negation is the is_negated polarity bit, not an operator.
+        assert f.operator == "is"
+        assert f.is_negated is True
         assert f.value == "types/article"
     
     def test_parse_complex_human_readable(self):

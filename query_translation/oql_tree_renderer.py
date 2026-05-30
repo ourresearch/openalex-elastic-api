@@ -201,34 +201,42 @@ class OQLTreeRenderer:
         column_id = f.column_id
         value = f.value
         operator = f.operator or "is"
-        
+        is_negated = bool(f.is_negated)
+
         # Determine clause kind
         clause_kind = self._determine_clause_kind(column_id, value, operator)
-        
+
         # Check for boolean filter with special "it's" format
         if column_id in BOOLEAN_COLUMNS:
             bool_value = self._normalize_boolean(value)
             if bool_value is not None:
-                return self._render_boolean_clause(column_id, bool_value, operator, source_pointer, clause_kind)
-        
+                return self._render_boolean_clause(column_id, bool_value, is_negated, source_pointer, clause_kind)
+
         # Get display name for column
         column_display = COLUMN_DISPLAY_NAMES.get(column_id, column_id)
-        
+
+        # English phrasing folds is_negated into the operator text.
+        if operator == "is":
+            op_text = "is not" if is_negated else "is"
+        elif operator == "contains":
+            op_text = "does not contain" if is_negated else "contains"
+        else:
+            op_text = operator
+
         # Build segments based on operator type
         segments = []
         value_entity: Optional[EntityValue] = None
-        
-        if operator in ("is", "is not"):
+
+        if operator == "is":
             # Entity or simple value clause
             segments.append(Segment(
                 kind="column",
                 text=column_display,
                 meta=SegmentMeta(column_id=column_id)
             ))
-            
-            operator_text = f" {operator} "
-            segments.append(Segment(kind="operator", text=operator_text))
-            
+
+            segments.append(Segment(kind="operator", text=f" {op_text} "))
+
             # Format the value
             if value is None:
                 segments.append(Segment(
@@ -251,7 +259,7 @@ class OQLTreeRenderer:
                     text=value_str,
                     meta=SegmentMeta(value=value)
                 ))
-        
+
         elif operator in (">", ">=", "<", "<="):
             # Comparison clause
             segments.append(Segment(
@@ -259,26 +267,26 @@ class OQLTreeRenderer:
                 text=column_display,
                 meta=SegmentMeta(column_id=column_id)
             ))
-            
+
             segments.append(Segment(kind="operator", text=f" {operator} "))
-            
+
             value_str = str(value) if value is not None else "unknown"
             segments.append(Segment(
                 kind="value",
                 text=value_str,
                 meta=SegmentMeta(value=value)
             ))
-        
-        elif operator in ("contains", "does not contain"):
+
+        elif operator == "contains":
             # Text search clause
             segments.append(Segment(
                 kind="column",
                 text=column_display,
                 meta=SegmentMeta(column_id=column_id)
             ))
-            
-            segments.append(Segment(kind="operator", text=f" {operator} "))
-            
+
+            segments.append(Segment(kind="operator", text=f" {op_text} "))
+
             # Quote string values
             value_str = self._format_text_value(value)
             segments.append(Segment(
@@ -286,7 +294,7 @@ class OQLTreeRenderer:
                 text=value_str,
                 meta=SegmentMeta(value=value)
             ))
-        
+
         else:
             # Fallback for unknown operators
             segments.append(Segment(
@@ -300,7 +308,7 @@ class OQLTreeRenderer:
                 text=str(value),
                 meta=SegmentMeta(value=value)
             ))
-        
+
         return ClauseNode(
             segments=segments,
             meta=ClauseMeta(
@@ -320,7 +328,7 @@ class OQLTreeRenderer:
             return "boolean"
         if value is None:
             return "null"
-        if operator in ("contains", "does not contain"):
+        if operator == "contains":
             return "text"
         if operator in (">", ">=", "<", "<="):
             return "comparison"
@@ -342,20 +350,25 @@ class OQLTreeRenderer:
         return None
     
     def _render_boolean_clause(
-        self, column_id: str, value: bool, operator: str, 
+        self, column_id: str, value: bool, is_negated: bool,
         source_pointer: str, clause_kind: str
     ) -> ClauseNode:
-        """Render a boolean filter using "it's [not] {displayName}" format."""
+        """Render a boolean filter using "it's [not] {displayName}" format.
+
+        Polarity is the XOR of the bare boolean value (False = negated) and the
+        is_negated polarity bit. Canonical OQO carries booleans as bare True/False
+        with is_negated=False; folding both ways here keeps non-canonical input
+        rendering correctly.
+        """
         display_name = BOOLEAN_COLUMNS.get(column_id, column_id)
-        
-        # Determine if negated
-        is_negated = (value is False) or (operator == "is not" and value is True)
-        
-        if is_negated:
+
+        negated = (value is False) ^ bool(is_negated)
+
+        if negated:
             text = f"it's not {display_name}"
         else:
             text = f"it's {display_name}"
-        
+
         return ClauseNode(
             segments=[
                 Segment(kind="keyword", text=text)
@@ -363,8 +376,8 @@ class OQLTreeRenderer:
             meta=ClauseMeta(
                 column_id=column_id,
                 column_display_name=display_name,
-                operator="is" if not is_negated else "is not",
-                value=True,  # Canonical form
+                operator="is",
+                value=not negated,
                 value_entity=None,
                 source_pointer=source_pointer
             ),

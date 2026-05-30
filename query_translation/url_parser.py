@@ -130,34 +130,34 @@ def split_filter_string(filter_string: str) -> List[str]:
 def parse_single_filter(field: str, value: str) -> FilterType:
     """
     Parse a single field:value pair into filter object(s).
-    
+
     Handles:
     - OR: value1|value2 -> BranchFilter with join="or"
-    - Negation: !value -> operator="is not"
+    - Negation: !value -> is_negated=True (operator stays "is")
     - Ranges: 2020-2024, 2020-, -2024
     - Null: null, !null
     """
     # Handle OR (pipe) in values
     if "|" in value:
         return parse_or_values(field, value)
-    
+
     # Handle null
     if value == "null":
         return LeafFilter(column_id=field, value=None, operator="is")
-    
+
     if value == "!null":
-        return LeafFilter(column_id=field, value=None, operator="is not")
-    
+        return LeafFilter(column_id=field, value=None, operator="is", is_negated=True)
+
     # Handle negation
     if value.startswith("!"):
         actual_value = value[1:]
-        return LeafFilter(column_id=field, value=actual_value, operator="is not")
-    
+        return LeafFilter(column_id=field, value=actual_value, operator="is", is_negated=True)
+
     # Handle ranges
     range_filter = parse_range_value(field, value)
     if range_filter:
         return range_filter
-    
+
     # Simple value
     return LeafFilter(column_id=field, value=value, operator="is")
 
@@ -177,17 +177,18 @@ def parse_or_values(field: str, value: str) -> FilterType:
     for part in parts:
         if part.startswith("!"):
             filters.append(LeafFilter(
-                column_id=field, 
-                value=part[1:], 
-                operator="is not"
+                column_id=field,
+                value=part[1:],
+                operator="is",
+                is_negated=True,
             ))
         else:
             filters.append(LeafFilter(
-                column_id=field, 
-                value=part, 
-                operator="is"
+                column_id=field,
+                value=part,
+                operator="is",
             ))
-    
+
     return BranchFilter(join="or", filters=filters)
 
 

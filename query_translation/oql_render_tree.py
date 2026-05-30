@@ -21,9 +21,10 @@ EntityType = Literal[
     "institution-types", "locations", "oa-statuses"
 ]
 
-# Valid operators (mirrors OQO)  
+# Valid operators (mirrors OQO.VALID_OPERATORS — affirmative only;
+# negation is the is_negated polarity bit, not an operator).
 Operator = Literal[
-    "is", "is not", ">", ">=", "<", "<=", "contains", "does not contain"
+    "is", ">", ">=", "<", "<=", "contains"
 ]
 
 # Segment kinds for styling

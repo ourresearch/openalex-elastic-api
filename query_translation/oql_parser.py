@@ -114,7 +114,12 @@ COLUMN_TO_ENTITY_TYPE: Dict[str, str] = {
     "best_oa_location.license": "licenses",
 }
 
-# Operators in order of precedence (longest first for matching)
+# Operators in order of precedence (longest first for matching).
+#
+# Negation phrasings ("is not", "does not contain") are NOT operators in the
+# new spec — they become the `is_negated` polarity bit on the affirmative
+# operator. We keep them in this list only so the parser can *recognize* and
+# strip the "not" while emitting an affirmative LeafFilter. See `_normalize_operator`.
 OPERATORS = [
     "is not",
     "does not contain",
@@ -129,6 +134,12 @@ OPERATORS = [
     "is",
     "contains",
 ]
+
+# Phrasing -> (affirmative_operator, is_negated)
+_NEGATED_PHRASINGS = {
+    "is not": ("is", True),
+    "does not contain": ("contains", True),
+}
 
 
 class OQLParser:
@@ -465,17 +476,22 @@ class OQLParser:
             if idx != -1:
                 column_part = clause[:idx].strip()
                 value_part = clause[idx + len(op):].strip()
-                
+
                 # Resolve column name
                 column_id = self._resolve_column(column_part)
-                
+
                 # Parse value (pass column_id for short ID expansion)
                 value, extracted_op = self._parse_value(value_part, op, column_id)
-                
-                # Map operator
-                operator = self._normalize_operator(extracted_op or op)
-                
-                return LeafFilter(column_id=column_id, value=value, operator=operator)
+
+                # Map operator (carrying any negation polarity into is_negated)
+                operator, is_negated = self._normalize_operator(extracted_op or op)
+
+                return LeafFilter(
+                    column_id=column_id,
+                    value=value,
+                    operator=operator,
+                    is_negated=is_negated,
+                )
         
         self._add_error(f"Could not parse filter clause: {clause}")
         return None
@@ -553,18 +569,26 @@ class OQLParser:
         # Return as string
         return value_str, None
     
-    def _normalize_operator(self, op: str) -> str:
-        """Normalize operator to standard form."""
+    def _normalize_operator(self, op: str) -> Tuple[str, bool]:
+        """Normalize operator phrasing into (operator, is_negated).
+
+        Negation lives on the `is_negated` polarity bit (one mechanism), so
+        "is not" / "does not contain" are split into the affirmative operator
+        plus is_negated=True. Affirmative phrasings return is_negated=False.
+        """
         op_lower = op.lower().strip()
-        
+
+        if op_lower in _NEGATED_PHRASINGS:
+            return _NEGATED_PHRASINGS[op_lower]
+
         mappings = {
             "is greater than or equal to": ">=",
             "is less than or equal to": "<=",
             "is greater than": ">",
             "is less than": "<",
         }
-        
-        return mappings.get(op_lower, op_lower)
+
+        return mappings.get(op_lower, op_lower), False
     
     def _parse_sort(self, sort_str: str) -> Tuple[Optional[str], Optional[str]]:
         """Parse sort clause."""

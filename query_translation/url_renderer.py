@@ -76,10 +76,10 @@ def render_single_filter(f: FilterType, depth: int = 0) -> str:
 def render_leaf_filter(f: LeafFilter) -> str:
     """
     Render a leaf filter to URL format.
-    
+
     Examples:
     - is: field:value
-    - is not: field:!value
+    - is_negated: field:!value
     - >=: field:value-
     - <=: field:-value
     - null: field:null
@@ -87,20 +87,23 @@ def render_leaf_filter(f: LeafFilter) -> str:
     field = f.column_id
     value = f.value
     operator = f.operator
-    
+    negated = bool(f.is_negated)
+
     # Handle null values
     if value is None:
-        if operator == "is not":
+        if negated:
             return f"{field}:!null"
         return f"{field}:null"
-    
+
     # Convert value to string
     str_value = str(value).lower() if isinstance(value, bool) else str(value)
-    
-    # Handle operators
-    if operator == "is not":
+
+    # Negation is the polarity bit: render as bang-prefixed value
+    if negated:
         return f"{field}:!{str_value}"
-    elif operator in (">=", "is greater than or equal to"):
+
+    # Handle operators
+    if operator in (">=", "is greater than or equal to"):
         return f"{field}:{str_value}-"
     elif operator in ("<=", "is less than or equal to"):
         return f"{field}:-{str_value}"
@@ -169,13 +172,13 @@ def render_or_branch(f: BranchFilter) -> str:
     # All same field - render as pipe-separated values
     field = f.filters[0].column_id
     values = []
-    
+
     for sub_f in f.filters:
-        if sub_f.operator == "is not":
+        if getattr(sub_f, "is_negated", False):
             values.append(f"!{sub_f.value}")
         else:
             values.append(str(sub_f.value))
-    
+
     pipe_joined = "|".join(values)
     return f"{field}:{pipe_joined}"
 

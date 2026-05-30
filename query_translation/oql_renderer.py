@@ -143,7 +143,7 @@ class OQLRenderer:
     def _render_leaf_filter(self, f: LeafFilter) -> str:
         """
         Render a leaf filter to human-readable OQL.
-        
+
         Examples:
         - it's Open Access
         - Country is Canada [countries/ca]
@@ -153,25 +153,25 @@ class OQLRenderer:
         column_id = f.column_id
         value = f.value
         operator = f.operator
-        
+        is_negated = bool(f.is_negated)
+
         # Check for boolean filter with special "it's" format
         # Handle both actual booleans and string representations ("true"/"false")
         if column_id in BOOLEAN_COLUMNS:
             bool_value = self._normalize_boolean(value)
             if bool_value is not None:
-                return self._render_boolean_filter(column_id, bool_value, operator)
-        
+                return self._render_boolean_filter(column_id, bool_value, is_negated)
+
         # Get display name for column
         column_display = COLUMN_DISPLAY_NAMES.get(column_id, column_id)
-        
+
         # Format value based on type
         value_str = self._format_value(value, column_id)
-        
-        # Format based on operator
+
+        # Format based on operator (with is_negated translated to English phrasing)
         if operator == "is":
-            return f"{column_display} is {value_str}"
-        elif operator == "is not":
-            return f"{column_display} is not {value_str}"
+            verb = "is not" if is_negated else "is"
+            return f"{column_display} {verb} {value_str}"
         elif operator == ">=":
             return f"{column_display} >= {value_str}"
         elif operator == "<=":
@@ -181,9 +181,8 @@ class OQLRenderer:
         elif operator == "<":
             return f"{column_display} < {value_str}"
         elif operator == "contains":
-            return f"{column_display} contains {value_str}"
-        elif operator == "does not contain":
-            return f"{column_display} does not contain {value_str}"
+            verb = "does not contain" if is_negated else "contains"
+            return f"{column_display} {verb} {value_str}"
         else:
             return f"{column_display} {operator} {value_str}"
     
@@ -202,21 +201,26 @@ class OQLRenderer:
                 return False
         return None
     
-    def _render_boolean_filter(self, column_id: str, value: bool, operator: str) -> str:
+    def _render_boolean_filter(self, column_id: str, value: bool, is_negated: bool) -> str:
         """
         Render a boolean filter using "it's [not] {displayName}" format.
-        
+
         Examples:
         - it's Open Access
         - it's not retracted
         - it's from Global South
+
+        Polarity is the XOR of the bare boolean value (False = negated) and the
+        is_negated polarity bit (one mechanism). Canonical OQO carries booleans
+        as bare True/False; the is_negated bit folds in for completeness so a
+        non-canonical input still renders correctly.
         """
         display_name = BOOLEAN_COLUMNS.get(column_id, column_id)
-        
-        # Determine if negated
-        is_negated = (value is False) or (operator == "is not" and value is True)
-        
-        if is_negated:
+
+        # XOR: value=False or is_negated flips polarity; both flips cancel.
+        negated = (value is False) ^ bool(is_negated)
+
+        if negated:
             return f"it's not {display_name}"
         else:
             return f"it's {display_name}"
