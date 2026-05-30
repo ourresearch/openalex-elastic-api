@@ -159,22 +159,27 @@ def parse_single_filter(field: str, value: str) -> FilterType:
     - Negation: !value -> is_negated=True (operator stays "is")
     - Ranges: 2020-2024, 2020-, -2024
     - Null: null, !null
+
+    For `.search`-suffix columns the default operator is `contains` (free-text
+    matching); for all other columns it's `is` (exact equality).
     """
     # Handle OR (pipe) in values
     if "|" in value:
         return parse_or_values(field, value)
 
+    default_op = _default_operator_for(field)
+
     # Handle null
     if value == "null":
-        return LeafFilter(column_id=field, value=None, operator="is")
+        return LeafFilter(column_id=field, value=None, operator=default_op)
 
     if value == "!null":
-        return LeafFilter(column_id=field, value=None, operator="is", is_negated=True)
+        return LeafFilter(column_id=field, value=None, operator=default_op, is_negated=True)
 
     # Handle negation
     if value.startswith("!"):
         actual_value = value[1:]
-        return LeafFilter(column_id=field, value=actual_value, operator="is", is_negated=True)
+        return LeafFilter(column_id=field, value=actual_value, operator=default_op, is_negated=True)
 
     # Handle ranges
     range_filter = parse_range_value(field, value)
@@ -182,7 +187,12 @@ def parse_single_filter(field: str, value: str) -> FilterType:
         return range_filter
 
     # Simple value
-    return LeafFilter(column_id=field, value=value, operator="is")
+    return LeafFilter(column_id=field, value=value, operator=default_op)
+
+
+def _default_operator_for(field: str) -> str:
+    """`.search`-suffix columns default to `contains`; everything else to `is`."""
+    return "contains" if field.endswith(".search") else "is"
 
 
 def parse_or_values(field: str, value: str) -> FilterType:
@@ -192,24 +202,23 @@ def parse_or_values(field: str, value: str) -> FilterType:
     Example: type:article|book -> BranchFilter(join="or", filters=[...])
     """
     parts = value.split("|")
-    
-    # Check if all values are negated
-    all_negated = all(p.startswith("!") for p in parts)
-    
+
+    default_op = _default_operator_for(field)
+
     filters = []
     for part in parts:
         if part.startswith("!"):
             filters.append(LeafFilter(
                 column_id=field,
                 value=part[1:],
-                operator="is",
+                operator=default_op,
                 is_negated=True,
             ))
         else:
             filters.append(LeafFilter(
                 column_id=field,
                 value=part,
-                operator="is",
+                operator=default_op,
             ))
 
     return BranchFilter(join="or", filters=filters)

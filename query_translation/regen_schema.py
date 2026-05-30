@@ -126,7 +126,10 @@ def build_schema() -> dict:
                     },
                     "value": {
                         "description": "BARE value (no entity prefix). Native IDs self-namespace via their letter prefix (A/W/I/S/F/T/...); non-native values are bare slugs/codes/ints disambiguated by column_id. String for ids/slugs/search, integer for counts/years, boolean for flags, null for missing.",
-                        "oneOf": [
+                        # anyOf (not oneOf) because `integer` is a subset of
+                        # `number` — an int value matches both and `oneOf`
+                        # demands exactly one match.
+                        "anyOf": [
                             {"type": "string"},
                             {"type": "integer"},
                             {"type": "number"},
