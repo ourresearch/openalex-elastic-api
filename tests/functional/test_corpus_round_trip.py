@@ -247,19 +247,6 @@ def skip_reason(row: Dict[str, Any]) -> Optional[str]:
     if "publication_year:>1975" in filt:
         return "corpus B03 normalizes URL `:>year` → OQO `>= year+1` (column-type semantic rewrite, owned by #294)"
 
-    # Proximity (`"phrase"~N`) and wildcards (`*` / `?`) inside search values
-    # don't parse as plain values today — the URL parser splits on commas and
-    # respects quotes for splitting but doesn't preserve the proximity suffix
-    # as a single token.
-    if re.search(r'"[^"]+"~\d+', filt):
-        return "OXURL uses inline proximity (URL parser gap)"
-
-    # Plain double-quoted phrases in search values (e.g. `"oyster toadfish"`).
-    # These survive split_filter_string fine, but the parser keeps the quotes
-    # as part of the value; the spec form is a plain inline phrase. Treat as
-    # a URL-parser gap for now.
-    if re.search(r':\s*"[^"]+"', filt):
-        return "OXURL uses quoted-phrase value (URL parser gap)"
 
     # Corpus quirk: a few rows note the user's intended `sample` in the OQO
     # cell but use `per-page=…` in the OXURL (pagination ≠ sampling — they
