@@ -253,8 +253,6 @@ def skip_reason(row: Dict[str, Any]) -> Optional[str]:
     # as a single token.
     if re.search(r'"[^"]+"~\d+', filt):
         return "OXURL uses inline proximity (URL parser gap)"
-    if re.search(r"[a-z]\*|\*[a-z]", filt, re.IGNORECASE):
-        return "OXURL uses wildcard in search value (URL parser gap)"
 
     # Plain double-quoted phrases in search values (e.g. `"oyster toadfish"`).
     # These survive split_filter_string fine, but the parser keeps the quotes
