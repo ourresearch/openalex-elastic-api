@@ -63,29 +63,29 @@ class TestOQLRenderer:
         oqo = OQO(
             get_rows="works",
             filter_rows=[
-                LeafFilter(column_id="authorships.countries", value="countries/ca")
+                LeafFilter(column_id="authorships.countries", value="ca")
             ]
         )
         result = render_oqo_to_oql(oqo)
         assert result == "Works where Country is Canada [ca]"
-    
+
     def test_entity_value_sdg(self):
         """Test SDG entity value with display name and short ID."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
-                LeafFilter(column_id="sustainable_development_goals.id", value="sdgs/2")
+                LeafFilter(column_id="sustainable_development_goals.id", value="2")
             ]
         )
         result = render_oqo_to_oql(oqo)
         assert result == "Works where Sustainable Development Goals is Zero Hunger [2]"
-    
+
     def test_entity_value_type(self):
         """Test work type entity value with short ID."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
-                LeafFilter(column_id="type", value="types/article")
+                LeafFilter(column_id="type", value="article")
             ]
         )
         result = render_oqo_to_oql(oqo)
@@ -131,7 +131,7 @@ class TestOQLRenderer:
             filter_rows=[
                 LeafFilter(column_id="open_access.is_oa", value=True),
                 LeafFilter(column_id="publication_year", value=2020, operator=">="),
-                LeafFilter(column_id="authorships.countries", value="countries/ca")
+                LeafFilter(column_id="authorships.countries", value="ca")
             ]
         )
         result = render_oqo_to_oql(oqo)
@@ -148,8 +148,8 @@ class TestOQLRenderer:
                 BranchFilter(
                     join="or",
                     filters=[
-                        LeafFilter(column_id="type", value="types/article"),
-                        LeafFilter(column_id="type", value="types/book")
+                        LeafFilter(column_id="type", value="article"),
+                        LeafFilter(column_id="type", value="book")
                     ]
                 )
             ]
@@ -186,24 +186,24 @@ class TestOQLRenderer:
         assert "; sample 100" in result
     
     def test_negation(self):
-        """Test negation operator with short ID."""
+        """Test negation as is_negated polarity bit (new spec: one mechanism)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
-                LeafFilter(column_id="type", value="types/article", operator="is not")
+                LeafFilter(column_id="type", value="article", is_negated=True)
             ]
         )
         result = render_oqo_to_oql(oqo)
         assert "is not Article [article]" in result
-    
+
     def test_complex_query(self):
         """Test the example from the user's request."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
                 LeafFilter(column_id="open_access.is_oa", value=True),
-                LeafFilter(column_id="sustainable_development_goals.id", value="sdgs/2"),
-                LeafFilter(column_id="authorships.countries", value="countries/ca"),
+                LeafFilter(column_id="sustainable_development_goals.id", value="2"),
+                LeafFilter(column_id="authorships.countries", value="ca"),
                 LeafFilter(column_id="institutions.is_global_south", value=True),
                 LeafFilter(column_id="publication_year", value=2020, operator=">=")
             ]
@@ -510,8 +510,8 @@ class TestRoundTrip:
             get_rows="works",
             filter_rows=[
                 LeafFilter(column_id="open_access.is_oa", value=True),
-                LeafFilter(column_id="sustainable_development_goals.id", value="sdgs/2"),
-                LeafFilter(column_id="authorships.countries", value="countries/ca"),
+                LeafFilter(column_id="sustainable_development_goals.id", value="2"),
+                LeafFilter(column_id="authorships.countries", value="ca"),
                 LeafFilter(column_id="institutions.is_global_south", value=True),
                 LeafFilter(column_id="publication_year", value=2020, operator=">=")
             ],
@@ -574,7 +574,7 @@ class TestEdgeCases:
         oqo = OQO(
             get_rows="works",
             filter_rows=[
-                LeafFilter(column_id="authorships.institutions.lineage", value="institutions/I136199984")
+                LeafFilter(column_id="authorships.institutions.lineage", value="I136199984")
             ]
         )
         result = render_oqo_to_oql(oqo)

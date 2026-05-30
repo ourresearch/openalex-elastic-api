@@ -56,7 +56,7 @@ class TestStringifyInvariant:
         """Test entity filter with resolved display name."""
         oqo = OQO(
             get_rows="works",
-            filter_rows=[LeafFilter(column_id="authorships.countries", value="countries/ca")]
+            filter_rows=[LeafFilter(column_id="authorships.countries", value="ca")]
         )
         oql, tree = render_oqo_to_oql_and_tree(oqo)
         
@@ -86,8 +86,8 @@ class TestStringifyInvariant:
                 BranchFilter(
                     join="or",
                     filters=[
-                        LeafFilter(column_id="type", value="types/article"),
-                        LeafFilter(column_id="type", value="types/book")
+                        LeafFilter(column_id="type", value="article"),
+                        LeafFilter(column_id="type", value="book")
                     ]
                 )
             ]
@@ -134,8 +134,8 @@ class TestStringifyInvariant:
                 BranchFilter(
                     join="or",
                     filters=[
-                        LeafFilter(column_id="sustainable_development_goals.id", value="sdgs/2"),
-                        LeafFilter(column_id="sustainable_development_goals.id", value="sdgs/4")
+                        LeafFilter(column_id="sustainable_development_goals.id", value="2"),
+                        LeafFilter(column_id="sustainable_development_goals.id", value="4")
                     ]
                 )
             ],
@@ -313,8 +313,8 @@ class TestTreeStructure:
                 BranchFilter(
                     join="or",
                     filters=[
-                        LeafFilter(column_id="type", value="types/article"),
-                        LeafFilter(column_id="type", value="types/book")
+                        LeafFilter(column_id="type", value="article"),
+                        LeafFilter(column_id="type", value="book")
                     ]
                 )
             ]
@@ -373,7 +373,7 @@ class TestEntityResolution:
         """Test country code resolution."""
         oqo = OQO(
             get_rows="works",
-            filter_rows=[LeafFilter(column_id="authorships.countries", value="countries/us")]
+            filter_rows=[LeafFilter(column_id="authorships.countries", value="us")]
         )
         oql, _ = render_oqo_to_oql_and_tree(oqo)
         
@@ -384,7 +384,7 @@ class TestEntityResolution:
         """Test SDG resolution."""
         oqo = OQO(
             get_rows="works",
-            filter_rows=[LeafFilter(column_id="sustainable_development_goals.id", value="sdgs/4")]
+            filter_rows=[LeafFilter(column_id="sustainable_development_goals.id", value="4")]
         )
         oql, _ = render_oqo_to_oql_and_tree(oqo)
         
@@ -395,7 +395,7 @@ class TestEntityResolution:
         """Test language code resolution."""
         oqo = OQO(
             get_rows="works",
-            filter_rows=[LeafFilter(column_id="language", value="languages/en")]
+            filter_rows=[LeafFilter(column_id="language", value="en")]
         )
         oql, _ = render_oqo_to_oql_and_tree(oqo)
         
@@ -406,7 +406,7 @@ class TestEntityResolution:
         """Test work type resolution."""
         oqo = OQO(
             get_rows="works",
-            filter_rows=[LeafFilter(column_id="type", value="types/book-chapter")]
+            filter_rows=[LeafFilter(column_id="type", value="book-chapter")]
         )
         oql, _ = render_oqo_to_oql_and_tree(oqo)
         
