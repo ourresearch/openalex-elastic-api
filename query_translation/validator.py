@@ -1,15 +1,32 @@
-"""
-Validator - Validates OQO against field definitions.
+"""Validator — checks an OQO against the live column registry.
 
-Uses the field definitions from {entity}/fields.py to validate
-that column_ids and operators are valid.
+Source of truth is `core.registry.REGISTRY` (#294 Phase B): the per-entity map
+built at boot from the same `Field` objects the filter layer executes. Validation
+answers, for each leaf filter, three questions:
+
+  (a) is `column_id` a real column on the OQO's `get_rows` entity?   -> invalid_column
+  (b) does `operator` fit that column's type?                       -> invalid_operator_for_column
+  (c) does `value` match the column's field_type?                   -> invalid_value_type
+
+Strict: every one of these is a hard error (the route returns 400). This catches
+nonsense like `cited_by_count contains 5` or `is_oa is 5` before it reaches ES.
+
+Negation is the `is_negated` polarity bit, not an operator; the OQO->ES translator
+applies it uniformly via `~q`, so it is NOT constrained here.
 """
 
-from typing import Dict, List, Optional, Tuple, Any, Set
+import re
 from dataclasses import dataclass
-import requests
+from typing import Any, Dict, List, Optional
 
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, VALID_OPERATORS
+from core.registry import REGISTRY, get_entity_columns
+from query_translation.oqo import (
+    OQO,
+    LeafFilter,
+    BranchFilter,
+    FilterType,
+    VALID_OPERATORS,
+)
 
 
 @dataclass
@@ -20,13 +37,13 @@ class ValidationError:
     location: Optional[str] = None
 
 
-@dataclass  
+@dataclass
 class ValidationResult:
     """Result of OQO validation."""
     valid: bool
     errors: List[ValidationError]
     warnings: List[ValidationError]
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "valid": self.valid,
@@ -37,156 +54,140 @@ class ValidationResult:
             "warnings": [
                 {"type": w.type, "message": w.message, "location": w.location}
                 for w in self.warnings
-            ]
+            ],
         }
 
 
+# OQO get_rows values that name the same registry entity under a different label.
+ENTITY_ALIASES = {"types": "work-types"}
+
+VALID_SORT_ORDERS = {"asc", "desc"}
+
+# Comparison operators (produce range-form ES queries in the translator).
+COMPARISON_OPERATORS = {">", ">=", "<", "<="}
+
+
+def _registry_entity(get_rows: str) -> Optional[str]:
+    """Resolve an OQO `get_rows` to its registry key, or None if unknown."""
+    if get_rows in REGISTRY:
+        return get_rows
+    alias = ENTITY_ALIASES.get(get_rows)
+    if alias in REGISTRY:
+        return alias
+    return None
+
+
+def _is_numeric(value: Any) -> bool:
+    """True for ints/floats and numeric strings (bools excluded — bool is an int)."""
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, (int, float)):
+        return True
+    if isinstance(value, str):
+        try:
+            float(value)
+            return True
+        except ValueError:
+            return False
+    return False
+
+
+# Loosely: a 4-digit year, optionally -MM, -MM-DD, optionally a T-time suffix.
+_DATE_RE = re.compile(r"^\d{4}(-\d{2}(-\d{2})?)?([T ].*)?$")
+
+
+def _value_matches_type(field_type: Optional[str], value: Any) -> bool:
+    """Check a bare scalar against a column's declared field_type.
+
+    Deliberately lenient on the string-ish types (string/openalex_id/external_id/
+    search/phrase) — over-tight ID-shape checks would false-reject valid queries.
+    `value is None` (null) is handled by the operator check, not here.
+    """
+    if value is None:
+        return True
+    if field_type == "boolean":
+        if isinstance(value, bool):
+            return True
+        return isinstance(value, str) and value.strip().lower() in ("true", "false")
+    if field_type == "number":
+        return _is_numeric(value)
+    if field_type in ("date", "datetime"):
+        if isinstance(value, int) and not isinstance(value, bool):
+            return 1000 <= value <= 9999  # bare year
+        return isinstance(value, str) and bool(_DATE_RE.match(value.strip()))
+    # string-ish: openalex_id, external_id, string, search, phrase, collection.
+    # Accept any scalar that stringifies cleanly; reject only bools.
+    return isinstance(value, (str, int, float)) and not isinstance(value, bool)
+
+
+def _operator_fits_column(operator: str, value: Any, operators: List[str]) -> bool:
+    """Check an OQO operator against a column's supported registry operator buckets."""
+    if value is None:
+        # null/!null: only the default operator, and the column must support null.
+        return operator == "is" and "null" in operators
+    if operator == "is":
+        return "eq" in operators
+    if operator == "contains":
+        return "search" in operators or "phrase" in operators
+    if operator in COMPARISON_OPERATORS:
+        return "range" in operators or "date_range" in operators
+    # Unknown operator string — surfaced separately as invalid_operator.
+    return False
+
+
 class OQOValidator:
-    """Validates OQO objects against field definitions."""
-    
-    VALID_ENTITIES = {
-        "works", "authors", "institutions", "sources", "publishers",
-        "funders", "topics", "keywords", "concepts", "countries",
-        "continents", "domains", "fields", "subfields", "sdgs",
-        "languages", "licenses", "work-types", "source-types",
-        "institution-types", "awards", "locations"
-    }
-    
-    VALID_SORT_ORDERS = {"asc", "desc"}
-    
-    def __init__(self, config: Optional[Dict] = None):
-        """
-        Initialize validator.
-        
-        Args:
-            config: Optional entity config dict. If not provided,
-                   will fetch from API.
-        """
-        self._config = config
-        self._valid_fields_cache: Dict[str, Set[str]] = {}
-    
-    @property
-    def config(self) -> Dict:
-        """Lazy-load entity config from API."""
-        if self._config is None:
-            self._config = self._fetch_entities_config()
-        return self._config
-    
-    @staticmethod
-    def _fetch_entities_config() -> Dict:
-        """Fetch entity configuration from API."""
-        try:
-            r = requests.get('https://api.openalex.org/entities/config')
-            r.raise_for_status()
-            return r.json()
-        except Exception:
-            # Return empty config if API unavailable
-            return {}
-    
-    def get_valid_fields(self, entity_type: str) -> Set[str]:
-        """Get valid filter fields for an entity type."""
-        if entity_type in self._valid_fields_cache:
-            return self._valid_fields_cache[entity_type]
-        
-        fields = set()
-        
-        # Try to get from config
-        if entity_type in self.config:
-            columns = self.config[entity_type].get("columns", {})
-            for col_id, col_data in columns.items():
-                fields.add(col_id)
-                fields.add(col_data.get("id", col_id))
-                if "displayName" in col_data:
-                    fields.add(col_data["displayName"])
-        
-        # Also load from local fields.py definitions
-        fields.update(self._get_local_fields(entity_type))
-        
-        self._valid_fields_cache[entity_type] = fields
-        return fields
-    
-    def _get_local_fields(self, entity_type: str) -> Set[str]:
-        """Get fields from local {entity}/fields.py definitions."""
-        fields = set()
-        
-        try:
-            # Import the appropriate fields module
-            if entity_type == "works":
-                from works.fields import fields as works_fields
-                for f in works_fields:
-                    fields.add(f.param)
-                    if f.alias:
-                        fields.add(f.alias)
-            elif entity_type == "authors":
-                from authors.fields import fields as authors_fields
-                for f in authors_fields:
-                    fields.add(f.param)
-                    if f.alias:
-                        fields.add(f.alias)
-            elif entity_type == "institutions":
-                from institutions.fields import fields as institutions_fields
-                for f in institutions_fields:
-                    fields.add(f.param)
-                    if f.alias:
-                        fields.add(f.alias)
-            elif entity_type == "sources":
-                from sources.fields import fields as sources_fields
-                for f in sources_fields:
-                    fields.add(f.param)
-                    if f.alias:
-                        fields.add(f.alias)
-            # Add more entities as needed
-        except ImportError:
-            pass
-        
-        return fields
-    
+    """Validates OQO objects against the live column registry."""
+
     def validate(self, oqo: OQO) -> ValidationResult:
-        """
-        Validate an OQO object.
-        
-        Args:
-            oqo: The OQO object to validate
-            
-        Returns:
-            ValidationResult with errors and warnings
-        """
-        errors = []
-        warnings = []
-        
-        # Validate entity type
-        if oqo.get_rows not in self.VALID_ENTITIES:
+        errors: List[ValidationError] = []
+        warnings: List[ValidationError] = []
+
+        entity = _registry_entity(oqo.get_rows)
+        if entity is None:
             errors.append(ValidationError(
                 type="invalid_entity",
                 message=f"'{oqo.get_rows}' is not a valid entity type",
-                location="get_rows"
+                location="get_rows",
             ))
-        
-        # Validate filter_rows
+            # Without a known entity we can't resolve columns; stop here.
+            return ValidationResult(valid=False, errors=errors, warnings=warnings)
+
+        columns = get_entity_columns(entity)
+
         for i, f in enumerate(oqo.filter_rows):
-            filter_errors = self._validate_filter(
-                f, oqo.get_rows, f"filter_rows[{i}]"
-            )
-            errors.extend(filter_errors)
-        
-        # Validate sort
-        if oqo.sort_by_order and oqo.sort_by_order not in self.VALID_SORT_ORDERS:
+            errors.extend(self._validate_filter(f, columns, f"filter_rows[{i}]"))
+
+        # sort_by_column must be a real column on the entity.
+        if oqo.sort_by_column and oqo.sort_by_column not in columns:
+            errors.append(ValidationError(
+                type="invalid_column",
+                message=(
+                    f"'{oqo.sort_by_column}' is not a sortable column on "
+                    f"'{oqo.get_rows}'"
+                ),
+                location="sort_by_column",
+            ))
+
+        if oqo.sort_by_order and oqo.sort_by_order not in VALID_SORT_ORDERS:
             errors.append(ValidationError(
                 type="invalid_sort_order",
-                message=f"'{oqo.sort_by_order}' is not a valid sort order. Use 'asc' or 'desc'.",
-                location="sort_by_order"
+                message=(
+                    f"'{oqo.sort_by_order}' is not a valid sort order. "
+                    f"Use 'asc' or 'desc'."
+                ),
+                location="sort_by_order",
             ))
-        
-        # Validate sample
+
         if oqo.sample is not None:
-            if not isinstance(oqo.sample, int) or oqo.sample < 1:
+            if not isinstance(oqo.sample, int) or isinstance(oqo.sample, bool) \
+                    or oqo.sample < 1:
                 errors.append(ValidationError(
                     type="invalid_sample",
                     message="Sample must be a positive integer",
-                    location="sample"
+                    location="sample",
                 ))
 
-        # Validate group_by dims (spec §8 list; dim order meaningful).
+        # group_by dimensions must be non-empty strings AND real columns.
         for i, g in enumerate(oqo.group_by):
             column_id = getattr(g, "column_id", None)
             if not column_id or not isinstance(column_id, str):
@@ -195,98 +196,114 @@ class OQOValidator:
                     message="group_by dimension must have a non-empty string column_id",
                     location=f"group_by[{i}].column_id",
                 ))
+            elif column_id not in columns:
+                errors.append(ValidationError(
+                    type="invalid_column",
+                    message=(
+                        f"'{column_id}' is not a groupable column on "
+                        f"'{oqo.get_rows}'"
+                    ),
+                    location=f"group_by[{i}].column_id",
+                ))
 
         return ValidationResult(
             valid=len(errors) == 0,
             errors=errors,
-            warnings=warnings
+            warnings=warnings,
         )
-    
+
     def _validate_filter(
-        self, 
-        f: FilterType, 
-        entity_type: str,
-        location: str
+        self, f: FilterType, columns: Dict[str, Dict], location: str
     ) -> List[ValidationError]:
-        """Validate a single filter."""
-        errors = []
-        
         if isinstance(f, LeafFilter):
-            errors.extend(self._validate_leaf_filter(f, entity_type, location))
-        elif isinstance(f, BranchFilter):
-            errors.extend(self._validate_branch_filter(f, entity_type, location))
-        
-        return errors
-    
+            return self._validate_leaf_filter(f, columns, location)
+        if isinstance(f, BranchFilter):
+            return self._validate_branch_filter(f, columns, location)
+        return []
+
     def _validate_leaf_filter(
-        self, 
-        f: LeafFilter, 
-        entity_type: str,
-        location: str
+        self, f: LeafFilter, columns: Dict[str, Dict], location: str
     ) -> List[ValidationError]:
-        """Validate a leaf filter."""
-        errors = []
-        
-        # Validate operator
-        if f.operator not in VALID_OPERATORS:
+        errors: List[ValidationError] = []
+
+        # (shape) operator must be a known OQO operator string.
+        operator_known = f.operator in VALID_OPERATORS
+        if not operator_known:
             errors.append(ValidationError(
                 type="invalid_operator",
                 message=f"'{f.operator}' is not a valid operator",
-                location=f"{location}.operator"
+                location=f"{location}.operator",
             ))
-        
-        # Validate column_id (field)
-        # Note: We're lenient here - we allow fields that might not be in our cache
-        # because the config might not be complete
-        valid_fields = self.get_valid_fields(entity_type)
-        if valid_fields and f.column_id not in valid_fields:
-            # Check if it looks like a nested field path
-            base_field = f.column_id.split(".")[0]
-            if base_field not in valid_fields:
-                # This is a warning, not an error, because our field list might be incomplete
-                pass  # Could add warning here
-        
+
+        # (a) column registered on the entity.
+        entry = columns.get(f.column_id)
+        if entry is None:
+            errors.append(ValidationError(
+                type="invalid_column",
+                message=f"'{f.column_id}' is not a valid column",
+                location=f"{location}.column_id",
+            ))
+            # Can't check operator-fit / value-type without the column's type.
+            return errors
+
+        # (b) operator fits the column's type — only if the operator is a known one.
+        if operator_known and not _operator_fits_column(
+            f.operator, f.value, entry["operators"]
+        ):
+            errors.append(ValidationError(
+                type="invalid_operator_for_column",
+                message=(
+                    f"Operator '{f.operator}' is not valid on column "
+                    f"'{f.column_id}' (type '{entry['field_type']}'; supports "
+                    f"{entry['operators']})"
+                ),
+                location=f"{location}.operator",
+            ))
+
+        # (c) value matches the column's field_type.
+        if not _value_matches_type(entry["field_type"], f.value):
+            errors.append(ValidationError(
+                type="invalid_value_type",
+                message=(
+                    f"Value {f.value!r} does not match the type "
+                    f"'{entry['field_type']}' of column '{f.column_id}'"
+                ),
+                location=f"{location}.value",
+            ))
+
         return errors
-    
+
     def _validate_branch_filter(
-        self, 
-        f: BranchFilter, 
-        entity_type: str,
-        location: str
+        self, f: BranchFilter, columns: Dict[str, Dict], location: str
     ) -> List[ValidationError]:
-        """Validate a branch filter."""
-        errors = []
-        
-        # Validate join operator
+        errors: List[ValidationError] = []
+
         if f.join not in ("and", "or"):
             errors.append(ValidationError(
                 type="invalid_join",
                 message=f"'{f.join}' is not a valid join operator. Use 'and' or 'or'.",
-                location=f"{location}.join"
+                location=f"{location}.join",
             ))
-        
-        # Validate sub-filters
+
         if not f.filters:
             errors.append(ValidationError(
                 type="empty_branch",
                 message="Branch filter must have at least one sub-filter",
-                location=f"{location}.filters"
+                location=f"{location}.filters",
             ))
         else:
             for i, sub_f in enumerate(f.filters):
-                sub_errors = self._validate_filter(
-                    sub_f, entity_type, f"{location}.filters[{i}]"
-                )
-                errors.extend(sub_errors)
-        
+                errors.extend(self._validate_filter(
+                    sub_f, columns, f"{location}.filters[{i}]"
+                ))
+
         return errors
 
 
 def validate_oqo(oqo: OQO, config: Optional[Dict] = None) -> ValidationResult:
+    """Validate an OQO against the column registry.
+
+    `config` is accepted for backwards compatibility and ignored — validation is
+    now driven entirely by the in-memory registry.
     """
-    Validate an OQO object.
-    
-    Convenience function that creates a validator and validates.
-    """
-    validator = OQOValidator(config=config)
-    return validator.validate(oqo)
+    return OQOValidator().validate(oqo)
