@@ -76,6 +76,20 @@ def annotate_entity_types(fields):
 
 
 class Field(ABC):
+    # --- column-registry contract (#294 Phase B) ---
+    # Each subclass declares the value type it accepts and the filter operators
+    # the server actually supports (this mirrors the branching in build_query()
+    # below — until now that contract was implicit in each method body). The
+    # boot-time registry builder reads these via to_registry_entry(); the
+    # offline audit tool work/extract_server.py keeps a parallel FIELD_OPERATORS
+    # table that must stay in sync with these declarations.
+    #   field_type — value type a filter on this column accepts
+    #   operators  — filter operators valid on this column
+    #   actions    — high-level affordances ("filter" / "search"); [] = synthetic
+    field_type = None
+    operators = []
+    actions = ["filter"]
+
     def __init__(
         self,
         param,
@@ -133,8 +147,28 @@ class Field(ABC):
             field = self.param.replace("__", ".")
         return field
 
+    def to_registry_entry(self):
+        """Serialize this field's column-registry contract (#294 Phase B).
+
+        Returns the per-column dict the OQO validator consults to answer
+        "is column X valid on entity Y with operator Z and value type T?":
+        the value type the column accepts, the operators valid on it, and the
+        cross-type entity_type (when the column holds OpenAlex entity IDs)."""
+        return {
+            "param": self.param,
+            "field_type": self.field_type,
+            "operators": list(self.operators),
+            "actions": list(self.actions),
+            "alias": self.alias,
+            "custom_es_field": self.custom_es_field,
+            "entity_type": self.entity_type,
+        }
+
 
 class BooleanField(Field):
+    field_type = "boolean"
+    operators = ["eq", "null"]
+
     def build_query(self):
         q = None
         if self.param in EXTERNAL_ID_FIELDS:
@@ -238,6 +272,9 @@ class BooleanField(Field):
 
 
 class DateField(Field):
+    field_type = "date"
+    operators = ["eq", "date_range", "null"]
+
     def build_query(self):
         if "<" in self.value:
             query = self.value[1:]
@@ -281,6 +318,8 @@ class DateField(Field):
 
 
 class DateTimeField(DateField):
+    field_type = "datetime"  # operators inherited from DateField
+
     def validate(self, query):
         # override DateField.validate()
 
@@ -297,6 +336,9 @@ class DateTimeField(DateField):
 
 
 class OpenAlexIDField(Field):
+    field_type = "openalex_id"
+    operators = ["eq", "or", "not", "null"]
+
     def build_query(self):
         if self.param in ("authorships.institutions.id", "authorships.institutions.lineage"):
             field_name = self.es_field().replace("__", ".")
@@ -457,6 +499,10 @@ class OpenAlexIDField(Field):
 
 
 class PhraseField(Field):
+    field_type = "phrase"
+    operators = ["phrase"]
+    actions = ["search"]
+
     def build_query(self):
         if self.value == "null":
             field_name = self.es_field()
@@ -488,6 +534,9 @@ class PhraseField(Field):
 
 
 class RangeField(Field):
+    field_type = "number"
+    operators = ["eq", "range", "or", "not", "null"]
+
     def build_query(self):
         if "<" in self.value:
             query = self.value[1:]
@@ -553,6 +602,10 @@ class RangeField(Field):
 
 
 class SearchField(Field):
+    field_type = "search"
+    operators = ["search"]
+    actions = ["search"]
+
     def build_query(self):
         self.validate(self.value)
         if self.param == "default.search":
@@ -630,6 +683,9 @@ class SearchField(Field):
 
 
 class TermField(Field):
+    field_type = "string"
+    operators = ["eq", "or", "not", "null"]
+
     def build_terms_query(self, values):
         """
         Build an Elasticsearch terms query (plural) for multiple values.
@@ -1241,7 +1297,10 @@ class ExternalIDField(Field):
     - Short form: languages/en, countries/us, licenses/cc-by
     - Full form: https://openalex.org/languages/en
     """
-    
+
+    field_type = "external_id"
+    operators = ["eq", "null"]
+
     def __init__(self, param, entity_type, **kwargs):
         super().__init__(param, **kwargs)
         self.entity_type = entity_type
@@ -1331,6 +1390,10 @@ class CollectionField(Field):
     canonical full URL (`https://openalex.org/W2741809807`), so we expand
     before building the terms clause.
     """
+
+    field_type = "collection"
+    operators = ["collection"]
+    actions = []  # synthetic transport, not a user-facing column
 
     # Post-Phase-10 (oxjob #228 QA-042) collections all use the
     # `col_<10-char-base58>` ID shape; legacy `label-...`/`lab_...` rows were
