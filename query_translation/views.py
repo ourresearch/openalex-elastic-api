@@ -28,6 +28,7 @@ from core.shared_view import (
     format_response,
     set_source,
 )
+from core.registry import REGISTRY, get_entity_columns
 from core.utils import get_data_version_connection
 from core.utils import get_display_name as _get_display_name
 from query_translation.oqo import OQO, VALID_OPERATORS, filter_from_dict
@@ -304,6 +305,50 @@ def _build_params_from_oqo(oqo: OQO, request):
         "searches": [],
         "sort": sort,
     }
+
+
+# ---------------------------------------------------------------------------
+# /registry — the column registry (#294 Phase B)
+# ---------------------------------------------------------------------------
+
+
+@blueprint.route("/registry", methods=["GET"])
+def get_registry():
+    """The full column registry: every queryable column per entity, with its
+    value type, valid filter operators, actions, and cross-type entity_type.
+
+    Built at boot from the live `Field` objects the filter layer executes
+    (core/registry.py), so it can't drift from what the server actually accepts.
+    This is the same data the OQO validator consults to answer "is column X
+    valid on entity Y with operator Z and value type T?".
+    """
+    return jsonify(
+        {
+            "meta": {
+                "entity_count": len(REGISTRY),
+                "column_count": sum(len(cols) for cols in REGISTRY.values()),
+            },
+            "registry": REGISTRY,
+        }
+    ), 200
+
+
+@blueprint.route("/registry/<entity_type>", methods=["GET"])
+def get_registry_entity(entity_type: str):
+    """The column registry for a single entity type, e.g. `/registry/works`."""
+    columns = get_entity_columns(entity_type)
+    if columns is None:
+        return _error_response(
+            f"'{entity_type}' is not a registered entity type.",
+            "invalid_entity",
+            status=404,
+        )
+    return jsonify(
+        {
+            "meta": {"entity_type": entity_type, "column_count": len(columns)},
+            "columns": columns,
+        }
+    ), 200
 
 
 # ---------------------------------------------------------------------------
