@@ -156,7 +156,43 @@ class TestURLParser:
         
         assert oqo.sort_by_column == "cited_by_count"
         assert oqo.sort_by_order == "desc"
-    
+
+    def test_directionless_sort_defaults_asc(self):
+        """A sort with no `:dir` must default to `asc`, matching legacy
+        core/utils.py:map_sort_params. A `desc` default silently reversed the
+        page vs the legacy URL path (oxjob #323 Pattern F1)."""
+        oqo = parse_url_to_oqo("works", sort_string="publication_date")
+        assert oqo.sort_by_column == "publication_date"
+        assert oqo.sort_by_order == "asc"
+
+    def test_negated_or_list_negates_whole_list(self):
+        """`field:!a|b|c` means NOT (a OR b OR c), not `(NOT a) OR b OR c`.
+
+        Legacy core/filter.py negates every value after a leading `!` and ANDs
+        them (NOT IN list). The OQO must be a *negated* OR-branch over positive
+        leaves; mis-parsing it as an OR of mixed-polarity leaves over-counts to
+        nearly the whole index (oxjob #323 Pattern D negated OR-list)."""
+        oqo = parse_url_to_oqo(
+            "works",
+            filter_string="primary_location.source.id:!s1|s2|s3",
+        )
+        assert len(oqo.filter_rows) == 1
+        branch = oqo.filter_rows[0]
+        assert branch.join == "or"
+        assert branch.is_negated is True
+        assert [leaf.value for leaf in branch.filters] == ["s1", "s2", "s3"]
+        # leaves are positive — the polarity lives on the branch (NNF before canon)
+        assert all(leaf.is_negated is False for leaf in branch.filters)
+        assert validate_oqo(oqo).valid
+
+    def test_positive_or_list_unchanged(self):
+        """A positive OR-list stays a non-negated OR-branch of positive leaves."""
+        oqo = parse_url_to_oqo("works", filter_string="type:article|book")
+        branch = oqo.filter_rows[0]
+        assert branch.join == "or"
+        assert branch.is_negated is False
+        assert [leaf.value for leaf in branch.filters] == ["article", "book"]
+
     def test_sample_parsing(self):
         """Test parsing sample parameter."""
         oqo = parse_url_to_oqo(
@@ -579,11 +615,36 @@ class TestValidator:
             sort_by_column="cited_by_count",
             sort_by_order="ascending"
         )
-        
+
         result = validate_oqo(oqo)
-        
+
         assert not result.valid
         assert any(e.type == "invalid_sort_order" for e in result.errors)
+
+    def test_group_by_sort_count_is_valid(self):
+        """`count`/`key` are valid sort columns WHEN a group_by is present — they
+        order the buckets (legacy core/sort.py special-cases them). Without this
+        `?group_by=type&sort=count:desc` 400s `invalid_column` (oxjob #323 G1)."""
+        for key in ("count", "key"):
+            oqo = parse_url_to_oqo(
+                "works", group_by_string="type", sort_string=f"{key}:desc"
+            )
+            assert oqo.sort_by_column == key
+            result = validate_oqo(oqo)
+            assert result.valid, (key, [e.type for e in result.errors])
+
+    def test_count_sort_without_group_by_is_invalid(self):
+        """`count`/`key` are bucket-ordering keys: invalid as a row sort with no
+        group_by (they aren't entity columns)."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[],
+            sort_by_column="count",
+            sort_by_order="desc",
+        )
+        result = validate_oqo(oqo)
+        assert not result.valid
+        assert any(e.type == "invalid_column" for e in result.errors)
     
     def test_invalid_sample(self):
         """Test validation rejects invalid sample."""

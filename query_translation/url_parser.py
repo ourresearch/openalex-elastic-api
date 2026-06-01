@@ -301,6 +301,20 @@ def parse_or_values(field: str, value: str) -> FilterType:
 
     default_op = _default_operator_for(field)
 
+    # A leading "!" negates the WHOLE OR-list: `!a|b|c` means NOT (a OR b OR c),
+    # not `(NOT a) OR b OR c`. Legacy core/filter.py:92 ("negate everything in
+    # values after !") ANDs the per-value negations and rejects "!" on any
+    # non-leading element. Mirror that: strip "!" from every part, build a positive
+    # OR-branch, and negate the branch (the canonicalizer pushes the NOT down via
+    # De Morgan). Without this the OQO over-counts wildly — `(NOT a) OR …` ≈ the
+    # whole index (#323 Pattern D negated OR-list).
+    if value.startswith("!"):
+        filters = [
+            LeafFilter(column_id=field, value=part.lstrip("!"), operator=default_op)
+            for part in parts
+        ]
+        return BranchFilter(join="or", filters=filters, is_negated=True)
+
     filters = []
     for part in parts:
         if part.startswith("!"):
@@ -626,7 +640,9 @@ def parse_sort_string(sort_string: str) -> Tuple[Optional[str], Optional[str]]:
     """
     if ":" in sort_string:
         parts = sort_string.split(":")
-        return parts[0], parts[1] if len(parts) > 1 else "desc"
-    
-    # Default to desc if no order specified
-    return sort_string, "desc"
+        return parts[0], parts[1] if len(parts) > 1 else "asc"
+
+    # Default to asc when no order is specified, to match the legacy URL path:
+    # core/utils.py:map_sort_params assigns "asc" for a directionless sort. A
+    # desc default here silently reversed the page vs legacy (#323 Pattern F1).
+    return sort_string, "asc"

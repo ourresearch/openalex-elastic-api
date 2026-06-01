@@ -142,6 +142,13 @@ def _operator_fits_column(operator: str, value: Any, operators: List[str]) -> bo
 # `core/shared_view.py:apply_sorting`).
 RELEVANCE_SORT_COLUMN = "relevance_score"
 
+# `count` and `key` are synthetic sort keys valid ONLY when a group_by is present:
+# they order the returned buckets by doc count or bucket key, not the entity's rows.
+# Legacy `core/sort.py:get_sort_fields` special-cases them for group_by; they are
+# not entity columns, so they get their own allow-rule below, gated on group_by
+# (#323 Pattern G1 — without it `?group_by=type&sort=count:desc` 400s `invalid_column`).
+GROUP_BY_SORT_KEYS = {"count", "key"}
+
 
 def _has_search_clause(filter_rows: List["FilterType"]) -> bool:
     """True if any leaf in the filter tree is a `*.search` (free-text) clause.
@@ -207,6 +214,9 @@ class OQOValidator:
                     message="Sorting by 'relevance_score' ascending is not allowed.",
                     location="sort_by_order",
                 ))
+        elif oqo.group_by and oqo.sort_by_column in GROUP_BY_SORT_KEYS:
+            # Bucket-ordering sort key (count/key) — valid because group_by is set.
+            pass
         elif oqo.sort_by_column and oqo.sort_by_column not in columns:
             errors.append(ValidationError(
                 type="invalid_column",

@@ -134,6 +134,20 @@ def group_by_best_open_version(field, index_name, params, fields_dict):
 
 def search_and_filter(fields_dict, index_name, params):
     s = Search(index=index_name)
+    # OQO execution path (#323 Pattern G2): the OQO executor applies search/filters
+    # via pre-built Q objects (not params["search"]/["filters"], which it leaves
+    # unset), and stashes the main query's exact query+filter contexts here so this
+    # custom group_by sub-search (continent/version/best_open_version) honors the
+    # same filter instead of running global. Replicate those contexts and return.
+    # Strictly additive: the legacy URL path never sets these keys.
+    if "_oqo_filter_qs" in params:
+        oqo_search_q = params.get("_oqo_search_q")
+        if oqo_search_q is not None:
+            s = s.query(oqo_search_q)
+        for fq in params["_oqo_filter_qs"]:
+            s = s.filter(fq)
+        s = s.extra(track_total_hits=True)
+        return s
     searches = params.get("searches", [])
     if len(searches) > 1:
         # Multi-search: build sub-queries without citation boost, AND them, wrap once

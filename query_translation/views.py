@@ -28,6 +28,7 @@ from core.shared_view import (
     format_response,
     set_source,
 )
+from core.preference import clean_preference, combine_preferences
 from core.registry import REGISTRY, get_entity_columns
 from core.utils import get_data_version_connection
 from core.utils import get_display_name as _get_display_name
@@ -285,7 +286,10 @@ def _build_params_from_oqo(oqo: OQO, request):
     """
     sort = None
     if oqo.sort_by_column:
-        sort = {oqo.sort_by_column: oqo.sort_by_order or "desc"}
+        # "asc" default matches legacy map_sort_params for a directionless sort
+        # (#323 Pattern F1). The URL parser already supplies an explicit order, so
+        # this fallback only applies to OQOs built directly without one.
+        sort = {oqo.sort_by_column: oqo.sort_by_order or "asc"}
 
     # Search-awareness for sorting (#323 2b/2c). `apply_sorting` decides the
     # implicit default sort and gates `relevance_score` via
@@ -522,6 +526,8 @@ def _execute_oqo(oqo_dict: dict):
 
     # Apply the standard works-walden is_xpac:false default unless the OQO
     # already references is_xpac or the caller opts in via include_xpac=true.
+    from elasticsearch_dsl import Q
+
     extra_qs = []
     if oqo.get_rows == "works" and connection == "walden":
         include_xpac = (
@@ -530,13 +536,28 @@ def _execute_oqo(oqo_dict: dict):
         )
         oqo_mentions_xpac = _oqo_mentions_column(oqo.filter_rows, "is_xpac")
         if not include_xpac and not oqo_mentions_xpac:
-            from elasticsearch_dsl import Q
-
             extra_qs.append(Q("term", is_xpac="false"))
 
-    # Build the Search object — same stages as construct_query() in shared_view,
-    # minus the search/filter stages we're replacing.
+    # Mirror the /authors works_count>0 default (authors/views.py, #287): hide
+    # curation-emptied (0-works) authors unless the OQO explicitly references
+    # works_count. Without this the OQO over-counts authors vs legacy (#323
+    # Pattern B). Applies on every connection, matching the legacy view.
+    if oqo.get_rows == "authors":
+        if not _oqo_mentions_column(oqo.filter_rows, "works_count"):
+            extra_qs.append(Q("range", works_count={"gt": 0}))
+
+    # Custom group_by results (continent / version / best_open_version) are
+    # computed at format time by core/group_by/custom_results.py, which rebuilds a
+    # fresh Search from params["filters"]/params["search"] via search_and_filter().
+    # The OQO path leaves those params unset (it applies filters/search via the
+    # pre-built Qs above), so without this those sub-searches would run UNFILTERED
+    # → global bucket counts (#323 Pattern G2). Stash the exact query/filter
+    # contexts of the main search so the custom path can replicate them. extra_qs
+    # (the is_xpac:false default) is folded into the filter list so bucket totals
+    # match meta.count. Plain dict keys; legacy never sets them, so it's untouched.
     s = Search(index=index_name, using=connection)
+    params["_oqo_search_q"] = search_q
+    params["_oqo_filter_qs"] = ([filter_q] if filter_q is not None else []) + extra_qs
     s = set_source(index_name, s)
     s = _set_size(params, s)
     s = _set_cursor_pagination(params, s)
@@ -546,6 +567,7 @@ def _execute_oqo(oqo_dict: dict):
         s = s.filter(filter_q)
     for extra in extra_qs:
         s = s.filter(extra)
+    s = _apply_search_preference(oqo, s)
     s = apply_sorting(params, fields_dict, default_sort, index_name, s)
     s = apply_grouping(params, fields_dict, s)
 
@@ -606,6 +628,52 @@ def _collect_invalid_operators(filter_rows, prefix="filter_rows"):
         if hasattr(f, "filters"):
             bad.extend(_collect_invalid_operators(f.filters, loc + ".filters"))
     return bad
+
+
+# The search clauses legacy pins ES shard routing on (#323 Pattern C). Legacy sets
+# preference=clean_preference(<value>) for a `?search=` query (which lands in the
+# OQO as a `default.search` filter) and for the four `*.search` filters that
+# core/shared_view.set_preference_for_filter_search inspects. Other search kinds
+# (fulltext/keyword/semantic) get no preference in legacy, so they're excluded here
+# for parity. Empirically verified against the legacy path (see EXPLORE session 5).
+PREFERENCE_SEARCH_COLUMNS = {
+    "default.search",
+    "title.search",
+    "abstract.search",
+    "display_name.search",
+    "raw_affiliation_strings.search",
+}
+
+
+def _collect_preference_search_values(filter_rows):
+    """The search-clause values legacy would pin shard `preference` on, in order."""
+    vals = []
+    for f in filter_rows:
+        if hasattr(f, "filters"):
+            vals.extend(_collect_preference_search_values(f.filters))
+        elif (
+            getattr(f, "column_id", None) in PREFERENCE_SEARCH_COLUMNS
+            and isinstance(getattr(f, "value", None), str)
+        ):
+            vals.append(f.value)
+    return vals
+
+
+def _apply_search_preference(oqo, s):
+    """Pin ES shard routing the way legacy does for search queries (#323 Pattern C).
+
+    The OQO executor otherwise sets no `preference`, so legacy (preference pinned by
+    the search string) and the OQO path route to different shards → divergent score
+    tie-breaks among near-equal-relevance docs. Mirror legacy: single search clause →
+    clean_preference(value); multiple → combine_preferences (legacy's multi-search
+    path). No eligible search clause → no preference (matches legacy filter-only).
+    """
+    values = _collect_preference_search_values(oqo.filter_rows)
+    if len(values) == 1:
+        return s.params(preference=clean_preference(values[0]))
+    if len(values) > 1:
+        return s.params(preference=combine_preferences(values))
+    return s
 
 
 def _oqo_mentions_column(filter_rows, column_id):
