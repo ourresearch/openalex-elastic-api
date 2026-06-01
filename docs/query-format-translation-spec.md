@@ -70,8 +70,9 @@ OQO is the canonical JSON representation. All translations go through OQO.
 {
   "get_rows": "works",              // Required: entity type
   "filter_rows": [...],             // Filters applied to rows being retrieved
-  "sort_by_column": "cited_by_count",
-  "sort_by_order": "desc",
+  "sort_by": [                      // Ordered sort keys (primary, secondary, …)
+    {"column_id": "cited_by_count", "direction": "desc"}
+  ],
   "sample": 100                     // Optional
 }
 ```
@@ -339,8 +340,7 @@ Translates between query formats.
       {"column_id": "type", "value": "types/article"},
       {"column_id": "publication_year", "value": "2024", "operator": ">="}
     ],
-    "sort_by_column": "cited_by_count",
-    "sort_by_order": "desc"
+    "sort_by": [{"column_id": "cited_by_count", "direction": "desc"}]
   },
   "validation": {
     "valid": true,
@@ -405,8 +405,7 @@ All existing entity endpoints (`/works`, `/authors`, etc.) should include query 
       "oqo": {
         "get_rows": "works",
         "filter_rows": [{"column_id": "type", "value": "types/article"}],
-        "sort_by_column": "cited_by_count",
-        "sort_by_order": "desc"
+        "sort_by": [{"column_id": "cited_by_count", "direction": "desc"}]
       }
     }
   },
@@ -455,11 +454,15 @@ class BranchFilter:
     filters: List[Union["LeafFilter", "BranchFilter"]]
 
 @dataclass
+class SortBy:
+    column_id: str
+    direction: Literal["asc", "desc"] = "asc"
+
+@dataclass
 class OQO:
     get_rows: str
     filter_rows: List[Union[LeafFilter, BranchFilter]]
-    sort_by_column: Optional[str] = None
-    sort_by_order: Optional[Literal["asc", "desc"]] = None
+    sort_by: List[SortBy] = field(default_factory=list)  # ordered tiebreakers
     sample: Optional[int] = None
 ```
 
@@ -690,7 +693,7 @@ OQL_PARSING_TESTS = [
     
     # Sort
     ("works where type is Article [article]; sort by citation count",
-     {"entity": "works", "filters": [...], "sort_by_column": "cited_by_count", "sort_by_order": "desc"}),
+     {"entity": "works", "filters": [...], "sort_by": [{"column_id": "cited_by_count", "direction": "desc"}]}),
     
     # Sample
     ("works where year ≥ 2024; sample 100",
@@ -718,8 +721,7 @@ EQUIVALENCE_TESTS = [
         "oqo": {
             "get_rows": "works",
             "filter_rows": [{"column_id": "publication_year", "value": "2024", "operator": ">="}],
-            "sort_by_column": "fwci",
-            "sort_by_order": "desc"
+            "sort_by": [{"column_id": "fwci", "direction": "desc"}]
         }
     },
     {

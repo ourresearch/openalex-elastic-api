@@ -9,7 +9,7 @@ Tests cover:
 """
 
 import pytest
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, filter_from_dict
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, SortBy, filter_from_dict
 from query_translation.url_parser import parse_url_to_oqo, parse_filter_string
 from query_translation.url_renderer import render_oqo_to_url, URLRenderError
 from query_translation.validator import validate_oqo
@@ -154,16 +154,36 @@ class TestURLParser:
             sort_string="cited_by_count:desc"
         )
         
-        assert oqo.sort_by_column == "cited_by_count"
-        assert oqo.sort_by_order == "desc"
+        assert oqo.sort_by == [SortBy("cited_by_count", "desc")]
 
     def test_directionless_sort_defaults_asc(self):
         """A sort with no `:dir` must default to `asc`, matching legacy
         core/utils.py:map_sort_params. A `desc` default silently reversed the
         page vs the legacy URL path (oxjob #323 Pattern F1)."""
         oqo = parse_url_to_oqo("works", sort_string="publication_date")
-        assert oqo.sort_by_column == "publication_date"
-        assert oqo.sort_by_order == "asc"
+        assert oqo.sort_by == [SortBy("publication_date", "asc")]
+
+    def test_multi_column_sort_parsing(self):
+        """A comma-separated sort is an ordered list of tiebreaker keys (#333)."""
+        oqo = parse_url_to_oqo(
+            "works",
+            sort_string="publication_year:desc,cited_by_count:desc",
+        )
+        assert oqo.sort_by == [
+            SortBy("publication_year", "desc"),
+            SortBy("cited_by_count", "desc"),
+        ]
+
+    def test_multi_column_sort_directionless_secondary(self):
+        """A directionless secondary key defaults to asc, like the primary."""
+        oqo = parse_url_to_oqo(
+            "works",
+            sort_string="publication_year:desc,cited_by_count",
+        )
+        assert oqo.sort_by == [
+            SortBy("publication_year", "desc"),
+            SortBy("cited_by_count", "asc"),
+        ]
 
     def test_negated_or_list_negates_whole_list(self):
         """`field:!a|b|c` means NOT (a OR b OR c), not `(NOT a) OR b OR c`.
@@ -341,13 +361,27 @@ class TestURLRenderer:
         oqo = OQO(
             get_rows="works",
             filter_rows=[],
-            sort_by_column="cited_by_count",
-            sort_by_order="desc"
+            sort_by=[SortBy("cited_by_count", "desc")],
         )
 
         result = render_oqo_to_url(oqo)
 
         assert result["sort"] == "cited_by_count:desc"
+
+    def test_multi_column_sort_rendering(self):
+        """A multi-key sort renders as a comma-separated ordered list (#333)."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[],
+            sort_by=[
+                SortBy("publication_year", "desc"),
+                SortBy("cited_by_count", "desc"),
+            ],
+        )
+
+        result = render_oqo_to_url(oqo)
+
+        assert result["sort"] == "publication_year:desc,cited_by_count:desc"
 
     def test_group_by_rendering_single_dim(self):
         """Test rendering single-dimension group_by."""
@@ -474,8 +508,7 @@ class TestRoundTrip:
         
         # Should produce equivalent OQO
         assert oqo.get_rows == oqo2.get_rows
-        assert oqo.sort_by_column == oqo2.sort_by_column
-        assert oqo.sort_by_order == oqo2.sort_by_order
+        assert oqo.sort_by == oqo2.sort_by
 
 
 class TestOQOModel:
@@ -533,15 +566,22 @@ class TestOQOModel:
         oqo = OQO(
             get_rows="works",
             filter_rows=[LeafFilter(column_id="type", value="article")],
-            sort_by_column="cited_by_count",
-            sort_by_order="desc"
+            sort_by=[SortBy("cited_by_count", "desc")],
         )
         d = oqo.to_dict()
-        
+
         assert d["get_rows"] == "works"
         assert len(d["filter_rows"]) == 1
-        assert d["sort_by_column"] == "cited_by_count"
-        assert d["sort_by_order"] == "desc"
+        assert d["sort_by"] == [{"column_id": "cited_by_count", "direction": "desc"}]
+
+    def test_oqo_from_dict_back_compat_scalar_sort(self):
+        """A pre-#333 OQO dict with scalar sort keys reads as a 1-element list."""
+        oqo = OQO.from_dict({
+            "get_rows": "works",
+            "sort_by_column": "cited_by_count",
+            "sort_by_order": "desc",
+        })
+        assert oqo.sort_by == [SortBy("cited_by_count", "desc")]
     
     def test_oqo_from_dict(self):
         """Test OQO deserialization."""
@@ -557,13 +597,13 @@ class TestOQOModel:
                     ]
                 }
             ],
-            "sort_by_column": "cited_by_count",
-            "sort_by_order": "desc"
+            "sort_by": [{"column_id": "cited_by_count", "direction": "desc"}]
         }
         oqo = OQO.from_dict(d)
-        
+
         assert oqo.get_rows == "works"
         assert len(oqo.filter_rows) == 2
+        assert oqo.sort_by == [SortBy("cited_by_count", "desc")]
         assert isinstance(oqo.filter_rows[0], LeafFilter)
         assert isinstance(oqo.filter_rows[1], BranchFilter)
 
@@ -612,14 +652,43 @@ class TestValidator:
         oqo = OQO(
             get_rows="works",
             filter_rows=[],
-            sort_by_column="cited_by_count",
-            sort_by_order="ascending"
+            sort_by=[SortBy("cited_by_count", "ascending")],
         )
 
         result = validate_oqo(oqo)
 
         assert not result.valid
         assert any(e.type == "invalid_sort_order" for e in result.errors)
+
+    def test_multi_column_sort_valid(self):
+        """Each key in a multi-column sort is validated on its own merits (#333)."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[],
+            sort_by=[
+                SortBy("publication_year", "desc"),
+                SortBy("cited_by_count", "desc"),
+            ],
+        )
+        result = validate_oqo(oqo)
+        assert result.valid, [e.type for e in result.errors]
+
+    def test_multi_column_sort_rejects_bad_key_in_list(self):
+        """A bad column anywhere in the sort list is rejected, located by index."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[],
+            sort_by=[
+                SortBy("publication_year", "desc"),
+                SortBy("bogus_col", "desc"),
+            ],
+        )
+        result = validate_oqo(oqo)
+        assert not result.valid
+        errs = [e for e in result.errors if e.type == "invalid_column"]
+        assert errs and errs[0].location == "sort_by[1].column_id", [
+            (e.type, e.location) for e in result.errors
+        ]
 
     def test_group_by_sort_count_is_valid(self):
         """`count`/`key` are valid sort columns WHEN a group_by is present — they
@@ -629,7 +698,7 @@ class TestValidator:
             oqo = parse_url_to_oqo(
                 "works", group_by_string="type", sort_string=f"{key}:desc"
             )
-            assert oqo.sort_by_column == key
+            assert oqo.sort_by == [SortBy(key, "desc")]
             result = validate_oqo(oqo)
             assert result.valid, (key, [e.type for e in result.errors])
 
@@ -639,8 +708,7 @@ class TestValidator:
         oqo = OQO(
             get_rows="works",
             filter_rows=[],
-            sort_by_column="count",
-            sort_by_order="desc",
+            sort_by=[SortBy("count", "desc")],
         )
         result = validate_oqo(oqo)
         assert not result.valid
@@ -690,8 +758,18 @@ class TestEquivalence:
             "oqo": {
                 "get_rows": "works",
                 "filter_rows": [{"column_id": "publication_year", "value": "2024", "operator": ">="}],
-                "sort_by_column": "fwci",
-                "sort_by_order": "desc"
+                "sort_by": [{"column_id": "fwci", "direction": "desc"}]
+            }
+        },
+        {
+            "description": "Multi-column sort",
+            "url": {"sort": "publication_year:desc,cited_by_count:desc"},
+            "oqo": {
+                "get_rows": "works",
+                "sort_by": [
+                    {"column_id": "publication_year", "direction": "desc"},
+                    {"column_id": "cited_by_count", "direction": "desc"},
+                ]
             }
         },
         {
@@ -728,8 +806,7 @@ class TestEquivalence:
         
         # Compare key properties
         assert oqo_from_url.get_rows == oqo_from_dict.get_rows
-        assert oqo_from_url.sort_by_column == oqo_from_dict.sort_by_column
-        assert oqo_from_url.sort_by_order == oqo_from_dict.sort_by_order
+        assert oqo_from_url.sort_by == oqo_from_dict.sort_by
 
         # Compare filter count
         assert len(oqo_from_url.filter_rows) == len(oqo_from_dict.filter_rows)

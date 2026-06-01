@@ -9,7 +9,7 @@ Tests verify:
 """
 
 import pytest
-from query_translation.oqo import OQO, LeafFilter, BranchFilter
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, SortBy
 from query_translation.oql_render_tree import (
     OQLRenderTree, EntityHead, GroupNode, ClauseNode, Segment, SegmentMeta,
     ClauseMeta, GroupMeta, EntityValue, SortDirective, SampleDirective,
@@ -104,13 +104,32 @@ class TestStringifyInvariant:
         oqo = OQO(
             get_rows="works",
             filter_rows=[],
-            sort_by_column="cited_by_count",
-            sort_by_order="desc"
+            sort_by=[SortBy("cited_by_count", "desc")],
         )
         oql, tree = render_oqo_to_oql_and_tree(oqo)
-        
+
         assert stringify(tree) == oql
         assert "; sort by" in oql
+
+    def test_multi_column_sort_directive(self):
+        """A multi-key sort renders one directive; stringify is invariant (#333)."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[],
+            sort_by=[
+                SortBy("publication_year", "desc"),
+                SortBy("cited_by_count", "desc"),
+            ],
+        )
+        oql, tree = render_oqo_to_oql_and_tree(oqo)
+
+        assert stringify(tree) == oql
+        assert "; sort by" in oql
+        # Both keys present, in order, comma-separated.
+        sort_directive = next(d for d in tree.directives if d.type == "sort")
+        assert [k["column_id"] for k in sort_directive.meta.keys] == [
+            "publication_year", "cited_by_count",
+        ]
     
     def test_sample_directive(self):
         """Test sample directive."""
@@ -139,12 +158,11 @@ class TestStringifyInvariant:
                     ]
                 )
             ],
-            sort_by_column="cited_by_count",
-            sort_by_order="desc",
+            sort_by=[SortBy("cited_by_count", "desc")],
             sample=100
         )
         oql, tree = render_oqo_to_oql_and_tree(oqo)
-        
+
         assert stringify(tree) == oql
 
 
@@ -336,8 +354,7 @@ class TestToDict:
         oqo = OQO(
             get_rows="works",
             filter_rows=[LeafFilter(column_id="publication_year", value=2020, operator=">=")],
-            sort_by_column="cited_by_count",
-            sort_by_order="desc"
+            sort_by=[SortBy("cited_by_count", "desc")],
         )
         _, tree = render_oqo_to_oql_and_tree(oqo)
         

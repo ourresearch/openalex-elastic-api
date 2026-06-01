@@ -12,7 +12,7 @@ import re
 from typing import Optional, Dict, List, Tuple, Any, Union
 from dataclasses import dataclass
 
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy
 
 
 @dataclass
@@ -176,8 +176,7 @@ class OQLParser:
         
         # Initialize result
         filter_rows: List[FilterType] = []
-        sort_by_column: Optional[str] = None
-        sort_by_order: Optional[str] = None
+        sort_by: List[SortBy] = []
         sample: Optional[int] = None
         group_by: List[GroupBy] = []
 
@@ -199,7 +198,7 @@ class OQLParser:
                     filter_rows = self._parse_filters(filter_str)
                 elif part.lower().startswith("sort by "):
                     sort_str = part[8:].strip()  # Remove "sort by "
-                    sort_by_column, sort_by_order = self._parse_sort(sort_str)
+                    sort_by = self._parse_sort(sort_str)
                 elif part.lower().startswith("sample "):
                     sample_str = part[7:].strip()  # Remove "sample "
                     try:
@@ -216,8 +215,7 @@ class OQLParser:
         return OQO(
             get_rows=entity_type,
             filter_rows=filter_rows,
-            sort_by_column=sort_by_column,
-            sort_by_order=sort_by_order,
+            sort_by=sort_by,
             sample=sample,
             group_by=group_by,
         )
@@ -612,30 +610,38 @@ class OQLParser:
             dims.append(GroupBy(column_id=column_id))
         return dims
 
-    def _parse_sort(self, sort_str: str) -> Tuple[Optional[str], Optional[str]]:
-        """Parse sort clause."""
-        parts = sort_str.split()
-        
-        if not parts:
-            return None, None
-        
-        column = parts[0]
-        order = parts[1] if len(parts) > 1 else "desc"
-        
-        # Resolve column name
-        column_id = self._resolve_column(column)
-        
-        # Also check sort-specific mappings
+    def _parse_sort(self, sort_str: str) -> List[SortBy]:
+        """Parse a (possibly multi-column) sort clause into an ordered list.
+
+        In `sort by col1 desc, col2 asc`, the substring `col1 desc, col2 asc` is
+        a comma-separated list of `<column> [direction]` keys, applied in order
+        as primary/secondary/… tiebreakers (#333).
+        """
+        sort_by: List[SortBy] = []
+
         sort_mappings = {
             "citations": "cited_by_count",
             "year": "publication_year",
             "date": "publication_date",
             "relevance": "relevance_score",
         }
-        if column.lower() in sort_mappings:
-            column_id = sort_mappings[column.lower()]
-        
-        return column_id, order.lower()
+
+        for segment in sort_str.split(","):
+            parts = segment.split()
+            if not parts:
+                continue
+
+            column = parts[0]
+            order = parts[1] if len(parts) > 1 else "desc"
+
+            # Resolve column name, then apply sort-specific mappings.
+            column_id = self._resolve_column(column)
+            if column.lower() in sort_mappings:
+                column_id = sort_mappings[column.lower()]
+
+            sort_by.append(SortBy(column_id=column_id, direction=order.lower()))
+
+        return sort_by
     
     def _add_error(self, message: str, position: Optional[int] = None):
         """Add a parsing error."""

@@ -145,11 +145,14 @@ class OQLRenderer:
                     filter_clauses.append(clause)
             parts.append(" and ".join(filter_clauses))
         
-        # Sort
-        if oqo.sort_by_column:
-            order = oqo.sort_by_order or "desc"
-            sort_display = SORT_DISPLAY_NAMES.get(oqo.sort_by_column, oqo.sort_by_column)
-            parts.append(f"; sort by {sort_display} {order}")
+        # Sort (multi-column: comma-separated keys in tiebreaker order, #333)
+        if oqo.sort_by:
+            sort_clauses = []
+            for s in oqo.sort_by:
+                order = s.direction or "desc"
+                sort_display = SORT_DISPLAY_NAMES.get(s.column_id, s.column_id)
+                sort_clauses.append(f"{sort_display} {order}")
+            parts.append(f"; sort by {', '.join(sort_clauses)}")
 
         # Sample
         if oqo.sample:

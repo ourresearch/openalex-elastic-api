@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openalex.org/schemas/oqo/v1.2",
+  "$id": "https://openalex.org/schemas/oqo/v1.3",
   "name": "OpenAlex_Query_Object",
   "description": "The canonical JSON representation for OpenAlex queries. OQO is the intermediate format for bidirectional translation between URL parameters, OQL (human-readable query language), and programmatic JSON access. GENERATED from query_translation/oqo.py by query_translation/regen_schema.py — do not hand-edit. Entity values are BARE (the namespace is the column_id, resolved via the column registry): 'I136199984', 'de', 'article', '13' — never 'institutions/I136199984'. Negation is the per-node 'is_negated' polarity bit; the canonical form is NNF (negation on leaves only). JSON is the normative serialization; YAML is display-only and MUST round-trip to identical JSON (quote every string value on emit).",
   "type": "object",
@@ -29,32 +29,13 @@
       },
       "default": []
     },
-    "sort_by_column": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "description": "Column/field to sort results by. Must be a valid sortable field for the entity.",
-      "examples": [
-        "cited_by_count",
-        "publication_year",
-        "fwci",
-        "display_name",
-        "works_count"
-      ]
-    },
-    "sort_by_order": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "enum": [
-        "asc",
-        "desc",
-        null
-      ],
-      "description": "Sort direction. 'asc' ascending, 'desc' descending.",
-      "default": null
+    "sort_by": {
+      "type": "array",
+      "description": "Sort keys, applied in order as primary/secondary/… tiebreakers. A LIST, so a multi-column sort (`sort=publication_year:desc,cited_by_count:desc`) is expressible; list order is meaningful and is preserved (NOT sorted). Absent/empty ⇒ the entity's implicit default sort.",
+      "items": {
+        "$ref": "#/$defs/SortBy"
+      },
+      "default": []
     },
     "sample": {
       "type": [
@@ -266,6 +247,37 @@
         }
       }
     },
+    "SortBy": {
+      "type": "object",
+      "description": "A single sort key: a column plus a direction. `column_id` may be a real sortable column or a synthetic sort key — 'relevance_score' (requires a search clause; descending only) or, when a group_by is present, the bucket-ordering keys 'count' / 'key'.",
+      "required": [
+        "column_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "column_id": {
+          "type": "string",
+          "description": "The column/field to sort by.",
+          "examples": [
+            "cited_by_count",
+            "publication_year",
+            "fwci",
+            "display_name",
+            "works_count",
+            "relevance_score"
+          ]
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Sort direction. 'asc' ascending, 'desc' descending. Defaults to 'asc'.",
+          "default": "asc"
+        }
+      }
+    },
     "Operator": {
       "type": "string",
       "description": "Leaf comparison operators (strictly affirmative). Sourced from oqo.VALID_OPERATORS. Negation is the `is_negated` bit, not an operator.",
@@ -386,9 +398,29 @@
             "operator": ">="
           }
         ],
-        "sort_by_column": "cited_by_count",
-        "sort_by_order": "desc",
+        "sort_by": [
+          {
+            "column_id": "cited_by_count",
+            "direction": "desc"
+          }
+        ],
         "sample": 100
+      }
+    },
+    {
+      "description": "Multi-column sort: newest first, then most-cited as a tiebreaker",
+      "value": {
+        "get_rows": "works",
+        "sort_by": [
+          {
+            "column_id": "publication_year",
+            "direction": "desc"
+          },
+          {
+            "column_id": "cited_by_count",
+            "direction": "desc"
+          }
+        ]
       }
     },
     {

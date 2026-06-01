@@ -6,7 +6,7 @@ Generates the traditional query parameter syntax:
 """
 
 from typing import Dict, List, Optional, Tuple, Any
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, SortBy
 
 
 class URLRenderError(Exception):
@@ -30,7 +30,7 @@ def render_oqo_to_url(oqo: OQO) -> Dict[str, Any]:
                        expressed in URL format (e.g., nested boolean logic)
     """
     filter_string = render_filters(oqo.filter_rows)
-    sort_string = render_sort(oqo.sort_by_column, oqo.sort_by_order)
+    sort_string = render_sort(oqo.sort_by)
     group_by_string = render_group_by(oqo.group_by)
     select_string = render_select(oqo.select)
 
@@ -214,16 +214,18 @@ def render_or_branch(f: BranchFilter) -> str:
     return f"{field}:{pipe_joined}"
 
 
-def render_sort(
-    sort_by_column: Optional[str], 
-    sort_by_order: Optional[str]
-) -> Optional[str]:
-    """Render sort parameters to URL format."""
-    if not sort_by_column:
+def render_sort(sort_by: List[SortBy]) -> Optional[str]:
+    """Render the ordered sort-key list to a URL `sort=` string.
+
+    Emits a comma-separated `column:direction` list preserving the tiebreaker
+    order, e.g. [pub_year:desc, cited_by_count:desc] ->
+    "publication_year:desc,cited_by_count:desc". Direction is always rendered
+    explicitly so the string round-trips back to the same SortBy list.
+    """
+    if not sort_by:
         return None
-    
-    order = sort_by_order or "desc"
-    return f"{sort_by_column}:{order}"
+
+    return ",".join(f"{s.column_id}:{s.direction or 'asc'}" for s in sort_by)
 
 
 def can_render_to_url(oqo: OQO) -> Tuple[bool, Optional[str]]:

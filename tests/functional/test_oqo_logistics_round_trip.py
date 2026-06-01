@@ -30,7 +30,7 @@ ROUND_TRIP_DICTS = {
         "get_rows": "works",
         "filter_rows": [{"column_id": "publication_year", "value": 2024,
                          "operator": ">="}],
-        "sort_by_column": "cited_by_count", "sort_by_order": "desc",
+        "sort_by": [{"column_id": "cited_by_count", "direction": "desc"}],
     },
     "select_only": {"get_rows": "works",
                     "select": ["id", "display_name", "cited_by_count"]},
@@ -41,7 +41,10 @@ ROUND_TRIP_DICTS = {
     "everything": {
         "get_rows": "works",
         "filter_rows": [{"column_id": "type", "value": "article"}],
-        "sort_by_column": "cited_by_count", "sort_by_order": "desc",
+        "sort_by": [
+            {"column_id": "publication_year", "direction": "desc"},
+            {"column_id": "cited_by_count", "direction": "desc"},
+        ],
         "sample": 50, "seed": "x9",
         "select": ["id", "display_name"],
         "per_page": 25, "page": 3,

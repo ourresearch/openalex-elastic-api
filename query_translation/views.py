@@ -294,11 +294,14 @@ def _build_params_from_oqo(oqo: OQO, request):
     follow-up.
     """
     sort = None
-    if oqo.sort_by_column:
-        # "asc" default matches legacy map_sort_params for a directionless sort
-        # (#323 Pattern F1). The URL parser already supplies an explicit order, so
-        # this fallback only applies to OQOs built directly without one.
-        sort = {oqo.sort_by_column: oqo.sort_by_order or "asc"}
+    if oqo.sort_by:
+        # Rebuild the legacy ordered {column: direction} sort dict from the
+        # ordered sort-key list. This is faithful to legacy
+        # core/utils.py:map_sort_params: insertion order is preserved (Py3.7+
+        # dict) so multi-column tiebreakers apply primary→secondary, and a
+        # duplicate column collapses to its last direction (same as legacy).
+        # "asc" default matches legacy for a directionless sort (#323 Pattern F1).
+        sort = {s.column_id: (s.direction or "asc") for s in oqo.sort_by}
 
     # Search-awareness for sorting (#323 2b/2c). `apply_sorting` decides the
     # implicit default sort and gates `relevance_score` via

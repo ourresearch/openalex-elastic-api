@@ -12,7 +12,7 @@ See oql-oqo-plan.md for specification.
 
 from typing import Optional, Dict, Any, Callable, Tuple, List
 
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy
 from query_translation.oql_render_tree import (
     OQLRenderTree, EntityHead, GroupNode, ClauseNode, Segment, SegmentMeta,
     ClauseMeta, GroupMeta, EntityValue, SortDirective, SampleDirective,
@@ -167,8 +167,8 @@ class OQLTreeRenderer:
         # Build directives
         directives = []
         
-        if oqo.sort_by_column:
-            sort_directive = self._build_sort_directive(oqo.sort_by_column, oqo.sort_by_order or "desc")
+        if oqo.sort_by:
+            sort_directive = self._build_sort_directive(oqo.sort_by)
             directives.append(sort_directive)
 
         if oqo.sample:
@@ -545,28 +545,44 @@ class OQLTreeRenderer:
             meta=GroupMeta(implicit=False, source_pointer=source_pointer)
         )
     
-    def _build_sort_directive(self, column_id: str, order: str) -> SortDirective:
-        """Build a sort directive."""
-        sort_display = SORT_DISPLAY_NAMES.get(column_id, column_id)
-        
+    def _build_sort_directive(self, sort_by: List[SortBy]) -> SortDirective:
+        """Build a sort directive for the ordered sort-key list (#333).
+
+        Renders `; sort by col1 desc, col2 asc`; key order is the tiebreaker
+        priority. `meta.keys` carries the full list; the top-level meta fields
+        mirror the primary (first) key for single-sort back-compat (cf.
+        `_build_group_by_directive`).
+        """
+        segments: List[Segment] = []
+        key_meta: List[Dict[str, Any]] = []
+
+        for i, s in enumerate(sort_by):
+            order = s.direction or "desc"
+            sort_display = SORT_DISPLAY_NAMES.get(s.column_id, s.column_id)
+            key_meta.append({
+                "column_id": s.column_id,
+                "order": order,
+                "column_display_name": sort_display,
+            })
+            if i > 0:
+                segments.append(Segment(kind="text", text=", "))
+            segments.append(Segment(
+                kind="column",
+                text=sort_display,
+                meta=SegmentMeta(column_id=s.column_id),
+            ))
+            segments.append(Segment(kind="text", text=" "))
+            segments.append(Segment(kind="keyword", text=order))
+
+        primary = key_meta[0]
         return SortDirective(
             prefix="; sort by ",
-            segments=[
-                Segment(
-                    kind="column",
-                    text=sort_display,
-                    meta=SegmentMeta(column_id=column_id)
-                ),
-                Segment(kind="text", text=" "),
-                Segment(
-                    kind="keyword",
-                    text=order
-                )
-            ],
+            segments=segments,
             meta=SortMeta(
-                column_id=column_id,
-                column_display_name=sort_display,
-                order=order
+                column_id=primary["column_id"],
+                column_display_name=primary["column_display_name"],
+                order=primary["order"],
+                keys=key_meta,
             )
         )
     

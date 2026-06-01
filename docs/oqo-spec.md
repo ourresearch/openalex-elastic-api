@@ -25,8 +25,7 @@ An OQO is one JSON object:
   "get_rows": "works",              // entity type to return (required)
   "filter_rows": [ <Filter>, ... ], // implicitly AND-joined at the top level
   "group_by":   [ <GroupBy>, ... ], // Stage B grouping dimensions (a list)
-  "sort_by_column": "cited_by_count",
-  "sort_by_order":  "desc",         // "asc" | "desc" | null
+  "sort_by":    [ <SortBy>, ... ],  // ordered sort keys (primary, secondary, …)
   "sample": 100                     // random sample of N, or null
 }
 ```
@@ -43,6 +42,15 @@ A **`Filter`** is either a **`LeafFilter`** (one condition) or a **`BranchFilter
 ```
 
 A **`GroupBy`** is `{ "column_id": "primary_topic.id" }`.
+
+A **`SortBy`** is one sort key: `{ "column_id": "cited_by_count", "direction": "desc" }`
+(`direction` is `"asc"` | `"desc"`, default `"asc"`). `sort_by` is an **ordered list**
+of these, so a multi-column sort — e.g. `sort=publication_year:desc,cited_by_count:desc`
+on the URL surface — is expressible; the list order is the tiebreaker priority and is
+**preserved** (never sorted), unlike the commutative top-level `filter_rows`. `column_id`
+may be a real sortable column or a synthetic key: `relevance_score` (requires a search
+clause; descending only) or, when a `group_by` is present, the bucket-ordering keys
+`count` / `key`. Absent/empty ⇒ the entity's implicit default sort.
 
 `get_rows` ∈ the entity enum (works, authors, institutions, sources, publishers,
 funders, topics, …). The full enum is in the schema (sourced from

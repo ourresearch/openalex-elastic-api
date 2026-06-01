@@ -111,6 +111,36 @@ class GroupBy:
 
 
 @dataclass
+class SortBy:
+    """A single sort key: a column plus a direction.
+
+    `sort_by` on the OQO is an *ordered list* of these, so a multi-column sort
+    (`sort=publication_year:desc,cited_by_count:desc`) is expressible: the list
+    order is the tiebreaker priority (primary, secondary, …), applied in order
+    by the legacy ES sort path (`core/sort.py:get_sort_fields`). Order is
+    meaningful and is **preserved**, never sorted (unlike the commutative
+    top-level `filter_rows`). `direction` defaults to `asc`, matching the legacy
+    URL path's directionless-sort default (`core/utils.py:map_sort_params`).
+
+    `column_id` may be a real entity column or a synthetic sort key:
+    `relevance_score` (→ ES `_score`, desc-only, requires a search clause) or,
+    when a `group_by` is present, the bucket-ordering keys `count` / `key`.
+    """
+    column_id: str
+    direction: Literal["asc", "desc"] = "asc"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"column_id": self.column_id, "direction": self.direction}
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SortBy":
+        return cls(
+            column_id=data["column_id"],
+            direction=data.get("direction", "asc"),
+        )
+
+
+@dataclass
 class OQO:
     """OpenAlex Query Object - the canonical query representation.
 
@@ -122,8 +152,10 @@ class OQO:
     """
     get_rows: str
     filter_rows: List[FilterType] = field(default_factory=list)
-    sort_by_column: Optional[str] = None
-    sort_by_order: Optional[Literal["asc", "desc"]] = None
+    # `sort_by` is an ordered list of (column, direction) sort keys — the list
+    # order is the tiebreaker priority. A multi-column sort URL round-trips
+    # through this list; absent ⇒ the entity's implicit default sort applies.
+    sort_by: List[SortBy] = field(default_factory=list)
     sample: Optional[int] = None
     group_by: List[GroupBy] = field(default_factory=list)
     # --- logistics layer (#318) ------------------------------------------
@@ -146,11 +178,8 @@ class OQO:
         if self.filter_rows:
             result["filter_rows"] = [f.to_dict() for f in self.filter_rows]
 
-        if self.sort_by_column:
-            result["sort_by_column"] = self.sort_by_column
-
-        if self.sort_by_order:
-            result["sort_by_order"] = self.sort_by_order
+        if self.sort_by:
+            result["sort_by"] = [s.to_dict() for s in self.sort_by]
 
         if self.sample:
             result["sample"] = self.sample
@@ -180,11 +209,23 @@ class OQO:
         filter_rows = [filter_from_dict(f) for f in data.get("filter_rows", [])]
         group_by = [GroupBy.from_dict(g) for g in data.get("group_by", [])]
 
+        # `sort_by` is the canonical list shape. Back-compat: an OQO dict that
+        # still carries the old scalar `sort_by_column` / `sort_by_order` keys
+        # (pre-#333 fixtures / in-flight callers) is read as a 1-element list.
+        if "sort_by" in data and data["sort_by"]:
+            sort_by = [SortBy.from_dict(s) for s in data["sort_by"]]
+        elif data.get("sort_by_column"):
+            sort_by = [SortBy(
+                column_id=data["sort_by_column"],
+                direction=data.get("sort_by_order") or "asc",
+            )]
+        else:
+            sort_by = []
+
         return cls(
             get_rows=data["get_rows"],
             filter_rows=filter_rows,
-            sort_by_column=data.get("sort_by_column"),
-            sort_by_order=data.get("sort_by_order"),
+            sort_by=sort_by,
             sample=data.get("sample"),
             group_by=group_by,
             select=list(data.get("select") or []),

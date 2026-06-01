@@ -199,11 +199,18 @@ ExprNode = Union[GroupNode, ClauseNode]
 
 @dataclass
 class SortMeta:
-    """Metadata for sort directive."""
+    """Metadata for a sort directive.
+
+    `keys` is the full ordered list of sort keys (multi-column sort, #333),
+    mirroring `GroupByMeta.dimensions`; list order is the tiebreaker priority.
+    The top-level `column_id`/`order`/`column_display_name` mirror the *primary*
+    (first) key for back-compat with consumers that read the single-sort shape.
+    """
     column_id: str
     order: Literal["asc", "desc"]
     column_display_name: Optional[str] = None
-    
+    keys: Optional[List[Dict[str, Any]]] = None  # [{column_id, order, column_display_name?}, ...]
+
     def to_dict(self) -> Dict[str, Any]:
         result = {
             "column_id": self.column_id,
@@ -211,6 +218,8 @@ class SortMeta:
         }
         if self.column_display_name is not None:
             result["column_display_name"] = self.column_display_name
+        if self.keys is not None:
+            result["keys"] = list(self.keys)
         return result
 
 

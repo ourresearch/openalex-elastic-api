@@ -25,6 +25,7 @@ from query_translation.oqo import (
     LeafFilter,
     BranchFilter,
     FilterType,
+    SortBy,
     VALID_OPERATORS,
 )
 
@@ -192,49 +193,14 @@ class OQOValidator:
         for i, f in enumerate(oqo.filter_rows):
             errors.extend(self._validate_filter(f, columns, f"filter_rows[{i}]"))
 
-        # sort_by_column must be a real column on the entity, OR the synthetic
-        # `relevance_score` sort key. relevance_score is sortable but not
-        # filterable (legacy core/sort.py -> ES _score); it is gated on a search
-        # clause being present and is descending-only (legacy apply_sorting:
-        # ascending relevance is rejected; sorting it with no search is rejected).
-        if oqo.sort_by_column == RELEVANCE_SORT_COLUMN:
-            if not _has_search_clause(oqo.filter_rows):
-                errors.append(ValidationError(
-                    type="relevance_sort_requires_search",
-                    message=(
-                        "Sorting by 'relevance_score' requires a search clause "
-                        "(e.g. ?search=example or a *.search filter such as "
-                        "display_name.search:example)."
-                    ),
-                    location="sort_by_column",
-                ))
-            if oqo.sort_by_order == "asc":
-                errors.append(ValidationError(
-                    type="invalid_sort_order",
-                    message="Sorting by 'relevance_score' ascending is not allowed.",
-                    location="sort_by_order",
-                ))
-        elif oqo.group_by and oqo.sort_by_column in GROUP_BY_SORT_KEYS:
-            # Bucket-ordering sort key (count/key) — valid because group_by is set.
-            pass
-        elif oqo.sort_by_column and oqo.sort_by_column not in columns:
-            errors.append(ValidationError(
-                type="invalid_column",
-                message=(
-                    f"'{oqo.sort_by_column}' is not a sortable column on "
-                    f"'{oqo.get_rows}'"
-                ),
-                location="sort_by_column",
-            ))
-
-        if oqo.sort_by_order and oqo.sort_by_order not in VALID_SORT_ORDERS:
-            errors.append(ValidationError(
-                type="invalid_sort_order",
-                message=(
-                    f"'{oqo.sort_by_order}' is not a valid sort order. "
-                    f"Use 'asc' or 'desc'."
-                ),
-                location="sort_by_order",
+        # `sort_by` is an ordered list of sort keys (multi-column sort, #333).
+        # Each key is validated on its own merits — exactly the single-sort rules
+        # applied per element. Locations are indexed (`sort_by[i].…`) so a caller
+        # can point at the offending key in a multi-column sort.
+        has_search = _has_search_clause(oqo.filter_rows)
+        for i, key in enumerate(oqo.sort_by):
+            errors.extend(self._validate_sort_key(
+                key, i, columns, has_search, bool(oqo.group_by), oqo.get_rows,
             ))
 
         if oqo.sample is not None:
@@ -330,6 +296,71 @@ class OQOValidator:
             errors=errors,
             warnings=warnings,
         )
+
+    def _validate_sort_key(
+        self,
+        key: SortBy,
+        index: int,
+        columns: Dict[str, Dict],
+        has_search: bool,
+        has_group_by: bool,
+        get_rows: str,
+    ) -> List[ValidationError]:
+        """Validate one sort key in the ordered `sort_by` list.
+
+        These are the single-sort rules applied per element. `column_id` must be
+        a real column on the entity, OR a synthetic sort key:
+          - `relevance_score` — sortable but not filterable (legacy core/sort.py
+            -> ES `_score`); gated on a search clause and descending-only (legacy
+            apply_sorting rejects ascending relevance and relevance with no search).
+          - `count` / `key` — bucket-ordering keys, valid only when a group_by is
+            present (legacy core/sort.py:get_sort_fields special-cases them).
+        And the direction must be `asc`/`desc`.
+        """
+        errors: List[ValidationError] = []
+        loc = f"sort_by[{index}]"
+
+        if key.column_id == RELEVANCE_SORT_COLUMN:
+            if not has_search:
+                errors.append(ValidationError(
+                    type="relevance_sort_requires_search",
+                    message=(
+                        "Sorting by 'relevance_score' requires a search clause "
+                        "(e.g. ?search=example or a *.search filter such as "
+                        "display_name.search:example)."
+                    ),
+                    location=f"{loc}.column_id",
+                ))
+            if key.direction == "asc":
+                errors.append(ValidationError(
+                    type="invalid_sort_order",
+                    message="Sorting by 'relevance_score' ascending is not allowed.",
+                    location=f"{loc}.direction",
+                ))
+        elif has_group_by and key.column_id in GROUP_BY_SORT_KEYS:
+            # Bucket-ordering sort key (count/key) — valid because group_by is set.
+            pass
+        elif key.column_id and key.column_id not in columns:
+            errors.append(ValidationError(
+                type="invalid_column",
+                message=(
+                    f"'{key.column_id}' is not a sortable column on "
+                    f"'{get_rows}'"
+                ),
+                location=f"{loc}.column_id",
+            ))
+
+        if key.direction and key.direction not in VALID_SORT_ORDERS:
+            errors.append(ValidationError(
+                type="invalid_sort_order",
+                message=(
+                    f"'{key.direction}' is not a valid sort order. "
+                    f"Use 'asc' or 'desc'."
+                ),
+                location=f"{loc}.direction",
+            ))
+
+        return errors
 
     def _validate_filter(
         self, f: FilterType, columns: Dict[str, Dict], location: str

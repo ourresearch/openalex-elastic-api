@@ -37,7 +37,7 @@ def build_schema() -> dict:
 
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://openalex.org/schemas/oqo/v1.2",
+        "$id": "https://openalex.org/schemas/oqo/v1.3",
         "name": "OpenAlex_Query_Object",
         "description": (
             "The canonical JSON representation for OpenAlex queries. OQO is the "
@@ -77,16 +77,17 @@ def build_schema() -> dict:
                 "items": {"$ref": "#/$defs/GroupBy"},
                 "default": [],
             },
-            "sort_by_column": {
-                "type": ["string", "null"],
-                "description": "Column/field to sort results by. Must be a valid sortable field for the entity.",
-                "examples": ["cited_by_count", "publication_year", "fwci", "display_name", "works_count"],
-            },
-            "sort_by_order": {
-                "type": ["string", "null"],
-                "enum": ["asc", "desc", None],
-                "description": "Sort direction. 'asc' ascending, 'desc' descending.",
-                "default": None,
+            "sort_by": {
+                "type": "array",
+                "description": (
+                    "Sort keys, applied in order as primary/secondary/… "
+                    "tiebreakers. A LIST, so a multi-column sort "
+                    "(`sort=publication_year:desc,cited_by_count:desc`) is "
+                    "expressible; list order is meaningful and is preserved (NOT "
+                    "sorted). Absent/empty ⇒ the entity's implicit default sort."
+                ),
+                "items": {"$ref": "#/$defs/SortBy"},
+                "default": [],
             },
             "sample": {
                 "type": ["integer", "null"],
@@ -235,6 +236,31 @@ def build_schema() -> dict:
                     },
                 },
             },
+            "SortBy": {
+                "type": "object",
+                "description": (
+                    "A single sort key: a column plus a direction. `column_id` "
+                    "may be a real sortable column or a synthetic sort key — "
+                    "'relevance_score' (requires a search clause; descending "
+                    "only) or, when a group_by is present, the bucket-ordering "
+                    "keys 'count' / 'key'."
+                ),
+                "required": ["column_id"],
+                "additionalProperties": False,
+                "properties": {
+                    "column_id": {
+                        "type": "string",
+                        "description": "The column/field to sort by.",
+                        "examples": ["cited_by_count", "publication_year", "fwci", "display_name", "works_count", "relevance_score"],
+                    },
+                    "direction": {
+                        "type": "string",
+                        "enum": ["asc", "desc"],
+                        "description": "Sort direction. 'asc' ascending, 'desc' descending. Defaults to 'asc'.",
+                        "default": "asc",
+                    },
+                },
+            },
             "Operator": {
                 "type": "string",
                 "description": "Leaf comparison operators (strictly affirmative). Sourced from oqo.VALID_OPERATORS. Negation is the `is_negated` bit, not an operator.",
@@ -281,7 +307,15 @@ def build_schema() -> dict:
                 "description": "Sort + sample (top-cited sample)",
                 "value": {"get_rows": "works",
                           "filter_rows": [{"column_id": "publication_year", "value": 2024, "operator": ">="}],
-                          "sort_by_column": "cited_by_count", "sort_by_order": "desc", "sample": 100},
+                          "sort_by": [{"column_id": "cited_by_count", "direction": "desc"}], "sample": 100},
+            },
+            {
+                "description": "Multi-column sort: newest first, then most-cited as a tiebreaker",
+                "value": {"get_rows": "works",
+                          "sort_by": [
+                              {"column_id": "publication_year", "direction": "desc"},
+                              {"column_id": "cited_by_count", "direction": "desc"},
+                          ]},
             },
             {
                 "description": "Logistics layer (#318): projection + reproducible sample + pagination, all self-contained",

@@ -7,7 +7,7 @@ Handles the traditional query parameter syntax:
 
 import re
 from typing import Dict, List, Optional, Tuple, Any
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy
 
 
 def parse_url_to_oqo(
@@ -77,11 +77,9 @@ def parse_url_to_oqo(
         else:
             filter_rows.append(parsed_search)
 
-    sort_by_column = None
-    sort_by_order = None
-
+    sort_by = []
     if sort_string:
-        sort_by_column, sort_by_order = parse_sort_string(sort_string)
+        sort_by = parse_sort_string(sort_string)
 
     group_by = []
     if group_by_string:
@@ -92,8 +90,7 @@ def parse_url_to_oqo(
     return OQO(
         get_rows=entity_type,
         filter_rows=filter_rows,
-        sort_by_column=sort_by_column,
-        sort_by_order=sort_by_order,
+        sort_by=sort_by,
         sample=sample,
         group_by=group_by,
         select=select,
@@ -632,17 +629,31 @@ def _parse_search_boolean(field: str, value: str) -> FilterType:
     return result
 
 
-def parse_sort_string(sort_string: str) -> Tuple[Optional[str], Optional[str]]:
+def parse_sort_string(sort_string: str) -> List[SortBy]:
     """
-    Parse a sort string into column and order.
-    
-    Example: "cited_by_count:desc" -> ("cited_by_count", "desc")
-    """
-    if ":" in sort_string:
-        parts = sort_string.split(":")
-        return parts[0], parts[1] if len(parts) > 1 else "asc"
+    Parse a (possibly multi-column) sort string into an ordered list of SortBy.
 
-    # Default to asc when no order is specified, to match the legacy URL path:
-    # core/utils.py:map_sort_params assigns "asc" for a directionless sort. A
-    # desc default here silently reversed the page vs legacy (#323 Pattern F1).
-    return sort_string, "asc"
+    A legacy `sort=` URL param is a comma-separated list of `column[:direction]`
+    keys applied in order as primary/secondary/… tiebreakers, e.g.
+    `sort=publication_year:desc,cited_by_count:desc` ->
+    [SortBy("publication_year","desc"), SortBy("cited_by_count","desc")].
+
+    Each key defaults to "asc" when no direction is given, to match the legacy
+    URL path: core/utils.py:map_sort_params assigns "asc" for a directionless
+    sort. A desc default here silently reversed the page vs legacy (#323
+    Pattern F1). Blank segments (e.g. a trailing comma) are skipped.
+    """
+    sort_by = []
+    for segment in sort_string.split(","):
+        segment = segment.strip()
+        if not segment:
+            continue
+        if ":" in segment:
+            parts = segment.split(":")
+            column = parts[0]
+            direction = parts[1] if len(parts) > 1 and parts[1] else "asc"
+        else:
+            column = segment
+            direction = "asc"
+        sort_by.append(SortBy(column_id=column, direction=direction))
+    return sort_by

@@ -5,7 +5,7 @@ Tests both the human-readable and technical formats, and round-trip conversions.
 """
 
 import pytest
-from query_translation.oqo import OQO, LeafFilter, BranchFilter
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, SortBy
 from query_translation.oql_renderer import render_oqo_to_oql, OQLRenderer
 from query_translation.oql_parser import parse_oql_to_oqo, OQLParser, OQLParseError
 
@@ -167,11 +167,22 @@ class TestOQLRenderer:
             filter_rows=[
                 LeafFilter(column_id="open_access.is_oa", value=True)
             ],
-            sort_by_column="cited_by_count",
-            sort_by_order="desc"
+            sort_by=[SortBy("cited_by_count", "desc")],
         )
         result = render_oqo_to_oql(oqo)
         assert "; sort by citations desc" in result
+
+    def test_multi_column_sort_render_oql(self):
+        """A multi-key sort renders comma-separated in tiebreaker order (#333)."""
+        oqo = OQO(
+            get_rows="works",
+            sort_by=[
+                SortBy("publication_year", "desc"),
+                SortBy("cited_by_count", "desc"),
+            ],
+        )
+        result = render_oqo_to_oql(oqo)
+        assert "; sort by year desc, citations desc" in result
     
     def test_sample(self):
         """Test sample clause."""
@@ -345,10 +356,19 @@ class TestOQLParser:
         """Test parsing sort clause."""
         oql = "Works where it's Open Access; sort by citations desc"
         oqo = parse_oql_to_oqo(oql)
-        
-        assert oqo.sort_by_column == "cited_by_count"
-        assert oqo.sort_by_order == "desc"
-    
+
+        assert oqo.sort_by == [SortBy("cited_by_count", "desc")]
+
+    def test_parse_multi_column_sort(self):
+        """A comma-separated OQL sort clause parses to an ordered list (#333)."""
+        oql = "Works; sort by year desc, citations desc"
+        oqo = parse_oql_to_oqo(oql)
+
+        assert oqo.sort_by == [
+            SortBy("publication_year", "desc"),
+            SortBy("cited_by_count", "desc"),
+        ]
+
     def test_parse_sample(self):
         """Test parsing sample clause."""
         oql = "Works where year >= 2024; sample 100"
@@ -360,9 +380,8 @@ class TestOQLParser:
         """Test parsing both sort and sample."""
         oql = "Works where it's Open Access; sort by citations desc; sample 50"
         oqo = parse_oql_to_oqo(oql)
-        
-        assert oqo.sort_by_column == "cited_by_count"
-        assert oqo.sort_by_order == "desc"
+
+        assert oqo.sort_by == [SortBy("cited_by_count", "desc")]
         assert oqo.sample == 50
     
     def test_parse_technical_format(self):
@@ -515,8 +534,7 @@ class TestRoundTrip:
                 LeafFilter(column_id="institutions.is_global_south", value=True),
                 LeafFilter(column_id="publication_year", value=2020, operator=">=")
             ],
-            sort_by_column="cited_by_count",
-            sort_by_order="desc"
+            sort_by=[SortBy("cited_by_count", "desc")],
         )
         
         oql = render_oqo_to_oql(original)
@@ -524,8 +542,7 @@ class TestRoundTrip:
         
         assert parsed.get_rows == original.get_rows
         assert len(parsed.filter_rows) == len(original.filter_rows)
-        assert parsed.sort_by_column == original.sort_by_column
-        assert parsed.sort_by_order == original.sort_by_order
+        assert parsed.sort_by == original.sort_by
 
 
 class TestEdgeCases:

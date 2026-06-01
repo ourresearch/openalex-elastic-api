@@ -21,7 +21,7 @@ registry) — there is no entity-id prefix normalization. See docs/oql-spec.md.
 
 import json
 from typing import List, Union, Any
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, SortBy
 
 
 def canonicalize_oqo(oqo: OQO) -> OQO:
@@ -51,8 +51,9 @@ def canonicalize_oqo(oqo: OQO) -> OQO:
     return OQO(
         get_rows=oqo.get_rows.lower(),  # Normalize entity type to lowercase
         filter_rows=canonical_filters,
-        sort_by_column=oqo.sort_by_column,
-        sort_by_order=oqo.sort_by_order,
+        # sort_by order is meaningful (tiebreaker priority: primary, secondary,
+        # …) -> preserved, NOT sorted (unlike the commutative filter_rows above).
+        sort_by=[SortBy(s.column_id, s.direction) for s in oqo.sort_by],
         sample=oqo.sample,
         group_by=list(oqo.group_by),  # group_by order is meaningful (dim order) -> preserved
         # Logistics layer (#318) passes through unchanged: `select` order is
