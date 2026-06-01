@@ -78,6 +78,53 @@ class TestURLParser:
         operators = {f.operator for f in oqo.filter_rows}
         assert operators == {">=", "<="}
     
+    def test_issn_hyphen_is_exact_not_range(self):
+        """ISSN values are `NNNN-NNNN`; the hyphen must NOT be read as a range.
+
+        Regression for the column-type-aware range fix (oxjob #323): range-ness
+        is a column property, not a value shape. `issn` columns are string/term
+        columns (no `range` operator), so `0021-9258` is one exact filter, not
+        `>=0021 AND <=9258`. Verified against real corpus URLs.
+        """
+        for entity, col in [
+            ("sources", "issn"),
+            ("works", "primary_location.source.issn"),
+            ("works", "locations.source.issn"),
+        ]:
+            oqo = parse_url_to_oqo(entity, filter_string=f"{col}:0021-9258")
+            assert len(oqo.filter_rows) == 1, (entity, col, oqo.filter_rows)
+            leaf = oqo.filter_rows[0]
+            assert leaf.column_id == col
+            assert leaf.operator == "is"
+            assert leaf.value == "0021-9258"
+            assert validate_oqo(oqo).valid
+
+    def test_numeric_and_date_columns_still_range(self):
+        """The fix must not regress real range columns (numeric/date)."""
+        oqo = parse_url_to_oqo("works", filter_string="cited_by_count:100-500")
+        assert {f.operator for f in oqo.filter_rows} == {">=", "<="}
+
+        oqo = parse_url_to_oqo("works", filter_string="publication_year:2020-")
+        assert len(oqo.filter_rows) == 1
+        assert oqo.filter_rows[0].operator == ">="
+
+    def test_issn_and_year_range_in_one_filter(self):
+        """Mixed real-world filter: exact ISSN AND a year range coexist."""
+        oqo = parse_url_to_oqo(
+            "works",
+            filter_string="primary_location.source.issn:0964-6639,publication_year:2020-2024",
+        )
+        ops = [(r.column_id, r.operator) for r in oqo.filter_rows]
+        assert ("primary_location.source.issn", "is") in ops
+        assert ("publication_year", ">=") in ops
+        assert ("publication_year", "<=") in ops
+        assert validate_oqo(oqo).valid
+
+    def test_range_parsing_without_entity_keeps_shape_behavior(self):
+        """`parse_filter_string` with no entity context is unchanged (back-compat)."""
+        rows = parse_filter_string("issn:0021-9258")  # no entity_type
+        assert {r.operator for r in rows} == {">=", "<="}
+
     def test_null_value(self):
         """Test parsing null value."""
         oqo = parse_url_to_oqo("works", filter_string="language:null")

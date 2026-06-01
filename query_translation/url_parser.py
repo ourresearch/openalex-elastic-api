@@ -57,7 +57,7 @@ def parse_url_to_oqo(
         filter_rows.append(LeafFilter(column_id="ids.openalex", value=path_id))
 
     if filter_string:
-        filter_rows.extend(parse_filter_string(filter_string))
+        filter_rows.extend(parse_filter_string(filter_string, entity_type))
 
     sort_by_column = None
     sort_by_order = None
@@ -110,16 +110,22 @@ def parse_group_by_string(group_by_string: str) -> List[GroupBy]:
     ]
 
 
-def parse_filter_string(filter_string: str) -> List[FilterType]:
+def parse_filter_string(
+    filter_string: str, entity_type: Optional[str] = None
+) -> List[FilterType]:
     """
     Parse a filter string into a list of filter objects.
-    
+
     Handles:
     - Multiple filters: field1:value1,field2:value2
     - OR within values: field:value1|value2
     - Negation: field:!value
     - Ranges: field:2020-2024, field:2020-, field:-2024
     - Null: field:null, field:!null
+
+    `entity_type` (the OQO `get_rows`) enables column-type-aware range parsing:
+    a hyphen is only treated as a range separator on numeric/date columns. Pass
+    None (legacy direct callers) to keep purely value-shape-based range parsing.
     """
     filters = []
     
@@ -155,7 +161,7 @@ def parse_filter_string(filter_string: str) -> List[FilterType]:
         field_filters = []
         
         for _, value in pairs:
-            parsed = parse_single_filter(field, value)
+            parsed = parse_single_filter(field, value, entity_type)
             if isinstance(parsed, list):
                 field_filters.extend(parsed)
             else:
@@ -196,7 +202,9 @@ def split_filter_string(filter_string: str) -> List[str]:
     return parts
 
 
-def parse_single_filter(field: str, value: str) -> FilterType:
+def parse_single_filter(
+    field: str, value: str, entity_type: Optional[str] = None
+) -> FilterType:
     """
     Parse a single field:value pair into filter object(s).
 
@@ -252,7 +260,7 @@ def parse_single_filter(field: str, value: str) -> FilterType:
             return LeafFilter(column_id=field, value=value[len(prefix):], operator=op)
 
     # Handle ranges
-    range_filter = parse_range_value(field, value)
+    range_filter = parse_range_value(field, value, entity_type)
     if range_filter:
         return range_filter
 
@@ -294,19 +302,58 @@ def parse_or_values(field: str, value: str) -> FilterType:
     return BranchFilter(join="or", filters=filters)
 
 
-def parse_range_value(field: str, value: str) -> Optional[FilterType]:
+def _should_range_parse(entity_type: Optional[str], field: str) -> bool:
+    """Whether a hyphen in `field`'s value should be read as a range separator.
+
+    Range-ness is a *column-type* property, not a value-shape one: legacy only
+    range-parses numeric/date columns (`RangeField`/`DateField`). String/term
+    columns whose values legitimately contain hyphens — most importantly ISSN
+    (`NNNN-NNNN`), but also any other `TermField` ID — must keep the hyphen as
+    part of an exact value, never split it into `>=a AND <=b`.
+
+    We consult the column registry (the same source the validator uses). To stay
+    a strictly *narrowing* fix (no regression), we only suppress range-parsing
+    when we can positively confirm the column exists and lacks a range operator:
+    - `entity_type` is None (direct callers w/o entity context) -> keep old behavior
+    - column not found in the registry -> keep old behavior (validator flags it)
+    - column found and supports `range`/`date_range` -> range-parse
+    - column found and does NOT -> exact match (the fix)
+    """
+    if entity_type is None:
+        return True
+    from core.registry import get_column
+
+    col = get_column(entity_type, field)
+    if col is None:
+        return True
+    operators = col.get("operators") or []
+    return "range" in operators or "date_range" in operators
+
+
+def parse_range_value(
+    field: str, value: str, entity_type: Optional[str] = None
+) -> Optional[FilterType]:
     """
     Parse range values into filter(s).
-    
+
     Patterns:
     - 2020-2024 -> >= 2020 AND <= 2024 (two filters)
     - 2020- -> >= 2020
     - -2024 -> <= 2024
+
+    Range-parsing is gated on column type (see `_should_range_parse`): for a
+    non-range column (e.g. ISSN) this returns None so the caller falls through
+    to an exact-match LeafFilter.
     """
+    # Range-ness is a column property, not a value shape: e.g. `issn:0021-9258`
+    # is an exact ISSN, not the range >=0021 AND <=9258.
+    if not _should_range_parse(entity_type, field):
+        return None
+
     # Check for range pattern: value-value
     # But be careful: negative numbers like -5 should not be treated as ranges
     # And ISO dates like 2024-01-15 should be exact matches
-    
+
     # Pattern: ends with dash (e.g., 2020-)
     if value.endswith("-") and not value.startswith("-"):
         start_value = value[:-1]
