@@ -37,7 +37,7 @@ def build_schema() -> dict:
 
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://openalex.org/schemas/oqo/v1.1",
+        "$id": "https://openalex.org/schemas/oqo/v1.2",
         "name": "OpenAlex_Query_Object",
         "description": (
             "The canonical JSON representation for OpenAlex queries. OQO is the "
@@ -93,6 +93,54 @@ def build_schema() -> dict:
                 "minimum": 1,
                 "maximum": 10000,
                 "description": "Return a random sample of N results instead of all matches.",
+                "default": None,
+            },
+            "select": {
+                "type": "array",
+                "description": (
+                    "Column projection (#318): the result-schema field names "
+                    "each returned row should carry, e.g. ['id','display_name',"
+                    "'cited_by_count']. Order is meaningful (display order). "
+                    "Absent/empty ⇒ the full object. Valid fields are the "
+                    "entity's result-schema fields (the same set the URL "
+                    "`?select=` accepts), NOT the filter-column registry."
+                ),
+                "items": {"type": "string"},
+                "default": [],
+            },
+            "seed": {
+                "type": ["string", "integer", "null"],
+                "description": (
+                    "Seed that makes a `sample` reproducible. Only meaningful "
+                    "alongside `sample`; ignored (with a warning) otherwise."
+                ),
+                "default": None,
+            },
+            "per_page": {
+                "type": ["integer", "null"],
+                "minimum": 1,
+                "maximum": 200,
+                "description": (
+                    "Page size (#318). Default 25, max 200 — applied at "
+                    "execution, so a canonical OQO leaves it absent when unset."
+                ),
+                "default": None,
+            },
+            "page": {
+                "type": ["integer", "null"],
+                "minimum": 1,
+                "description": (
+                    "Offset page number (1-based). Mutually exclusive with "
+                    "`cursor`; absent both ⇒ page 1."
+                ),
+                "default": None,
+            },
+            "cursor": {
+                "type": ["string", "null"],
+                "description": (
+                    "Cursor-pagination token ('*' to start; opaque thereafter). "
+                    "Mutually exclusive with `page`."
+                ),
                 "default": None,
             },
         },
@@ -234,6 +282,14 @@ def build_schema() -> dict:
                 "value": {"get_rows": "works",
                           "filter_rows": [{"column_id": "publication_year", "value": 2024, "operator": ">="}],
                           "sort_by_column": "cited_by_count", "sort_by_order": "desc", "sample": 100},
+            },
+            {
+                "description": "Logistics layer (#318): projection + reproducible sample + pagination, all self-contained",
+                "value": {"get_rows": "works",
+                          "filter_rows": [{"column_id": "publication_year", "value": 2024, "operator": ">="}],
+                          "select": ["id", "display_name", "cited_by_count"],
+                          "sample": 50, "seed": "42",
+                          "per_page": 25, "page": 2},
             },
         ],
     }

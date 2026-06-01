@@ -17,6 +17,11 @@ def parse_url_to_oqo(
     sample: Optional[int] = None,
     group_by_string: Optional[str] = None,
     path_id: Optional[str] = None,
+    select_string: Optional[str] = None,
+    seed: Optional[Any] = None,
+    per_page: Optional[int] = None,
+    page: Optional[int] = None,
+    cursor: Optional[str] = None,
 ) -> OQO:
     """
     Parse URL filter/sort/group_by strings into an OQO object.
@@ -35,6 +40,13 @@ def parse_url_to_oqo(
             `/authors/A5022654839`). Translates to a leading
             `LeafFilter(column_id="ids.openalex", value=path_id)` so path-form
             single-entity lookups round-trip cleanly to the spec form.
+        select_string: The `select` parameter value (e.g.
+            "id,display_name,cited_by_count") → `oqo.select`. Logistics layer
+            (#318): column projection.
+        seed: Optional sample seed (URL `?seed=`). Only meaningful with `sample`.
+        per_page: Optional page size (URL `?per-page=`).
+        page: Optional offset page number (URL `?page=`). XOR with `cursor`.
+        cursor: Optional cursor token (URL `?cursor=`). XOR with `page`.
 
     Returns:
         OQO object representing the query
@@ -57,6 +69,8 @@ def parse_url_to_oqo(
     if group_by_string:
         group_by = parse_group_by_string(group_by_string)
 
+    select = parse_select_string(select_string) if select_string else []
+
     return OQO(
         get_rows=entity_type,
         filter_rows=filter_rows,
@@ -64,7 +78,24 @@ def parse_url_to_oqo(
         sort_by_order=sort_by_order,
         sample=sample,
         group_by=group_by,
+        select=select,
+        seed=seed,
+        per_page=per_page,
+        page=page,
+        cursor=cursor,
     )
+
+
+def parse_select_string(select_string: str) -> List[str]:
+    """Parse a `&select=col1,col2` URL value into a list of result-field names.
+
+    Column order is meaningful (display order, §select) and preserved.
+    """
+    return [
+        part.strip()
+        for part in select_string.split(",")
+        if part.strip()
+    ]
 
 
 def parse_group_by_string(group_by_string: str) -> List[GroupBy]:

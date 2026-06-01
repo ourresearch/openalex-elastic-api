@@ -265,8 +265,14 @@ def _set_int_arg(request, name, default):
 
 
 def _build_params_from_oqo(oqo: OQO, request):
-    """Synthesize the params dict that shared_view stages expect, from the OQO
-    plus transport-level args (per_page, cursor, page) carried on the request.
+    """Synthesize the params dict that shared_view stages expect, from the OQO.
+
+    Logistics layer (#318): pagination (`per_page`/`page`/`cursor`) and the
+    sample `seed` are read FROM THE OQO so the object is self-contained — the
+    cacheable `/query/oqo/<json>` form then carries everything with no
+    side-channel query string. For back-compat with callers that still pass them
+    on the query string, the request args remain a fallback when the OQO omits
+    a value (the OQO always wins when it carries one).
 
     `filters` is set to None because filters are applied directly via the
     pre-built Q (returned by the translator). `search`, `searches`, etc. are
@@ -286,18 +292,24 @@ def _build_params_from_oqo(oqo: OQO, request):
             )
         group_by = oqo.group_by[0].column_id
 
+    # OQO value wins; request arg is the back-compat fallback.
+    cursor = oqo.cursor if oqo.cursor is not None else request.args.get("cursor")
+    page = oqo.page if oqo.page is not None else _set_int_arg(request, "page", 1)
+    per_page = oqo.per_page if oqo.per_page is not None else get_per_page(request)
+    seed = oqo.seed if oqo.seed is not None else request.args.get("seed")
+
     return {
         "apc_sum": None,
         "cited_by_count_sum": None,
-        "cursor": request.args.get("cursor"),
+        "cursor": cursor,
         "format": None,
         "filters": None,
         "group_by": group_by,
         "group_bys": None,
-        "page": _set_int_arg(request, "page", 1),
-        "per_page": get_per_page(request),
+        "page": page,
+        "per_page": per_page,
         "sample": oqo.sample,
-        "seed": request.args.get("seed"),
+        "seed": seed,
         "q": None,
         "search": None,
         "search_type": None,
@@ -525,8 +537,20 @@ def _execute_oqo(oqo_dict: dict):
 
     result = format_response(response, params, index_name, fields_dict, s, connection)
     # Marshall the ES response objects into JSON-serializable dicts via the
-    # entity's MessageSchema — the same path the per-entity views use.
-    serialized = MessageSchema().dump(result)
+    # entity's MessageSchema — the same path the per-entity views use. Apply the
+    # OQO `select` projection (#318) the same way `core.utils.process_only_fields`
+    # does for the URL `?select=`: marshmallow `only` of `results.<field>` plus
+    # the always-present `meta`/`group_by` envelope. select columns were already
+    # validated against the entity's selectable fields, so they're safe here.
+    only_fields = None
+    if oqo.select:
+        only_fields = (
+            ["meta"]
+            + [f"results.{f}" for f in oqo.select]
+            + ["group_by"]
+        )
+    message_schema = MessageSchema(only=only_fields) if only_fields else MessageSchema()
+    serialized = message_schema.dump(result)
     # Echo a canonicalized OQO so clients can confirm what we actually executed.
     serialized["oqo"] = canonicalize_oqo(oqo).to_dict()
     return jsonify(serialized), 200
@@ -672,12 +696,22 @@ def parse_url_input(entity_type: str, input_data):
             sort_string = input_data.get("sort")
             sample = input_data.get("sample")
             group_by_string = input_data.get("group_by")
+            select_string = input_data.get("select")
+            seed = input_data.get("seed")
+            per_page = input_data.get("per_page") or input_data.get("per-page")
+            page = input_data.get("page")
+            cursor = input_data.get("cursor")
         else:
             # Input is just the filter string
             filter_string = input_data
             sort_string = None
             sample = None
             group_by_string = None
+            select_string = None
+            seed = None
+            per_page = None
+            page = None
+            cursor = None
 
         oqo = parse_url_to_oqo(
             entity_type=entity_type,
@@ -685,6 +719,11 @@ def parse_url_input(entity_type: str, input_data):
             sort_string=sort_string,
             sample=sample,
             group_by_string=group_by_string,
+            select_string=select_string,
+            seed=seed,
+            per_page=per_page,
+            page=page,
+            cursor=cursor,
         )
         return oqo, None
     except Exception as e:

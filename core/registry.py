@@ -82,3 +82,51 @@ def get_entity_columns(entity_type):
 def get_column(entity_type, column_id):
     """Return the registry entry for one column, or None if entity/column unknown."""
     return REGISTRY.get(entity_type, {}).get(column_id)
+
+
+# ---------------------------------------------------------------------------
+# Selectable result-fields (#318) — the `select` projection source.
+#
+# `select` fields are the entity's *result-schema* fields (what each returned
+# row serializes), a DIFFERENT set from the filter-column registry above:
+# e.g. `abstract` is selectable but not filterable; the filter column
+# `open_access.is_oa` corresponds to the selectable parent field `open_access`.
+# So we source selectable fields from each entity's MessageSchema (its `results`
+# nested schema's declared fields) — the exact same set
+# `core.utils.process_only_fields` validates the URL `?select=` against, so OQO
+# `select` and URL `select` accept identical field sets. Lazily built + cached:
+# importing every MessageSchema at boot is unnecessary work for a rarely-used
+# validation path.
+# ---------------------------------------------------------------------------
+
+_SELECTABLE_CACHE = {}
+
+
+def get_selectable_fields(entity_type):
+    """Return the set of selectable result-field names for an entity type, or
+    None if the entity is unknown / has no resolvable MessageSchema.
+
+    `entity_type` is an OQO `get_rows` registry key (e.g. "works", "work-types").
+    """
+    if entity_type in _SELECTABLE_CACHE:
+        return _SELECTABLE_CACHE[entity_type]
+    module_name = ENTITY_FIELDS_MODULES.get(entity_type)
+    if module_name is None:
+        return None
+    # "works.fields" -> "works"; import its sibling "<pkg>.schemas.MessageSchema".
+    pkg = module_name.rsplit(".", 1)[0]
+    try:
+        schemas_mod = importlib.import_module(f"{pkg}.schemas")
+    except ImportError:
+        return None
+    message_schema = getattr(schemas_mod, "MessageSchema", None)
+    if message_schema is None:
+        return None
+    results_field = message_schema._declared_fields.get("results")
+    nested = getattr(results_field, "nested", None)  # the entity result Schema
+    declared = getattr(nested, "_declared_fields", None)
+    if declared is None:
+        return None
+    fields = set(declared.keys())
+    _SELECTABLE_CACHE[entity_type] = fields
+    return fields

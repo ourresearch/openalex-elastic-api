@@ -55,6 +55,15 @@ def canonicalize_oqo(oqo: OQO) -> OQO:
         sort_by_order=oqo.sort_by_order,
         sample=oqo.sample,
         group_by=list(oqo.group_by),  # group_by order is meaningful (dim order) -> preserved
+        # Logistics layer (#318) passes through unchanged: `select` order is
+        # meaningful (display order), and pagination/seed defaults are applied
+        # only at execution — canonical form leaves them absent when unset so
+        # OQOs stay minimal and comparable.
+        select=list(oqo.select),
+        seed=oqo.seed,
+        per_page=oqo.per_page,
+        page=oqo.page,
+        cursor=oqo.cursor,
     )
 
 

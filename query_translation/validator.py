@@ -19,7 +19,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from core.registry import REGISTRY, get_entity_columns
+from core.registry import REGISTRY, get_entity_columns, get_selectable_fields
 from query_translation.oqo import (
     OQO,
     LeafFilter,
@@ -205,6 +205,66 @@ class OQOValidator:
                     ),
                     location=f"group_by[{i}].column_id",
                 ))
+
+        # --- logistics layer (#318) ------------------------------------------
+
+        # select: each entry must be a selectable result-field on the entity.
+        # Selectable fields are the entity's result-schema fields (NOT the filter
+        # column registry above) — see core.registry.get_selectable_fields.
+        if oqo.select:
+            selectable = get_selectable_fields(entity)
+            for i, col in enumerate(oqo.select):
+                if not isinstance(col, str) or not col:
+                    errors.append(ValidationError(
+                        type="invalid_select_column",
+                        message="select column must be a non-empty string",
+                        location=f"select[{i}]",
+                    ))
+                elif selectable is not None and col not in selectable:
+                    errors.append(ValidationError(
+                        type="invalid_select_column",
+                        message=(
+                            f"'{col}' is not a selectable field on "
+                            f"'{oqo.get_rows}'"
+                        ),
+                        location=f"select[{i}]",
+                    ))
+
+        # pagination: page and cursor are mutually exclusive.
+        if oqo.page is not None and oqo.cursor is not None:
+            errors.append(ValidationError(
+                type="invalid_pagination",
+                message="'page' and 'cursor' are mutually exclusive",
+                location="cursor",
+            ))
+
+        # per_page must be an integer in 1..200.
+        if oqo.per_page is not None:
+            if not isinstance(oqo.per_page, int) or isinstance(oqo.per_page, bool) \
+                    or oqo.per_page < 1 or oqo.per_page > 200:
+                errors.append(ValidationError(
+                    type="invalid_per_page",
+                    message="per_page must be an integer between 1 and 200",
+                    location="per_page",
+                ))
+
+        # page must be an integer >= 1.
+        if oqo.page is not None:
+            if not isinstance(oqo.page, int) or isinstance(oqo.page, bool) \
+                    or oqo.page < 1:
+                errors.append(ValidationError(
+                    type="invalid_page",
+                    message="page must be an integer >= 1",
+                    location="page",
+                ))
+
+        # seed without sample is harmless but inert — non-blocking warning.
+        if oqo.seed is not None and oqo.sample is None:
+            warnings.append(ValidationError(
+                type="seed_without_sample",
+                message="'seed' has no effect without 'sample'",
+                location="seed",
+            ))
 
         return ValidationResult(
             valid=len(errors) == 0,

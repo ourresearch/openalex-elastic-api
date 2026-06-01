@@ -112,13 +112,33 @@ class GroupBy:
 
 @dataclass
 class OQO:
-    """OpenAlex Query Object - the canonical query representation."""
+    """OpenAlex Query Object - the canonical query representation.
+
+    Beyond *query semantics* (which rows match, sort, group, sample), the OQO
+    also carries the "logistics" every OXURL carries so it can fully stand in
+    for a `/:entity` request (#318): column projection (`select`), the sample
+    `seed`, and pagination (`per_page`/`page`/`cursor`). These five are all
+    back-compatible additions — absent ⇒ the prior behavior.
+    """
     get_rows: str
     filter_rows: List[FilterType] = field(default_factory=list)
     sort_by_column: Optional[str] = None
     sort_by_order: Optional[Literal["asc", "desc"]] = None
     sample: Optional[int] = None
     group_by: List[GroupBy] = field(default_factory=list)
+    # --- logistics layer (#318) ------------------------------------------
+    # `select` is a list of *result-schema* field names (the columns each row
+    # carries), e.g. ["id", "display_name", "cited_by_count"]; absent ⇒ full
+    # object. Order is meaningful (display order) and preserved.
+    select: List[str] = field(default_factory=list)
+    # `seed` makes a `sample` reproducible; only meaningful alongside `sample`.
+    seed: Optional[Union[str, int]] = None
+    # Pagination. `page` XOR `cursor`; absent both ⇒ page 1. `per_page` default
+    # (25) / max (200) are applied at execution, not stored, so canonical OQOs
+    # stay minimal and comparable.
+    per_page: Optional[int] = None
+    page: Optional[int] = None
+    cursor: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         result = {"get_rows": self.get_rows}
@@ -138,6 +158,21 @@ class OQO:
         if self.group_by:
             result["group_by"] = [g.to_dict() for g in self.group_by]
 
+        if self.select:
+            result["select"] = list(self.select)
+
+        if self.seed is not None:
+            result["seed"] = self.seed
+
+        if self.per_page is not None:
+            result["per_page"] = self.per_page
+
+        if self.page is not None:
+            result["page"] = self.page
+
+        if self.cursor is not None:
+            result["cursor"] = self.cursor
+
         return result
 
     @classmethod
@@ -152,6 +187,11 @@ class OQO:
             sort_by_order=data.get("sort_by_order"),
             sample=data.get("sample"),
             group_by=group_by,
+            select=list(data.get("select") or []),
+            seed=data.get("seed"),
+            per_page=data.get("per_page"),
+            page=data.get("page"),
+            cursor=data.get("cursor"),
         )
 
 

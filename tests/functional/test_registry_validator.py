@@ -146,6 +146,25 @@ POSITIVES = {
 }
 
 
+# --- Logistics layer (#318): select / seed / pagination positives ------------
+POSITIVES.update({
+    "P01_select": {"get_rows": "works",
+                   "select": ["id", "display_name", "cited_by_count"]},
+    "P02_seeded_sample": {"get_rows": "works", "sample": 100, "seed": "42"},
+    "P03_per_page_page": {"get_rows": "works", "per_page": 50, "page": 2},
+    "P04_per_page_bounds_lo": {"get_rows": "works", "per_page": 1, "page": 1},
+    "P05_per_page_bounds_hi": {"get_rows": "works", "per_page": 200},
+    "P06_cursor_only": {"get_rows": "works", "cursor": "*"},
+    "P07_select_authors": {"get_rows": "authors",
+                           "select": ["id", "display_name", "works_count"]},
+    "P08_all_logistics": {"get_rows": "works",
+                          "filter_rows": [{"column_id": "publication_year",
+                                           "value": 2024, "operator": ">="}],
+                          "select": ["id", "display_name"],
+                          "sample": 50, "seed": 7, "per_page": 25, "page": 2},
+})
+
+
 @pytest.mark.parametrize("row_id", sorted(POSITIVES))
 def test_in_scope_examples_validate(row_id):
     """Every in-scope #284 worked example must pass the strict validator."""
@@ -207,6 +226,22 @@ NEGATIVES = [
     ("unknown_group_by_column",
      {"get_rows": "works", "group_by": [{"column_id": "bogus_col"}]},
      "invalid_column"),
+    # --- logistics layer (#318) negatives ---
+    ("unknown_select_column",
+     {"get_rows": "works", "select": ["id", "not_a_real_field"]},
+     "invalid_select_column"),
+    ("page_and_cursor",
+     {"get_rows": "works", "page": 2, "cursor": "*"},
+     "invalid_pagination"),
+    ("per_page_zero",
+     {"get_rows": "works", "per_page": 0},
+     "invalid_per_page"),
+    ("per_page_too_big",
+     {"get_rows": "works", "per_page": 9999},
+     "invalid_per_page"),
+    ("page_zero",
+     {"get_rows": "works", "page": 0},
+     "invalid_page"),
 ]
 
 
@@ -220,3 +255,22 @@ def test_invalid_oqo_rejected(desc, oqo_dict, expected_type):
         f"{desc}: expected {expected_type}, got "
         f"{[e.type for e in result.errors]}"
     )
+
+
+# --- Logistics layer (#318): error locations + non-blocking warning ----------
+
+def test_invalid_select_column_has_indexed_location():
+    """The bad select entry is pinpointed at `select[i]` (the 2nd here)."""
+    result = validate_oqo(OQO.from_dict(
+        {"get_rows": "works", "select": ["id", "bogus_field"]}
+    ))
+    assert not result.valid
+    locs = {e.location for e in result.errors if e.type == "invalid_select_column"}
+    assert "select[1]" in locs, locs
+
+
+def test_seed_without_sample_is_a_nonblocking_warning():
+    """`seed` without `sample` is inert — a warning, not an error."""
+    result = validate_oqo(OQO.from_dict({"get_rows": "works", "seed": "42"}))
+    assert result.valid, [(e.type, e.location) for e in result.errors]
+    assert "seed_without_sample" in {w.type for w in result.warnings}
