@@ -135,6 +135,34 @@ def _operator_fits_column(operator: str, value: Any, operators: List[str]) -> bo
     return False
 
 
+# `relevance_score` is a synthetic sort key, not a filterable column: legacy
+# `core/sort.py` maps it to ES `_score`. It is sortable but never appears in the
+# filter column registry, so it gets its own allow-rule in the sort check below
+# (gated on a search clause being present, descending only — see legacy
+# `core/shared_view.py:apply_sorting`).
+RELEVANCE_SORT_COLUMN = "relevance_score"
+
+
+def _has_search_clause(filter_rows: List["FilterType"]) -> bool:
+    """True if any leaf in the filter tree is a `*.search` (free-text) clause.
+
+    Mirrors legacy `core.search.check_is_search_query`: a search query is present
+    when a `?search=` (now mapped to a `default.search` filter row, #323 2a) or
+    any `*.search` / `*.search.exact` filter is present. In canonical OQO form
+    `.search.exact` is rewritten to `.search`, so `endswith(".search")` over all
+    leaves catches every legacy search key (default/title/abstract/fulltext/
+    semantic/keyword/display_name/title_and_abstract/raw_*).
+    """
+    for f in filter_rows:
+        if isinstance(f, BranchFilter):
+            if _has_search_clause(f.filters):
+                return True
+        elif isinstance(f, LeafFilter):
+            if isinstance(f.column_id, str) and f.column_id.endswith(".search"):
+                return True
+    return False
+
+
 class OQOValidator:
     """Validates OQO objects against the live column registry."""
 
@@ -157,8 +185,29 @@ class OQOValidator:
         for i, f in enumerate(oqo.filter_rows):
             errors.extend(self._validate_filter(f, columns, f"filter_rows[{i}]"))
 
-        # sort_by_column must be a real column on the entity.
-        if oqo.sort_by_column and oqo.sort_by_column not in columns:
+        # sort_by_column must be a real column on the entity, OR the synthetic
+        # `relevance_score` sort key. relevance_score is sortable but not
+        # filterable (legacy core/sort.py -> ES _score); it is gated on a search
+        # clause being present and is descending-only (legacy apply_sorting:
+        # ascending relevance is rejected; sorting it with no search is rejected).
+        if oqo.sort_by_column == RELEVANCE_SORT_COLUMN:
+            if not _has_search_clause(oqo.filter_rows):
+                errors.append(ValidationError(
+                    type="relevance_sort_requires_search",
+                    message=(
+                        "Sorting by 'relevance_score' requires a search clause "
+                        "(e.g. ?search=example or a *.search filter such as "
+                        "display_name.search:example)."
+                    ),
+                    location="sort_by_column",
+                ))
+            if oqo.sort_by_order == "asc":
+                errors.append(ValidationError(
+                    type="invalid_sort_order",
+                    message="Sorting by 'relevance_score' ascending is not allowed.",
+                    location="sort_by_order",
+                ))
+        elif oqo.sort_by_column and oqo.sort_by_column not in columns:
             errors.append(ValidationError(
                 type="invalid_column",
                 message=(

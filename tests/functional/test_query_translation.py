@@ -669,6 +669,135 @@ class TestEquivalence:
         assert oqo_from_url.get_rows == oqo_from_dict.get_rows
         assert oqo_from_url.sort_by_column == oqo_from_dict.sort_by_column
         assert oqo_from_url.sort_by_order == oqo_from_dict.sort_by_order
-        
+
         # Compare filter count
         assert len(oqo_from_url.filter_rows) == len(oqo_from_dict.filter_rows)
+
+
+class TestTopLevelSearch:
+    """`?search=X` → a `default.search` filter (#323 2a).
+
+    Legacy maps a bare `?search=X` to scope `("default", None)`, identical to
+    `filter=default.search:X` (core/params.py:96-98). The OQO parser AND's a
+    `default.search` contains-filter in.
+    """
+
+    def test_search_maps_to_default_search_filter(self):
+        oqo = parse_url_to_oqo("works", search_string="quantum computing")
+        assert len(oqo.filter_rows) == 1
+        leaf = oqo.filter_rows[0]
+        assert leaf.column_id == "default.search"
+        assert leaf.value == "quantum computing"
+        assert leaf.operator == "contains"
+        assert validate_oqo(oqo).valid
+
+    def test_search_with_comma_is_one_clause(self):
+        """Free-text search containing a comma must NOT be split (it is routed
+        through parse_single_filter, not the comma-splitting filter parser)."""
+        oqo = parse_url_to_oqo("works", search_string="climate, society")
+        assert len(oqo.filter_rows) == 1
+        assert oqo.filter_rows[0].value == "climate, society"
+
+    def test_search_anded_with_existing_filter(self):
+        oqo = parse_url_to_oqo(
+            "works", filter_string="type:article", search_string="quantum"
+        )
+        cols = [f.column_id for f in oqo.filter_rows]
+        assert "type" in cols and "default.search" in cols
+        assert validate_oqo(oqo).valid
+
+    def test_search_lucene_boolean_lifts(self):
+        """A Lucene boolean in the search value lifts to AND'd contains leaves,
+        same as `filter=default.search:a AND b`."""
+        oqo = parse_url_to_oqo("works", search_string="machine AND learning")
+        assert len(oqo.filter_rows) == 2
+        assert all(f.column_id == "default.search" for f in oqo.filter_rows)
+        assert {f.value for f in oqo.filter_rows} == {"machine", "learning"}
+
+
+class TestRelevanceScoreSort:
+    """`relevance_score` is a sortable synthetic column (#323 2b).
+
+    Sortable but NOT filterable (legacy core/sort.py maps it to ES _score).
+    Gated on a search clause being present; descending only.
+    """
+
+    def test_relevance_with_search_is_valid(self):
+        oqo = parse_url_to_oqo(
+            "works", search_string="quantum", sort_string="relevance_score:desc"
+        )
+        assert validate_oqo(oqo).valid
+
+    def test_relevance_with_search_filter_is_valid(self):
+        """A `*.search` filter (not just `?search=`) also satisfies the gate."""
+        oqo = parse_url_to_oqo(
+            "works",
+            filter_string="display_name.search:quantum",
+            sort_string="relevance_score:desc",
+        )
+        assert validate_oqo(oqo).valid
+
+    def test_relevance_without_search_is_rejected(self):
+        oqo = parse_url_to_oqo("works", sort_string="relevance_score:desc")
+        result = validate_oqo(oqo)
+        assert not result.valid
+        assert any(
+            e.type == "relevance_sort_requires_search" for e in result.errors
+        )
+
+    def test_relevance_ascending_is_rejected(self):
+        oqo = parse_url_to_oqo(
+            "works", search_string="quantum", sort_string="relevance_score:asc"
+        )
+        result = validate_oqo(oqo)
+        assert not result.valid
+        assert any(e.type == "invalid_sort_order" for e in result.errors)
+
+    def test_relevance_score_is_not_filterable(self):
+        """It is sort-only — using it as a filter column stays invalid."""
+        oqo = parse_url_to_oqo("works", filter_string="relevance_score:5")
+        assert not validate_oqo(oqo).valid
+
+
+class TestSearchAwareSortInExecutor:
+    """The OQO executor delegates sort to legacy `apply_sorting`, signalling a
+    search clause via params["search"] (#323 2c). With a search clause present:
+    - no explicit sort ⇒ works default `_score, publication_date, id` (order parity)
+    - relevance_score:desc ⇒ ES `_score`
+    Without a search clause, the non-search default sort applies.
+    """
+
+    def _sort_for(self, **kw):
+        from flask import Flask, request
+        from elasticsearch_dsl import Search
+        from query_translation.views import _build_params_from_oqo
+        from core.shared_view import apply_sorting
+
+        oqo = parse_url_to_oqo(entity_type="works", **kw)
+        app = Flask(__name__)
+        with app.test_request_context("/"):
+            params = _build_params_from_oqo(oqo, request)
+        s = Search(index="works-v1")
+        s = apply_sorting(params, {}, ["-publication_date", "id"], "works-v1", s)
+        return s.to_dict().get("sort"), params["search"]
+
+    def test_search_no_sort_uses_works_relevance_default(self):
+        sort, search = self._sort_for(search_string="quantum")
+        assert search  # search clause signalled
+        assert sort == ["_score", "publication_date", "id"]
+
+    def test_no_search_no_sort_uses_default(self):
+        sort, search = self._sort_for()
+        assert search is None
+        assert sort == [{"publication_date": {"order": "desc"}}, "id"]
+
+    def test_search_relevance_sort_maps_to_score(self):
+        sort, search = self._sort_for(
+            search_string="quantum", sort_string="relevance_score:desc"
+        )
+        assert sort == ["_score"]
+
+    def test_search_clause_from_filter_also_signals(self):
+        sort, search = self._sort_for(filter_string="display_name.search:quantum")
+        assert search
+        assert sort == ["_score", "publication_date", "id"]

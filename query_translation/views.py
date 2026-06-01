@@ -46,6 +46,7 @@ from query_translation.validator import (
     ValidationError,
     ValidationResult,
     validate_oqo,
+    _has_search_clause,
 )
 
 
@@ -283,6 +284,19 @@ def _build_params_from_oqo(oqo: OQO, request):
     if oqo.sort_by_column:
         sort = {oqo.sort_by_column: oqo.sort_by_order or "desc"}
 
+    # Search-awareness for sorting (#323 2b/2c). `apply_sorting` decides the
+    # implicit default sort and gates `relevance_score` via
+    # `check_is_search_query(params["filters"], params["search"])`. The OQO path
+    # applies the actual search via the pre-built Q (not params), so we signal a
+    # search clause by setting params["search"] truthy when any `*.search` leaf
+    # is present (incl. `default.search`, which is where a top-level `?search=`
+    # lands). With a search clause + no explicit sort, legacy `apply_sorting`
+    # then applies `_score, publication_date, id` for works (order parity); and
+    # `relevance_score` sort maps to ES `_score` instead of 400-ing. No other
+    # stage the OQO executor runs reads params["search"], so this only affects
+    # sort — there is no second search application.
+    has_search = _has_search_clause(oqo.filter_rows)
+
     group_by = None
     if oqo.group_by:
         if len(oqo.group_by) > 1:
@@ -311,7 +325,7 @@ def _build_params_from_oqo(oqo: OQO, request):
         "sample": oqo.sample,
         "seed": seed,
         "q": None,
-        "search": None,
+        "search": "<oqo-search>" if has_search else None,
         "search_type": None,
         "search_scope": None,
         "searches": [],
@@ -701,6 +715,7 @@ def parse_url_input(entity_type: str, input_data):
             per_page = input_data.get("per_page") or input_data.get("per-page")
             page = input_data.get("page")
             cursor = input_data.get("cursor")
+            search_string = input_data.get("search")
         else:
             # Input is just the filter string
             filter_string = input_data
@@ -712,6 +727,7 @@ def parse_url_input(entity_type: str, input_data):
             per_page = None
             page = None
             cursor = None
+            search_string = None
 
         oqo = parse_url_to_oqo(
             entity_type=entity_type,
@@ -724,6 +740,7 @@ def parse_url_input(entity_type: str, input_data):
             per_page=per_page,
             page=page,
             cursor=cursor,
+            search_string=search_string,
         )
         return oqo, None
     except Exception as e:

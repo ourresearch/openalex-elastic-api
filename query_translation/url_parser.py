@@ -22,6 +22,7 @@ def parse_url_to_oqo(
     per_page: Optional[int] = None,
     page: Optional[int] = None,
     cursor: Optional[str] = None,
+    search_string: Optional[str] = None,
 ) -> OQO:
     """
     Parse URL filter/sort/group_by strings into an OQO object.
@@ -47,6 +48,14 @@ def parse_url_to_oqo(
         per_page: Optional page size (URL `?per-page=`).
         page: Optional offset page number (URL `?page=`). XOR with `cursor`.
         cursor: Optional cursor token (URL `?cursor=`). XOR with `page`.
+        search_string: Optional top-level `?search=` value. Legacy maps a bare
+            `?search=X` to the same internal scope as `filter=default.search:X`
+            (`core/params.py:96-98`, scope `("default", None)`), so it AND's a
+            `default.search` contains-filter into the OQO. Routed through
+            `parse_single_filter` (NOT the comma-splitting filter-string parser)
+            so a free-text value containing commas stays one search clause; this
+            also gives `.search` columns the `contains` operator and Lucene
+            boolean lifting for free.
 
     Returns:
         OQO object representing the query
@@ -58,6 +67,15 @@ def parse_url_to_oqo(
 
     if filter_string:
         filter_rows.extend(parse_filter_string(filter_string, entity_type))
+
+    if search_string:
+        parsed_search = parse_single_filter(
+            "default.search", search_string, entity_type
+        )
+        if isinstance(parsed_search, list):
+            filter_rows.extend(parsed_search)
+        else:
+            filter_rows.append(parsed_search)
 
     sort_by_column = None
     sort_by_order = None
