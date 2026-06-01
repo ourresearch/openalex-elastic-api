@@ -51,6 +51,54 @@ def oqo_to_q(oqo: OQO, fields_dict) -> Optional[Q]:
     return Q("bool", must=child_queries)
 
 
+def _is_scoring_search_leaf(f: FilterType) -> bool:
+    """A top-level `.search` leaf that should be applied in *query* (scoring)
+    context, mirroring legacy. Negated search leaves and search leaves nested in
+    branches are NOT lifted — they stay in filter context (correct recall,
+    no scoring contribution), which is rare in the real corpus.
+    """
+    return (
+        isinstance(f, LeafFilter)
+        and not f.is_negated
+        and isinstance(f.column_id, str)
+        and f.column_id.endswith(".search")
+    )
+
+
+def oqo_to_search_and_filter_q(oqo: OQO, fields_dict, scoring: bool = True):
+    """Split an OQO into `(search_q, filter_q)` so the executor can apply search
+    in *query* (scoring) context and exact filters in *filter* context — exactly
+    what legacy `construct_query` does (`s.query(search)` + `s.filter(filters)`).
+
+    Why this exists: applying a `.search` clause via `s.filter()` runs it in
+    filter context, where `_score` is uniform — so sorting by `_score`
+    (relevance) is a no-op and search results come back in the secondary-sort
+    order (e.g. publication_date) instead of by relevance. Legacy avoids this by
+    scoring the search query. (#323: caught by prod differential check.)
+
+    Only TOP-LEVEL, non-negated `.search` leaves are lifted to scoring; anything
+    else (exact filters, branches, negated/ nested search) goes to `filter_q`.
+    When `scoring=False` (sampling — legacy applies search via `s.filter` when a
+    `sample` is set), every row goes to `filter_q`, reproducing legacy exactly.
+    """
+    if scoring:
+        search_rows = [f for f in oqo.filter_rows if _is_scoring_search_leaf(f)]
+        filter_rows = [f for f in oqo.filter_rows if not _is_scoring_search_leaf(f)]
+    else:
+        search_rows, filter_rows = [], list(oqo.filter_rows)
+
+    def _combine(rows):
+        qs = [_translate(f, fields_dict) for f in rows]
+        qs = [q for q in qs if q is not None]
+        if not qs:
+            return None
+        if len(qs) == 1:
+            return qs[0]
+        return Q("bool", must=qs)
+
+    return _combine(search_rows), _combine(filter_rows)
+
+
 def _translate(node: FilterType, fields_dict) -> Optional[Q]:
     if isinstance(node, LeafFilter):
         return _translate_leaf(node, fields_dict)

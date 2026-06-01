@@ -17,6 +17,7 @@ from core.filter import filter_records
 from query_translation.oqo import OQO, LeafFilter, BranchFilter
 from query_translation.oqo_to_es import (
     oqo_to_q,
+    oqo_to_search_and_filter_q,
     OQOTranslationError,
     _encode_leaf_value,
 )
@@ -276,6 +277,69 @@ class TestEmptyOqo:
     def test_no_filters_returns_none(self):
         oqo = OQO(get_rows="works", filter_rows=[])
         assert oqo_to_q(oqo, works_fields) is None
+
+
+class TestSearchFilterSplit:
+    """`oqo_to_search_and_filter_q` lifts top-level `.search` leaves into a
+    scoring (query-context) Q, leaving exact filters in the filter Q — so the
+    executor can score search (relevance order) like legacy (#323)."""
+
+    def test_search_goes_to_search_q_filter_to_filter_q(self):
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[
+                LeafFilter("default.search", "quantum", operator="contains"),
+                LeafFilter("type", "article"),
+            ],
+        )
+        search_q, filter_q = oqo_to_search_and_filter_q(oqo, works_fields)
+        assert search_q is not None
+        assert filter_q is not None
+        # The exact `type` filter must NOT be in the scoring query.
+        assert "article" not in str(search_q.to_dict())
+        assert "article" in str(filter_q.to_dict())
+
+    def test_pure_search_has_no_filter_q(self):
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[LeafFilter("default.search", "quantum", operator="contains")],
+        )
+        search_q, filter_q = oqo_to_search_and_filter_q(oqo, works_fields)
+        assert search_q is not None
+        assert filter_q is None
+
+    def test_no_search_all_in_filter_q(self):
+        oqo = OQO(get_rows="works", filter_rows=[LeafFilter("type", "article")])
+        search_q, filter_q = oqo_to_search_and_filter_q(oqo, works_fields)
+        assert search_q is None
+        assert filter_q is not None
+
+    def test_scoring_false_keeps_search_in_filter_q(self):
+        """When sampling (scoring=False), legacy applies search via s.filter —
+        so everything (incl. search) goes to filter_q, search_q is None."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[LeafFilter("default.search", "quantum", operator="contains")],
+        )
+        search_q, filter_q = oqo_to_search_and_filter_q(
+            oqo, works_fields, scoring=False
+        )
+        assert search_q is None
+        assert filter_q is not None
+
+    def test_negated_search_stays_in_filter_q(self):
+        """A negated search leaf is not a relevance signal — keep it in filter."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[
+                LeafFilter(
+                    "default.search", "quantum", operator="contains", is_negated=True
+                )
+            ],
+        )
+        search_q, filter_q = oqo_to_search_and_filter_q(oqo, works_fields)
+        assert search_q is None
+        assert filter_q is not None
 
 
 # ---------------------------------------------------------------------------

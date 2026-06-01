@@ -33,7 +33,10 @@ from core.utils import get_data_version_connection
 from core.utils import get_display_name as _get_display_name
 from query_translation.oqo import OQO, VALID_OPERATORS, filter_from_dict
 from query_translation.oqo_canonicalizer import canonicalize_oqo
-from query_translation.oqo_to_es import OQOTranslationError, oqo_to_q
+from query_translation.oqo_to_es import (
+    OQOTranslationError,
+    oqo_to_search_and_filter_q,
+)
 from query_translation.oql_renderer import render_oqo_to_oql
 from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
 from query_translation.url_parser import parse_url_to_oqo
@@ -504,9 +507,16 @@ def _execute_oqo(oqo_dict: dict):
     except APIQueryParamsError as e:
         return _error_response(str(e), "invalid_params", status=400)
 
-    # Translate the OQO filter tree to a single ES Q (or None if no filters).
+    # Translate the OQO filter tree, splitting `.search` (scoring) clauses from
+    # exact filters so search runs in *query* context (relevance scoring) and
+    # filters in *filter* context — exactly like legacy construct_query. Applying
+    # search via s.filter() would leave _score uniform and silently break
+    # relevance ordering (#323). When sampling, legacy applies search via
+    # s.filter(), so we pass scoring=False to keep parity.
     try:
-        oqo_q = oqo_to_q(oqo, fields_dict)
+        search_q, filter_q = oqo_to_search_and_filter_q(
+            oqo, fields_dict, scoring=not oqo.sample
+        )
     except OQOTranslationError as e:
         return _error_response(str(e), "translation_error", status=400)
 
@@ -530,8 +540,10 @@ def _execute_oqo(oqo_dict: dict):
     s = set_source(index_name, s)
     s = _set_size(params, s)
     s = _set_cursor_pagination(params, s)
-    if oqo_q is not None:
-        s = s.filter(oqo_q)
+    if search_q is not None:
+        s = s.query(search_q)
+    if filter_q is not None:
+        s = s.filter(filter_q)
     for extra in extra_qs:
         s = s.filter(extra)
     s = apply_sorting(params, fields_dict, default_sort, index_name, s)
