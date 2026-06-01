@@ -246,6 +246,15 @@ def _resolve_entity(entity_type: str, connection: str):
         from settings import AWARDS_INDEX
 
         return fields_dict, AWARDS_INDEX, ["-funded_outputs_count", "id"], MessageSchema
+    if et == "locations":
+        # locations live only in walden; the legacy view hardcodes connection='walden'
+        # and its index constant lives in the view, not settings.py. Mirror both,
+        # including its locations-specific ascending default sort (#334).
+        from locations.fields import fields_dict
+        from locations.schemas import MessageSchema
+        from locations.views import LOCATIONS_INDEX
+
+        return fields_dict, LOCATIONS_INDEX, ["work_id", "native_id"], MessageSchema
 
     raise APIQueryParamsError(
         f"OQO get_rows='{entity_type}' is not a supported entity type."

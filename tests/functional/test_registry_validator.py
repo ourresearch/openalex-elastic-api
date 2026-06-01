@@ -274,3 +274,38 @@ def test_seed_without_sample_is_a_nonblocking_warning():
     result = validate_oqo(OQO.from_dict({"get_rows": "works", "seed": "42"}))
     assert result.valid, [(e.type, e.location) for e in result.errors]
     assert "seed_without_sample" in {w.type for w in result.warnings}
+
+
+# --- Registry <-> executor coverage (#334) -----------------------------------
+# The #334 bug: an entity can be in the registry (so the validator accepts it)
+# yet missing a branch in `_resolve_entity` (so `/query` 400s `invalid_entity` at
+# execution). That split is exactly what let `/locations` validate but never
+# execute. Guard the invariant: every registry entity must also resolve.
+
+from core.registry import REGISTRY
+from query_translation.views import _resolve_entity
+from core.exceptions import APIQueryParamsError
+
+
+@pytest.mark.parametrize("entity", sorted(REGISTRY), ids=sorted(REGISTRY))
+def test_every_registry_entity_resolves_for_execution(entity):
+    """If the validator accepts an entity, `_resolve_entity` must execute it."""
+    try:
+        fields_dict, index_name, default_sort, _schema = _resolve_entity(
+            entity, connection="walden"
+        )
+    except APIQueryParamsError:
+        pytest.fail(
+            f"'{entity}' is in REGISTRY (validator accepts it) but "
+            f"_resolve_entity raised — it would 400 invalid_entity at /query."
+        )
+    assert fields_dict and index_name and default_sort
+
+
+def test_locations_resolves_to_its_walden_index():
+    """#334 regression: locations resolves to locations-v1 with its own sort."""
+    _fields, index_name, default_sort, _schema = _resolve_entity(
+        "locations", connection="walden"
+    )
+    assert index_name == "locations-v1"
+    assert default_sort == ["work_id", "native_id"]
