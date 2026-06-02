@@ -135,6 +135,12 @@ def test_search_model_space_quotes_near():
     fr = rows("works where title contains exactly foo")
     assert len(fr) == 2  # `exactly` AND `foo`, both stemmed terms
 
+    # `not` binds to the single next operand (tightest): `not a and b` = (not a) and b
+    fr = rows("works where title contains not a and b")
+    assert len(fr) == 2
+    by_val = {f["value"]: f.get("is_negated", False) for f in fr}
+    assert by_val == {"a": True, "b": False}  # only `a` is negated
+
 
 def test_corpus_covers_every_locked_behavior():
     """Spec self-check: each EXPLORE §2 locked behavior has >=1 corpus case."""

@@ -182,8 +182,18 @@ works where title & abstract contains covid and title & abstract does not contai
 
 There is **one** negation mechanism, mapping to OQO's `is_negated` (NNF). On the
 surface it reads naturally — `is not`, `does not contain`, `is not any of`, or a
-prefix `NOT (…)` on a group. All compile to `is_negated` on the appropriate node;
+prefix `not (…)` on a group. All compile to `is_negated` on the appropriate node;
 the canonical form pushes it to the leaves.
+
+**`not` binds to the single operand that follows it** (one term, leaf, or
+parenthesized group) — `not a and b` is `(not a) and b`, **not** `not (a and b)`.
+This is the *one* binding rule in OQL, and unlike AND/OR ordering (§3.4) it is kept
+rather than parens-forced, for a reason: "unary NOT is tightest" is **universal and
+unambiguous** (Lucene, PubMed, WoS, every programming language agree), whereas
+AND-vs-OR ordering is *not* standardized across systems — so the footgun the
+parens-rule guards against doesn't exist here. To negate a group, parenthesize:
+`not (a or b)`. Canonical output always renders the scope explicitly (e.g.
+`does not contain a and contains b`), so the binding is never hidden on round-trip.
 
 ### 3.6 Search — the governing law
 
@@ -248,6 +258,12 @@ Key rules these encode:
 - **`any of (…)` / `all of (…)`** are flat-list sugar for same-op OR / AND; items
   may themselves be `"exact"` or `near "stemmed"` phrases. Mixed logic uses infix
   `and`/`or` + required parens.
+- **A search value runs until the next field-clause.** `title contains a or b and
+  year >= 2020` is `(title contains (a or b)) and year >= 2020` — the `or` is the
+  contains-value's, the `and` joins clauses. This is deterministic, not a precedence
+  choice: a `year >= …` clause can't live *inside* a `contains`, so the value
+  boundary is forced (there's only one valid parse). A genuinely mixed and/or
+  *between clauses* still errors (§3.4).
 
 ### 3.7 Proximity and wildcards — the edge matrix
 
