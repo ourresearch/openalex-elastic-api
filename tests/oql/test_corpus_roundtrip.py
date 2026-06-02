@@ -98,6 +98,39 @@ def test_renderer_resolves_display_names_for_id_and_country_columns():
     assert "[SHOULD-NOT-APPEAR]" not in out   # readable slug (article) does NOT
 
 
+def test_search_model_space_quotes_near():
+    """Lock the v2 search model: space=AND, quotes=exact, near=stemmed phrase."""
+    from tests.oql.oql_v2 import parse as p, OQLError
+    rows = lambda oql: p(oql).to_dict()["filter_rows"]
+
+    # SPACE = stemmed AND (two .search leaves, words may be apart)
+    fr = rows("works where title contains climate change")
+    assert [(f["column_id"], f["value"]) for f in fr] == \
+        [("display_name.search", "climate"), ("display_name.search", "change")]
+
+    # QUOTES = exact adjacent phrase (.search.exact)
+    fr = rows('works where title contains "climate change"')
+    assert fr == [{"column_id": "display_name.search.exact", "value": '"climate change"', "operator": "contains"}]
+
+    # NEAR = stemmed adjacent phrase (.search, quoted value)
+    fr = rows('works where title contains near "whopper junior"')
+    assert fr == [{"column_id": "display_name.search", "value": '"whopper junior"', "operator": "contains"}]
+
+    # single quoted word = exact; bare word = stemmed
+    assert rows('works where title contains "cat"')[0]["column_id"] == "display_name.search.exact"
+    assert rows("works where title contains cat")[0]["column_id"] == "display_name.search"
+
+    # adjacency binds tighter than OR (no parens needed); explicit mixed errors
+    p("works where title contains climate change or warming")  # ok
+    with pytest.raises(OQLError) as e:
+        p("works where title contains a and b or c")
+    assert e.value.code == "OQL_MIXED_BOOL_NEEDS_PARENS"
+
+    # `exactly` is gone — it's just a search word now, not a modifier
+    fr = rows("works where title contains exactly foo")
+    assert len(fr) == 2  # `exactly` AND `foo`, both stemmed terms
+
+
 def test_corpus_covers_every_locked_behavior():
     """Spec self-check: each EXPLORE §2 locked behavior has >=1 corpus case."""
     ids = {r["id"] for r in ROWS}

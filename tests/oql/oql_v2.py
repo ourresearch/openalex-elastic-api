@@ -668,7 +668,13 @@ class _Parser:
         return LeafFilter(fld.column + ".search.semantic", t.val, "contains")
 
     def _parse_search_expr(self, base: str) -> FilterType:
-        operands = [self._parse_search_operand(base)]
+        # A search expression is explicit-connective-separated *term-runs*. A
+        # term-run is one or more space-adjacent atoms = implicit AND (the
+        # everyday `climate change` = climate AND change). Adjacency binds tighter
+        # than explicit and/or, so `climate change OR warming` =
+        # (climate AND change) OR warming with NO parens needed; only EXPLICIT
+        # mixed and/or trips OQL_MIXED_BOOL_NEEDS_PARENS.
+        units = [self._parse_term_run(base)]
         conns: List[str] = []
         while True:
             self._skip_annot()
@@ -676,25 +682,40 @@ class _Parser:
             if t is None or t.kind in ("RP", "SEMI", "COMMA"):
                 break
             if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
-                # Is this a NEW clause (next is <field> <op>) or a continuation?
                 if self._starts_new_clause(1):
                     break
                 conns.append(t.val.lower())
                 self.next()
-                operands.append(self._parse_search_operand(base))
+                units.append(self._parse_term_run(base))
                 continue
-            if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample"):
-                break
-            # a search atom with no connective before it -> adjacency
-            self._adjacency_error(t)
+            break
         if not conns:
-            return operands[0]
+            return units[0]
         if len(set(conns)) > 1:
             raise OQLError(
                 "OQL_MIXED_BOOL_NEEDS_PARENS",
-                "mixed AND/OR at one level is ambiguous — add parentheses",
+                "mixed and/or at one level is ambiguous — add parentheses",
                 'group explicitly, e.g. "a and (b or c)"', self.toks[0].pos)
-        return BranchFilter(join=conns[0], filters=operands)
+        return BranchFilter(join=conns[0], filters=units)
+
+    def _parse_term_run(self, base: str) -> FilterType:
+        """One or more space-adjacent search atoms = implicit AND."""
+        atoms = [self._parse_search_operand(base)]
+        while True:
+            self._skip_annot()
+            t = self.peek()
+            if t is None or t.kind in ("RP", "SEMI", "COMMA"):
+                break
+            if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
+                break  # explicit connective -> handled by _parse_search_expr
+            if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample"):
+                break
+            if self._starts_new_clause(0):
+                break  # a new field clause begins (e.g. `year >= 2020`)
+            atoms.append(self._parse_search_operand(base))  # implicit AND
+        if len(atoms) == 1:
+            return atoms[0]
+        return BranchFilter(join="and", filters=atoms)
 
     def _starts_new_clause(self, k: int) -> bool:
         """After a connective at offset k, do the tokens begin a new field clause?
@@ -765,11 +786,16 @@ class _Parser:
         return self._parse_search_atom(base)
 
     def _parse_search_atom(self, base: str) -> LeafFilter:
+        # Stemming is ON by default; quotes turn it OFF (exact). `near "phrase"`
+        # is the bridge: an adjacent phrase that STAYS stemmed (recall).
+        #   bare term        -> stemmed          (.search)
+        #   "phrase"         -> exact, adjacent  (.search.exact)
+        #   near "phrase"    -> stemmed, adjacent (.search)
         self._skip_annot()
-        exact = False
-        if self.word_is("exactly"):
+        stemmed_phrase = False
+        if self.word_is("near") and self.peek(1) and self.peek(1).kind == "STRING":
             self.next()
-            exact = True
+            stemmed_phrase = True
         t = self.peek()
         if t is None or t.kind not in ("WORD", "STRING"):
             raise OQLError("OQL_MISSING_VALUE", "expected a search term",
@@ -787,6 +813,9 @@ class _Parser:
             self.next()
             _validate_wildcards(text, t.pos)
             phrase = False
+        # quoted => exact (.exact column) unless `near` keeps it stemmed
+        stemmed = (not phrase) or stemmed_phrase
+        col = base + (".search" if stemmed else ".search.exact")
         self._skip_annot()
         # proximity: within N words [of ...]
         if self.word_is("within"):
@@ -813,16 +842,11 @@ class _Parser:
                 raise OQLError("OQL_PROXIMITY_NEEDS_PHRASE",
                                'proximity needs a quoted multi-word phrase',
                                'e.g. "smart phone" within 3 words', t.pos)
-            return LeafFilter(base + ".search", f'"{text}"~{n}', "contains")
-        # encode value
-        col = base + ".search" + (".exact" if exact else "")
-        if phrase:
-            words = text.split()
-            if len(words) <= 1:
-                # quoting a single word is a no-op (gauntlet case 7)
-                value = text
-            else:
-                value = f'"{text}"'
+            return LeafFilter(col, f'"{text}"~{n}', "contains")
+        # encode value: multi-word phrase keeps its quotes; a single word is bare
+        # (the column suffix carries exact-vs-stemmed).
+        if phrase and len(text.split()) > 1:
+            value = f'"{text}"'
         else:
             value = text
         return LeafFilter(col, value, "contains")
@@ -971,24 +995,29 @@ def _is_search_leaf(f) -> bool:
     return isinstance(f, LeafFilter) and isinstance(f.column_id, str) and ".search" in f.column_id
 
 
-def _render_search_term(value: str, mode: str) -> str:
+def _render_term(value: str, column: str) -> str:
+    """OQL surface form of one search value, given its column:
+      .search (stemmed):       bare word | near "phrase" | near "phrase" within N words
+      .search.exact (exact):   "word"    | "phrase"      | "phrase" within N words
+    """
+    stemmed = not column.endswith(".search.exact")  # .search (and anything else) stems
     prox = re.match(r'^"(.+)"~(\d+)$', value or "")
     if prox:
-        return f'"{prox.group(1)}" within {prox.group(2)} words'
-    if mode == "semantic":
-        v = value.strip('"')
-        return f'"{v}"'
-    if mode == "exact":
-        return f"exactly {value}"
-    return value
+        body = f'"{prox.group(1)}" within {prox.group(2)} words'
+        return f"near {body}" if stemmed else body
+    if value.startswith('"') and value.endswith('"') and len(value) >= 2:  # multi-word phrase
+        return f"near {value}" if stemmed else value
+    # single word: stemmed => bare; exact => quoted
+    return value if stemmed else f'"{value}"'
 
 
 def _render_search_leaf(f: LeafFilter) -> str:
     name, mode = _oql_field(f.column_id)
     if mode == "semantic":
-        return f'{name} is similar to {_render_search_term(f.value, mode)}'
+        v = (f.value or "").strip('"')
+        return f'{name} is similar to "{v}"'
     verb = "does not contain" if f.is_negated else "contains"
-    return f"{name} {verb} {_render_search_term(f.value, mode)}"
+    return f"{name} {verb} {_render_term(f.value, f.column_id)}"
 
 
 def _render_value(fld, value) -> str:
@@ -1039,11 +1068,11 @@ def _same_field_search_set(f: BranchFilter):
         if not (isinstance(c, LeafFilter) and _is_search_leaf(c) and not c.is_negated):
             return None
         _, mode = _oql_field(c.column_id)
-        if mode:  # only plain stemmed leaves factor cleanly
+        if mode == "semantic":  # semantic leaves don't fold into `contains any of`
             return None
         cols.add(c.column_id)
         vals.append(c.value)
-    if len(cols) != 1:
+    if len(cols) != 1:  # same column => same stemmed/exact mode => factorable
         return None
     return cols.pop(), vals
 
@@ -1078,7 +1107,7 @@ def _render_filter(f: FilterType, top=False, resolver=None) -> str:
         col, vals = sset
         name, _ = _oql_field(col)
         kw = "any of" if f.join == "or" else "all of"
-        return f"{name} contains {kw} ({', '.join(vals)})"
+        return f"{name} contains {kw} ({', '.join(_render_term(v, col) for v in vals)})"
     # factor same-field equality sets
     for neg in (False, True):
         eqset = _same_field_eq_set(f, neg)

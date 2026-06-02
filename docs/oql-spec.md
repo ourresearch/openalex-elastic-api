@@ -1,6 +1,8 @@
 # OQL (OpenAlex Query Language) Specification — v2 **(FROZEN)**
 
-> **Status: frozen** (oxjob #330, 2026-06-02). This is a cases-first
+> **Status: frozen** (oxjob #330; v2.1, 2026-06-02 — adopted the mainstream
+> search model after a peer review: **space = AND, quotes = exact, `near` =
+> stemmed phrase**; lowercase connectives). This is a cases-first
 > specification: the normative truth is the worked-example corpus
 > [`docs/oql/corpus.yaml`](./oql/corpus.yaml), machine-checked by
 > [`tests/oql/test_corpus_roundtrip.py`](../tests/oql/test_corpus_roundtrip.py).
@@ -154,20 +156,21 @@ works where title contains FOO AND (bar or baz)          (BOOL4)  ✓ (any case 
   word (§3.6 governing law).
 - **`and` / `or` / `not` are lowercase canonically**, but **case-insensitive on
   input** (`AND`, `And`, `and` all parse). Lowercase wins on output because
-  principle #1 is "reads aloud," and OQL's own rules (operators-outside-quotes +
-  no-implicit-adjacency, below) already disambiguate connectives from search words —
-  so the uppercase-for-disambiguation convention that scholarly DBs need (because
-  they allow implicit adjacency) buys us nothing. (All keywords are lowercase:
-  `where`, `is`, `contains`, `within`, `exactly`, `any of`, `and`/`or`/`not`.)
+  principle #1 is "reads aloud," and the rule "**`and`/`or`/`not` outside quotes are
+  *always* operators — quote them to search them literally**" removes any ambiguity
+  with content words, so the uppercase-for-disambiguation convention scholarly DBs
+  rely on buys us nothing. (All keywords are lowercase: `where`, `is`, `contains`,
+  `within`, `near`, `any of`, `and`/`or`/`not`.)
 - **Mixed and/or at one grouping level REQUIRES explicit parentheses — a loud error
   otherwise** (`OQL_MIXED_BOOL_NEEDS_PARENS`). Pure-and or pure-or runs are
   associative, so they need no parens. This is the **one deliberate departure** from
   WoS/Scopus muscle memory, and it is where the field is already heading (Scopus
   mid-migration; Dimensions enforces; Lucene/Sourcegraph advise full
   parenthesization). Canonical output fully parenthesizes mixed logic.
-- **No implicit adjacency:** two operands with no connective between them is an
-  error (`OQL_IMPLICIT_ADJACENCY`) — this is what lets us drop force-quoting and
-  still disambiguate.
+- **Adjacency (space) = AND between *search terms*** (§3.6), and it binds tighter
+  than `or`. Between *whole clauses* at the top level, a connective is still required
+  (`year >= 2020 and it's open access`); two full clauses jammed together with no
+  `and` is `OQL_IMPLICIT_ADJACENCY`.
 
 ### 3.5 Negation — one mechanism
 
@@ -183,61 +186,69 @@ the canonical form pushes it to the leaves.
 
 ### 3.6 Search — the governing law
 
-> **Outside the quotes = structure** (operators, list sugar, the modifiers
-> `exactly` / `within N words`, the wildcards `*` `?`). **Inside the quotes =
-> literal text**, matched as-is (modulo lemmatization). Operators inside quotes are
-> just words; wildcards fire only when bare; two bare terms with no operator between
-> them is an error.
+> **Stemming is ON by default; quotes are the only thing that turns it off.**
+> A **space** between words is **AND** (the Google/PubMed convention — verified to
+> match OpenAlex's own engine). **Quotes = an exact, adjacent phrase** (no
+> stemming) — single word or many. **`near "…"`** is the bridge: an adjacent
+> phrase that *stays* stemmed (recall). Outside quotes = structure; inside quotes =
+> literal text (even `or` is just a word there).
 
-OQO has exactly **one** text operator, `contains`. The search *mode* is split
-across the **column** (lemmatization / semantic) and **inline value micro-syntax**
-(phrase / proximity / wildcard); the **boolean** structure is the filter tree.
+This is the mainstream model (Google, Bing, PubMed, Web of Science, Elasticsearch
+all do space=AND and quotes=exact), chosen after surveying peers — see the design
+note in `plans/oqlo.md` and oxjob #330's research. OQO has exactly **one** text
+operator, `contains`; the *mode* is split across the **column** (stemmed vs exact
+vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); the
+**boolean** structure is the filter tree.
 
 | Axis | OQL surface | OQO encoding |
 |---|---|---|
 | field scope | the field name (`title`, `title & abstract`, `abstract`, `anywhere`, `raw affiliation`, `byline`) | column prefix (`display_name.search`, `title_and_abstract.search`, `default.search`, …) |
-| lemmatization | `exactly` keyword | column suffix `.search` (stemmed) vs `.search.exact` |
-| semantic | `is similar to` | column suffix `.search.semantic` (2-phase) |
+| stemming | **default ON**; quotes turn it OFF | column suffix `.search` (stemmed) vs `.search.exact` |
+| stemmed phrase | `near "…"` | `.search` with a quoted value |
+| semantic | `is similar to "…"` | column suffix `.search.semantic` (2-phase) |
 | adjacency (phrase) | `" … "` | quotes in the value |
 | proximity | `within N words` | `"phrase"~N` in the value |
 | wildcard | bare `*` / `?` | `*` / `?` in the value |
-| boolean | infix `AND`/`OR`/`NOT`, `any of`/`all of` | the BranchFilter tree |
+| boolean | space (=AND) / infix `and`/`or`/`not` / `any of`/`all of` | the BranchFilter tree |
 
-The 9 gauntlet cases pin the consequences (all are corpus rows):
+The gauntlet pins the consequences (all are corpus rows):
 
-| # | OQL (`title …`) | Result |
+| # | OQL (`title contains …`) | Result |
 |---|---|---|
-| G1 | `contains foo and (bar or baz)` | `foo AND (bar OR baz)`, lemmatized |
-| G2 | `contains any of (foo, bar, baz)` | OR over the flat list |
-| G3 | `contains any of (foo, "foo bar", exactly baz)` | per-item modifiers; leaves on different columns (`.search` ×2, `.search.exact` ×1) |
-| G4 | `contains all of (foo, "foo or bar")` | AND; the `or` is **inside quotes = literal** |
-| G5 | `contains foo and "bar OR baz"` | pure-AND; `OR` in quotes is a literal word (the sneaky one) |
-| G6 | `contains exactly foo and bar` | `(exactly foo) AND bar` — `exactly` binds ONE operand |
-| G7 | `contains foo and "bar"` | `"bar" ≡ bar` — quoting a single word is a **no-op** |
-| G8 | `contains "bar*"` | ✗ `OQL_WILDCARD_IN_QUOTES` — fix-it: use `bar*` unquoted |
-| G9 | `contains bar*` | bare prefix wildcard |
+| G1 | `climate change` | **space = stemmed AND**; words may be apart (recall). The default. |
+| G2 | `"climate change"` | **quotes = exact adjacent phrase**, no stemming (`.search.exact`) |
+| G3 | `near "whopper junior"` | **`near` = stemmed adjacent phrase** → matches "whoppers junior" |
+| G4 | `"cat"` | quoting a **single** word = exact (no plurals) — quotes always mean exact |
+| G5 | `cat` | bare word = stemmed (matches cats) |
+| G6 | `"rock or roll"` | inside quotes = literal: `or` is a word, one exact phrase |
+| G7 | `climate change or warming` | adjacency binds **tighter** than `or` → `(climate AND change) OR warming`, no parens |
+| G8 | `"bar*"` | ✗ `OQL_WILDCARD_IN_QUOTES` — fix-it: use `bar*` unquoted |
+| G9 | `bar*` | bare prefix wildcard |
 
 Key rules these encode:
 
+- **Space = AND; adjacency binds tighter than `or`.** `climate change or warming` =
+  `(climate AND change) OR warming` with **no parens** — only an *explicit* `and`/`or`
+  mix at one level trips `OQL_MIXED_BOOL_NEEDS_PARENS` (G7 vs BOOL2).
+- **Quotes = exact, single word or phrase.** `"cat"` excludes "cats"; `"climate
+  change"` is the adjacent, unstemmed phrase. This is the mainstream "quotes = exact
+  match" people already expect.
+- **`near "…"` = the stemmed phrase** — adjacent *and* lemmatized (`.search`), for
+  when you want phrase precision without losing recall (corpus **G3**, **PW12**).
+  Without quotes you don't need `near`: bare terms are already stemmed.
 - **Booleans are structural, never lexical.** `contains "foo or bar"` searches the
-  literal phrase; the boolean is the tree (`contains any of ("foo", "bar")`).
-- **Quotes mean PHRASE, not "disable stemming."** Stemming stays **ON** inside
-  quotes → `contains "whopper junior"` matches "whoppers junior" (corpus **PW12**;
-  the recall win, and the deliberate divergence from PubMed). To turn stemming off,
-  use `exactly` (corpus **PW11**).
-- **Quoting a single word is a no-op** (`"bar" ≡ bar`) — the corollary.
-- **`exactly` binds a single operand** (term, phrase, group, or list). `exactly foo
-  AND bar` = `(exactly foo) AND bar`; widen with parens: `exactly (foo AND bar)`.
-  Canonical output parenthesizes a modifier's scope when a boolean is adjacent.
+  literal phrase; the boolean is the tree (`contains any of (foo, bar)`).
 - **`is similar to "…"` is semantic** vector search (`.search.semantic`, corpus
   **PW10**).
-- **`any of (…)` / `all of (…)`** are flat-list sugar for same-op OR / AND; mixed
-  logic uses infix `AND`/`OR` + required parens. Both compile to the same tree.
+- **`any of (…)` / `all of (…)`** are flat-list sugar for same-op OR / AND; items
+  may themselves be `"exact"` or `near "stemmed"` phrases. Mixed logic uses infix
+  `and`/`or` + required parens.
 
 ### 3.7 Proximity and wildcards — the edge matrix
 
 ```
-works where title contains "smart phone" within 3 words   (PW1)  ✓ → "smart phone"~3
+works where title contains "smart phone" within 3 words      (PW1)  ✓ exact proximity → .search.exact "smart phone"~3
+works where title contains near "smart phone" within 3 words (PW12) ✓ stemmed proximity → .search "smart phone"~3
 works where title contains foo*bar                          (PW2)  ✓ mid-word *
 works where title contains wom?n                            (PW3)  ✓ ? = exactly one char
 works where title contains *cycle                           (PW4)  ✗ OQL_LEADING_WILDCARD
@@ -347,11 +358,12 @@ Each row is `ok` (round-trips), `error` (named diagnostic + fix-it), or `boundar
 (documented non-representable: `L02c` wildcard-in-proximity, `L12` acronym
 resolution, `L20` set-reference).
 
-**v2 corrections to #284 search rows** (noted per row in the corpus): exactness now
-lives in the `.search.exact` column via `exactly` (L03), not in a quoted value;
-multi-word phrases are explicitly quoted (A06, B02, …); loose multi-word search is
-made explicit structure (L07, L17). These follow from §3.6's "quotes = phrase,
-stemming ON."
+**v2 search encoding vs. #284** (noted per row in the corpus): under §3.6's
+mainstream model, a bare multi-word search is **stemmed AND** — exactly what the
+#284 OXURLs did (space = AND on `.search`), so `climate change` (A06), `quantum
+computing` (L16) etc. render as bare terms. A genuine adjacent phrase uses `near
+"…"` (stemmed: B02, B06, L01, L02a, L07, L09, L19, L22) or plain quotes when the
+intent is exact/no-lemmatization (`"oyster toadfish"`, L03).
 
 ## 8. Out of scope
 

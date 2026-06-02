@@ -76,111 +76,99 @@ rows:
 - id: BOOL1
   group: booleans
   status: ok
-  oql: 'works where title contains "foo" and ("bar" or "baz")'
+  oql: 'works where title contains apple and (banana or cherry)'
   oqo: {get_rows: works, filter_rows: [
-        {column_id: display_name.search, value: foo, operator: contains},
+        {column_id: display_name.search, value: apple, operator: contains},
         {join: or, filters: [
-          {column_id: display_name.search, value: bar, operator: contains},
-          {column_id: display_name.search, value: baz, operator: contains}]}]}
-  note: 'Mixed logic with explicit parens is unambiguous. Quoting single words is a no-op so "foo"==foo.'
+          {column_id: display_name.search, value: banana, operator: contains},
+          {column_id: display_name.search, value: cherry, operator: contains}]}]}
+  note: Mixed and/or with explicit parens is unambiguous.
 
 - id: BOOL2
   group: booleans
   status: error
-  oql: 'works where title contains "foo" and "bar" or "baz"'
+  oql: 'works where title contains apple and banana or cherry'
   diagnostic: OQL_MIXED_BOOL_NEEDS_PARENS
-  note: Mixed AND/OR at one level with no parens — the one deliberate departure from WoS/Scopus.
+  note: Explicit mixed and/or at one level with no parens — the one deliberate departure from WoS/Scopus.
 
 - id: BOOL3
   group: booleans
   status: ok
-  oql: 'works where title contains "a" and "b" and "c"'
+  oql: 'works where title contains apple and banana and cherry'
   oqo: {get_rows: works, filter_rows: [
-        {column_id: display_name.search, value: a, operator: contains},
-        {column_id: display_name.search, value: b, operator: contains},
-        {column_id: display_name.search, value: c, operator: contains}]}
-  note: Pure-AND is associative, no parens needed.
+        {column_id: display_name.search, value: apple, operator: contains},
+        {column_id: display_name.search, value: banana, operator: contains},
+        {column_id: display_name.search, value: cherry, operator: contains}]}
+  note: Pure-and is associative, no parens needed.
 
 - id: BOOL4
   group: booleans
   status: ok
-  oql: 'works where title contains foo and (bar or baz)'
+  oql: 'works where title contains apple banana cherry'
   oqo: {get_rows: works, filter_rows: [
-        {column_id: display_name.search, value: foo, operator: contains},
-        {join: or, filters: [
-          {column_id: display_name.search, value: bar, operator: contains},
-          {column_id: display_name.search, value: baz, operator: contains}]}]}
-  note: Connectives are case-insensitive on input; canonical output is lowercase and/or/not.
+        {column_id: display_name.search, value: apple, operator: contains},
+        {column_id: display_name.search, value: banana, operator: contains},
+        {column_id: display_name.search, value: cherry, operator: contains}]}
+  note: 'SPACE = implicit AND (Google/PubMed convention) — `apple banana cherry` == `apple and banana and cherry`.'
 
 # ---------------------------------------------------------------------------
-# C. The 9 gauntlet cases — search semantics  (PLAN.md spine)
+# C. The gauntlet — search semantics  (the spine; teaches the v2 model)
+#    Stemming is ON by default; quotes turn it OFF (exact); `near` is the bridge.
 # ---------------------------------------------------------------------------
 - id: G1
   group: gauntlet
   status: ok
-  oql: 'works where title contains foo and (bar or baz)'
+  oql: 'works where title contains climate change'
   oqo: {get_rows: works, filter_rows: [
-        {column_id: display_name.search, value: foo, operator: contains},
-        {join: or, filters: [
-          {column_id: display_name.search, value: bar, operator: contains},
-          {column_id: display_name.search, value: baz, operator: contains}]}]}
-  note: 'foo AND (bar OR baz), lemmatized.'
+        {column_id: display_name.search, value: climate, operator: contains},
+        {column_id: display_name.search, value: change, operator: contains}]}
+  note: 'SPACE = stemmed AND; the words may be apart (recall). The everyday default.'
 
 - id: G2
   group: gauntlet
   status: ok
-  oql: 'works where title contains any of (foo, bar, baz)'
-  oqo: {get_rows: works, filter_rows: [{join: or, filters: [
-        {column_id: display_name.search, value: foo, operator: contains},
-        {column_id: display_name.search, value: bar, operator: contains},
-        {column_id: display_name.search, value: baz, operator: contains}]}]}
-  note: OR over the flat list.
+  oql: 'works where title contains "climate change"'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"climate change"', operator: contains}]}
+  note: 'QUOTES = exact adjacent phrase, stemming OFF (.search.exact). The precision lever.'
 
 - id: G3
   group: gauntlet
   status: ok
-  oql: 'works where title contains any of (foo, "foo bar", exactly baz)'
-  oqo: {get_rows: works, filter_rows: [{join: or, filters: [
-        {column_id: display_name.search, value: foo, operator: contains},
-        {column_id: display_name.search, value: '"foo bar"', operator: contains},
-        {column_id: display_name.search.exact, value: baz, operator: contains}]}]}
-  note: Per-item modifiers; the OR-leaves can sit on different columns (.search x2, .search.exact x1).
+  oql: 'works where title contains near "whopper junior"'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"whopper junior"', operator: contains}]}
+  note: 'NEAR = stemmed adjacent phrase (.search) → matches "whoppers junior". The bridge that keeps recall on a phrase.'
 
 - id: G4
   group: gauntlet
   status: ok
-  oql: 'works where title contains all of (foo, "foo or bar")'
-  oqo: {get_rows: works, filter_rows: [
-        {column_id: display_name.search, value: foo, operator: contains},
-        {column_id: display_name.search, value: '"foo or bar"', operator: contains}]}
-  note: AND; the `or` is inside quotes = literal text, not a connective.
+  oql: 'works where title contains "cat"'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: cat, operator: contains}]}
+  note: 'Quoting a SINGLE word = exact (no plurals). Same rule as a phrase — quotes always mean exact.'
 
 - id: G5
   group: gauntlet
   status: ok
-  oql: 'works where title contains foo and "bar OR baz"'
-  oqo: {get_rows: works, filter_rows: [
-        {column_id: display_name.search, value: foo, operator: contains},
-        {column_id: display_name.search, value: '"bar OR baz"', operator: contains}]}
-  note: 'The sneaky one — pure-AND; `OR` inside quotes is a literal word, not mixed logic.'
+  oql: 'works where title contains cat'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: cat, operator: contains}]}
+  note: 'Bare word = stemmed (matches cats). Contrast with G4 "cat" (exact).'
 
 - id: G6
   group: gauntlet
   status: ok
-  oql: 'works where title contains exactly foo and bar'
-  oqo: {get_rows: works, filter_rows: [
-        {column_id: display_name.search.exact, value: foo, operator: contains},
-        {column_id: display_name.search, value: bar, operator: contains}]}
-  note: '`exactly` binds ONE operand -> (exactly foo) AND bar. `exactly (foo AND bar)` would distribute.'
+  oql: 'works where title contains "rock or roll"'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"rock or roll"', operator: contains}]}
+  note: 'Inside quotes = literal: the `or` is a word, not a connective. One exact phrase.'
 
 - id: G7
   group: gauntlet
   status: ok
-  oql: 'works where title contains foo and "bar"'
-  oqo: {get_rows: works, filter_rows: [
-        {column_id: display_name.search, value: foo, operator: contains},
-        {column_id: display_name.search, value: bar, operator: contains}]}
-  note: Quoting a single word is a no-op ("bar" == bar); quotes mean phrase, not exactness.
+  oql: 'works where title contains climate change or warming'
+  oqo: {get_rows: works, filter_rows: [{join: or, filters: [
+        {join: and, filters: [
+          {column_id: display_name.search, value: climate, operator: contains},
+          {column_id: display_name.search, value: change, operator: contains}]},
+        {column_id: display_name.search, value: warming, operator: contains}]}]}
+  note: 'Adjacency binds TIGHTER than or: (climate AND change) OR warming — no parens needed (only EXPLICIT mixed and/or errors).'
 
 - id: G8
   group: gauntlet
@@ -194,7 +182,7 @@ rows:
   status: ok
   oql: 'works where title contains bar*'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: 'bar*', operator: contains}]}
-  note: Bare prefix wildcard.
+  note: Bare prefix wildcard (stemmed column).
 
 # ---------------------------------------------------------------------------
 # D. Proximity / wildcard edge matrix  (EXPLORE §2.5, §3)
@@ -203,8 +191,8 @@ rows:
   group: proximity-wildcard
   status: ok
   oql: 'works where title contains "smart phone" within 3 words'
-  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"smart phone"~3', operator: contains}]}
-  note: 'Whole-phrase proximity -> "smart phone"~3; up to N positional moves apart, any order.'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart phone"~3', operator: contains}]}
+  note: 'Exact proximity (quoted) → up to N positional moves apart, any order.'
 
 - id: PW2
   group: proximity-wildcard
@@ -246,14 +234,14 @@ rows:
   status: error
   oql: 'works where title contains "smart phone*" within 3 words'
   diagnostic: OQL_WILDCARD_IN_QUOTES
-  note: Wildcard inside a proximity phrase — the unsupported L02c combination; loud error.
+  note: 'Wildcard inside a phrase — acknowledged limitation (WoS/Scopus do it; ES query_string drops it). Loud error today; future engine work.'
 
 - id: PW8
   group: proximity-wildcard
   status: error
   oql: 'works where title contains "smart" within 3 words of "phone"'
   diagnostic: OQL_BINARY_PROXIMITY
-  note: Binary "X within N of Y" is unsupported (ES slop is whole-phrase); loud error.
+  note: 'Binary "X within N of Y" is unsupported (ES slop is whole-phrase); loud error.'
 
 - id: PW9
   group: proximity-wildcard
@@ -273,17 +261,16 @@ rows:
 - id: PW11
   group: proximity-wildcard
   status: ok
-  oql: 'works where title & abstract contains exactly "machine learning"'
+  oql: 'works where title & abstract contains "machine learning"'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"machine learning"', operator: contains}]}
-  note: Non-stemmed exact phrase (.search.exact).
+  note: Exact phrase, no stemming (.search.exact).
 
 - id: PW12
   group: proximity-wildcard
   status: ok
-  oql: 'works where title contains "whopper junior"'
-  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"whopper junior"', operator: contains}]}
-  note: STEMMED phrase -> matches "whoppers junior" (recall win); quotes = phrase, stemming stays ON.
-
+  oql: 'works where title contains near "smart phone" within 3 words'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"smart phone"~3', operator: contains}]}
+  note: 'STEMMED proximity (near + within) → .search column; contrast PW1 (exact proximity).'
 # ---------------------------------------------------------------------------
 # E. #284 worked-examples corpus — Stage A (filter / sort / sample)
 # ---------------------------------------------------------------------------
@@ -329,9 +316,11 @@ rows:
 - id: A06
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains "climate change"'
-  oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: '"climate change"', operator: contains}]}
-  note: 'v2 divergence from #284: the phrase is explicitly quoted (adjacency), not a bare loose string.'
+  oql: 'works where title & abstract contains climate change'
+  oqo: {get_rows: works, filter_rows: [
+        {column_id: title_and_abstract.search, value: climate, operator: contains},
+        {column_id: title_and_abstract.search, value: change, operator: contains}]}
+  note: 'Bare = stemmed AND — exactly what the #284 OXURL did (space = AND on .search). Use `near "climate change"` for an adjacent phrase.'
 
 - id: A07
   group: '#284'
@@ -392,9 +381,10 @@ rows:
 - id: B02
   group: '#284'
   status: ok
-  oql: 'works where anywhere contains "Macrocystis pyrifera"; group by author'
+  oql: 'works where anywhere contains near "Macrocystis pyrifera"; group by author'
   oqo: {get_rows: works, filter_rows: [{column_id: default.search, value: '"Macrocystis pyrifera"', operator: contains}],
         group_by: [{column_id: authorships.author.id}]}
+  note: 'A species name is a phrase but recall matters → `near` (stemmed adjacent), not exact quotes.'
 
 - id: B03
   group: '#284'
@@ -424,7 +414,7 @@ rows:
 - id: B06
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains "coral bleaching" and citations > 100; group by source'
+  oql: 'works where title & abstract contains near "coral bleaching" and citations > 100; group by source'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: '"coral bleaching"', operator: contains},
         {column_id: cited_by_count, value: 100, operator: '>'}],
@@ -459,7 +449,7 @@ rows:
 - id: L01
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains agile and title & abstract contains any of ("supply chain", "demand chain", "value chain") and title & abstract contains any of ("lead time", "cycle time")'
+  oql: 'works where title & abstract contains agile and title & abstract contains any of (near "supply chain", near "demand chain", near "value chain") and title & abstract contains any of (near "lead time", near "cycle time")'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: agile, operator: contains},
         {join: or, filters: [
@@ -469,13 +459,14 @@ rows:
         {join: or, filters: [
           {column_id: title_and_abstract.search, value: '"lead time"', operator: contains},
           {column_id: title_and_abstract.search, value: '"cycle time"', operator: contains}]}]}
-  note: AND of OR-groups; top level is pure-AND so no parens needed.
+  note: 'AND of OR-groups; the synonym phrases use `near` (stemmed adjacent) for recall. Top level is pure-and so no parens.'
 
 - id: L02a
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains "smart phone" within 3 words'
+  oql: 'works where title & abstract contains near "smart phone" within 3 words'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: '"smart phone"~3', operator: contains}]}
+  note: 'Stemmed proximity (`near`) → .search, matching the #284 column. Use plain quotes for exact proximity.'
 
 - id: L02b
   group: '#284'
@@ -494,9 +485,9 @@ rows:
 - id: L03
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains exactly "oyster toadfish"'
+  oql: 'works where title & abstract contains "oyster toadfish"'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"oyster toadfish"', operator: contains}]}
-  note: 'v2 CORRECTION of #284: exactness lives in the .search.exact column (via `exactly`), not in a quoted value on .search. (Under v2, quotes = phrase with stemming ON.)'
+  note: 'NL says "exact phrase only, no lemmatization" → plain quotes (exact, .search.exact). The textbook quotes-mean-exact case.'
 
 - id: L04
   group: '#284'
@@ -508,7 +499,7 @@ rows:
 - id: L05
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains any of (autism, ASD, "autism spectrum disorder") and title & abstract contains any of (intervention, therapy, treatment) and year >= 2015 and year <= 2024 and type is any of (article, review) and language is en'
+  oql: 'works where title & abstract contains any of (autism, ASD, near "autism spectrum disorder") and title & abstract contains any of (intervention, therapy, treatment) and year >= 2015 and year <= 2024 and type is any of (article, review) and language is en'
   oqo: {get_rows: works, filter_rows: [
         {join: or, filters: [
           {column_id: title_and_abstract.search, value: autism, operator: contains},
@@ -535,14 +526,14 @@ rows:
 - id: L07
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains CRISPR and "genome editing" and year >= 2018 and year <= 2023; sort by citations desc; sample 500'
+  oql: 'works where title & abstract contains CRISPR and near "genome editing" and year >= 2018 and year <= 2023; sort by citations desc; sample 500'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: CRISPR, operator: contains},
         {column_id: title_and_abstract.search, value: '"genome editing"', operator: contains},
         {column_id: publication_year, value: 2018, operator: '>='},
         {column_id: publication_year, value: 2023, operator: '<='}],
         sort_by: [{column_id: cited_by_count, direction: desc}], sample: 500}
-  note: 'v2 divergence from #284: the loose multi-word search is made explicit — CRISPR (token) AND "genome editing" (phrase).'
+  note: 'Mixes a bare token (CRISPR, stemmed) with a `near` phrase (genome editing) — the explicit version of #284''s loose multi-word search.'
 
 - id: L08
   group: '#284'
@@ -553,7 +544,7 @@ rows:
 - id: L09
   group: '#284'
   status: ok
-  oql: 'works where raw affiliation contains "london hospital" within 5 words'
+  oql: 'works where raw affiliation contains near "london hospital" within 5 words'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"london hospital"~5', operator: contains}]}
   note: Quoted phrase scopes to ONE affiliation (position_increment_gap); slop ~5 allows order/gap within it.
 
@@ -601,9 +592,12 @@ rows:
 - id: L16
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains "quantum computing"; group by country'
-  oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: '"quantum computing"', operator: contains}],
+  oql: 'works where title & abstract contains quantum computing; group by country'
+  oqo: {get_rows: works, filter_rows: [
+        {column_id: title_and_abstract.search, value: quantum, operator: contains},
+        {column_id: title_and_abstract.search, value: computing, operator: contains}],
         group_by: [{column_id: authorships.countries}]}
+  note: Bare = stemmed AND (faithful to the #284 OXURL).
 
 - id: L17
   group: '#284'
@@ -625,7 +619,7 @@ rows:
 - id: L19
   group: '#284'
   status: ok
-  oql: 'works where raw affiliation contains "tufts boston" within 5 words'
+  oql: 'works where raw affiliation contains near "tufts boston" within 5 words'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"tufts boston"~5', operator: contains}]}
 
 - id: L20
@@ -637,7 +631,7 @@ rows:
 - id: L22
   group: '#284'
   status: ok
-  oql: 'works where byline contains "john smith" within 2 words'
+  oql: 'works where byline contains near "john smith" within 2 words'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_author_name.search, value: '"john smith"~2', operator: contains}]}
   note: Byline slop ~2 recovers middle-name/initial forms without crossing co-authors.
 
