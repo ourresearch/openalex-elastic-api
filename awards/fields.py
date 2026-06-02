@@ -49,7 +49,11 @@ fields = [
     ),
     TermField(
         param="funder_scheme",
-        custom_es_field="funder_scheme",
+        # ES maps `funder_scheme` as `text` (unlike sibling keyword fields), so a
+        # terms agg / term filter on the bare field 500s ("fielddata disabled").
+        # Point at the `.keyword` subfield — same pattern as display_name.keyword
+        # everywhere. Fixes both group_by (#316) and exact-match filtering.
+        custom_es_field="funder_scheme.keyword",
         docstring="The specific funding scheme or program"
     ),
     TermField(
