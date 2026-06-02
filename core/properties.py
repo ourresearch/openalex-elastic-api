@@ -28,13 +28,16 @@ committed `docs/properties-snapshot.json` is its versioned, fingerprinted mirror
 import hashlib
 import importlib
 import json
+from dataclasses import replace
+
+from core.fields import Property
 
 # Human-curated semver of the published /properties contract (#331 Decision C).
 # MINOR/MAJOR only — no PATCH lane (the fingerprint already records that the
 # payload changed). Bumped by a human (Jason/Casey) when the rendered payload
 # changes; agents MUST NOT self-bump — flag the human. The CI drift gate ties
 # this constant to the change class. See docs/PROPERTIES_VERSIONING.md.
-PROPERTIES_VERSION = "1.0.0"
+PROPERTIES_VERSION = "1.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -116,17 +119,55 @@ def get_property(entity_type, property_name):
 # ---------------------------------------------------------------------------
 
 
+def _merged_properties(entity_type):
+    """One entity's PUBLIC property set: filter-columns ∪ selectable result-fields
+    (#318, Decision D), keyed by name, `actions` unioned. Returns {name: Property}.
+
+    Two source namespaces are reconciled here:
+      * filter columns — keyed by `param` (e.g. `open_access.is_oa`,
+        `publication_year`), each already a `Property` in `ENTITY_PROPERTIES`
+        with `actions=["filter"]` (some also `"search"`);
+      * selectable fields — keyed by result-schema field name (e.g.
+        `open_access`, `publication_year`, `abstract_inverted_index`), the exact
+        set `?select=` validates against (`get_selectable_fields`).
+    A property exists if it is filterable OR selectable. When a name is BOTH
+    (e.g. `publication_year`), `"select"` is unioned into the existing actions.
+    A select-only field (e.g. `open_access`, `abstract_inverted_index`) becomes a
+    new `Property` with `actions=["select"]` and no filter `type`/`operators` —
+    it is selectable but not filterable, and the `actions` discriminator keeps the
+    two never conflated.
+
+    This union is PUBLIC/render surface only. `ENTITY_PROPERTIES` (and therefore
+    `get_entity_properties`/`get_property`) stays the filter-column projection the
+    validator keys filter/sort/group_by checks off; `select` is validated against
+    `get_selectable_fields`. Both the validator and this render draw from the same
+    two sources, so the public catalog can't drift from what the server accepts.
+    """
+    merged = dict(ENTITY_PROPERTIES.get(entity_type, {}))  # name -> Property (filter)
+    for name in get_selectable_fields(entity_type) or set():
+        existing = merged.get(name)
+        if existing is None:
+            merged[name] = Property(
+                name=name, type=None, operators=[], actions=["select"],
+            )
+        elif "select" not in existing.actions:
+            merged[name] = replace(existing, actions=existing.actions + ["select"])
+    return merged
+
+
 def _canonical_catalog():
     """The full {entity: {property_name: serialized}} catalog, fully sorted.
 
-    Entities and property names sorted here; operators/actions sorted inside
-    `Property.serialize()`. This is the exact object the fingerprint hashes."""
+    Each entity's properties are the filter-columns ∪ selectable result-fields
+    union (`_merged_properties`). Entities and property names sorted here;
+    operators/actions sorted inside `Property.serialize()`. This is the exact
+    object the fingerprint hashes."""
     return {
         entity: {
-            name: ENTITY_PROPERTIES[entity][name].serialize()
-            for name in sorted(ENTITY_PROPERTIES[entity])
+            name: merged[name].serialize() for name in sorted(merged)
         }
         for entity in sorted(ENTITY_PROPERTIES)
+        for merged in (_merged_properties(entity),)
     }
 
 

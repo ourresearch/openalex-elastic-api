@@ -1,12 +1,21 @@
 {
   "meta": {
     "entity_count": 22,
-    "fingerprint": "5b704a791f095d35de7610acc5030282318f003c74036e926d28c0ca29eea7d0",
-    "property_count": 571,
-    "version": "1.0.0"
+    "fingerprint": "b647112ef67ae605ccde5d98b9e2c9e3bd11521295866006b79124e526841dd3",
+    "property_count": 823,
+    "version": "1.1.0"
   },
   "properties": {
     "authors": {
+      "affiliations": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "affiliations",
+        "operators": [],
+        "type": null
+      },
       "affiliations.institution.country_code": {
         "actions": [
           "filter"
@@ -79,7 +88,8 @@
       },
       "block_key": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "block_key",
@@ -93,7 +103,8 @@
       },
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -143,6 +154,24 @@
         ],
         "type": "openalex_id"
       },
+      "counts_by_year": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "counts_by_year",
+        "operators": [],
+        "type": null
+      },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -156,7 +185,8 @@
       },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -178,6 +208,15 @@
           "search"
         ],
         "type": "search"
+      },
+      "display_name_alternatives": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "display_name_alternatives",
+        "operators": [],
+        "type": null
       },
       "from_created_date": {
         "actions": [
@@ -205,6 +244,15 @@
         ],
         "type": "datetime"
       },
+      "full_name": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "full_name",
+        "operators": [],
+        "type": null
+      },
       "has_orcid": {
         "actions": [
           "filter"
@@ -219,7 +267,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "authors",
         "name": "id",
@@ -230,6 +279,15 @@
           "or"
         ],
         "type": "openalex_id"
+      },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
       },
       "ids.openalex": {
         "actions": [
@@ -244,6 +302,15 @@
           "or"
         ],
         "type": "openalex_id"
+      },
+      "last_known_institutions": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "last_known_institutions",
+        "operators": [],
+        "type": null
       },
       "last_known_institutions.continent": {
         "actions": [
@@ -371,7 +438,8 @@
       },
       "orcid": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "orcid",
@@ -439,6 +507,24 @@
         ],
         "type": "string"
       },
+      "raw_author_names": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "raw_author_names",
+        "operators": [],
+        "type": null
+      },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
       "scopus": {
         "actions": [
           "filter"
@@ -452,6 +538,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "summary_stats": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "summary_stats",
+        "operators": [],
+        "type": null
       },
       "summary_stats.2yr_mean_citedness": {
         "actions": [
@@ -524,6 +619,15 @@
         ],
         "type": "datetime"
       },
+      "topic_share": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "topic_share",
+        "operators": [],
+        "type": null
+      },
       "topic_share.id": {
         "actions": [
           "filter"
@@ -537,6 +641,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "topics": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "topics",
+        "operators": [],
+        "type": null
       },
       "topics.id": {
         "actions": [
@@ -552,9 +665,28 @@
         ],
         "type": "string"
       },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -566,6 +698,15 @@
           "range"
         ],
         "type": "number"
+      },
+      "x_concepts": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "x_concepts",
+        "operators": [],
+        "type": null
       },
       "x_concepts.id": {
         "actions": [
@@ -585,7 +726,8 @@
     "awards": {
       "amount": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "amount",
@@ -598,9 +740,28 @@
         ],
         "type": "number"
       },
+      "co_lead_investigator": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "co_lead_investigator",
+        "operators": [],
+        "type": null
+      },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "currency": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "currency",
@@ -623,6 +784,15 @@
         ],
         "type": "search"
       },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
+      },
       "description.search": {
         "actions": [
           "search"
@@ -633,6 +803,15 @@
           "search"
         ],
         "type": "search"
+      },
+      "display_name": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "display_name",
+        "operators": [],
+        "type": null
       },
       "display_name.search": {
         "actions": [
@@ -647,7 +826,8 @@
       },
       "doi": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "doi",
@@ -659,9 +839,19 @@
         ],
         "type": "string"
       },
+      "end_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "end_date",
+        "operators": [],
+        "type": null
+      },
       "end_year": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "end_year",
@@ -676,7 +866,8 @@
       },
       "funded_outputs": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "funded_outputs",
@@ -690,7 +881,8 @@
       },
       "funded_outputs_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "funded_outputs_count",
@@ -702,6 +894,15 @@
           "range"
         ],
         "type": "number"
+      },
+      "funder": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "funder",
+        "operators": [],
+        "type": null
       },
       "funder.doi": {
         "actions": [
@@ -747,7 +948,8 @@
       },
       "funder_award_id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "funder_award_id",
@@ -775,7 +977,8 @@
       },
       "funder_scheme": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "funder_scheme",
@@ -789,7 +992,8 @@
       },
       "funding_type": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "funding_type",
@@ -803,7 +1007,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "id",
@@ -814,6 +1019,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "institution_awarded": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "institution_awarded",
+        "operators": [],
+        "type": null
       },
       "institution_awarded.continent": {
         "actions": [
@@ -899,6 +1113,33 @@
         ],
         "type": "string"
       },
+      "investigators": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "investigators",
+        "operators": [],
+        "type": null
+      },
+      "landing_page_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "landing_page_url",
+        "operators": [],
+        "type": null
+      },
+      "lead_investigator": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "lead_investigator",
+        "operators": [],
+        "type": null
+      },
       "lead_investigator.affiliation.country": {
         "actions": [
           "filter"
@@ -969,6 +1210,15 @@
         ],
         "type": "string"
       },
+      "primary_topic": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "primary_topic",
+        "operators": [],
+        "type": null
+      },
       "primary_topic.domain.id": {
         "actions": [
           "filter"
@@ -1027,7 +1277,8 @@
       },
       "provenance": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "provenance",
@@ -1039,9 +1290,28 @@
         ],
         "type": "string"
       },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "start_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "start_date",
+        "operators": [],
+        "type": null
+      },
       "start_year": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "start_year",
@@ -1053,6 +1323,15 @@
           "range"
         ],
         "type": "number"
+      },
+      "topics": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "topics",
+        "operators": [],
+        "type": null
       },
       "topics.domain.id": {
         "actions": [
@@ -1109,9 +1388,36 @@
           "or"
         ],
         "type": "string"
+      },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
       }
     },
     "concepts": {
+      "ancestors": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ancestors",
+        "operators": [],
+        "type": null
+      },
       "ancestors.id": {
         "actions": [
           "filter"
@@ -1128,7 +1434,8 @@
       },
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -1150,6 +1457,24 @@
         ],
         "type": "collection"
       },
+      "counts_by_year": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "counts_by_year",
+        "operators": [],
+        "type": null
+      },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -1161,9 +1486,19 @@
         ],
         "type": "search"
       },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
+      },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -1224,6 +1559,24 @@
         ],
         "type": "boolean"
       },
+      "id": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "id",
+        "operators": [],
+        "type": null
+      },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
+      },
       "ids.openalex": {
         "actions": [
           "filter"
@@ -1238,9 +1591,37 @@
         ],
         "type": "openalex_id"
       },
+      "image_thumbnail_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "image_thumbnail_url",
+        "operators": [],
+        "type": null
+      },
+      "image_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "image_url",
+        "operators": [],
+        "type": null
+      },
+      "international": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "international",
+        "operators": [],
+        "type": null
+      },
       "level": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "level",
@@ -1280,6 +1661,33 @@
           "or"
         ],
         "type": "openalex_id"
+      },
+      "related_concepts": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "related_concepts",
+        "operators": [],
+        "type": null
+      },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "summary_stats": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "summary_stats",
+        "operators": [],
+        "type": null
       },
       "summary_stats.2yr_mean_citedness": {
         "actions": [
@@ -1326,6 +1734,24 @@
         ],
         "type": "number"
       },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "wikidata": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "wikidata",
+        "operators": [],
+        "type": null
+      },
       "wikidata_id": {
         "actions": [
           "filter"
@@ -1340,9 +1766,19 @@
         ],
         "type": "string"
       },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -1372,6 +1808,24 @@
         ],
         "type": "number"
       },
+      "countries": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "countries",
+        "operators": [],
+        "type": null
+      },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -1383,9 +1837,19 @@
         ],
         "type": "search"
       },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
+      },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -1407,6 +1871,15 @@
           "search"
         ],
         "type": "search"
+      },
+      "display_name_alternatives": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "display_name_alternatives",
+        "operators": [],
+        "type": null
       },
       "from_created_date": {
         "actions": [
@@ -1436,7 +1909,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "continents",
         "name": "id",
@@ -1446,9 +1920,37 @@
         ],
         "type": "external_id"
       },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
+      },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -1463,9 +1965,19 @@
       }
     },
     "countries": {
+      "authors_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "authors_api_url",
+        "operators": [],
+        "type": null
+      },
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -1478,6 +1990,33 @@
         ],
         "type": "number"
       },
+      "continent": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "continent",
+        "operators": [],
+        "type": null
+      },
+      "country_code": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "country_code",
+        "operators": [],
+        "type": null
+      },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -1489,9 +2028,19 @@
         ],
         "type": "search"
       },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
+      },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -1513,6 +2062,15 @@
           "search"
         ],
         "type": "search"
+      },
+      "display_name_alternatives": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "display_name_alternatives",
+        "operators": [],
+        "type": null
       },
       "from_created_date": {
         "actions": [
@@ -1542,7 +2100,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "countries",
         "name": "id",
@@ -1552,9 +2111,64 @@
         ],
         "type": "external_id"
       },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
+      },
+      "institutions_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "institutions_api_url",
+        "operators": [],
+        "type": null
+      },
+      "is_global_south": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "is_global_south",
+        "operators": [],
+        "type": null
+      },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -1571,7 +2185,8 @@
     "domains": {
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -1584,6 +2199,15 @@
         ],
         "type": "number"
       },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -1595,9 +2219,19 @@
         ],
         "type": "search"
       },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
+      },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -1619,6 +2253,24 @@
           "search"
         ],
         "type": "search"
+      },
+      "display_name_alternatives": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "display_name_alternatives",
+        "operators": [],
+        "type": null
+      },
+      "fields": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "fields",
+        "operators": [],
+        "type": null
       },
       "fields.id": {
         "actions": [
@@ -1663,7 +2315,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "domains",
         "name": "id",
@@ -1673,9 +2326,55 @@
         ],
         "type": "external_id"
       },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
+      },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "siblings": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "siblings",
+        "operators": [],
+        "type": null
+      },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -1692,7 +2391,8 @@
     "fields": {
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -1705,6 +2405,15 @@
         ],
         "type": "number"
       },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -1716,9 +2425,19 @@
         ],
         "type": "search"
       },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
+      },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -1740,6 +2459,24 @@
           "search"
         ],
         "type": "search"
+      },
+      "display_name_alternatives": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "display_name_alternatives",
+        "operators": [],
+        "type": null
+      },
+      "domain": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "domain",
+        "operators": [],
+        "type": null
       },
       "domain.id": {
         "actions": [
@@ -1783,7 +2520,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "fields",
         "name": "id",
@@ -1792,6 +2530,42 @@
           "null"
         ],
         "type": "external_id"
+      },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
+      },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "siblings": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "siblings",
+        "operators": [],
+        "type": null
+      },
+      "subfields": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "subfields",
+        "operators": [],
+        "type": null
       },
       "subfields.id": {
         "actions": [
@@ -1808,9 +2582,28 @@
         ],
         "type": "number"
       },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -1825,9 +2618,19 @@
       }
     },
     "funders": {
+      "alternate_titles": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "alternate_titles",
+        "operators": [],
+        "type": null
+      },
       "awards_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "awards_count",
@@ -1842,7 +2645,8 @@
       },
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -1880,7 +2684,8 @@
       },
       "country_code": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "country_code",
@@ -1892,6 +2697,24 @@
         ],
         "type": "string"
       },
+      "counts_by_year": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "counts_by_year",
+        "operators": [],
+        "type": null
+      },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -1902,6 +2725,15 @@
           "search"
         ],
         "type": "search"
+      },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
       },
       "description.search": {
         "actions": [
@@ -1916,7 +2748,8 @@
       },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -1964,6 +2797,33 @@
           "null"
         ],
         "type": "datetime"
+      },
+      "homepage_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "homepage_url",
+        "operators": [],
+        "type": null
+      },
+      "id": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "id",
+        "operators": [],
+        "type": null
+      },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
       },
       "ids.crossref": {
         "actions": [
@@ -2035,6 +2895,24 @@
         ],
         "type": "string"
       },
+      "image_thumbnail_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "image_thumbnail_url",
+        "operators": [],
+        "type": null
+      },
+      "image_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "image_url",
+        "operators": [],
+        "type": null
+      },
       "is_global_south": {
         "actions": [
           "filter"
@@ -2075,6 +2953,24 @@
         ],
         "type": "openalex_id"
       },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "roles": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "roles",
+        "operators": [],
+        "type": null
+      },
       "roles.id": {
         "actions": [
           "filter"
@@ -2102,6 +2998,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "summary_stats": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "summary_stats",
+        "operators": [],
+        "type": null
       },
       "summary_stats.2yr_mean_citedness": {
         "actions": [
@@ -2148,6 +3053,15 @@
         ],
         "type": "number"
       },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
       "wikidata": {
         "actions": [
           "filter"
@@ -2164,7 +3078,8 @@
       },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -2181,7 +3096,8 @@
     "institution-types": {
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -2194,6 +3110,15 @@
         ],
         "type": "number"
       },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -2205,9 +3130,19 @@
         ],
         "type": "search"
       },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
+      },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -2258,7 +3193,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "institution-types",
         "name": "id",
@@ -2268,9 +3204,37 @@
         ],
         "type": "external_id"
       },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -2285,9 +3249,19 @@
       }
     },
     "institutions": {
+      "associated_institutions": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "associated_institutions",
+        "operators": [],
+        "type": null
+      },
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -2353,7 +3327,8 @@
       },
       "country_code": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "country_code",
@@ -2364,6 +3339,24 @@
           "or"
         ],
         "type": "string"
+      },
+      "counts_by_year": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "counts_by_year",
+        "operators": [],
+        "type": null
+      },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
       },
       "default.search": {
         "actions": [
@@ -2378,7 +3371,8 @@
       },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -2400,6 +3394,24 @@
           "search"
         ],
         "type": "search"
+      },
+      "display_name_acronyms": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "display_name_acronyms",
+        "operators": [],
+        "type": null
+      },
+      "display_name_alternatives": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "display_name_alternatives",
+        "operators": [],
+        "type": null
       },
       "from_created_date": {
         "actions": [
@@ -2427,6 +3439,15 @@
         ],
         "type": "datetime"
       },
+      "geo": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "geo",
+        "operators": [],
+        "type": null
+      },
       "has_ror": {
         "actions": [
           "filter"
@@ -2439,9 +3460,19 @@
         ],
         "type": "boolean"
       },
+      "homepage_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "homepage_url",
+        "operators": [],
+        "type": null
+      },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "institutions",
         "name": "id",
@@ -2452,6 +3483,15 @@
           "or"
         ],
         "type": "openalex_id"
+      },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
       },
       "ids.openalex": {
         "actions": [
@@ -2467,6 +3507,33 @@
         ],
         "type": "openalex_id"
       },
+      "image_thumbnail_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "image_thumbnail_url",
+        "operators": [],
+        "type": null
+      },
+      "image_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "image_url",
+        "operators": [],
+        "type": null
+      },
+      "international": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "international",
+        "operators": [],
+        "type": null
+      },
       "is_global_south": {
         "actions": [
           "filter"
@@ -2481,7 +3548,8 @@
       },
       "is_super_system": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_super_system",
@@ -2493,7 +3561,8 @@
       },
       "lineage": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "lineage",
@@ -2532,6 +3601,24 @@
           "or"
         ],
         "type": "openalex_id"
+      },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "repositories": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "repositories",
+        "operators": [],
+        "type": null
       },
       "repositories.host_organization": {
         "actions": [
@@ -2575,6 +3662,15 @@
         ],
         "type": "openalex_id"
       },
+      "roles": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "roles",
+        "operators": [],
+        "type": null
+      },
       "roles.id": {
         "actions": [
           "filter"
@@ -2591,7 +3687,8 @@
       },
       "ror": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "ror",
@@ -2605,7 +3702,8 @@
       },
       "status": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "status",
@@ -2616,6 +3714,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "summary_stats": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "summary_stats",
+        "operators": [],
+        "type": null
       },
       "summary_stats.2yr_mean_citedness": {
         "actions": [
@@ -2662,6 +3769,15 @@
         ],
         "type": "number"
       },
+      "topic_share": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "topic_share",
+        "operators": [],
+        "type": null
+      },
       "topic_share.id": {
         "actions": [
           "filter"
@@ -2675,6 +3791,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "topics": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "topics",
+        "operators": [],
+        "type": null
       },
       "topics.id": {
         "actions": [
@@ -2692,7 +3817,8 @@
       },
       "type": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "type",
@@ -2704,9 +3830,37 @@
         ],
         "type": "string"
       },
+      "type_id": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "type_id",
+        "operators": [],
+        "type": null
+      },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -2718,6 +3872,15 @@
           "range"
         ],
         "type": "number"
+      },
+      "x_concepts": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "x_concepts",
+        "operators": [],
+        "type": null
       },
       "x_concepts.id": {
         "actions": [
@@ -2737,7 +3900,8 @@
     "keywords": {
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -2759,6 +3923,15 @@
         ],
         "type": "collection"
       },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -2772,7 +3945,8 @@
       },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -2823,7 +3997,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "keywords",
         "name": "id",
@@ -2833,9 +4008,37 @@
         ],
         "type": "external_id"
       },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -2852,7 +4055,8 @@
     "languages": {
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -2864,6 +4068,15 @@
           "range"
         ],
         "type": "number"
+      },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
       },
       "default.search": {
         "actions": [
@@ -2878,7 +4091,8 @@
       },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -2929,7 +4143,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "languages",
         "name": "id",
@@ -2939,9 +4154,46 @@
         ],
         "type": "external_id"
       },
+      "is_global_south": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "is_global_south",
+        "operators": [],
+        "type": null
+      },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -2958,7 +4210,8 @@
     "licenses": {
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -2971,6 +4224,15 @@
         ],
         "type": "number"
       },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -2982,9 +4244,19 @@
         ],
         "type": "search"
       },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
+      },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -3035,7 +4307,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "licenses",
         "name": "id",
@@ -3045,9 +4318,46 @@
         ],
         "type": "external_id"
       },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "url",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -3075,7 +4385,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "id",
@@ -3087,9 +4398,19 @@
         ],
         "type": "string"
       },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
+      },
       "is_oa": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_oa",
@@ -3101,7 +4422,8 @@
       },
       "is_retracted": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_retracted",
@@ -3111,9 +4433,19 @@
         ],
         "type": "boolean"
       },
+      "landing_page_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "landing_page_url",
+        "operators": [],
+        "type": null
+      },
       "language": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "language",
@@ -3127,7 +4459,8 @@
       },
       "license": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "license",
@@ -3139,9 +4472,19 @@
         ],
         "type": "string"
       },
+      "merge_key": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "merge_key",
+        "operators": [],
+        "type": null
+      },
       "native_id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "native_id",
@@ -3155,7 +4498,8 @@
       },
       "native_id_namespace": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "native_id_namespace",
@@ -3167,9 +4511,19 @@
         ],
         "type": "string"
       },
+      "pdf_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "pdf_url",
+        "operators": [],
+        "type": null
+      },
       "provenance": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "provenance",
@@ -3183,7 +4537,8 @@
       },
       "publisher": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "publisher",
@@ -3195,9 +4550,19 @@
         ],
         "type": "string"
       },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
       "source_id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "source_id",
@@ -3211,7 +4576,8 @@
       },
       "source_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "source_name",
@@ -3225,7 +4591,8 @@
       },
       "title": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "title",
@@ -3250,7 +4617,8 @@
       },
       "type": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "type",
@@ -3262,9 +4630,19 @@
         ],
         "type": "string"
       },
+      "urls": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "urls",
+        "operators": [],
+        "type": null
+      },
       "version": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "version",
@@ -3278,7 +4656,8 @@
       },
       "work_id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "work_id",
@@ -3292,9 +4671,19 @@
       }
     },
     "publishers": {
+      "alternate_titles": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "alternate_titles",
+        "operators": [],
+        "type": null
+      },
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -3332,7 +4721,8 @@
       },
       "country_codes": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "country_codes",
@@ -3343,6 +4733,24 @@
           "or"
         ],
         "type": "string"
+      },
+      "counts_by_year": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "counts_by_year",
+        "operators": [],
+        "type": null
+      },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
       },
       "default.search": {
         "actions": [
@@ -3357,7 +4765,8 @@
       },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -3408,7 +4817,8 @@
       },
       "hierarchy_level": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "hierarchy_level",
@@ -3420,6 +4830,33 @@
           "range"
         ],
         "type": "number"
+      },
+      "homepage_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "homepage_url",
+        "operators": [],
+        "type": null
+      },
+      "id": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "id",
+        "operators": [],
+        "type": null
+      },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
       },
       "ids.openalex": {
         "actions": [
@@ -3463,9 +4900,28 @@
         ],
         "type": "string"
       },
+      "image_thumbnail_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "image_thumbnail_url",
+        "operators": [],
+        "type": null
+      },
+      "image_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "image_url",
+        "operators": [],
+        "type": null
+      },
       "lineage": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "lineage",
@@ -3507,7 +4963,8 @@
       },
       "parent_publisher": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "parent_publisher",
@@ -3518,6 +4975,24 @@
           "or"
         ],
         "type": "openalex_id"
+      },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "roles": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "roles",
+        "operators": [],
+        "type": null
       },
       "roles.id": {
         "actions": [
@@ -3546,6 +5021,24 @@
           "or"
         ],
         "type": "string"
+      },
+      "sources_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "sources_api_url",
+        "operators": [],
+        "type": null
+      },
+      "summary_stats": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "summary_stats",
+        "operators": [],
+        "type": null
       },
       "summary_stats.2yr_mean_citedness": {
         "actions": [
@@ -3592,6 +5085,15 @@
         ],
         "type": "number"
       },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
       "wikidata": {
         "actions": [
           "filter"
@@ -3608,7 +5110,8 @@
       },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -3625,7 +5128,8 @@
     "sdgs": {
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -3647,6 +5151,15 @@
         ],
         "type": "collection"
       },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -3658,9 +5171,19 @@
         ],
         "type": "search"
       },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
+      },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -3711,7 +5234,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "sdgs",
         "name": "id",
@@ -3721,9 +5245,64 @@
         ],
         "type": "external_id"
       },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
+      },
+      "image_thumbnail_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "image_thumbnail_url",
+        "operators": [],
+        "type": null
+      },
+      "image_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "image_url",
+        "operators": [],
+        "type": null
+      },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -3740,7 +5319,8 @@
     "source-types": {
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -3753,6 +5333,15 @@
         ],
         "type": "number"
       },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -3764,9 +5353,19 @@
         ],
         "type": "search"
       },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
+      },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -3817,7 +5416,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "source-types",
         "name": "id",
@@ -3827,9 +5427,37 @@
         ],
         "type": "external_id"
       },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -3844,6 +5472,33 @@
       }
     },
     "sources": {
+      "abbreviated_title": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "abbreviated_title",
+        "operators": [],
+        "type": null
+      },
+      "alternate_titles": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "alternate_titles",
+        "operators": [],
+        "type": null
+      },
+      "apc_prices": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "apc_prices",
+        "operators": [],
+        "type": null
+      },
       "apc_prices.currency": {
         "actions": [
           "filter"
@@ -3875,7 +5530,8 @@
       },
       "apc_usd": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "apc_usd",
@@ -3890,7 +5546,8 @@
       },
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -3954,9 +5611,19 @@
         ],
         "type": "string"
       },
+      "country": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "country",
+        "operators": [],
+        "type": null
+      },
       "country_code": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "country_code",
@@ -3967,6 +5634,24 @@
           "or"
         ],
         "type": "string"
+      },
+      "counts_by_year": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "counts_by_year",
+        "operators": [],
+        "type": null
+      },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
       },
       "default.search": {
         "actions": [
@@ -3981,7 +5666,8 @@
       },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -4006,7 +5692,8 @@
       },
       "first_publication_year": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "first_publication_year",
@@ -4057,9 +5744,19 @@
         ],
         "type": "boolean"
       },
+      "homepage_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "homepage_url",
+        "operators": [],
+        "type": null
+      },
       "host_organization": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "host_organization",
@@ -4087,7 +5784,8 @@
       },
       "host_organization_lineage": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "host_organization_lineage",
@@ -4098,6 +5796,33 @@
           "or"
         ],
         "type": "openalex_id"
+      },
+      "host_organization_name": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "host_organization_name",
+        "operators": [],
+        "type": null
+      },
+      "id": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "id",
+        "operators": [],
+        "type": null
+      },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
       },
       "ids.mag": {
         "actions": [
@@ -4129,7 +5854,8 @@
       },
       "is_core": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_core",
@@ -4153,7 +5879,8 @@
       },
       "is_high_oa_rate": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_high_oa_rate",
@@ -4165,7 +5892,8 @@
       },
       "is_high_oa_rate_since_year": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_high_oa_rate_since_year",
@@ -4180,7 +5908,8 @@
       },
       "is_in_doaj": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_in_doaj",
@@ -4192,7 +5921,8 @@
       },
       "is_in_doaj_since_year": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_in_doaj_since_year",
@@ -4207,7 +5937,8 @@
       },
       "is_in_jstage": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_in_jstage",
@@ -4219,7 +5950,8 @@
       },
       "is_in_jstage_since_year": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_in_jstage_since_year",
@@ -4232,9 +5964,28 @@
         ],
         "type": "number"
       },
+      "is_in_scielo": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "is_in_scielo",
+        "operators": [],
+        "type": null
+      },
+      "is_indexed_in_scopus": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "is_indexed_in_scopus",
+        "operators": [],
+        "type": null
+      },
       "is_oa": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_oa",
@@ -4246,7 +5997,8 @@
       },
       "is_ojs": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_ojs",
@@ -4258,7 +6010,8 @@
       },
       "issn": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "issn",
@@ -4272,7 +6025,8 @@
       },
       "issn_l": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "issn_l",
@@ -4286,7 +6040,8 @@
       },
       "last_publication_year": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "last_publication_year",
@@ -4301,7 +6056,8 @@
       },
       "oa_flip_year": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "oa_flip_year",
@@ -4313,6 +6069,15 @@
           "range"
         ],
         "type": "number"
+      },
+      "oa_works_count": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "oa_works_count",
+        "operators": [],
+        "type": null
       },
       "openalex": {
         "actions": [
@@ -4341,6 +6106,33 @@
           "or"
         ],
         "type": "openalex_id"
+      },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "societies": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "societies",
+        "operators": [],
+        "type": null
+      },
+      "summary_stats": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "summary_stats",
+        "operators": [],
+        "type": null
       },
       "summary_stats.2yr_mean_citedness": {
         "actions": [
@@ -4413,6 +6205,15 @@
         ],
         "type": "datetime"
       },
+      "topic_share": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "topic_share",
+        "operators": [],
+        "type": null
+      },
       "topic_share.id": {
         "actions": [
           "filter"
@@ -4426,6 +6227,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "topics": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "topics",
+        "operators": [],
+        "type": null
       },
       "topics.id": {
         "actions": [
@@ -4443,7 +6253,8 @@
       },
       "type": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "type",
@@ -4455,9 +6266,28 @@
         ],
         "type": "string"
       },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -4469,6 +6299,15 @@
           "range"
         ],
         "type": "number"
+      },
+      "x_concepts": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "x_concepts",
+        "operators": [],
+        "type": null
       },
       "x_concepts.id": {
         "actions": [
@@ -4488,7 +6327,8 @@
     "subfields": {
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -4501,6 +6341,15 @@
         ],
         "type": "number"
       },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -4512,9 +6361,19 @@
         ],
         "type": "search"
       },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
+      },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -4537,6 +6396,24 @@
         ],
         "type": "search"
       },
+      "display_name_alternatives": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "display_name_alternatives",
+        "operators": [],
+        "type": null
+      },
+      "domain": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "domain",
+        "operators": [],
+        "type": null
+      },
       "domain.id": {
         "actions": [
           "filter"
@@ -4550,6 +6427,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "field": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "field",
+        "operators": [],
+        "type": null
       },
       "field.id": {
         "actions": [
@@ -4593,7 +6479,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "subfields",
         "name": "id",
@@ -4602,6 +6489,42 @@
           "null"
         ],
         "type": "external_id"
+      },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
+      },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "siblings": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "siblings",
+        "operators": [],
+        "type": null
+      },
+      "topics": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "topics",
+        "operators": [],
+        "type": null
       },
       "topics.id": {
         "actions": [
@@ -4617,9 +6540,28 @@
         ],
         "type": "openalex_id"
       },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -4636,7 +6578,8 @@
     "topics": {
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -4658,6 +6601,15 @@
         ],
         "type": "collection"
       },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -4668,6 +6620,15 @@
           "search"
         ],
         "type": "search"
+      },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
       },
       "description.search": {
         "actions": [
@@ -4682,7 +6643,8 @@
       },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -4705,6 +6667,15 @@
         ],
         "type": "search"
       },
+      "domain": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "domain",
+        "operators": [],
+        "type": null
+      },
       "domain.id": {
         "actions": [
           "filter"
@@ -4718,6 +6689,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "field": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "field",
+        "operators": [],
+        "type": null
       },
       "field.id": {
         "actions": [
@@ -4761,7 +6741,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "id",
@@ -4772,6 +6753,15 @@
           "or"
         ],
         "type": "openalex_id"
+      },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
       },
       "ids.openalex": {
         "actions": [
@@ -4786,6 +6776,15 @@
           "or"
         ],
         "type": "openalex_id"
+      },
+      "keywords": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "keywords",
+        "operators": [],
+        "type": null
       },
       "keywords.search": {
         "actions": [
@@ -4812,6 +6811,33 @@
         ],
         "type": "openalex_id"
       },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "siblings": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "siblings",
+        "operators": [],
+        "type": null
+      },
+      "subfield": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "subfield",
+        "operators": [],
+        "type": null
+      },
       "subfield.id": {
         "actions": [
           "filter"
@@ -4826,9 +6852,28 @@
         ],
         "type": "string"
       },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -4845,7 +6890,8 @@
     "work-types": {
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -4858,6 +6904,24 @@
         ],
         "type": "number"
       },
+      "created_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "type": null
+      },
+      "crossref_types": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "crossref_types",
+        "operators": [],
+        "type": null
+      },
       "default.search": {
         "actions": [
           "search"
@@ -4869,9 +6933,19 @@
         ],
         "type": "search"
       },
+      "description": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "type": null
+      },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -4922,7 +6996,8 @@
       },
       "id": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "types",
         "name": "id",
@@ -4932,9 +7007,37 @@
         ],
         "type": "external_id"
       },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
+      "updated_date": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "type": null
+      },
       "works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "works_count",
@@ -4970,6 +7073,24 @@
           "search"
         ],
         "type": "search"
+      },
+      "abstract_inverted_index": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "abstract_inverted_index",
+        "operators": [],
+        "type": null
+      },
+      "apc_list": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "apc_list",
+        "operators": [],
+        "type": null
       },
       "apc_list.currency": {
         "actions": [
@@ -5028,6 +7149,15 @@
           "range"
         ],
         "type": "number"
+      },
+      "apc_paid": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "apc_paid",
+        "operators": [],
+        "type": null
       },
       "apc_paid.currency": {
         "actions": [
@@ -5129,6 +7259,15 @@
           "range"
         ],
         "type": "number"
+      },
+      "authorships": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "authorships",
+        "operators": [],
+        "type": null
       },
       "authorships.affiliations.institution_ids": {
         "actions": [
@@ -5308,6 +7447,15 @@
         ],
         "type": "string"
       },
+      "awards": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "awards",
+        "operators": [],
+        "type": null
+      },
       "awards.doi": {
         "actions": [
           "filter"
@@ -5377,6 +7525,15 @@
           "or"
         ],
         "type": "openalex_id"
+      },
+      "best_oa_location": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "best_oa_location",
+        "operators": [],
+        "type": null
       },
       "best_oa_location.is_accepted": {
         "actions": [
@@ -5592,6 +7749,15 @@
         ],
         "type": "string"
       },
+      "biblio": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "biblio",
+        "operators": [],
+        "type": null
+      },
       "biblio.first_page": {
         "actions": [
           "filter"
@@ -5648,6 +7814,15 @@
         ],
         "type": "string"
       },
+      "citation_normalized_percentile": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "citation_normalized_percentile",
+        "operators": [],
+        "type": null
+      },
       "citation_normalized_percentile.is_in_top_10_percent": {
         "actions": [
           "filter"
@@ -5701,9 +7876,19 @@
         ],
         "type": "openalex_id"
       },
+      "cited_by_api_url": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "cited_by_api_url",
+        "operators": [],
+        "type": null
+      },
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "cited_by_count",
@@ -5715,6 +7900,15 @@
           "range"
         ],
         "type": "number"
+      },
+      "cited_by_percentile_year": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "cited_by_percentile_year",
+        "operators": [],
+        "type": null
       },
       "cited_by_percentile_year.max": {
         "actions": [
@@ -5783,6 +7977,15 @@
         ],
         "type": "openalex_id"
       },
+      "concepts": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "concepts",
+        "operators": [],
+        "type": null
+      },
       "concepts.id": {
         "actions": [
           "filter"
@@ -5826,9 +8029,19 @@
         ],
         "type": "number"
       },
+      "content_urls": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "content_urls",
+        "operators": [],
+        "type": null
+      },
       "corresponding_author_ids": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "authors",
         "name": "corresponding_author_ids",
@@ -5842,7 +8055,8 @@
       },
       "corresponding_institution_ids": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": "institutions",
         "name": "corresponding_institution_ids",
@@ -5856,7 +8070,8 @@
       },
       "countries_distinct_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "countries_distinct_count",
@@ -5869,9 +8084,19 @@
         ],
         "type": "number"
       },
+      "counts_by_year": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "counts_by_year",
+        "operators": [],
+        "type": null
+      },
       "created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "created_date",
@@ -5884,7 +8109,8 @@
       },
       "datasets": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "datasets",
@@ -5909,7 +8135,8 @@
       },
       "display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "display_name",
@@ -5945,7 +8172,8 @@
       },
       "doi": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "doi",
@@ -6034,7 +8262,8 @@
       },
       "fulltext_origin": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "fulltext_origin",
@@ -6045,6 +8274,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "funders": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "funders",
+        "operators": [],
+        "type": null
       },
       "funders.id": {
         "actions": [
@@ -6062,7 +8300,8 @@
       },
       "fwci": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "fwci",
@@ -6086,6 +8325,15 @@
           "null"
         ],
         "type": "boolean"
+      },
+      "has_content": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "has_content",
+        "operators": [],
+        "type": null
       },
       "has_content.grobid_xml": {
         "actions": [
@@ -6137,7 +8385,8 @@
       },
       "has_fulltext": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "has_fulltext",
@@ -6255,6 +8504,24 @@
         ],
         "type": "boolean"
       },
+      "id": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "id",
+        "operators": [],
+        "type": null
+      },
+      "ids": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "type": null
+      },
       "ids.mag": {
         "actions": [
           "filter"
@@ -6313,7 +8580,8 @@
       },
       "indexed_in": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "indexed_in",
@@ -6338,6 +8606,15 @@
           "or"
         ],
         "type": "openalex_id"
+      },
+      "institution_assertions": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "institution_assertions",
+        "operators": [],
+        "type": null
       },
       "institution_assertions.country_code": {
         "actions": [
@@ -6408,6 +8685,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "institutions": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "institutions",
+        "operators": [],
+        "type": null
       },
       "institutions.continent": {
         "actions": [
@@ -6493,7 +8779,8 @@
       },
       "institutions_distinct_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "institutions_distinct_count",
@@ -6505,6 +8792,15 @@
           "range"
         ],
         "type": "number"
+      },
+      "is_authors_truncated": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "is_authors_truncated",
+        "operators": [],
+        "type": null
       },
       "is_corresponding": {
         "actions": [
@@ -6532,7 +8828,8 @@
       },
       "is_paratext": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_paratext",
@@ -6544,7 +8841,8 @@
       },
       "is_retracted": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_retracted",
@@ -6556,7 +8854,8 @@
       },
       "is_xpac": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "is_xpac",
@@ -6591,6 +8890,15 @@
         ],
         "type": "search"
       },
+      "keywords": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "keywords",
+        "operators": [],
+        "type": null
+      },
       "keywords.id": {
         "actions": [
           "filter"
@@ -6607,7 +8915,8 @@
       },
       "language": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "language",
@@ -6618,6 +8927,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "locations": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "locations",
+        "operators": [],
+        "type": null
       },
       "locations.is_accepted": {
         "actions": [
@@ -6873,7 +9191,8 @@
       },
       "locations_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "locations_count",
@@ -6912,6 +9231,15 @@
         ],
         "type": "boolean"
       },
+      "mesh": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "mesh",
+        "operators": [],
+        "type": null
+      },
       "oa_status": {
         "actions": [
           "filter"
@@ -6925,6 +9253,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "open_access": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "open_access",
+        "operators": [],
+        "type": null
       },
       "open_access.any_repository_has_fulltext": {
         "actions": [
@@ -7019,6 +9356,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "primary_location": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "primary_location",
+        "operators": [],
+        "type": null
       },
       "primary_location.is_accepted": {
         "actions": [
@@ -7272,6 +9618,15 @@
         ],
         "type": "string"
       },
+      "primary_topic": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "primary_topic",
+        "operators": [],
+        "type": null
+      },
       "primary_topic.domain.id": {
         "actions": [
           "filter"
@@ -7330,7 +9685,8 @@
       },
       "publication_date": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "publication_date",
@@ -7343,7 +9699,8 @@
       },
       "publication_year": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "publication_year",
@@ -7394,7 +9751,8 @@
       },
       "referenced_works": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "referenced_works",
@@ -7408,7 +9766,8 @@
       },
       "referenced_works_count": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "referenced_works_count",
@@ -7435,6 +9794,24 @@
         ],
         "type": "openalex_id"
       },
+      "related_works": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "related_works",
+        "operators": [],
+        "type": null
+      },
+      "relevance_score": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "type": null
+      },
       "repository": {
         "actions": [
           "filter"
@@ -7459,6 +9836,24 @@
           "search"
         ],
         "type": "search"
+      },
+      "sources": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "sources",
+        "operators": [],
+        "type": null
+      },
+      "sustainable_development_goals": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "sustainable_development_goals",
+        "operators": [],
+        "type": null
       },
       "sustainable_development_goals.id": {
         "actions": [
@@ -7488,6 +9883,15 @@
           "range"
         ],
         "type": "number"
+      },
+      "title": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "title",
+        "operators": [],
+        "type": null
       },
       "title.search": {
         "actions": [
@@ -7572,6 +9976,15 @@
         ],
         "type": "datetime"
       },
+      "topics": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "topics",
+        "operators": [],
+        "type": null
+      },
       "topics.domain.id": {
         "actions": [
           "filter"
@@ -7645,7 +10058,8 @@
       },
       "type": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "type",
@@ -7659,7 +10073,8 @@
       },
       "type_crossref": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "type_crossref",
@@ -7673,7 +10088,8 @@
       },
       "updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "select"
         ],
         "entity_type": null,
         "name": "updated_date",
@@ -7697,6 +10113,15 @@
           "or"
         ],
         "type": "string"
+      },
+      "versions": {
+        "actions": [
+          "select"
+        ],
+        "entity_type": null,
+        "name": "versions",
+        "operators": [],
+        "type": null
       }
     }
   }

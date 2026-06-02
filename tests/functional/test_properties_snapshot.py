@@ -18,8 +18,10 @@ import subprocess
 import sys
 
 from core.properties import (
+    ENTITY_PROPERTIES,
     PROPERTIES_VERSION,
     canonical_bytes,
+    get_selectable_fields,
     properties_fingerprint,
     render_properties,
 )
@@ -109,6 +111,51 @@ def test_committed_snapshot_matches_live_render():
         "snapshot is STALE — run `python scripts/render_properties.py` and bump "
         "PROPERTIES_VERSION per docs/PROPERTIES_VERSIONING.md"
     )
+
+
+def test_rendered_catalog_is_filter_union_select():
+    """The rendered catalog is the union of filter-columns and selectable
+    result-fields, discriminated by `actions` (#318 / Decision D). The render
+    must NOT mutate `ENTITY_PROPERTIES` (the validator's filter-column source) —
+    every selectable name appears in the render, every filter name appears in
+    the render, and a both-name carries `select` unioned into its filter actions.
+    """
+    works = render_properties(entity="works")["properties"]["works"]
+    filter_names = set(ENTITY_PROPERTIES["works"])
+    select_names = get_selectable_fields("works")
+
+    # render = filter ∪ select (no name lost from either namespace)
+    assert filter_names <= set(works)
+    assert select_names <= set(works)
+
+    # selectable names carry the `select` action
+    for name in select_names:
+        assert "select" in works[name]["actions"], name
+    # a filter-only name does NOT gain `select`
+    filter_only = filter_names - select_names
+    assert filter_only, "expected some filter-only columns on works"
+    for name in filter_only:
+        assert "select" not in works[name]["actions"], name
+
+    # ENTITY_PROPERTIES (validator's filter source) is untouched by the render:
+    # select-only names never leak into it.
+    assert (select_names - filter_names) and not (
+        (select_names - filter_names) & filter_names
+    )
+
+
+def test_select_only_property_has_no_filter_surface():
+    """A select-only field (e.g. `abstract_inverted_index`) renders as a property
+    with `actions == ["select"]`, no `type`, no `operators` — it is selectable but
+    not filterable, so it can never be mistaken for a filter column."""
+    works = render_properties(entity="works")["properties"]["works"]
+    select_only = get_selectable_fields("works") - set(ENTITY_PROPERTIES["works"])
+    assert "abstract_inverted_index" in select_only
+    for name in select_only:
+        prop = works[name]
+        assert prop["actions"] == ["select"], name
+        assert prop["type"] is None, name
+        assert prop["operators"] == [], name
 
 
 def test_entity_slice_matches_full_catalog():

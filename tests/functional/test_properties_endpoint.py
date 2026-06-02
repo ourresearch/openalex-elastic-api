@@ -86,3 +86,35 @@ def test_public_payload_omits_server_internal_keys(client):
     assert set(sample.keys()) == {"name", "type", "operators", "actions", "entity_type"}
     assert "custom_es_field" not in sample
     assert "alias" not in sample
+
+
+# --- #318 select unification (ACCEPTANCE Test 5, select half) ----------------
+# The catalog carries filter-columns ∪ selectable result-fields, discriminated by
+# `actions`. NOTE the two source namespaces (PLAN's examples are nominal):
+#   - select-only field is `abstract_inverted_index` (NOT a bare `abstract`),
+#   - `open_access` is select-only (the FILTER column is `open_access.is_oa`),
+#   - `publication_year` is the clean both-filterable-and-selectable case.
+
+def test_select_only_field_is_a_property_with_select_action(client):
+    works = client.get("/properties/works").get_json()["properties"]["works"]
+    for name in ("abstract_inverted_index", "open_access"):
+        assert name in works, f"{name} should appear as a (select-only) property"
+        prop = works[name]
+        assert prop["actions"] == ["select"]
+        # select-only ⇒ not filterable: no value type, no operators.
+        assert prop["type"] is None
+        assert prop["operators"] == []
+
+
+def test_filterable_and_selectable_field_unions_actions(client):
+    works = client.get("/properties/works").get_json()["properties"]["works"]
+    py = works["publication_year"]
+    assert "filter" in py["actions"]
+    assert "select" in py["actions"]
+
+
+def test_filter_only_column_has_no_select_action(client):
+    # `open_access.is_oa` is filter-only; the selectable object is the parent
+    # `open_access`. The two must not be conflated.
+    works = client.get("/properties/works").get_json()["properties"]["works"]
+    assert "select" not in works["open_access.is_oa"]["actions"]
