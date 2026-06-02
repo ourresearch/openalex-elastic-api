@@ -1,569 +1,359 @@
-# OQL (OpenAlex Query Language) Specification v1.1
+# OQL (OpenAlex Query Language) Specification — v2 **(FROZEN)**
 
-## Overview
+> **Status: frozen** (oxjob #330, 2026-06-02). This is a cases-first
+> specification: the normative truth is the worked-example corpus
+> [`docs/oql/corpus.yaml`](./oql/corpus.yaml), machine-checked by
+> [`tests/oql/test_corpus_roundtrip.py`](../tests/oql/test_corpus_roundtrip.py).
+> **The rules in this prose are the generalization *under* the cases.** When prose
+> and a corpus case disagree, the case wins — fix the prose.
+>
+> v2 supersedes v1.1. v1.1 (parser/renderer in `query_translation/oql_*.py`) was
+> designed months ago and never shipped; v2 is a "build one to throw away" rev
+> (Brooks) — the general idea survives, many local decisions changed. The
+> production translator is still v1.1; reconciling it to v2 is roadmap step 3 (see
+> [`docs/oql/gap_report.md`](./oql/gap_report.md)).
 
-OQL is a human-readable query language that bidirectionally converts to/from OQO (OpenAlex Query Object) and URL parameters. It's designed to be:
-
-- **Copy-pasteable** — Users can include OQL in papers/slides, and others can paste it into OpenAlex to reproduce results
-- **Unambiguous** — Entity IDs are always enclosed in brackets `[id]`
-- **Deterministic** — No AI required; purely rule-based conversion
-
-### Design Philosophy
-
-- **Strict output**: Always emit the most human-readable OQL with display names
-- **Permissive input**: Accept both technical names and display names when parsing
-
-### Relationship to Other Formats
-
-OQL is one of three interchangeable query formats:
-
-```
-URL ←→ OQO ←→ OQL
-```
-
-- **OQO** (OpenAlex Query Object): The canonical JSON format. All translations go through OQO.
-- **URL**: Traditional query parameters (`filter=type:article,publication_year:2024-`)
-- **OQL**: Human-readable text (`Works where it's Open Access and year >= 2024`)
-
-See `query-format-translation-spec.md` for the complete translation system.
-See `oqo-schema.json` for the OQO JSON schema.
+OQL is the **human-readable surface over OQO**. It is defined and validated *in
+terms of* OQO (the canonical query object, [`oqo-spec.md`](./oqo-spec.md)) — not
+in terms of OXURL. Its whole bet, versus Scopus / Web of Science / Dimensions, is
+that a researcher can **read a query aloud and roughly understand it** (confirmed
+by the #277 peer survey: OQL is the only one of the four that does this).
 
 ---
 
-## 1. Syntax Structure
+## 0. Design principles (priority order)
 
-### 1.1 Basic Format
+1. **Human-readable / reads aloud.** Protect this above all.
+2. **Map as tightly to OQO as possible.** OQO is canonical; OQL is sugar over it.
+3. **When (1) and (2) conflict, decide case-by-case** — no global tiebreak.
+4. **Cases > rules.** Rules emerge from worked examples; this doc leads with cases.
+5. **Loud, never silent.** A query that can't do what it appears to do is an
+   **error with a fix-it**, never a silent wrong answer.
 
-```
-{EntityType} where {clause} [and {clause}]* [; sort by {field} {order}] [; sample {n}]
-```
-
-### 1.2 Entity Type (Required)
-
-Statement **must** begin with a capitalized entity type:
-
-- `Works where ...`
-- `Authors where ...`
-- `Sources where ...`
-- `Institutions where ...`
-- `Funders where ...`
-- `Publishers where ...`
-- `Topics where ...`
-- `Keywords where ...`
-- `Concepts where ...`
-- `Awards where ...`
-- `Countries where ...`
-- `Continents where ...`
-- `Sdgs where ...`
-- `Languages where ...`
-- `Licenses where ...`
-- `Types where ...`
-- `Source Types where ...`
-- `Institution Types where ...`
-
-### 1.3 Conjunctions
-
-- **AND**: Top-level clauses are joined by `and`
-- **OR**: Expressed within branch filters using parentheses
-
----
-
-## 2. Technical vs Human-Readable Formats
-
-OQL supports **two equivalent syntaxes**. Both are valid for input, but the **human-readable format is preferred for output**.
-
-### 2.1 Technical Format (Valid Input)
-
-Uses column_id keys and raw value IDs:
+## 1. The canonical triple and the round-trip invariant
 
 ```
-Works where open_access.is_oa is true and sustainable_development_goals.id is [sdgs/2] and authorships.countries is [countries/ca] and institutions.is_global_south is true and publication_year >= 2020
+URL  ↔  OQO  ↔  OQL          (OQO is canonical)
 ```
 
-### 2.2 Human-Readable Format (Preferred Output)
+- **`OQL → OQO` is semantically lossless and order-preserving.** It discards only
+  the **non-semantic text layer** — annotations/comments (display-name labels are a
+  special case) and whitespace — and **normalizes equivalent spellings** to one
+  canonical OQO (`is in` / `is any of` → one form; a technical column-id and its
+  display name → one column).
+- **`OQO → OQL` is deterministic** and *synthesizes* display-name labels.
+- **Round-trip identity holds on the OQO side:** **`OQO → OQL → OQO` is the
+  identity.** (`OQL-text → OQO → OQL-text` is *normalizing*, not identity —
+  canonical spelling, regenerated `[names]`, comments gone.) This is how comments
+  are allowed to exist without breaking "OQL is a pure function of OQO": they live
+  only in the text layer, exactly like whitespace.
 
-Uses display names for columns and includes display names before bracketed IDs:
+This invariant is the spec's runnable contract — see §9.
 
-```
-Works where it's Open Access and Sustainable Development Goals is Zero Hunger [2] and Country is Canada [ca] and it's from Global South and year >= 2020
-```
-
-### 2.3 Key Differences
-
-| Aspect | Technical | Human-Readable |
-|--------|-----------|----------------|
-| Column names | `open_access.is_oa` | `Open Access` (display name) |
-| Boolean filters | `open_access.is_oa is true` | `it's Open Access` |
-| Entity values | `[sdgs/2]` | `Zero Hunger [2]` |
-
----
-
-## 3. Filter Types & Syntax
-
-### 3.1 Boolean Filters
-
-Boolean filters have a special human-readable syntax using `it's`:
-
-| Technical | Human-Readable |
-|-----------|----------------|
-| `open_access.is_oa is true` | `it's Open Access` |
-| `open_access.is_oa is false` | `it's not Open Access` |
-| `institutions.is_global_south is true` | `it's from Global South` |
-| `institutions.is_global_south is false` | `it's not from Global South` |
-| `is_retracted is true` | `it's retracted` |
-| `has_doi is true` | `it has a DOI` |
-| `has_doi is false` | `it doesn't have a DOI` |
-
-The display name comes from the column's `displayName` in the config.
-
-### 3.2 Select Entity Filters
-
-For filters that select entities, the format includes an optional display name before the bracketed ID:
-
-**Technical** (namespaced ID in brackets - accepted for backward compatibility):
-```
-sustainable_development_goals.id is [sdgs/2]
-authorships.countries is [countries/ca]
-authorships.institutions.lineage is [institutions/I136199984]
-```
-
-**Human-Readable** (display name + short ID in brackets - preferred output):
-```
-Sustainable Development Goals is Zero Hunger [2]
-Country is Canada [ca]
-institution is Harvard University [I136199984]
-```
-
-**IMPORTANT**: The bracketed ID is **always required** and is the source of truth. The display name before it is optional for input but preferred for output.
-
-### 3.3 Comparison Filters (>=, <=, >, <)
-
-For numeric and date fields. Display names can be used for the column:
-
-**Technical**:
-```
-publication_year >= 2020
-cited_by_count <= 100
-fwci > 2
-```
-
-**Human-Readable**:
-```
-year >= 2020
-citations <= 100
-FWCI > 2
-```
-
-### 3.4 Text Search Filters (contains / does not contain)
-
-**Technical**:
-```
-title_and_abstract.search contains "machine learning"
-display_name.search contains "climate"
-```
-
-**Human-Readable**:
-```
-title & abstract contains "machine learning"
-title contains "climate"
-```
-
-### 3.5 Null Values
+## 2. Statement shape
 
 ```
-language is unknown           → filter for unknown/missing values
-language is not unknown       → filter for known values
+<entity> [ where <conditions> ] [ ; group by <dims> ] [ ; sort by <keys> ] [ ; sample <n> [ seed <s> ] ]
 ```
 
-Or technical:
-```
-language is null
-language is not null
-```
+- The entity type names the rows returned (`works`, `authors`, `institutions`,
+  `sources`, `publishers`, `funders`, `topics`, …). It is a sentence word →
+  lowercase canonically; any case accepted on input. (corpus **A01**, **A07**, **A10–A12**)
+- `where` introduces the conditions. With no conditions, the bare entity is a valid
+  query: `works` (corpus **A01**).
+- Directives (`group by`, `sort by`, `sample`) follow, each introduced by `;`.
 
----
+OQL covers exactly **OQO Stage A (filter / sort / sample) + Stage B (group_by)**.
+There is deliberately **no Stage-C / HAVING syntax** (§10).
 
-## 4. Bracketed IDs
+## 3. Conditions — the cases
 
-**All entity IDs must be enclosed in brackets `[id]`**. This is a critical requirement for unambiguous parsing.
-
-### 4.1 Format
-
-Preferred output format (short ID):
-```
-[{short_id}]
-```
-
-Backward-compatible input format (namespaced ID):
-```
-[{entity_type}/{short_id}]
-```
-
-### 4.2 Examples
-
-| Entity Type | Preferred Output | Also Accepted (Input) |
-|-------------|------------------|----------------------|
-| institutions | `[I136199984]` | `[institutions/I136199984]` |
-| authors | `[A5023888391]` | `[authors/A5023888391]` |
-| works | `[W2741809807]` | `[works/W2741809807]` |
-| sources | `[S137773608]` | `[sources/S137773608]` |
-| topics | `[T10012]` | `[topics/T10012]` |
-| funders | `[F4320332161]` | `[funders/F4320332161]` |
-| publishers | `[P4310319908]` | `[publishers/P4310319908]` |
-| types | `[article]` | `[types/article]` |
-| countries | `[ca]` | `[countries/ca]` |
-| sdgs | `[2]` | `[sdgs/2]` |
-| oa-statuses | `[gold]` | `[oa-statuses/gold]` |
-| languages | `[en]` | `[languages/en]` |
-
-### 4.3 With Display Names (Preferred Output)
-
-When outputting OQL, include the display name before the bracketed short ID:
+### 3.1 Entity references: the ID is authoritative, `[…]` is ignored decoration
 
 ```
-Harvard University [I136199984]
-Zero Hunger [2]
-Canada [ca]
-article [article]
+works where institution is I136199984 [Harvard]                         (ENT1)
+works where institution is I136199984 [those Harvard bastards, go Yale] (ENT2)
 ```
+Both produce `{column_id: authorships.institutions.lineage, value: I136199984}`.
 
----
+- **`[ … ]` is a universal annotation slot.** Its contents are **ignored on input**
+  (never validated) and **regenerated as the entity's display name on output**. You
+  may write anything inside it. It attaches to the token before it.
+- The name **cannot lie**, because nothing reads it — this kills the v1.1
+  silent-mismatch bug (where `Stanford [I136199984]` resolved to Harvard).
+- The parser is **offline-pure**: no entity resolver in the parse path. A
+  best-effort "⚠ that ID isn't Harvard" is the editor/linter's job, never the
+  parser's, and never blocks.
+- An entity reference with **only** an annotation and no ID is a **loud error**:
+  `institution is [Harvard]` → `OQL_MISSING_ENTITY_ID` (corpus **ENT6**).
+- Values are **bare** (no `entity/id` prefix): `I136199984`, `de`, `article`, `13`,
+  `gold` — the column carries the namespace (per oqo-spec §2). A `col_…` collection
+  reference is also a valid bare value (corpus **B04**).
 
-## 5. Boolean Logic
-
-### 5.1 Top-Level AND
-
-Multiple filters at the top level are implicitly AND-ed:
-
-```
-Works where it's Open Access and year >= 2024 and Country is Canada [countries/ca]
-```
-
-### 5.2 OR with Parentheses
-
-OR requires parentheses:
-
-```
-Works where (type is article [article] or type is book [book])
-```
-
-### 5.3 Nested Boolean
-
-Complex boolean expressions are supported:
+### 3.2 Sets / value lists: `is any of ( … )`
 
 ```
-Works where institution is Harvard University [I136199984] and (institution is Stanford University [I97018004] or institution is MIT [I63966007])
+works where institution is any of (I33213144 [Harvard], I97018004 [Stanford])  (ENT3)
+works where type is in (article, review)                                       (ENT5)
+works where institution is not any of (I33213144, I97018004)                   (ENT4)
 ```
 
-**Note**: Nested boolean cannot always be expressed in URL format.
+- `( … )` does **double duty**: boolean grouping **and** value lists. The preceding
+  keyword disambiguates.
+- Accept **`is in`** and **`is any of`** on input; **emit `is any of`** canonically
+  (it reads aloud; SQL familiarity is explicitly *not* a goal here).
+- `is any of (a, b)` compiles to an OR-branch of equality leaves. `is not any of
+  (a, b)` is `NOT(a OR b)` = `(NOT a) AND (NOT b)` by De Morgan — canonical NNF
+  carries the negation on the leaves (corpus **ENT4**).
 
----
+### 3.3 Delimiters and the no-escaping result
 
-## 6. Sort and Sample
+| Delimiter | Meaning |
+|---|---|
+| `( … )` | boolean grouping **and** value lists (`is any of ( … )`) |
+| `[ … ]` | annotation slot — ignored on input, regenerated as a display name on output |
+| `" … "` | literal text to match (a phrase) |
+| `{ … }` | **unused** — banked for later |
 
-### 6.1 Sort (Optional)
+**The language has no escape sequences at all.** Two lexing rules buy this:
+1. **Strings are scanned opaquely** — any delimiter inside `" … "` (`[ ] ( ) ,`) is
+   inert.
+2. **An annotation runs to the first `]`** (no nesting, no `]` inside).
 
-```
-; sort by {column} {order}
-```
+Therefore **only `"` delimits strings** — `'` is *not* a delimiter, so apostrophes
+and contractions are ordinary characters: `"parkinson's disease"`, `child's`
+(corpus **L21**). A literal `"` inside a search term is unsupported (ES normalizes
+punctuation away, so it is meaningless anyway) and documented, not escaped.
 
-Display names can be used:
-```
-Works where it's Open Access; sort by citations desc
-Works where year >= 2024; sort by FWCI desc
-```
-
-### 6.2 Sample (Optional)
-
-```
-; sample {n}
-```
-
----
-
-## 7. Column Display Name Mapping
-
-The following mappings are used to convert between technical column_ids and display names:
-
-| column_id | displayName |
-|-----------|-------------|
-| `publication_year` | year |
-| `cited_by_count` | citations |
-| `fwci` | FWCI |
-| `type` | type |
-| `open_access.is_oa` | Open Access |
-| `authorships.institutions.lineage` | institution |
-| `authorships.author.id` | author |
-| `authorships.countries` | Country |
-| `primary_location.source.id` | source |
-| `primary_topic.id` | topic |
-| `grants.funder` | funder |
-| `sustainable_development_goals.id` | Sustainable Development Goals |
-| `title_and_abstract.search` | title & abstract |
-| `display_name.search` | title |
-| `language` | language |
-| `is_retracted` | retracted |
-| `has_doi` | has a DOI |
-| `institutions.is_global_south` | from Global South |
-
----
-
-## 8. Complete Examples
-
-### Example 1: Human-Readable (Preferred Output)
-
-**OQL**:
-```
-Works where it's Open Access and Sustainable Development Goals is Zero Hunger [2] and Country is Canada [ca] and it's from Global South and year >= 2020
-```
-
-**OQO**:
-```json
-{
-  "get_rows": "works",
-  "filter_rows": [
-    {"column_id": "open_access.is_oa", "value": true},
-    {"column_id": "sustainable_development_goals.id", "value": "sdgs/2"},
-    {"column_id": "authorships.countries", "value": "countries/ca"},
-    {"column_id": "institutions.is_global_south", "value": true},
-    {"column_id": "publication_year", "value": 2020, "operator": ">="}
-  ]
-}
-```
-
-### Example 2: Technical (Also Valid Input)
-
-**OQL**:
-```
-Works where open_access.is_oa is true and sustainable_development_goals.id is [sdgs/2] and authorships.countries is [countries/ca] and institutions.is_global_south is true and publication_year >= 2020
-```
-
-Same OQO as above.
-
-### Example 3: OR Filter with Display Names
-
-**OQL**:
-```
-Works where (type is article [article] or type is book [book])
-```
-
-**OQO**:
-```json
-{
-  "get_rows": "works",
-  "filter_rows": [
-    {
-      "join": "or",
-      "filters": [
-        {"column_id": "type", "value": "types/article"},
-        {"column_id": "type", "value": "types/book"}
-      ]
-    }
-  ]
-}
-```
-
-### Example 4: Search with Sample
-
-**OQL**:
-```
-Works where title & abstract contains "machine learning" and year >= 2020; sample 100
-```
-
-**OQO**:
-```json
-{
-  "get_rows": "works",
-  "filter_rows": [
-    {"column_id": "title_and_abstract.search", "value": "machine learning", "operator": "contains"},
-    {"column_id": "publication_year", "value": 2020, "operator": ">="}
-  ],
-  "sample": 100
-}
-```
-
-### Example 5: Negation
-
-**OQL**:
-```
-Works where type is not article [article]
-```
-
-Or human-readable for boolean:
-```
-Works where it's not Open Access
-```
-
----
-
-## 9. Valid Operators
-
-> **Updated by #284 (OQO spec):** leaf operators are now strictly **affirmative**.
-> The `is not` and `does not contain` operators were **removed** — negation is the
-> per-node `is_negated` polarity bit (one negation mechanism; canonical form is
-> NNF). OQL still *renders* "column is not value" / "column does not contain value"
-> for a negated leaf, but the underlying OQO encodes `operator: is`/`contains` +
-> `is_negated: true`. See **[`docs/oqo-spec.md`](./oqo-spec.md)** §4 and
-> `docs/oqo-schema.json`. Values are **bare** (no `entity/id` prefix) — see
-> oqo-spec.md §2. This OQL doc (v1.1) still shows the older prefixed/bracketed-ID
-> and operator forms below and is pending a parallel refresh.
-
-| Operator | OQL Syntax (rendered) | Underlying OQO |
-|----------|------------|------|
-| `is` | `column is value` | `operator: is` |
-| `>=` | `column >= value` | `operator: >=` |
-| `<=` | `column <= value` | `operator: <=` |
-| `>` | `column > value` | `operator: >` |
-| `<` | `column < value` | `operator: <` |
-| `contains` | `column contains value` | `operator: contains` |
-| *(negation)* | `column is not value` / `column does not contain value` | same operator + `is_negated: true` |
-
----
-
-## 10. Parsing Rules
-
-### 10.1 Input Parsing Priority
-
-1. Check for boolean pattern: `it's [not] {displayName}`
-2. Check for bracketed ID: extract `[entity_type/id]`
-3. Check for display name before brackets: `{display_name} [{id}]`
-4. Match column name (display name or column_id)
-5. Parse operator and value
-
-### 10.2 Display Name Before Bracket is Optional
-
-When parsing, if a display name appears before a bracketed ID, it is validated but the **bracketed ID is the source of truth**.
-
-Valid inputs:
-```
-Country is Canada [ca]              ✓ (display name + short ID - preferred)
-Country is [ca]                     ✓ (short ID only)
-Country is Canada [countries/ca]    ✓ (namespaced ID - backward compatible)
-Country is [countries/ca]           ✓ (namespaced ID only - backward compatible)
-Country is Canada                   ✗ (no ID - error)
-```
-
-### 10.3 Display Name Validation
-
-If a display name is provided, it should match the entity's actual display name. Mismatches produce a warning but the query still works (ID is authoritative).
-
----
-
-## 11. Implementation
-
-### Files
-
-- `oql_renderer.py` — OQO → OQL (outputs human-readable format)
-- `oql_parser.py` — OQL → OQO (accepts both formats)
-
-### Display Name Resolution
-
-The renderer requires access to:
-1. Column config (column_id → displayName mapping)
-2. Entity display names (entity ID → display_name)
-
-Entity display names are fetched from the API or cached.
-
----
-
-## 12. Normalized Output OQL
-
-The `/query` endpoint returns OQL in a **normalized output** format. This normalized form is:
-- Generated from canonical OQO via deterministic rendering
-- A strict subset of acceptable input OQL
-- Always parseable by the OQL parser (roundtrip-safe)
-
-### 12.1 Normalization Rules
-
-1. **Entity type**: Capitalized, multi-word types use spaces (e.g., `Source Types`)
-2. **Boolean filters**: Use `it's [not] {displayName}` format
-3. **Entity values**: Include display name before bracketed short ID (e.g., `Canada [ca]`)
-4. **Operators**: Standard spacing around operators
-5. **Null values**: Rendered as `unknown`
-6. **Text values**: Quoted with double quotes
-7. **OR groups**: Always parenthesized
-8. **Top-level AND**: No parentheses, joined by ` and `
-
-### 12.2 Entity-Only Statements (No Filters)
-
-An OQL statement may omit the `where` clause if there are no filters:
+### 3.4 Booleans, casing, precedence
 
 ```
-Works
-Works; sort by citations desc
-Works; sample 100
+works where title contains "foo" AND ("bar" OR "baz")    (BOOL1)  ✓
+works where title contains "foo" AND "bar" OR "baz"       (BOOL2)  ✗ OQL_MIXED_BOOL_NEEDS_PARENS
+works where title contains "a" AND "b" AND "c"           (BOOL3)  ✓ (pure-AND, associative)
+works where title contains foo and (bar or baz)          (BOOL4)  ✓ (lowercase normalized to AND/OR)
 ```
 
-This produces all entities of that type (subject to sort/sample).
+- **Operators always sit OUTSIDE quotes.** Inside quotes, even `OR` is a literal
+  word (§3.6 governing law).
+- **`AND` / `OR` / `NOT` are UPPERCASE canonically**; lowercase accepted on input
+  and normalized. Rule: **logical connectives uppercase; sentence words lowercase**
+  (`where`, `is`, `contains`, `within`, `exactly`, `any of`).
+- **Mixed AND/OR at one grouping level REQUIRES explicit parentheses — a loud error
+  otherwise** (`OQL_MIXED_BOOL_NEEDS_PARENS`). Pure-AND or pure-OR runs are
+  associative, so they need no parens. This is the **one deliberate departure** from
+  WoS/Scopus muscle memory, and it is where the field is already heading (Scopus
+  mid-migration; Dimensions enforces; Lucene/Sourcegraph advise full
+  parenthesization). Canonical output fully parenthesizes mixed logic.
+- **No implicit adjacency:** two operands with no connective between them is an
+  error (`OQL_IMPLICIT_ADJACENCY`) — this is what lets us drop force-quoting and
+  still disambiguate.
 
----
+### 3.5 Negation — one mechanism
 
-## 13. oql_render (UI Render Tree)
+```
+works where title & abstract contains covid AND title & abstract does not contain pediatric  (L15)
+```
+→ `{contains covid}` AND `{contains pediatric, is_negated: true}`.
 
-The `/query` endpoint returns an `oql_render` field containing a structured tree representation of the normalized OQL. This enables UI rendering without client-side parsing.
+There is **one** negation mechanism, mapping to OQO's `is_negated` (NNF). On the
+surface it reads naturally — `is not`, `does not contain`, `is not any of`, or a
+prefix `NOT (…)` on a group. All compile to `is_negated` on the appropriate node;
+the canonical form pushes it to the leaves.
 
-### 13.1 Purpose
+### 3.6 Search — the governing law
 
-- **Pretty UI rendering**: Color-coded, clickable, tooltipped query display
-- **Grammar-less rendering**: Client concatenates text segments without grammar rules
-- **Semantic metadata**: Each node carries metadata for tooltips and interactions
+> **Outside the quotes = structure** (operators, list sugar, the modifiers
+> `exactly` / `within N words`, the wildcards `*` `?`). **Inside the quotes =
+> literal text**, matched as-is (modulo lemmatization). Operators inside quotes are
+> just words; wildcards fire only when bare; two bare terms with no operator between
+> them is an error.
 
-### 13.2 Structure
+OQO has exactly **one** text operator, `contains`. The search *mode* is split
+across the **column** (lemmatization / semantic) and **inline value micro-syntax**
+(phrase / proximity / wildcard); the **boolean** structure is the filter tree.
 
-```json
-{
-  "version": "1.0",
-  "entity": { "id": "works", "text": "Works" },
-  "where_keyword": " where ",
-  "where": { ... },       // ExprNode (group or clause)
-  "directives": [ ... ]   // sort, sample
-}
+| Axis | OQL surface | OQO encoding |
+|---|---|---|
+| field scope | the field name (`title`, `title & abstract`, `abstract`, `anywhere`, `raw affiliation`, `byline`) | column prefix (`display_name.search`, `title_and_abstract.search`, `default.search`, …) |
+| lemmatization | `exactly` keyword | column suffix `.search` (stemmed) vs `.search.exact` |
+| semantic | `is similar to` | column suffix `.search.semantic` (2-phase) |
+| adjacency (phrase) | `" … "` | quotes in the value |
+| proximity | `within N words` | `"phrase"~N` in the value |
+| wildcard | bare `*` / `?` | `*` / `?` in the value |
+| boolean | infix `AND`/`OR`/`NOT`, `any of`/`all of` | the BranchFilter tree |
+
+The 9 gauntlet cases pin the consequences (all are corpus rows):
+
+| # | OQL (`title …`) | Result |
+|---|---|---|
+| G1 | `contains foo and (bar or baz)` | `foo AND (bar OR baz)`, lemmatized |
+| G2 | `contains any of (foo, bar, baz)` | OR over the flat list |
+| G3 | `contains any of (foo, "foo bar", exactly baz)` | per-item modifiers; leaves on different columns (`.search` ×2, `.search.exact` ×1) |
+| G4 | `contains all of (foo, "foo or bar")` | AND; the `or` is **inside quotes = literal** |
+| G5 | `contains foo and "bar OR baz"` | pure-AND; `OR` in quotes is a literal word (the sneaky one) |
+| G6 | `contains exactly foo and bar` | `(exactly foo) AND bar` — `exactly` binds ONE operand |
+| G7 | `contains foo and "bar"` | `"bar" ≡ bar` — quoting a single word is a **no-op** |
+| G8 | `contains "bar*"` | ✗ `OQL_WILDCARD_IN_QUOTES` — fix-it: use `bar*` unquoted |
+| G9 | `contains bar*` | bare prefix wildcard |
+
+Key rules these encode:
+
+- **Booleans are structural, never lexical.** `contains "foo or bar"` searches the
+  literal phrase; the boolean is the tree (`contains any of ("foo", "bar")`).
+- **Quotes mean PHRASE, not "disable stemming."** Stemming stays **ON** inside
+  quotes → `contains "whopper junior"` matches "whoppers junior" (corpus **PW12**;
+  the recall win, and the deliberate divergence from PubMed). To turn stemming off,
+  use `exactly` (corpus **PW11**).
+- **Quoting a single word is a no-op** (`"bar" ≡ bar`) — the corollary.
+- **`exactly` binds a single operand** (term, phrase, group, or list). `exactly foo
+  AND bar` = `(exactly foo) AND bar`; widen with parens: `exactly (foo AND bar)`.
+  Canonical output parenthesizes a modifier's scope when a boolean is adjacent.
+- **`is similar to "…"` is semantic** vector search (`.search.semantic`, corpus
+  **PW10**).
+- **`any of (…)` / `all of (…)`** are flat-list sugar for same-op OR / AND; mixed
+  logic uses infix `AND`/`OR` + required parens. Both compile to the same tree.
+
+### 3.7 Proximity and wildcards — the edge matrix
+
+```
+works where title contains "smart phone" within 3 words   (PW1)  ✓ → "smart phone"~3
+works where title contains foo*bar                          (PW2)  ✓ mid-word *
+works where title contains wom?n                            (PW3)  ✓ ? = exactly one char
+works where title contains *cycle                           (PW4)  ✗ OQL_LEADING_WILDCARD
+works where title contains ?cycle                           (PW5)  ✗ OQL_LEADING_WILDCARD
+works where title contains ab*                              (PW6)  ✗ OQL_SHORT_WILDCARD_PREFIX (need ≥3)
+works where title contains "smart phone*" within 3 words    (PW7)  ✗ OQL_WILDCARD_IN_QUOTES
+works where title contains "smart" within 3 words of "phone"(PW8)  ✗ OQL_BINARY_PROXIMITY
+works where title contains smart* within 3 words            (PW9)  ✗ OQL_WILDCARD_IN_PROXIMITY
 ```
 
-### 13.3 Node Types
+- **Proximity is a whole-phrase modifier**, not a binary `X within N of Y`. ES slop
+  is the total positional moves over one quoted phrase — it conflates gap *and*
+  reordering (reversal alone costs 2). So `"smart phone" within 3 words` →
+  `"smart phone"~3`, documented as "up to N positional moves apart, **in any
+  order**." A binary form would lie about the semantics and not generalize to 3+
+  terms → `OQL_BINARY_PROXIMITY`.
+- On the multi-valued per-record search fields (`raw affiliation` /
+  `byline`), a **quoted phrase scopes to one sub-record** (one affiliation / one
+  byline) via ES `position_increment_gap`; slop widens within it. This is how a
+  single `contains` leaf expresses intra-affiliation co-occurrence (corpus **L09**,
+  **L19**, **L22**).
+- **Wildcards fire only when BARE on a single token.** In quotes →
+  `OQL_WILDCARD_IN_QUOTES`. Leading → `OQL_LEADING_WILDCARD`. Sub-3-char prefix →
+  `OQL_SHORT_WILDCARD_PREFIX`. With proximity → `OQL_WILDCARD_IN_PROXIMITY`. Every
+  unsupported combination is a loud error with a fix-it — never a silent literal,
+  never a false promise. See [`docs/oql/engine_findings.md`](./oql/engine_findings.md)
+  for the engine behavior behind these.
 
-- **GroupNode**: Boolean group with `join`, `prefix`, `suffix`, `joiner`, `children`
-- **ClauseNode**: Leaf clause with `segments` array and `meta` object
-- **Segment**: Renderable text piece with `kind` (column, operator, value, id, keyword, text)
+### 3.8 `null` / `unknown`
 
-### 13.4 Invariant A
+`language is unknown` / `language is not unknown` → `value: null` (± `is_negated`).
+Emit `unknown` canonically; accept `null` and `unknown` on input.
 
-**Critical invariant**: `stringify(oql_render) === oql`
+### 3.9 Booleans on flags (`it's …`)
 
-A trivial stringify function that concatenates all text from the tree must produce exactly the same string as the `oql` field. This ensures the tree is accurate and complete.
+Boolean columns get a reads-aloud surface: `it's open access`, `it's not open
+access`, `it's retracted`, `it has a DOI`, `it has an ORCID` (corpus **A05**,
+**A08**, **B05**, **B08**). These compile to `{column: …, value: true|false}`. The
+technical `<column> is true|false` form is also accepted.
 
-### 13.5 Example
+## 4. Directives
 
-For the query `Works where year >= 2020`:
-
-```json
-{
-  "version": "1.0",
-  "entity": { "id": "works", "text": "Works" },
-  "where_keyword": " where ",
-  "where": {
-    "type": "clause",
-    "clause_kind": "comparison",
-    "segments": [
-      { "kind": "column", "text": "year" },
-      { "kind": "operator", "text": " >= " },
-      { "kind": "value", "text": "2020" }
-    ],
-    "meta": {
-      "column_id": "publication_year",
-      "operator": ">=",
-      "value": 2020
-    }
-  },
-  "directives": []
-}
+```
+authors; sort by works_count desc                          (A07)
+works where year >= 1976; group by topic, year             (B03)  (multi-dim: spec-level; live API single-dim → #297)
+works where … ; sort by citations desc; sample 500         (L07)
 ```
 
----
+- **`group by <dim>[, <dim>]*`** → `group_by` list (order = dimension order).
+- **`sort by <key> [asc|desc][, …]`** → ordered `sort_by` list (order = tiebreaker
+  priority). Accept `ascending`/`descending`; default `asc`. Synthetic keys
+  (`relevance_score`, `count`, `key`) are allowed.
+- **`sample <n> [seed <s>]`** → `sample` (+ optional reproducibility `seed`).
 
-## 14. Related Documentation
+## 5. Diagnostics (codes + fix-its)
 
-- `query-format-translation-spec.md` — Complete translation system (URL ↔ OQO ↔ OQL)
-- `oqo-schema.json` — JSON Schema for OQO format
-- `oqo-column-reference.md` — Complete list of valid column_ids by entity type
-- `oql_render_tree.py` — Python data model for oql_render
+Diagnostics are a **language-agnostic contract** (charter decision 5): every error
+is a stable **code** + a human message + a **fix-it**; consumers (parser, editor,
+NL) share codes and only localize prose. Every `✗` corpus row asserts its code.
+
+| Code | When | Fix-it |
+|---|---|---|
+| `OQL_MIXED_BOOL_NEEDS_PARENS` | mixed AND/OR at one level | add parens: `a AND (b OR c)` |
+| `OQL_IMPLICIT_ADJACENCY` | two operands, no connective | insert AND or OR |
+| `OQL_MISSING_ENTITY_ID` | entity ref with only a `[name]` | put the ID first: `institution is I136199984 [Harvard]` |
+| `OQL_WILDCARD_IN_QUOTES` | `*`/`?` inside a quoted phrase | move it out: `bar*` |
+| `OQL_LEADING_WILDCARD` | leading `*`/`?` | anchor it: `cycle*` |
+| `OQL_SHORT_WILDCARD_PREFIX` | `<3` chars before `*` | add characters: `abc*` |
+| `OQL_WILDCARD_IN_PROXIMITY` | wildcard + `within N words` | drop one of them |
+| `OQL_BINARY_PROXIMITY` | `X within N words of Y` | one phrase: `"x y" within N words` |
+| `OQL_UNTERMINATED_STRING` / `OQL_UNTERMINATED_ANNOTATION` | missing `"` / `]` | close it |
+| `OQL_UNKNOWN_FIELD` / `OQL_UNKNOWN_ENTITY` / `OQL_UNKNOWN_BOOLEAN` | not in the registry | check the properties registry |
+| `OQL_MISSING_OPERATOR` / `OQL_MISSING_VALUE` / `OQL_BAD_NUMBER` | malformed clause | — |
+| `OQL_UNBALANCED_PARENS` | missing `)` | add `)` |
+| `OQL_BAD_SORT` / `OQL_BAD_SAMPLE` / `OQL_BAD_PROXIMITY` / `OQL_PROXIMITY_NEEDS_PHRASE` / `OQL_SEMANTIC_NEEDS_TEXT` / `OQL_TRAILING_TOKENS` | malformed directive/clause | — |
+
+(The reference implementation `tests/oql/oql_v2.py` is the authoritative code list.)
+
+## 6. Fields & values (the registry)
+
+OQL field names, the columns they map to, value types, and valid operators are owned
+by the **properties registry** (`/properties`; #294/#331), **not** by this spec.
+The reference impl carries a focused stand-in (`tests/oql/oql_v2.py:_FIELDS`)
+covering the corpus. Field validity ("is this column valid on this entity? what
+value type? which operators?") is a registry question; OQL's grammar is
+column-agnostic, exactly as the OQO dataclass is (oqo-spec §7).
+
+## 7. The corpus (normative)
+
+[`docs/oql/corpus.yaml`](./oql/corpus.yaml) is the normative set of `(OQL, OQO)`
+pairs. It covers: every in-scope #284 worked-example row rendered to v2, the 9
+gauntlet cases, the proximity/wildcard matrix, and the entity/boolean/set cases.
+Each row is `ok` (round-trips), `error` (named diagnostic + fix-it), or `boundary`
+(documented non-representable: `L02c` wildcard-in-proximity, `L12` acronym
+resolution, `L20` set-reference).
+
+**v2 corrections to #284 search rows** (noted per row in the corpus): exactness now
+lives in the `.search.exact` column via `exactly` (L03), not in a quoted value;
+multi-word phrases are explicitly quoted (A06, B02, …); loose multi-word search is
+made explicit structure (L07, L17). These follow from §3.6's "quotes = phrase,
+stemming ON."
+
+## 8. Out of scope
+
+- **Stage C / HAVING** (filtering on group aggregates). OQL must not promise what
+  OQO can't execute (charter decision 2); the abandoned `get`/`summarize by`/`where
+  …;` dialect (#274) is the trap to avoid. Group ranking by an aggregate metric
+  (corpus **L18**) is `#297`.
+- **Multi-dimensional `group by`** is expressible in the spec (corpus **B03**) but
+  single-dimension in the live serving impl → `#297`.
+- **Acronym / name resolution** (corpus **L12**) and **set-references** (corpus
+  **L20**) are not query-language features.
+
+## 9. Conformance & round-trip
+
+The runnable contract:
+
+```bash
+cd ~/Documents/openalex-elastic-api
+python3 -m venv .venv-oql && .venv-oql/bin/pip install -q pyyaml requests pytest
+# round-trip identity (OQO -> OQL -> OQO) over the normative corpus:
+.venv-oql/bin/python -m pytest tests/oql/test_corpus_roundtrip.py -q --noconftest
+# gap report against the current v1.1 production translator:
+.venv-oql/bin/python tests/oql/gap_report.py    # -> docs/oql/gap_report.md
+```
+
+The reference implementation (`tests/oql/oql_v2.py`) is the **executable spec** —
+it is *not* the production translator (`query_translation/oql_*.py`, still v1.1).
+Reconciling the two is roadmap step 3 (gated on #323); the gap report is its
+work-list.
+
+## 10. Related documentation
+
+- [`oqo-spec.md`](./oqo-spec.md) — the canonical query object OQL is sugar over.
+- [`oql/corpus.yaml`](./oql/corpus.yaml) — the normative cases.
+- [`oql/gap_report.md`](./oql/gap_report.md) — v1.1 → v2 work-list.
+- [`oql/engine_findings.md`](./oql/engine_findings.md) — engine reality behind the
+  wildcard/proximity errors.
+- `plans/oqlo.md` (oxjobs) — the OQLO charter (architecture, roadmap, decisions).
