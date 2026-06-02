@@ -25,7 +25,16 @@ module — introspecting the live objects — is the runtime source of truth; th
 committed `docs/properties-snapshot.json` is its versioned, fingerprinted mirror.
 """
 
+import hashlib
 import importlib
+import json
+
+# Human-curated semver of the published /properties contract (#331 Decision C).
+# MINOR/MAJOR only — no PATCH lane (the fingerprint already records that the
+# payload changed). Bumped by a human (Jason/Casey) when the rendered payload
+# changes; agents MUST NOT self-bump — flag the human. The CI drift gate ties
+# this constant to the change class. See docs/PROPERTIES_VERSIONING.md.
+PROPERTIES_VERSION = "1.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -91,6 +100,72 @@ def get_entity_properties(entity_type):
 def get_property(entity_type, property_name):
     """Return the `Property` for one column, or None if entity/property unknown."""
     return ENTITY_PROPERTIES.get(entity_type, {}).get(property_name)
+
+
+# ---------------------------------------------------------------------------
+# Canonical render + content fingerprint (#331 Phase 2)
+#
+# The catalog is the runtime source of truth; the rendered payload below is its
+# deterministic, fingerprintable wire form. EVERYTHING is sorted — entities,
+# property names, and (via `Property.serialize()`) each property's operators and
+# actions — so `json.dumps(..., sort_keys=True)` over it is byte-identical across
+# fresh boots. The fingerprint is a sha256 of those canonical bytes; it is stable
+# by construction and never flaps on dict/set iteration order. The committed
+# `docs/properties-snapshot.json` is the pretty-printed mirror of this output and
+# the CI drift baseline.
+# ---------------------------------------------------------------------------
+
+
+def _canonical_catalog():
+    """The full {entity: {property_name: serialized}} catalog, fully sorted.
+
+    Entities and property names sorted here; operators/actions sorted inside
+    `Property.serialize()`. This is the exact object the fingerprint hashes."""
+    return {
+        entity: {
+            name: ENTITY_PROPERTIES[entity][name].serialize()
+            for name in sorted(ENTITY_PROPERTIES[entity])
+        }
+        for entity in sorted(ENTITY_PROPERTIES)
+    }
+
+
+def canonical_bytes(catalog):
+    """The canonical UTF-8 bytes the fingerprint is taken over. Compact +
+    sort_keys so the encoding is total-order deterministic, independent of how
+    the dict was built."""
+    return json.dumps(catalog, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def properties_fingerprint(catalog=None):
+    """sha256 hex of the canonical catalog bytes. Hashes ONLY the properties
+    (not `meta`) so the fingerprint moves iff the contract content moves —
+    `PROPERTIES_VERSION` is independent (human-curated)."""
+    if catalog is None:
+        catalog = _canonical_catalog()
+    return hashlib.sha256(canonical_bytes(catalog)).hexdigest()
+
+
+def render_properties(entity=None):
+    """Render the canonical `/properties` payload: `{meta, properties}`.
+
+    `meta` carries the human `version`, the content `fingerprint`, and counts —
+    all describing the FULL catalog (the contract identity), even when `entity`
+    slices the `properties` block to a single entity type. Callers must validate
+    `entity` (404 on unknown) before slicing; an unknown entity yields `{}` here.
+    """
+    catalog = _canonical_catalog()
+    fingerprint = properties_fingerprint(catalog)
+    properties = catalog if entity is None else {entity: catalog.get(entity, {})}
+    meta = {
+        "version": PROPERTIES_VERSION,
+        "fingerprint": fingerprint,
+        "entity_count": len(catalog),
+        "property_count": sum(len(props) for props in catalog.values()),
+    }
+    if entity is not None:
+        meta["entity"] = entity
+    return {"meta": meta, "properties": properties}
 
 
 # ---------------------------------------------------------------------------

@@ -87,11 +87,19 @@ class Property:
     it, the high-level `actions` it affords (filter/sort/select/group_by), and the
     cross-type `entity_type` (when the property holds OpenAlex entity IDs).
 
-    `.serialize()` is the ONE canonical wire form: it sorts `operators` and
-    `actions` so the rendered `/properties` payload is deterministic — a content
-    fingerprint over it is stable by construction, never flapping on dict/set
-    iteration order (#331 Decision C). Renamed from the old per-column registry
-    dict; `name`/`type` replace the former `param`/`field_type` wire keys.
+    `.serialize()` is the ONE canonical PUBLIC wire form: it sorts `operators`
+    and `actions` so the rendered `/properties` payload is deterministic — a
+    content fingerprint over it is stable by construction, never flapping on
+    dict/set iteration order (#331 Decision C). Renamed from the old per-column
+    registry dict; `name`/`type` replace the former `param`/`field_type` keys.
+
+    `alias` and `custom_es_field` are kept on the dataclass for internal callers
+    (they describe how the server maps a property onto Elasticsearch) but are
+    DELIBERATELY excluded from `serialize()` (#331 Phase 2): they are server
+    implementation detail, not part of the public query contract. Excluding them
+    means an internal ES remap (e.g. pointing a field at its `.keyword` subfield)
+    does NOT flap the fingerprint or trip the version gate — only changes to the
+    public surface (name/type/operators/actions/entity_type) do.
     """
 
     name: str
@@ -103,15 +111,14 @@ class Property:
     entity_type: Optional[str] = None
 
     def serialize(self) -> dict:
-        """The canonical JSON-ready dict. `operators`/`actions` are sorted so
-        repeated renders are byte-identical (fingerprint-stable)."""
+        """The canonical PUBLIC JSON-ready dict. `operators`/`actions` are sorted
+        so repeated renders are byte-identical (fingerprint-stable). Server-internal
+        `alias`/`custom_es_field` are intentionally omitted — see the class docstring."""
         return {
             "name": self.name,
             "type": self.type,
             "operators": sorted(self.operators),
             "actions": sorted(self.actions),
-            "alias": self.alias,
-            "custom_es_field": self.custom_es_field,
             "entity_type": self.entity_type,
         }
 

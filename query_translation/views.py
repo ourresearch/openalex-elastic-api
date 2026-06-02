@@ -29,7 +29,7 @@ from core.shared_view import (
     set_source,
 )
 from core.preference import clean_preference, combine_preferences
-from core.properties import ENTITY_PROPERTIES, get_entity_properties
+from core.properties import get_entity_properties, render_properties
 from core.utils import get_data_version_connection
 from core.utils import get_display_name as _get_display_name
 from query_translation.oqo import OQO, VALID_OPERATORS, filter_from_dict
@@ -353,58 +353,82 @@ def _build_params_from_oqo(oqo: OQO, request):
 
 
 # ---------------------------------------------------------------------------
-# /registry — the entity-property catalog (#331; formerly #294 Phase B)
+# /properties — the entity-property catalog (#331; formerly #294's /registry)
+#
+# Every queryable property per entity, with its value type, valid filter
+# operators, actions (filter/sort/select/group_by), and cross-type entity_type.
+# Built at boot from the live `Field` objects the filter layer executes
+# (core/properties.py), so it can't drift from what the server actually accepts.
+# This is the same data the OQO validator consults to answer "is column X valid
+# on entity Y with operator Z and value type T?".
+#
+# The payload is canonical (fully sorted) and carries `meta.version` +
+# `meta.fingerprint`; `docs/properties-snapshot.json` is its committed mirror.
+# `/registry*` remain as deprecated aliases (identical payload + `Deprecation`
+# header) through a deprecation window.
+#
+# Per-entity form is `/properties/<entity>`, NOT `/entities/<entity>/properties`:
+# the latter collides with the universal entity-by-id route
+# `/entities/<entity>/<path:id>` (the `<path:id>` converter swallows "properties"
+# as an id → 404). `/properties/<entity>` is an unambiguous sub-resource of the
+# collection and matches the `?entity=` slice byte-for-byte.
 # ---------------------------------------------------------------------------
 
 
-def _serialize_entity(properties):
-    """Serialize one entity's {name: Property} into {name: dict}."""
-    return {name: prop.serialize() for name, prop in properties.items()}
+def _deprecated(response):
+    """Tag a response as a deprecated `/registry*` alias (RFC 8594)."""
+    response.headers["Deprecation"] = "true"
+    response.headers["Link"] = '</properties>; rel="successor-version"'
+    return response
+
+
+def _properties_payload(entity_type):
+    """Render the canonical payload for the full catalog (`entity_type=None`) or
+    one entity, or an error tuple if the entity is unknown. Shared by the
+    `/properties` routes and the deprecated `/registry*` aliases so they serve
+    byte-identical bodies."""
+    if entity_type is not None and get_entity_properties(entity_type) is None:
+        return _error_response(
+            f"'{entity_type}' is not a known entity type.",
+            "invalid_entity",
+            status=404,
+        )
+    return jsonify(render_properties(entity=entity_type)), 200
+
+
+@blueprint.route("/properties", methods=["GET"])
+def get_properties():
+    """The full entity-property catalog, or one entity via `?entity=works`.
+
+    `?entity=` returns the same body as `/properties/<entity>`.
+    """
+    return _properties_payload(request.args.get("entity"))
+
+
+@blueprint.route("/properties/<entity_type>", methods=["GET"])
+def get_entity_properties_route(entity_type: str):
+    """The property catalog for a single entity type, e.g. `/properties/works`."""
+    return _properties_payload(entity_type)
 
 
 @blueprint.route("/registry", methods=["GET"])
 def get_registry():
-    """The full entity-property catalog: every queryable property per entity,
-    with its value type, valid filter operators, actions, and cross-type
-    entity_type.
-
-    Built at boot from the live `Field` objects the filter layer executes
-    (core/properties.py), so it can't drift from what the server actually accepts.
-    This is the same data the OQO validator consults to answer "is column X
-    valid on entity Y with operator Z and value type T?".
-    """
-    return jsonify(
-        {
-            "meta": {
-                "entity_count": len(ENTITY_PROPERTIES),
-                "column_count": sum(
-                    len(props) for props in ENTITY_PROPERTIES.values()
-                ),
-            },
-            "registry": {
-                entity: _serialize_entity(props)
-                for entity, props in ENTITY_PROPERTIES.items()
-            },
-        }
-    ), 200
+    """DEPRECATED alias of `/properties` (`?entity=` supported). Identical body;
+    carries a `Deprecation` header. Use `/properties`."""
+    payload, status = _properties_payload(request.args.get("entity"))
+    if status != 200:
+        return payload, status
+    return _deprecated(payload), status
 
 
 @blueprint.route("/registry/<entity_type>", methods=["GET"])
 def get_registry_entity(entity_type: str):
-    """The property catalog for a single entity type, e.g. `/registry/works`."""
-    properties = get_entity_properties(entity_type)
-    if properties is None:
-        return _error_response(
-            f"'{entity_type}' is not a registered entity type.",
-            "invalid_entity",
-            status=404,
-        )
-    return jsonify(
-        {
-            "meta": {"entity_type": entity_type, "column_count": len(properties)},
-            "columns": _serialize_entity(properties),
-        }
-    ), 200
+    """DEPRECATED alias of `/properties/<entity_type>`. Identical body;
+    carries a `Deprecation` header."""
+    payload, status = _properties_payload(entity_type)
+    if status != 200:
+        return payload, status
+    return _deprecated(payload), status
 
 
 # ---------------------------------------------------------------------------
