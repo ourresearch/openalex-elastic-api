@@ -210,5 +210,10 @@ def requires_display_name_conversion(group_by):
     exact_matches = (
         "authorships.institutions.lineage",
         "last_known_institutions.lineage",
+        # awards `institution_awarded.lineage` buckets are institution OpenAlex
+        # IDs; resolve them to names via the institutions index like the works
+        # lineage group_bys above (oxjob #256). Without this the group_by
+        # returns key_display_name == the raw https://openalex.org/I… URL.
+        "institution_awarded.lineage",
     )
     return group_by.endswith(endings) or group_by in exact_matches

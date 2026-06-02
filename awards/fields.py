@@ -161,7 +161,15 @@ fields = [
     ),
     TermField(
         param="institution_awarded.country_code",
-        custom_es_field="institution_awarded_full.country_code",
+        # Route to the `.lower` normalized subfield so the filter is
+        # case-insensitive, matching every other entity's country_code field
+        # (works/authors/institutions/sources route there via alias -> __lower;
+        # publishers via custom_es_field="country_codes.lower"). The bare
+        # `keyword` is case-sensitive and the gui sends lowercased ids, so
+        # `country_code:us` silently returned 0. The `.lower` subfield + the
+        # `lower` normalizer were added to awards-v4 in oxjob #256 (mirrored in
+        # the walden BuildAwardsV4 / PatchAwardsV4Mapping notebooks).
+        custom_es_field="institution_awarded_full.country_code.lower",
         docstring="The country of the institution that received the award",
     ),
     TermField(
