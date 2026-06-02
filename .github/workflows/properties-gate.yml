@@ -1,0 +1,76 @@
+name: Properties Contract Drift Gate
+
+# oxjob #331 Phase 3 — the mechanical drift gate for the /properties contract.
+#
+# elastic-api ships direct-to-master (no PR flow), so this runs `on: push: master`
+# like the post-deploy smoke test (Decision B). Unlike the smoke test it does NOT
+# wait for Heroku — it's a static check on the committed tree, so it gives fast
+# feedback and (worst case) catches drift one deploy cycle after it ships, failing
+# loud + Slack. Three checks:
+#   1. Staleness  — re-render the live catalog, assert it byte-matches the committed
+#                   docs/properties-snapshot.json (you changed a Field but forgot to
+#                   regenerate the snapshot).
+#   2. Bump rule  — diff the committed snapshot vs the push's base, classify the
+#                   change (added=MINOR / removed|type|operator|action|rename=MAJOR),
+#                   and assert the PROPERTIES_VERSION delta matches exactly.
+#   3. Client ⊆ server — re-homed #294 invariant: every gui client column claiming a
+#                   server-backed action exists in the live property catalog.
+# See docs/PROPERTIES_VERSIONING.md.
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  properties-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the bump classifier can `git show <before-sha>:…` to
+          # read the snapshot as it was at the base of this push.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"  # repo targets 3.10 (.python-version); numpy 1.23.5 has no newer wheels
+          cache: pip
+
+      - name: Install dependencies
+        # Booting the catalog imports the live Field modules (no ES, no DB), which
+        # pulls the app's runtime deps. Swap psycopg2 → psycopg2-binary so we don't
+        # need a libpq toolchain on the runner (psycopg2 isn't on the catalog import
+        # path anyway). The bump classifier is stdlib-only.
+        run: |
+          sed 's/^psycopg2==/psycopg2-binary==/' requirements/prod.txt > /tmp/gate-requirements.txt
+          pip install -r /tmp/gate-requirements.txt
+
+      - name: Snapshot staleness check
+        run: PYTHONPATH=. python scripts/render_properties.py --check
+
+      - name: Version bump rule check
+        run: PYTHONPATH=. python scripts/classify_properties_diff.py --base-ref "${{ github.event.before }}"
+
+      - name: Client ⊆ server catalog check
+        run: PYTHONPATH=. python scripts/check_client_subset.py
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          channel-id: 'CESFJUHGD'  # #general
+          slack-message: |
+            :rotating_light: *Properties contract drift gate FAILED on master!*
+
+            The `/properties` catalog drifted from its committed snapshot, or
+            `PROPERTIES_VERSION` wasn't bumped to match a contract change, or a gui
+            client column lost its server backing. A HUMAN must reconcile + bump
+            (agents must not self-bump) — see docs/PROPERTIES_VERSIONING.md.
+
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+
+            <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View failed workflow>
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
