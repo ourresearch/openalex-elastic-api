@@ -12,6 +12,16 @@ VALID_SEARCH_TYPES = [
 
 
 def validate_params(request):
+    # NOTE: an upstream edge-validation layer in the `openalex-api-proxy`
+    # Cloudflare Worker (src/f1Validation.ts, oxjob #194) fast-fails a few
+    # request shapes BEFORE they ever reach this code — e.g. the `limit=`
+    # param typo and raw (unescaped) commas in `filter=...search:` values.
+    # Those requests 400 at the edge with `error_source: openalex-api-proxy`
+    # and an `x-openalex-edge-reject` header, so if a "should-work" request is
+    # being rejected and you can't find why here, check the proxy. The Worker
+    # is the source of truth for that list; it intentionally mirrors only a
+    # subset of the rules below (the edge may only reject what this origin
+    # would also reject), and this `valid_params` allowlist WILL drift from it.
     valid_params = [
         "apc_sum",
         "api-key",
