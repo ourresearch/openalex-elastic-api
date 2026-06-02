@@ -120,11 +120,16 @@ def test_search_model_space_quotes_near():
     assert rows('works where title contains "cat"')[0]["column_id"] == "display_name.search.exact"
     assert rows("works where title contains cat")[0]["column_id"] == "display_name.search"
 
-    # adjacency binds tighter than OR (no parens needed); explicit mixed errors
-    p("works where title contains climate change or warming")  # ok
-    with pytest.raises(OQLError) as e:
-        p("works where title contains a and b or c")
-    assert e.value.code == "OQL_MIXED_BOOL_NEEDS_PARENS"
+    # a space is an AND -> mixing it with an explicit `or` needs parens (no
+    # silent order-of-operations). Both the implicit and explicit mix error.
+    for bad in ("works where title contains climate change or warming",
+                "works where title contains a and b or c"):
+        with pytest.raises(OQLError) as e:
+            p(bad)
+        assert e.value.code == "OQL_MIXED_BOOL_NEEDS_PARENS"
+    # the disambiguated forms are fine
+    p("works where title contains climate (change or warming)")   # ok
+    p("works where title contains (climate change) or warming")   # ok
 
     # `exactly` is gone — it's just a search word now, not a modifier
     fr = rows("works where title contains exactly foo")

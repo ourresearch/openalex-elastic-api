@@ -167,10 +167,11 @@ works where title contains FOO AND (bar or baz)          (BOOL4)  ✓ (any case 
   WoS/Scopus muscle memory, and it is where the field is already heading (Scopus
   mid-migration; Dimensions enforces; Lucene/Sourcegraph advise full
   parenthesization). Canonical output fully parenthesizes mixed logic.
-- **Adjacency (space) = AND between *search terms*** (§3.6), and it binds tighter
-  than `or`. Between *whole clauses* at the top level, a connective is still required
-  (`year >= 2020 and it's open access`); two full clauses jammed together with no
-  `and` is `OQL_IMPLICIT_ADJACENCY`.
+- **Adjacency (space) = AND between *search terms*** (§3.6), and it counts as AND
+  for this parens rule (so `climate change or warming` errors — §3.6 G7). Between
+  *whole clauses* at the top level, a connective is still required (`year >= 2020 and
+  it's open access`); two full clauses jammed together with no `and` is
+  `OQL_IMPLICIT_ADJACENCY`.
 
 ### 3.5 Negation — one mechanism
 
@@ -221,15 +222,19 @@ The gauntlet pins the consequences (all are corpus rows):
 | G4 | `"cat"` | quoting a **single** word = exact (no plurals) — quotes always mean exact |
 | G5 | `cat` | bare word = stemmed (matches cats) |
 | G6 | `"rock or roll"` | inside quotes = literal: `or` is a word, one exact phrase |
-| G7 | `climate change or warming` | adjacency binds **tighter** than `or` → `(climate AND change) OR warming`, no parens |
+| G7 | `climate change or warming` | ✗ `OQL_MIXED_BOOL_NEEDS_PARENS` — a space is an AND, so this mixes and/or |
+| G7b | `climate (change or warming)` | ✓ `climate AND (change OR warming)` — the disambiguated form |
 | G8 | `"bar*"` | ✗ `OQL_WILDCARD_IN_QUOTES` — fix-it: use `bar*` unquoted |
 | G9 | `bar*` | bare prefix wildcard |
 
 Key rules these encode:
 
-- **Space = AND; adjacency binds tighter than `or`.** `climate change or warming` =
-  `(climate AND change) OR warming` with **no parens** — only an *explicit* `and`/`or`
-  mix at one level trips `OQL_MIXED_BOOL_NEEDS_PARENS` (G7 vs BOOL2).
+- **Space = AND, and a space counts as AND for the parens rule.** There is **no
+  silent order of operations**: mixing a space-run with an explicit `or` at one
+  level is `OQL_MIXED_BOOL_NEEDS_PARENS`, just like an explicit `and`/`or` mix
+  (G7, BOOL2). `climate change or warming` errors; you say which you mean —
+  `climate (change or warming)` (G7b) or `(climate change) or warming`. (Pure runs —
+  all-space, all-`and`, or all-`or` — need no parens.)
 - **Quotes = exact, single word or phrase.** `"cat"` excludes "cats"; `"climate
   change"` is the adjacent, unstemmed phrase. This is the mainstream "quotes = exact
   match" people already expect.

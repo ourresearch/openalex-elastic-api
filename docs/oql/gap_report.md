@@ -11,11 +11,11 @@
 |---|---|---|
 | PASS | 16 | v1.1 already produces the v2 OQO |
 | MISSING-FEATURE | 5 | v1.1 can't parse the v2 surface (raises) |
-| SPEC-MISMATCH | 51 | v1.1 parses but to different (v1.1) semantics, or wrongly accepts an error case |
+| SPEC-MISMATCH | 52 | v1.1 parses but to different (v1.1) semantics, or wrongly accepts an error case |
 | ENGINE-BUG | 1 | spec-valid, but the live ES engine mishandles it |
 | BOUNDARY | 3 | documented non-representable |
 | UNKNOWN | 1 | no oracle (round-trip-only row) |
-| **Total** | **77** | |
+| **Total** | **78** | |
 
 ## PASS (16)
 
@@ -48,7 +48,7 @@
 | L07 | OQLParseError: Failed to parse OQL | `works where title & abstract contains CRISPR and near "genome editing" and year >= 2018…` |
 | L17 | OQLParseError: Failed to parse OQL | `works where title & abstract contains CRISPR and Cas9; group by author` |
 
-## SPEC-MISMATCH (51)
+## SPEC-MISMATCH (52)
 
 | Row | Detail | OQL |
 |---|---|---|
@@ -64,7 +64,8 @@
 | G3 | v1.1 parses but to a different OQO than v2 | `works where title contains near "whopper junior"` |
 | G4 | v1.1 parses but to a different OQO than v2 | `works where title contains "cat"` |
 | G6 | v1.1 parses but to a different OQO than v2 | `works where title contains "rock or roll"` |
-| G7 | v1.1 parses but to a different OQO than v2 | `works where title contains climate change or warming` |
+| G7 | v1.1 silently accepts an input v2 rejects (no diagnostic) | `works where title contains climate change or warming` |
+| G7b | v1.1 parses but to a different OQO than v2 | `works where title contains climate (change or warming)` |
 | G8 | v1.1 silently accepts an input v2 rejects (no diagnostic) | `works where title contains "bar*"` |
 | PW1 | v1.1 parses but to a different OQO than v2 | `works where title contains "smart phone" within 3 words` |
 | PW4 | v1.1 silently accepts an input v2 rejects (no diagnostic) | `works where title contains *cycle` |
@@ -130,8 +131,8 @@ Does the v1.1 renderer emit v2-parseable OQL that round-trips to the same OQO?
 
 | Category | Count |
 |---|---|
-| RENDER-OK | 42 |
-| RENDER-MISMATCH | 22 |
+| RENDER-OK | 41 |
+| RENDER-MISMATCH | 23 |
 
 Rows the v1.1 renderer does not yet emit in v2 form:
 
@@ -142,6 +143,7 @@ Rows the v1.1 renderer does not yet emit in v2 form:
 | G3 | v1.1 render parses to a different OQO |
 | G4 | v1.1 output not v2-parseable: [OQL_UNKNOWN_FIELD] unknown field "display_name.search.exact"  Fix: check the fi |
 | G6 | v1.1 output not v2-parseable: [OQL_UNKNOWN_FIELD] unknown field "display_name.search.exact"  Fix: check the fi |
+| G7b | v1.1 output not v2-parseable: [OQL_UNBALANCED_PARENS] missing a closing parenthesis  Fix: add a ) |
 | PW1 | v1.1 output not v2-parseable: [OQL_UNKNOWN_FIELD] unknown field "display_name.search.exact"  Fix: check the fi |
 | PW10 | v1.1 output not v2-parseable: [OQL_UNKNOWN_FIELD] unknown field "abstract.search.semantic"  Fix: check the fie |
 | PW11 | v1.1 output not v2-parseable: [OQL_UNKNOWN_FIELD] unknown field "title_and_abstract.search.exact"  Fix: check  |

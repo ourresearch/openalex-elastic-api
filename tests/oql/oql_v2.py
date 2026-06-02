@@ -670,11 +670,14 @@ class _Parser:
     def _parse_search_expr(self, base: str) -> FilterType:
         # A search expression is explicit-connective-separated *term-runs*. A
         # term-run is one or more space-adjacent atoms = implicit AND (the
-        # everyday `climate change` = climate AND change). Adjacency binds tighter
-        # than explicit and/or, so `climate change OR warming` =
-        # (climate AND change) OR warming with NO parens needed; only EXPLICIT
-        # mixed and/or trips OQL_MIXED_BOOL_NEEDS_PARENS.
-        units = [self._parse_term_run(base)]
+        # everyday `climate change` = climate AND change). Implicit AND counts as
+        # AND for the mixed-rule: mixing a space-run with an explicit `or` at one
+        # level is a loud OQL_MIXED_BOOL_NEEDS_PARENS — we never silently pick an
+        # order of operations. `climate change or warming` errors; the user must
+        # say which they mean: `climate (change or warming)` or `(climate change) or warming`.
+        unit, n = self._parse_term_run(base)
+        units = [unit]
+        implicit_and = n > 1
         conns: List[str] = []
         while True:
             self._skip_annot()
@@ -686,20 +689,25 @@ class _Parser:
                     break
                 conns.append(t.val.lower())
                 self.next()
-                units.append(self._parse_term_run(base))
+                unit, n = self._parse_term_run(base)
+                units.append(unit)
+                implicit_and = implicit_and or n > 1
                 continue
             break
-        if not conns:
-            return units[0]
-        if len(set(conns)) > 1:
+        effective = set(conns) | ({"and"} if implicit_and else set())
+        if "and" in effective and "or" in effective:
             raise OQLError(
                 "OQL_MIXED_BOOL_NEEDS_PARENS",
-                "mixed and/or at one level is ambiguous — add parentheses",
-                'group explicitly, e.g. "a and (b or c)"', self.toks[0].pos)
+                "mixed and/or at one level is ambiguous — add parentheses "
+                "(a space between words is an AND)",
+                'group explicitly, e.g. "a (b or c)" or "(a b) or c"', self.toks[0].pos)
+        if not conns:
+            return units[0]
         return BranchFilter(join=conns[0], filters=units)
 
-    def _parse_term_run(self, base: str) -> FilterType:
-        """One or more space-adjacent search atoms = implicit AND."""
+    def _parse_term_run(self, base: str) -> Tuple[FilterType, int]:
+        """One or more space-adjacent search atoms = implicit AND. Returns
+        (filter, n_atoms) so the caller can apply the mixed-and/or rule."""
         atoms = [self._parse_search_operand(base)]
         while True:
             self._skip_annot()
@@ -714,8 +722,8 @@ class _Parser:
                 break  # a new field clause begins (e.g. `year >= 2020`)
             atoms.append(self._parse_search_operand(base))  # implicit AND
         if len(atoms) == 1:
-            return atoms[0]
-        return BranchFilter(join="and", filters=atoms)
+            return atoms[0], 1
+        return BranchFilter(join="and", filters=atoms), len(atoms)
 
     def _starts_new_clause(self, k: int) -> bool:
         """After a connective at offset k, do the tokens begin a new field clause?

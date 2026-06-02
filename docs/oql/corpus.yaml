@@ -161,14 +161,21 @@ rows:
 
 - id: G7
   group: gauntlet
-  status: ok
+  status: error
   oql: 'works where title contains climate change or warming'
-  oqo: {get_rows: works, filter_rows: [{join: or, filters: [
-        {join: and, filters: [
-          {column_id: display_name.search, value: climate, operator: contains},
-          {column_id: display_name.search, value: change, operator: contains}]},
-        {column_id: display_name.search, value: warming, operator: contains}]}]}
-  note: 'Adjacency binds TIGHTER than or: (climate AND change) OR warming — no parens needed (only EXPLICIT mixed and/or errors).'
+  diagnostic: OQL_MIXED_BOOL_NEEDS_PARENS
+  note: 'A space is an AND, so this mixes and/or at one level → loud error (no silent order-of-operations). Fix-it offers `climate (change or warming)` or `(climate change) or warming`.'
+
+- id: G7b
+  group: gauntlet
+  status: ok
+  oql: 'works where title contains climate (change or warming)'
+  oqo: {get_rows: works, filter_rows: [
+        {column_id: display_name.search, value: climate, operator: contains},
+        {join: or, filters: [
+          {column_id: display_name.search, value: change, operator: contains},
+          {column_id: display_name.search, value: warming, operator: contains}]}]}
+  note: 'The likely-intended disambiguation: climate AND (change OR warming). Implicit AND between `climate` and the group; the only `or` is nested.'
 
 - id: G8
   group: gauntlet
