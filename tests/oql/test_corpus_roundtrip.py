@@ -69,6 +69,35 @@ def test_error_cases_have_named_diagnostic(row):
     assert exc.value.fixit, f"{row['id']}: diagnostic must carry a fix-it"
 
 
+def test_value_case_is_canonicalized():
+    """Enum slugs -> lowercase; ISO country codes -> uppercase; IDs/col_ verbatim."""
+    from tests.oql.oql_v2 import parse as p
+    rows = lambda oql: p(oql).to_dict()["filter_rows"]
+    assert rows("works where type is Article")[0]["value"] == "article"
+    assert rows("works where language is EN")[0]["value"] == "en"
+    assert rows("works where author country is br")[0]["value"] == "BR"
+    assert rows("works where institution is I33213144")[0]["value"] == "I33213144"  # preserved
+    assert rows("works where country is col_eu27")[0]["value"] == "col_eu27"        # preserved
+
+
+def test_canonical_output_is_lowercase_connectives():
+    from tests.oql.oql_v2 import parse as p, render as r
+    # different-column OR won't factor into `any of`, so an `or` survives to output
+    out = r(canonicalize_oqo(p("works where it's open access AND (institution is I1 OR type is article)")))
+    assert " and " in out and " or " in out
+    assert " AND " not in out and " OR " not in out
+
+
+def test_renderer_resolves_display_names_for_id_and_country_columns():
+    from tests.oql.oql_v2 import parse as p, render as r
+    names = {"I33213144": "Harvard University", "DE": "Germany", "article": "SHOULD-NOT-APPEAR"}
+    out = r(canonicalize_oqo(p("works where institution is I33213144 and country is de and type is article")),
+            resolver=lambda v: names.get(v))
+    assert "[Harvard University]" in out      # opaque ID resolves
+    assert "[Germany]" in out                 # country code resolves
+    assert "[SHOULD-NOT-APPEAR]" not in out   # readable slug (article) does NOT
+
+
 def test_corpus_covers_every_locked_behavior():
     """Spec self-check: each EXPLORE §2 locked behavior has >=1 corpus case."""
     ids = {r["id"] for r in ROWS}

@@ -55,6 +55,24 @@ this job; listed here so the spec's `✗`/`⚠` decisions are traceable.
 4. **`?`/`*` that don't match the detector shape silently become literal.** Same
    class as (2): any near-miss of the detector regex is a silent degradation.
 
+## Acknowledged capability gap: wildcard-in-a-phrase / near another word
+
+`"unusual behavi*or"`, `"smart phone*" within 3 words` — a wildcard combined with a
+phrase or proximity — is **rejected today** (corpus PW7, PW9, L02c) because our ES
+`query_string` path **silently drops the wildcard** (L02c verified live 2026-05-30).
+This is an **acknowledged limitation, not a permanent boundary**: **WoS and Scopus
+support it**, so it's a real gap vs. the big scholarly DBs. ES *can* express
+"wildcard term near another term" with heavier query types (**intervals** queries,
+or `span_near` + `span_multi(wildcard)`) — just not in the simple query path we use.
+
+- A wildcard **on its own word** (`behavi*or`, UK/US spelling) works fine today; only
+  the *combination* with a phrase/proximity is gapped.
+- Often sidesteppable: if the words needn't be adjacent, `contains unusual and
+  behavi*or` works.
+- Closing it is future engine work — exactly what the "lift to structure"
+  recommendation below enables (adjacent to #298 nested mapping / #337 wildcards).
+  The OQL spec marks it a loud, named error today so we never silently mislead.
+
 ## Recommendation back to OQO / engine (not in scope for #330)
 
 Consider lifting proximity / wildcard / adjacency **out of the opaque `value`

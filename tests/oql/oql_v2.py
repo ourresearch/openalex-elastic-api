@@ -69,6 +69,18 @@ class OQLHint:
 #       'id'     (entity id equality / set)
 #       'enum'   (slug equality / set)
 #       'string' (literal-string equality, e.g. doi/orcid)
+# The engine is fully case-insensitive on values (verified live 2026-06-02:
+# US==us, Article==article, I136…==i136…), so value case is purely cosmetic.
+# We canonicalize for readability, NOT correctness:
+#   casing 'lower'  -> enum slugs (article, gold, en)
+#   casing 'upper'  -> ISO country codes (US, GB) — convention, what people read
+#   casing ''       -> IDs / strings / search text: preserved verbatim (an
+#                      OpenAlex ID's uppercase prefix is its conventional form;
+#                      search text is the user's literal text). col_… refs are
+#                      ALWAYS preserved regardless of casing (they self-identify).
+# resolves_name: the renderer synthesizes a `[display name]` for this column's
+# values (opaque IDs + country codes), via an entity resolver. Human-readable
+# slugs (article, gold, en) don't — `article [article]` is noise.
 @dataclass
 class Field:
     column: str          # base column (search) or full column_id (non-search)
@@ -76,16 +88,31 @@ class Field:
     oql: str             # canonical OQL spelling for rendering
     bool_true: str = ""  # human phrasing for value=true   (bool kind)
     bool_false: str = "" # human phrasing for value=false  (bool kind)
+    casing: str = ""     # '' | 'lower' | 'upper'
+    resolves_name: bool = False
 
 
 _FIELDS: List[Tuple[List[str], Field]] = []  # (alias-spellings, Field)
 
 
-def _f(oql, column, kind, aliases=(), bool_true="", bool_false=""):
-    fld = Field(column=column, kind=kind, oql=oql, bool_true=bool_true, bool_false=bool_false)
+def _f(oql, column, kind, aliases=(), bool_true="", bool_false="",
+       casing=None, resolves_name=None):
+    if casing is None:
+        casing = "lower" if kind == "enum" else ""
+    if resolves_name is None:
+        resolves_name = (kind == "id")
+    fld = Field(column=column, kind=kind, oql=oql, bool_true=bool_true,
+                bool_false=bool_false, casing=casing, resolves_name=resolves_name)
     spellings = [oql] + list(aliases)
     _FIELDS.append(([s.lower() for s in spellings], fld))
     return fld
+
+
+def _canon_value_case(value, fld: "Field"):
+    """Apply the column's cosmetic value casing (never touches col_… refs)."""
+    if not isinstance(value, str) or value.startswith("col_") or not fld.casing:
+        return value
+    return value.lower() if fld.casing == "lower" else value.upper()
 
 
 # --- search fields (column is the *base*; .search suffix added per mode) ---
@@ -139,10 +166,13 @@ _f("openalex id", "ids.openalex", "id", aliases=["ids.openalex"])
 # --- enums (slug values) ---
 _f("type", "type", "enum", aliases=[])
 _f("OA status", "open_access.oa_status", "enum", aliases=["open_access.oa_status", "oa status"])
-_f("country", "authorships.countries", "enum", aliases=["authorships.countries"])
-_f("country code", "country_code", "enum", aliases=["country_code"])
+# Country codes: ISO uppercase canonical + resolve a [display name] (Germany, not de).
+_f("country", "authorships.countries", "enum", aliases=["authorships.countries"],
+   casing="upper", resolves_name=True)
+_f("country code", "country_code", "enum", aliases=["country_code"],
+   casing="upper", resolves_name=True)
 _f("author country", "last_known_institutions.country_code", "enum",
-   aliases=["last_known_institutions.country_code"])
+   aliases=["last_known_institutions.country_code"], casing="upper", resolves_name=True)
 _f("language", "language", "enum", aliases=[])
 
 # --- literal strings ---
@@ -360,7 +390,7 @@ class _Parser:
             raise OQLError(
                 "OQL_MIXED_BOOL_NEEDS_PARENS",
                 "mixed AND/OR at one level is ambiguous — add parentheses",
-                'group explicitly, e.g. "a AND (b OR c)" or "(a AND b) OR c"',
+                'group explicitly, e.g. "a and (b or c)" or "(a and b) or c"',
                 first.pos)
         join = conns[0]
         return BranchFilter(join=join, filters=operands)
@@ -624,7 +654,7 @@ class _Parser:
                 return True
             if low in ("false", "no"):
                 return False
-        return val
+        return _canon_value_case(val, fld)
 
     # -- search sub-grammar --
     def _parse_semantic(self, fld: Field) -> LeafFilter:
@@ -663,7 +693,7 @@ class _Parser:
             raise OQLError(
                 "OQL_MIXED_BOOL_NEEDS_PARENS",
                 "mixed AND/OR at one level is ambiguous — add parentheses",
-                'group explicitly, e.g. "a AND (b OR c)"', self.toks[0].pos)
+                'group explicitly, e.g. "a and (b or c)"', self.toks[0].pos)
         return BranchFilter(join=conns[0], filters=operands)
 
     def _starts_new_clause(self, k: int) -> bool:
@@ -969,7 +999,19 @@ def _render_value(fld, value) -> str:
     return str(value)
 
 
-def _render_leaf(f: LeafFilter) -> str:
+def _value_with_name(fld, value, resolver) -> str:
+    """Render a value, appending ` [display name]` when the column resolves names
+    and a resolver is supplied (institutions, authors, …, country codes)."""
+    rendered = _render_value(fld, value)
+    if (resolver and fld and fld.resolves_name and isinstance(value, str)
+            and not value.startswith("col_")):
+        name = resolver(value)
+        if name:
+            return f"{rendered} [{name}]"
+    return rendered
+
+
+def _render_leaf(f: LeafFilter, resolver=None) -> str:
     if _is_search_leaf(f):
         return _render_search_leaf(f)
     fld = _BY_COLUMN.get(f.column_id)
@@ -985,7 +1027,7 @@ def _render_leaf(f: LeafFilter) -> str:
     if f.operator in (">", ">=", "<", "<="):
         return f"{name} {f.operator} {_render_value(fld, f.value)}"
     verb = "is not" if f.is_negated else "is"
-    return f"{name} {verb} {_render_value(fld, f.value)}"
+    return f"{name} {verb} {_value_with_name(fld, f.value, resolver)}"
 
 
 def _same_field_search_set(f: BranchFilter):
@@ -1024,12 +1066,12 @@ def _same_field_eq_set(f: BranchFilter, negated: bool):
     return cols.pop(), vals
 
 
-def _render_filter(f: FilterType, top=False) -> str:
+def _render_filter(f: FilterType, top=False, resolver=None) -> str:
     if isinstance(f, LeafFilter):
-        return _render_leaf(f)
+        return _render_leaf(f, resolver)
     # BranchFilter
     if f.is_negated:
-        return "NOT (" + _render_filter(BranchFilter(f.join, f.filters)) + ")"
+        return "not (" + _render_filter(BranchFilter(f.join, f.filters), resolver=resolver) + ")"
     # factor same-field search OR/AND into `any of/all of`
     sset = _same_field_search_set(f)
     if sset:
@@ -1045,20 +1087,23 @@ def _render_filter(f: FilterType, top=False) -> str:
             fld = _BY_COLUMN.get(col)
             name = fld.oql if fld else col
             kw = "is not any of" if neg else "is any of"
-            return f"{name} {kw} ({', '.join(str(v) for v in vals)})"
-    parts = [_render_filter(c) for c in f.filters]
-    joined = f" {f.join.upper()} ".join(parts)
+            items = ", ".join(_value_with_name(fld, v, resolver) for v in vals)
+            return f"{name} {kw} ({items})"
+    parts = [_render_filter(c, resolver=resolver) for c in f.filters]
+    joined = f" {f.join} ".join(parts)
     return joined if top else f"({joined})"
 
 
-def render(oqo: OQO) -> str:
+def render(oqo: OQO, resolver=None) -> str:
+    """OQO -> canonical OQL. `resolver(id) -> name|None` (optional) synthesizes
+    `[display name]` annotations for opaque-ID / country columns."""
     entity = oqo.get_rows.lower()
     out = entity
     if oqo.filter_rows:
         if len(oqo.filter_rows) == 1:
-            cond = _render_filter(oqo.filter_rows[0], top=True)
+            cond = _render_filter(oqo.filter_rows[0], top=True, resolver=resolver)
         else:
-            cond = " AND ".join(_render_filter(f) for f in oqo.filter_rows)
+            cond = " and ".join(_render_filter(f, resolver=resolver) for f in oqo.filter_rows)
         out += f" where {cond}"
     if oqo.group_by:
         dims = ", ".join(_oql_field(g.column_id)[0] for g in oqo.group_by)

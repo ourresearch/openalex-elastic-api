@@ -21,7 +21,7 @@
 
 | Row | Detail | OQL |
 |---|---|---|
-| BOOL2 | v1.1 also rejects (no v2 diagnostic code though) | `works where title contains "foo" AND "bar" OR "baz"` |
+| BOOL2 | v1.1 also rejects (no v2 diagnostic code though) | `works where title contains "foo" and "bar" or "baz"` |
 | G9 | v1.1 parse matches the v2 oqo | `works where title contains bar*` |
 | PW2 | v1.1 parse matches the v2 oqo | `works where title contains foo*bar` |
 | PW3 | v1.1 parse matches the v2 oqo | `works where title contains wom?n` |
@@ -30,27 +30,27 @@
 | A07 | v1.1 parse matches the v2 oqo | `authors; sort by works_count desc` |
 | A10 | v1.1 parse matches the v2 oqo | `sources where type is journal` |
 | B03 | v1.1 parse matches the v2 oqo | `works where year >= 1976; group by topic, year` |
-| B04 | v1.1 parse matches the v2 oqo | `works where country is col_eu27 AND country is US; group by topic` |
+| B04 | v1.1 parse matches the v2 oqo | `works where country is col_eu27 and country is US; group by topic` |
 | B05 | v1.1 parse matches the v2 oqo | `works where it's retracted; group by institution` |
 | B07 | v1.1 parse matches the v2 oqo | `works where type is book; group by field` |
 | L04 | v1.1 parse matches the v2 oqo | `works where title & abstract contains behavio*r` |
 | L14 | v1.1 parse matches the v2 oqo | `works where language is es` |
-| L15 | v1.1 parse matches the v2 oqo | `works where title & abstract contains covid AND title & abstract does not contain pedia…` |
+| L15 | v1.1 parse matches the v2 oqo | `works where title & abstract contains covid and title & abstract does not contain pedia…` |
 
 ## MISSING-FEATURE (10)
 
 | Row | Detail | OQL |
 |---|---|---|
-| BOOL1 | OQLParseError: Failed to parse OQL | `works where title contains "foo" AND ("bar" OR "baz")` |
-| BOOL3 | OQLParseError: Failed to parse OQL | `works where title contains "a" AND "b" AND "c"` |
+| BOOL1 | OQLParseError: Failed to parse OQL | `works where title contains "foo" and ("bar" or "baz")` |
+| BOOL3 | OQLParseError: Failed to parse OQL | `works where title contains "a" and "b" and "c"` |
 | BOOL4 | OQLParseError: Failed to parse OQL | `works where title contains foo and (bar or baz)` |
 | G1 | OQLParseError: Failed to parse OQL | `works where title contains foo and (bar or baz)` |
 | G5 | OQLParseError: Failed to parse OQL | `works where title contains foo and "bar OR baz"` |
 | G6 | OQLParseError: Failed to parse OQL | `works where title contains exactly foo and bar` |
 | G7 | OQLParseError: Failed to parse OQL | `works where title contains foo and "bar"` |
-| A08 | OQLParseError: Failed to parse OQL | `authors where author country is BR AND it has an ORCID` |
-| L07 | OQLParseError: Failed to parse OQL | `works where title & abstract contains CRISPR AND "genome editing" AND year >= 2018 AND …` |
-| L17 | OQLParseError: Failed to parse OQL | `works where title & abstract contains CRISPR AND Cas9; group by author` |
+| A08 | OQLParseError: Failed to parse OQL | `authors where author country is BR and it has an ORCID` |
+| L07 | OQLParseError: Failed to parse OQL | `works where title & abstract contains CRISPR and "genome editing" and year >= 2018 and …` |
+| L17 | OQLParseError: Failed to parse OQL | `works where title & abstract contains CRISPR and Cas9; group by author` |
 
 ## SPEC-MISMATCH (47)
 
@@ -83,17 +83,17 @@
 | A09 | v1.1 parses but to a different OQO than v2 | `authors where openalex id is A5022654839` |
 | A11 | v1.1 parses but to a different OQO than v2 | `institutions where country code is FR` |
 | A12 | v1.1 parses but to a different OQO than v2 | `topics where domain is 3` |
-| A13 | v1.1 parses but to a different OQO than v2 | `authors where last known institution is I114027177 [UNC] AND topics is T10895 [climate …` |
+| A13 | v1.1 parses but to a different OQO than v2 | `authors where last known institution is I114027177 [UNC] and topics is T10895 [climate …` |
 | B01 | v1.1 parses but to a different OQO than v2 | `works where author is A5066175077 [Stephen Hawking]; group by author` |
 | B02 | v1.1 parses but to a different OQO than v2 | `works where anywhere contains "Macrocystis pyrifera"; group by author` |
-| B06 | v1.1 parses but to a different OQO than v2 | `works where title & abstract contains "coral bleaching" AND citations > 100; group by s…` |
+| B06 | v1.1 parses but to a different OQO than v2 | `works where title & abstract contains "coral bleaching" and citations > 100; group by s…` |
 | B08 | v1.1 parses but to a different OQO than v2 | `works where institution is I154570441 [UCSB] AND it's retracted; group by author` |
 | B09 | v1.1 parses but to a different OQO than v2 | `works where institution is I107639228 [Notre Dame]; group by SDG` |
-| L01 | v1.1 parses but to a different OQO than v2 | `works where title & abstract contains agile AND title & abstract contains any of ("supp…` |
+| L01 | v1.1 parses but to a different OQO than v2 | `works where title & abstract contains agile and title & abstract contains any of ("supp…` |
 | L02a | v1.1 parses but to a different OQO than v2 | `works where title & abstract contains "smart phone" within 3 words` |
 | L03 | v1.1 parses but to a different OQO than v2 | `works where title & abstract contains exactly "oyster toadfish"` |
 | L05 | v1.1 parses but to a different OQO than v2 | `works where title & abstract contains any of (autism, ASD, "autism spectrum disorder") …` |
-| L06 | v1.1 parses but to a different OQO than v2 | `works where OA status is gold AND funder is F4320337351 [NCI]` |
+| L06 | v1.1 parses but to a different OQO than v2 | `works where OA status is gold and funder is F4320337351 [NCI]` |
 | L08 | v1.1 parses but to a different OQO than v2 | `works where raw affiliation contains library` |
 | L09 | v1.1 parses but to a different OQO than v2 | `works where raw affiliation contains "london hospital" within 5 words` |
 | L10 | v1.1 parses but to a different OQO than v2 | `works where DOI is 10.1021/es052595+` |
@@ -130,14 +130,13 @@ Does the v1.1 renderer emit v2-parseable OQL that round-trips to the same OQO?
 
 | Category | Count |
 |---|---|
-| RENDER-OK | 33 |
-| RENDER-MISMATCH | 31 |
+| RENDER-OK | 38 |
+| RENDER-MISMATCH | 26 |
 
 Rows the v1.1 renderer does not yet emit in v2 form:
 
 | Row | Detail |
 |---|---|
-| ENT5 | v1.1 render parses to a different OQO |
 | BOOL1 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "conta |
 | BOOL4 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "conta |
 | G1 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "conta |
@@ -150,20 +149,16 @@ Rows the v1.1 renderer does not yet emit in v2 form:
 | PW11 | v1.1 output not v2-parseable: [OQL_UNKNOWN_FIELD] unknown field "title_and_abstract.search.exact"  Fix: check  |
 | PW12 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "whopp |
 | A06 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "clima |
-| A10 | v1.1 render parses to a different OQO |
 | B02 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "Macro |
 | B04 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "State |
 | B06 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "coral |
-| B07 | v1.1 render parses to a different OQO |
 | L01 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "&")   |
 | L02a | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "smart |
 | L03 | v1.1 output not v2-parseable: [OQL_UNKNOWN_FIELD] unknown field "title_and_abstract.search.exact"  Fix: check  |
 | L05 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "autis |
-| L06 | v1.1 render parses to a different OQO |
 | L07 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "genom |
 | L09 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "londo |
 | L10 | v1.1 render parses to a different OQO |
-| L13 | v1.1 render parses to a different OQO |
 | L14 | v1.1 render parses to a different OQO |
 | L16 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "quant |
 | L19 | v1.1 output not v2-parseable: [OQL_IMPLICIT_ADJACENCY] two conditions with no AND/OR between them (near "tufts |

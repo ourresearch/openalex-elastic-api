@@ -76,7 +76,7 @@ rows:
 - id: BOOL1
   group: booleans
   status: ok
-  oql: 'works where title contains "foo" AND ("bar" OR "baz")'
+  oql: 'works where title contains "foo" and ("bar" or "baz")'
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: foo, operator: contains},
         {join: or, filters: [
@@ -87,14 +87,14 @@ rows:
 - id: BOOL2
   group: booleans
   status: error
-  oql: 'works where title contains "foo" AND "bar" OR "baz"'
+  oql: 'works where title contains "foo" and "bar" or "baz"'
   diagnostic: OQL_MIXED_BOOL_NEEDS_PARENS
   note: Mixed AND/OR at one level with no parens — the one deliberate departure from WoS/Scopus.
 
 - id: BOOL3
   group: booleans
   status: ok
-  oql: 'works where title contains "a" AND "b" AND "c"'
+  oql: 'works where title contains "a" and "b" and "c"'
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: a, operator: contains},
         {column_id: display_name.search, value: b, operator: contains},
@@ -110,7 +110,7 @@ rows:
         {join: or, filters: [
           {column_id: display_name.search, value: bar, operator: contains},
           {column_id: display_name.search, value: baz, operator: contains}]}]}
-  note: Lowercase and/or accepted on input; normalized to uppercase AND/OR on output.
+  note: Connectives are case-insensitive on input; canonical output is lowercase and/or/not.
 
 # ---------------------------------------------------------------------------
 # C. The 9 gauntlet cases — search semantics  (PLAN.md spine)
@@ -303,7 +303,7 @@ rows:
 - id: A03
   group: '#284'
   status: ok
-  oql: 'works where institution is any of (I33213144 [University of Florida], I136199984 [Harvard]) AND year >= 2020'
+  oql: 'works where institution is any of (I33213144 [University of Florida], I136199984 [Harvard]) and year >= 2020'
   oqo: {get_rows: works, filter_rows: [
         {join: or, filters: [
           {column_id: authorships.institutions.lineage, value: I33213144},
@@ -342,7 +342,7 @@ rows:
 - id: A08
   group: '#284'
   status: ok
-  oql: 'authors where author country is BR AND it has an ORCID'
+  oql: 'authors where author country is BR and it has an ORCID'
   oqo: {get_rows: authors, filter_rows: [
         {column_id: last_known_institutions.country_code, value: BR},
         {column_id: has_orcid, value: true}]}
@@ -374,7 +374,7 @@ rows:
 - id: A13
   group: '#284'
   status: ok
-  oql: 'authors where last known institution is I114027177 [UNC] AND topics is T10895 [climate change]'
+  oql: 'authors where last known institution is I114027177 [UNC] and topics is T10895 [climate change]'
   oqo: {get_rows: authors, filter_rows: [
         {column_id: last_known_institutions.id, value: I114027177},
         {column_id: topics.id, value: T10895}]}
@@ -407,7 +407,7 @@ rows:
 - id: B04
   group: '#284'
   status: ok
-  oql: 'works where country is col_eu27 AND country is US; group by topic'
+  oql: 'works where country is col_eu27 and country is US; group by topic'
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.countries, value: col_eu27},
         {column_id: authorships.countries, value: US}],
@@ -424,7 +424,7 @@ rows:
 - id: B06
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains "coral bleaching" AND citations > 100; group by source'
+  oql: 'works where title & abstract contains "coral bleaching" and citations > 100; group by source'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: '"coral bleaching"', operator: contains},
         {column_id: cited_by_count, value: 100, operator: '>'}],
@@ -459,7 +459,7 @@ rows:
 - id: L01
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains agile AND title & abstract contains any of ("supply chain", "demand chain", "value chain") AND title & abstract contains any of ("lead time", "cycle time")'
+  oql: 'works where title & abstract contains agile and title & abstract contains any of ("supply chain", "demand chain", "value chain") and title & abstract contains any of ("lead time", "cycle time")'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: agile, operator: contains},
         {join: or, filters: [
@@ -489,7 +489,7 @@ rows:
   status: boundary
   oql: 'works where title & abstract contains "smart phone*" within 3 words'
   diagnostic: OQL_WILDCARD_IN_QUOTES
-  note: 'Wildcard-in-proximity — genuinely non-representable (ES can''t compose them). Surfaces as a loud error (PW7 covers the runnable assertion).'
+  note: 'Wildcard-in-proximity. ACKNOWLEDGED LIMITATION (not a permanent boundary): WoS/Scopus support it; our ES query_string path drops the wildcard (verified live). Rejected loudly today (PW7); fixable via ES intervals/span queries → future engine work (lift-to-structure rec / #337 / #298).'
 
 - id: L03
   group: '#284'
@@ -508,7 +508,7 @@ rows:
 - id: L05
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains any of (autism, ASD, "autism spectrum disorder") AND title & abstract contains any of (intervention, therapy, treatment) AND year >= 2015 AND year <= 2024 AND type is any of (article, review) AND language is en'
+  oql: 'works where title & abstract contains any of (autism, ASD, "autism spectrum disorder") and title & abstract contains any of (intervention, therapy, treatment) and year >= 2015 and year <= 2024 and type is any of (article, review) and language is en'
   oqo: {get_rows: works, filter_rows: [
         {join: or, filters: [
           {column_id: title_and_abstract.search, value: autism, operator: contains},
@@ -527,7 +527,7 @@ rows:
 - id: L06
   group: '#284'
   status: ok
-  oql: 'works where OA status is gold AND funder is F4320337351 [NCI]'
+  oql: 'works where OA status is gold and funder is F4320337351 [NCI]'
   oqo: {get_rows: works, filter_rows: [
         {column_id: open_access.oa_status, value: gold},
         {column_id: funders.id, value: F4320337351}]}
@@ -535,7 +535,7 @@ rows:
 - id: L07
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains CRISPR AND "genome editing" AND year >= 2018 AND year <= 2023; sort by citations desc; sample 500'
+  oql: 'works where title & abstract contains CRISPR and "genome editing" and year >= 2018 and year <= 2023; sort by citations desc; sample 500'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: CRISPR, operator: contains},
         {column_id: title_and_abstract.search, value: '"genome editing"', operator: contains},
@@ -592,7 +592,7 @@ rows:
 - id: L15
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains covid AND title & abstract does not contain pediatric'
+  oql: 'works where title & abstract contains covid and title & abstract does not contain pediatric'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: covid, operator: contains},
         {column_id: title_and_abstract.search, value: pediatric, operator: contains, is_negated: true}]}
@@ -608,7 +608,7 @@ rows:
 - id: L17
   group: '#284'
   status: ok
-  oql: 'works where title & abstract contains CRISPR AND Cas9; group by author'
+  oql: 'works where title & abstract contains CRISPR and Cas9; group by author'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: CRISPR, operator: contains},
         {column_id: title_and_abstract.search, value: Cas9, operator: contains}],
@@ -649,4 +649,4 @@ rows:
     OR-synonym groups, each block scoped to a different search field
     (title / title & abstract x2 / anywhere). 114 leaves. No explicit oqo oracle
     — the harness asserts OQO->OQL->OQO identity through the whole tree.
-  oql: 'works where title contains any of (obese, overweight, obesity, "body image", fat, fatness, thin, thinness, Height, weight, bodyweight, "body hatred", "body positive", "thin ideal", "fat ideal", "body esteem", "body ideal", "ideal body", "body shape", "body size", "body sizes", "weight bias", "being fat", "being thin", "anti fat", "body shame") AND title & abstract contains any of (qualitative, "focus group", "focus groups", questionnaire, questionnaires, interview, interviews, experiences, "lived experience", perceptions, perspective, perspectives, attitude, attitudes, beliefs, diary, diaries) AND title & abstract contains any of (qualitative, "focus group", "focus groups", "semi structured", semistructured, unstructured, informal, in-depth, indepth, open, "open ended", experiences, "lived experience", perceptions, perspective, perspectives, attitude, attitudes, beliefs, diary, diaries) AND title contains any of ("young people", adolescent, youth, pubertal, pubescent, "pre adolescent", "Pre pubescent", "pre pubertal", teen, preteen, tweens, tweenage, youths, schoolboy, schoolgirl, "school aged", "young person", juvenile, Boy, boys, children, child''s, Girl, girls, Minors, preadolescent, Prepubescent, schoolchild, "early adolescent") AND anywhere contains any of (GB, Britain, UK, "United Kingdom", England, "Northern Ireland", "Northern Irish", "North Ireland", "North Irish", Scotland, Scottish, Wales, Welsh, "english boys", "English girls", "english school", "English children", "English teen", "English adolescent", "English young people", "English schoolchild")'
+  oql: 'works where title contains any of (obese, overweight, obesity, "body image", fat, fatness, thin, thinness, Height, weight, bodyweight, "body hatred", "body positive", "thin ideal", "fat ideal", "body esteem", "body ideal", "ideal body", "body shape", "body size", "body sizes", "weight bias", "being fat", "being thin", "anti fat", "body shame") and title & abstract contains any of (qualitative, "focus group", "focus groups", questionnaire, questionnaires, interview, interviews, experiences, "lived experience", perceptions, perspective, perspectives, attitude, attitudes, beliefs, diary, diaries) and title & abstract contains any of (qualitative, "focus group", "focus groups", "semi structured", semistructured, unstructured, informal, in-depth, indepth, open, "open ended", experiences, "lived experience", perceptions, perspective, perspectives, attitude, attitudes, beliefs, diary, diaries) and title contains any of ("young people", adolescent, youth, pubertal, pubescent, "pre adolescent", "Pre pubescent", "pre pubertal", teen, preteen, tweens, tweenage, youths, schoolboy, schoolgirl, "school aged", "young person", juvenile, Boy, boys, children, child''s, Girl, girls, Minors, preadolescent, Prepubescent, schoolchild, "early adolescent") and anywhere contains any of (GB, Britain, UK, "United Kingdom", England, "Northern Ireland", "Northern Irish", "North Ireland", "North Irish", Scotland, Scottish, Wales, Welsh, "english boys", "English girls", "english school", "English children", "English teen", "English adolescent", "English young people", "English schoolchild")'

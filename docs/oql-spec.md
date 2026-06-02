@@ -90,6 +90,22 @@ Both produce `{column_id: authorships.institutions.lineage, value: I136199984}`.
   `gold` — the column carries the namespace (per oqo-spec §2). A `col_…` collection
   reference is also a valid bare value (corpus **B04**).
 
+**Which values get a `[display name]` on output is per-column (registry-driven):**
+the renderer synthesizes a name only when the bare value is **not human-readable** —
+opaque OpenAlex IDs (`I136199984` → `[Harvard University]`) and **country codes**
+(`de` → `[Germany]`). Already-readable slugs (`article`, `gold`, `en`) get **no**
+annotation — `article [article]` is noise. This is a column property in the
+properties registry (#294/#331), not an entity-vs-string distinction.
+
+**Value case is cosmetic, not semantic.** The engine is case-insensitive on values
+(verified live 2026-06-02: `US`==`us`, `Article`==`article`, `I136…`==`i136…`), so
+OQL canonicalizes case purely for readability: **enum slugs → lowercase**
+(`type is Article` → `type is article`), **ISO country codes → uppercase**
+(`country is us` → `country is US`), and **IDs / search text → verbatim** (an
+OpenAlex ID's uppercase prefix is conventional; search text is the user's literal
+words). `col_…` references are always preserved. (Per-column canonical case is a
+registry property.)
+
 ### 3.2 Sets / value lists: `is any of ( … )`
 
 ```
@@ -128,19 +144,23 @@ punctuation away, so it is meaningless anyway) and documented, not escaped.
 ### 3.4 Booleans, casing, precedence
 
 ```
-works where title contains "foo" AND ("bar" OR "baz")    (BOOL1)  ✓
-works where title contains "foo" AND "bar" OR "baz"       (BOOL2)  ✗ OQL_MIXED_BOOL_NEEDS_PARENS
-works where title contains "a" AND "b" AND "c"           (BOOL3)  ✓ (pure-AND, associative)
-works where title contains foo and (bar or baz)          (BOOL4)  ✓ (lowercase normalized to AND/OR)
+works where title contains "foo" and ("bar" or "baz")    (BOOL1)  ✓
+works where title contains "foo" and "bar" or "baz"       (BOOL2)  ✗ OQL_MIXED_BOOL_NEEDS_PARENS
+works where title contains "a" and "b" and "c"           (BOOL3)  ✓ (pure-AND, associative)
+works where title contains FOO AND (bar or baz)          (BOOL4)  ✓ (any case accepted on input)
 ```
 
-- **Operators always sit OUTSIDE quotes.** Inside quotes, even `OR` is a literal
+- **Operators always sit OUTSIDE quotes.** Inside quotes, even `or` is a literal
   word (§3.6 governing law).
-- **`AND` / `OR` / `NOT` are UPPERCASE canonically**; lowercase accepted on input
-  and normalized. Rule: **logical connectives uppercase; sentence words lowercase**
-  (`where`, `is`, `contains`, `within`, `exactly`, `any of`).
-- **Mixed AND/OR at one grouping level REQUIRES explicit parentheses — a loud error
-  otherwise** (`OQL_MIXED_BOOL_NEEDS_PARENS`). Pure-AND or pure-OR runs are
+- **`and` / `or` / `not` are lowercase canonically**, but **case-insensitive on
+  input** (`AND`, `And`, `and` all parse). Lowercase wins on output because
+  principle #1 is "reads aloud," and OQL's own rules (operators-outside-quotes +
+  no-implicit-adjacency, below) already disambiguate connectives from search words —
+  so the uppercase-for-disambiguation convention that scholarly DBs need (because
+  they allow implicit adjacency) buys us nothing. (All keywords are lowercase:
+  `where`, `is`, `contains`, `within`, `exactly`, `any of`, `and`/`or`/`not`.)
+- **Mixed and/or at one grouping level REQUIRES explicit parentheses — a loud error
+  otherwise** (`OQL_MIXED_BOOL_NEEDS_PARENS`). Pure-and or pure-or runs are
   associative, so they need no parens. This is the **one deliberate departure** from
   WoS/Scopus muscle memory, and it is where the field is already heading (Scopus
   mid-migration; Dimensions enforces; Lucene/Sourcegraph advise full
@@ -152,7 +172,7 @@ works where title contains foo and (bar or baz)          (BOOL4)  ✓ (lowercase
 ### 3.5 Negation — one mechanism
 
 ```
-works where title & abstract contains covid AND title & abstract does not contain pediatric  (L15)
+works where title & abstract contains covid and title & abstract does not contain pediatric  (L15)
 ```
 → `{contains covid}` AND `{contains pediatric, is_negated: true}`.
 
@@ -246,6 +266,19 @@ works where title contains smart* within 3 words            (PW9)  ✗ OQL_WILDC
   never a false promise. See [`docs/oql/engine_findings.md`](./oql/engine_findings.md)
   for the engine behavior behind these.
 
+> **⚠ Acknowledged limitation (to be fixed, not a permanent boundary):**
+> **wildcard-in-a-phrase / wildcard-near-another-word** — `"unusual behavi*or"`,
+> `"smart phone*" within 3 words` — is rejected today (PW7, PW9, corpus L02c)
+> because our ES `query_string` path drops the wildcard (verified live: L02c
+> silently dropped it). **WoS and Scopus support this**, so it is a real
+> capability gap, not a design choice. ES *can* express it with heavier query
+> types (intervals / span queries); reaching it is future engine work — exactly
+> what the "lift proximity/wildcard into OQO **structure**" recommendation enables
+> (charter §4; adjacent to #298 / #337). Note: a wildcard **on its own word** —
+> `behavi*or` (UK/US spelling) — works fine today; only the *combination with a
+> phrase/proximity* is gapped, and you can often sidestep it with `contains x and
+> y*` when the words needn't be adjacent.
+
 ### 3.8 `null` / `unknown`
 
 `language is unknown` / `language is not unknown` → `value: null` (± `is_negated`).
@@ -280,8 +313,8 @@ NL) share codes and only localize prose. Every `✗` corpus row asserts its code
 
 | Code | When | Fix-it |
 |---|---|---|
-| `OQL_MIXED_BOOL_NEEDS_PARENS` | mixed AND/OR at one level | add parens: `a AND (b OR c)` |
-| `OQL_IMPLICIT_ADJACENCY` | two operands, no connective | insert AND or OR |
+| `OQL_MIXED_BOOL_NEEDS_PARENS` | mixed and/or at one level | add parens: `a and (b or c)` |
+| `OQL_IMPLICIT_ADJACENCY` | two operands, no connective | insert an `and` or `or` |
 | `OQL_MISSING_ENTITY_ID` | entity ref with only a `[name]` | put the ID first: `institution is I136199984 [Harvard]` |
 | `OQL_WILDCARD_IN_QUOTES` | `*`/`?` inside a quoted phrase | move it out: `bar*` |
 | `OQL_LEADING_WILDCARD` | leading `*`/`?` | anchor it: `cycle*` |
