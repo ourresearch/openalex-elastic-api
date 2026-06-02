@@ -1,29 +1,38 @@
-"""Column registry (#294 Phase B) — build-at-boot, in-memory.
+"""Entity properties (#331; formerly the column registry, #294 Phase B) —
+build-at-boot, in-memory.
 
-A per-entity map of every queryable column, derived from the SAME live `Field`
-objects the filter layer executes (each entity's `fields_dict`). Built once at
-import by calling `Field.to_registry_entry()` on every field, so the registry
-and the executor can never disagree — there's no committed snapshot to go stale.
+A per-entity catalog of every queryable property, derived from the SAME live
+`Field` objects the filter layer executes (each entity's `fields_dict`). Built
+once at import by calling `Field.to_property()` on every field, so this catalog
+and the executor can never disagree.
 
-    REGISTRY[entity_type][column_id] = {
-        "param", "field_type", "operators", "actions",
-        "alias", "custom_es_field", "entity_type",
-    }
+"Registry" was a backwards name: nothing *registers* into this — it is a derived
+**projection** of the live `Field` objects (the real source of truth). It is a
+read-only computed view; editing it does nothing. Hence the #331 rename to
+"properties" (a catalog of each entity's queryable properties).
+
+    ENTITY_PROPERTIES[entity_type][property_name] = Property(...)
 
 `entity_type` keys are the OQO `get_rows` strings (hyphenated where the OQO uses
-hyphens, e.g. "work-types") so a caller can look up `REGISTRY[oqo.get_rows]`
-directly. `column_id` keys are each field's `param` — the same space the OQO's
+hyphens, e.g. "work-types") so a caller can look up `ENTITY_PROPERTIES[oqo.get_rows]`
+directly. `property_name` keys are each field's `param` — the same space the OQO's
 `LeafFilter.column_id` and `core.utils.get_field` resolve against.
 
 Consumers: the OQO validator (`query_translation/validator.py`) and the
-`GET /registry` endpoint. The offline audit tool
-(`oxjobs/working/column-registry-sync/work/extract_server.py`) builds the same
-shape statically via AST and is kept in sync as a cross-check, but this module —
-introspecting the live objects — is the runtime source of truth.
+`GET /properties` endpoint (plus the deprecated `/registry` aliases). The offline
+audit tool (`oxjobs/.../check_client_subset.py`) cross-checks against this. This
+module — introspecting the live objects — is the runtime source of truth; the
+committed `docs/properties-snapshot.json` is its versioned, fingerprinted mirror.
 """
 
 import importlib
 
+# ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
+# │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
+# │ the validator accepts the entity) AND `_resolve_entity` (hand-maintained → the  │
+# │ executor runs it). Adding an entity here WITHOUT a `_resolve_entity` branch     │
+# │ makes a query validate but 400 `invalid_entity` at execution. Wire BOTH.        │
+# └─────────────────────────────────────────────────────────────────────────────────┘
 # OQO entity type (== oqo.get_rows / validator.VALID_ENTITIES) -> fields module.
 # Hyphenated OQO types map to underscored package names.
 ENTITY_FIELDS_MODULES = {
@@ -52,43 +61,43 @@ ENTITY_FIELDS_MODULES = {
 }
 
 
-def _build_entity_registry(module_name):
-    """Introspect one entity's live fields into {column_id: registry_entry}."""
+def _build_entity_properties(module_name):
+    """Introspect one entity's live fields into {property_name: Property}."""
     mod = importlib.import_module(module_name)
     fields_dict = getattr(mod, "fields_dict", None)
     if fields_dict is None:
         fields_dict = {f.param: f for f in getattr(mod, "fields", [])}
-    return {param: field.to_registry_entry() for param, field in fields_dict.items()}
+    return {param: field.to_property() for param, field in fields_dict.items()}
 
 
-def build_registry():
-    """Build the full {entity_type: {column_id: entry}} registry from live fields."""
-    registry = {}
+def build_properties():
+    """Build the full {entity_type: {property_name: Property}} catalog from live fields."""
+    properties = {}
     for entity_type, module_name in ENTITY_FIELDS_MODULES.items():
-        registry[entity_type] = _build_entity_registry(module_name)
-    return registry
+        properties[entity_type] = _build_entity_properties(module_name)
+    return properties
 
 
 # Built once at import (boot). Import is cheap — it only walks already-constructed
 # Field objects; it does not touch Elasticsearch.
-REGISTRY = build_registry()
+ENTITY_PROPERTIES = build_properties()
 
 
-def get_entity_columns(entity_type):
-    """Return {column_id: entry} for an entity type, or None if unknown."""
-    return REGISTRY.get(entity_type)
+def get_entity_properties(entity_type):
+    """Return {property_name: Property} for an entity type, or None if unknown."""
+    return ENTITY_PROPERTIES.get(entity_type)
 
 
-def get_column(entity_type, column_id):
-    """Return the registry entry for one column, or None if entity/column unknown."""
-    return REGISTRY.get(entity_type, {}).get(column_id)
+def get_property(entity_type, property_name):
+    """Return the `Property` for one column, or None if entity/property unknown."""
+    return ENTITY_PROPERTIES.get(entity_type, {}).get(property_name)
 
 
 # ---------------------------------------------------------------------------
 # Selectable result-fields (#318) — the `select` projection source.
 #
 # `select` fields are the entity's *result-schema* fields (what each returned
-# row serializes), a DIFFERENT set from the filter-column registry above:
+# row serializes), a DIFFERENT set from the filter-column properties above:
 # e.g. `abstract` is selectable but not filterable; the filter column
 # `open_access.is_oa` corresponds to the selectable parent field `open_access`.
 # So we source selectable fields from each entity's MessageSchema (its `results`
@@ -106,7 +115,7 @@ def get_selectable_fields(entity_type):
     """Return the set of selectable result-field names for an entity type, or
     None if the entity is unknown / has no resolvable MessageSchema.
 
-    `entity_type` is an OQO `get_rows` registry key (e.g. "works", "work-types").
+    `entity_type` is an OQO `get_rows` property-catalog key (e.g. "works", "work-types").
     """
     if entity_type in _SELECTABLE_CACHE:
         return _SELECTABLE_CACHE[entity_type]

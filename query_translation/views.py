@@ -29,7 +29,7 @@ from core.shared_view import (
     set_source,
 )
 from core.preference import clean_preference, combine_preferences
-from core.registry import REGISTRY, get_entity_columns
+from core.properties import ENTITY_PROPERTIES, get_entity_properties
 from core.utils import get_data_version_connection
 from core.utils import get_display_name as _get_display_name
 from query_translation.oqo import OQO, VALID_OPERATORS, filter_from_dict
@@ -353,36 +353,47 @@ def _build_params_from_oqo(oqo: OQO, request):
 
 
 # ---------------------------------------------------------------------------
-# /registry — the column registry (#294 Phase B)
+# /registry — the entity-property catalog (#331; formerly #294 Phase B)
 # ---------------------------------------------------------------------------
+
+
+def _serialize_entity(properties):
+    """Serialize one entity's {name: Property} into {name: dict}."""
+    return {name: prop.serialize() for name, prop in properties.items()}
 
 
 @blueprint.route("/registry", methods=["GET"])
 def get_registry():
-    """The full column registry: every queryable column per entity, with its
-    value type, valid filter operators, actions, and cross-type entity_type.
+    """The full entity-property catalog: every queryable property per entity,
+    with its value type, valid filter operators, actions, and cross-type
+    entity_type.
 
     Built at boot from the live `Field` objects the filter layer executes
-    (core/registry.py), so it can't drift from what the server actually accepts.
+    (core/properties.py), so it can't drift from what the server actually accepts.
     This is the same data the OQO validator consults to answer "is column X
     valid on entity Y with operator Z and value type T?".
     """
     return jsonify(
         {
             "meta": {
-                "entity_count": len(REGISTRY),
-                "column_count": sum(len(cols) for cols in REGISTRY.values()),
+                "entity_count": len(ENTITY_PROPERTIES),
+                "column_count": sum(
+                    len(props) for props in ENTITY_PROPERTIES.values()
+                ),
             },
-            "registry": REGISTRY,
+            "registry": {
+                entity: _serialize_entity(props)
+                for entity, props in ENTITY_PROPERTIES.items()
+            },
         }
     ), 200
 
 
 @blueprint.route("/registry/<entity_type>", methods=["GET"])
 def get_registry_entity(entity_type: str):
-    """The column registry for a single entity type, e.g. `/registry/works`."""
-    columns = get_entity_columns(entity_type)
-    if columns is None:
+    """The property catalog for a single entity type, e.g. `/registry/works`."""
+    properties = get_entity_properties(entity_type)
+    if properties is None:
         return _error_response(
             f"'{entity_type}' is not a registered entity type.",
             "invalid_entity",
@@ -390,8 +401,8 @@ def get_registry_entity(entity_type: str):
         )
     return jsonify(
         {
-            "meta": {"entity_type": entity_type, "column_count": len(columns)},
-            "columns": columns,
+            "meta": {"entity_type": entity_type, "column_count": len(properties)},
+            "columns": _serialize_entity(properties),
         }
     ), 200
 

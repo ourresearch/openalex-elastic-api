@@ -1,6 +1,8 @@
 import datetime
 import re
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import List, Optional
 
 from elasticsearch_dsl import Q, Search
 
@@ -75,14 +77,53 @@ def annotate_entity_types(fields):
             f.entity_type = ENTITY_ID_PARAM_TYPES[f.param]
 
 
+@dataclass(frozen=True)
+class Property:
+    """A single queryable property of an entity type (#331).
+
+    This is the canonical, serializable projection of one live `Field` — what the
+    OQO validator consults to answer "is column X valid on entity Y with operator
+    Z and value type T?": the value `type` it accepts, the `operators` valid on
+    it, the high-level `actions` it affords (filter/sort/select/group_by), and the
+    cross-type `entity_type` (when the property holds OpenAlex entity IDs).
+
+    `.serialize()` is the ONE canonical wire form: it sorts `operators` and
+    `actions` so the rendered `/properties` payload is deterministic — a content
+    fingerprint over it is stable by construction, never flapping on dict/set
+    iteration order (#331 Decision C). Renamed from the old per-column registry
+    dict; `name`/`type` replace the former `param`/`field_type` wire keys.
+    """
+
+    name: str
+    type: Optional[str]
+    operators: List[str]
+    actions: List[str]
+    alias: Optional[str] = None
+    custom_es_field: Optional[str] = None
+    entity_type: Optional[str] = None
+
+    def serialize(self) -> dict:
+        """The canonical JSON-ready dict. `operators`/`actions` are sorted so
+        repeated renders are byte-identical (fingerprint-stable)."""
+        return {
+            "name": self.name,
+            "type": self.type,
+            "operators": sorted(self.operators),
+            "actions": sorted(self.actions),
+            "alias": self.alias,
+            "custom_es_field": self.custom_es_field,
+            "entity_type": self.entity_type,
+        }
+
+
 class Field(ABC):
-    # --- column-registry contract (#294 Phase B) ---
+    # --- entity-property contract (#331; formerly #294 Phase B) ---
     # Each subclass declares the value type it accepts and the filter operators
     # the server actually supports (this mirrors the branching in build_query()
     # below — until now that contract was implicit in each method body). The
-    # boot-time registry builder reads these via to_registry_entry(); the
-    # offline audit tool work/extract_server.py keeps a parallel FIELD_OPERATORS
-    # table that must stay in sync with these declarations.
+    # boot-time properties builder reads these via to_property(); the offline
+    # audit tool work/extract_server.py keeps a parallel FIELD_OPERATORS table
+    # that must stay in sync with these declarations.
     #   field_type — value type a filter on this column accepts
     #   operators  — filter operators valid on this column
     #   actions    — high-level affordances ("filter" / "search"); [] = synthetic
@@ -147,22 +188,32 @@ class Field(ABC):
             field = self.param.replace("__", ".")
         return field
 
-    def to_registry_entry(self):
-        """Serialize this field's column-registry contract (#294 Phase B).
+    def to_property(self):
+        """Project this field into its `Property` — the entity-property contract
+        (#331; renamed from #294 Phase B's `to_registry_entry`).
 
-        Returns the per-column dict the OQO validator consults to answer
-        "is column X valid on entity Y with operator Z and value type T?":
-        the value type the column accepts, the operators valid on it, and the
-        cross-type entity_type (when the column holds OpenAlex entity IDs)."""
-        return {
-            "param": self.param,
-            "field_type": self.field_type,
-            "operators": list(self.operators),
-            "actions": list(self.actions),
-            "alias": self.alias,
-            "custom_es_field": self.custom_es_field,
-            "entity_type": self.entity_type,
-        }
+        ┌─ AGENT/HUMAN: this output is a PUBLIC CONTRACT ────────────────────────┐
+        │ The `Property` rendered here flows into `/properties` and the committed │
+        │ `docs/properties-snapshot.json` the libs bundle. If you add/remove a    │
+        │ field, change its `field_type`, or alter its `operators`/`actions`, the │
+        │ CI drift gate will block until `PROPERTIES_VERSION` is bumped to match  │
+        │ the change class. Do NOT self-bump — flag Jason or Casey. See           │
+        │ docs/PROPERTIES_VERSIONING.md.                                          │
+        └────────────────────────────────────────────────────────────────────────┘
+
+        Returns the `Property` the OQO validator consults to answer "is column X
+        valid on entity Y with operator Z and value type T?": the value type the
+        column accepts, the operators valid on it, and the cross-type entity_type
+        (when the column holds OpenAlex entity IDs)."""
+        return Property(
+            name=self.param,
+            type=self.field_type,
+            operators=list(self.operators),
+            actions=list(self.actions),
+            alias=self.alias,
+            custom_es_field=self.custom_es_field,
+            entity_type=self.entity_type,
+        )
 
 
 class BooleanField(Field):

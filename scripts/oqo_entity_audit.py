@@ -1,16 +1,16 @@
 """oxjob #334 — OQO list-entity coverage audit.
 
 For every legacy list entity, answer:
-  (1) Does core.registry.REGISTRY contain it?  (validator accepts the entity)
-  (2) How many columns does it register?
+  (1) Does core.properties.ENTITY_PROPERTIES contain it?  (validator accepts the entity)
+  (2) How many properties does it expose?
   (3) Does query_translation.views._resolve_entity handle it?  (/query can execute)
 
-No app boot / no ES needed — registry builds at import, and _resolve_entity only
+No app boot / no ES needed — the catalog builds at import, and _resolve_entity only
 imports per-entity fields modules. Run from repo root with PYTHONPATH=. .
 """
 import importlib
 
-from core.registry import REGISTRY
+from core.properties import ENTITY_PROPERTIES
 from query_translation.views import _resolve_entity, NATIVE_ENTITY_TYPES
 from core.exceptions import APIQueryParamsError
 
@@ -23,11 +23,11 @@ LEGACY_LIST_ENTITIES = [
     "oa-statuses", "raw-affiliation-strings",
 ]
 
-print(f"{'entity':<24} {'in_registry':<12} {'#cols':<6} {'_resolve_entity':<16}")
+print(f"{'entity':<24} {'in_catalog':<12} {'#props':<6} {'_resolve_entity':<16}")
 print("-" * 64)
 for ent in LEGACY_LIST_ENTITIES:
-    in_reg = ent in REGISTRY
-    ncols = len(REGISTRY.get(ent, {})) if in_reg else 0
+    in_reg = ent in ENTITY_PROPERTIES
+    ncols = len(ENTITY_PROPERTIES.get(ent, {})) if in_reg else 0
     try:
         _resolve_entity(ent, connection="walden")
         resolves = "ok"
@@ -39,5 +39,5 @@ for ent in LEGACY_LIST_ENTITIES:
     print(f"{ent:<24} {str(in_reg):<12} {ncols:<6} {resolves:<16}{flag}")
 
 print()
-print("Registry keys not in legacy list set:",
-      sorted(set(REGISTRY) - set(LEGACY_LIST_ENTITIES)))
+print("Catalog keys not in legacy list set:",
+      sorted(set(ENTITY_PROPERTIES) - set(LEGACY_LIST_ENTITIES)))

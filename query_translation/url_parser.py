@@ -340,22 +340,23 @@ def _should_range_parse(entity_type: Optional[str], field: str) -> bool:
     (`NNNN-NNNN`), but also any other `TermField` ID — must keep the hyphen as
     part of an exact value, never split it into `>=a AND <=b`.
 
-    We consult the column registry (the same source the validator uses). To stay
-    a strictly *narrowing* fix (no regression), we only suppress range-parsing
-    when we can positively confirm the column exists and lacks a range operator:
+    We consult the entity-property catalog (the same source the validator uses).
+    To stay a strictly *narrowing* fix (no regression), we only suppress
+    range-parsing when we can positively confirm the property exists and lacks a
+    range operator:
     - `entity_type` is None (direct callers w/o entity context) -> keep old behavior
-    - column not found in the registry -> keep old behavior (validator flags it)
-    - column found and supports `range`/`date_range` -> range-parse
-    - column found and does NOT -> exact match (the fix)
+    - property not found in the catalog -> keep old behavior (validator flags it)
+    - property found and supports `range`/`date_range` -> range-parse
+    - property found and does NOT -> exact match (the fix)
     """
     if entity_type is None:
         return True
-    from core.registry import get_column
+    from core.properties import get_property
 
-    col = get_column(entity_type, field)
-    if col is None:
+    prop = get_property(entity_type, field)
+    if prop is None:
         return True
-    operators = col.get("operators") or []
+    operators = prop.operators or []
     return "range" in operators or "date_range" in operators
 
 

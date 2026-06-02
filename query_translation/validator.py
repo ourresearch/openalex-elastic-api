@@ -1,12 +1,13 @@
-"""Validator — checks an OQO against the live column registry.
+"""Validator — checks an OQO against the live entity-property catalog.
 
-Source of truth is `core.registry.REGISTRY` (#294 Phase B): the per-entity map
-built at boot from the same `Field` objects the filter layer executes. Validation
-answers, for each leaf filter, three questions:
+Source of truth is `core.properties.ENTITY_PROPERTIES` (#331; formerly the #294
+column registry): the per-entity catalog built at boot from the same `Field`
+objects the filter layer executes. Validation answers, for each leaf filter,
+three questions:
 
-  (a) is `column_id` a real column on the OQO's `get_rows` entity?   -> invalid_column
-  (b) does `operator` fit that column's type?                       -> invalid_operator_for_column
-  (c) does `value` match the column's field_type?                   -> invalid_value_type
+  (a) is `column_id` a real property on the OQO's `get_rows` entity? -> invalid_column
+  (b) does `operator` fit that property's type?                     -> invalid_operator_for_column
+  (c) does `value` match the property's type?                       -> invalid_value_type
 
 Strict: every one of these is a hard error (the route returns 400). This catches
 nonsense like `cited_by_count contains 5` or `is_oa is 5` before it reaches ES.
@@ -19,7 +20,12 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from core.registry import REGISTRY, get_entity_columns, get_selectable_fields
+from core.fields import Property
+from core.properties import (
+    ENTITY_PROPERTIES,
+    get_entity_properties,
+    get_selectable_fields,
+)
 from query_translation.oqo import (
     OQO,
     LeafFilter,
@@ -59,7 +65,7 @@ class ValidationResult:
         }
 
 
-# OQO get_rows values that name the same registry entity under a different label.
+# OQO get_rows values that name the same property-catalog entity under a different label.
 ENTITY_ALIASES = {"types": "work-types"}
 
 VALID_SORT_ORDERS = {"asc", "desc"}
@@ -68,12 +74,12 @@ VALID_SORT_ORDERS = {"asc", "desc"}
 COMPARISON_OPERATORS = {">", ">=", "<", "<="}
 
 
-def _registry_entity(get_rows: str) -> Optional[str]:
-    """Resolve an OQO `get_rows` to its registry key, or None if unknown."""
-    if get_rows in REGISTRY:
+def _resolve_property_entity(get_rows: str) -> Optional[str]:
+    """Resolve an OQO `get_rows` to its property-catalog key, or None if unknown."""
+    if get_rows in ENTITY_PROPERTIES:
         return get_rows
     alias = ENTITY_ALIASES.get(get_rows)
-    if alias in REGISTRY:
+    if alias in ENTITY_PROPERTIES:
         return alias
     return None
 
@@ -122,7 +128,7 @@ def _value_matches_type(field_type: Optional[str], value: Any) -> bool:
 
 
 def _operator_fits_column(operator: str, value: Any, operators: List[str]) -> bool:
-    """Check an OQO operator against a column's supported registry operator buckets."""
+    """Check an OQO operator against a property's supported operator buckets."""
     if value is None:
         # null/!null: only the default operator, and the column must support null.
         return operator == "is" and "null" in operators
@@ -138,7 +144,7 @@ def _operator_fits_column(operator: str, value: Any, operators: List[str]) -> bo
 
 # `relevance_score` is a synthetic sort key, not a filterable column: legacy
 # `core/sort.py` maps it to ES `_score`. It is sortable but never appears in the
-# filter column registry, so it gets its own allow-rule in the sort check below
+# filter-column property catalog, so it gets its own allow-rule in the sort check below
 # (gated on a search clause being present, descending only — see legacy
 # `core/shared_view.py:apply_sorting`).
 RELEVANCE_SORT_COLUMN = "relevance_score"
@@ -172,13 +178,13 @@ def _has_search_clause(filter_rows: List["FilterType"]) -> bool:
 
 
 class OQOValidator:
-    """Validates OQO objects against the live column registry."""
+    """Validates OQO objects against the live entity-property catalog."""
 
     def validate(self, oqo: OQO) -> ValidationResult:
         errors: List[ValidationError] = []
         warnings: List[ValidationError] = []
 
-        entity = _registry_entity(oqo.get_rows)
+        entity = _resolve_property_entity(oqo.get_rows)
         if entity is None:
             errors.append(ValidationError(
                 type="invalid_entity",
@@ -188,7 +194,7 @@ class OQOValidator:
             # Without a known entity we can't resolve columns; stop here.
             return ValidationResult(valid=False, errors=errors, warnings=warnings)
 
-        columns = get_entity_columns(entity)
+        columns = get_entity_properties(entity)
 
         for i, f in enumerate(oqo.filter_rows):
             errors.extend(self._validate_filter(f, columns, f"filter_rows[{i}]"))
@@ -235,7 +241,7 @@ class OQOValidator:
 
         # select: each entry must be a selectable result-field on the entity.
         # Selectable fields are the entity's result-schema fields (NOT the filter
-        # column registry above) — see core.registry.get_selectable_fields.
+        # property catalog above) — see core.properties.get_selectable_fields.
         if oqo.select:
             selectable = get_selectable_fields(entity)
             for i, col in enumerate(oqo.select):
@@ -301,7 +307,7 @@ class OQOValidator:
         self,
         key: SortBy,
         index: int,
-        columns: Dict[str, Dict],
+        columns: Dict[str, Property],
         has_search: bool,
         has_group_by: bool,
         get_rows: str,
@@ -363,7 +369,7 @@ class OQOValidator:
         return errors
 
     def _validate_filter(
-        self, f: FilterType, columns: Dict[str, Dict], location: str
+        self, f: FilterType, columns: Dict[str, Property], location: str
     ) -> List[ValidationError]:
         if isinstance(f, LeafFilter):
             return self._validate_leaf_filter(f, columns, location)
@@ -372,7 +378,7 @@ class OQOValidator:
         return []
 
     def _validate_leaf_filter(
-        self, f: LeafFilter, columns: Dict[str, Dict], location: str
+        self, f: LeafFilter, columns: Dict[str, Property], location: str
     ) -> List[ValidationError]:
         errors: List[ValidationError] = []
 
@@ -396,27 +402,27 @@ class OQOValidator:
             # Can't check operator-fit / value-type without the column's type.
             return errors
 
-        # (b) operator fits the column's type — only if the operator is a known one.
+        # (b) operator fits the property's type — only if the operator is a known one.
         if operator_known and not _operator_fits_column(
-            f.operator, f.value, entry["operators"]
+            f.operator, f.value, entry.operators
         ):
             errors.append(ValidationError(
                 type="invalid_operator_for_column",
                 message=(
                     f"Operator '{f.operator}' is not valid on column "
-                    f"'{f.column_id}' (type '{entry['field_type']}'; supports "
-                    f"{entry['operators']})"
+                    f"'{f.column_id}' (type '{entry.type}'; supports "
+                    f"{entry.operators})"
                 ),
                 location=f"{location}.operator",
             ))
 
-        # (c) value matches the column's field_type.
-        if not _value_matches_type(entry["field_type"], f.value):
+        # (c) value matches the property's type.
+        if not _value_matches_type(entry.type, f.value):
             errors.append(ValidationError(
                 type="invalid_value_type",
                 message=(
                     f"Value {f.value!r} does not match the type "
-                    f"'{entry['field_type']}' of column '{f.column_id}'"
+                    f"'{entry.type}' of column '{f.column_id}'"
                 ),
                 location=f"{location}.value",
             ))
@@ -424,7 +430,7 @@ class OQOValidator:
         return errors
 
     def _validate_branch_filter(
-        self, f: BranchFilter, columns: Dict[str, Dict], location: str
+        self, f: BranchFilter, columns: Dict[str, Property], location: str
     ) -> List[ValidationError]:
         errors: List[ValidationError] = []
 
@@ -451,9 +457,9 @@ class OQOValidator:
 
 
 def validate_oqo(oqo: OQO, config: Optional[Dict] = None) -> ValidationResult:
-    """Validate an OQO against the column registry.
+    """Validate an OQO against the entity-property catalog.
 
     `config` is accepted for backwards compatibility and ignored — validation is
-    now driven entirely by the in-memory registry.
+    now driven entirely by the in-memory property catalog.
     """
     return OQOValidator().validate(oqo)
