@@ -8,7 +8,7 @@ from elasticsearch_dsl import Q, Search
 
 import country_list
 from core.exceptions import APIQueryParamsError
-from core.search import SearchOpenAlex, full_search_query
+from core.search import SearchOpenAlex, full_search_query, validate_wildcards
 from core.utils import get_full_openalex_id, normalize_openalex_id
 from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX_LEGACY
 
@@ -738,6 +738,9 @@ class SearchField(Field):
             raise APIQueryParamsError(
                 f"Search filters do not support the ! operator. Problem value: {query}"
             )
+        # Reject unsupported wildcard shapes with friendly messages (oxjob #337):
+        # leading `*`/`?` (raw ES parse error) and sub-3-char prefixes (silent literal).
+        validate_wildcards(query)
 
 
 class TermField(Field):

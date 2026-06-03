@@ -7,6 +7,7 @@ from core.search import (
     SearchOpenAlex,
     normalize_search_input,
     validate_search_terms,
+    validate_wildcards,
 )
 from core.sort import get_sort_fields
 from core.utils import map_filter_params, map_sort_params
@@ -443,6 +444,63 @@ class TestValidateSearchTerms:
 
     def test_unquoted_long_strings_ignored(self):
         validate_search_terms(("z" * 500) + " OR " + ("y" * 500))
+
+    def test_validate_search_terms_rejects_leading_wildcard(self):
+        with pytest.raises(APIQueryParamsError):
+            validate_search_terms("*phone")
+
+
+class TestValidateWildcards:
+    """oxjob #337: unsupported wildcard shapes must fail loud + kind, not reach ES
+    as a raw parse error (leading) or silently degrade to a literal (short prefix)."""
+
+    def test_empty_and_non_str_pass(self):
+        validate_wildcards("")
+        validate_wildcards(None)
+        validate_wildcards(123)
+
+    def test_plain_text_passes(self):
+        validate_wildcards("machine learning")
+
+    def test_supported_wildcards_pass(self):
+        # trailing >=3-char prefix, mid-word, single-char ?
+        validate_wildcards("phone*")
+        validate_wildcards("behavi*or")
+        validate_wildcards("wom?n")
+        validate_wildcards("title contains chem*stry")
+
+    def test_trailing_question_mark_passes(self):
+        # a real "?" used as punctuation is not a leading/short wildcard
+        validate_wildcards("what is this?")
+        validate_wildcards("why? because")
+
+    def test_bare_star_and_question_pass(self):
+        # length-1 tokens are not treated as wildcards today; don't newly reject them
+        validate_wildcards("who * what")
+        validate_wildcards("who ? what")
+
+    @pytest.mark.parametrize("terms", ["*phone", "?cycle", "*cycle", "find *phone now"])
+    def test_leading_wildcard_rejected(self, terms):
+        with pytest.raises(APIQueryParamsError) as exc:
+            validate_wildcards(terms)
+        assert "Leading wildcard" in str(exc.value.args[0])
+
+    @pytest.mark.parametrize("terms", ["ab*", "a*", "ab*cd", "go ab* now"])
+    def test_short_prefix_wildcard_rejected(self, terms):
+        with pytest.raises(APIQueryParamsError) as exc:
+            validate_wildcards(terms)
+        assert "at least 3 leading characters" in str(exc.value.args[0])
+
+    @pytest.mark.parametrize("terms", ['"bar*"', '"smart phone*"', '"wom?n"'])
+    def test_wildcard_in_quotes_rejected(self, terms):
+        with pytest.raises(APIQueryParamsError) as exc:
+            validate_wildcards(terms)
+        assert "quoted phrase" in str(exc.value.args[0])
+
+    def test_abc_star_passes_but_ab_star_fails(self):
+        validate_wildcards("abc*")  # 3-char prefix ok
+        with pytest.raises(APIQueryParamsError):
+            validate_wildcards("ab*")
 
 
 class TestSearchInputNormalization:

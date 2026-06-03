@@ -14,6 +14,53 @@ LONG_PHRASE_CHAR_THRESHOLD = 80
 QUOTED_PHRASE_RE = re.compile(r'"([^"]*)"')
 
 
+def validate_wildcards(search_terms):
+    """Reject unsupported wildcard shapes with friendly messages (oxjob #337).
+
+    Mirrors the OQL v2 diagnostics (OQL_LEADING_WILDCARD, OQL_SHORT_WILDCARD_PREFIX,
+    OQL_WILDCARD_IN_QUOTES) so the raw API and OQL give identical guidance. Without
+    this, two shapes misbehave on the live search path:
+      - leading `*`/`?` (e.g. `*phone`) reaches ES as a raw parse error
+        ("Failed to parse query") because we pin allow_leading_wildcard=False;
+      - a `*` with fewer than 3 leading characters (e.g. `ab*`) misses the wildcard
+        detector and silently degrades to a literal that matches ~nothing.
+    We catch both up front and fail loud + kind instead.
+    """
+    if not search_terms or not isinstance(search_terms, str):
+        return
+
+    # `*`/`?` inside a quoted phrase can't wildcard — move it outside the quotes.
+    for phrase in QUOTED_PHRASE_RE.findall(search_terms):
+        if "*" in phrase or "?" in phrase:
+            raise APIQueryParamsError(
+                f'Wildcards (* or ?) do not work inside a quoted phrase: "{phrase}". '
+                'Move the wildcard outside the quotes, e.g. bar* instead of "bar*".'
+            )
+
+    # Outside quotes, check each whitespace-delimited token.
+    unquoted = QUOTED_PHRASE_RE.sub(" ", search_terms)
+    for word in unquoted.split():
+        if "*" not in word and "?" not in word:
+            continue
+        # Leading wildcard attached to text (`*phone`, `?cycle`) — bare `*`/`?`
+        # (length 1) is left alone; it isn't treated as a wildcard today.
+        if len(word) > 1 and word[0] in "*?":
+            raise APIQueryParamsError(
+                f'Leading wildcards are not supported (too expensive): "{word}". '
+                "Anchor the wildcard with at least 3 leading characters, e.g. cycle*."
+            )
+        # A `*` needs >=3 word characters before it (matches the engine detector).
+        # star == 0 is a leading/bare `*` (handled above or left alone), not a prefix.
+        star = word.find("*")
+        if star > 0:
+            chars_before = len(re.match(r"\w*", word).group(0)[:star])
+            if chars_before < 3:
+                raise APIQueryParamsError(
+                    f'A * wildcard needs at least 3 leading characters: "{word}". '
+                    "Add characters before the *, e.g. abc*."
+                )
+
+
 def validate_search_terms(search_terms):
     """Reject queries that combine many long quoted phrases with OR.
 
@@ -22,9 +69,14 @@ def validate_search_terms(search_terms):
     OR'd together multiplies that cost across all clauses, which makes these
     queries disproportionately expensive on Elasticsearch. Bulk citation
     lookups should be issued as separate requests instead.
+
+    Also rejects unsupported wildcard shapes (oxjob #337) so leading wildcards
+    don't reach ES as a raw parse error and short-prefix wildcards don't silently
+    degrade to a literal.
     """
     if not search_terms:
         return
+    validate_wildcards(search_terms)
     long_phrases = [
         p for p in QUOTED_PHRASE_RE.findall(search_terms)
         if len(p) > LONG_PHRASE_CHAR_THRESHOLD
