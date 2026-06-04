@@ -157,3 +157,21 @@ def test_corpus_covers_every_locked_behavior():
     }
     missing = required - ids
     assert not missing, f"corpus missing locked-behavior cases: {sorted(missing)}"
+
+
+def test_every_row_has_valid_facets():
+    """Every case carries a `category` (topical) and `source` (provenance) facet
+    from the known sets. These replaced the old conflated `group` field (#345);
+    keeping them mechanical means the dev playground never has to infer category
+    from the ID prefix."""
+    categories = {
+        "entity references", "boolean logic", "search semantics",
+        "proximity & wildcards", "filter, sort & sample", "group by",
+        "librarian & SR queries",
+    }
+    sources = {"spec spine", "#284 worked examples"}
+    bad = []
+    for r in ROWS:
+        if r.get("category") not in categories or r.get("source") not in sources:
+            bad.append((r["id"], r.get("category"), r.get("source")))
+    assert not bad, f"rows with missing/unknown facets: {bad}"

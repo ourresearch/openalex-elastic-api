@@ -24,21 +24,24 @@ rows:
 # A. Entity references, sets, annotations  (EXPLORE §2.1, §2.2)
 # ---------------------------------------------------------------------------
 - id: ENT1
-  group: entity-refs
+  category: "entity references"
+  source: "spec spine"
   status: ok
   oql: 'works where institution is I136199984 [Harvard]'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I136199984}]}
   note: ID authoritative; [Harvard] is an ignored annotation, regenerated on output.
 
 - id: ENT2
-  group: entity-refs
+  category: "entity references"
+  source: "spec spine"
   status: ok
   oql: 'works where institution is I136199984 [those Harvard bastards, go Yale]'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I136199984}]}
   note: The annotation is free text and is not validated — it cannot lie because nothing reads it.
 
 - id: ENT3
-  group: entity-refs
+  category: "entity references"
+  source: "spec spine"
   status: ok
   oql: 'works where institution is any of (I33213144 [Harvard], I97018004 [Stanford])'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
@@ -47,7 +50,8 @@ rows:
   note: '( ... ) is a value list here; per-item annotations allowed.'
 
 - id: ENT4
-  group: entity-refs
+  category: "entity references"
+  source: "spec spine"
   status: ok
   oql: 'works where institution is not any of (I33213144, I97018004)'
   oqo: {get_rows: works, filter_rows: [
@@ -56,7 +60,8 @@ rows:
   note: 'Negated set = NOT(a OR b) = (NOT a) AND (NOT b) by De Morgan; canonical NNF carries negation on the leaves.'
 
 - id: ENT5
-  group: entity-refs
+  category: "entity references"
+  source: "spec spine"
   status: ok
   oql: 'works where type is in (article, review)'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
@@ -64,7 +69,8 @@ rows:
   note: '`is in` is accepted on input; canonical output spells it `is any of`.'
 
 - id: ENT6
-  group: entity-refs
+  category: "entity references"
+  source: "spec spine"
   status: error
   oql: 'works where institution is [Harvard]'
   diagnostic: OQL_MISSING_ENTITY_ID
@@ -74,7 +80,8 @@ rows:
 # B. Booleans / precedence / casing  (EXPLORE §2.4)
 # ---------------------------------------------------------------------------
 - id: BOOL1
-  group: booleans
+  category: "boolean logic"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains apple and (banana or cherry)'
   oqo: {get_rows: works, filter_rows: [
@@ -85,14 +92,16 @@ rows:
   note: Mixed and/or with explicit parens is unambiguous.
 
 - id: BOOL2
-  group: booleans
+  category: "boolean logic"
+  source: "spec spine"
   status: error
   oql: 'works where title contains apple and banana or cherry'
   diagnostic: OQL_MIXED_BOOL_NEEDS_PARENS
   note: Explicit mixed and/or at one level with no parens — the one deliberate departure from WoS/Scopus.
 
 - id: BOOL3
-  group: booleans
+  category: "boolean logic"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains apple and banana and cherry'
   oqo: {get_rows: works, filter_rows: [
@@ -102,7 +111,8 @@ rows:
   note: Pure-and is associative, no parens needed.
 
 - id: BOOL4
-  group: booleans
+  category: "boolean logic"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains apple banana cherry'
   oqo: {get_rows: works, filter_rows: [
@@ -116,7 +126,8 @@ rows:
 #    Stemming is ON by default; quotes turn it OFF (exact); `near` is the bridge.
 # ---------------------------------------------------------------------------
 - id: G1
-  group: gauntlet
+  category: "search semantics"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains climate change'
   oqo: {get_rows: works, filter_rows: [
@@ -125,49 +136,56 @@ rows:
   note: 'SPACE = stemmed AND; the words may be apart (recall). The everyday default.'
 
 - id: G2
-  group: gauntlet
+  category: "search semantics"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains "climate change"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"climate change"', operator: contains}]}
   note: 'QUOTES = exact adjacent phrase, stemming OFF (.search.exact). The precision lever.'
 
 - id: G3
-  group: gauntlet
+  category: "search semantics"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains near "whopper junior"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"whopper junior"', operator: contains}]}
   note: 'NEAR = stemmed adjacent phrase (.search) → matches "whoppers junior". The bridge that keeps recall on a phrase.'
 
 - id: G4
-  group: gauntlet
+  category: "search semantics"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains "cat"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: cat, operator: contains}]}
   note: 'Quoting a SINGLE word = exact (no plurals). Same rule as a phrase — quotes always mean exact.'
 
 - id: G5
-  group: gauntlet
+  category: "search semantics"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains cat'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: cat, operator: contains}]}
   note: 'Bare word = stemmed (matches cats). Contrast with G4 "cat" (exact).'
 
 - id: G6
-  group: gauntlet
+  category: "search semantics"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains "rock or roll"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"rock or roll"', operator: contains}]}
   note: 'Inside quotes = literal: the `or` is a word, not a connective. One exact phrase.'
 
 - id: G7
-  group: gauntlet
+  category: "search semantics"
+  source: "spec spine"
   status: error
   oql: 'works where title contains climate change or warming'
   diagnostic: OQL_MIXED_BOOL_NEEDS_PARENS
   note: 'A space is an AND, so this mixes and/or at one level → loud error (no silent order-of-operations). Fix-it offers `climate (change or warming)` or `(climate change) or warming`.'
 
 - id: G7b
-  group: gauntlet
+  category: "search semantics"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains climate (change or warming)'
   oqo: {get_rows: works, filter_rows: [
@@ -178,14 +196,16 @@ rows:
   note: 'The likely-intended disambiguation: climate AND (change OR warming). Implicit AND between `climate` and the group; the only `or` is nested.'
 
 - id: G8
-  group: gauntlet
+  category: "search semantics"
+  source: "spec spine"
   status: error
   oql: 'works where title contains "bar*"'
   diagnostic: OQL_WILDCARD_IN_QUOTES
   note: '`*` inside quotes can''t wildcard. Fix-it: use bar* unquoted.'
 
 - id: G9
-  group: gauntlet
+  category: "search semantics"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains bar*'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: 'bar*', operator: contains}]}
@@ -195,70 +215,80 @@ rows:
 # D. Proximity / wildcard edge matrix  (EXPLORE §2.5, §3)
 # ---------------------------------------------------------------------------
 - id: PW1
-  group: proximity-wildcard
+  category: "proximity & wildcards"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains "smart phone" within 3 words'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart phone"~3', operator: contains}]}
   note: 'Exact proximity (quoted) → up to N positional moves apart, any order.'
 
 - id: PW2
-  group: proximity-wildcard
+  category: "proximity & wildcards"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains foo*bar'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: 'foo*bar', operator: contains}]}
   note: Mid-word `*` (>=3-char prefix, within one token).
 
 - id: PW3
-  group: proximity-wildcard
+  category: "proximity & wildcards"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains wom?n'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: 'wom?n', operator: contains}]}
   note: Mid-word `?` = exactly one character.
 
 - id: PW4
-  group: proximity-wildcard
+  category: "proximity & wildcards"
+  source: "spec spine"
   status: error
   oql: 'works where title contains *cycle'
   diagnostic: OQL_LEADING_WILDCARD
   note: Leading `*` unsupported (perf; allow_leading_wildcard=False).
 
 - id: PW5
-  group: proximity-wildcard
+  category: "proximity & wildcards"
+  source: "spec spine"
   status: error
   oql: 'works where title contains ?cycle'
   diagnostic: OQL_LEADING_WILDCARD
   note: Leading `?` unsupported.
 
 - id: PW6
-  group: proximity-wildcard
+  category: "proximity & wildcards"
+  source: "spec spine"
   status: error
   oql: 'works where title contains ab*'
   diagnostic: OQL_SHORT_WILDCARD_PREFIX
   note: Sub-3-char prefix -> error, not a silent literal.
 
 - id: PW7
-  group: proximity-wildcard
+  category: "proximity & wildcards"
+  source: "spec spine"
   status: error
   oql: 'works where title contains "smart phone*" within 3 words'
   diagnostic: OQL_WILDCARD_IN_QUOTES
   note: 'Wildcard inside a phrase — acknowledged limitation (WoS/Scopus do it; ES query_string drops it). Loud error today; future engine work.'
 
 - id: PW8
-  group: proximity-wildcard
+  category: "proximity & wildcards"
+  source: "spec spine"
   status: error
   oql: 'works where title contains "smart" within 3 words of "phone"'
   diagnostic: OQL_BINARY_PROXIMITY
   note: 'Binary "X within N of Y" is unsupported (ES slop is whole-phrase); loud error.'
 
 - id: PW9
-  group: proximity-wildcard
+  category: "proximity & wildcards"
+  source: "spec spine"
   status: error
   oql: 'works where title contains smart* within 3 words'
   diagnostic: OQL_WILDCARD_IN_PROXIMITY
   note: Wildcard + proximity can't compose.
 
 - id: PW10
-  group: proximity-wildcard
+  category: "proximity & wildcards"
+  source: "spec spine"
   status: ok
   oql: 'works where abstract is similar to "graph neural networks for molecular property prediction"'
   oqo: {get_rows: works, filter_rows: [{column_id: abstract.search.semantic,
@@ -266,14 +296,16 @@ rows:
   note: Semantic (search.semantic, 2-phase vector search).
 
 - id: PW11
-  group: proximity-wildcard
+  category: "proximity & wildcards"
+  source: "spec spine"
   status: ok
   oql: 'works where title & abstract contains "machine learning"'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"machine learning"', operator: contains}]}
   note: Exact phrase, no stemming (.search.exact).
 
 - id: PW12
-  group: proximity-wildcard
+  category: "proximity & wildcards"
+  source: "spec spine"
   status: ok
   oql: 'works where title contains near "smart phone" within 3 words'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"smart phone"~3', operator: contains}]}
@@ -282,20 +314,23 @@ rows:
 # E. #284 worked-examples corpus — Stage A (filter / sort / sample)
 # ---------------------------------------------------------------------------
 - id: A01
-  group: '#284'
+  category: "filter, sort & sample"
+  source: "#284 worked examples"
   status: ok
   oql: 'works'
   oqo: {get_rows: works}
   note: Bare entity query, no filters.
 
 - id: A02
-  group: '#284'
+  category: "filter, sort & sample"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where year is 2020'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 2020}]}
 
 - id: A03
-  group: '#284'
+  category: "filter, sort & sample"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where institution is any of (I33213144 [University of Florida], I136199984 [Harvard]) and year >= 2020'
   oqo: {get_rows: works, filter_rows: [
@@ -305,14 +340,16 @@ rows:
         {column_id: publication_year, value: 2020, operator: '>='}]}
 
 - id: A04
-  group: '#284'
+  category: "filter, sort & sample"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where institution is I130438778 [Memorial University of Newfoundland]; sort by citations desc'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I130438778}],
         sort_by: [{column_id: cited_by_count, direction: desc}]}
 
 - id: A05
-  group: '#284'
+  category: "filter, sort & sample"
+  source: "#284 worked examples"
   status: ok
   oql: "works where institution is I201448701 [UW] AND funder is F4320332161 [NIH] AND it's not open access"
   oqo: {get_rows: works, filter_rows: [
@@ -321,7 +358,8 @@ rows:
         {column_id: open_access.is_oa, value: false}]}
 
 - id: A06
-  group: '#284'
+  category: "filter, sort & sample"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where title & abstract contains climate change'
   oqo: {get_rows: works, filter_rows: [
@@ -330,13 +368,15 @@ rows:
   note: 'Bare = stemmed AND — exactly what the #284 OXURL did (space = AND on .search). Use `near "climate change"` for an adjacent phrase.'
 
 - id: A07
-  group: '#284'
+  category: "filter, sort & sample"
+  source: "#284 worked examples"
   status: ok
   oql: 'authors; sort by works_count desc'
   oqo: {get_rows: authors, sort_by: [{column_id: works_count, direction: desc}]}
 
 - id: A08
-  group: '#284'
+  category: "filter, sort & sample"
+  source: "#284 worked examples"
   status: ok
   oql: 'authors where author country is BR and it has an ORCID'
   oqo: {get_rows: authors, filter_rows: [
@@ -344,31 +384,36 @@ rows:
         {column_id: has_orcid, value: true}]}
 
 - id: A09
-  group: '#284'
+  category: "filter, sort & sample"
+  source: "#284 worked examples"
   status: ok
   oql: 'authors where openalex id is A5022654839'
   oqo: {get_rows: authors, filter_rows: [{column_id: ids.openalex, value: A5022654839}]}
 
 - id: A10
-  group: '#284'
+  category: "filter, sort & sample"
+  source: "#284 worked examples"
   status: ok
   oql: 'sources where type is journal'
   oqo: {get_rows: sources, filter_rows: [{column_id: type, value: journal}]}
 
 - id: A11
-  group: '#284'
+  category: "filter, sort & sample"
+  source: "#284 worked examples"
   status: ok
   oql: 'institutions where country code is FR'
   oqo: {get_rows: institutions, filter_rows: [{column_id: country_code, value: FR}]}
 
 - id: A12
-  group: '#284'
+  category: "filter, sort & sample"
+  source: "#284 worked examples"
   status: ok
   oql: 'topics where domain is 3'
   oqo: {get_rows: topics, filter_rows: [{column_id: domain.id, value: '3'}]}
 
 - id: A13
-  group: '#284'
+  category: "filter, sort & sample"
+  source: "#284 worked examples"
   status: ok
   oql: 'authors where last known institution is I114027177 [UNC] and topics is T10895 [climate change]'
   oqo: {get_rows: authors, filter_rows: [
@@ -379,14 +424,16 @@ rows:
 # F. #284 corpus — Stage B (group_by)
 # ---------------------------------------------------------------------------
 - id: B01
-  group: '#284'
+  category: "group by"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where author is A5066175077 [Stephen Hawking]; group by author'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.id, value: A5066175077}],
         group_by: [{column_id: authorships.author.id}]}
 
 - id: B02
-  group: '#284'
+  category: "group by"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where anywhere contains near "Macrocystis pyrifera"; group by author'
   oqo: {get_rows: works, filter_rows: [{column_id: default.search, value: '"Macrocystis pyrifera"', operator: contains}],
@@ -394,7 +441,8 @@ rows:
   note: 'A species name is a phrase but recall matters → `near` (stemmed adjacent), not exact quotes.'
 
 - id: B03
-  group: '#284'
+  category: "group by"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where year >= 1976; group by topic, year'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 1976, operator: '>='}],
@@ -402,7 +450,8 @@ rows:
   note: Multi-dim group_by is expressible in the spec (live API single-dim only -> #297).
 
 - id: B04
-  group: '#284'
+  category: "group by"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where country is col_eu27 and country is US; group by topic'
   oqo: {get_rows: works, filter_rows: [
@@ -412,14 +461,16 @@ rows:
   note: 'col_eu27 is a collection reference — a valid bare value (it self-identifies via col_).'
 
 - id: B05
-  group: '#284'
+  category: "group by"
+  source: "#284 worked examples"
   status: ok
   oql: "works where it's retracted; group by institution"
   oqo: {get_rows: works, filter_rows: [{column_id: is_retracted, value: true}],
         group_by: [{column_id: authorships.institutions.lineage}]}
 
 - id: B06
-  group: '#284'
+  category: "group by"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where title & abstract contains near "coral bleaching" and citations > 100; group by source'
   oqo: {get_rows: works, filter_rows: [
@@ -428,14 +479,16 @@ rows:
         group_by: [{column_id: primary_location.source.id}]}
 
 - id: B07
-  group: '#284'
+  category: "group by"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where type is book; group by field'
   oqo: {get_rows: works, filter_rows: [{column_id: type, value: book}],
         group_by: [{column_id: primary_topic.field.id}]}
 
 - id: B08
-  group: '#284'
+  category: "group by"
+  source: "#284 worked examples"
   status: ok
   oql: "works where institution is I154570441 [UCSB] AND it's retracted; group by author"
   oqo: {get_rows: works, filter_rows: [
@@ -444,7 +497,8 @@ rows:
         group_by: [{column_id: authorships.author.id}]}
 
 - id: B09
-  group: '#284'
+  category: "group by"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where institution is I107639228 [Notre Dame]; group by SDG'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I107639228}],
@@ -454,7 +508,8 @@ rows:
 # G. #284 corpus — Librarian / vendor / SR-lit rows
 # ---------------------------------------------------------------------------
 - id: L01
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where title & abstract contains agile and title & abstract contains any of (near "supply chain", near "demand chain", near "value chain") and title & abstract contains any of (near "lead time", near "cycle time")'
   oqo: {get_rows: works, filter_rows: [
@@ -469,42 +524,48 @@ rows:
   note: 'AND of OR-groups; the synonym phrases use `near` (stemmed adjacent) for recall. Top level is pure-and so no parens.'
 
 - id: L02a
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where title & abstract contains near "smart phone" within 3 words'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: '"smart phone"~3', operator: contains}]}
   note: 'Stemmed proximity (`near`) → .search, matching the #284 column. Use plain quotes for exact proximity.'
 
 - id: L02b
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where title & abstract contains phone*'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: 'phone*', operator: contains}]}
   note: 'Spec ✓ (trailing wildcard). ENGINE BUG: the live server 500s on this today (see evidence/engine_findings.md).'
 
 - id: L02c
-  group: boundary
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: boundary
   oql: 'works where title & abstract contains "smart phone*" within 3 words'
   diagnostic: OQL_WILDCARD_IN_QUOTES
   note: 'Wildcard-in-proximity. ACKNOWLEDGED LIMITATION (not a permanent boundary): WoS/Scopus support it; our ES query_string path drops the wildcard (verified live). Rejected loudly today (PW7); fixable via ES intervals/span queries → future engine work (lift-to-structure rec / #337 / #298).'
 
 - id: L03
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where title & abstract contains "oyster toadfish"'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"oyster toadfish"', operator: contains}]}
   note: 'NL says "exact phrase only, no lemmatization" → plain quotes (exact, .search.exact). The textbook quotes-mean-exact case.'
 
 - id: L04
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where title & abstract contains behavio*r'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: 'behavio*r', operator: contains}]}
   note: Mid-word wildcard (UK/US spellings in one query).
 
 - id: L05
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where title & abstract contains any of (autism, ASD, near "autism spectrum disorder") and title & abstract contains any of (intervention, therapy, treatment) and year >= 2015 and year <= 2024 and type is any of (article, review) and language is en'
   oqo: {get_rows: works, filter_rows: [
@@ -523,7 +584,8 @@ rows:
         {column_id: language, value: en}]}
 
 - id: L06
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where OA status is gold and funder is F4320337351 [NCI]'
   oqo: {get_rows: works, filter_rows: [
@@ -531,7 +593,8 @@ rows:
         {column_id: funders.id, value: F4320337351}]}
 
 - id: L07
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where title & abstract contains CRISPR and near "genome editing" and year >= 2018 and year <= 2023; sort by citations desc; sample 500'
   oqo: {get_rows: works, filter_rows: [
@@ -543,52 +606,60 @@ rows:
   note: 'Mixes a bare token (CRISPR, stemmed) with a `near` phrase (genome editing) — the explicit version of #284''s loose multi-word search.'
 
 - id: L08
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where raw affiliation contains library'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: library, operator: contains}]}
 
 - id: L09
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where raw affiliation contains near "london hospital" within 5 words'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"london hospital"~5', operator: contains}]}
   note: Quoted phrase scopes to ONE affiliation (position_increment_gap); slop ~5 allows order/gap within it.
 
 - id: L10
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where DOI is 10.1021/es052595+'
   oqo: {get_rows: works, filter_rows: [{column_id: doi, value: '10.1021/es052595+'}]}
   note: 'Reserved chars (+, /) are ordinary inside a bare value; no escaping in OQL.'
 
 - id: L11
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where ORCID is 0000-0002-1838-9363'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.orcid, value: '0000-0002-1838-9363'}]}
 
 - id: L12
-  group: boundary
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: boundary
   oql: null
   note: '"funded by the acronym DFG" — not representable. OQO only expresses funders.id equality AFTER an out-of-band /funders?search=DFG -> ID resolution; the acronym has no OQL/OQO form.'
 
 - id: L13
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where type is any of (article, review)'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
         {column_id: type, value: article}, {column_id: type, value: review}]}]}
 
 - id: L14
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where language is es'
   oqo: {get_rows: works, filter_rows: [{column_id: language, value: es}]}
 
 - id: L15
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where title & abstract contains covid and title & abstract does not contain pediatric'
   oqo: {get_rows: works, filter_rows: [
@@ -597,7 +668,8 @@ rows:
   note: 'One negation mechanism: `does not contain` renders is_negated:true on a contains leaf.'
 
 - id: L16
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where title & abstract contains quantum computing; group by country'
   oqo: {get_rows: works, filter_rows: [
@@ -607,7 +679,8 @@ rows:
   note: Bare = stemmed AND (faithful to the #284 OXURL).
 
 - id: L17
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where title & abstract contains CRISPR and Cas9; group by author'
   oqo: {get_rows: works, filter_rows: [
@@ -616,7 +689,8 @@ rows:
         group_by: [{column_id: authorships.author.id}]}
 
 - id: L18
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where title & abstract contains CRISPR; group by funder'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: CRISPR, operator: contains}],
@@ -624,26 +698,30 @@ rows:
   note: 'Only the group-by-COUNT form is in scope. Ranking groups by mean citation impact is sort-by-aggregate -> #297.'
 
 - id: L19
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where raw affiliation contains near "tufts boston" within 5 words'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"tufts boston"~5', operator: contains}]}
 
 - id: L20
-  group: boundary
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: boundary
   oql: null
   note: Set-reference / stateful query composition (refine a saved search) — no single OQO; out of scope.
 
 - id: L22
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   oql: 'works where byline contains near "john smith" within 2 words'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_author_name.search, value: '"john smith"~2', operator: contains}]}
   note: Byline slop ~2 recovers middle-name/initial forms without crossing co-authors.
 
 - id: L21
-  group: '#284'
+  category: "librarian & SR queries"
+  source: "#284 worked examples"
   status: ok
   note: >-
     The real zd#8101 systematic-review tree (Claire): a 5-block AND of large
