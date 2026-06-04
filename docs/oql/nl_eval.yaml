@@ -25,9 +25,13 @@
 # Gold rule: store the gold OQO, NEVER a gold result set. The grader executes
 # pred & gold in the SAME run so index drift cancels (EXPLORE.md §1).
 #
-# NOTE: corpus PW10 (`abstract is similar to …`, semantic vector search) is
-# intentionally NOT ref'd here — its gold column `abstract.search.semantic` is
-# not in the validator catalog and isn't gradeable by execution equivalence.
+# NOTE: two corpus rows are intentionally NOT ref'd here, both because their gold
+# can't be graded by execution equivalence on the live API:
+#   * PW10 (`abstract is similar to …`, semantic vector search) — its gold column
+#     `abstract.search.semantic` isn't in the validator catalog.
+#   * B03 (`group by topic, year`) — MULTI-dimensional group_by is in the OQO spec
+#     but the live `/query` rejects it (HTTP 400, single-dim only; see oxjob #297),
+#     so neither pred nor gold can execute for Tier-2 grading.
 #
 # Lint with:  work/validate_nl_eval.py
 version: 1
@@ -268,11 +272,8 @@ cases:
     - {text: "macrocystis pyrifera research counted per author", difficulty: 3}
     - {text: "group works about Macrocystis pyrifera by author", difficulty: 2}
 
-- ref: B03  # year >= 1976; group by topic, year
-  nl:
-    - {text: "papers from 1976 onward, grouped by topic and then year", difficulty: 1}
-    - {text: "count works since 1976 broken down by topic and year", difficulty: 2}
-    - {text: "since 1976, group by topic then year", difficulty: 2}
+# B03 (group by topic, year) intentionally omitted — multi-dim group_by isn't
+# executable on the live /query (HTTP 400), so it can't be Tier-2 graded. See header.
 
 - ref: B04  # country is col_eu27 and country is US; group by topic
   nl:
