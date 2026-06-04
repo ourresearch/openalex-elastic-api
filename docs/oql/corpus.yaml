@@ -13,10 +13,24 @@
 # order and string-vs-typed scalars don't matter here. When `oqo` is omitted the
 # harness only asserts round-trip identity (used for the huge L21 tree).
 #
-# Provenance: spine cases = #330 design pass (EXPLORE.md §2). "#284" rows =
-# archived/oqo-spec/work/EXAMPLES.md (each OXURL verified live 2026-05-30).
-# Where v2 deliberately diverges from the #284 OQO (search encoding), the note
-# says so — those are corrections, not transcription drift.
+# Per-row facets (#345):
+#   * category   — topical grouping (7 values; the GUI playground filters on it).
+#   * provenance — real origin: {type, label, url?}. `type` is one of
+#       "spec design"        (#330 design pass — the ENT/BOOL/G/PW spine),
+#       "analytics question" (OpenAlex OAQ#/AKQ# fossils — the A/B rows),
+#       "librarian guide"    (library SLR/search guides — Cranfield, U.Manitoba,
+#                             UCL, Caltech, KCL, Tufts, …),
+#       "vendor docs"        (Scopus/Elsevier, Dimensions DSL, Clarivate WoS),
+#       "zendesk ticket"     (real OpenAlex user query — zd#8101, "Claire").
+#     This replaced the old conflated `source` ("spec spine" / "#284 worked
+#     examples"); see archived/oqo-spec/work/EXAMPLES.md for the per-row sources
+#     (each #284 OXURL verified live 2026-05-30).
+#   * oxurl_representable — does the spec say this query is expressible as a
+#     classic api.openalex.org URL? false for the invalid-OQL error rows and the
+#     genuinely non-representable boundaries (L02c wildcard-in-proximity, L12
+#     funder-by-acronym, L20 set-reference). The GUI playground auto-renders the
+#     oxurl for the `true` rows via query_translation/url_renderer.py; a `true`
+#     row that fails to render is a *translator gap* to fix, not a corpus error.
 version: 2
 rows:
 
@@ -25,7 +39,10 @@ rows:
 # ---------------------------------------------------------------------------
 - id: ENT1
   category: "entity references"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where institution is I136199984 [Harvard]'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I136199984}]}
@@ -33,7 +50,10 @@ rows:
 
 - id: ENT2
   category: "entity references"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where institution is I136199984 [those Harvard bastards, go Yale]'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I136199984}]}
@@ -41,7 +61,10 @@ rows:
 
 - id: ENT3
   category: "entity references"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where institution is any of (I33213144 [Harvard], I97018004 [Stanford])'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
@@ -51,7 +74,10 @@ rows:
 
 - id: ENT4
   category: "entity references"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where institution is not any of (I33213144, I97018004)'
   oqo: {get_rows: works, filter_rows: [
@@ -61,7 +87,10 @@ rows:
 
 - id: ENT5
   category: "entity references"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where type is in (article, review)'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
@@ -70,7 +99,10 @@ rows:
 
 - id: ENT6
   category: "entity references"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: false
   status: error
   oql: 'works where institution is [Harvard]'
   diagnostic: OQL_MISSING_ENTITY_ID
@@ -81,7 +113,10 @@ rows:
 # ---------------------------------------------------------------------------
 - id: BOOL1
   category: "boolean logic"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains apple and (banana or cherry)'
   oqo: {get_rows: works, filter_rows: [
@@ -93,7 +128,10 @@ rows:
 
 - id: BOOL2
   category: "boolean logic"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: false
   status: error
   oql: 'works where title contains apple and banana or cherry'
   diagnostic: OQL_MIXED_BOOL_NEEDS_PARENS
@@ -101,7 +139,10 @@ rows:
 
 - id: BOOL3
   category: "boolean logic"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains apple and banana and cherry'
   oqo: {get_rows: works, filter_rows: [
@@ -112,7 +153,10 @@ rows:
 
 - id: BOOL4
   category: "boolean logic"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains apple banana cherry'
   oqo: {get_rows: works, filter_rows: [
@@ -127,7 +171,10 @@ rows:
 # ---------------------------------------------------------------------------
 - id: G1
   category: "search semantics"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains climate change'
   oqo: {get_rows: works, filter_rows: [
@@ -137,7 +184,10 @@ rows:
 
 - id: G2
   category: "search semantics"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains "climate change"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"climate change"', operator: contains}]}
@@ -145,7 +195,10 @@ rows:
 
 - id: G3
   category: "search semantics"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains near "whopper junior"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"whopper junior"', operator: contains}]}
@@ -153,7 +206,10 @@ rows:
 
 - id: G4
   category: "search semantics"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains "cat"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: cat, operator: contains}]}
@@ -161,7 +217,10 @@ rows:
 
 - id: G5
   category: "search semantics"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains cat'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: cat, operator: contains}]}
@@ -169,7 +228,10 @@ rows:
 
 - id: G6
   category: "search semantics"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains "rock or roll"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"rock or roll"', operator: contains}]}
@@ -177,7 +239,10 @@ rows:
 
 - id: G7
   category: "search semantics"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: false
   status: error
   oql: 'works where title contains climate change or warming'
   diagnostic: OQL_MIXED_BOOL_NEEDS_PARENS
@@ -185,7 +250,10 @@ rows:
 
 - id: G7b
   category: "search semantics"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains climate (change or warming)'
   oqo: {get_rows: works, filter_rows: [
@@ -197,7 +265,10 @@ rows:
 
 - id: G8
   category: "search semantics"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: false
   status: error
   oql: 'works where title contains "bar*"'
   diagnostic: OQL_WILDCARD_IN_QUOTES
@@ -205,7 +276,10 @@ rows:
 
 - id: G9
   category: "search semantics"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains bar*'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: 'bar*', operator: contains}]}
@@ -216,7 +290,10 @@ rows:
 # ---------------------------------------------------------------------------
 - id: PW1
   category: "proximity & wildcards"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains "smart phone" within 3 words'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart phone"~3', operator: contains}]}
@@ -224,7 +301,10 @@ rows:
 
 - id: PW2
   category: "proximity & wildcards"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains foo*bar'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: 'foo*bar', operator: contains}]}
@@ -232,7 +312,10 @@ rows:
 
 - id: PW3
   category: "proximity & wildcards"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains wom?n'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: 'wom?n', operator: contains}]}
@@ -240,7 +323,10 @@ rows:
 
 - id: PW4
   category: "proximity & wildcards"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: false
   status: error
   oql: 'works where title contains *cycle'
   diagnostic: OQL_LEADING_WILDCARD
@@ -248,7 +334,10 @@ rows:
 
 - id: PW5
   category: "proximity & wildcards"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: false
   status: error
   oql: 'works where title contains ?cycle'
   diagnostic: OQL_LEADING_WILDCARD
@@ -256,7 +345,10 @@ rows:
 
 - id: PW6
   category: "proximity & wildcards"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: false
   status: error
   oql: 'works where title contains ab*'
   diagnostic: OQL_SHORT_WILDCARD_PREFIX
@@ -264,7 +356,10 @@ rows:
 
 - id: PW7
   category: "proximity & wildcards"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: false
   status: error
   oql: 'works where title contains "smart phone*" within 3 words'
   diagnostic: OQL_WILDCARD_IN_QUOTES
@@ -272,7 +367,10 @@ rows:
 
 - id: PW8
   category: "proximity & wildcards"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: false
   status: error
   oql: 'works where title contains "smart" within 3 words of "phone"'
   diagnostic: OQL_BINARY_PROXIMITY
@@ -280,7 +378,10 @@ rows:
 
 - id: PW9
   category: "proximity & wildcards"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: false
   status: error
   oql: 'works where title contains smart* within 3 words'
   diagnostic: OQL_WILDCARD_IN_PROXIMITY
@@ -288,7 +389,10 @@ rows:
 
 - id: PW10
   category: "proximity & wildcards"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where abstract is similar to "graph neural networks for molecular property prediction"'
   oqo: {get_rows: works, filter_rows: [{column_id: abstract.search.semantic,
@@ -297,7 +401,10 @@ rows:
 
 - id: PW11
   category: "proximity & wildcards"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains "machine learning"'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"machine learning"', operator: contains}]}
@@ -305,7 +412,10 @@ rows:
 
 - id: PW12
   category: "proximity & wildcards"
-  source: "spec spine"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
   status: ok
   oql: 'works where title contains near "smart phone" within 3 words'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"smart phone"~3', operator: contains}]}
@@ -315,7 +425,10 @@ rows:
 # ---------------------------------------------------------------------------
 - id: A01
   category: "filter, sort & sample"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (OAQ#2)"
+  oxurl_representable: true
   status: ok
   oql: 'works'
   oqo: {get_rows: works}
@@ -323,14 +436,20 @@ rows:
 
 - id: A02
   category: "filter, sort & sample"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (OAQ#3)"
+  oxurl_representable: true
   status: ok
   oql: 'works where year is 2020'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 2020}]}
 
 - id: A03
   category: "filter, sort & sample"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (OAQ#23)"
+  oxurl_representable: true
   status: ok
   oql: 'works where institution is any of (I33213144 [University of Florida], I136199984 [Harvard]) and year >= 2020'
   oqo: {get_rows: works, filter_rows: [
@@ -341,7 +460,10 @@ rows:
 
 - id: A04
   category: "filter, sort & sample"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#8)"
+  oxurl_representable: true
   status: ok
   oql: 'works where institution is I130438778 [Memorial University of Newfoundland]; sort by citations desc'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I130438778}],
@@ -349,7 +471,10 @@ rows:
 
 - id: A05
   category: "filter, sort & sample"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#19)"
+  oxurl_representable: true
   status: ok
   oql: "works where institution is I201448701 [UW] AND funder is F4320332161 [NIH] AND it's not open access"
   oqo: {get_rows: works, filter_rows: [
@@ -359,7 +484,10 @@ rows:
 
 - id: A06
   category: "filter, sort & sample"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#46)"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains climate change'
   oqo: {get_rows: works, filter_rows: [
@@ -369,14 +497,20 @@ rows:
 
 - id: A07
   category: "filter, sort & sample"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (OAQ#10)"
+  oxurl_representable: true
   status: ok
   oql: 'authors; sort by works_count desc'
   oqo: {get_rows: authors, sort_by: [{column_id: works_count, direction: desc}]}
 
 - id: A08
   category: "filter, sort & sample"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#18)"
+  oxurl_representable: true
   status: ok
   oql: 'authors where author country is BR and it has an ORCID'
   oqo: {get_rows: authors, filter_rows: [
@@ -385,35 +519,50 @@ rows:
 
 - id: A09
   category: "filter, sort & sample"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (OAQ#17)"
+  oxurl_representable: true
   status: ok
   oql: 'authors where openalex id is A5022654839'
   oqo: {get_rows: authors, filter_rows: [{column_id: ids.openalex, value: A5022654839}]}
 
 - id: A10
   category: "filter, sort & sample"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (OAQ#6)"
+  oxurl_representable: true
   status: ok
   oql: 'sources where type is journal'
   oqo: {get_rows: sources, filter_rows: [{column_id: type, value: journal}]}
 
 - id: A11
   category: "filter, sort & sample"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (OAQ#12)"
+  oxurl_representable: true
   status: ok
   oql: 'institutions where country code is FR'
   oqo: {get_rows: institutions, filter_rows: [{column_id: country_code, value: FR}]}
 
 - id: A12
   category: "filter, sort & sample"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (OAQ#14)"
+  oxurl_representable: true
   status: ok
   oql: 'topics where domain is 3'
   oqo: {get_rows: topics, filter_rows: [{column_id: domain.id, value: '3'}]}
 
 - id: A13
   category: "filter, sort & sample"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#37)"
+  oxurl_representable: true
   status: ok
   oql: 'authors where last known institution is I114027177 [UNC] and topics is T10895 [climate change]'
   oqo: {get_rows: authors, filter_rows: [
@@ -425,7 +574,10 @@ rows:
 # ---------------------------------------------------------------------------
 - id: B01
   category: "group by"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#10)"
+  oxurl_representable: true
   status: ok
   oql: 'works where author is A5066175077 [Stephen Hawking]; group by author'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.id, value: A5066175077}],
@@ -433,7 +585,10 @@ rows:
 
 - id: B02
   category: "group by"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#17)"
+  oxurl_representable: true
   status: ok
   oql: 'works where anywhere contains near "Macrocystis pyrifera"; group by author'
   oqo: {get_rows: works, filter_rows: [{column_id: default.search, value: '"Macrocystis pyrifera"', operator: contains}],
@@ -442,7 +597,10 @@ rows:
 
 - id: B03
   category: "group by"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#75)"
+  oxurl_representable: true
   status: ok
   oql: 'works where year >= 1976; group by topic, year'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 1976, operator: '>='}],
@@ -451,7 +609,10 @@ rows:
 
 - id: B04
   category: "group by"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#20)"
+  oxurl_representable: true
   status: ok
   oql: 'works where country is col_eu27 and country is US; group by topic'
   oqo: {get_rows: works, filter_rows: [
@@ -462,7 +623,10 @@ rows:
 
 - id: B05
   category: "group by"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#48)"
+  oxurl_representable: true
   status: ok
   oql: "works where it's retracted; group by institution"
   oqo: {get_rows: works, filter_rows: [{column_id: is_retracted, value: true}],
@@ -470,7 +634,10 @@ rows:
 
 - id: B06
   category: "group by"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#27)"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains near "coral bleaching" and citations > 100; group by source'
   oqo: {get_rows: works, filter_rows: [
@@ -480,7 +647,10 @@ rows:
 
 - id: B07
   category: "group by"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#13)"
+  oxurl_representable: true
   status: ok
   oql: 'works where type is book; group by field'
   oqo: {get_rows: works, filter_rows: [{column_id: type, value: book}],
@@ -488,7 +658,10 @@ rows:
 
 - id: B08
   category: "group by"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#59)"
+  oxurl_representable: true
   status: ok
   oql: "works where institution is I154570441 [UCSB] AND it's retracted; group by author"
   oqo: {get_rows: works, filter_rows: [
@@ -498,7 +671,10 @@ rows:
 
 - id: B09
   category: "group by"
-  source: "#284 worked examples"
+  provenance:
+    type: "analytics question"
+    label: "OpenAlex analytics question (AKQ#22)"
+  oxurl_representable: true
   status: ok
   oql: 'works where institution is I107639228 [Notre Dame]; group by SDG'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I107639228}],
@@ -509,7 +685,11 @@ rows:
 # ---------------------------------------------------------------------------
 - id: L01
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "librarian guide"
+    label: "Cranfield SLR combining-strings guide"
+    url: "https://blogs.cranfield.ac.uk/library/slr-combining-strings/"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains agile and title & abstract contains any of (near "supply chain", near "demand chain", near "value chain") and title & abstract contains any of (near "lead time", near "cycle time")'
   oqo: {get_rows: works, filter_rows: [
@@ -525,7 +705,11 @@ rows:
 
 - id: L02a
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "librarian guide"
+    label: "U. Manitoba Scopus proximity guide"
+    url: "https://libguides.lib.umanitoba.ca/scopus/phrases"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains near "smart phone" within 3 words'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: '"smart phone"~3', operator: contains}]}
@@ -533,7 +717,11 @@ rows:
 
 - id: L02b
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "librarian guide"
+    label: "U. Manitoba Scopus proximity guide"
+    url: "https://libguides.lib.umanitoba.ca/scopus/phrases"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains phone*'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: 'phone*', operator: contains}]}
@@ -541,7 +729,11 @@ rows:
 
 - id: L02c
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "librarian guide"
+    label: "U. Manitoba Scopus proximity guide"
+    url: "https://libguides.lib.umanitoba.ca/scopus/phrases"
+  oxurl_representable: false
   status: boundary
   oql: 'works where title & abstract contains "smart phone*" within 3 words'
   diagnostic: OQL_WILDCARD_IN_QUOTES
@@ -549,7 +741,11 @@ rows:
 
 - id: L03
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "librarian guide"
+    label: "UCL Scopus search-techniques guide"
+    url: "https://library-guides.ucl.ac.uk/scopus/search-techniques"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains "oyster toadfish"'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"oyster toadfish"', operator: contains}]}
@@ -557,7 +753,10 @@ rows:
 
 - id: L04
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "librarian guide"
+    label: "Caltech Web of Science wildcard guide"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains behavio*r'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: 'behavio*r', operator: contains}]}
@@ -565,7 +764,11 @@ rows:
 
 - id: L05
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "librarian guide"
+    label: "KCL/Stirling systematic-review template"
+    url: "https://libguides.kcl.ac.uk/systematicreview/advanced"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains any of (autism, ASD, near "autism spectrum disorder") and title & abstract contains any of (intervention, therapy, treatment) and year >= 2015 and year <= 2024 and type is any of (article, review) and language is en'
   oqo: {get_rows: works, filter_rows: [
@@ -585,7 +788,11 @@ rows:
 
 - id: L06
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "vendor docs"
+    label: "Dimensions DSL reference + cookbook"
+    url: "https://docs.dimensions.ai/dsl/"
+  oxurl_representable: true
   status: ok
   oql: 'works where OA status is gold and funder is F4320337351 [NCI]'
   oqo: {get_rows: works, filter_rows: [
@@ -594,7 +801,11 @@ rows:
 
 - id: L07
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "vendor docs"
+    label: "Dimensions DSL reference + cookbook"
+    url: "https://docs.dimensions.ai/dsl/"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains CRISPR and near "genome editing" and year >= 2018 and year <= 2023; sort by citations desc; sample 500'
   oqo: {get_rows: works, filter_rows: [
@@ -607,14 +818,21 @@ rows:
 
 - id: L08
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "librarian guide"
+    label: "Bibliometric study of librarian-authored SRs"
+  oxurl_representable: true
   status: ok
   oql: 'works where raw affiliation contains library'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: library, operator: contains}]}
 
 - id: L09
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "vendor docs"
+    label: "Elsevier Scopus Search Tips"
+    url: "https://schema.elsevier.com/dtds/document/bkapi/search/SCOPUSSearchTips.htm"
+  oxurl_representable: true
   status: ok
   oql: 'works where raw affiliation contains near "london hospital" within 5 words'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"london hospital"~5', operator: contains}]}
@@ -622,7 +840,11 @@ rows:
 
 - id: L10
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "vendor docs"
+    label: "Elsevier Scopus Search Tips"
+    url: "https://schema.elsevier.com/dtds/document/bkapi/search/SCOPUSSearchTips.htm"
+  oxurl_representable: true
   status: ok
   oql: 'works where DOI is 10.1021/es052595+'
   oqo: {get_rows: works, filter_rows: [{column_id: doi, value: '10.1021/es052595+'}]}
@@ -630,21 +852,33 @@ rows:
 
 - id: L11
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "vendor docs"
+    label: "Clarivate Web of Science field tags"
+    url: "https://webofscience.zendesk.com/hc/en-us/articles/26916347018257-Web-of-Science-Core-Collection-Advanced-Search-Field-Tags"
+  oxurl_representable: true
   status: ok
   oql: 'works where ORCID is 0000-0002-1838-9363'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.orcid, value: '0000-0002-1838-9363'}]}
 
 - id: L12
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "vendor docs"
+    label: "Dimensions DSL reference + cookbook"
+    url: "https://docs.dimensions.ai/dsl/"
+  oxurl_representable: false
   status: boundary
   oql: null
   note: '"funded by the acronym DFG" — not representable. OQO only expresses funders.id equality AFTER an out-of-band /funders?search=DFG -> ID resolution; the acronym has no OQL/OQO form.'
 
 - id: L13
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "vendor docs"
+    label: "Elsevier Scopus Search Tips"
+    url: "https://schema.elsevier.com/dtds/document/bkapi/search/SCOPUSSearchTips.htm"
+  oxurl_representable: true
   status: ok
   oql: 'works where type is any of (article, review)'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
@@ -652,14 +886,22 @@ rows:
 
 - id: L14
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "vendor docs"
+    label: "Elsevier Scopus Search Tips"
+    url: "https://schema.elsevier.com/dtds/document/bkapi/search/SCOPUSSearchTips.htm"
+  oxurl_representable: true
   status: ok
   oql: 'works where language is es'
   oqo: {get_rows: works, filter_rows: [{column_id: language, value: es}]}
 
 - id: L15
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "librarian guide"
+    label: "UCL Web of Science search-tips guide"
+    url: "https://library-guides.ucl.ac.uk/web-of-science/search-tips"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains covid and title & abstract does not contain pediatric'
   oqo: {get_rows: works, filter_rows: [
@@ -669,7 +911,11 @@ rows:
 
 - id: L16
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "vendor docs"
+    label: "Clarivate Web of Science field tags"
+    url: "https://webofscience.zendesk.com/hc/en-us/articles/26916347018257-Web-of-Science-Core-Collection-Advanced-Search-Field-Tags"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains quantum computing; group by country'
   oqo: {get_rows: works, filter_rows: [
@@ -680,7 +926,11 @@ rows:
 
 - id: L17
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "vendor docs"
+    label: "Dimensions DSL reference + cookbook"
+    url: "https://docs.dimensions.ai/dsl/"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains CRISPR and Cas9; group by author'
   oqo: {get_rows: works, filter_rows: [
@@ -690,7 +940,11 @@ rows:
 
 - id: L18
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "vendor docs"
+    label: "Dimensions DSL reference + cookbook"
+    url: "https://docs.dimensions.ai/dsl/"
+  oxurl_representable: true
   status: ok
   oql: 'works where title & abstract contains CRISPR; group by funder'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: CRISPR, operator: contains}],
@@ -699,21 +953,33 @@ rows:
 
 - id: L19
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "librarian guide"
+    label: "Tufts Web of Science proximity examples"
+    url: "https://researchguides.library.tufts.edu/c.php?g=249270&p=1660077"
+  oxurl_representable: true
   status: ok
   oql: 'works where raw affiliation contains near "tufts boston" within 5 words'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"tufts boston"~5', operator: contains}]}
 
 - id: L20
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "librarian guide"
+    label: "UCL Web of Science search-tips guide"
+    url: "https://library-guides.ucl.ac.uk/web-of-science/search-tips"
+  oxurl_representable: false
   status: boundary
   oql: null
   note: Set-reference / stateful query composition (refine a saved search) — no single OQO; out of scope.
 
 - id: L22
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "zendesk ticket"
+    label: "OpenAlex zd#8101 + PR #240 (byline recall)"
+    url: "https://openalex.zendesk.com/agent/tickets/8101"
+  oxurl_representable: true
   status: ok
   oql: 'works where byline contains near "john smith" within 2 words'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_author_name.search, value: '"john smith"~2', operator: contains}]}
@@ -721,7 +987,11 @@ rows:
 
 - id: L21
   category: "librarian & SR queries"
-  source: "#284 worked examples"
+  provenance:
+    type: "zendesk ticket"
+    label: "OpenAlex zd#8101 — Claire's real systematic review"
+    url: "https://openalex.zendesk.com/agent/tickets/8101"
+  oxurl_representable: true
   status: ok
   note: >-
     The real zd#8101 systematic-review tree (Claire): a 5-block AND of large

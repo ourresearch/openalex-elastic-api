@@ -160,18 +160,44 @@ def test_corpus_covers_every_locked_behavior():
 
 
 def test_every_row_has_valid_facets():
-    """Every case carries a `category` (topical) and `source` (provenance) facet
-    from the known sets. These replaced the old conflated `group` field (#345);
-    keeping them mechanical means the dev playground never has to infer category
-    from the ID prefix."""
+    """Every case carries a `category` (topical) facet, a structured
+    `provenance` (real origin) facet, and an explicit `oxurl_representable`
+    flag. These replaced the old conflated `group` / coarse `source` fields
+    (#345); keeping them mechanical means the dev playground never has to infer
+    semantics from the ID prefix."""
     categories = {
         "entity references", "boolean logic", "search semantics",
         "proximity & wildcards", "filter, sort & sample", "group by",
         "librarian & SR queries",
     }
-    sources = {"spec spine", "#284 worked examples"}
+    provenance_types = {
+        "spec design", "analytics question", "librarian guide",
+        "vendor docs", "zendesk ticket",
+    }
     bad = []
     for r in ROWS:
-        if r.get("category") not in categories or r.get("source") not in sources:
-            bad.append((r["id"], r.get("category"), r.get("source")))
+        prov = r.get("provenance") or {}
+        ok = (
+            r.get("category") in categories
+            and isinstance(prov, dict)
+            and prov.get("type") in provenance_types
+            and bool(prov.get("label"))
+            and isinstance(r.get("oxurl_representable"), bool)
+        )
+        if not ok:
+            bad.append((r["id"], r.get("category"), prov.get("type"),
+                        r.get("oxurl_representable")))
     assert not bad, f"rows with missing/unknown facets: {bad}"
+
+    # The non-representable set is a deliberate, reviewed list: the 10 invalid-OQL
+    # error rows plus the 3 genuine boundaries. If this drifts, it's a real
+    # editorial change — update the list, don't loosen the assert.
+    not_representable = {r["id"] for r in ROWS if not r["oxurl_representable"]}
+    expected_not = {
+        "ENT6", "BOOL2", "G7", "G8", "PW4", "PW5", "PW6", "PW7", "PW8", "PW9",
+        "L02c", "L12", "L20",
+    }
+    assert not_representable == expected_not, (
+        f"oxurl_representable set drifted: "
+        f"+{not_representable - expected_not} -{expected_not - not_representable}"
+    )
