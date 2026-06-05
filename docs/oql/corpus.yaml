@@ -372,11 +372,11 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: false
-  status: error
+  oxurl_representable: true
+  status: ok
   oql: 'works where title contains "smart" within 3 words of "phone"'
-  diagnostic: OQL_BINARY_PROXIMITY
-  note: 'Binary "X within N of Y" is unsupported (ES slop is whole-phrase); loud error.'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart"~3~"phone"', operator: contains}]}
+  note: 'Binary proximity: two SEPARATE quoted operands NEAR each other (WoS `NEAR/N`). SUPPORTED via an ES `intervals` query — each operand is its own (possibly multi-word, adjacent) sub-interval and the two are combined ordered=false + max_gaps=N (oxjob #355 Goal B; live works-v33 = 5,183 hits). `match_phrase`+slop genuinely cannot express it (slop is whole-phrase). Value encoding `"A"~N~"B"` extends the single-phrase `"phrase"~N` form. Exact-only (both operands quoted/no-stem).'
 
 - id: 29
   category: "proximity & wildcards"
@@ -399,6 +399,39 @@ rows:
   oql: 'works where title contains "smart* phone"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart* phone"', operator: contains}]}
   note: 'Multi-token quoted wildcard phrase WITHOUT proximity = adjacency. SUPPORTED via an ES `intervals` query (ordered=true, max_gaps=0; trailing-prefix -> prefix rule, mid-word ? -> wildcard rule) — query_string would silently drop the wildcard. The no-`within` sibling of rows 27/58 (oxjob #355 Goal A; live works-v33 = 4,986 hits vs plain "smart phone" = 4,975). A SINGLE quoted wildcard token ("studies*") is #364''s unquoted no-stem path, not this. Leading / sub-3-char-prefix wildcards inside the phrase still rejected (#337).'
+
+- id: 80
+  category: "proximity & wildcards"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
+  status: ok
+  oql: 'works where title contains "machine learning" within 5 words of "neural network"'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"machine learning"~5~"neural network"', operator: contains}]}
+  note: 'Binary proximity with MULTI-WORD phrase operands on both sides — each phrase stays intact (its own ordered, gap-0 adjacency sub-interval) and the two are combined ordered=false + max_gaps=5. This is the shape only WoS (NEAR/N) and an ES `intervals`/`span` engine can express; `match_phrase`+slop cannot keep two phrases as units (oxjob #355 Goal B; live works-v33 = 1,531 hits).'
+
+- id: 81
+  category: "proximity & wildcards"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: false
+  status: error
+  oql: 'works where title contains "pro*" within 3 words of "pre*"'
+  diagnostic: OQL_MULTI_WILDCARD_SHORT_PREFIX
+  note: 'oxjob #355 perf guard: two wildcards in one intervals query (here a binary proximity) each need a >=4-char prefix — short 3-char prefixes multiply postings expansion (live: "pro* pro*" ~265ms vs ~45ms at 4 chars). "prot*" within 3 words of "pret*" is accepted. A lone wildcard keeps #337''s >=3-char floor.'
+
+- id: 82
+  category: "proximity & wildcards"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: false
+  status: error
+  oql: 'works where title contains "big* cat* dog*"'
+  diagnostic: OQL_TOO_MANY_WILDCARDS
+  note: 'oxjob #355 perf guard: at most 2 wildcards are allowed in one phrase / proximity / binary-proximity (one ES `intervals` query); 3+ multiplies prefix-expansion cost unacceptably. Remove a wildcard or split into separate searches.'
 
 - id: 30
   category: "proximity & wildcards"

@@ -8,9 +8,29 @@ See docs/oql-spec.md for the full specification.
 """
 
 from typing import Optional, Dict, Any, Callable
+import re
 import requests
 
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
+
+
+def _render_search_proximity(value: Any) -> Optional[str]:
+    """Render a search proximity value back to its OQL surface (oxjob #355).
+
+    `"phrase"~N` -> `"phrase" within N words`; binary `"A"~N~"B"` ->
+    `"A" within N words of "B"`. Returns None for any non-proximity value so the
+    caller falls back to normal value formatting. Binary is checked first (its value
+    ends in a quote, so the single-phrase regex won't match it anyway).
+    """
+    if not isinstance(value, str):
+        return None
+    m = re.match(r'^"([^"]*)"~(\d+)~"([^"]*)"$', value)
+    if m:
+        return f'"{m.group(1)}" within {m.group(2)} words of "{m.group(3)}"'
+    m = re.match(r'^"([^"]*)"~(\d+)$', value)
+    if m:
+        return f'"{m.group(1)}" within {m.group(2)} words'
+    return None
 
 
 # Column ID to display name mapping
@@ -218,7 +238,10 @@ class OQLRenderer:
             return f"{column_display} < {value_str}"
         elif operator == "contains":
             verb = "does not contain" if is_negated else "contains"
-            return f"{column_display} {verb} {value_str}"
+            # Search proximity values render to their `within N words [of ...]`
+            # surface, not the raw `~N` encoding (oxjob #355).
+            prox = _render_search_proximity(value)
+            return f"{column_display} {verb} {prox if prox is not None else value_str}"
         else:
             return f"{column_display} {operator} {value_str}"
     

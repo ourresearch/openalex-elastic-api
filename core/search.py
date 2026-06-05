@@ -23,6 +23,21 @@ PROXIMITY_PHRASE_RE = re.compile(r'^"([^"]*)"~(\d+)$')
 # this is the no-`~N` sibling of the proximity case — see adjacent_wildcard_query() /
 # oxjob #355 (Goal A).
 ADJACENT_PHRASE_RE = re.compile(r'^"([^"]*)"$')
+# Binary proximity: two SEPARATE quoted operands joined by a slop, e.g.
+# `"smart"~3~"phone"` (OQL `"smart" within 3 words of "phone"`). Either operand may
+# itself be a multi-word phrase (`"machine learning"~5~"neural network"`). This is the
+# WoS `NEAR/N` shape that `match_phrase`+slop genuinely cannot express (slop is
+# whole-phrase): each operand is its own ordered sub-interval and the two are combined
+# unordered with max_gaps=N. Built as an ES `intervals` query — see
+# binary_proximity_query() / oxjob #355 (Goal B).
+BINARY_PROXIMITY_RE = re.compile(r'^"([^"]*)"~(\d+)~"([^"]*)"$')
+
+# oxjob #355 perf guard: two short prefix-wildcards in one `intervals` query multiply
+# postings expansion (live on works-v33: `"pro* pro*"` ~265ms vs ~45ms once each prefix
+# is >=4 chars). Cap wildcard tokens per intervals query and require longer prefixes
+# when there are two. A lone wildcard keeps #337's >=3-char floor.
+MAX_WILDCARDS_PER_INTERVALS = 2
+MULTI_WILDCARD_MIN_PREFIX = 4
 
 # #364: stemmed text fields whose wildcards are silently wrong. Stemming happens
 # at INDEX time, so the literal prefix the user types (e.g. `studies` in
@@ -132,6 +147,41 @@ def _validate_wildcard_token(word):
             )
 
 
+def _validate_wildcard_budget(words):
+    """Cap prefix-expansion cost inside one ES `intervals` query (oxjob #355 guard).
+
+    Two short prefix-wildcards in a single intervals query multiply postings-list
+    expansion — live on works-v33 `"pro* pro*"` ran ~265ms vs ~45ms once each prefix
+    is >=4 chars. So: at most MAX_WILDCARDS_PER_INTERVALS (2) wildcard tokens per
+    query, and when there are exactly two, each TRAILING-`*` prefix token (the cost
+    driver; `?`/embedded wildcards are bounded) needs >=MULTI_WILDCARD_MIN_PREFIX (4)
+    leading chars. A lone wildcard is untouched (keeps #337's >=3-char floor), so the
+    already-shipped single-wildcard adjacency/proximity cases (Goal A, L02c) don't
+    regress. `words` is every token across the intervals query (both operands, for the
+    binary case).
+    """
+    wild = [w for w in words if "*" in w or "?" in w]
+    if len(wild) <= 1:
+        return
+    if len(wild) > MAX_WILDCARDS_PER_INTERVALS:
+        raise APIQueryParamsError(
+            f"At most {MAX_WILDCARDS_PER_INTERVALS} wildcards (* or ?) are allowed in "
+            f"one phrase or proximity search; this has {len(wild)}. Remove a wildcard "
+            "or split it into separate searches (it gets too expensive otherwise)."
+        )
+    for w in wild:
+        # Only a trailing-`*` prefix drives the multiplicative expansion; require a
+        # longer anchor for it when a second wildcard is present.
+        if w.endswith("*") and w.count("*") == 1 and "?" not in w:
+            if len(w) - 1 < MULTI_WILDCARD_MIN_PREFIX:
+                raise APIQueryParamsError(
+                    f"With two wildcards in one phrase or proximity search, each * "
+                    f"needs at least {MULTI_WILDCARD_MIN_PREFIX} leading characters "
+                    f'(for performance): "{w}". Use a longer prefix (e.g. abcd*), drop '
+                    "a wildcard, or split into separate searches."
+                )
+
+
 def validate_wildcards(search_terms):
     """Reject unsupported wildcard shapes with friendly messages (oxjob #337).
 
@@ -156,6 +206,20 @@ def validate_wildcards(search_terms):
     # wildcard on the stemmed `.search` field is itself rejected by #364, so that
     # advice is now a dead end.)
     stripped = search_terms.strip()
+
+    # Binary proximity `"A"~N~"B"` (oxjob #355 Goal B) -> intervals. Both operands and
+    # their wildcards live in ONE intervals query, so validate every operand token and
+    # apply the shared wildcard budget across BOTH operands. Handle it before the
+    # per-phrase loop below, because that loop would see `"A"` (followed by `~N`) as a
+    # proximity phrase but mis-classify the trailing `"B"` operand and wrongly reject it.
+    mbin = BINARY_PROXIMITY_RE.match(stripped)
+    if mbin:
+        words = mbin.group(1).split() + mbin.group(3).split()
+        for word in words:
+            _validate_wildcard_token(word)
+        _validate_wildcard_budget(words)
+        return
+
     for phrase in QUOTED_PHRASE_RE.findall(search_terms):
         if "*" not in phrase and "?" not in phrase:
             continue
@@ -163,6 +227,7 @@ def validate_wildcards(search_terms):
         if re.search(re.escape(f'"{phrase}"') + r"~\d", search_terms):
             for word in phrase.split():
                 _validate_wildcard_token(word)
+            _validate_wildcard_budget(phrase.split())
             continue
         # Adjacency phrase: the WHOLE search is a single multi-token quoted phrase
         # containing a wildcard (`"smart* phone"`) -> intervals ordered, max_gaps=0
@@ -171,6 +236,7 @@ def validate_wildcards(search_terms):
         if stripped == f'"{phrase}"' and len(phrase.split()) >= 2:
             for word in phrase.split():
                 _validate_wildcard_token(word)
+            _validate_wildcard_budget(phrase.split())
             continue
         raise APIQueryParamsError(
             f'Wildcards (* or ?) do not work inside a quoted phrase: "{phrase}". '
@@ -281,6 +347,16 @@ class SearchOpenAlex:
                 return raw_query
             return self.citation_boost_query(raw_query)
 
+        # Binary proximity `"A"~N~"B"` — two separate operands NEAR each other (WoS
+        # `NEAR/N`); `match_phrase`+slop can't express it (slop is whole-phrase), so it
+        # builds an ES `intervals` query with one sub-interval per operand (#355 Goal B).
+        # No wildcard required, but wildcards in either operand compose fine.
+        if self.has_binary_proximity():
+            raw_query = self.binary_proximity_query()
+            if skip_citation_boost:
+                return raw_query
+            return self.citation_boost_query(raw_query)
+
         if (
             self.primary_field == "authorships.raw_affiliation_strings"
             and len(self.search_terms.strip()) > 3
@@ -346,6 +422,17 @@ class SearchOpenAlex:
         phrase = m.group(1)
         return ("*" in phrase or "?" in phrase) and len(phrase.split()) >= 2
 
+    def has_binary_proximity(self):
+        """True for binary proximity `"A"~N~"B"` (oxjob #355 Goal B).
+
+        Two separate quoted operands joined by a slop, either of which may be a
+        multi-word phrase (`"machine learning"~5~"neural network"`). Unlike the other
+        intervals shapes this does NOT require a wildcard — it's a capability
+        `match_phrase`+slop lacks entirely (slop loosens gaps within ONE phrase; it
+        can't keep two phrases intact and search for them near each other).
+        """
+        return bool(BINARY_PROXIMITY_RE.match(self.search_terms.strip()))
+
     @staticmethod
     def _interval_rule(word):
         """Map one phrase token to an ES `intervals` rule.
@@ -361,18 +448,12 @@ class SearchOpenAlex:
             return {"wildcard": {"pattern": lower}}
         return {"match": {"query": word}}
 
-    def _intervals_query(self, phrase, ordered, max_gaps):
-        """Build an ES `intervals` query for a quoted wildcard phrase (oxjob #355).
+    def _intervals_over_fields(self, rule):
+        """OR one `intervals` rule across primary (+secondary/+tertiary) fields.
 
-        Each token becomes a match/prefix/wildcard rule; they are combined with
-        `all_of` under the given `ordered`/`max_gaps`. Searches primary
-        (+secondary/+tertiary) fields OR'd, mirroring the boost weights of the
-        match-path branches. Shared by the proximity (`"…"~N`, ordered=false) and
-        adjacency (`"smart* phone"`, ordered=true/max_gaps=0) entry points.
+        Mirrors the boost weights of the match-path branches. Shared by every
+        intervals entry point (proximity, adjacency, binary proximity — oxjob #355).
         """
-        rules = [self._interval_rule(w) for w in phrase.split()]
-        rule = {"all_of": {"ordered": ordered, "max_gaps": max_gaps, "intervals": rules}}
-
         fields = [(self.primary_field, None)]
         if self.secondary_field:
             fields.append((self.secondary_field, 0.10))
@@ -387,6 +468,37 @@ class SearchOpenAlex:
             clause = Q("intervals", **{field: body})
             query = clause if query is None else (query | clause)
         return query
+
+    def _intervals_query(self, phrase, ordered, max_gaps):
+        """Build an ES `intervals` query for a single quoted wildcard phrase (#355).
+
+        Each token becomes a match/prefix/wildcard rule; they are combined with
+        `all_of` under the given `ordered`/`max_gaps`. Shared by the proximity
+        (`"…"~N`, ordered=false) and adjacency (`"smart* phone"`,
+        ordered=true/max_gaps=0) entry points.
+        """
+        rules = [self._interval_rule(w) for w in phrase.split()]
+        rule = {"all_of": {"ordered": ordered, "max_gaps": max_gaps, "intervals": rules}}
+        return self._intervals_over_fields(rule)
+
+    def _operand_rule(self, phrase):
+        """One binary-proximity operand -> an `intervals` rule (oxjob #355 Goal B).
+
+        A single-word operand is just its match/prefix/wildcard rule; a multi-word
+        operand (`"machine learning"`) becomes an ordered, gap-0 adjacency
+        sub-interval so the phrase stays intact as a unit before the two operands are
+        combined NEAR each other.
+        """
+        words = phrase.split()
+        if len(words) == 1:
+            return self._interval_rule(words[0])
+        return {
+            "all_of": {
+                "ordered": True,
+                "max_gaps": 0,
+                "intervals": [self._interval_rule(w) for w in words],
+            }
+        }
 
     def proximity_wildcard_query(self):
         """Build an `intervals` query for `"phrase with wildcard*"~N` (oxjob #355).
@@ -408,6 +520,25 @@ class SearchOpenAlex:
         """
         m = ADJACENT_PHRASE_RE.match(self.search_terms.strip())
         return self._intervals_query(m.group(1), ordered=True, max_gaps=0)
+
+    def binary_proximity_query(self):
+        """Build an `intervals` query for `"A"~N~"B"` binary proximity (#355 Goal B).
+
+        Each operand is its own (possibly multi-word, adjacent) sub-interval; the two
+        are combined `ordered=false` + `max_gaps=N` — unordered NEAR, matching OQL
+        "within N words of" (= WoS `NEAR/N`) and consistent with the single-phrase
+        proximity path's max_gaps==slop mapping (oxjob #355, pinned live on works-v33).
+        """
+        m = BINARY_PROXIMITY_RE.match(self.search_terms.strip())
+        left, slop, right = m.group(1), int(m.group(2)), m.group(3)
+        rule = {
+            "all_of": {
+                "ordered": False,
+                "max_gaps": slop,
+                "intervals": [self._operand_rule(left), self._operand_rule(right)],
+            }
+        }
+        return self._intervals_over_fields(rule)
 
     def primary_match_query(self):
         """Searches with 'and' and phrase queries, with phrase boosted by 2."""

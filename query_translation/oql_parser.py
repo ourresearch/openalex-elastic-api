@@ -551,6 +551,19 @@ class OQLParser:
                 entity_id = entity_id.split("/", 1)[1]
             return entity_id, None
         
+        # Search proximity (oxjob #355): encode the `within N words [of "B"]` surface
+        # into the `"phrase"~N` / `"A"~N~"B"` value the engine + oracle decode. Checked
+        # before the plain quoted-string branch below, which would otherwise mangle the
+        # binary form (it starts AND ends with a quote). Patterns are specific enough
+        # they can't false-match an ordinary value.
+        m = re.match(r'^"(.+?)"\s+within\s+(\d+)\s+words?\s+of\s+"(.+?)"$',
+                     value_str, re.I)
+        if m:
+            return f'"{m.group(1)}"~{m.group(2)}~"{m.group(3)}"', None
+        m = re.match(r'^"(.+?)"\s+within\s+(\d+)\s+words?$', value_str, re.I)
+        if m:
+            return f'"{m.group(1)}"~{m.group(2)}', None
+
         # Check for quoted string
         if (value_str.startswith('"') and value_str.endswith('"')) or \
            (value_str.startswith("'") and value_str.endswith("'")):

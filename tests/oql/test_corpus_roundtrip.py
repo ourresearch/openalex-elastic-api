@@ -204,10 +204,13 @@ def test_every_row_has_valid_facets():
     not_representable = {r["id"] for r in ROWS if not r["oxurl_representable"]}
     # Opaque ints since #360; old semantic ids in comments (work/id_map.yaml).
     expected_not = {
-        # ENT6, BOOL2, G7, G8(20=bare-wildcard error), PW4, PW5, PW6, PW8, PW9
-        6, 8, 17, 20, 24, 25, 26, 28, 29,
+        # ENT6, BOOL2, G7, G8(20=bare-wildcard error), PW4, PW5, PW6, PW9
+        # (PW8/28 binary proximity is now SUPPORTED → representable, oxjob #355 Goal B)
+        6, 8, 17, 20, 24, 25, 26, 29,
         # L12, L20  (the 2 remaining genuine boundaries)
         68, 76,
+        # oxjob #355 perf-guard rejections (binary/phrase wildcard budget)
+        81, 82,
     }
     assert not_representable == expected_not, (
         f"oxurl_representable set drifted: "

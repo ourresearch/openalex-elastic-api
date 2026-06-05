@@ -13,6 +13,7 @@ See oql-oqo-plan.md for specification.
 from typing import Optional, Dict, Any, Callable, Tuple, List
 
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy
+from query_translation.oql_renderer import _render_search_proximity
 from query_translation.oql_render_tree import (
     OQLRenderTree, EntityHead, GroupNode, ClauseNode, Segment, SegmentMeta,
     ClauseMeta, GroupMeta, EntityValue, SortDirective, SampleDirective,
@@ -294,8 +295,10 @@ class OQLTreeRenderer:
 
             segments.append(Segment(kind="operator", text=f" {op_text} "))
 
-            # Quote string values
-            value_str = self._format_text_value(value)
+            # Search proximity values render to their `within N words [of ...]`
+            # surface (oxjob #355); other values just get quoted.
+            prox = _render_search_proximity(value)
+            value_str = prox if prox is not None else self._format_text_value(value)
             segments.append(Segment(
                 kind="value",
                 text=value_str,

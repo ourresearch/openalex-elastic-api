@@ -725,6 +725,97 @@ class TestAdjacentWildcard:
         assert "query_string" not in str(q)  # wildcard NOT dropped to query_string
 
 
+class TestBinaryProximity:
+    """oxjob #355 Goal B: `"A"~N~"B"` (two separate quoted operands NEAR each other,
+    OQL `"A" within N words of "B"`) compiles to an ES `intervals` query with one
+    sub-interval per operand, combined ordered=false/max_gaps=N. No wildcard required;
+    `match_phrase`+slop can't express it (slop is whole-phrase)."""
+
+    @pytest.mark.parametrize(
+        "terms",
+        ['"smart"~3~"phone"', '"machine learning"~5~"neural network"', '"smart*"~3~"phone"'],
+    )
+    def test_has_binary_proximity_true(self, terms):
+        assert SearchOpenAlex(search_terms=terms).has_binary_proximity()
+
+    @pytest.mark.parametrize(
+        "terms",
+        # single-phrase proximity, adjacency, plain wildcard, plain text — none binary.
+        ['"smart phone"~3', '"smart* phone"', "phone*", "machine learning", '"smart"~3'],
+    )
+    def test_has_binary_proximity_false(self, terms):
+        assert not SearchOpenAlex(search_terms=terms).has_binary_proximity()
+
+    def test_single_word_operands(self):
+        oa = SearchOpenAlex(
+            search_terms='"smart"~3~"phone"', primary_field="display_name.no_stem"
+        )
+        all_of = oa.build_query(skip_citation_boost=True).to_dict()[
+            "intervals"]["display_name.no_stem"]["all_of"]
+        assert all_of["ordered"] is False
+        assert all_of["max_gaps"] == 3
+        assert all_of["intervals"] == [
+            {"match": {"query": "smart"}},
+            {"match": {"query": "phone"}},
+        ]
+
+    def test_multiword_phrase_operands_become_adjacency_subintervals(self):
+        oa = SearchOpenAlex(
+            search_terms='"machine learning"~5~"neural network"',
+            primary_field="display_name.no_stem",
+        )
+        all_of = oa.build_query(skip_citation_boost=True).to_dict()[
+            "intervals"]["display_name.no_stem"]["all_of"]
+        assert all_of["ordered"] is False and all_of["max_gaps"] == 5
+        assert all_of["intervals"] == [
+            {"all_of": {"ordered": True, "max_gaps": 0, "intervals": [
+                {"match": {"query": "machine"}}, {"match": {"query": "learning"}}]}},
+            {"all_of": {"ordered": True, "max_gaps": 0, "intervals": [
+                {"match": {"query": "neural"}}, {"match": {"query": "network"}}]}},
+        ]
+
+    def test_wildcard_operand_uses_prefix_rule(self):
+        oa = SearchOpenAlex(
+            search_terms='"smart*"~3~"phone"', primary_field="display_name.no_stem"
+        )
+        rules = oa.build_query(skip_citation_boost=True).to_dict()[
+            "intervals"]["display_name.no_stem"]["all_of"]["intervals"]
+        assert rules[0] == {"prefix": {"prefix": "smart"}}
+        assert "query_string" not in str(oa.build_query(skip_citation_boost=True).to_dict())
+
+
+class TestIntervalsWildcardBudget:
+    """oxjob #355 perf guard: cap prefix-expansion cost inside one `intervals` query.
+    >=2 wildcards multiply postings expansion (`"pro* pro*"` ~265ms live on works-v33);
+    bound it to <=2 wildcards, each trailing-`*` prefix >=4 chars when two are present.
+    A lone wildcard is untouched (keeps #337's >=3-char floor)."""
+
+    @pytest.mark.parametrize(
+        "terms",
+        ['"smart phone*"~3', '"smart* phone"', '"comp* scie*"', '"prot*"~4~"pret*"',
+         '"machine learning"~5~"neural network"'],
+    )
+    def test_within_budget_passes(self, terms):
+        validate_wildcards(terms)  # no raise
+
+    @pytest.mark.parametrize("terms", ['"big* cat* dog*"', '"a* b* c*"'])
+    def test_three_or_more_wildcards_rejected(self, terms):
+        with pytest.raises(APIQueryParamsError) as exc:
+            validate_wildcards(terms)
+        assert "wildcard" in str(exc.value).lower()
+
+    @pytest.mark.parametrize(
+        "terms", ['"pro* pro*"', '"pre* pro*"', '"pro*"~3~"pre*"'])
+    def test_two_short_prefixes_rejected(self, terms):
+        with pytest.raises(APIQueryParamsError) as exc:
+            validate_wildcards(terms)
+        assert "4 leading characters" in str(exc.value)
+
+    @pytest.mark.parametrize("terms", ['"prot* prot*"', '"comp* scie*"', '"prot*"~3~"pret*"'])
+    def test_two_long_prefixes_allowed(self, terms):
+        validate_wildcards(terms)  # no raise
+
+
 class TestSearchInputNormalization:
     """oxjob #191.2 Case 6a: curly quotes / whitespace lookalikes must not
     silently degrade phrase + boolean searches to keyword searches."""

@@ -841,9 +841,34 @@ class _Parser:
                                'e.g. within 3 words')
             self.next()
             if self.word_is("of"):
-                raise OQLError("OQL_BINARY_PROXIMITY",
-                               'binary "within N words of X" is not supported',
-                               'use one quoted phrase: "term1 term2" within N words')
+                # Binary proximity `"A" within N words of "B"` — two SEPARATE quoted
+                # operands NEAR each other (WoS `NEAR/N`). The engine compiles it to an
+                # ES `intervals` query with one sub-interval per operand (oxjob #355
+                # Goal B); `match_phrase`+slop can't express it (slop is whole-phrase).
+                self.next()
+                bt = self.peek()
+                if bt is None or bt.kind != "STRING":
+                    raise OQLError("OQL_BINARY_PROXIMITY_NEEDS_PHRASES",
+                                   'binary proximity needs a quoted phrase after "of"',
+                                   'e.g. "smart" within 3 words of "phone"',
+                                   bt.pos if bt else None)
+                right = bt.val
+                self.next()
+                # Binary proximity is exact-only (both operands quoted, no-stem). `near`
+                # (stemmed) on operand A is not supported here.
+                if not phrase or stemmed_phrase:
+                    raise OQLError("OQL_BINARY_PROXIMITY_NEEDS_PHRASES",
+                                   'binary proximity needs two quoted phrases',
+                                   'e.g. "smart" within 3 words of "phone"', t.pos)
+                # Validate each wildcard token's shape across BOTH operands (keep #337's
+                # leading/short-prefix rejections), then the shared expansion budget
+                # (#355 guard) across all tokens in the one intervals query.
+                words = text.split() + right.split()
+                for word in words:
+                    _validate_wildcards(word, t.pos)
+                _validate_wildcard_budget(words, t.pos)
+                return LeafFilter(base + ".search.exact",
+                                  f'"{text}"~{n}~"{right}"', "contains")
             # A bare (unquoted) wildcard token can't carry proximity
             # (e.g. `smart* within 3 words`).
             if has_wildcard and not phrase:
@@ -861,6 +886,7 @@ class _Parser:
             if has_wildcard:
                 for word in text.split():
                     _validate_wildcards(word, t.pos)
+                _validate_wildcard_budget(text.split(), t.pos)
             return LeafFilter(col, f'"{text}"~{n}', "contains")
         # #364: outside a proximity phrase, a wildcard must run on exact (no-stem)
         # text — stemming at index time removes the literal prefix, so a wildcard
@@ -883,6 +909,7 @@ class _Parser:
         if phrase and has_wildcard:
             for word in text.split():
                 _validate_wildcards(word, t.pos)
+            _validate_wildcard_budget(text.split(), t.pos)
         # encode value: multi-word phrase keeps its quotes; a single word is bare
         # (the column suffix carries exact-vs-stemmed).
         if phrase and len(text.split()) > 1:
@@ -997,6 +1024,36 @@ def _validate_wildcards(word: str, pos: int):
                            'e.g. wom?n', pos)
 
 
+# oxjob #355 perf guard: cap prefix-expansion cost inside one ES `intervals` query
+# (adjacency, single-phrase proximity, or binary proximity). Two short prefix-wildcards
+# multiply postings expansion (live: `"pro* pro*"` ~265ms vs ~45ms once each prefix is
+# >=4 chars). Mirrors core/search.py::_validate_wildcard_budget so OQL and the raw API
+# reject identically. A lone wildcard is untouched (keeps #337's >=3-char floor).
+MAX_WILDCARDS_PER_INTERVALS = 2
+MULTI_WILDCARD_MIN_PREFIX = 4
+
+
+def _validate_wildcard_budget(words: List[str], pos: int):
+    wild = [w for w in words if "*" in w or "?" in w]
+    if len(wild) <= 1:
+        return
+    if len(wild) > MAX_WILDCARDS_PER_INTERVALS:
+        raise OQLError("OQL_TOO_MANY_WILDCARDS",
+                       f'at most {MAX_WILDCARDS_PER_INTERVALS} wildcards are allowed in '
+                       f'one phrase or proximity search (this has {len(wild)})',
+                       'remove a wildcard, or split into separate searches', pos)
+    for w in wild:
+        # Only a trailing-`*` prefix drives multiplicative expansion; require a longer
+        # anchor for it when a second wildcard is present.
+        if w.endswith("*") and w.count("*") == 1 and "?" not in w:
+            if len(w) - 1 < MULTI_WILDCARD_MIN_PREFIX:
+                raise OQLError("OQL_MULTI_WILDCARD_SHORT_PREFIX",
+                               f'with two wildcards in one phrase or proximity search, '
+                               f'each * needs at least {MULTI_WILDCARD_MIN_PREFIX} '
+                               f'leading characters (for performance): "{w}"',
+                               'use a longer prefix (e.g. abcd*) or drop a wildcard', pos)
+
+
 def parse(oql: str) -> OQO:
     """OQL text -> OQO. Raises OQLError (with .code/.fixit) on any error case."""
     toks = lex(oql)
@@ -1041,6 +1098,13 @@ def _render_term(value: str, column: str) -> str:
       .search.exact (exact):   "word"    | "phrase"      | "phrase" within N words
     """
     stemmed = not column.endswith(".search.exact")  # .search (and anything else) stems
+    # Binary proximity `"A"~N~"B"` -> `"A" within N words of "B"` (oxjob #355 Goal B).
+    # Check before the single-phrase form below (whose regex won't match a value that
+    # ends in a quote, but keep binary first for clarity). Binary is exact-only.
+    binp = re.match(r'^"([^"]*)"~(\d+)~"([^"]*)"$', value or "")
+    if binp:
+        return (f'"{binp.group(1)}" within {binp.group(2)} words '
+                f'of "{binp.group(3)}"')
     prox = re.match(r'^"(.+)"~(\d+)$', value or "")
     if prox:
         body = f'"{prox.group(1)}" within {prox.group(2)} words'

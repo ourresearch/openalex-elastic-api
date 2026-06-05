@@ -163,9 +163,13 @@ def parse_filter_string(
         # `.search.exact:<v>` is the legacy URL surface for the spec's inline
         # quoted-phrase form (§3.1): rewrite to `.search` column with the
         # value double-quoted, which the parser treats as a phrase containment.
+        # A value that ALREADY starts with a quote is itself the inline quoted form
+        # (a phrase, single-phrase proximity `"a b"~3`, or binary `"a"~3~"b"`) — don't
+        # re-wrap it, which would double-quote and corrupt it (oxjob #355).
         if field.endswith(".search.exact"):
             field = field[: -len(".exact")]
-            value = f'"{value}"'
+            if not value.startswith('"'):
+                value = f'"{value}"'
 
         if field not in field_groups:
             field_groups[field] = []
@@ -501,17 +505,25 @@ def _tokenize_search_boolean(value: str) -> List[Tuple[str, str]]:
             tokens.append(("RPAREN", ")"))
             i += 1
             continue
-        # Quoted phrase (with optional proximity suffix like `"phrase"~3`)
+        # Quoted phrase, with optional proximity suffix `"phrase"~3`, or binary
+        # proximity `"A"~3~"B"` (two operands NEAR each other — oxjob #355 Goal B).
         if ch == '"':
             j = i + 1
             while j < n and value[j] != '"':
                 j += 1
             j = min(j + 1, n)  # include closing quote
-            # Optional proximity suffix
+            # Optional proximity suffix `~N`
             if j < n and value[j] == "~":
                 k = j + 1
                 while k < n and value[k].isdigit():
                     k += 1
+                # Binary proximity: a second `~"phrase"` operand stays in this token,
+                # so `"A"~3~"B"` is ONE PHRASE (else `~` and `"B"` split off and AND).
+                if k + 1 < n and value[k] == "~" and value[k + 1] == '"':
+                    k += 2
+                    while k < n and value[k] != '"':
+                        k += 1
+                    k = min(k + 1, n)
                 j = k
             tokens.append(("PHRASE", value[i:j]))
             i = j
