@@ -142,9 +142,11 @@ def validate_wildcards(search_terms):
     if not search_terms or not isinstance(search_terms, str):
         return
 
-    # `*`/`?` inside a quoted phrase can't wildcard — move it outside the quotes —
-    # UNLESS the phrase carries a proximity slop (`"..."~N`), which the engine
-    # supports via intervals (oxjob #355).
+    # `*`/`?` inside a quoted phrase can't wildcard via query_string — run a
+    # single word on the no-stem `.search.exact` field unquoted (#364), or carry a
+    # proximity slop (`"..."~N`), which the engine supports via intervals (#355).
+    # (Don't say "move it outside the quotes": a bare wildcard on the stemmed
+    # `.search` field is itself rejected by #364, so that advice is now a dead end.)
     for phrase in QUOTED_PHRASE_RE.findall(search_terms):
         if "*" not in phrase and "?" not in phrase:
             continue
@@ -154,7 +156,9 @@ def validate_wildcards(search_terms):
             continue
         raise APIQueryParamsError(
             f'Wildcards (* or ?) do not work inside a quoted phrase: "{phrase}". '
-            'Move the wildcard outside the quotes, e.g. bar* instead of "bar*".'
+            "For a single word, run the wildcard on the no-stem exact field "
+            "unquoted (e.g. the .search.exact filter); for a multi-word phrase use "
+            'proximity, e.g. "smart phone*"~3.'
         )
 
     # Outside quotes, check each whitespace-delimited token.
