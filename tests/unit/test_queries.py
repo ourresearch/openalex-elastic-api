@@ -493,11 +493,20 @@ class TestValidateWildcards:
             validate_wildcards(terms)
         assert "at least 3 leading characters" in str(exc.value.args[0])
 
-    @pytest.mark.parametrize("terms", ['"bar*"', '"smart phone*"', '"wom?n"'])
+    @pytest.mark.parametrize("terms", ['"bar*"', '"wom?n"'])
     def test_wildcard_in_quotes_rejected(self, terms):
+        # A SINGLE quoted wildcard token can't wildcard via query_string and isn't an
+        # adjacency phrase (#364 runs it unquoted on the no-stem field instead).
         with pytest.raises(APIQueryParamsError) as exc:
             validate_wildcards(terms)
         assert "quoted phrase" in str(exc.value.args[0])
+
+    @pytest.mark.parametrize("terms", ['"smart* phone"', '"smart phone*"', '"smart wom?n"'])
+    def test_adjacency_wildcard_phrase_passes(self, terms):
+        # oxjob #355 Goal A: a MULTI-token quoted wildcard phrase WITHOUT proximity is an
+        # adjacency phrase, compiled to an ES intervals query (ordered, max_gaps=0), so
+        # validation must NOT reject it.
+        validate_wildcards(terms)
 
     def test_abc_star_passes_but_ab_star_fails(self):
         validate_wildcards("abc*")  # 3-char prefix ok
@@ -616,7 +625,8 @@ class TestProximityWildcard:
     )
     def test_has_proximity_wildcard_false(self, terms):
         # plain proximity, plain wildcard, plain text, wildcard-in-quotes-without-prox,
-        # and a bare wildcard token all stay off the intervals path.
+        # and a bare wildcard token all stay off the PROXIMITY path (the adjacency
+        # `"smart phone*"` case has its own has_adjacent_wildcard_phrase route).
         assert not SearchOpenAlex(search_terms=terms).has_proximity_wildcard()
 
     def test_builds_intervals_with_prefix_rule(self):
@@ -655,6 +665,63 @@ class TestProximityWildcard:
         assert "display_name.no_stem" in should[0]["intervals"]
         sec = should[1]["intervals"]["abstract.no_stem"]
         assert sec["boost"] == 0.10
+        assert "query_string" not in str(q)  # wildcard NOT dropped to query_string
+
+
+class TestAdjacentWildcard:
+    """oxjob #355 Goal A: `"smart* phone"` (multi-token quoted wildcard phrase, NO
+    proximity) is adjacency — it must compile to an ES `intervals` query with
+    ordered=true, max_gaps=0, not be dropped to query_string (which loses the wildcard)."""
+
+    @pytest.mark.parametrize("terms", ['"smart* phone"', '"smart phone*"', '"smart wom?n"'])
+    def test_has_adjacent_wildcard_phrase_true(self, terms):
+        assert SearchOpenAlex(search_terms=terms).has_adjacent_wildcard_phrase()
+
+    @pytest.mark.parametrize(
+        "terms",
+        # single quoted wildcard token (#364's path), plain exact phrase, proximity
+        # wildcard (its own path), plain wildcard, plain text.
+        ['"studies*"', '"smart phone"', '"smart phone*"~3', "phone*", "machine learning"],
+    )
+    def test_has_adjacent_wildcard_phrase_false(self, terms):
+        assert not SearchOpenAlex(search_terms=terms).has_adjacent_wildcard_phrase()
+
+    def test_builds_ordered_intervals_with_prefix_rule(self):
+        oa = SearchOpenAlex(
+            search_terms='"smart* phone"', primary_field="display_name.no_stem"
+        )
+        q = oa.build_query(skip_citation_boost=True).to_dict()
+        all_of = q["intervals"]["display_name.no_stem"]["all_of"]
+        assert all_of["ordered"] is True
+        assert all_of["max_gaps"] == 0
+        assert all_of["intervals"] == [
+            {"prefix": {"prefix": "smart"}},
+            {"match": {"query": "phone"}},
+        ]
+
+    def test_trailing_prefix_token_uses_prefix_rule(self):
+        oa = SearchOpenAlex(
+            search_terms='"smart phone*"', primary_field="display_name.no_stem"
+        )
+        rules = oa.build_query(skip_citation_boost=True).to_dict()[
+            "intervals"]["display_name.no_stem"]["all_of"]["intervals"]
+        assert rules == [
+            {"match": {"query": "smart"}},
+            {"prefix": {"prefix": "phone"}},
+        ]
+
+    def test_combine_fields_ors_with_boost(self):
+        oa = SearchOpenAlex(
+            search_terms='"smart* phone"',
+            primary_field="display_name.no_stem",
+            secondary_field="abstract.no_stem",
+            combine_fields=True,
+        )
+        q = oa.build_query(skip_citation_boost=True).to_dict()
+        should = q["bool"]["should"]
+        assert len(should) == 2
+        assert "display_name.no_stem" in should[0]["intervals"]
+        assert should[1]["intervals"]["abstract.no_stem"]["boost"] == 0.10
         assert "query_string" not in str(q)  # wildcard NOT dropped to query_string
 
 

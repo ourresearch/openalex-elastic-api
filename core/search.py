@@ -17,6 +17,12 @@ QUOTED_PHRASE_RE = re.compile(r'"([^"]*)"')
 # `intervals` query instead of query_string (which silently drops the wildcard) — see
 # proximity_wildcard_query() / oxjob #355.
 PROXIMITY_PHRASE_RE = re.compile(r'^"([^"]*)"~(\d+)$')
+# A single quoted phrase with NO proximity slop, e.g. `"smart* phone"`. When it is
+# multi-token AND contains a wildcard, the engine builds an ES `intervals` ADJACENCY
+# query (ordered=true, max_gaps=0) — query_string would silently drop the wildcard, so
+# this is the no-`~N` sibling of the proximity case — see adjacent_wildcard_query() /
+# oxjob #355 (Goal A).
+ADJACENT_PHRASE_RE = re.compile(r'^"([^"]*)"$')
 
 # #364: stemmed text fields whose wildcards are silently wrong. Stemming happens
 # at INDEX time, so the literal prefix the user types (e.g. `studies` in
@@ -143,14 +149,26 @@ def validate_wildcards(search_terms):
         return
 
     # `*`/`?` inside a quoted phrase can't wildcard via query_string — run a
-    # single word on the no-stem `.search.exact` field unquoted (#364), or carry a
-    # proximity slop (`"..."~N`), which the engine supports via intervals (#355).
-    # (Don't say "move it outside the quotes": a bare wildcard on the stemmed
-    # `.search` field is itself rejected by #364, so that advice is now a dead end.)
+    # single word on the no-stem `.search.exact` field unquoted (#364), or keep it
+    # inside a MULTI-word quoted phrase, which the engine supports via intervals: an
+    # adjacency phrase `"smart* phone"` (ordered, max_gaps=0) or a proximity phrase
+    # `"smart phone*"~N` (#355). (Don't say "move it outside the quotes": a bare
+    # wildcard on the stemmed `.search` field is itself rejected by #364, so that
+    # advice is now a dead end.)
+    stripped = search_terms.strip()
     for phrase in QUOTED_PHRASE_RE.findall(search_terms):
         if "*" not in phrase and "?" not in phrase:
             continue
+        # Proximity phrase `"…"~N` -> intervals (oxjob #355, L02c/PW7).
         if re.search(re.escape(f'"{phrase}"') + r"~\d", search_terms):
+            for word in phrase.split():
+                _validate_wildcard_token(word)
+            continue
+        # Adjacency phrase: the WHOLE search is a single multi-token quoted phrase
+        # containing a wildcard (`"smart* phone"`) -> intervals ordered, max_gaps=0
+        # (oxjob #355, Goal A). A single quoted wildcard token (`"studies*"`) is NOT
+        # this path — #364 runs it unquoted on the no-stem field — so keep rejecting it.
+        if stripped == f'"{phrase}"' and len(phrase.split()) >= 2:
             for word in phrase.split():
                 _validate_wildcard_token(word)
             continue
@@ -158,7 +176,7 @@ def validate_wildcards(search_terms):
             f'Wildcards (* or ?) do not work inside a quoted phrase: "{phrase}". '
             "For a single word, run the wildcard on the no-stem exact field "
             "unquoted (e.g. the .search.exact filter); for a multi-word phrase use "
-            'proximity, e.g. "smart phone*"~3.'
+            'an adjacency phrase ("smart* phone") or proximity ("smart phone*"~3).'
         )
 
     # Outside quotes, check each whitespace-delimited token.
@@ -255,6 +273,14 @@ class SearchOpenAlex:
                 return raw_query
             return self.citation_boost_query(raw_query)
 
+        # Wildcard inside a multi-token quoted phrase WITHOUT proximity (`"smart* phone"`)
+        # — adjacency; same `intervals` fix, ordered with max_gaps=0 (#355 Goal A).
+        if self.has_adjacent_wildcard_phrase():
+            raw_query = self.adjacent_wildcard_query()
+            if skip_citation_boost:
+                return raw_query
+            return self.citation_boost_query(raw_query)
+
         if (
             self.primary_field == "authorships.raw_affiliation_strings"
             and len(self.search_terms.strip()) > 3
@@ -304,6 +330,22 @@ class SearchOpenAlex:
         m = PROXIMITY_PHRASE_RE.match(self.search_terms.strip())
         return bool(m) and ("*" in m.group(1) or "?" in m.group(1))
 
+    def has_adjacent_wildcard_phrase(self):
+        """True for a single MULTI-token quoted phrase (no `~N`) containing a wildcard.
+
+        e.g. `"smart* phone"` — adjacency: the tokens must appear in order with no gap
+        between them, one of them a wildcard. It's the `ordered=true, max_gaps=0` sibling
+        of the proximity case; query_string would silently drop the wildcard, so it also
+        routes to an `intervals` query (oxjob #355, Goal A). A single quoted wildcard
+        token (`"studies*"`) is NOT this path — #364 runs it unquoted on the no-stem
+        field — so require >=2 tokens.
+        """
+        m = ADJACENT_PHRASE_RE.match(self.search_terms.strip())
+        if not m:
+            return False
+        phrase = m.group(1)
+        return ("*" in phrase or "?" in phrase) and len(phrase.split()) >= 2
+
     @staticmethod
     def _interval_rule(word):
         """Map one phrase token to an ES `intervals` rule.
@@ -319,18 +361,17 @@ class SearchOpenAlex:
             return {"wildcard": {"pattern": lower}}
         return {"match": {"query": word}}
 
-    def proximity_wildcard_query(self):
-        """Build an `intervals` query for `"phrase with wildcard*"~N` (oxjob #355).
+    def _intervals_query(self, phrase, ordered, max_gaps):
+        """Build an ES `intervals` query for a quoted wildcard phrase (oxjob #355).
 
-        `ordered=false` + `max_gaps=N` reproduces OQL "within N words" (= WoS `W/n`,
-        unordered NEAR); the spike pinned max_gaps==slop with no off-by-one. Each token
-        becomes a match/prefix/wildcard rule. Searches primary (+secondary/+tertiary)
-        fields OR'd, mirroring the boost weights of the match-path branches.
+        Each token becomes a match/prefix/wildcard rule; they are combined with
+        `all_of` under the given `ordered`/`max_gaps`. Searches primary
+        (+secondary/+tertiary) fields OR'd, mirroring the boost weights of the
+        match-path branches. Shared by the proximity (`"…"~N`, ordered=false) and
+        adjacency (`"smart* phone"`, ordered=true/max_gaps=0) entry points.
         """
-        m = PROXIMITY_PHRASE_RE.match(self.search_terms.strip())
-        phrase, slop = m.group(1), int(m.group(2))
         rules = [self._interval_rule(w) for w in phrase.split()]
-        rule = {"all_of": {"ordered": False, "max_gaps": slop, "intervals": rules}}
+        rule = {"all_of": {"ordered": ordered, "max_gaps": max_gaps, "intervals": rules}}
 
         fields = [(self.primary_field, None)]
         if self.secondary_field:
@@ -346,6 +387,27 @@ class SearchOpenAlex:
             clause = Q("intervals", **{field: body})
             query = clause if query is None else (query | clause)
         return query
+
+    def proximity_wildcard_query(self):
+        """Build an `intervals` query for `"phrase with wildcard*"~N` (oxjob #355).
+
+        `ordered=false` + `max_gaps=N` reproduces OQL "within N words" (= WoS `W/n`,
+        unordered NEAR); the spike pinned max_gaps==slop with no off-by-one.
+        """
+        m = PROXIMITY_PHRASE_RE.match(self.search_terms.strip())
+        phrase, slop = m.group(1), int(m.group(2))
+        return self._intervals_query(phrase, ordered=False, max_gaps=slop)
+
+    def adjacent_wildcard_query(self):
+        """Build an `intervals` query for `"smart* phone"` adjacency (oxjob #355 Goal A).
+
+        `ordered=true` + `max_gaps=0` reproduces a quoted (exact/no-stem) phrase whose
+        tokens are adjacent in order, one of them a wildcard — the no-`~N` analogue of a
+        proximity phrase. Verified live on works-v33 (`"smart* phone"` = 4,986 hits vs
+        plain `"smart phone"` = 4,975).
+        """
+        m = ADJACENT_PHRASE_RE.match(self.search_terms.strip())
+        return self._intervals_query(m.group(1), ordered=True, max_gaps=0)
 
     def primary_match_query(self):
         """Searches with 'and' and phrase queries, with phrase boosted by 2."""

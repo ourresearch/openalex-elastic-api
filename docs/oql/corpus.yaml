@@ -389,6 +389,17 @@ rows:
   diagnostic: OQL_WILDCARD_IN_PROXIMITY
   note: Wildcard + proximity can't compose.
 
+- id: 79
+  category: "proximity & wildcards"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_representable: true
+  status: ok
+  oql: 'works where title contains "smart* phone"'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart* phone"', operator: contains}]}
+  note: 'Multi-token quoted wildcard phrase WITHOUT proximity = adjacency. SUPPORTED via an ES `intervals` query (ordered=true, max_gaps=0; trailing-prefix -> prefix rule, mid-word ? -> wildcard rule) — query_string would silently drop the wildcard. The no-`within` sibling of rows 27/58 (oxjob #355 Goal A; live works-v33 = 4,986 hits vs plain "smart phone" = 4,975). A SINGLE quoted wildcard token ("studies*") is #364''s unquoted no-stem path, not this. Leading / sub-3-char-prefix wildcards inside the phrase still rejected (#337).'
+
 - id: 30
   category: "proximity & wildcards"
   provenance:
