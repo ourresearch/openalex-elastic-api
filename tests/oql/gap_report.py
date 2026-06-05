@@ -39,7 +39,7 @@ CORPUS = os.path.join(ROOT, "docs", "oql", "corpus.yaml")
 
 # Rows the spec marks ✓ but the LIVE engine mishandles (see engine_findings.md).
 ENGINE_BUGS = {
-    "L02b": "trailing wildcard `phone*` 500s on the live server (not yet shipped)",
+    57: "trailing wildcard `phone*` 500s on the live server (not yet shipped)",  # old id L02b
 }
 
 

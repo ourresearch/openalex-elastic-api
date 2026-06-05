@@ -145,15 +145,18 @@ def test_search_model_space_quotes_near():
 def test_corpus_covers_every_locked_behavior():
     """Spec self-check: each EXPLORE §2 locked behavior has >=1 corpus case."""
     ids = {r["id"] for r in ROWS}
+    # Row ids are opaque sequential ints since #360; the old semantic ids are in
+    # the trailing comments (full map: work/id_map.yaml).
     required = {
-        # entity refs, sets, annotations
-        "ENT1", "ENT3", "ENT4", "ENT5", "ENT6",
-        # booleans / precedence / casing
-        "BOOL1", "BOOL2", "BOOL3", "BOOL4",
-        # the 9 gauntlet cases
-        "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9",
+        # entity refs, sets, annotations            (ENT1,ENT3,ENT4,ENT5,ENT6)
+        1, 3, 4, 5, 6,
+        # booleans / precedence / casing            (BOOL1..BOOL4)
+        7, 8, 9, 10,
+        # the 9 gauntlet cases                       (G1..G9; G7b=18 excluded)
+        11, 12, 13, 14, 15, 16, 17, 19, 20,
         # proximity / wildcard / semantic / exact / stemmed-phrase
-        "PW1", "PW4", "PW6", "PW7", "PW8", "PW9", "PW10", "PW11", "PW12",
+        # (PW1,PW4,PW6,PW7,PW8,PW9,PW10,PW11,PW12)
+        21, 24, 26, 27, 28, 29, 30, 31, 32,
     }
     missing = required - ids
     assert not missing, f"corpus missing locked-behavior cases: {sorted(missing)}"
@@ -193,9 +196,12 @@ def test_every_row_has_valid_facets():
     # error rows plus the 3 genuine boundaries. If this drifts, it's a real
     # editorial change — update the list, don't loosen the assert.
     not_representable = {r["id"] for r in ROWS if not r["oxurl_representable"]}
+    # Opaque ints since #360; old semantic ids in comments (work/id_map.yaml).
     expected_not = {
-        "ENT6", "BOOL2", "G7", "G8", "PW4", "PW5", "PW6", "PW7", "PW8", "PW9",
-        "L02c", "L12", "L20",
+        # ENT6, BOOL2, G7, G8, PW4, PW5, PW6, PW7, PW8, PW9
+        6, 8, 17, 19, 24, 25, 26, 27, 28, 29,
+        # L02c, L12, L20  (the 3 genuine boundaries)
+        58, 68, 76,
     }
     assert not_representable == expected_not, (
         f"oxurl_representable set drifted: "

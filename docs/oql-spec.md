@@ -60,9 +60,9 @@ This invariant is the spec's runnable contract — see §9.
 
 - The entity type names the rows returned (`works`, `authors`, `institutions`,
   `sources`, `publishers`, `funders`, `topics`, …). It is a sentence word →
-  lowercase canonically; any case accepted on input. (corpus **A01**, **A07**, **A10–A12**)
+  lowercase canonically; any case accepted on input. (corpus rows **33**, **39**, **42–44**)
 - `where` introduces the conditions. With no conditions, the bare entity is a valid
-  query: `works` (corpus **A01**).
+  query: `works` (corpus row **33**).
 - Directives (`group by`, `sort by`, `sample`) follow, each introduced by `;`.
 
 OQL covers exactly **OQO Stage A (filter / sort / sample) + Stage B (group_by)**.
@@ -73,8 +73,8 @@ There is deliberately **no Stage-C / HAVING syntax** (§10).
 ### 3.1 Entity references: the ID is authoritative, `[…]` is ignored decoration
 
 ```
-works where institution is I136199984 [Harvard]                         (ENT1)
-works where institution is I136199984 [those Harvard bastards, go Yale] (ENT2)
+works where institution is I136199984 [Harvard]                         (row 1)
+works where institution is I136199984 [those Harvard bastards, go Yale] (row 2)
 ```
 Both produce `{column_id: authorships.institutions.lineage, value: I136199984}`.
 
@@ -87,10 +87,10 @@ Both produce `{column_id: authorships.institutions.lineage, value: I136199984}`.
   best-effort "⚠ that ID isn't Harvard" is the editor/linter's job, never the
   parser's, and never blocks.
 - An entity reference with **only** an annotation and no ID is a **loud error**:
-  `institution is [Harvard]` → `OQL_MISSING_ENTITY_ID` (corpus **ENT6**).
+  `institution is [Harvard]` → `OQL_MISSING_ENTITY_ID` (corpus row **6**).
 - Values are **bare** (no `entity/id` prefix): `I136199984`, `de`, `article`, `13`,
   `gold` — the column carries the namespace (per oqo-spec §2). A `col_…` collection
-  reference is also a valid bare value (corpus **B04**).
+  reference is also a valid bare value (corpus row **49**).
 
 **Which values get a `[display name]` on output is per-column (registry-driven):**
 the renderer synthesizes a name only when the bare value is **not human-readable** —
@@ -111,9 +111,9 @@ registry property.)
 ### 3.2 Sets / value lists: `is any of ( … )`
 
 ```
-works where institution is any of (I33213144 [Harvard], I97018004 [Stanford])  (ENT3)
-works where type is in (article, review)                                       (ENT5)
-works where institution is not any of (I33213144, I97018004)                   (ENT4)
+works where institution is any of (I33213144 [Harvard], I97018004 [Stanford])  (row 3)
+works where type is in (article, review)                                       (row 5)
+works where institution is not any of (I33213144, I97018004)                   (row 4)
 ```
 
 - `( … )` does **double duty**: boolean grouping **and** value lists. The preceding
@@ -122,7 +122,7 @@ works where institution is not any of (I33213144, I97018004)                   (
   (it reads aloud; SQL familiarity is explicitly *not* a goal here).
 - `is any of (a, b)` compiles to an OR-branch of equality leaves. `is not any of
   (a, b)` is `NOT(a OR b)` = `(NOT a) AND (NOT b)` by De Morgan — canonical NNF
-  carries the negation on the leaves (corpus **ENT4**).
+  carries the negation on the leaves (corpus row **4**).
 
 ### 3.3 Delimiters and the no-escaping result
 
@@ -140,16 +140,16 @@ works where institution is not any of (I33213144, I97018004)                   (
 
 Therefore **only `"` delimits strings** — `'` is *not* a delimiter, so apostrophes
 and contractions are ordinary characters: `"parkinson's disease"`, `child's`
-(corpus **L21**). A literal `"` inside a search term is unsupported (ES normalizes
+(corpus row **78**). A literal `"` inside a search term is unsupported (ES normalizes
 punctuation away, so it is meaningless anyway) and documented, not escaped.
 
 ### 3.4 Booleans, casing, precedence
 
 ```
-works where title contains "foo" and ("bar" or "baz")    (BOOL1)  ✓
-works where title contains "foo" and "bar" or "baz"       (BOOL2)  ✗ OQL_MIXED_BOOL_NEEDS_PARENS
-works where title contains "a" and "b" and "c"           (BOOL3)  ✓ (pure-AND, associative)
-works where title contains FOO AND (bar or baz)          (BOOL4)  ✓ (any case accepted on input)
+works where title contains "foo" and ("bar" or "baz")    (row 7)   ✓
+works where title contains "foo" and "bar" or "baz"       (row 8)   ✗ OQL_MIXED_BOOL_NEEDS_PARENS
+works where title contains "a" and "b" and "c"           (row 9)   ✓ (pure-AND, associative)
+works where title contains FOO AND (bar or baz)          (row 10)  ✓ (any case accepted on input)
 ```
 
 - **Operators always sit OUTSIDE quotes.** Inside quotes, even `or` is a literal
@@ -168,7 +168,7 @@ works where title contains FOO AND (bar or baz)          (BOOL4)  ✓ (any case 
   mid-migration; Dimensions enforces; Lucene/Sourcegraph advise full
   parenthesization). Canonical output fully parenthesizes mixed logic.
 - **Adjacency (space) = AND between *search terms*** (§3.6), and it counts as AND
-  for this parens rule (so `climate change or warming` errors — §3.6 G7). Between
+  for this parens rule (so `climate change or warming` errors — §3.6 row 17). Between
   *whole clauses* at the top level, a connective is still required (`year >= 2020 and
   it's open access`); two full clauses jammed together with no `and` is
   `OQL_IMPLICIT_ADJACENCY`.
@@ -176,7 +176,7 @@ works where title contains FOO AND (bar or baz)          (BOOL4)  ✓ (any case 
 ### 3.5 Negation — one mechanism
 
 ```
-works where title & abstract contains covid and title & abstract does not contain pediatric  (L15)
+works where title & abstract contains covid and title & abstract does not contain pediatric  (row 71)
 ```
 → `{contains covid}` AND `{contains pediatric, is_negated: true}`.
 
@@ -224,37 +224,37 @@ vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); 
 
 The gauntlet pins the consequences (all are corpus rows):
 
-| # | OQL (`title contains …`) | Result |
+| row | OQL (`title contains …`) | Result |
 |---|---|---|
-| G1 | `climate change` | **space = stemmed AND**; words may be apart (recall). The default. |
-| G2 | `"climate change"` | **quotes = exact adjacent phrase**, no stemming (`.search.exact`) |
-| G3 | `near "whopper junior"` | **`near` = stemmed adjacent phrase** → matches "whoppers junior" |
-| G4 | `"cat"` | quoting a **single** word = exact (no plurals) — quotes always mean exact |
-| G5 | `cat` | bare word = stemmed (matches cats) |
-| G6 | `"rock or roll"` | inside quotes = literal: `or` is a word, one exact phrase |
-| G7 | `climate change or warming` | ✗ `OQL_MIXED_BOOL_NEEDS_PARENS` — a space is an AND, so this mixes and/or |
-| G7b | `climate (change or warming)` | ✓ `climate AND (change OR warming)` — the disambiguated form |
-| G8 | `"bar*"` | ✗ `OQL_WILDCARD_IN_QUOTES` — fix-it: use `bar*` unquoted |
-| G9 | `bar*` | bare prefix wildcard |
+| 11 | `climate change` | **space = stemmed AND**; words may be apart (recall). The default. |
+| 12 | `"climate change"` | **quotes = exact adjacent phrase**, no stemming (`.search.exact`) |
+| 13 | `near "whopper junior"` | **`near` = stemmed adjacent phrase** → matches "whoppers junior" |
+| 14 | `"cat"` | quoting a **single** word = exact (no plurals) — quotes always mean exact |
+| 15 | `cat` | bare word = stemmed (matches cats) |
+| 16 | `"rock or roll"` | inside quotes = literal: `or` is a word, one exact phrase |
+| 17 | `climate change or warming` | ✗ `OQL_MIXED_BOOL_NEEDS_PARENS` — a space is an AND, so this mixes and/or |
+| 18 | `climate (change or warming)` | ✓ `climate AND (change OR warming)` — the disambiguated form |
+| 19 | `"bar*"` | ✗ `OQL_WILDCARD_IN_QUOTES` — fix-it: use `bar*` unquoted |
+| 20 | `bar*` | bare prefix wildcard |
 
 Key rules these encode:
 
 - **Space = AND, and a space counts as AND for the parens rule.** There is **no
   silent order of operations**: mixing a space-run with an explicit `or` at one
   level is `OQL_MIXED_BOOL_NEEDS_PARENS`, just like an explicit `and`/`or` mix
-  (G7, BOOL2). `climate change or warming` errors; you say which you mean —
-  `climate (change or warming)` (G7b) or `(climate change) or warming`. (Pure runs —
+  (rows 17, 8). `climate change or warming` errors; you say which you mean —
+  `climate (change or warming)` (row 18) or `(climate change) or warming`. (Pure runs —
   all-space, all-`and`, or all-`or` — need no parens.)
 - **Quotes = exact, single word or phrase.** `"cat"` excludes "cats"; `"climate
   change"` is the adjacent, unstemmed phrase. This is the mainstream "quotes = exact
   match" people already expect.
 - **`near "…"` = the stemmed phrase** — adjacent *and* lemmatized (`.search`), for
-  when you want phrase precision without losing recall (corpus **G3**, **PW12**).
+  when you want phrase precision without losing recall (corpus rows **13**, **32**).
   Without quotes you don't need `near`: bare terms are already stemmed.
 - **Booleans are structural, never lexical.** `contains "foo or bar"` searches the
   literal phrase; the boolean is the tree (`contains any of (foo, bar)`).
 - **`is similar to "…"` is semantic** vector search (`.search.semantic`, corpus
-  **PW10**).
+  row **30**).
 - **`any of (…)` / `all of (…)`** are flat-list sugar for same-op OR / AND; items
   may themselves be `"exact"` or `near "stemmed"` phrases. Mixed logic uses infix
   `and`/`or` + required parens.
@@ -268,16 +268,16 @@ Key rules these encode:
 ### 3.7 Proximity and wildcards — the edge matrix
 
 ```
-works where title contains "smart phone" within 3 words      (PW1)  ✓ exact proximity → .search.exact "smart phone"~3
-works where title contains near "smart phone" within 3 words (PW12) ✓ stemmed proximity → .search "smart phone"~3
-works where title contains foo*bar                          (PW2)  ✓ mid-word *
-works where title contains wom?n                            (PW3)  ✓ ? = exactly one char
-works where title contains *cycle                           (PW4)  ✗ OQL_LEADING_WILDCARD
-works where title contains ?cycle                           (PW5)  ✗ OQL_LEADING_WILDCARD
-works where title contains ab*                              (PW6)  ✗ OQL_SHORT_WILDCARD_PREFIX (need ≥3)
-works where title contains "smart phone*" within 3 words    (PW7)  ✗ OQL_WILDCARD_IN_QUOTES
-works where title contains "smart" within 3 words of "phone"(PW8)  ✗ OQL_BINARY_PROXIMITY
-works where title contains smart* within 3 words            (PW9)  ✗ OQL_WILDCARD_IN_PROXIMITY
+works where title contains "smart phone" within 3 words      (row 21) ✓ exact proximity → .search.exact "smart phone"~3
+works where title contains near "smart phone" within 3 words (row 32) ✓ stemmed proximity → .search "smart phone"~3
+works where title contains foo*bar                          (row 22) ✓ mid-word *
+works where title contains wom?n                            (row 23) ✓ ? = exactly one char
+works where title contains *cycle                           (row 24) ✗ OQL_LEADING_WILDCARD
+works where title contains ?cycle                           (row 25) ✗ OQL_LEADING_WILDCARD
+works where title contains ab*                              (row 26) ✗ OQL_SHORT_WILDCARD_PREFIX (need ≥3)
+works where title contains "smart phone*" within 3 words    (row 27) ✗ OQL_WILDCARD_IN_QUOTES
+works where title contains "smart" within 3 words of "phone"(row 28) ✗ OQL_BINARY_PROXIMITY
+works where title contains smart* within 3 words            (row 29) ✗ OQL_WILDCARD_IN_PROXIMITY
 ```
 
 - **Proximity is a whole-phrase modifier**, not a binary `X within N of Y`. ES slop
@@ -289,8 +289,8 @@ works where title contains smart* within 3 words            (PW9)  ✗ OQL_WILDC
 - On the multi-valued per-record search fields (`raw affiliation` /
   `byline`), a **quoted phrase scopes to one sub-record** (one affiliation / one
   byline) via ES `position_increment_gap`; slop widens within it. This is how a
-  single `contains` leaf expresses intra-affiliation co-occurrence (corpus **L09**,
-  **L19**, **L22**).
+  single `contains` leaf expresses intra-affiliation co-occurrence (corpus rows **65**,
+  **75**, **77**).
 - **Wildcards fire only when BARE on a single token.** In quotes →
   `OQL_WILDCARD_IN_QUOTES`. Leading → `OQL_LEADING_WILDCARD`. Sub-3-char prefix →
   `OQL_SHORT_WILDCARD_PREFIX`. With proximity → `OQL_WILDCARD_IN_PROXIMITY`. Every
@@ -300,8 +300,8 @@ works where title contains smart* within 3 words            (PW9)  ✗ OQL_WILDC
 
 > **⚠ Acknowledged limitation (to be fixed, not a permanent boundary):**
 > **wildcard-in-a-phrase / wildcard-near-another-word** — `"unusual behavi*or"`,
-> `"smart phone*" within 3 words` — is rejected today (PW7, PW9, corpus L02c)
-> because our ES `query_string` path drops the wildcard (verified live: L02c
+> `"smart phone*" within 3 words` — is rejected today (rows 27, 29, corpus row 58)
+> because our ES `query_string` path drops the wildcard (verified live: row 58
 > silently dropped it). **WoS and Scopus support this**, so it is a real
 > capability gap, not a design choice. ES *can* express it with heavier query
 > types (intervals / span queries); reaching it is future engine work — exactly
@@ -319,16 +319,16 @@ Emit `unknown` canonically; accept `null` and `unknown` on input.
 ### 3.9 Booleans on flags (`it's …`)
 
 Boolean columns get a reads-aloud surface: `it's open access`, `it's not open
-access`, `it's retracted`, `it has a DOI`, `it has an ORCID` (corpus **A05**,
-**A08**, **B05**, **B08**). These compile to `{column: …, value: true|false}`. The
+access`, `it's retracted`, `it has a DOI`, `it has an ORCID` (corpus rows **37**,
+**40**, **50**, **53**). These compile to `{column: …, value: true|false}`. The
 technical `<column> is true|false` form is also accepted.
 
 ## 4. Directives
 
 ```
-authors; sort by works_count desc                          (A07)
-works where year >= 1976; group by topic, year             (B03)  (multi-dim: spec-level; live API single-dim → #297)
-works where … ; sort by citations desc; sample 500         (L07)
+authors; sort by works_count desc                          (row 39)
+works where year >= 1976; group by topic, year             (row 48)  (multi-dim: spec-level; live API single-dim → #297)
+works where … ; sort by citations desc; sample 500         (row 63)
 ```
 
 - **`group by <dim>[, <dim>]*`** → `group_by` list (order = dimension order).
@@ -376,26 +376,26 @@ column-agnostic, exactly as the OQO dataclass is (oqo-spec §7).
 pairs. It covers: every in-scope #284 worked-example row rendered to v2, the 9
 gauntlet cases, the proximity/wildcard matrix, and the entity/boolean/set cases.
 Each row is `ok` (round-trips), `error` (named diagnostic + fix-it), or `boundary`
-(documented non-representable: `L02c` wildcard-in-proximity, `L12` acronym
-resolution, `L20` set-reference).
+(documented non-representable: row `58` wildcard-in-proximity, row `68` acronym
+resolution, row `76` set-reference).
 
 **v2 search encoding vs. #284** (noted per row in the corpus): under §3.6's
 mainstream model, a bare multi-word search is **stemmed AND** — exactly what the
-#284 OXURLs did (space = AND on `.search`), so `climate change` (A06), `quantum
-computing` (L16) etc. render as bare terms. A genuine adjacent phrase uses `near
-"…"` (stemmed: B02, B06, L01, L02a, L07, L09, L19, L22) or plain quotes when the
-intent is exact/no-lemmatization (`"oyster toadfish"`, L03).
+#284 OXURLs did (space = AND on `.search`), so `climate change` (row 38), `quantum
+computing` (row 72) etc. render as bare terms. A genuine adjacent phrase uses `near
+"…"` (stemmed: rows 47, 51, 55, 56, 63, 65, 75, 77) or plain quotes when the
+intent is exact/no-lemmatization (`"oyster toadfish"`, row 59).
 
 ## 8. Out of scope
 
 - **Stage C / HAVING** (filtering on group aggregates). OQL must not promise what
   OQO can't execute (charter decision 2); the abandoned `get`/`summarize by`/`where
   …;` dialect (#274) is the trap to avoid. Group ranking by an aggregate metric
-  (corpus **L18**) is `#297`.
-- **Multi-dimensional `group by`** is expressible in the spec (corpus **B03**) but
+  (corpus row **74**) is `#297`.
+- **Multi-dimensional `group by`** is expressible in the spec (corpus row **48**) but
   single-dimension in the live serving impl → `#297`.
-- **Acronym / name resolution** (corpus **L12**) and **set-references** (corpus
-  **L20**) are not query-language features.
+- **Acronym / name resolution** (corpus row **68**) and **set-references** (corpus
+  row **76**) are not query-language features.
 
 ## 9. Conformance & round-trip
 

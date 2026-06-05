@@ -27,9 +27,9 @@
 #
 # NOTE: two corpus rows are intentionally NOT ref'd here, both because their gold
 # can't be graded by execution equivalence on the live API:
-#   * PW10 (`abstract is similar to …`, semantic vector search) — its gold column
+#   * row 30 (`abstract is similar to …`, semantic vector search) — its gold column
 #     `abstract.search.semantic` isn't in the validator catalog.
-#   * B03 (`group by topic, year`) — MULTI-dimensional group_by is in the OQO spec
+#   * row 48 (`group by topic, year`) — MULTI-dimensional group_by is in the OQO spec
 #     but the live `/query` rejects it (HTTP 400, single-dim only; see oxjob #297),
 #     so neither pred nor gold can execute for Tier-2 grading.
 #
@@ -38,398 +38,398 @@ version: 1
 cases:
 
 # ---------------------------------------------------------------------------
-# A. Entity references, sets, annotations  (corpus ENT*)
+# A. Entity references, sets, annotations  (corpus rows 1–6)
 #    Entity disambiguation: the NL names an entity; the model must resolve it to
 #    the gold OpenAlex ID via the registry. IDs are authoritative — phrasings use
 #    the institution's REAL name (I136199984=Harvard, I33213144=U. of Florida,
 #    I97018004=Stanford), not the corpus's free-text annotations.
 # ---------------------------------------------------------------------------
-- ref: ENT1   # works where institution is Harvard
+- ref: 1   # works where institution is Harvard
   nl:
     - {text: "papers affiliated with Harvard", difficulty: 1}
     - {text: "show me works from Harvard University", difficulty: 1}
     - {text: "research where at least one author is at Harvard", difficulty: 2}
     - {text: "harvard papers", difficulty: 3}
 
-- ref: ENT3   # institution is any of (U. of Florida, Stanford)
+- ref: 3   # institution is any of (U. of Florida, Stanford)
   nl:
     - {text: "papers from the University of Florida or Stanford", difficulty: 1}
     - {text: "works affiliated with either Stanford or UF", difficulty: 2}
     - {text: "anything out of stanford or florida", difficulty: 3}
 
-- ref: ENT4   # institution is NOT any of (U. of Florida, Stanford)
+- ref: 4   # institution is NOT any of (U. of Florida, Stanford)
   nl:
     - {text: "papers not affiliated with the University of Florida or Stanford", difficulty: 1}
     - {text: "works from anywhere except Stanford and UF", difficulty: 2}
     - {text: "exclude florida and stanford papers", difficulty: 3}
 
-- ref: ENT5   # type is any of (article, review)
+- ref: 5   # type is any of (article, review)
   nl:
     - {text: "works that are articles or reviews", difficulty: 1}
     - {text: "only journal articles and review articles", difficulty: 2}
     - {text: "articles + reviews", difficulty: 3}
 
 # ---------------------------------------------------------------------------
-# B. Boolean logic  (corpus BOOL*)
+# B. Boolean logic  (corpus rows 7–10)
 # ---------------------------------------------------------------------------
-- ref: BOOL1  # title contains apple and (banana or cherry)
+- ref: 7  # title contains apple and (banana or cherry)
   nl:
     - {text: "papers whose title contains apple and either banana or cherry", difficulty: 1}
     - {text: "title has apple, plus banana or cherry", difficulty: 2}
     - {text: "title: apple and (banana or cherry)", difficulty: 3}
 
-- ref: BOOL3  # title contains apple and banana and cherry
+- ref: 9  # title contains apple and banana and cherry
   nl:
     - {text: "papers whose title contains apple, banana, and cherry", difficulty: 1}
     - {text: "title mentions all three of apple, banana and cherry", difficulty: 2}
     - {text: "title has apple banana cherry all together", difficulty: 3}
 
-- ref: BOOL4  # title contains apple banana cherry (space = implicit AND)
+- ref: 10  # title contains apple banana cherry (space = implicit AND)
   nl:
     - {text: "papers with apple banana cherry in the title", difficulty: 1}
     - {text: "title about apple banana cherry", difficulty: 2}
     - {text: "apple banana cherry in title", difficulty: 3}
 
 # ---------------------------------------------------------------------------
-# C. Search semantics  (corpus G*) — the exact / stemmed / near / wildcard
+# C. Search semantics  (corpus rows 11–20) — the exact / stemmed / near / wildcard
 #    distinctions. Inherently subtle: the NL must signal which lever. The
 #    grader's human fail-list owns the genuinely-ambiguous misses (EXPLORE §1).
 # ---------------------------------------------------------------------------
-- ref: G1   # title contains climate change  (stemmed AND, words may be apart)
+- ref: 11   # title contains climate change  (stemmed AND, words may be apart)
   nl:
     - {text: "papers with climate change in the title", difficulty: 1}
     - {text: "title mentions climate change", difficulty: 2}
     - {text: "climate change in the title somewhere", difficulty: 3}
 
-- ref: G2   # title contains "climate change"  (EXACT adjacent phrase)
+- ref: 12   # title contains "climate change"  (EXACT adjacent phrase)
   nl:
     - {text: 'papers whose title contains the exact phrase "climate change"', difficulty: 1}
     - {text: 'title has "climate change" as an exact phrase, no word variations', difficulty: 2}
     - {text: "title with climate change as an exact quoted phrase", difficulty: 3}
 
-- ref: G3   # title contains near "whopper junior"  (STEMMED adjacent phrase)
+- ref: 13   # title contains near "whopper junior"  (STEMMED adjacent phrase)
   nl:
     - {text: 'title contains the phrase "whopper junior", allowing stemmed variants like "whoppers junior"', difficulty: 2}
     - {text: "papers with whopper junior as an adjacent phrase but matching plurals too", difficulty: 3}
     - {text: "title: whopper junior together, stemming on", difficulty: 3}
 
-- ref: G4   # title contains "cat"  (quoted single word = EXACT, no plurals)
+- ref: 14   # title contains "cat"  (quoted single word = EXACT, no plurals)
   nl:
     - {text: 'papers with the exact word "cat" in the title, not cats', difficulty: 1}
     - {text: "title contains cat exactly, excluding the plural", difficulty: 2}
     - {text: 'title has just "cat", no stemming', difficulty: 3}
 
-- ref: G5   # title contains cat  (bare = stemmed, matches cats)
+- ref: 15   # title contains cat  (bare = stemmed, matches cats)
   nl:
     - {text: "papers with cat in the title", difficulty: 1}
     - {text: "title about cats", difficulty: 2}
     - {text: "cat in title (cats is fine too)", difficulty: 3}
 
-- ref: G6   # title contains "rock or roll"  (literal phrase, or is a word)
+- ref: 16   # title contains "rock or roll"  (literal phrase, or is a word)
   nl:
     - {text: 'papers whose title contains the exact phrase "rock or roll"', difficulty: 2}
     - {text: 'title has the literal phrase "rock or roll" (or being part of the phrase)', difficulty: 3}
     - {text: 'exact title phrase "rock or roll"', difficulty: 2}
 
-- ref: G7b  # title contains climate (change or warming)
+- ref: 18  # title contains climate (change or warming)
   nl:
     - {text: "papers whose title contains climate and either change or warming", difficulty: 1}
     - {text: "title about climate change or climate warming", difficulty: 2}
     - {text: "title: climate and (change or warming)", difficulty: 3}
 
-- ref: G9   # title contains bar*  (prefix wildcard)
+- ref: 20   # title contains bar*  (prefix wildcard)
   nl:
     - {text: "papers whose title has a word starting with bar (like bar, barometer, barrier)", difficulty: 2}
     - {text: "title contains words beginning bar*", difficulty: 3}
     - {text: "title has a bar-prefixed word", difficulty: 3}
 
 # ---------------------------------------------------------------------------
-# D. Proximity & wildcards  (corpus PW*) — arcane by nature.
+# D. Proximity & wildcards  (corpus rows 21–32) — arcane by nature.
 # ---------------------------------------------------------------------------
-- ref: PW1  # title contains "smart phone" within 3 words  (EXACT proximity)
+- ref: 21  # title contains "smart phone" within 3 words  (EXACT proximity)
   nl:
     - {text: 'title has "smart" and "phone" within 3 words of each other, exact', difficulty: 2}
     - {text: "papers where smart and phone appear within three words in the title", difficulty: 3}
     - {text: 'title proximity: "smart phone" within 3', difficulty: 3}
 
-- ref: PW2  # title contains foo*bar  (mid-word wildcard within one token)
+- ref: 22  # title contains foo*bar  (mid-word wildcard within one token)
   nl:
     - {text: "papers whose title has a single word starting with foo and ending with bar", difficulty: 3}
     - {text: "title contains a foo…bar word (foo*bar)", difficulty: 3}
     - {text: "one title token beginning foo, ending bar", difficulty: 3}
 
-- ref: PW3  # title contains wom?n  (single-char wildcard)
+- ref: 23  # title contains wom?n  (single-char wildcard)
   nl:
     - {text: "papers whose title matches woman or women (one variable character: wom?n)", difficulty: 3}
     - {text: "title has wom?n — exactly one wildcard character", difficulty: 3}
     - {text: "match woman/women in the title via single-char wildcard", difficulty: 3}
 
-- ref: PW11 # title & abstract contains "machine learning"  (exact phrase)
+- ref: 31 # title & abstract contains "machine learning"  (exact phrase)
   nl:
     - {text: 'papers whose title or abstract contains the exact phrase "machine learning"', difficulty: 2}
     - {text: 'exact phrase "machine learning" in title or abstract', difficulty: 2}
     - {text: "title/abstract: machine learning as an exact phrase, no stemming", difficulty: 3}
 
-- ref: PW12 # title contains near "smart phone" within 3 words  (STEMMED proximity)
+- ref: 32 # title contains near "smart phone" within 3 words  (STEMMED proximity)
   nl:
     - {text: 'title has "smart phone" within 3 words, allowing stemmed forms', difficulty: 3}
     - {text: "stemmed proximity of smart phone within three words in the title", difficulty: 3}
     - {text: 'title: near "smart phone" within 3', difficulty: 3}
 
 # ---------------------------------------------------------------------------
-# E. Filter, sort & sample  (corpus A*) — non-works entities, sorts, operators.
+# E. Filter, sort & sample  (corpus rows 33–45) — non-works entities, sorts, operators.
 # ---------------------------------------------------------------------------
-- ref: A01  # works  (bare, no filters)
+- ref: 33  # works  (bare, no filters)
   nl:
     - {text: "all works", difficulty: 1}
     - {text: "every paper in OpenAlex", difficulty: 2}
     - {text: "works", difficulty: 3}
 
-- ref: A02  # works where year is 2020
+- ref: 34  # works where year is 2020
   nl:
     - {text: "papers published in 2020", difficulty: 1}
     - {text: "works from the year 2020", difficulty: 1}
     - {text: "2020 papers", difficulty: 3}
 
-- ref: A03  # institution is any of (UF, Harvard) and year >= 2020
+- ref: 35  # institution is any of (UF, Harvard) and year >= 2020
   nl:
     - {text: "papers from the University of Florida or Harvard published in 2020 or later", difficulty: 1}
     - {text: "works affiliated with Harvard or UF since 2020", difficulty: 2}
     - {text: "harvard or florida stuff from 2020 onwards", difficulty: 3}
 
-- ref: A04  # institution is Memorial U. of Newfoundland; sort by citations desc
+- ref: 36  # institution is Memorial U. of Newfoundland; sort by citations desc
   nl:
     - {text: "papers from Memorial University of Newfoundland, sorted by most cited first", difficulty: 1}
     - {text: "most cited works affiliated with Memorial University of Newfoundland", difficulty: 2}
     - {text: "memorial university of newfoundland papers, highest citations first", difficulty: 2}
 
-- ref: A05  # institution UW AND funder NIH AND not open access
+- ref: 37  # institution UW AND funder NIH AND not open access
   nl:
     - {text: "University of Washington papers funded by the NIH that are not open access", difficulty: 1}
     - {text: "closed-access UW research with NIH funding", difficulty: 2}
     - {text: "non-OA papers, uw, nih funded", difficulty: 3}
 
-- ref: A06  # title & abstract contains climate change  (stemmed AND)
+- ref: 38  # title & abstract contains climate change  (stemmed AND)
   nl:
     - {text: "papers about climate change (in the title or abstract)", difficulty: 1}
     - {text: "works mentioning climate change anywhere in title or abstract", difficulty: 2}
     - {text: "climate change in title or abstract", difficulty: 2}
 
-- ref: A07  # authors; sort by works_count desc
+- ref: 39  # authors; sort by works_count desc
   nl:
     - {text: "authors ranked by number of works, most prolific first", difficulty: 1}
     - {text: "which authors have the most papers", difficulty: 2}
     - {text: "authors sorted by works count descending", difficulty: 1}
 
-- ref: A08  # authors where country is BR and has ORCID
+- ref: 40  # authors where country is BR and has ORCID
   nl:
     - {text: "authors based in Brazil who have an ORCID", difficulty: 1}
     - {text: "brazilian authors with orcids", difficulty: 3}
     - {text: "researchers in Brazil that have an ORCID id", difficulty: 2}
 
-- ref: A09  # authors where openalex id is A5022654839
+- ref: 41  # authors where openalex id is A5022654839
   nl:
     - {text: "the author with OpenAlex ID A5022654839", difficulty: 1}
     - {text: "look up author A5022654839", difficulty: 2}
     - {text: "author A5022654839", difficulty: 3}
 
-- ref: A10  # sources where type is journal
+- ref: 42  # sources where type is journal
   nl:
     - {text: "sources that are journals", difficulty: 1}
     - {text: "list all journals", difficulty: 2}
     - {text: "journals", difficulty: 3}
 
-- ref: A11  # institutions where country code is FR
+- ref: 43  # institutions where country code is FR
   nl:
     - {text: "institutions in France", difficulty: 1}
     - {text: "french institutions", difficulty: 2}
     - {text: "universities and orgs located in France", difficulty: 2}
 
-- ref: A12  # topics where domain is 3
+- ref: 44  # topics where domain is 3
   nl:
     - {text: "topics in domain 3", difficulty: 1}
     - {text: "all topics under domain id 3", difficulty: 2}
     - {text: "list the topics belonging to domain 3", difficulty: 1}
 
-- ref: A13  # authors where last known institution is UNC and topics is climate change
+- ref: 45  # authors where last known institution is UNC and topics is climate change
   nl:
     - {text: "authors whose last known institution is UNC and who work on the climate change topic", difficulty: 1}
     - {text: "climate-change researchers currently at the University of North Carolina", difficulty: 2}
     - {text: "UNC authors studying climate change", difficulty: 2}
 
 # ---------------------------------------------------------------------------
-# F. Group by  (corpus B*)
+# F. Group by  (corpus rows 46–54)
 # ---------------------------------------------------------------------------
-- ref: B01  # works where author is Stephen Hawking; group by author
+- ref: 46  # works where author is Stephen Hawking; group by author
   nl:
     - {text: "Stephen Hawking's papers, grouped by author", difficulty: 1}
     - {text: "works by Stephen Hawking broken down by co-author", difficulty: 2}
     - {text: "hawking papers counted per author", difficulty: 3}
 
-- ref: B02  # anywhere contains near "Macrocystis pyrifera"; group by author
+- ref: 47  # anywhere contains near "Macrocystis pyrifera"; group by author
   nl:
     - {text: 'papers mentioning "Macrocystis pyrifera" anywhere, grouped by author', difficulty: 2}
     - {text: "macrocystis pyrifera research counted per author", difficulty: 3}
     - {text: "group works about Macrocystis pyrifera by author", difficulty: 2}
 
-# B03 (group by topic, year) intentionally omitted — multi-dim group_by isn't
+# row 48 (group by topic, year) intentionally omitted — multi-dim group_by isn't
 # executable on the live /query (HTTP 400), so it can't be Tier-2 graded. See header.
 
-- ref: B04  # country is col_eu27 and country is US; group by topic
+- ref: 49  # country is col_eu27 and country is US; group by topic
   nl:
     - {text: "papers co-authored between an EU27 country and the US, grouped by topic", difficulty: 2}
     - {text: "US–EU27 collaborations counted by topic", difficulty: 3}
     - {text: "works with both a US and an EU27 affiliation, grouped by topic", difficulty: 2}
 
-- ref: B05  # is retracted; group by institution
+- ref: 50  # is retracted; group by institution
   nl:
     - {text: "retracted papers grouped by institution", difficulty: 1}
     - {text: "which institutions have the most retractions", difficulty: 2}
     - {text: "count retractions per institution", difficulty: 2}
 
-- ref: B06  # t&a contains near "coral bleaching" and citations > 100; group by source
+- ref: 51  # t&a contains near "coral bleaching" and citations > 100; group by source
   nl:
     - {text: 'papers about "coral bleaching" with more than 100 citations, grouped by source', difficulty: 2}
     - {text: "highly cited (>100) coral bleaching papers per journal", difficulty: 3}
     - {text: "coral bleaching works cited over 100 times, grouped by source", difficulty: 2}
 
-- ref: B07  # type is book; group by field
+- ref: 52  # type is book; group by field
   nl:
     - {text: "books grouped by field", difficulty: 1}
     - {text: "count books per research field", difficulty: 2}
     - {text: "books broken down by field", difficulty: 2}
 
-- ref: B08  # institution UCSB AND retracted; group by author
+- ref: 53  # institution UCSB AND retracted; group by author
   nl:
     - {text: "retracted papers from UC Santa Barbara grouped by author", difficulty: 1}
     - {text: "ucsb retractions per author", difficulty: 3}
     - {text: "group retracted UCSB works by author", difficulty: 2}
 
-- ref: B09  # institution Notre Dame; group by SDG
+- ref: 54  # institution Notre Dame; group by SDG
   nl:
     - {text: "Notre Dame papers grouped by Sustainable Development Goal", difficulty: 1}
     - {text: "university of notre dame works counted by SDG", difficulty: 2}
     - {text: "group Notre Dame research by SDG", difficulty: 2}
 
 # ---------------------------------------------------------------------------
-# G. Librarian & systematic-review queries  (corpus L*) — real guide/vendor/
+# G. Librarian & systematic-review queries  (corpus rows 55–78) — real guide/vendor/
 #    Zendesk phrasings; the messy, compound long tail.
 # ---------------------------------------------------------------------------
-- ref: L01  # agile AND (supply/demand/value chain) AND (lead/cycle time)
+- ref: 55  # agile AND (supply/demand/value chain) AND (lead/cycle time)
   nl:
     - {text: 'papers (title or abstract) about agile AND any of "supply chain"/"demand chain"/"value chain" AND any of "lead time"/"cycle time"', difficulty: 2}
     - {text: "agile supply-chain or value-chain research that also mentions lead time or cycle time", difficulty: 3}
     - {text: "title/abstract: agile, plus a supply/demand/value chain term, plus a lead/cycle time term", difficulty: 2}
 
-- ref: L02a # t&a contains near "smart phone" within 3 words  (stemmed proximity)
+- ref: 56 # t&a contains near "smart phone" within 3 words  (stemmed proximity)
   nl:
     - {text: 'title or abstract with "smart phone" within 3 words, stemmed', difficulty: 3}
     - {text: "smart phone within three words in title or abstract, allowing stemming", difficulty: 3}
     - {text: 'stemmed proximity near "smart phone" within 3 across title and abstract', difficulty: 3}
 
-- ref: L02b # t&a contains phone*  (trailing wildcard)
+- ref: 57 # t&a contains phone*  (trailing wildcard)
   nl:
     - {text: "papers whose title or abstract has a word starting with phone (phone, phones, phoneme...)", difficulty: 2}
     - {text: "title/abstract contains a phone* prefixed word", difficulty: 3}
     - {text: "anything starting with phone in title or abstract", difficulty: 2}
 
-- ref: L03  # t&a contains "oyster toadfish"  (exact phrase, no lemmatization)
+- ref: 59  # t&a contains "oyster toadfish"  (exact phrase, no lemmatization)
   nl:
     - {text: 'papers with the exact phrase "oyster toadfish" in title or abstract, no variations', difficulty: 1}
     - {text: "title or abstract containing oyster toadfish exactly", difficulty: 2}
     - {text: 'exact "oyster toadfish" anywhere in title/abstract', difficulty: 2}
 
-- ref: L04  # t&a contains behavio*r  (mid-word wildcard, UK/US spelling)
+- ref: 60  # t&a contains behavio*r  (mid-word wildcard, UK/US spelling)
   nl:
     - {text: "papers matching both behavior and behaviour in title or abstract", difficulty: 2}
     - {text: "title/abstract with behavio*r covering both spellings", difficulty: 3}
     - {text: "US or UK spelling of behavior in title or abstract", difficulty: 2}
 
-- ref: L05  # autism/ASD synonyms AND intervention synonyms AND 2015-2024 AND article/review AND en
+- ref: 61  # autism/ASD synonyms AND intervention synonyms AND 2015-2024 AND article/review AND en
   nl:
     - {text: 'English articles or reviews from 2015–2024 about autism (or ASD, or "autism spectrum disorder") and intervention (or therapy, or treatment), searching title and abstract', difficulty: 2}
     - {text: "systematic-review search: autism interventions, 2015 to 2024, English, articles and reviews only", difficulty: 3}
     - {text: "autism/ASD intervention/therapy/treatment papers, 2015–2024, English, articles+reviews, title & abstract", difficulty: 2}
 
-- ref: L06  # OA status gold and funder NCI
+- ref: 62  # OA status gold and funder NCI
   nl:
     - {text: "gold open access papers funded by the National Cancer Institute", difficulty: 1}
     - {text: "NCI-funded gold OA works", difficulty: 2}
     - {text: "gold OA research with National Cancer Institute funding", difficulty: 2}
 
-- ref: L07  # CRISPR and near "genome editing" and 2018-2023; sort citations desc; sample 500
+- ref: 63  # CRISPR and near "genome editing" and 2018-2023; sort citations desc; sample 500
   nl:
     - {text: 'papers about CRISPR and "genome editing" from 2018 to 2023, sorted by most cited, take a sample of 500', difficulty: 2}
     - {text: "500-paper sample of CRISPR genome editing work 2018–2023, highest cited first", difficulty: 3}
     - {text: "CRISPR + genome editing, 2018–2023, sample 500, sort by citations descending", difficulty: 2}
 
-- ref: L08  # raw affiliation contains library
+- ref: 64  # raw affiliation contains library
   nl:
     - {text: "papers where a raw affiliation string contains library", difficulty: 2}
     - {text: "works with library in the affiliation text", difficulty: 2}
     - {text: "raw affiliation mentions library", difficulty: 1}
 
-- ref: L09  # raw affiliation contains near "london hospital" within 5 words
+- ref: 65  # raw affiliation contains near "london hospital" within 5 words
   nl:
     - {text: 'papers whose raw affiliation has "london hospital" within 5 words', difficulty: 3}
     - {text: "london hospital within five words in the raw affiliation string", difficulty: 3}
     - {text: 'raw affiliation proximity: "london hospital" within 5', difficulty: 3}
 
-- ref: L10  # DOI is 10.1021/es052595+
+- ref: 66  # DOI is 10.1021/es052595+
   nl:
     - {text: "the paper with DOI 10.1021/es052595+", difficulty: 1}
     - {text: "find doi 10.1021/es052595+", difficulty: 2}
     - {text: "10.1021/es052595+", difficulty: 3}
 
-- ref: L11  # ORCID is 0000-0002-1838-9363
+- ref: 67  # ORCID is 0000-0002-1838-9363
   nl:
     - {text: "works for ORCID 0000-0002-1838-9363", difficulty: 1}
     - {text: "papers by the researcher with orcid 0000-0002-1838-9363", difficulty: 2}
     - {text: "0000-0002-1838-9363 papers", difficulty: 3}
 
-- ref: L13  # type is any of (article, review)
+- ref: 69  # type is any of (article, review)
   nl:
     - {text: "only articles and reviews", difficulty: 1}
     - {text: "limit to journal articles or review articles", difficulty: 2}
     - {text: "articles or reviews only", difficulty: 2}
 
-- ref: L14  # language is es
+- ref: 70  # language is es
   nl:
     - {text: "papers written in Spanish", difficulty: 1}
     - {text: "spanish-language works", difficulty: 2}
     - {text: "works in Spanish", difficulty: 1}
 
-- ref: L15  # t&a contains covid and t&a does not contain pediatric
+- ref: 71  # t&a contains covid and t&a does not contain pediatric
   nl:
     - {text: "papers about covid but not pediatric, in title or abstract", difficulty: 1}
     - {text: "covid research excluding anything mentioning pediatric", difficulty: 2}
     - {text: "title/abstract has covid and not pediatric", difficulty: 2}
 
-- ref: L16  # t&a contains quantum computing; group by country
+- ref: 72  # t&a contains quantum computing; group by country
   nl:
     - {text: "quantum computing papers grouped by country", difficulty: 1}
     - {text: "count works about quantum computing per country", difficulty: 2}
     - {text: "quantum computing output by country", difficulty: 2}
 
-- ref: L17  # t&a contains CRISPR and Cas9; group by author
+- ref: 73  # t&a contains CRISPR and Cas9; group by author
   nl:
     - {text: "papers mentioning CRISPR and Cas9, grouped by author", difficulty: 1}
     - {text: "crispr cas9 research per author", difficulty: 3}
     - {text: "group CRISPR and Cas9 works by author", difficulty: 2}
 
-- ref: L18  # t&a contains CRISPR; group by funder
+- ref: 74  # t&a contains CRISPR; group by funder
   nl:
     - {text: "CRISPR papers grouped by funder", difficulty: 1}
     - {text: "which funders support CRISPR research", difficulty: 2}
     - {text: "count CRISPR works per funder", difficulty: 2}
 
-- ref: L19  # raw affiliation contains near "tufts boston" within 5 words
+- ref: 75  # raw affiliation contains near "tufts boston" within 5 words
   nl:
     - {text: 'papers whose raw affiliation has "tufts boston" within 5 words', difficulty: 3}
     - {text: "tufts boston within five words in the raw affiliation", difficulty: 3}
     - {text: 'raw affiliation proximity: "tufts boston" within 5', difficulty: 3}
 
-- ref: L22  # byline contains near "john smith" within 2 words
+- ref: 77  # byline contains near "john smith" within 2 words
   nl:
     - {text: 'papers whose byline has "john smith" within 2 words (catching middle names/initials)', difficulty: 3}
     - {text: "john smith within two words in the byline", difficulty: 3}

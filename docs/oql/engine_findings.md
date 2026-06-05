@@ -26,7 +26,7 @@ Every query path hard-sets **`allow_leading_wildcard=False`**.
   not "foobar".
 - Wildcards match **within a single token** (won't cross whitespace).
 
-The spec turns each unsupported shape into a loud diagnostic (corpus PW4–PW9):
+The spec turns each unsupported shape into a loud diagnostic (corpus rows 24–29):
 `OQL_LEADING_WILDCARD`, `OQL_SHORT_WILDCARD_PREFIX`, `OQL_WILDCARD_IN_QUOTES`,
 `OQL_WILDCARD_IN_PROXIMITY`, `OQL_BINARY_PROXIMITY`.
 
@@ -36,7 +36,7 @@ These are **not** spec gaps — they are places the live engine violates "loud, 
 silent" or contradicts code that says a feature works. Filed as oxjob stubs off
 this job; listed here so the spec's `✗`/`⚠` decisions are traceable.
 
-1. **Trailing-wildcard `500` (corpus L02b).** The code *supports* `foo*`, yet
+1. **Trailing-wildcard `500` (corpus row 57).** The code *supports* `foo*`, yet
    `title_and_abstract.search:phone*` was observed `500`-ing on the live server
    (2026-05-30, "not yet shipped"). The spec marks `phone*` ✅; the gap report
    flags the live 500 as `ENGINE-BUG`. **Fix on the engine, don't spec around a
@@ -58,8 +58,8 @@ this job; listed here so the spec's `✗`/`⚠` decisions are traceable.
 ## Acknowledged capability gap: wildcard-in-a-phrase / near another word
 
 `"unusual behavi*or"`, `"smart phone*" within 3 words` — a wildcard combined with a
-phrase or proximity — is **rejected today** (corpus PW7, PW9, L02c) because our ES
-`query_string` path **silently drops the wildcard** (L02c verified live 2026-05-30).
+phrase or proximity — is **rejected today** (corpus rows 27, 29, 58) because our ES
+`query_string` path **silently drops the wildcard** (row 58 verified live 2026-05-30).
 This is an **acknowledged limitation, not a permanent boundary**: **WoS and Scopus
 support it**, so it's a real gap vs. the big scholarly DBs. ES *can* express
 "wildcard term near another term" with heavier query types (**intervals** queries,
