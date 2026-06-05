@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 22,
-    "fingerprint": "b647112ef67ae605ccde5d98b9e2c9e3bd11521295866006b79124e526841dd3",
-    "property_count": 823,
-    "version": "1.1.0"
+    "fingerprint": "1c891f9a947ff4dd2bfb7cb612ad8a289899f8fe2ced58a5a0650f753079f797",
+    "property_count": 824,
+    "version": "1.2.0"
   },
   "properties": {
     "authors": {
@@ -8128,6 +8128,17 @@
         ],
         "entity_type": null,
         "name": "default.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
+      "default.search.exact": {
+        "actions": [
+          "search"
+        ],
+        "entity_type": null,
+        "name": "default.search.exact",
         "operators": [
           "search"
         ],
