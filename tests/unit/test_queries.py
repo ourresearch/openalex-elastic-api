@@ -7,6 +7,8 @@ from core.search import (
     SearchOpenAlex,
     normalize_search_input,
     validate_search_terms,
+    validate_top_level_search_wildcard,
+    validate_wildcard_requires_exact,
     validate_wildcards,
 )
 from core.sort import get_sort_fields
@@ -520,6 +522,84 @@ class TestValidateWildcards:
         with pytest.raises(APIQueryParamsError) as exc:
             validate_wildcards(terms)
         assert needle in str(exc.value.args[0])
+
+
+class TestWildcardRequiresExact:
+    """oxjob #364: a wildcard on a stemmed `.search` field is silently wrong (stemming
+    at index time removes the literal prefix), so it must be rejected with a fix-it
+    pointing at the no-stem `.search.exact` field. Works-only."""
+
+    @pytest.mark.parametrize(
+        "param,exact",
+        [
+            ("default.search", "default.search.exact"),
+            ("title.search", "title.search.exact"),
+            ("abstract.search", "abstract.search.exact"),
+            ("fulltext.search", "fulltext.search.exact"),
+            ("display_name.search", "display_name.search.exact"),
+            ("title_and_abstract.search", "title_and_abstract.search.exact"),
+        ],
+    )
+    def test_stemmed_wildcard_rejected_names_exact(self, param, exact):
+        with pytest.raises(APIQueryParamsError) as exc:
+            validate_wildcard_requires_exact(param, "studies*", "works-v33")
+        msg = str(exc.value.args[0])
+        assert exact in msg and "exact (no-stem)" in msg
+
+    @pytest.mark.parametrize(
+        "param",
+        [
+            "default.search.exact",
+            "title.search.exact",
+            "abstract.search.exact",
+            "fulltext.search.exact",
+            "display_name.search.exact",
+            "title_and_abstract.search.exact",
+        ],
+    )
+    def test_exact_field_wildcard_passes(self, param):
+        validate_wildcard_requires_exact(param, "studies*", "works-v33")
+
+    def test_no_wildcard_passes(self):
+        validate_wildcard_requires_exact("title.search", "machine learning", "works-v33")
+
+    def test_question_mark_wildcard_rejected(self):
+        with pytest.raises(APIQueryParamsError):
+            validate_wildcard_requires_exact("title.search", "wom?n", "works-v33")
+
+    def test_non_works_index_not_gated(self):
+        # Other entities have no no-stem search path; don't break their wildcards.
+        validate_wildcard_requires_exact("display_name.search", "foo*", "authors-v1")
+        validate_wildcard_requires_exact("default.search", "foo*", "sources-v1")
+
+    def test_field_without_exact_sibling_not_gated(self):
+        # keyword/raw_* `.search` fields have no `.search.exact` sibling.
+        validate_wildcard_requires_exact("keyword.search", "foo*", "works-v33")
+        validate_wildcard_requires_exact("raw_author_name.search", "foo*", "works-v33")
+
+    def test_quoted_proximity_wildcard_not_gated(self):
+        # `"smart phone*"~3` routes to a no-stem ES intervals query (oxjob #355);
+        # the wildcard is inside quotes, so the stemmed-field gate must not fire.
+        validate_wildcard_requires_exact("title.search", '"smart phone*"~3', "works-v33")
+
+
+class TestTopLevelSearchWildcard:
+    """oxjob #364: the top-level `?search=` path is stemmed by default; a wildcard there
+    must require the exact route (`&search_type=exact`)."""
+
+    def test_stemmed_top_level_wildcard_rejected(self):
+        with pytest.raises(APIQueryParamsError) as exc:
+            validate_top_level_search_wildcard("studies*", "works-v33", is_exact=False)
+        assert "search_type=exact" in str(exc.value.args[0])
+
+    def test_exact_route_passes(self):
+        validate_top_level_search_wildcard("studies*", "works-v33", is_exact=True)
+
+    def test_no_wildcard_passes(self):
+        validate_top_level_search_wildcard("climate change", "works-v33", is_exact=False)
+
+    def test_non_works_not_gated(self):
+        validate_top_level_search_wildcard("studies*", "authors-v1", is_exact=False)
 
 
 class TestProximityWildcard:

@@ -825,6 +825,7 @@ class _Parser:
         # quoted => exact (.exact column) unless `near` keeps it stemmed
         stemmed = (not phrase) or stemmed_phrase
         col = base + (".search" if stemmed else ".search.exact")
+        has_wildcard = "*" in text or "?" in text
         self._skip_annot()
         # proximity: within N words [of ...]
         if self.word_is("within"):
@@ -843,7 +844,6 @@ class _Parser:
                 raise OQLError("OQL_BINARY_PROXIMITY",
                                'binary "within N words of X" is not supported',
                                'use one quoted phrase: "term1 term2" within N words')
-            has_wildcard = "*" in text or "?" in text
             # A bare (unquoted) wildcard token can't carry proximity
             # (e.g. `smart* within 3 words`).
             if has_wildcard and not phrase:
@@ -862,13 +862,27 @@ class _Parser:
                 for word in text.split():
                     _validate_wildcards(word, t.pos)
             return LeafFilter(col, f'"{text}"~{n}', "contains")
-        # A wildcard inside quotes is only meaningful with proximity (handled above);
-        # without a `within N words` suffix there is no engine path, so reject it
-        # (e.g. `"bar*"`). (oxjob #337 / #355)
-        if phrase and ("*" in text or "?" in text):
-            raise OQLError("OQL_WILDCARD_IN_QUOTES",
-                           f'wildcard inside a quoted phrase: "{text}"',
-                           'move the wildcard out of the quotes, e.g. bar*', t.pos)
+        # #364: outside a proximity phrase, a wildcard must run on exact (no-stem)
+        # text — stemming at index time removes the literal prefix, so a wildcard
+        # on a stemmed field is silently wrong (`studies*` = 2.4k stemmed vs 2.2M
+        # no-stem). A bare term and a `near` phrase are stemmed → reject with a
+        # quote-it fix-it. A quoted phrase is exact → the sanctioned wildcard path.
+        # (This deliberately REVERSES #337's old OQL_WILDCARD_IN_QUOTES guidance:
+        # quotes are now where wildcards belong.)
+        if has_wildcard and stemmed:
+            if stemmed_phrase:
+                raise OQLError("OQL_WILDCARD_NEEDS_EXACT",
+                               f'wildcards run on exact (no-stem) text, but "near" '
+                               f'keeps the phrase stemmed: "{text}"',
+                               'drop "near" so the wildcard runs on exact text', t.pos)
+            raise OQLError("OQL_WILDCARD_NEEDS_EXACT",
+                           f'wildcards run on exact (no-stem) text: {text}',
+                           f'quote it: "{text}"', t.pos)
+        # A quoted wildcard (`"studies*"`) is exact — validate each token's shape
+        # so #337's leading / sub-3-char-prefix rejections still hold inside quotes.
+        if phrase and has_wildcard:
+            for word in text.split():
+                _validate_wildcards(word, t.pos)
         # encode value: multi-word phrase keeps its quotes; a single word is bare
         # (the column suffix carries exact-vs-stemmed).
         if phrase and len(text.split()) > 1:

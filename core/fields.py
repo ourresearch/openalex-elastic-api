@@ -8,7 +8,13 @@ from elasticsearch_dsl import Q, Search
 
 import country_list
 from core.exceptions import APIQueryParamsError
-from core.search import SearchOpenAlex, full_search_query, validate_wildcards
+from core.search import (
+    SearchOpenAlex,
+    full_search_query,
+    full_search_query_exact,
+    validate_wildcard_requires_exact,
+    validate_wildcards,
+)
 from core.utils import get_full_openalex_id, normalize_openalex_id
 from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX_LEGACY
 
@@ -668,6 +674,10 @@ class SearchField(Field):
         self.validate(self.value)
         if self.param == "default.search":
             q = full_search_query(self.index, self.value)
+        elif self.param == "default.search.exact":
+            # No-stem sibling of default.search (#364) — the exact target a
+            # wildcard on the top-level search must use. Works-only.
+            q = full_search_query_exact(self.value)
         elif (
             self.param == "raw_affiliation_strings.search"
             or self.param == "abstract.search"
@@ -743,6 +753,9 @@ class SearchField(Field):
         # Reject unsupported wildcard shapes with friendly messages (oxjob #337):
         # leading `*`/`?` (raw ES parse error) and sub-3-char prefixes (silent literal).
         validate_wildcards(query)
+        # #364: a wildcard on a stemmed `.search` field is silently wrong (stemming
+        # removes the literal prefix). Require the no-stem `.search.exact` field.
+        validate_wildcard_requires_exact(self.param, query, self.index)
 
 
 class TermField(Field):

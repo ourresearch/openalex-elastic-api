@@ -78,10 +78,29 @@ class TestWorksSearch:
             "Search filters do not support the ! operator. Problem value: !zoo"
         )
 
-    def test_works_search_wildcard(self, client):
+    def test_works_search_wildcard_stemmed_rejected(self, client):
+        # oxjob #364: a wildcard on the stemmed top-level search is silently wrong;
+        # it must be rejected with a fix-it pointing at the exact route.
         res = client.get("/works?search=analys*")
+        assert res.status_code == 403
+        assert "search_type=exact" in res.get_json()["message"]
+
+    def test_works_search_wildcard_exact_ok(self, client):
+        res = client.get("/works?search=analys*&search_type=exact")
         assert res.status_code == 200
 
-    def test_works_filter_search_wildcard(self, client):
+    def test_works_filter_search_wildcard_stemmed_rejected(self, client):
+        # oxjob #364: `display_name.search:analys*` (stemmed) → loud error naming
+        # the no-stem `.search.exact` field.
         res = client.get("/works?filter=display_name.search:analys*")
+        assert res.status_code == 403
+        assert "display_name.search.exact" in res.get_json()["message"]
+
+    def test_works_filter_search_wildcard_exact_ok(self, client):
+        res = client.get("/works?filter=display_name.search.exact:analys*")
+        assert res.status_code == 200
+
+    def test_works_filter_default_search_exact_wildcard_ok(self, client):
+        # oxjob #364: the new default.search.exact field is the top-level wildcard target.
+        res = client.get("/works?filter=default.search.exact:analys*")
         assert res.status_code == 200

@@ -600,6 +600,12 @@ fields = [
         docstring="Free text search among the work's title, abstract (when available) and full text (when available)",
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
+    SearchField(
+        param="default.search.exact",
+        index="works",
+        docstring="Free text search among the work's title, abstract and full text, without stemming. The no-stem field wildcards (* and ?) must target.",
+        documentation_link="https://developers.openalex.org/guides/searching",
+    ),
     SearchField(param="display_name.search"),
     SearchField(
         param="display_name.search.exact", custom_es_field="display_name.no_stem"

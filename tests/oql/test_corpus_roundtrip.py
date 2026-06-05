@@ -198,11 +198,14 @@ def test_every_row_has_valid_facets():
     # editorial change — update the list, don't loosen the assert.
     # (oxjob #355 lifted PW7=27 and L02c=58 to `ok`: wildcard-in-quoted-proximity now
     #  compiles to an ES `intervals` query, so both are representable.)
+    # (oxjob #364 swapped 19<->20: a QUOTED wildcard `"bar*"` (19) is now the
+    #  sanctioned no-stem path (representable); a BARE wildcard `bar*` (20) is now
+    #  OQL_WILDCARD_NEEDS_EXACT (error, not representable).)
     not_representable = {r["id"] for r in ROWS if not r["oxurl_representable"]}
     # Opaque ints since #360; old semantic ids in comments (work/id_map.yaml).
     expected_not = {
-        # ENT6, BOOL2, G7, G8, PW4, PW5, PW6, PW8, PW9
-        6, 8, 17, 19, 24, 25, 26, 28, 29,
+        # ENT6, BOOL2, G7, G8(20=bare-wildcard error), PW4, PW5, PW6, PW8, PW9
+        6, 8, 17, 20, 24, 25, 26, 28, 29,
         # L12, L20  (the 2 remaining genuine boundaries)
         68, 76,
     }

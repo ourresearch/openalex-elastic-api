@@ -234,8 +234,8 @@ The gauntlet pins the consequences (all are corpus rows):
 | 16 | `"rock or roll"` | inside quotes = literal: `or` is a word, one exact phrase |
 | 17 | `climate change or warming` | ✗ `OQL_MIXED_BOOL_NEEDS_PARENS` — a space is an AND, so this mixes and/or |
 | 18 | `climate (change or warming)` | ✓ `climate AND (change OR warming)` — the disambiguated form |
-| 19 | `"bar*"` | ✗ `OQL_WILDCARD_IN_QUOTES` — fix-it: use `bar*` unquoted |
-| 20 | `bar*` | bare prefix wildcard |
+| 19 | `"bar*"` | ✓ quoted wildcard = the sanctioned path → no-stem `.search.exact` (oxjob #364) |
+| 20 | `bar*` | ✗ `OQL_WILDCARD_NEEDS_EXACT` — bare wildcard is stemmed (wrong); fix-it: quote it `"bar*"` |
 
 Key rules these encode:
 
@@ -270,12 +270,13 @@ Key rules these encode:
 ```
 works where title contains "smart phone" within 3 words      (row 21) ✓ exact proximity → .search.exact "smart phone"~3
 works where title contains near "smart phone" within 3 words (row 32) ✓ stemmed proximity → .search "smart phone"~3
-works where title contains foo*bar                          (row 22) ✓ mid-word *
-works where title contains wom?n                            (row 23) ✓ ? = exactly one char
+works where title contains "foo*bar"                        (row 22) ✓ mid-word * (quoted = no-stem .search.exact)
+works where title contains "wom?n"                          (row 23) ✓ ? = exactly one char (quoted = no-stem)
+works where title contains bar*                             (row 20) ✗ OQL_WILDCARD_NEEDS_EXACT (bare = stemmed = wrong)
 works where title contains *cycle                           (row 24) ✗ OQL_LEADING_WILDCARD
 works where title contains ?cycle                           (row 25) ✗ OQL_LEADING_WILDCARD
 works where title contains ab*                              (row 26) ✗ OQL_SHORT_WILDCARD_PREFIX (need ≥3)
-works where title contains "smart phone*" within 3 words    (row 27) ✗ OQL_WILDCARD_IN_QUOTES
+works where title contains "smart phone*" within 3 words    (row 27) ✓ wildcard-in-proximity → ES intervals (oxjob #355)
 works where title contains "smart" within 3 words of "phone"(row 28) ✗ OQL_BINARY_PROXIMITY
 works where title contains smart* within 3 words            (row 29) ✗ OQL_WILDCARD_IN_PROXIMITY
 ```
@@ -291,12 +292,19 @@ works where title contains smart* within 3 words            (row 29) ✗ OQL_WIL
   byline) via ES `position_increment_gap`; slop widens within it. This is how a
   single `contains` leaf expresses intra-affiliation co-occurrence (corpus rows **65**,
   **75**, **77**).
-- **Wildcards fire only when BARE on a single token.** In quotes →
-  `OQL_WILDCARD_IN_QUOTES`. Leading → `OQL_LEADING_WILDCARD`. Sub-3-char prefix →
-  `OQL_SHORT_WILDCARD_PREFIX`. With proximity → `OQL_WILDCARD_IN_PROXIMITY`. Every
-  unsupported combination is a loud error with a fix-it — never a silent literal,
-  never a false promise. See [`docs/oql/engine_findings.md`](./oql/engine_findings.md)
-  for the engine behavior behind these.
+- **Wildcards require the no-stem (exact) field — quote them (oxjob #364).** A
+  wildcard matches indexed tokens literally, but the default search is *stemmed*
+  at index time, so a bare wildcard hunts for a prefix the index no longer holds
+  and returns near-nothing (`studies*` = 2.4k stemmed vs 2.2M no-stem). So a wildcard
+  on a single token must be **quoted** → it runs on `.search.exact`: `"bar*"`,
+  `"foo*bar"`, `"wom?n"`. A **bare** wildcard is `OQL_WILDCARD_NEEDS_EXACT` (fix-it:
+  quote it). `near` keeps a phrase stemmed, so a wildcard there is the same error.
+  Leading → `OQL_LEADING_WILDCARD`. Sub-3-char prefix → `OQL_SHORT_WILDCARD_PREFIX`.
+  Bare wildcard with proximity → `OQL_WILDCARD_IN_PROXIMITY`. Every unsupported
+  combination is a loud error with a fix-it — never a silent literal, never a false
+  promise. (This **reverses** #337's old `OQL_WILDCARD_IN_QUOTES` "move it out of the
+  quotes" guidance: quotes are now exactly where wildcards belong.) See
+  [`docs/oql/engine_findings.md`](./oql/engine_findings.md) for the engine behavior.
 
 > **⚠ Acknowledged limitation (to be fixed, not a permanent boundary):**
 > **wildcard-in-a-phrase / wildcard-near-another-word** — `"unusual behavi*or"`,
@@ -348,7 +356,7 @@ NL) share codes and only localize prose. Every `✗` corpus row asserts its code
 | `OQL_MIXED_BOOL_NEEDS_PARENS` | mixed and/or at one level | add parens: `a and (b or c)` |
 | `OQL_IMPLICIT_ADJACENCY` | two operands, no connective | insert an `and` or `or` |
 | `OQL_MISSING_ENTITY_ID` | entity ref with only a `[name]` | put the ID first: `institution is I136199984 [Harvard]` |
-| `OQL_WILDCARD_IN_QUOTES` | `*`/`?` inside a quoted phrase | move it out: `bar*` |
+| `OQL_WILDCARD_NEEDS_EXACT` | bare (stemmed) `*`/`?` wildcard | quote it: `"bar*"` (runs on no-stem `.search.exact`) |
 | `OQL_LEADING_WILDCARD` | leading `*`/`?` | anchor it: `cycle*` |
 | `OQL_SHORT_WILDCARD_PREFIX` | `<3` chars before `*` | add characters: `abc*` |
 | `OQL_WILDCARD_IN_PROXIMITY` | wildcard + `within N words` | drop one of them |

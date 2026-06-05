@@ -18,6 +18,83 @@ QUOTED_PHRASE_RE = re.compile(r'"([^"]*)"')
 # proximity_wildcard_query() / oxjob #355.
 PROXIMITY_PHRASE_RE = re.compile(r'^"([^"]*)"~(\d+)$')
 
+# #364: stemmed text fields whose wildcards are silently wrong. Stemming happens
+# at INDEX time, so the literal prefix the user types (e.g. `studies` in
+# `studies*`) is usually absent from the stemmed index (it was stored as `studi`)
+# and the wildcard matches ~nothing (live: `studies*` = 2,423 stemmed vs
+# 2,210,904 no-stem, works-v33). A wildcard must target the no-stem `.exact`
+# field instead. This maps each stemmed `.search` param → the `.search.exact`
+# param a wildcard has to use. Works-only: the `.no_stem` ES subfields these
+# point at exist on the works index. Other entities' `default.search`/
+# `display_name.search` have no no-stem sibling and are left unchanged (a
+# follow-up would need no-stem mappings added to those indices).
+WILDCARD_REQUIRES_EXACT = {
+    "default.search": "default.search.exact",
+    "title.search": "title.search.exact",
+    "abstract.search": "abstract.search.exact",
+    "fulltext.search": "fulltext.search.exact",
+    "display_name.search": "display_name.search.exact",
+    "title_and_abstract.search": "title_and_abstract.search.exact",
+}
+
+
+def _has_unquoted_wildcard(search_terms):
+    """True if a `*`/`?` wildcard appears OUTSIDE quotes (the stemmed-field path).
+
+    A wildcard inside quotes is handled by validate_wildcards (rejected unless it
+    carries a proximity slop `~N`, which the engine routes to a no-stem
+    `intervals` query — oxjob #355). Only an UNQUOTED wildcard lands on the
+    stemmed `.search` field, so that is the shape #364 gates.
+    """
+    if not search_terms or not isinstance(search_terms, str):
+        return False
+    unquoted = QUOTED_PHRASE_RE.sub(" ", search_terms)
+    return any(("*" in word or "?" in word) for word in unquoted.split())
+
+
+def validate_wildcard_requires_exact(param, search_terms, index):
+    """#364: reject an (unquoted) wildcard on a stemmed `.search` field.
+
+    Stemming removes the literal text the wildcard matches, so the search returns
+    wrong/near-empty results. Point the user at the no-stem `.search.exact` field
+    where the wildcard works. Mirrors the OQL diagnostic OQL_WILDCARD_NEEDS_EXACT
+    so the raw API and OQL give identical guidance (the #337 invariant).
+    """
+    if not index or not index.lower().startswith("works"):
+        return
+    exact_param = WILDCARD_REQUIRES_EXACT.get(param)
+    if not exact_param:
+        return
+    if _has_unquoted_wildcard(search_terms):
+        raise APIQueryParamsError(
+            f'Wildcards (* or ?) require the exact (no-stem) field. "{param}" is '
+            "stemmed, so the literal text before the wildcard is removed when the "
+            "work is indexed and the search returns wrong results. Use "
+            f'"{exact_param}" instead, e.g. {exact_param}:{search_terms}.'
+        )
+
+
+def validate_top_level_search_wildcard(search_terms, index, is_exact):
+    """#364: gate a wildcard on the top-level `?search=` / scoped-search path.
+
+    The default top-level search is stemmed, so an (unquoted) wildcard there is
+    silently wrong (same root cause as the filter form). Require the exact route
+    (`&search_type=exact`, or the `default.search.exact` filter). `is_exact` is
+    True when the caller already routes to the no-stem path (search_type=exact),
+    in which case the wildcard is fine. Works-only — other indices have no
+    no-stem search path.
+    """
+    if is_exact or not index or not index.lower().startswith("works"):
+        return
+    if _has_unquoted_wildcard(search_terms):
+        raise APIQueryParamsError(
+            "Wildcards (* or ?) require exact (no-stem) search. The default search "
+            "is stemmed, so the literal text before the wildcard is removed when "
+            "the work is indexed and the search returns wrong results. Add "
+            "&search_type=exact (or use the default.search.exact filter), e.g. "
+            f"?search={search_terms}&search_type=exact."
+        )
+
 
 def _validate_wildcard_token(word):
     """Reject the wildcard shapes #337 closed; no-op for tokens without a wildcard.
@@ -52,7 +129,9 @@ def validate_wildcards(search_terms):
     """Reject unsupported wildcard shapes with friendly messages (oxjob #337).
 
     Mirrors the OQL v2 diagnostics (OQL_LEADING_WILDCARD, OQL_SHORT_WILDCARD_PREFIX,
-    OQL_WILDCARD_IN_QUOTES) so the raw API and OQL give identical guidance.
+    OQL_WILDCARD_IN_QUOTES) so the raw API and OQL give identical guidance. The
+    "wildcards must target the no-stem field" rule (#364) is enforced separately by
+    validate_wildcard_requires_exact (it needs the field param, not just the terms).
 
     One shape that LOOKS like wildcard-in-quotes is allowed: a wildcard inside a quoted
     PROXIMITY phrase, `"smart phone*"~3`. That compiles to an ES `intervals` query
@@ -739,6 +818,7 @@ def check_is_search_query(filter_params, search):
         "abstract.search",
         "abstract.search.exact",
         "default.search",
+        "default.search.exact",
         "display_name.search",
         "display_name.search.exact",
         "fulltext.search",

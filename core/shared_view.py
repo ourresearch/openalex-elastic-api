@@ -16,7 +16,7 @@ from core.knn import KNNQueryWithFilter
 from core.paginate import get_pagination
 from core.params import parse_params
 from core.preference import clean_preference, combine_preferences, set_preference_for_filter_search
-from core.search import SearchOpenAlex, check_is_search_query, full_search_query, full_search_query_exact, scoped_search_query, validate_search_terms
+from core.search import SearchOpenAlex, check_is_search_query, full_search_query, full_search_query_exact, scoped_search_query, validate_search_terms, validate_top_level_search_wildcard
 from core.semantic_search import embed_query, VECTOR_FIELD
 from core.sort import get_sort_fields, sort_with_cursor, sort_with_sample
 from core.utils import get_data_version_connection, get_field
@@ -136,6 +136,13 @@ def add_search_query(params, index_name, s):
                     f"search.{search_scope} is only supported for /works."
                 )
 
+            # #364: a wildcard on the stemmed top-level search returns wrong
+            # results; require &search_type=exact (or the default.search.exact
+            # filter). search_scope=... with search_type=exact also routes no-stem.
+            validate_top_level_search_wildcard(
+                params["search"], index_name, is_exact=(search_type == "exact")
+            )
+
             if search_scope:
                 search_query = scoped_search_query(
                     params["search"], search_scope, search_type
@@ -171,6 +178,10 @@ def add_search_query(params, index_name, s):
             raise APIQueryParamsError(
                 f"search.{search_scope} is only supported for /works."
             )
+
+        validate_top_level_search_wildcard(
+            query_str, index_name, is_exact=(search_type == "exact")
+        )
 
         if search_scope:
             sub_query = scoped_search_query(

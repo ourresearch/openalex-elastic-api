@@ -27,8 +27,17 @@ Every query path hard-sets **`allow_leading_wildcard=False`**.
 - Wildcards match **within a single token** (won't cross whitespace).
 
 The spec turns each unsupported shape into a loud diagnostic (corpus rows 24–29):
-`OQL_LEADING_WILDCARD`, `OQL_SHORT_WILDCARD_PREFIX`, `OQL_WILDCARD_IN_QUOTES`,
+`OQL_LEADING_WILDCARD`, `OQL_SHORT_WILDCARD_PREFIX`, `OQL_WILDCARD_NEEDS_EXACT`,
 `OQL_WILDCARD_IN_PROXIMITY`, `OQL_BINARY_PROXIMITY`.
+
+**Wildcards require the no-stem field (oxjob #364).** Stemming runs at index time,
+so a bare (stemmed) wildcard hunts a literal prefix the index no longer holds and
+returns near-nothing (`studies*` = 2,423 stemmed vs 2,210,904 no-stem, works-v33).
+The sanctioned path is a **quoted** wildcard → it runs on `.search.exact`; a bare
+wildcard is `OQL_WILDCARD_NEEDS_EXACT` (raw API: `title.search:foo*` → use
+`title.search.exact:foo*`; top-level `?search=foo*` → add `&search_type=exact`).
+This **reverses** #337's old `OQL_WILDCARD_IN_QUOTES` "move it out of the quotes"
+guidance — quotes are now where wildcards belong.
 
 ## Open discrepancies to file as engine work
 

@@ -270,22 +270,22 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: false
-  status: error
+  oxurl_representable: true
+  status: ok
   oql: 'works where title contains "bar*"'
-  diagnostic: OQL_WILDCARD_IN_QUOTES
-  note: '`*` inside quotes can''t wildcard. Fix-it: use bar* unquoted.'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'bar*', operator: contains}]}
+  note: 'Quoted wildcard = the sanctioned path (oxjob #364): runs on the no-stem `.search.exact` column. Reverses #337''s old `OQL_WILDCARD_IN_QUOTES` — quotes are now where wildcards belong (stemming would drop the literal prefix).'
 
 - id: 20
   category: "search semantics"
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
-  status: ok
+  oxurl_representable: false
+  status: error
   oql: 'works where title contains bar*'
-  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: 'bar*', operator: contains}]}
-  note: Bare prefix wildcard (stemmed column).
+  diagnostic: OQL_WILDCARD_NEEDS_EXACT
+  note: 'Bare prefix wildcard is stemmed → silently wrong (oxjob #364): stemming removes the literal prefix at index time. Fix-it: quote it → "bar*" (runs on the no-stem column).'
 
 # ---------------------------------------------------------------------------
 # D. Proximity / wildcard edge matrix  (EXPLORE §2.5, §3)
@@ -308,9 +308,9 @@ rows:
     label: "OQL v2 spec spine"
   oxurl_representable: true
   status: ok
-  oql: 'works where title contains foo*bar'
-  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: 'foo*bar', operator: contains}]}
-  note: Mid-word `*` (>=3-char prefix, within one token).
+  oql: 'works where title contains "foo*bar"'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'foo*bar', operator: contains}]}
+  note: Mid-word `*` (>=3-char prefix, within one token), quoted so it runs on the no-stem `.search.exact` column (oxjob #364). Bare `foo*bar` is now an error (OQL_WILDCARD_NEEDS_EXACT).
 
 - id: 23
   category: "proximity & wildcards"
@@ -319,9 +319,9 @@ rows:
     label: "OQL v2 spec spine"
   oxurl_representable: true
   status: ok
-  oql: 'works where title contains wom?n'
-  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: 'wom?n', operator: contains}]}
-  note: Mid-word `?` = exactly one character.
+  oql: 'works where title contains "wom?n"'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'wom?n', operator: contains}]}
+  note: Mid-word `?` = exactly one character, quoted so it runs on the no-stem `.search.exact` column (oxjob #364). Bare `wom?n` is now an error (OQL_WILDCARD_NEEDS_EXACT).
 
 - id: 24
   category: "proximity & wildcards"
@@ -725,9 +725,9 @@ rows:
     url: "https://libguides.lib.umanitoba.ca/scopus/phrases"
   oxurl_representable: true
   status: ok
-  oql: 'works where title & abstract contains phone*'
-  oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: 'phone*', operator: contains}]}
-  note: 'Spec ✓ (trailing wildcard). ENGINE BUG: the live server 500s on this today (see evidence/engine_findings.md).'
+  oql: 'works where title & abstract contains "phone*"'
+  oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: 'phone*', operator: contains}]}
+  note: 'Trailing wildcard, quoted so it runs on the no-stem `title_and_abstract.search.exact` column (oxjob #364). Bare `phone*` is now an error (OQL_WILDCARD_NEEDS_EXACT) — stemming would drop the literal prefix.'
 
 - id: 58
   category: "librarian & SR queries"
@@ -760,9 +760,9 @@ rows:
     label: "Caltech Web of Science wildcard guide"
   oxurl_representable: true
   status: ok
-  oql: 'works where title & abstract contains behavio*r'
-  oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: 'behavio*r', operator: contains}]}
-  note: Mid-word wildcard (UK/US spellings in one query).
+  oql: 'works where title & abstract contains "behavio*r"'
+  oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: 'behavio*r', operator: contains}]}
+  note: Mid-word wildcard (UK/US spellings in one query), quoted so it runs on the no-stem `title_and_abstract.search.exact` column (oxjob #364). Bare `behavio*r` is now an error (OQL_WILDCARD_NEEDS_EXACT).
 
 - id: 61
   category: "librarian & SR queries"
