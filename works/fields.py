@@ -584,6 +584,7 @@ fields = [
     RangeField(param="topics_count"),
     SearchField(
         param="abstract.search",
+        index="works",
         custom_es_field="abstract",
         docstring="Free text search within the work's abstract only",
         documentation_link="https://developers.openalex.org/guides/searching",
@@ -606,12 +607,13 @@ fields = [
         docstring="Free text search among the work's title, abstract and full text, without stemming. The no-stem field wildcards (* and ?) must target.",
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
-    SearchField(param="display_name.search"),
+    SearchField(param="display_name.search", index="works"),
     SearchField(
         param="display_name.search.exact", custom_es_field="display_name.no_stem"
     ),
     SearchField(
         param="fulltext.search",
+        index="works",
         custom_es_field="fulltext",
         docstring="Free text search within the work's full text (body) only",
         documentation_link="https://developers.openalex.org/guides/searching",
@@ -652,6 +654,7 @@ fields = [
     ),
     SearchField(
         param="title.search",
+        index="works",
         custom_es_field="display_name",
         docstring="Free text search within the work's title only",
         documentation_link="https://developers.openalex.org/guides/searching",
@@ -664,6 +667,7 @@ fields = [
     ),
     SearchField(
         param="title_and_abstract.search",
+        index="works",
         docstring="Free text search within the work's title and abstract",
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
