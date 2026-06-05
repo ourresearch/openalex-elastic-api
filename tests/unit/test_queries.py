@@ -585,12 +585,12 @@ class TestWildcardRequiresExact:
 
 class TestTopLevelSearchWildcard:
     """oxjob #364: the top-level `?search=` path is stemmed by default; a wildcard there
-    must require the exact route (`&search_type=exact`)."""
+    must require the exact route (the `search.exact=` param)."""
 
     def test_stemmed_top_level_wildcard_rejected(self):
         with pytest.raises(APIQueryParamsError) as exc:
             validate_top_level_search_wildcard("studies*", "works-v33", is_exact=False)
-        assert "search_type=exact" in str(exc.value.args[0])
+        assert "search.exact=" in str(exc.value.args[0])
 
     def test_exact_route_passes(self):
         validate_top_level_search_wildcard("studies*", "works-v33", is_exact=True)

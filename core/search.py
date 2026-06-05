@@ -79,10 +79,11 @@ def validate_top_level_search_wildcard(search_terms, index, is_exact):
 
     The default top-level search is stemmed, so an (unquoted) wildcard there is
     silently wrong (same root cause as the filter form). Require the exact route
-    (`&search_type=exact`, or the `default.search.exact` filter). `is_exact` is
-    True when the caller already routes to the no-stem path (search_type=exact),
-    in which case the wildcard is fine. Works-only — other indices have no
-    no-stem search path.
+    (the `search.exact=` param, or the `default.search.exact` filter). `is_exact`
+    is True when the caller already routes to the no-stem path (the `search.exact`
+    / `search.title.exact` / `search.title_and_abstract.exact` params, which set
+    search_type=exact), in which case the wildcard is fine. Works-only — other
+    indices have no no-stem search path.
     """
     if is_exact or not index or not index.lower().startswith("works"):
         return
@@ -90,9 +91,9 @@ def validate_top_level_search_wildcard(search_terms, index, is_exact):
         raise APIQueryParamsError(
             "Wildcards (* or ?) require exact (no-stem) search. The default search "
             "is stemmed, so the literal text before the wildcard is removed when "
-            "the work is indexed and the search returns wrong results. Add "
-            "&search_type=exact (or use the default.search.exact filter), e.g. "
-            f"?search={search_terms}&search_type=exact."
+            "the work is indexed and the search returns wrong results. Use the "
+            "search.exact= parameter instead (or the default.search.exact filter), "
+            f"e.g. search.exact={search_terms}."
         )
 
 

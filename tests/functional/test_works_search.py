@@ -83,10 +83,11 @@ class TestWorksSearch:
         # it must be rejected with a fix-it pointing at the exact route.
         res = client.get("/works?search=analys*")
         assert res.status_code == 403
-        assert "search_type=exact" in res.get_json()["message"]
+        assert "search.exact=" in res.get_json()["message"]
 
     def test_works_search_wildcard_exact_ok(self, client):
-        res = client.get("/works?search=analys*&search_type=exact")
+        # The exact top-level entry point is the `search.exact=` param (oxjob #364).
+        res = client.get("/works?search.exact=analys*")
         assert res.status_code == 200
 
     def test_works_filter_search_wildcard_stemmed_rejected(self, client):
