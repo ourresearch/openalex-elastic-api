@@ -5,7 +5,8 @@ For every row in docs/oql/corpus.yaml:
   * status ok / hint   -> parse(oql) equals the authored oqo (canonicalized),
                           AND OQO -> OQL -> OQO is the identity.
   * status error       -> parse(oql) raises OQLError whose .code == diagnostic.
-  * status boundary    -> documented non-representable; not executed here.
+  * status out-of-scope -> documented non-representable / intentionally
+                           unsupported; not executed here.
 
 Run:  .venv-oql/bin/python -m pytest tests/oql/test_corpus_roundtrip.py -q
 """

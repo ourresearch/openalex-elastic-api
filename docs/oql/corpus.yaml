@@ -6,7 +6,9 @@
 # This file is machine-checked by tests/oql/test_corpus_roundtrip.py:
 #   * status: ok | hint   -> parse(oql) == oqo  AND  OQO->OQL->OQO is identity
 #   * status: error       -> parse(oql) raises OQLError whose .code == diagnostic
-#   * status: boundary    -> documented non-representable; not executed
+#   * status: out-of-scope -> documented non-representable / intentionally
+#                            unsupported; not executed (the deliberate scope
+#                            boundary of OQL/OQO, e.g. funder-by-acronym)
 #
 # `oqo` is the independent oracle (authored from intent / the #284 corpus, NOT
 # from this parser). Equality is checked after canonicalization, so operand
@@ -27,8 +29,8 @@
 #     (each #284 OXURL verified live 2026-05-30).
 #   * oxurl_representable — does the spec say this query is expressible as a
 #     classic api.openalex.org URL? false for the invalid-OQL error rows and the
-#     genuinely non-representable boundaries (row 58 wildcard-in-proximity, row 68
-#     funder-by-acronym, row 76 set-reference). The GUI playground auto-renders the
+#     genuinely non-representable `out-of-scope` rows (row 68 funder-by-acronym,
+#     row 76 set-reference). The GUI playground auto-renders the
 #     oxurl for the `true` rows via query_translation/url_renderer.py; a `true`
 #     row that fails to render is a *translator gap* to fix, not a corpus error.
 version: 2
@@ -868,9 +870,9 @@ rows:
     label: "Dimensions DSL reference + cookbook"
     url: "https://docs.dimensions.ai/dsl/"
   oxurl_representable: false
-  status: boundary
+  status: out-of-scope
   oql: null
-  note: '"funded by the acronym DFG" — not representable. OQO only expresses funders.id equality AFTER an out-of-band /funders?search=DFG -> ID resolution; the acronym has no OQL/OQO form.'
+  note: '"funded by the acronym DFG" — out of scope (not representable). OQO only expresses funders.id equality AFTER an out-of-band /funders?search=DFG -> ID resolution; the acronym has no OQL/OQO form.'
 
 - id: 69
   category: "librarian & SR queries"
@@ -969,7 +971,7 @@ rows:
     label: "UCL Web of Science search-tips guide"
     url: "https://library-guides.ucl.ac.uk/web-of-science/search-tips"
   oxurl_representable: false
-  status: boundary
+  status: out-of-scope
   oql: null
   note: Set-reference / stateful query composition (refine a saved search) — no single OQO; out of scope.
 
