@@ -437,37 +437,50 @@ def get_registry_entity(entity_type: str):
 # ---------------------------------------------------------------------------
 
 
-@blueprint.route("/query", methods=["POST"])
-def post_query():
-    """Execute an OQO directly against Elasticsearch.
+# Execution moved to the root in #372 Phase 3 (`GET /?oql=…`, `GET /?oqo=…`,
+# `POST /` with `{oqo}`/`{oql}`) — oql/oqo embed the entity type, so they belong
+# at the root next to `/works?filter=…`, not under `/query/...` (which is now the
+# pure *translation* resource). The works-blueprint root handler
+# (`works/views.py`) dispatches to the public `execute_*` wrappers below. The old
+# `POST /query` and `GET /query/oqo/<path>` execute forms are removed (the GET
+# path-form now translates; both had zero consumers — see #372 EXPLORE).
 
-    Request body: JSON OQO (see docs/oqo-schema.json).
-    Optional query-string params: per-page, cursor, page (transport-level
-    pagination, identical to the URL surface).
 
-    Response shape mirrors /works, /authors, etc.: {meta, group_by, results}.
-    Adds `"oqo"` (canonicalized echo of the input) for round-trip introspection.
+def execute_oqo_dict(oqo_dict):
+    """Public entry point: execute an OQO given as a dict → Flask response.
+
+    Response shape mirrors /works, /authors, etc.: {meta, group_by, results},
+    plus a canonicalized `oqo` echo for round-trip introspection.
     """
-    if not request.is_json:
+    if not isinstance(oqo_dict, dict):
         return _error_response(
-            "Request body must be JSON (Content-Type: application/json).",
-            "invalid_content_type",
-            status=400,
+            "OQO must be a JSON object.", "invalid_body", status=400
         )
+    return _execute_oqo(oqo_dict)
 
-    body = request.get_json(silent=True)
-    if not isinstance(body, dict):
+
+def execute_oqo_json_string(oqo_str):
+    """Public entry point: execute an OQO given as a (URL-decoded) JSON string."""
+    try:
+        oqo_dict = json.loads(oqo_str)
+    except (ValueError, TypeError) as e:
         return _error_response(
-            "Request body must be a JSON object representing an OQO.",
-            "invalid_body",
-            status=400,
+            f"Could not parse OQO JSON: {e}", "invalid_oqo", status=400
         )
+    return execute_oqo_dict(oqo_dict)
 
-    return _execute_oqo(body)
 
-
-# NOTE: `GET /query/oqo/<path>` now *translates* (see translate_oqo below), not
-# executes. OQO execution moves to the root in Phase 3 (`GET /?oqo=…`, `POST /`).
+def execute_oql_string(oql_str):
+    """Public entry point: execute an OQL string → Flask response."""
+    if not oql_str or not oql_str.strip():
+        return _error_response("Empty OQL query.", "invalid_oql", status=400)
+    try:
+        oqo = parse_oql_to_oqo(oql_str)
+    except Exception as e:  # OQLParseError and friends → 400, never 500
+        return _error_response(
+            f"Failed to parse OQL: {e}", "parse_error", status=400
+        )
+    return _execute_oqo(oqo.to_dict())
 
 
 def _execute_oqo(oqo_dict: dict):

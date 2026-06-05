@@ -1,18 +1,25 @@
-"""Functional tests for the /query OQO execution endpoint (#306).
+"""Functional tests for OQO execution at the root (#306 execution, moved to the
+root in #372 Phase 3).
 
 Two layers:
 
-1. **Pure validation** — hit `POST /query` and `GET /query/oqo/<path>` with
-   shape-broken OQOs and assert structured 400 responses. No live ES required.
+1. **Pure validation** — hit `POST /` (body `{"oqo": …}`) and `GET /query/oqo/<path>`
+   with shape-broken OQOs and assert structured 400 responses. No live ES required.
 
 2. **End-to-end equivalence** — for an in-scope subset of the worked-example
-   corpus, hit `POST /query` with the OQO and `GET /works?...` with the
+   corpus, hit `POST /` with the OQO and `GET /works?...` with the
    equivalent OXURL; assert both return the same result count and the same
    top-N result IDs. Requires a populated test ES (the existing tests/conftest
    contract).
 
 The first layer runs in any environment with the test app importable; the
 second is gated on ES reachability and skipped otherwise.
+
+NOTE (#372): execution moved from `POST /query` to `POST /` with body
+`{"oqo": <oqo>}` / `{"oql": <oql>}` (also `GET /?oqo=` / `GET /?oql=`). The old
+`POST /query` and execute-via-`GET /query/oqo/<path>` forms were removed.
+Root-specific execution tests (GET forms, bare-`/` descriptor, removed routes)
+live in test_root_execution_endpoint.py.
 """
 
 import json
@@ -29,16 +36,12 @@ import pytest
 
 
 def _post_oqo(client, body):
+    # Execution at root (#372): POST / with the OQO wrapped under the "oqo" key.
     return client.post(
-        "/query",
-        data=json.dumps(body),
+        "/",
+        data=json.dumps({"oqo": body}),
         content_type="application/json",
     )
-
-
-def _get_oqo(client, body):
-    encoded = urllib.parse.quote(json.dumps(body), safe="")
-    return client.get(f"/query/oqo/{encoded}")
 
 
 def _check_400_with_errors(res):
@@ -61,12 +64,12 @@ def _check_400_with_errors(res):
 
 class TestInvalidOQO:
     def test_post_without_json_content_type_returns_400(self, client):
-        res = client.post("/query", data="not json", content_type="text/plain")
+        res = client.post("/", data="not json", content_type="text/plain")
         _check_400_with_errors(res)
 
     def test_post_with_non_object_body_returns_400(self, client):
         res = client.post(
-            "/query",
+            "/",
             data=json.dumps(["this", "is", "not", "an", "object"]),
             content_type="application/json",
         )
@@ -171,11 +174,12 @@ class TestInvalidOQO:
 
 
 class TestPostExecutes:
-    """POST /query executes an OQO against ES (Search built without running ES).
+    """POST / (body {"oqo": …}) executes an OQO against ES (Search built without
+    running ES).
 
     NOTE (#372): `GET /query/oqo/<path>` now *translates* (→ all formats), it no
-    longer executes. OQO execution moves to the root (`GET /?oqo=`, `POST /`) in
-    Phase 3. Translation of the GET path-form is covered in
+    longer executes. OQO execution lives at the root (`GET /?oqo=`, `POST /`) as
+    of Phase 3. Translation of the GET path-form is covered in
     test_query_translation_endpoint.py.
     """
 
@@ -262,7 +266,7 @@ _RUN_LIVE_ES_TESTS = os.environ.get("ES_OQO_INTEGRATION") == "1"
     reason="Set ES_OQO_INTEGRATION=1 to run end-to-end OQO/OXURL parity tests.",
 )
 class TestEndToEndParity:
-    """Hit POST /query (OQO) and GET /works (OXURL) for the same query and
+    """Hit POST / (OQO) and GET /works (OXURL) for the same query and
     assert both return the same meta.count + top-10 IDs."""
 
     def test_simple_filter_parity(self, client):

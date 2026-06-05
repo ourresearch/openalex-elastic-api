@@ -16,8 +16,55 @@ from works.schemas import MessageSchema, WorksSchema
 blueprint = Blueprint("works", __name__)
 
 
-@blueprint.route("/")
+@blueprint.route("/", methods=["GET", "POST"])
 def index():
+    """Root: API descriptor + query execution (oxjob #372).
+
+    oql/oqo embed the entity type, so they execute at the root (next to
+    `/works?filter=…`), not under `/query/...` (the pure translation resource):
+
+      GET  /?oql=<oql>
+      GET  /?oqo=<urlencoded_json>
+      POST /  body {"oqo": {...}} or {"oql": "..."}   (for queries over the
+              proxy's ~4 KB URL cap — the proxy skips the cap for POST bodies)
+
+    A bare `GET /` (no oql/oqo) still returns the "Don't panic" descriptor.
+    """
+    # Lazy import: avoids any import-time coupling between the works and
+    # query_translation blueprints (both are fully loaded by request time).
+    from query_translation.views import (
+        execute_oql_string,
+        execute_oqo_dict,
+        execute_oqo_json_string,
+        _error_response,
+    )
+
+    if request.method == "POST":
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict):
+            return _error_response(
+                "Request body must be a JSON object with an 'oqo' or 'oql' key.",
+                "invalid_body",
+                status=400,
+            )
+        if "oqo" in body:
+            return execute_oqo_dict(body["oqo"])
+        if "oql" in body:
+            return execute_oql_string(body["oql"])
+        return _error_response(
+            "Request body must contain an 'oqo' or 'oql' key.",
+            "invalid_body",
+            status=400,
+        )
+
+    # GET: execute if oql/oqo present, else return the descriptor.
+    oql = request.args.get("oql")
+    if oql is not None:
+        return execute_oql_string(oql)
+    oqo = request.args.get("oqo")
+    if oqo is not None:
+        return execute_oqo_json_string(oqo)
+
     return jsonify(
         {
             "version": "0.1",

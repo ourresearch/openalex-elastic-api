@@ -1,0 +1,192 @@
+"""Functional tests for query EXECUTION at the root (oxjob #372 Phase 3).
+
+oql/oqo embed the entity type, so they execute at the root — next to
+`/works?filter=…` — rather than under `/query/...` (the pure translation
+resource):
+
+    GET  /?oql=<oql>
+    GET  /?oqo=<urlencoded_json>
+    POST /  body {"oqo": {...}} | {"oql": "..."}
+
+A bare `GET /` (no oql/oqo) still returns the "Don't panic" descriptor. The old
+`POST /query` execute form is removed.
+
+`execute_search` is patched so these run without a live ES (same pattern as
+test_oqo_query_endpoint.py::TestPostExecutes).
+"""
+
+import json
+import urllib.parse
+from unittest.mock import patch
+
+
+# ---------------------------------------------------------------------------
+# Stubs: build the Search without running ES
+# ---------------------------------------------------------------------------
+
+
+class _StubHits:
+    total = type("T", (), {"value": 7})()
+
+
+class _StubResponse:
+    took = 3
+    hits = _StubHits()
+
+    def __iter__(self):
+        return iter([])
+
+
+def _fake_execute(captured):
+    def _inner(s, params):
+        captured.append(s.to_dict())
+        return _StubResponse()
+
+    return _inner
+
+
+WORKS_OQO = {
+    "get_rows": "works",
+    "filter_rows": [{"column_id": "type", "value": "article"}],
+}
+
+
+def _valid_oql(client):
+    """Round-trip an oxurl through translation to get a parser-valid OQL string."""
+    base = client.get("/query/oxurl/works?filter=type:article").get_json()
+    return base["oql"]
+
+
+# ---------------------------------------------------------------------------
+# Bare root still returns the descriptor
+# ---------------------------------------------------------------------------
+
+
+class TestBareRoot:
+    def test_bare_get_returns_descriptor(self, client):
+        res = client.get("/")
+        assert res.status_code == 200
+        body = res.get_json()
+        assert body["msg"] == "Don't panic"
+        assert "documentation_url" in body
+
+
+# ---------------------------------------------------------------------------
+# Execution: all four forms reach execute_search and echo the OQO
+# ---------------------------------------------------------------------------
+
+
+class TestRootExecutes:
+    def test_get_oqo_executes(self, client):
+        captured = []
+        encoded = urllib.parse.quote(json.dumps(WORKS_OQO), safe="")
+        with patch(
+            "query_translation.views.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.get(f"/?oqo={encoded}")
+        assert res.status_code == 200, res.get_json()
+        assert len(captured) == 1
+        assert res.get_json()["oqo"]["get_rows"] == "works"
+
+    def test_post_oqo_executes(self, client):
+        captured = []
+        with patch(
+            "query_translation.views.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.post(
+                "/",
+                data=json.dumps({"oqo": WORKS_OQO}),
+                content_type="application/json",
+            )
+        assert res.status_code == 200, res.get_json()
+        assert len(captured) == 1
+        assert res.get_json()["oqo"]["get_rows"] == "works"
+
+    def test_get_oql_executes(self, client):
+        oql = _valid_oql(client)
+        captured = []
+        with patch(
+            "query_translation.views.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.get("/?oql=" + urllib.parse.quote(oql, safe=""))
+        assert res.status_code == 200, res.get_json()
+        assert len(captured) == 1
+        assert res.get_json()["oqo"]["get_rows"] == "works"
+
+    def test_post_oql_executes(self, client):
+        oql = _valid_oql(client)
+        captured = []
+        with patch(
+            "query_translation.views.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.post(
+                "/",
+                data=json.dumps({"oql": oql}),
+                content_type="application/json",
+            )
+        assert res.status_code == 200, res.get_json()
+        assert len(captured) == 1
+
+
+# ---------------------------------------------------------------------------
+# Error hygiene: malformed input is 400 (never 500)
+# ---------------------------------------------------------------------------
+
+
+def _assert_400(res):
+    assert res.status_code == 400, res.get_json()
+    body = res.get_json()
+    assert body["validation"]["valid"] is False
+    assert len(body["validation"]["errors"]) >= 1
+
+
+class TestRootErrors:
+    def test_post_non_object_body_returns_400(self, client):
+        res = client.post(
+            "/",
+            data=json.dumps([1, 2, 3]),
+            content_type="application/json",
+        )
+        _assert_400(res)
+
+    def test_post_without_oqo_or_oql_returns_400(self, client):
+        res = client.post(
+            "/",
+            data=json.dumps({"foo": "bar"}),
+            content_type="application/json",
+        )
+        _assert_400(res)
+
+    def test_get_invalid_oqo_json_returns_400(self, client):
+        res = client.get("/?oqo=not_valid_json")
+        _assert_400(res)
+
+    def test_get_invalid_oql_returns_400(self, client):
+        res = client.get("/?oql=" + urllib.parse.quote("this is not oql !!", safe=""))
+        _assert_400(res)
+
+    def test_get_empty_oql_returns_400(self, client):
+        res = client.get("/?oql=")
+        _assert_400(res)
+
+
+# ---------------------------------------------------------------------------
+# The old execute form is gone
+# ---------------------------------------------------------------------------
+
+
+class TestOldExecuteFormRemoved:
+    def test_post_query_no_longer_executes(self, client):
+        # Execution moved to the root; `POST /query` is removed. `/query` is now
+        # GET-only (translation descriptor) → POST yields 405 (or 404 if the
+        # route is fully absent). Either way it must NOT execute (no 200).
+        res = client.post(
+            "/query",
+            data=json.dumps({"get_rows": "works"}),
+            content_type="application/json",
+        )
+        assert res.status_code in (404, 405), res.status_code
