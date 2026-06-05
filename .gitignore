@@ -26,3 +26,6 @@ run_local.py
 
 # Local virtualenv
 api/
+
+# local py3.10 test venv (#372)
+.venv-test/

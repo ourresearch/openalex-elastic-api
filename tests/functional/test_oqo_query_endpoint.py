@@ -170,14 +170,17 @@ class TestInvalidOQO:
 # ---------------------------------------------------------------------------
 
 
-class TestPostGetEquivalence:
-    """POST /query and GET /query/oqo/<path> should produce the same Search."""
+class TestPostExecutes:
+    """POST /query executes an OQO against ES (Search built without running ES).
 
-    def test_both_routes_construct_the_same_search(self, client):
-        """Patch execute_search to capture the Search body without running ES.
+    NOTE (#372): `GET /query/oqo/<path>` now *translates* (→ all formats), it no
+    longer executes. OQO execution moves to the root (`GET /?oqo=`, `POST /`) in
+    Phase 3. Translation of the GET path-form is covered in
+    test_query_translation_endpoint.py.
+    """
 
-        Both POST and GET must produce identical `s.to_dict()` for the same OQO.
-        """
+    def test_post_constructs_a_search(self, client):
+        """Patch execute_search to capture the Search body without running ES."""
         oqo_body = {
             "get_rows": "works",
             "filter_rows": [
@@ -206,12 +209,9 @@ class TestPostGetEquivalence:
             "query_translation.views.execute_search", side_effect=fake_execute_search
         ):
             res_post = _post_oqo(client, oqo_body)
-            res_get = _get_oqo(client, oqo_body)
 
         assert res_post.status_code == 200, res_post.get_json()
-        assert res_get.status_code == 200, res_get.get_json()
-        assert len(captured) == 2
-        assert captured[0] == captured[1]
+        assert len(captured) == 1
 
 
 # ---------------------------------------------------------------------------

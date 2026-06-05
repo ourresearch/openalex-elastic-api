@@ -38,6 +38,7 @@ from query_translation.oqo_to_es import (
     OQOTranslationError,
     oqo_to_search_and_filter_q,
 )
+from query_translation.oql_parser import parse_oql_to_oqo
 from query_translation.oql_renderer import render_oqo_to_oql
 from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
 from query_translation.url_parser import parse_url_to_oqo
@@ -465,32 +466,8 @@ def post_query():
     return _execute_oqo(body)
 
 
-@blueprint.route("/query/oqo/<path:oqo_encoded>", methods=["GET"])
-def get_query_by_oqo(oqo_encoded: str):
-    """Path-form OQO read endpoint (cacheable).
-
-    The OQO carries the entity type (`get_rows`), so the route can't live under
-    an entity-specific prefix like `/works`. The path is `/query/oqo/<json>`,
-    where `<json>` is the URL-encoded JSON OQO.
-    """
-    try:
-        oqo_decoded = urllib.parse.unquote(oqo_encoded)
-        body = json.loads(oqo_decoded)
-    except ValueError as e:
-        return _error_response(
-            f"OQO path is not valid JSON: {e}",
-            "invalid_oqo_json",
-            status=400,
-        )
-
-    if not isinstance(body, dict):
-        return _error_response(
-            "OQO path must decode to a JSON object.",
-            "invalid_oqo_json",
-            status=400,
-        )
-
-    return _execute_oqo(body)
+# NOTE: `GET /query/oqo/<path>` now *translates* (see translate_oqo below), not
+# executes. OQO execution moves to the root in Phase 3 (`GET /?oqo=…`, `POST /`).
 
 
 def _execute_oqo(oqo_dict: dict):
@@ -745,87 +722,132 @@ def _set_cursor_pagination(params, s):
 
 
 # ---------------------------------------------------------------------------
-# Legacy /query GET (format-translation introspection) — deferred to a future
-# rev; the route below preserves a usable shape but is no longer the 404 stub.
+# Translation resource: `/query` addressed by any one representation, returns
+# all of them — {oxurl, oql, oql_render, oqo, validation}. The entity type is
+# embedded in every format, so no entity_type param is needed.
+#
+#   GET /query/oxurl/:query   (e.g. /query/oxurl/works?filter=type:article)
+#   GET /query/oql/:query
+#   GET /query/oqo/:query
+#
+# :query is accepted both un-encoded (default, readable) and urlencoded.
 # ---------------------------------------------------------------------------
 
 
 @blueprint.route("/query", methods=["GET"])
 def get_query():
-    """Backwards-compat translation introspection.
-
-    No body — returns a small descriptor so existing callers don't 404.
-    To execute an OQO directly use `POST /query` (with a JSON body) or
-    `GET /query/oqo/<urlencoded_json>`.
-    """
+    """Descriptor for the translation resource (no segment given)."""
     return jsonify(
         {
             "msg": (
-                "POST /query with an OQO JSON body, or use "
-                "GET /query/oqo/<urlencoded_json> for the cacheable read form."
+                "Translate a query: GET /query/{oxurl|oql|oqo}/<query> "
+                "(un-encoded or urlencoded) → {oxurl, oql, oql_render, oqo, "
+                "validation}. Execute a query: GET /works?filter=… , "
+                "GET /?oql=… , GET /?oqo=… , or POST / with {oqo} or {oql}."
             ),
             "documentation_url": "/docs",
         }
     ), 200
 
-    # ---- legacy translation-introspection code, kept commented for reference ----
-    # entity_type = request.args.get("entity_type", "works")
-    # filter_string = request.args.get("filter")
-    # sort_string = request.args.get("sort")
-    # sample = request.args.get("sample", type=int)
-    # oqo_json = request.args.get("oqo")
-    #
-    # try:
-    #     oqo = None
-    #     parse_error = None
-    #
-    #     if oqo_json:
-    #         # Parse OQO from JSON query param
-    #         oqo, parse_error = parse_oqo_input(entity_type, oqo_json)
-    #     else:
-    #         # Parse from URL filter/sort params
-    #         oqo, parse_error = parse_url_input(entity_type, {
-    #             "filter": filter_string,
-    #             "sort": sort_string,
-    #             "sample": sample
-    #         })
-    #
-    #     if parse_error:
-    #         return jsonify({
-    #             "url": None,
-    #             "oql": None,
-    #             "oqo": None,
-    #             "validation": {
-    #                 "valid": False,
-    #                 "errors": [{"type": "parse_error", "message": parse_error}],
-    #                 "warnings": []
-    #             }
-    #         }), 400
-    #
-    #     validation_result = validate_oqo(oqo)
-    #
-    #     if not validation_result.valid:
-    #         return jsonify({
-    #             "url": None,
-    #             "oql": None,
-    #             "oqo": oqo.to_dict(),
-    #             "validation": validation_result.to_dict()
-    #         }), 400
-    #
-    #     response = render_all_formats(oqo, validation_result)
-    #     return jsonify(response), 200
-    #
-    # except Exception as e:
-    #     return jsonify({
-    #         "url": None,
-    #         "oql": None,
-    #         "oqo": None,
-    #         "validation": {
-    #             "valid": False,
-    #             "errors": [{"type": "internal_error", "message": str(e)}],
-    #             "warnings": []
-    #         }
-    #     }), 500
+
+def _full_query_value(path_value: str) -> str:
+    """Reconstruct the full query string from the `<path:value>` segment plus
+    the real querystring, so both encodings work:
+
+    - raw:     GET /query/oxurl/works?filter=type:article
+               → path_value="works", query_string="filter=type:article"
+    - encoded: GET /query/oxurl/works%3Ffilter%3Dtype%3Aarticle
+               → path_value="works?filter=type:article", no query_string
+    """
+    qs = request.query_string.decode("utf-8")
+    if qs and "?" not in path_value:
+        return f"{path_value}?{qs}"
+    return path_value
+
+
+def _parse_oxurl_value(value: str):
+    """Parse an oxurl string (`works?filter=…&sort=…`) into an OQO.
+
+    Returns (oqo, error_string). `search.<field>=` params are folded into the
+    filter string as `<field>.search:<value>` (the OQO's representation of a
+    scoped free-text search); a bare `search=` is passed through.
+    """
+    value = value.lstrip("/")
+    if "?" in value:
+        entity_type, qs = value.split("?", 1)
+    else:
+        entity_type, qs = value, ""
+    entity_type = entity_type.strip().strip("/")
+
+    params = {}
+    for k, v in urllib.parse.parse_qsl(qs, keep_blank_values=True):
+        params[k] = v
+
+    # Fold scoped search params (search.title_and_abstract=…) into filter clauses.
+    extra_filters = []
+    for k, v in list(params.items()):
+        if k.startswith("search.") and v:
+            field = k[len("search."):]
+            extra_filters.append(f"{field}.search:{v}")
+    if extra_filters:
+        base = params.get("filter")
+        params["filter"] = ",".join(([base] if base else []) + extra_filters)
+
+    input_data = {
+        "filter": params.get("filter"),
+        "sort": params.get("sort"),
+        "search": params.get("search"),
+        "group_by": params.get("group_by"),
+        "select": params.get("select"),
+        "sample": params.get("sample"),
+        "seed": params.get("seed"),
+        "per_page": params.get("per_page") or params.get("per-page"),
+        "page": params.get("page"),
+        "cursor": params.get("cursor"),
+    }
+    return parse_url_input(entity_type, input_data)
+
+
+def _translate_response(oqo, parse_error):
+    """Shared tail for the translation routes: validate + render all formats."""
+    if parse_error:
+        return _error_response(parse_error, "parse_error", status=400)
+
+    validation_result = validate_oqo(oqo)
+    if not validation_result.valid:
+        return jsonify({
+            "oxurl": None,
+            "oql": None,
+            "oqo": oqo.to_dict(),
+            "validation": validation_result.to_dict(),
+        }), 400
+
+    return jsonify(render_all_formats(oqo, validation_result)), 200
+
+
+@blueprint.route("/query/oxurl/<path:value>", methods=["GET"])
+def translate_oxurl(value: str):
+    """Translate an OpenAlex URL (`works?filter=…`) to all formats."""
+    oqo, err = _parse_oxurl_value(_full_query_value(value))
+    return _translate_response(oqo, err)
+
+
+@blueprint.route("/query/oql/<path:value>", methods=["GET"])
+def translate_oql(value: str):
+    """Translate an OQL string to all formats."""
+    oql = _full_query_value(value)
+    try:
+        oqo = parse_oql_to_oqo(oql)
+    except Exception as e:  # OQLParseError and friends → 400
+        return _error_response(f"Failed to parse OQL: {e}", "parse_error", status=400)
+    return _translate_response(oqo, None)
+
+
+@blueprint.route("/query/oqo/<path:value>", methods=["GET"])
+def translate_oqo(value: str):
+    """Translate an OQO (URL-encoded or raw JSON) to all formats."""
+    oqo, err = parse_oqo_input(None, _full_query_value(value))
+    return _translate_response(oqo, err)
 
 
 def parse_url_input(entity_type: str, input_data):
@@ -891,39 +913,69 @@ def parse_oqo_input(entity_type: str, input_data):
         return None, f"Failed to parse OQO format: {str(e)}"
 
 
+# oxurl component order — the readable order the GUI/users emit. `search` is
+# folded into `filter` as a `default.search:` clause by render_oqo_to_url, so it
+# is not a separate key here.
+_OXURL_COMPONENT_ORDER = (
+    "filter", "sort", "group_by", "select", "sample", "seed",
+    "per_page", "page", "cursor",
+)
+
+
+def _components_to_oxurl(entity_type: str, components: dict) -> str:
+    """Build a readable OpenAlex URL string (e.g. `/works?filter=type:article`)
+    from the entity type + the component dict returned by render_oqo_to_url.
+
+    `:` `,` `|` are left un-encoded (readable filter syntax); spaces and other
+    reserved chars are percent-encoded so the URL is still valid.
+    """
+    pairs = []
+    for key in _OXURL_COMPONENT_ORDER:
+        value = components.get(key)
+        if value is None or value == "":
+            continue
+        pairs.append(f"{key}={urllib.parse.quote(str(value), safe=':,|')}")
+    base = f"/{entity_type}"
+    return base + ("?" + "&".join(pairs) if pairs else "")
+
+
 def render_all_formats(oqo: OQO, validation_result: ValidationResult):
-    """Render OQO to all output formats."""
+    """Render OQO to all output formats: {oxurl, oql, oql_render, oqo, validation}."""
     warnings = list(validation_result.warnings)
-    
+
     # Canonicalize OQO for deterministic output
     canonical_oqo = canonicalize_oqo(oqo)
-    
-    # Render to URL
-    url_output = None
+
+    # Render to oxurl (OpenAlex URL string)
+    oxurl_output = None
     try:
-        url_output = render_oqo_to_url(canonical_oqo)
+        components = render_oqo_to_url(canonical_oqo)
+        oxurl_output = _components_to_oxurl(canonical_oqo.get_rows, components)
     except URLRenderError as e:
         warnings.append(ValidationError(
             type="url_not_representable",
             message=str(e)
         ))
-    
+
     # Render to OQL and oql_render tree
     # Pass safe_get_display_name as entity resolver to include display names in oql_render
     oql_output, oql_render_tree = render_oqo_to_oql_and_tree(
         canonical_oqo,
         entity_resolver=safe_get_display_name
     )
-    
+
     # Build response
     return {
-        "url": url_output,
+        "oxurl": oxurl_output,
         "oql": oql_output,
         "oql_render": oql_render_tree.to_dict(),
         "oqo": canonical_oqo.to_dict(),
         "validation": {
             "valid": True,
-            "errors": [],
+            "errors": [
+                {"type": e.type, "message": e.message, "location": e.location}
+                for e in validation_result.errors
+            ],
             "warnings": [
                 {"type": w.type, "message": w.message, "location": w.location}
                 for w in warnings
