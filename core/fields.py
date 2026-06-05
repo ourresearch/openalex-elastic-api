@@ -713,6 +713,7 @@ class SearchField(Field):
                 search_terms=self.value,
                 primary_field="display_name",
                 secondary_field="abstract",
+                combine_fields=True,
             )
             q = search_oa.build_query()
         elif self.param == "title_and_abstract.search.exact":
@@ -720,6 +721,7 @@ class SearchField(Field):
                 search_terms=self.value,
                 primary_field="display_name.no_stem",
                 secondary_field="abstract.no_stem",
+                combine_fields=True,
             )
             q = search_oa.build_query()
         elif self.param == "semantic.search":

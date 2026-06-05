@@ -12,53 +12,75 @@ from settings import ES_URL_WALDEN
 MAX_LONG_PHRASES_IN_OR = 3
 LONG_PHRASE_CHAR_THRESHOLD = 80
 QUOTED_PHRASE_RE = re.compile(r'"([^"]*)"')
+# A single quoted phrase carrying a proximity slop, e.g. `"smart phone"~3`. When the
+# phrase ALSO contains a wildcard (`"smart phone*"~3`), the engine builds an ES
+# `intervals` query instead of query_string (which silently drops the wildcard) — see
+# proximity_wildcard_query() / oxjob #355.
+PROXIMITY_PHRASE_RE = re.compile(r'^"([^"]*)"~(\d+)$')
+
+
+def _validate_wildcard_token(word):
+    """Reject the wildcard shapes #337 closed; no-op for tokens without a wildcard.
+
+    - leading `*`/`?` (e.g. `*phone`) reaches ES as a raw parse error
+      ("Failed to parse query") because we pin allow_leading_wildcard=False;
+    - a `*` with fewer than 3 leading characters (e.g. `ab*`) misses the wildcard
+      detector and silently degrades to a literal that matches ~nothing.
+    """
+    if "*" not in word and "?" not in word:
+        return
+    # Leading wildcard attached to text (`*phone`, `?cycle`) — bare `*`/`?`
+    # (length 1) is left alone; it isn't treated as a wildcard today.
+    if len(word) > 1 and word[0] in "*?":
+        raise APIQueryParamsError(
+            f'Leading wildcards are not supported (too expensive): "{word}". '
+            "Anchor the wildcard with at least 3 leading characters, e.g. cycle*."
+        )
+    # A `*` needs >=3 word characters before it (matches the engine detector).
+    # star == 0 is a leading/bare `*` (handled above or left alone), not a prefix.
+    star = word.find("*")
+    if star > 0:
+        chars_before = len(re.match(r"\w*", word).group(0)[:star])
+        if chars_before < 3:
+            raise APIQueryParamsError(
+                f'A * wildcard needs at least 3 leading characters: "{word}". '
+                "Add characters before the *, e.g. abc*."
+            )
 
 
 def validate_wildcards(search_terms):
     """Reject unsupported wildcard shapes with friendly messages (oxjob #337).
 
     Mirrors the OQL v2 diagnostics (OQL_LEADING_WILDCARD, OQL_SHORT_WILDCARD_PREFIX,
-    OQL_WILDCARD_IN_QUOTES) so the raw API and OQL give identical guidance. Without
-    this, two shapes misbehave on the live search path:
-      - leading `*`/`?` (e.g. `*phone`) reaches ES as a raw parse error
-        ("Failed to parse query") because we pin allow_leading_wildcard=False;
-      - a `*` with fewer than 3 leading characters (e.g. `ab*`) misses the wildcard
-        detector and silently degrades to a literal that matches ~nothing.
-    We catch both up front and fail loud + kind instead.
+    OQL_WILDCARD_IN_QUOTES) so the raw API and OQL give identical guidance.
+
+    One shape that LOOKS like wildcard-in-quotes is allowed: a wildcard inside a quoted
+    PROXIMITY phrase, `"smart phone*"~3`. That compiles to an ES `intervals` query
+    (oxjob #355) rather than being dropped, so we accept it here — but still enforce the
+    per-token shape rules (no leading wildcard, >=3-char prefix) inside the phrase.
     """
     if not search_terms or not isinstance(search_terms, str):
         return
 
-    # `*`/`?` inside a quoted phrase can't wildcard — move it outside the quotes.
+    # `*`/`?` inside a quoted phrase can't wildcard — move it outside the quotes —
+    # UNLESS the phrase carries a proximity slop (`"..."~N`), which the engine
+    # supports via intervals (oxjob #355).
     for phrase in QUOTED_PHRASE_RE.findall(search_terms):
-        if "*" in phrase or "?" in phrase:
-            raise APIQueryParamsError(
-                f'Wildcards (* or ?) do not work inside a quoted phrase: "{phrase}". '
-                'Move the wildcard outside the quotes, e.g. bar* instead of "bar*".'
-            )
+        if "*" not in phrase and "?" not in phrase:
+            continue
+        if re.search(re.escape(f'"{phrase}"') + r"~\d", search_terms):
+            for word in phrase.split():
+                _validate_wildcard_token(word)
+            continue
+        raise APIQueryParamsError(
+            f'Wildcards (* or ?) do not work inside a quoted phrase: "{phrase}". '
+            'Move the wildcard outside the quotes, e.g. bar* instead of "bar*".'
+        )
 
     # Outside quotes, check each whitespace-delimited token.
     unquoted = QUOTED_PHRASE_RE.sub(" ", search_terms)
     for word in unquoted.split():
-        if "*" not in word and "?" not in word:
-            continue
-        # Leading wildcard attached to text (`*phone`, `?cycle`) — bare `*`/`?`
-        # (length 1) is left alone; it isn't treated as a wildcard today.
-        if len(word) > 1 and word[0] in "*?":
-            raise APIQueryParamsError(
-                f'Leading wildcards are not supported (too expensive): "{word}". '
-                "Anchor the wildcard with at least 3 leading characters, e.g. cycle*."
-            )
-        # A `*` needs >=3 word characters before it (matches the engine detector).
-        # star == 0 is a leading/bare `*` (handled above or left alone), not a prefix.
-        star = word.find("*")
-        if star > 0:
-            chars_before = len(re.match(r"\w*", word).group(0)[:star])
-            if chars_before < 3:
-                raise APIQueryParamsError(
-                    f'A * wildcard needs at least 3 leading characters: "{word}". '
-                    "Add characters before the *, e.g. abc*."
-                )
+        _validate_wildcard_token(word)
 
 
 def validate_search_terms(search_terms):
@@ -123,6 +145,7 @@ class SearchOpenAlex:
         tertiary_field=None,
         is_author_name_query=False,
         is_semantic_query=False,
+        combine_fields=False,
     ):
         self.search_terms = normalize_search_input(search_terms)
         self.primary_field = primary_field if primary_field else "display_name"
@@ -130,10 +153,23 @@ class SearchOpenAlex:
         self.tertiary_field = tertiary_field
         self.is_author_name_query = is_author_name_query
         self.is_semantic_query = is_semantic_query
+        # When True, the Boolean/phrase/wildcard branch of primary_secondary_match_query
+        # emits ONE query_string over a `fields` list instead of two OR'd query_strings,
+        # so each Boolean operand can match in *either* field (cross-field). Used only by
+        # title_and_abstract.search so its name finally matches its behavior (oxjob #191.7).
+        self.combine_fields = combine_fields
 
     def build_query(self, skip_citation_boost=False):
         if not self.search_terms:
             return self.match_all()
+
+        # Wildcard inside a quoted proximity phrase (`"smart phone*"~3`) — query_string
+        # silently drops the wildcard, so build an ES `intervals` query instead (#355).
+        if self.has_proximity_wildcard():
+            raw_query = self.proximity_wildcard_query()
+            if skip_citation_boost:
+                return raw_query
+            return self.citation_boost_query(raw_query)
 
         if (
             self.primary_field == "authorships.raw_affiliation_strings"
@@ -174,6 +210,59 @@ class SearchOpenAlex:
             **{self.primary_field: {"query": self.search_terms, "boost": 2}},
         )
 
+    def has_proximity_wildcard(self):
+        """True for a single quoted proximity phrase containing a wildcard.
+
+        e.g. `"smart phone*"~3` — the one shape where proximity and a wildcard compose.
+        Plain proximity (`"smart phone"~3`) and plain wildcards stay on their existing
+        paths; only the combination needs the `intervals` query (oxjob #355).
+        """
+        m = PROXIMITY_PHRASE_RE.match(self.search_terms.strip())
+        return bool(m) and ("*" in m.group(1) or "?" in m.group(1))
+
+    @staticmethod
+    def _interval_rule(word):
+        """Map one phrase token to an ES `intervals` rule.
+
+        Trailing `*` -> `prefix` (cheap, anchored). Any other wildcard (mid-word `?`,
+        embedded `*`) -> `wildcard`. A plain token -> `match` (so it's analyzed/stemmed
+        consistently with the field). Shapes are pre-validated by validate_wildcards().
+        """
+        lower = word.lower()
+        if word.endswith("*") and word.count("*") == 1 and "?" not in word:
+            return {"prefix": {"prefix": lower[:-1]}}
+        if "*" in word or "?" in word:
+            return {"wildcard": {"pattern": lower}}
+        return {"match": {"query": word}}
+
+    def proximity_wildcard_query(self):
+        """Build an `intervals` query for `"phrase with wildcard*"~N` (oxjob #355).
+
+        `ordered=false` + `max_gaps=N` reproduces OQL "within N words" (= WoS `W/n`,
+        unordered NEAR); the spike pinned max_gaps==slop with no off-by-one. Each token
+        becomes a match/prefix/wildcard rule. Searches primary (+secondary/+tertiary)
+        fields OR'd, mirroring the boost weights of the match-path branches.
+        """
+        m = PROXIMITY_PHRASE_RE.match(self.search_terms.strip())
+        phrase, slop = m.group(1), int(m.group(2))
+        rules = [self._interval_rule(w) for w in phrase.split()]
+        rule = {"all_of": {"ordered": False, "max_gaps": slop, "intervals": rules}}
+
+        fields = [(self.primary_field, None)]
+        if self.secondary_field:
+            fields.append((self.secondary_field, 0.10))
+        if self.tertiary_field:
+            fields.append((self.tertiary_field, 0.05))
+
+        query = None
+        for field, boost in fields:
+            body = dict(rule)
+            if boost is not None:
+                body["boost"] = boost
+            clause = Q("intervals", **{field: body})
+            query = clause if query is None else (query | clause)
+        return query
+
     def primary_match_query(self):
         """Searches with 'and' and phrase queries, with phrase boosted by 2."""
         if self.is_boolean_search() or self.has_phrase() or self.has_wildcard():
@@ -198,6 +287,19 @@ class SearchOpenAlex:
         """Searches primary and secondary fields."""
         if self.is_boolean_search() or self.has_phrase() or self.has_wildcard():
             self.clean_search_terms()
+            if self.combine_fields:
+                # One query_string over both fields: ES expands each Boolean operand
+                # (term or phrase) into a disjunction across the fields, so a Boolean
+                # whose halves split across title↔abstract still matches. Preserves the
+                # full query_string parser (phrases, wildcards, leading-wildcard disallow).
+                # The `^0.1` keeps the secondary field's original 0.10 boost weight.
+                return Q(
+                    "query_string",
+                    query=self.search_terms,
+                    fields=[self.primary_field, f"{self.secondary_field}^0.1"],
+                    default_operator="AND",
+                    allow_leading_wildcard=False,
+                )
             return Q(
                 "query_string",
                 query=self.search_terms,
