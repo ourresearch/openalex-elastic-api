@@ -811,10 +811,11 @@ class _Parser:
         if t.kind == "STRING":
             text = t.val
             self.next()
-            if "*" in text or "?" in text:
-                raise OQLError("OQL_WILDCARD_IN_QUOTES",
-                               f'wildcard inside a quoted phrase: "{text}"',
-                               'move the wildcard out of the quotes, e.g. bar*', t.pos)
+            # A wildcard inside quotes is allowed ONLY as part of a proximity phrase
+            # ("smart phone*" within N words) — the engine compiles it to an ES
+            # `intervals` query (oxjob #355). Defer the decision: the proximity block
+            # below validates and accepts it; a wildcard-in-quotes WITHOUT proximity is
+            # rejected just after (OQL_WILDCARD_IN_QUOTES, e.g. "bar*").
             phrase = True
         else:
             text = t.val
@@ -842,7 +843,10 @@ class _Parser:
                 raise OQLError("OQL_BINARY_PROXIMITY",
                                'binary "within N words of X" is not supported',
                                'use one quoted phrase: "term1 term2" within N words')
-            if "*" in text or "?" in text:
+            has_wildcard = "*" in text or "?" in text
+            # A bare (unquoted) wildcard token can't carry proximity
+            # (e.g. `smart* within 3 words`).
+            if has_wildcard and not phrase:
                 raise OQLError("OQL_WILDCARD_IN_PROXIMITY",
                                'a wildcard cannot be combined with proximity',
                                'drop the wildcard, or drop "within N words"', t.pos)
@@ -850,7 +854,21 @@ class _Parser:
                 raise OQLError("OQL_PROXIMITY_NEEDS_PHRASE",
                                'proximity needs a quoted multi-word phrase',
                                'e.g. "smart phone" within 3 words', t.pos)
+            # A wildcard inside a quoted proximity phrase IS supported (oxjob #355): the
+            # engine compiles it to an ES `intervals` query (trailing-prefix -> prefix
+            # rule, mid-word `?` -> wildcard rule). Validate each wildcard token's shape
+            # so #337's leading/short-prefix rejections still hold inside the phrase.
+            if has_wildcard:
+                for word in text.split():
+                    _validate_wildcards(word, t.pos)
             return LeafFilter(col, f'"{text}"~{n}', "contains")
+        # A wildcard inside quotes is only meaningful with proximity (handled above);
+        # without a `within N words` suffix there is no engine path, so reject it
+        # (e.g. `"bar*"`). (oxjob #337 / #355)
+        if phrase and ("*" in text or "?" in text):
+            raise OQLError("OQL_WILDCARD_IN_QUOTES",
+                           f'wildcard inside a quoted phrase: "{text}"',
+                           'move the wildcard out of the quotes, e.g. bar*', t.pos)
         # encode value: multi-word phrase keeps its quotes; a single word is bare
         # (the column suffix carries exact-vs-stemmed).
         if phrase and len(text.split()) > 1:

@@ -193,16 +193,18 @@ def test_every_row_has_valid_facets():
                         r.get("oxurl_representable")))
     assert not bad, f"rows with missing/unknown facets: {bad}"
 
-    # The non-representable set is a deliberate, reviewed list: the 10 invalid-OQL
-    # error rows plus the 3 genuine boundaries. If this drifts, it's a real
+    # The non-representable set is a deliberate, reviewed list: the 9 invalid-OQL
+    # error rows plus the 2 genuine boundaries. If this drifts, it's a real
     # editorial change — update the list, don't loosen the assert.
+    # (oxjob #355 lifted PW7=27 and L02c=58 to `ok`: wildcard-in-quoted-proximity now
+    #  compiles to an ES `intervals` query, so both are representable.)
     not_representable = {r["id"] for r in ROWS if not r["oxurl_representable"]}
     # Opaque ints since #360; old semantic ids in comments (work/id_map.yaml).
     expected_not = {
-        # ENT6, BOOL2, G7, G8, PW4, PW5, PW6, PW7, PW8, PW9
-        6, 8, 17, 19, 24, 25, 26, 27, 28, 29,
-        # L02c, L12, L20  (the 3 genuine boundaries)
-        58, 68, 76,
+        # ENT6, BOOL2, G7, G8, PW4, PW5, PW6, PW8, PW9
+        6, 8, 17, 19, 24, 25, 26, 28, 29,
+        # L12, L20  (the 2 remaining genuine boundaries)
+        68, 76,
     }
     assert not_representable == expected_not, (
         f"oxurl_representable set drifted: "

@@ -502,6 +502,81 @@ class TestValidateWildcards:
         with pytest.raises(APIQueryParamsError):
             validate_wildcards("ab*")
 
+    @pytest.mark.parametrize("terms", ['"smart phone*"~3', '"smart wom?n"~3'])
+    def test_wildcard_in_quoted_proximity_passes(self, terms):
+        # oxjob #355: a wildcard inside a quoted PROXIMITY phrase is supported (it
+        # compiles to an ES intervals query), so validation must NOT reject it.
+        validate_wildcards(terms)
+
+    @pytest.mark.parametrize(
+        "terms,needle",
+        [
+            ('"smart *phone"~3', "Leading wildcard"),
+            ('"smart ab*"~3', "at least 3 leading characters"),
+        ],
+    )
+    def test_bad_wildcard_shape_in_proximity_still_rejected(self, terms, needle):
+        # #337's leading / short-prefix rejections still apply inside a proximity phrase.
+        with pytest.raises(APIQueryParamsError) as exc:
+            validate_wildcards(terms)
+        assert needle in str(exc.value.args[0])
+
+
+class TestProximityWildcard:
+    """oxjob #355: `"smart phone*"~3` (wildcard inside a quoted proximity phrase) must
+    compile to an ES `intervals` query — query_string silently drops the wildcard."""
+
+    def test_has_proximity_wildcard_true(self):
+        assert SearchOpenAlex(search_terms='"smart phone*"~3').has_proximity_wildcard()
+        assert SearchOpenAlex(search_terms='"smart wom?n"~3').has_proximity_wildcard()
+
+    @pytest.mark.parametrize(
+        "terms",
+        ['"smart phone"~3', "phone*", "machine learning", '"smart phone*"', "smart*"],
+    )
+    def test_has_proximity_wildcard_false(self, terms):
+        # plain proximity, plain wildcard, plain text, wildcard-in-quotes-without-prox,
+        # and a bare wildcard token all stay off the intervals path.
+        assert not SearchOpenAlex(search_terms=terms).has_proximity_wildcard()
+
+    def test_builds_intervals_with_prefix_rule(self):
+        oa = SearchOpenAlex(
+            search_terms='"smart phone*"~3', primary_field="display_name.no_stem"
+        )
+        q = oa.build_query(skip_citation_boost=True).to_dict()
+        field = q["intervals"]["display_name.no_stem"]
+        all_of = field["all_of"]
+        assert all_of["ordered"] is False
+        assert all_of["max_gaps"] == 3  # max_gaps maps 1:1 to slop N (spike-pinned)
+        assert all_of["intervals"] == [
+            {"match": {"query": "smart"}},
+            {"prefix": {"prefix": "phone"}},
+        ]
+
+    def test_midword_question_mark_uses_wildcard_rule(self):
+        oa = SearchOpenAlex(
+            search_terms='"smart wom?n"~3', primary_field="display_name"
+        )
+        rules = oa.build_query(skip_citation_boost=True).to_dict()[
+            "intervals"]["display_name"]["all_of"]["intervals"]
+        assert rules[1] == {"wildcard": {"pattern": "wom?n"}}
+
+    def test_combine_fields_ors_with_boost(self):
+        # title_and_abstract.search.exact path: primary + secondary, OR'd, secondary boosted.
+        oa = SearchOpenAlex(
+            search_terms='"smart phone*"~3',
+            primary_field="display_name.no_stem",
+            secondary_field="abstract.no_stem",
+            combine_fields=True,
+        )
+        q = oa.build_query(skip_citation_boost=True).to_dict()
+        should = q["bool"]["should"]
+        assert len(should) == 2
+        assert "display_name.no_stem" in should[0]["intervals"]
+        sec = should[1]["intervals"]["abstract.no_stem"]
+        assert sec["boost"] == 0.10
+        assert "query_string" not in str(q)  # wildcard NOT dropped to query_string
+
 
 class TestSearchInputNormalization:
     """oxjob #191.2 Case 6a: curly quotes / whitespace lookalikes must not
