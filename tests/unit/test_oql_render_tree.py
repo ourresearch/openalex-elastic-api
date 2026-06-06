@@ -161,7 +161,16 @@ class TestStringifyInvariant:
         )
         oql, tree = render_oqo_to_oql_and_tree(oqo)
 
-        assert stringify(tree) == oql
+        # This query exceeds the 80-col target, so render() lays it out
+        # multi-line (#376 Phase 2). Invariant A generalizes:
+        #  - the flat path of the formatter still equals stringify(tree), and
+        #  - the multi-line form round-trips to the same canonical OQO.
+        from query_translation.oql_lang import format_oql
+        from query_translation.oqo_canonicalizer import canonicalize_oqo
+        from tests.oql.oql_v2 import parse
+        assert "\n" in oql
+        assert stringify(tree) == format_oql(tree, width=10_000)
+        assert canonicalize_oqo(parse(oql)).to_dict() == canonicalize_oqo(oqo).to_dict()
 
 
 class TestCanonicalization:

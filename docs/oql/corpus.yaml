@@ -57,7 +57,7 @@ rows:
     label: "OQL v2 spec spine"
   oxurl_representable: true
   status: ok
-  oql: 'works where institution is I136199984 [those Harvard bastards, go Yale]'
+  oql: 'works where institution is I136199984 [Harvard]'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I136199984}]}
   note: The annotation is free text and is not validated — it cannot lie because nothing reads it.
 
@@ -81,7 +81,10 @@ rows:
     label: "OQL v2 spec spine"
   oxurl_representable: true
   status: ok
-  oql: 'works where institution is not any of (I33213144, I97018004)'
+  oql: |-
+    works
+    where institution is not I33213144 [Harvard]
+      and institution is not I97018004 [Stanford]
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I33213144, is_negated: true},
         {column_id: authorships.institutions.lineage, value: I97018004, is_negated: true}]}
@@ -94,7 +97,7 @@ rows:
     label: "OQL v2 spec spine"
   oxurl_representable: true
   status: ok
-  oql: 'works where type is in (article, review)'
+  oql: 'works where type is any of (article, review)'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
         {column_id: type, value: article}, {column_id: type, value: review}]}]}
   note: '`is in` is accepted on input; canonical output spells it `is any of`.'
@@ -120,7 +123,7 @@ rows:
     label: "OQL v2 spec spine"
   oxurl_representable: true
   status: ok
-  oql: 'works where title contains apple and (banana or cherry)'
+  oql: 'works where title contains apple and title contains any of (banana, cherry)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: apple, operator: contains},
         {join: or, filters: [
@@ -146,7 +149,9 @@ rows:
     label: "OQL v2 spec spine"
   oxurl_representable: true
   status: ok
-  oql: 'works where title contains apple and banana and cherry'
+  oql: |-
+    works
+    where title contains apple and title contains banana and title contains cherry
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: apple, operator: contains},
         {column_id: display_name.search, value: banana, operator: contains},
@@ -160,7 +165,9 @@ rows:
     label: "OQL v2 spec spine"
   oxurl_representable: true
   status: ok
-  oql: 'works where title contains apple banana cherry'
+  oql: |-
+    works
+    where title contains apple and title contains banana and title contains cherry
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: apple, operator: contains},
         {column_id: display_name.search, value: banana, operator: contains},
@@ -178,7 +185,7 @@ rows:
     label: "OQL v2 spec spine"
   oxurl_representable: true
   status: ok
-  oql: 'works where title contains climate change'
+  oql: 'works where title contains change and title contains climate'
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: climate, operator: contains},
         {column_id: display_name.search, value: change, operator: contains}]}
@@ -257,7 +264,7 @@ rows:
     label: "OQL v2 spec spine"
   oxurl_representable: true
   status: ok
-  oql: 'works where title contains climate (change or warming)'
+  oql: 'works where title contains climate and title contains any of (change, warming)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: climate, operator: contains},
         {join: or, filters: [
@@ -440,7 +447,9 @@ rows:
     label: "OQL v2 spec spine"
   oxurl_representable: true
   status: ok
-  oql: 'works where abstract is similar to "graph neural networks for molecular property prediction"'
+  oql: |-
+    works
+    where abstract is similar to "graph neural networks for molecular property prediction"
   oqo: {get_rows: works, filter_rows: [{column_id: abstract.search.semantic,
         value: graph neural networks for molecular property prediction, operator: contains}]}
   note: Semantic (search.semantic, 2-phase vector search).
@@ -497,7 +506,10 @@ rows:
     label: "OpenAlex analytics question (OAQ#23)"
   oxurl_representable: true
   status: ok
-  oql: 'works where institution is any of (I33213144 [University of Florida], I136199984 [Harvard]) and year >= 2020'
+  oql: |-
+    works
+    where year >= 2020
+      and institution is any of (I136199984 [Harvard], I33213144 [Harvard])
   oqo: {get_rows: works, filter_rows: [
         {join: or, filters: [
           {column_id: authorships.institutions.lineage, value: I33213144},
@@ -511,7 +523,10 @@ rows:
     label: "OpenAlex analytics question (AKQ#8)"
   oxurl_representable: true
   status: ok
-  oql: 'works where institution is I130438778 [Memorial University of Newfoundland]; sort by citations desc'
+  oql: |-
+    works
+    where institution is I130438778 [Memorial University of Newfoundland]
+    ; sort by citations desc
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I130438778}],
         sort_by: [{column_id: cited_by_count, direction: desc}]}
 
@@ -522,7 +537,11 @@ rows:
     label: "OpenAlex analytics question (AKQ#19)"
   oxurl_representable: true
   status: ok
-  oql: "works where institution is I201448701 [UW] AND funder is F4320332161 [NIH] AND it's not open access"
+  oql: |-
+    works
+    where institution is I201448701 [UW]
+      and funder is F4320332161 [NIH]
+      and it's not open access
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I201448701},
         {column_id: funders.id, value: F4320332161},
@@ -535,7 +554,9 @@ rows:
     label: "OpenAlex analytics question (AKQ#46)"
   oxurl_representable: true
   status: ok
-  oql: 'works where title & abstract contains climate change'
+  oql: |-
+    works
+    where title & abstract contains change and title & abstract contains climate
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: climate, operator: contains},
         {column_id: title_and_abstract.search, value: change, operator: contains}]}
@@ -558,7 +579,7 @@ rows:
     label: "OpenAlex analytics question (AKQ#18)"
   oxurl_representable: true
   status: ok
-  oql: 'authors where author country is BR and it has an ORCID'
+  oql: 'authors where it has an ORCID and author country is BR'
   oqo: {get_rows: authors, filter_rows: [
         {column_id: last_known_institutions.country_code, value: BR},
         {column_id: has_orcid, value: true}]}
@@ -610,7 +631,10 @@ rows:
     label: "OpenAlex analytics question (AKQ#37)"
   oxurl_representable: true
   status: ok
-  oql: 'authors where last known institution is I114027177 [UNC] and topics is T10895 [climate change]'
+  oql: |-
+    authors
+    where last known institution is I114027177 [UNC]
+      and topics is T10895 [climate change]
   oqo: {get_rows: authors, filter_rows: [
         {column_id: last_known_institutions.id, value: I114027177},
         {column_id: topics.id, value: T10895}]}
@@ -636,7 +660,7 @@ rows:
     label: "OpenAlex analytics question (AKQ#17)"
   oxurl_representable: true
   status: ok
-  oql: 'works where anywhere contains near "Macrocystis pyrifera"; group by author'
+  oql: 'works where fulltext contains near "Macrocystis pyrifera"; group by author'
   # "anywhere" is a back-compat alias of the canonical "fulltext" scope and emits
   # fulltext.search (oxjob #374; default.search is deprecated).
   oqo: {get_rows: works, filter_rows: [{column_id: fulltext.search, value: '"Macrocystis pyrifera"', operator: contains}],
@@ -662,7 +686,7 @@ rows:
     label: "OpenAlex analytics question (AKQ#20)"
   oxurl_representable: true
   status: ok
-  oql: 'works where country is col_eu27 and country is US; group by topic'
+  oql: 'works where country is US and country is col_eu27; group by topic'
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.countries, value: col_eu27},
         {column_id: authorships.countries, value: US}],
@@ -676,7 +700,7 @@ rows:
     label: "OpenAlex analytics question (AKQ#48)"
   oxurl_representable: true
   status: ok
-  oql: "works where it's retracted; group by institution"
+  oql: 'works where it''s retracted; group by institution'
   oqo: {get_rows: works, filter_rows: [{column_id: is_retracted, value: true}],
         group_by: [{column_id: authorships.institutions.lineage}]}
 
@@ -687,7 +711,10 @@ rows:
     label: "OpenAlex analytics question (AKQ#27)"
   oxurl_representable: true
   status: ok
-  oql: 'works where title & abstract contains near "coral bleaching" and citations > 100; group by source'
+  oql: |-
+    works
+    where citations > 100 and title & abstract contains near "coral bleaching"
+    ; group by source
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: '"coral bleaching"', operator: contains},
         {column_id: cited_by_count, value: 100, operator: '>'}],
@@ -711,7 +738,7 @@ rows:
     label: "OpenAlex analytics question (AKQ#59)"
   oxurl_representable: true
   status: ok
-  oql: "works where institution is I154570441 [UCSB] AND it's retracted; group by author"
+  oql: 'works where institution is I154570441 [UCSB] and it''s retracted; group by author'
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I154570441},
         {column_id: is_retracted, value: true}],
@@ -739,7 +766,15 @@ rows:
     url: "https://blogs.cranfield.ac.uk/library/slr-combining-strings/"
   oxurl_representable: true
   status: ok
-  oql: 'works where title & abstract contains agile and title & abstract contains any of (near "supply chain", near "demand chain", near "value chain") and title & abstract contains any of (near "lead time", near "cycle time")'
+  oql: |-
+    works
+    where title & abstract contains agile
+      and title & abstract contains any of (near "cycle time", near "lead time")
+      and title & abstract contains any of (
+        near "demand chain",
+        near "supply chain",
+        near "value chain",
+      )
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: agile, operator: contains},
         {join: or, filters: [
@@ -818,7 +853,18 @@ rows:
     url: "https://libguides.kcl.ac.uk/systematicreview/advanced"
   oxurl_representable: true
   status: ok
-  oql: 'works where title & abstract contains any of (autism, ASD, near "autism spectrum disorder") and title & abstract contains any of (intervention, therapy, treatment) and year >= 2015 and year <= 2024 and type is any of (article, review) and language is en'
+  oql: |-
+    works
+    where language is en
+      and year <= 2024
+      and year >= 2015
+      and title & abstract contains any of (
+        ASD,
+        near "autism spectrum disorder",
+        autism,
+      )
+      and title & abstract contains any of (intervention, therapy, treatment)
+      and type is any of (article, review)
   oqo: {get_rows: works, filter_rows: [
         {join: or, filters: [
           {column_id: title_and_abstract.search, value: autism, operator: contains},
@@ -842,7 +888,7 @@ rows:
     url: "https://docs.dimensions.ai/dsl/"
   oxurl_representable: true
   status: ok
-  oql: 'works where OA status is gold and funder is F4320337351 [NCI]'
+  oql: 'works where funder is F4320337351 [NCI] and OA status is gold'
   oqo: {get_rows: works, filter_rows: [
         {column_id: open_access.oa_status, value: gold},
         {column_id: funders.id, value: F4320337351}]}
@@ -855,7 +901,14 @@ rows:
     url: "https://docs.dimensions.ai/dsl/"
   oxurl_representable: true
   status: ok
-  oql: 'works where title & abstract contains CRISPR and near "genome editing" and year >= 2018 and year <= 2023; sort by citations desc; sample 500'
+  oql: |-
+    works
+    where year <= 2023
+      and year >= 2018
+      and title & abstract contains CRISPR
+      and title & abstract contains near "genome editing"
+    ; sort by citations desc
+    ; sample 500
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: CRISPR, operator: contains},
         {column_id: title_and_abstract.search, value: '"genome editing"', operator: contains},
@@ -951,7 +1004,10 @@ rows:
     url: "https://library-guides.ucl.ac.uk/web-of-science/search-tips"
   oxurl_representable: true
   status: ok
-  oql: 'works where title & abstract contains covid and title & abstract does not contain pediatric'
+  oql: |-
+    works
+    where title & abstract does not contain pediatric
+      and title & abstract contains covid
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: covid, operator: contains},
         {column_id: title_and_abstract.search, value: pediatric, operator: contains, is_negated: true}]}
@@ -965,7 +1021,10 @@ rows:
     url: "https://webofscience.zendesk.com/hc/en-us/articles/26916347018257-Web-of-Science-Core-Collection-Advanced-Search-Field-Tags"
   oxurl_representable: true
   status: ok
-  oql: 'works where title & abstract contains quantum computing; group by country'
+  oql: |-
+    works
+    where title & abstract contains computing and title & abstract contains quantum
+    ; group by country
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: quantum, operator: contains},
         {column_id: title_and_abstract.search, value: computing, operator: contains}],
@@ -980,7 +1039,10 @@ rows:
     url: "https://docs.dimensions.ai/dsl/"
   oxurl_representable: true
   status: ok
-  oql: 'works where title & abstract contains CRISPR and Cas9; group by author'
+  oql: |-
+    works
+    where title & abstract contains CRISPR and title & abstract contains Cas9
+    ; group by author
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: CRISPR, operator: contains},
         {column_id: title_and_abstract.search, value: Cas9, operator: contains}],
@@ -1046,4 +1108,38 @@ rows:
     OR-synonym groups, each block scoped to a different search field
     (title / title & abstract x2 / anywhere). 114 leaves. No explicit oqo oracle
     — the harness asserts OQO->OQL->OQO identity through the whole tree.
-  oql: 'works where title contains any of (obese, overweight, obesity, "body image", fat, fatness, thin, thinness, Height, weight, bodyweight, "body hatred", "body positive", "thin ideal", "fat ideal", "body esteem", "body ideal", "ideal body", "body shape", "body size", "body sizes", "weight bias", "being fat", "being thin", "anti fat", "body shame") and title & abstract contains any of (qualitative, "focus group", "focus groups", questionnaire, questionnaires, interview, interviews, experiences, "lived experience", perceptions, perspective, perspectives, attitude, attitudes, beliefs, diary, diaries) and title & abstract contains any of (qualitative, "focus group", "focus groups", "semi structured", semistructured, unstructured, informal, in-depth, indepth, open, "open ended", experiences, "lived experience", perceptions, perspective, perspectives, attitude, attitudes, beliefs, diary, diaries) and title contains any of ("young people", adolescent, youth, pubertal, pubescent, "pre adolescent", "Pre pubescent", "pre pubertal", teen, preteen, tweens, tweenage, youths, schoolboy, schoolgirl, "school aged", "young person", juvenile, Boy, boys, children, child''s, Girl, girls, Minors, preadolescent, Prepubescent, schoolchild, "early adolescent") and anywhere contains any of (GB, Britain, UK, "United Kingdom", England, "Northern Ireland", "Northern Irish", "North Ireland", "North Irish", Scotland, Scottish, Wales, Welsh, "english boys", "English girls", "english school", "English children", "English teen", "English adolescent", "English young people", "English schoolchild")'
+  oql: |-
+    works
+    where title contains any of (
+        Boy, Girl, Minors, Prepubescent, adolescent, boys, child's, children, girls,
+        juvenile, preadolescent, preteen, pubertal, pubescent, schoolboy,
+        schoolchild, schoolgirl, teen, tweenage, tweens, youth, youths,
+        "Pre pubescent", "early adolescent", "pre adolescent", "pre pubertal",
+        "school aged", "young people", "young person",
+      )
+      and title contains any of (
+        Height, bodyweight, fat, fatness, obese, obesity, overweight, thin,
+        thinness, weight, "anti fat", "being fat", "being thin", "body esteem",
+        "body hatred", "body ideal", "body image", "body positive", "body shame",
+        "body shape", "body size", "body sizes", "fat ideal", "ideal body",
+        "thin ideal", "weight bias",
+      )
+      and fulltext contains any of (
+        Britain, England, GB, Scotland, Scottish, UK, Wales, Welsh,
+        "English adolescent", "English children", "English girls",
+        "English schoolchild", "English teen", "English young people",
+        "North Ireland", "North Irish", "Northern Ireland", "Northern Irish",
+        "United Kingdom", "english boys", "english school",
+      )
+      and title & abstract contains any of (
+        attitude, attitudes, beliefs, diaries, diary, experiences, in-depth,
+        indepth, informal, open, perceptions, perspective, perspectives,
+        qualitative, semistructured, unstructured, "focus group", "focus groups",
+        "lived experience", "open ended", "semi structured",
+      )
+      and title & abstract contains any of (
+        attitude, attitudes, beliefs, diaries, diary, experiences, interview,
+        interviews, perceptions, perspective, perspectives, qualitative,
+        questionnaire, questionnaires, "focus group", "focus groups",
+        "lived experience",
+      )

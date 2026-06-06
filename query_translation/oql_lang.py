@@ -610,6 +610,11 @@ class _Parser:
             t = self.peek()
             if t and t.kind == "COMMA":
                 self.next()
+                # tolerate a trailing comma (the canonical formatter emits one
+                # in every exploded list; #376 Phase 2): `(a, b,)` == `(a, b)`.
+                nt = self.peek()
+                if nt and nt.kind == "RP":
+                    break
                 continue
             break
         self._expect_rp()
@@ -783,6 +788,10 @@ class _Parser:
                 nt = self.peek()
                 if nt and nt.kind == "COMMA":
                     self.next()
+                    # tolerate a trailing comma (canonical formatter, #376 Ph2)
+                    nt2 = self.peek()
+                    if nt2 and nt2.kind == "RP":
+                        break
                     continue
                 break
             self._expect_rp()
@@ -1155,21 +1164,29 @@ def _value_with_name(fld, value, column_id, resolver) -> str:
 
 
 def _same_field_search_set(f: BranchFilter):
-    """If every child is a plain search leaf on the same column & polarity, return
-    (column, [values]); else None. Enables `field contains any of (...)`."""
-    cols = set()
-    vals = []
+    """If every child is a plain search leaf on the same *base* field & polarity,
+    return (name_column, [(value, column_id), ...]); else None. Enables
+    `field contains any of (...)`. Grouping by base field (not full column_id)
+    lets a mixed stemmed/exact list — `contains any of (obese, "body image")`,
+    `.search` + `.search.exact` — factor into one clause; each value keeps its
+    own column so `_render_term` renders its mode surface (bare vs quoted).
+    Semantically identical to the OR/AND of the leaves, so round-trip holds."""
+    bases = set()
+    items = []
+    name_col = None
     for c in f.filters:
         if not (isinstance(c, LeafFilter) and _is_search_leaf(c) and not c.is_negated):
             return None
-        _, mode = _oql_field(c.column_id)
+        name, mode = _oql_field(c.column_id)
         if mode == "semantic":  # semantic leaves don't fold into `contains any of`
             return None
-        cols.add(c.column_id)
-        vals.append(c.value)
-    if len(cols) != 1:  # same column => same stemmed/exact mode => factorable
+        bases.add(name)  # the human field name is the per-base identity
+        if name_col is None:
+            name_col = c.column_id
+        items.append((c.value, c.column_id))
+    if len(bases) != 1:  # one base field => factorable into a single clause
         return None
-    return cols.pop(), vals
+    return name_col, items
 
 
 def _same_field_eq_set(f: BranchFilter, negated: bool):
@@ -1291,15 +1308,15 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
     # factor same-field search OR/AND into `any of/all of` -> one value-list clause
     sset = _same_field_search_set(f)
     if sset:
-        col, vals = sset
+        col, items = sset
         name, _ = _oql_field(col)
         kw = "any of" if f.join == "or" else "all of"
         segs = [_seg("column", name, column_id=col),
                 _seg("operator", f" contains {kw} "), _seg("text", "(")]
-        for i, v in enumerate(vals):
+        for i, (v, vcol) in enumerate(items):
             if i:
                 segs.append(_seg("text", ", "))
-            segs.append(_seg("value", _render_term(v, col), value=v))
+            segs.append(_seg("value", _render_term(v, vcol), value=v))
         segs.append(_seg("text", ")"))
         return ClauseNode(segments=segs, clause_kind="text", meta=ClauseMeta(
             column_id=col, operator="contains", value=None,
@@ -1389,15 +1406,157 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
                          where=where, directives=directives)
 
 
+# ---------------------------------------------------------------------------
+# Width-aware canonical formatter (#376 Phase 2).
+#
+# `render()`/`render_tree()` are width-aware: a query whose one-line canonical
+# form fits the target width renders flat (unchanged); a longer one is laid out
+# multi-line by a recursive fits-or-explode pass (the Black model) over the SAME
+# tree. Invariant A thus generalizes from "concatenated segments == oql" to
+# "segments in reading order == oql, with newlines + indentation allowed between
+# them": the whitespace-blind, trailing-comma-tolerant parser round-trips the
+# multi-line form to the identical OQO. Layout is a pure function of
+# (tree, width) -> idempotent. Spec: docs/oql-spec.md "Canonical formatting".
+# ---------------------------------------------------------------------------
+from query_translation.oql_render_tree import (  # noqa: E402
+    _stringify_expr, _stringify_clause, _stringify_group, _stringify_directive,
+)
+
+FORMAT_WIDTH = 80   # soft target; nodes explode to keep flat forms within it
+_INDENT = 2
+
+
+def _leading_conn(group: GroupNode) -> str:
+    """Connective that leads continuation operands of an exploded group
+    (`"and "` / `"or "`); empty for a single-child wrapper (e.g. `not (...)`)."""
+    j = group.joiner.strip()
+    return f"{j} " if j else ""
+
+
+def _split_list_clause(clause: ClauseNode):
+    """If `clause` is a value-list clause (`… is any of (a, b, c)` /
+    `… contains any of (…)`), return `(head, items, close)` where `head` ends
+    with `"("`, `items` is the list of flat item strings, and `close == ")"`;
+    else None. Splits on the engine's own structural segments (the literal
+    `"("`, `", "`, `")"` text segments), so a `", "` inside a resolved
+    `[display name]` (an `id` segment) is never mistaken for a separator."""
+    segs = clause.segments
+    open_idx = next((i for i, s in enumerate(segs)
+                     if s.kind == "text" and s.text == "("), None)
+    if open_idx is None or not (segs[-1].kind == "text" and segs[-1].text == ")"):
+        return None
+    head = "".join(s.text for s in segs[:open_idx + 1])
+    items, cur = [], []
+    for s in segs[open_idx + 1:-1]:
+        if s.kind == "text" and s.text == ", ":
+            items.append("".join(cur))
+            cur = []
+        else:
+            cur.append(s.text)
+    items.append("".join(cur))
+    return head, items, ")"
+
+
+def _fmt_list(head: str, items, indent: int, width: int) -> str:
+    """Lay out an exploded value list. `indent` is the clause's own indent
+    (where the closing `)` sits); items sit at `indent + _INDENT`. Every item
+    carries a trailing comma (idempotence anchor + clean diffs; the parser
+    tolerates it). <=8 items -> one per line; >8 -> fill/pack to `width`."""
+    pad = " " * (indent + _INDENT)
+    out = [head]
+    if len(items) <= 8:
+        out.extend(f"{pad}{it}," for it in items)
+    else:
+        line, empty = pad, True
+        for it in items:
+            piece = f"{it},"
+            if not empty and len(line) + 1 + len(piece) > width:
+                out.append(line)
+                line, empty = pad, True
+            line = f"{pad}{piece}" if empty else f"{line} {piece}"
+            empty = False
+        out.append(line)
+    out.append(f"{' ' * indent})")
+    return "\n".join(out)
+
+
+def _fmt_clause(clause: ClauseNode, indent: int, col: int, width: int) -> str:
+    flat = _stringify_clause(clause)
+    if col + len(flat) <= width:
+        return flat
+    parts = _split_list_clause(clause)
+    if parts is None:
+        return flat   # an unbreakable clause (e.g. one long search term)
+    head, items, _close = parts
+    return _fmt_list(head, items, indent, width)
+
+
+def _fmt_group(group: GroupNode, indent: int, col: int, width: int) -> str:
+    flat = _stringify_group(group)
+    if col + len(flat) <= width:
+        return flat
+    conn = _leading_conn(group)
+    if group.prefix:
+        # Parenthesized group: open bracket on the current line, every operand
+        # on its own line one level deeper, closing bracket back at `indent`.
+        child_indent = indent + _INDENT
+        pad = " " * child_indent
+        out = [group.prefix]
+        for i, ch in enumerate(group.children):
+            lead = "" if i == 0 else conn
+            sub = _fmt_expr(ch, child_indent, child_indent + len(lead), width)
+            out.append(f"{pad}{lead}{sub}")
+        out.append(f"{' ' * indent}{group.suffix}")
+        return "\n".join(out)
+    # Bare group (top-level where body / implicit AND): the first operand
+    # continues the current line; each subsequent operand starts a new line at
+    # `indent`, led by the connective.
+    out = []
+    for i, ch in enumerate(group.children):
+        if i == 0:
+            out.append(_fmt_expr(ch, indent, col, width))
+        else:
+            sub = _fmt_expr(ch, indent, indent + len(conn), width)
+            out.append(f"{' ' * indent}{conn}{sub}")
+    return "\n".join(out)
+
+
+def _fmt_expr(node: ExprNode, indent: int, col: int, width: int) -> str:
+    if isinstance(node, ClauseNode):
+        return _fmt_clause(node, indent, col, width)
+    if isinstance(node, GroupNode):
+        return _fmt_group(node, indent, col, width)
+    return _stringify_expr(node)
+
+
+def format_oql(tree: OQLRenderTree, width: int = FORMAT_WIDTH) -> str:
+    """Lay out `tree` as canonical OQL within `width` columns. A query whose
+    one-line form fits returns it unchanged; a longer one explodes top-down:
+    the entity head, the `where` body, and each directive onto their own
+    line(s)."""
+    flat = stringify(tree)
+    if len(flat) <= width:
+        return flat
+    lines = [tree.entity.text]
+    if tree.where is not None:
+        body = _fmt_expr(tree.where, _INDENT, len("where "), width)
+        lines.append(f"where {body}")
+    lines.extend(_stringify_directive(d) for d in tree.directives)
+    return "\n".join(lines)
+
+
 def render_tree(oqo: OQO, resolver=None):
-    """OQO -> (canonical OQL string, oql_render tree). Invariant A holds: the
-    string IS `stringify(tree)`."""
+    """OQO -> (canonical OQL string, oql_render tree). The string is the
+    width-aware `format_oql(tree)`; for queries that fit one line it equals
+    `stringify(tree)` (Invariant A), and the multi-line form still round-trips
+    to the same OQO."""
     tree = _build_tree(oqo, resolver)
-    return stringify(tree), tree
+    return format_oql(tree), tree
 
 
 def render(oqo: OQO, resolver=None) -> str:
-    """OQO -> canonical OQL. `resolver(value, column_id) -> name|None` (a 1-arg
-    `resolver(value)` is also accepted) synthesizes `[display name]` annotations
-    for opaque-ID / country columns."""
-    return stringify(_build_tree(oqo, resolver))
+    """OQO -> canonical OQL (width-aware multi-line when long; see `format_oql`).
+    `resolver(value, column_id) -> name|None` (a 1-arg `resolver(value)` is also
+    accepted) synthesizes `[display name]` annotations for opaque-ID / country
+    columns."""
+    return format_oql(_build_tree(oqo, resolver))

@@ -68,6 +68,53 @@ This invariant is the spec's runnable contract — see §9.
 OQL covers exactly **OQO Stage A (filter / sort / sample) + Stage B (group_by)**.
 There is deliberately **no Stage-C / HAVING syntax** (§10).
 
+### 2.1 Canonical formatting (output layout)
+
+`OQO → OQL` lays the canonical string out **width-aware and multi-line** when it
+is long, so a real systematic-review query (corpus row **78**, 114 search leaves)
+reads as an indented tree instead of one ~1,600-char line. Because the parser is
+**whitespace-blind** (whitespace is the non-semantic text layer, §1), the layout
+is **OQO-identity-preserving by construction** — it cannot change meaning or break
+any consumer. There is exactly **One Right Way** to lay a query out; it is a pure
+function of the query, never of the input's whitespace.
+
+Implemented in [`query_translation/oql_lang.py`](../query_translation/oql_lang.py)
+(`format_oql`, reached via `render()` / `render_tree()`); the rules:
+
+- **Target width 80 columns** (soft); **indent 2 spaces** per level.
+- **Recursive fits-or-explode** (the Black model): render a node flat; if it
+  fits at its starting column, keep it on one line; otherwise **explode its
+  direct children one level and recurse**. Breaking a parent does **not** force
+  its children to break.
+- **Top level.** A statement that fits stays on one line. Otherwise the entity
+  head, the `where` body, and **each directive** go on their own line(s); the
+  directives (`; group by …`, `; sort by …`, `; sample …`) sit at column 0.
+- **Leading connectives.** When a boolean explodes, `and` / `or` **begin** each
+  continuation line (one operand per line). A parenthesized group puts `(` on
+  the current line, its operands one level deeper, and `)` back at the group's
+  indent.
+- **Value lists** (`is any of ( … )`, `contains any of ( … )`): inline if they
+  fit; else **≤ 8 items → one per line**, **> 8 items → fill/pack** to the width
+  (this is what tames row 78's synonym blocks).
+- **Trailing comma** on every item of an **exploded** list (an idempotence
+  anchor + clean diffs); **none** inline. The parser tolerates a trailing comma
+  (`is any of (a, b,)` ≡ `is any of (a, b)`), so this stays whitespace-class.
+- **Idempotence is a hard invariant:** `format(format(x)) == format(x)`. Every
+  break decision is a pure function of *(content, width, depth)*.
+- **Hard ceiling 100 columns:** only a **single unbreakable atom** (one quoted
+  phrase, ID, or term longer than the budget) may exceed the target; nothing
+  with an internal `, ` break point ever does.
+
+```
+works
+where year >= 2020
+  and title contains any of (
+    fat, obese, obesity, overweight, thin, "anti fat", "being fat",
+    "body esteem", "body image", "fat ideal", "thin ideal", "weight bias",
+  )
+; sort by citations desc
+```
+
 ## 3. Conditions — the cases
 
 ### 3.1 Entity references: the ID is authoritative, `[…]` is ignored decoration
