@@ -1,26 +1,31 @@
 """
-OQL Renderer - Converts OQO format to OQL (human-readable query language).
+OQL Renderer — OQO -> canonical OQL string.
 
-Generates human-readable OQL strings like:
-  Works where it's Open Access and Country is Canada [countries/ca] and year >= 2020; sort by citations desc
+As of oxjob #376 this is a thin wrapper over the ONE OQL engine
+(`query_translation.oql_lang`). The engine owns the canonical grammar + render
+rules; this module's only job is to adapt prod's name-resolution surface (an
+`entity_resolver(entity_id)` callable that hits Elasticsearch for native
+entities, plus the built-in code->name tables for countries/languages/SDGs/…)
+to the engine's `resolver(value, column_id)` contract.
 
-See docs/oql-spec.md for the full specification.
+See docs/oql-spec.md and query_translation/oql_lang.py.
 """
 
 from typing import Optional, Dict, Any, Callable
 import re
-import requests
 
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
+from query_translation.oqo import OQO
+from query_translation import oql_lang
 
 
 def _render_search_proximity(value: Any) -> Optional[str]:
     """Render a search proximity value back to its OQL surface (oxjob #355).
 
     `"phrase"~N` -> `"phrase" within N words`; binary `"A"~N~"B"` ->
-    `"A" within N words of "B"`. Returns None for any non-proximity value so the
-    caller falls back to normal value formatting. Binary is checked first (its value
-    ends in a quote, so the single-phrase regex won't match it anyway).
+    `"A" within N words of "B"`. Returns None for any non-proximity value.
+
+    Retained for back-compat (the engine now renders proximity itself via
+    `oql_lang._render_term`); kept because other modules import it.
     """
     if not isinstance(value, str):
         return None
@@ -33,518 +38,134 @@ def _render_search_proximity(value: Any) -> Optional[str]:
     return None
 
 
-# Column ID to display name mapping
-# Maps technical column_id to human-readable display name
-COLUMN_DISPLAY_NAMES: Dict[str, str] = {
-    "publication_year": "year",
-    "cited_by_count": "citations",
-    "fwci": "FWCI",
-    "type": "type",
-    "open_access.is_oa": "Open Access",
-    "authorships.institutions.lineage": "institution",
-    "authorships.author.id": "author",
-    "authorships.countries": "Country",
-    "authorships.institutions.continent": "Continent",
-    "primary_location.source.id": "source",
-    "primary_location.source.type": "source type",
-    "primary_location.source.publisher_lineage": "publisher",
-    "primary_topic.id": "topic",
-    "primary_topic.subfield.id": "subfield",
-    "primary_topic.field.id": "field",
-    "primary_topic.domain.id": "domain",
-    "grants.funder": "funder",
-    "awards.funder.id": "funder",
-    "sustainable_development_goals.id": "Sustainable Development Goals",
-    "title_and_abstract.search": "title & abstract",
-    "display_name.search": "title",
-    "default.search": "fulltext",
-    "raw_affiliation_strings.search": "raw affiliation string",
-    "language": "language",
-    "is_retracted": "retracted",
-    "has_doi": "has a DOI",
-    "has_abstract": "has an abstract",
-    "institutions.is_global_south": "from Global South",
-    "authorships.institutions.is_global_south": "from Global South",
-    "keywords.id": "keyword",
-    "concepts.id": "concept",
-    "open_access.oa_status": "OA status",
-    "best_oa_location.license": "license",
-}
+# ---------------------------------------------------------------------------
+# Resolver bridge: engine `resolver(value, column_id)` -> prod name resolution.
+#
+# The engine asks "what's the display name for this value on this column?" only
+# for columns whose Field has resolves_name=True (entity-id columns + country
+# codes). We map the column_id to its entity-type namespace, try the supplied
+# `entity_resolver` (native ES lookup for institutions/authors/…), then fall
+# back to the built-in code->name tables (countries/languages/continents/SDGs).
+# ---------------------------------------------------------------------------
 
-# Column ID -> entity-type namespace. Used to reconstruct the prefixed display
-# form ("Canada [ca]") from the bare OQO value ("ca"). Mirrors oql_tree_renderer.
-COLUMN_ENTITY_TYPES: Dict[str, str] = {
+# column_id -> entity-type namespace, for the columns the engine resolves
+# (oql_lang._FIELDS where resolves_name is True). `None` = not name-resolvable
+# (e.g. a bare OpenAlex work id).
+_RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
     "authorships.institutions.lineage": "institutions",
+    "last_known_institutions.id": "institutions",
     "authorships.author.id": "authors",
-    "authorships.countries": "countries",
-    "authorships.institutions.continent": "continents",
     "primary_location.source.id": "sources",
-    "primary_location.source.publisher_lineage": "publishers",
     "primary_topic.id": "topics",
-    "primary_topic.subfield.id": "subfields",
+    "topics.id": "topics",
+    "funders.id": "funders",
     "primary_topic.field.id": "fields",
-    "primary_topic.domain.id": "domains",
-    "grants.funder": "funders",
-    "awards.funder.id": "funders",
+    "domain.id": "domains",
     "sustainable_development_goals.id": "sdgs",
-    "language": "languages",
-    "keywords.id": "keywords",
-    "concepts.id": "concepts",
-    "type": "types",
-    "open_access.oa_status": "oa-statuses",
-    "best_oa_location.license": "licenses",
+    "authorships.countries": "countries",
+    "country_code": "countries",
+    "last_known_institutions.country_code": "countries",
+    "ids.openalex": None,
+}
+
+# Built-in code -> display-name tables for non-native entity types (the
+# `entity_resolver` returns None for these; ES doesn't index them).
+LANGUAGES = {
+    "en": "English", "zh": "Chinese", "es": "Spanish", "fr": "French",
+    "de": "German", "ja": "Japanese", "pt": "Portuguese", "ru": "Russian",
+    "ko": "Korean", "it": "Italian", "ar": "Arabic", "nl": "Dutch",
+    "pl": "Polish", "tr": "Turkish", "id": "Indonesian", "cs": "Czech",
+    "sv": "Swedish", "fa": "Persian", "uk": "Ukrainian", "vi": "Vietnamese",
+}
+
+COUNTRIES = {
+    "us": "United States", "gb": "United Kingdom", "cn": "China",
+    "de": "Germany", "fr": "France", "jp": "Japan", "ca": "Canada",
+    "au": "Australia", "in": "India", "br": "Brazil", "it": "Italy",
+    "es": "Spain", "kr": "South Korea", "nl": "Netherlands", "ru": "Russia",
+    "ch": "Switzerland", "se": "Sweden", "pl": "Poland", "be": "Belgium",
+    "at": "Austria", "dk": "Denmark", "no": "Norway", "fi": "Finland",
+    "mx": "Mexico", "sg": "Singapore", "ie": "Ireland", "nz": "New Zealand",
+    "pt": "Portugal", "za": "South Africa", "il": "Israel",
+}
+
+CONTINENTS = {
+    "q15": "Africa", "q18": "South America", "q46": "Europe",
+    "q48": "Asia", "q49": "North America", "q55643": "Oceania",
+    "q51": "Antarctica", "africa": "Africa", "south america": "South America",
+    "europe": "Europe", "asia": "Asia", "north america": "North America",
+    "oceania": "Oceania", "antarctica": "Antarctica",
+}
+
+SDGS = {
+    "1": "No Poverty", "2": "Zero Hunger", "3": "Good Health and Well-being",
+    "4": "Quality Education", "5": "Gender Equality",
+    "6": "Clean Water and Sanitation", "7": "Affordable and Clean Energy",
+    "8": "Decent Work and Economic Growth", "9": "Industry, Innovation and Infrastructure",
+    "10": "Reduced Inequalities", "11": "Sustainable Cities and Communities",
+    "12": "Responsible Consumption and Production", "13": "Climate Action",
+    "14": "Life Below Water", "15": "Life on Land",
+    "16": "Peace, Justice, and Strong Institutions", "17": "Partnerships for the Goals",
 }
 
 
-# Boolean columns that use "it's [not] {displayName}" format
-BOOLEAN_COLUMNS: Dict[str, str] = {
-    "open_access.is_oa": "Open Access",
-    "is_retracted": "retracted",
-    "has_doi": "has a DOI",
-    "has_abstract": "has an abstract",
-    "institutions.is_global_south": "from Global South",
-    "authorships.institutions.is_global_south": "from Global South",
-    "primary_location.source.is_in_doaj": "indexed by DOAJ",
-    "primary_location.source.is_oa": "in an OA source",
-    "open_access.any_repository_has_fulltext": "has repository fulltext",
-}
-
-# Sort column display names
-SORT_DISPLAY_NAMES: Dict[str, str] = {
-    "cited_by_count": "citations",
-    "publication_year": "year",
-    "publication_date": "date",
-    "fwci": "FWCI",
-    "display_name": "title",
-    "relevance_score": "relevance",
-}
+def _builtin_name(entity_type: Optional[str], short_id: str) -> Optional[str]:
+    """Resolve well-known non-native entity codes to display names."""
+    if entity_type == "types":
+        return short_id.replace("-", " ").title()
+    if entity_type == "oa-statuses":
+        return short_id.title()
+    if entity_type == "languages":
+        return LANGUAGES.get(short_id.lower())
+    if entity_type == "countries":
+        return COUNTRIES.get(short_id.lower())
+    if entity_type == "continents":
+        return CONTINENTS.get(short_id.lower())
+    if entity_type == "sdgs":
+        return SDGS.get(short_id)
+    return None
 
 
-class OQLRenderer:
-    """
-    Renders OQO objects to human-readable OQL strings.
-    
-    Supports display name resolution for columns and entity values.
-    """
-    
-    def __init__(self, entity_resolver: Optional[Callable[[str], Optional[str]]] = None):
-        """
-        Initialize the renderer.
-        
-        Args:
-            entity_resolver: Optional function that takes an entity ID (e.g., "countries/ca")
-                           and returns its display name (e.g., "Canada"). If None, 
-                           a default resolver using the OpenAlex API will be used.
-        """
-        self._entity_resolver = entity_resolver
-        self._entity_cache: Dict[str, str] = {}
-    
-    def render(self, oqo: OQO) -> str:
-        """
-        Render an OQO object to OQL format.
-        
-        Args:
-            oqo: The OQO object to render
-        
-        Returns:
-            Human-readable OQL string
-        """
-        parts = []
-        
-        # Entity name (capitalized)
-        entity_name = oqo.get_rows.replace("-", " ").title()
-        parts.append(entity_name)
-        
-        # Filters
-        if oqo.filter_rows:
-            parts.append(" where ")
-            filter_clauses = []
-            for f in oqo.filter_rows:
-                clause = self._render_filter(f)
-                if clause:
-                    filter_clauses.append(clause)
-            parts.append(" and ".join(filter_clauses))
-        
-        # Sort (multi-column: comma-separated keys in tiebreaker order, #333)
-        if oqo.sort_by:
-            sort_clauses = []
-            for s in oqo.sort_by:
-                order = s.direction or "desc"
-                sort_display = SORT_DISPLAY_NAMES.get(s.column_id, s.column_id)
-                sort_clauses.append(f"{sort_display} {order}")
-            parts.append(f"; sort by {', '.join(sort_clauses)}")
+def make_engine_resolver(
+    entity_resolver: Optional[Callable[[str], Optional[str]]] = None
+) -> Callable[[str, str], Optional[str]]:
+    """Adapt prod's `entity_resolver(entity_id)` + built-in tables to the
+    engine's `resolver(value, column_id)` contract. Caches per (type, id)."""
+    cache: Dict[str, Optional[str]] = {}
 
-        # Sample
-        if oqo.sample:
-            parts.append(f"; sample {oqo.sample}")
+    def resolve(value: Any, column_id: str) -> Optional[str]:
+        if not isinstance(value, str):
+            return None
+        ns = _RESOLVE_NAMESPACE.get(column_id)
+        if ns is None:
+            return None
+        short_id = value.split("/", 1)[1] if "/" in value else value
+        key = f"{ns}/{short_id}"
+        if key in cache:
+            return cache[key]
+        name = None
+        if entity_resolver:
+            try:
+                name = entity_resolver(key)
+            except Exception:
+                name = None
+        if not name:
+            name = _builtin_name(ns, short_id)
+        cache[key] = name
+        return name
 
-        # Group by (multi-dim per spec §8; live API is single-dim → #297)
-        if oqo.group_by:
-            dims = ", ".join(
-                COLUMN_DISPLAY_NAMES.get(g.column_id, g.column_id)
-                for g in oqo.group_by
-            )
-            parts.append(f"; group by {dims}")
-
-        return "".join(parts)
-    
-    def _render_filter(self, f: FilterType) -> str:
-        """Render a single filter to OQL."""
-        if isinstance(f, LeafFilter):
-            return self._render_leaf_filter(f)
-        elif isinstance(f, BranchFilter):
-            return self._render_branch_filter(f)
-        return ""
-    
-    def _render_leaf_filter(self, f: LeafFilter) -> str:
-        """
-        Render a leaf filter to human-readable OQL.
-
-        Examples:
-        - it's Open Access
-        - Country is Canada [countries/ca]
-        - year >= 2020
-        - title & abstract contains "machine learning"
-        """
-        column_id = f.column_id
-        value = f.value
-        operator = f.operator
-        is_negated = bool(f.is_negated)
-
-        # Check for boolean filter with special "it's" format
-        # Handle both actual booleans and string representations ("true"/"false")
-        if column_id in BOOLEAN_COLUMNS:
-            bool_value = self._normalize_boolean(value)
-            if bool_value is not None:
-                return self._render_boolean_filter(column_id, bool_value, is_negated)
-
-        # Get display name for column
-        column_display = COLUMN_DISPLAY_NAMES.get(column_id, column_id)
-
-        # Format value based on type
-        value_str = self._format_value(value, column_id)
-
-        # Format based on operator (with is_negated translated to English phrasing)
-        if operator == "is":
-            verb = "is not" if is_negated else "is"
-            return f"{column_display} {verb} {value_str}"
-        elif operator == ">=":
-            return f"{column_display} >= {value_str}"
-        elif operator == "<=":
-            return f"{column_display} <= {value_str}"
-        elif operator == ">":
-            return f"{column_display} > {value_str}"
-        elif operator == "<":
-            return f"{column_display} < {value_str}"
-        elif operator == "contains":
-            verb = "does not contain" if is_negated else "contains"
-            # Search proximity values render to their `within N words [of ...]`
-            # surface, not the raw `~N` encoding (oxjob #355).
-            prox = _render_search_proximity(value)
-            return f"{column_display} {verb} {prox if prox is not None else value_str}"
-        else:
-            return f"{column_display} {operator} {value_str}"
-    
-    def _normalize_boolean(self, value: Any) -> Optional[bool]:
-        """
-        Normalize a value to a boolean, handling string representations.
-        
-        Returns None if value is not a boolean or boolean-like string.
-        """
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            if value.lower() == "true":
-                return True
-            if value.lower() == "false":
-                return False
-        return None
-    
-    def _render_boolean_filter(self, column_id: str, value: bool, is_negated: bool) -> str:
-        """
-        Render a boolean filter using "it's [not] {displayName}" format.
-
-        Examples:
-        - it's Open Access
-        - it's not retracted
-        - it's from Global South
-
-        Polarity is the XOR of the bare boolean value (False = negated) and the
-        is_negated polarity bit (one mechanism). Canonical OQO carries booleans
-        as bare True/False; the is_negated bit folds in for completeness so a
-        non-canonical input still renders correctly.
-        """
-        display_name = BOOLEAN_COLUMNS.get(column_id, column_id)
-
-        # XOR: value=False or is_negated flips polarity; both flips cancel.
-        negated = (value is False) ^ bool(is_negated)
-
-        if negated:
-            return f"it's not {display_name}"
-        else:
-            return f"it's {display_name}"
-    
-    def _format_value(self, value: Any, column_id: str) -> str:
-        """
-        Format a filter value for OQL output.
-
-        Per the #284 spec, OQO values are *bare* (no namespace prefix). The
-        namespace is the column's responsibility (resolved via the column
-        registry, #294). The display-form prefix is reconstructed here for
-        rendering only — "Canada [ca]" — but the OQO value remains "ca".
-        Legacy prefixed values ("countries/ca") are tolerated for back-compat.
-        """
-        if value is None:
-            return "unknown"
-
-        if isinstance(value, bool):
-            return str(value).lower()
-
-        if isinstance(value, str):
-            # Entity reference: column's namespace identifies the value as an
-            # entity ID. Reconstruct the full id ("countries/ca") only to look
-            # up a display name; what we *emit* is the bare short id in brackets.
-            entity_type = COLUMN_ENTITY_TYPES.get(column_id)
-            if entity_type:
-                short_id = value.split("/", 1)[1] if "/" in value else value
-                return self._format_entity_value(f"{entity_type}/{short_id}")
-
-            # Legacy: prefixed value on a column not in the namespace map -
-            # accept it and render from the prefixed form.
-            if "/" in value and not value.startswith('"'):
-                return self._format_entity_value(value)
-
-            # Quote strings that contain spaces or special characters
-            if " " in value or "," in value:
-                return f'"{value}"'
-            return value
-
-        return str(value)
-
-    def _format_entity_value(self, entity_id: str) -> str:
-        """
-        Format an entity ID with its display name, using short ID format.
-
-        Takes a *full* entity_id ("countries/ca") for display-name lookup; the
-        rendered text is "Display [short_id]" or just "short_id" when the
-        display name can't be resolved.
-        """
-        display_name = self._resolve_entity_display_name(entity_id)
-
-        # Extract the short ID (part after the slash)
-        short_id = entity_id.split("/", 1)[1] if "/" in entity_id else entity_id
-
-        if display_name:
-            return f"{display_name} [{short_id}]"
-        else:
-            # Fallback: just the short ID without brackets
-            return short_id
-    
-    def _resolve_entity_display_name(self, entity_id: str) -> Optional[str]:
-        """
-        Resolve an entity ID to its display name.
-        
-        Uses cache and custom resolver if provided.
-        """
-        # Check cache first
-        if entity_id in self._entity_cache:
-            return self._entity_cache[entity_id]
-        
-        # Use custom resolver if provided
-        if self._entity_resolver:
-            display_name = self._entity_resolver(entity_id)
-            if display_name:
-                self._entity_cache[entity_id] = display_name
-                return display_name
-        
-        # Try default resolution
-        display_name = self._default_entity_resolver(entity_id)
-        if display_name:
-            self._entity_cache[entity_id] = display_name
-        
-        return display_name
-    
-    def _default_entity_resolver(self, entity_id: str) -> Optional[str]:
-        """
-        Default entity resolver using OpenAlex API.
-        
-        Falls back to extracting readable name from ID for non-native entities.
-        """
-        # For non-native entities, we can derive display name from ID
-        if "/" in entity_id:
-            entity_type, short_id = entity_id.split("/", 1)
-            
-            # Simple mappings for well-known non-native entities
-            if entity_type == "types":
-                # article -> Article, book-chapter -> Book Chapter
-                return short_id.replace("-", " ").title()
-            
-            if entity_type == "oa-statuses":
-                return short_id.title()
-            
-            if entity_type == "languages":
-                # Try to resolve language code to name
-                return self._resolve_language(short_id)
-            
-            if entity_type == "countries":
-                return self._resolve_country(short_id)
-            
-            if entity_type == "continents":
-                return self._resolve_continent(short_id)
-            
-            if entity_type == "sdgs":
-                return self._resolve_sdg(short_id)
-            
-            # For native entities (institutions, authors, etc.), 
-            # would need API call - return None for now
-            # API resolution can be added later
-        
-        return None
-    
-    def _resolve_language(self, code: str) -> Optional[str]:
-        """Resolve language code to name."""
-        languages = {
-            "en": "English",
-            "zh": "Chinese",
-            "es": "Spanish",
-            "fr": "French",
-            "de": "German",
-            "ja": "Japanese",
-            "pt": "Portuguese",
-            "ru": "Russian",
-            "ko": "Korean",
-            "it": "Italian",
-            "ar": "Arabic",
-            "nl": "Dutch",
-            "pl": "Polish",
-            "tr": "Turkish",
-            "id": "Indonesian",
-            "cs": "Czech",
-            "sv": "Swedish",
-            "fa": "Persian",
-            "uk": "Ukrainian",
-            "vi": "Vietnamese",
-        }
-        return languages.get(code.lower())
-    
-    def _resolve_country(self, code: str) -> Optional[str]:
-        """Resolve country code to name."""
-        countries = {
-            "us": "United States",
-            "gb": "United Kingdom",
-            "cn": "China",
-            "de": "Germany",
-            "fr": "France",
-            "jp": "Japan",
-            "ca": "Canada",
-            "au": "Australia",
-            "in": "India",
-            "br": "Brazil",
-            "it": "Italy",
-            "es": "Spain",
-            "kr": "South Korea",
-            "nl": "Netherlands",
-            "ru": "Russia",
-            "ch": "Switzerland",
-            "se": "Sweden",
-            "pl": "Poland",
-            "be": "Belgium",
-            "at": "Austria",
-            "dk": "Denmark",
-            "no": "Norway",
-            "fi": "Finland",
-            "mx": "Mexico",
-            "sg": "Singapore",
-            "ie": "Ireland",
-            "nz": "New Zealand",
-            "pt": "Portugal",
-            "za": "South Africa",
-            "il": "Israel",
-        }
-        return countries.get(code.lower())
-    
-    def _resolve_continent(self, code: str) -> Optional[str]:
-        """Resolve continent code to name."""
-        continents = {
-            "q15": "Africa",
-            "q18": "South America",
-            "q46": "Europe",
-            "q48": "Asia",
-            "q49": "North America",
-            "q55643": "Oceania",
-            "q51": "Antarctica",
-            "africa": "Africa",
-            "south america": "South America",
-            "europe": "Europe",
-            "asia": "Asia",
-            "north america": "North America",
-            "oceania": "Oceania",
-            "antarctica": "Antarctica",
-        }
-        return continents.get(code.lower())
-    
-    def _resolve_sdg(self, sdg_id: str) -> Optional[str]:
-        """Resolve SDG number to name."""
-        sdgs = {
-            "1": "No Poverty",
-            "2": "Zero Hunger",
-            "3": "Good Health and Well-being",
-            "4": "Quality Education",
-            "5": "Gender Equality",
-            "6": "Clean Water and Sanitation",
-            "7": "Affordable and Clean Energy",
-            "8": "Decent Work and Economic Growth",
-            "9": "Industry, Innovation and Infrastructure",
-            "10": "Reduced Inequalities",
-            "11": "Sustainable Cities and Communities",
-            "12": "Responsible Consumption and Production",
-            "13": "Climate Action",
-            "14": "Life Below Water",
-            "15": "Life on Land",
-            "16": "Peace, Justice, and Strong Institutions",
-            "17": "Partnerships for the Goals",
-        }
-        return sdgs.get(sdg_id)
-    
-    def _render_branch_filter(self, f: BranchFilter) -> str:
-        """
-        Render a branch filter to OQL.
-        
-        Example: (type is article [types/article] or type is book [types/book])
-        """
-        if not f.filters:
-            return ""
-        
-        sub_clauses = []
-        for sub_f in f.filters:
-            clause = self._render_filter(sub_f)
-            if clause:
-                sub_clauses.append(clause)
-        
-        if not sub_clauses:
-            return ""
-        
-        if len(sub_clauses) == 1:
-            return sub_clauses[0]
-        
-        join_word = f" {f.join} "
-        joined = join_word.join(sub_clauses)
-        
-        # Wrap in parentheses for clarity
-        return f"({joined})"
+    return resolve
 
 
-# Convenience function for backward compatibility
-def render_oqo_to_oql(oqo: OQO, entity_resolver: Optional[Callable[[str], Optional[str]]] = None) -> str:
-    """
-    Render an OQO object to OQL format.
-    
+def render_oqo_to_oql(
+    oqo: OQO,
+    entity_resolver: Optional[Callable[[str], Optional[str]]] = None,
+) -> str:
+    """Render an OQO to canonical OQL (delegates to the engine).
+
     Args:
-        oqo: The OQO object to render
-        entity_resolver: Optional function to resolve entity IDs to display names
-    
-    Returns:
-        Human-readable OQL string
+        oqo: the OQO to render
+        entity_resolver: optional `entity_id -> display name` callable (native
+            ES lookup). Built-in code->name tables cover the rest.
     """
-    renderer = OQLRenderer(entity_resolver=entity_resolver)
-    return renderer.render(oqo)
+    return oql_lang.render(oqo, resolver=make_engine_resolver(entity_resolver))

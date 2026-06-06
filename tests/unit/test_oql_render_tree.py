@@ -15,7 +15,7 @@ from query_translation.oql_render_tree import (
     ClauseMeta, GroupMeta, EntityValue, SortDirective, SampleDirective,
     SortMeta, SampleMeta, stringify
 )
-from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree, OQLTreeRenderer
+from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 
 
@@ -28,18 +28,18 @@ class TestStringifyInvariant:
         oql, tree = render_oqo_to_oql_and_tree(oqo)
         
         assert stringify(tree) == oql
-        assert oql == "Works"
-    
+        assert oql == "works"
+
     def test_single_boolean_filter(self):
-        """Test single boolean filter with 'it's' format."""
+        """Test single boolean filter with canonical 'it's' phrase."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[LeafFilter(column_id="open_access.is_oa", value=True)]
         )
         oql, tree = render_oqo_to_oql_and_tree(oqo)
-        
+
         assert stringify(tree) == oql
-        assert "it's Open Access" in oql
+        assert "it's open access" in oql
     
     def test_single_comparison_filter(self):
         """Test comparison filter (year >= 2020)."""
@@ -61,8 +61,8 @@ class TestStringifyInvariant:
         oql, tree = render_oqo_to_oql_and_tree(oqo)
         
         assert stringify(tree) == oql
-        assert "Canada" in oql
-        assert "[ca]" in oql
+        # Canonical id-first: value first, resolved name in brackets.
+        assert "country is ca [Canada]" in oql
     
     def test_multiple_filters_with_and(self):
         """Test multiple filters joined with AND."""
@@ -79,7 +79,7 @@ class TestStringifyInvariant:
         assert " and " in oql
     
     def test_or_group_filter(self):
-        """Test OR group with parentheses."""
+        """A same-column OR factors into a canonical `is any of (...)` clause."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -93,11 +93,9 @@ class TestStringifyInvariant:
             ]
         )
         oql, tree = render_oqo_to_oql_and_tree(oqo)
-        
+
         assert stringify(tree) == oql
-        assert "(" in oql
-        assert " or " in oql
-        assert ")" in oql
+        assert "type is any of (article, book)" in oql
     
     def test_sort_directive(self):
         """Test sort directive."""
@@ -262,7 +260,7 @@ class TestTreeStructure:
         _, tree = render_oqo_to_oql_and_tree(oqo)
         
         assert tree.entity.id == "works"
-        assert tree.entity.text == "Works"
+        assert tree.entity.text == "works"
     
     def test_no_filters_has_null_where(self):
         """Test that no filters produces null where and empty keyword."""
@@ -324,26 +322,33 @@ class TestTreeStructure:
         assert group.joiner == " and "
     
     def test_or_group_has_parentheses(self):
-        """Test that OR groups have parentheses."""
+        """A nested OR group is parenthesized.
+
+        Two *different* columns so the OR stays a genuine boolean group (a
+        same-column OR would factor into `is any of (...)`), and it's nested
+        under an AND so it isn't the unparenthesized top-level expression.
+        """
         oqo = OQO(
             get_rows="works",
             filter_rows=[
+                LeafFilter(column_id="open_access.is_oa", value=True),
                 BranchFilter(
                     join="or",
                     filters=[
                         LeafFilter(column_id="type", value="article"),
-                        LeafFilter(column_id="type", value="book")
+                        LeafFilter(column_id="publication_year", value=2020, operator=">=")
                     ]
                 )
             ]
         )
         _, tree = render_oqo_to_oql_and_tree(oqo)
-        
-        group = tree.where
-        assert isinstance(group, GroupNode)
-        assert group.prefix == "("
-        assert group.suffix == ")"
-        assert group.joiner == " or "
+
+        and_group = tree.where
+        assert isinstance(and_group, GroupNode)
+        or_group = next(c for c in and_group.children if isinstance(c, GroupNode))
+        assert or_group.prefix == "("
+        assert or_group.suffix == ")"
+        assert or_group.joiner == " or "
 
 
 class TestToDict:
@@ -393,41 +398,39 @@ class TestEntityResolution:
             filter_rows=[LeafFilter(column_id="authorships.countries", value="us")]
         )
         oql, _ = render_oqo_to_oql_and_tree(oqo)
-        
-        assert "United States" in oql
-        assert "[us]" in oql
-    
+
+        # Canonical id-first: code first, resolved name in brackets.
+        assert "country is us [United States]" in oql
+
     def test_sdg_resolution(self):
-        """Test SDG resolution."""
+        """Test SDG resolution (id-first)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[LeafFilter(column_id="sustainable_development_goals.id", value="4")]
         )
         oql, _ = render_oqo_to_oql_and_tree(oqo)
-        
-        assert "Quality Education" in oql
-        assert "[4]" in oql
-    
-    def test_language_resolution(self):
-        """Test language code resolution."""
+
+        assert "SDG is 4 [Quality Education]" in oql
+
+    def test_language_not_name_resolved(self):
+        """Language is a canonical enum slug — rendered bare, no name annotation."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[LeafFilter(column_id="language", value="en")]
         )
         oql, _ = render_oqo_to_oql_and_tree(oqo)
-        
-        assert "English" in oql
-        assert "[en]" in oql
-    
-    def test_type_resolution(self):
-        """Test work type resolution."""
+
+        assert oql == "works where language is en"
+
+    def test_type_rendered_bare(self):
+        """Work type is a canonical enum slug — rendered bare, no name annotation."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[LeafFilter(column_id="type", value="book-chapter")]
         )
         oql, _ = render_oqo_to_oql_and_tree(oqo)
-        
-        assert "Book Chapter" in oql
+
+        assert oql == "works where type is book-chapter"
 
 
 class TestEdgeCases:
@@ -444,29 +447,29 @@ class TestEdgeCases:
         assert stringify(tree) == oql
         assert "unknown" in oql
     
-    def test_text_search_quoted(self):
-        """Test text search values are quoted."""
+    def test_text_search_stemmed_bare(self):
+        """A stemmed search value renders bare (canonical) — no auto-quoting."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[LeafFilter(column_id="title_and_abstract.search", value="machine learning", operator="contains")]
         )
         oql, tree = render_oqo_to_oql_and_tree(oqo)
-        
+
         assert stringify(tree) == oql
-        assert '"machine learning"' in oql
-    
+        assert "contains machine learning" in oql
+
     def test_different_entity_types(self):
-        """Test different entity types render correctly."""
+        """Test different entity types render correctly (lowercase, canonical)."""
         entity_types = [
-            ("authors", "Authors"),
-            ("institutions", "Institutions"),
-            ("sources", "Sources"),
-            ("source-types", "Source Types"),
+            ("authors", "authors"),
+            ("institutions", "institutions"),
+            ("sources", "sources"),
+            ("source-types", "source-types"),
         ]
-        
+
         for entity_id, expected_text in entity_types:
             oqo = OQO(get_rows=entity_id, filter_rows=[])
             oql, tree = render_oqo_to_oql_and_tree(oqo)
-            
+
             assert stringify(tree) == oql
             assert tree.entity.text == expected_text

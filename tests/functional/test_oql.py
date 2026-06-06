@@ -6,27 +6,31 @@ Tests both the human-readable and technical formats, and round-trip conversions.
 
 import pytest
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, SortBy
-from query_translation.oql_renderer import render_oqo_to_oql, OQLRenderer
+from query_translation.oqo_canonicalizer import canonicalize_oqo
+from query_translation.oql_renderer import render_oqo_to_oql
 from query_translation.oql_parser import parse_oql_to_oqo, OQLParser, OQLParseError
 
 
 class TestOQLRenderer:
-    """Tests for OQO -> OQL rendering."""
-    
+    """Tests for OQO -> canonical OQL rendering (oxjob #376: the renderer now
+    delegates to the one engine, so output is the canonical form — lowercase
+    entity head + boolean phrasing, id-first entity values with the resolved
+    name in brackets, bare enum slugs, same-field OR factored to `any of`)."""
+
     def test_simple_entity_type(self):
-        """Test rendering entity type."""
+        """Entity head renders lowercase (canonical)."""
         oqo = OQO(get_rows="works")
         result = render_oqo_to_oql(oqo)
-        assert result == "Works"
-    
+        assert result == "works"
+
     def test_entity_type_with_hyphen(self):
-        """Test entity types with hyphens."""
+        """Hyphenated entity types keep their slug, lowercase."""
         oqo = OQO(get_rows="source-types")
         result = render_oqo_to_oql(oqo)
-        assert result == "Source Types"
-    
+        assert result == "source-types"
+
     def test_boolean_filter_true(self):
-        """Test boolean filter with true value renders as 'it's X'."""
+        """Boolean true renders as the canonical 'it's …' phrase."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -34,10 +38,10 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "Works where it's Open Access"
-    
+        assert result == "works where it's open access"
+
     def test_boolean_filter_false(self):
-        """Test boolean filter with false value renders as 'it's not X'."""
+        """Boolean false renders as the canonical 'it's not …' phrase."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -45,10 +49,10 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "Works where it's not Open Access"
-    
+        assert result == "works where it's not open access"
+
     def test_boolean_filter_global_south(self):
-        """Test Global South boolean filter."""
+        """Global South boolean uses the engine's canonical phrase."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -56,10 +60,10 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "Works where it's from Global South"
-    
+        assert result == "works where it's from the global south"
+
     def test_entity_value_with_display_name(self):
-        """Test entity values include display name before bracketed short ID."""
+        """Entity values are id-first; the resolved name goes in brackets."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -67,10 +71,10 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "Works where Country is Canada [ca]"
+        assert result == "works where country is ca [Canada]"
 
     def test_entity_value_sdg(self):
-        """Test SDG entity value with display name and short ID."""
+        """SDG: bare id first, resolved name in brackets."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -78,10 +82,10 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "Works where Sustainable Development Goals is Zero Hunger [2]"
+        assert result == "works where SDG is 2 [Zero Hunger]"
 
     def test_entity_value_type(self):
-        """Test work type entity value with short ID."""
+        """Enum slugs (type) render bare — no name annotation (canonical)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -89,8 +93,8 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "Works where type is Article [article]"
-    
+        assert result == "works where type is article"
+
     def test_comparison_filter(self):
         """Test comparison filters use display names."""
         oqo = OQO(
@@ -100,10 +104,10 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "Works where year >= 2020"
-    
+        assert result == "works where year >= 2020"
+
     def test_search_filter(self):
-        """Test search filters use display names."""
+        """A stemmed search value renders bare (no quotes) in canonical form."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -111,8 +115,8 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == 'Works where title & abstract contains "machine learning"'
-    
+        assert result == 'works where title & abstract contains machine learning'
+
     def test_null_value(self):
         """Test null values render as 'unknown'."""
         oqo = OQO(
@@ -122,8 +126,8 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "Works where language is unknown"
-    
+        assert result == "works where language is unknown"
+
     def test_multiple_filters(self):
         """Test multiple filters joined by 'and'."""
         oqo = OQO(
@@ -135,13 +139,13 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert "it's Open Access" in result
+        assert "it's open access" in result
         assert "year >= 2020" in result
-        assert "Canada [ca]" in result
+        assert "country is ca [Canada]" in result
         assert " and " in result
-    
+
     def test_or_branch_filter(self):
-        """Test OR branch filters with parentheses."""
+        """A same-column OR factors into a canonical `is any of (...)` clause."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -155,11 +159,8 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result.startswith("Works where (")
-        assert "Article [article]" in result
-        assert "Book [book]" in result
-        assert " or " in result
-    
+        assert result == "works where type is any of (article, book)"
+
     def test_sort_with_display_name(self):
         """Test sort uses display name."""
         oqo = OQO(
@@ -183,7 +184,7 @@ class TestOQLRenderer:
         )
         result = render_oqo_to_oql(oqo)
         assert "; sort by year desc, citations desc" in result
-    
+
     def test_sample(self):
         """Test sample clause."""
         oqo = OQO(
@@ -195,9 +196,9 @@ class TestOQLRenderer:
         )
         result = render_oqo_to_oql(oqo)
         assert "; sample 100" in result
-    
+
     def test_negation(self):
-        """Test negation as is_negated polarity bit (new spec: one mechanism)."""
+        """Negation is the is_negated polarity bit; enum slug renders bare."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -205,10 +206,10 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert "is not Article [article]" in result
+        assert "type is not article" in result
 
     def test_complex_query(self):
-        """Test the example from the user's request."""
+        """Test the example from the user's request (canonical forms)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -220,11 +221,11 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        
-        assert "it's Open Access" in result
-        assert "Zero Hunger [2]" in result
-        assert "Canada [ca]" in result
-        assert "it's from Global South" in result
+
+        assert "it's open access" in result
+        assert "SDG is 2 [Zero Hunger]" in result
+        assert "country is ca [Canada]" in result
+        assert "it's from the global south" in result
         assert "year >= 2020" in result
 
 
@@ -494,29 +495,31 @@ class TestRoundTrip:
         assert f.column_id == "open_access.is_oa"
         assert f.value is True
     
-    @pytest.mark.xfail(
-        reason="oxjob #376 Phase-1 window: the live parser is the canonical engine "
-        "(id-first entity convention) but render_oqo_to_oql is still the OLD name-first "
-        "renderer (`Canada [ca]`), which the engine reads as value=CANADA. Phase 2 flips "
-        "render to id-first and this round-trip closes. See EXPLORE.md §9.",
-        strict=True,
-    )
     def test_round_trip_entity_value(self):
-        """Test round-trip for entity value (bare per new spec)."""
-        original = OQO(
+        """Round-trip for an entity value, now closed (oxjob #376 render merge).
+
+        Render is the canonical id-first form (`country is CA [Canada]`); the
+        `[Canada]` is an ignored annotation and `CA` is authoritative, so
+        OQO -> OQL -> OQO is the identity on the canonicalized OQO. (Country
+        codes canonicalize to uppercase.)
+        """
+        # Country codes are uppercase in the engine's canonical form (the parser
+        # uppercases bare codes), so start from "CA".
+        original = canonicalize_oqo(OQO(
             get_rows="works",
             filter_rows=[
-                LeafFilter(column_id="authorships.countries", value="ca")
+                LeafFilter(column_id="authorships.countries", value="CA")
             ]
-        )
+        ))
 
         oql = render_oqo_to_oql(original)
-        parsed = parse_oql_to_oqo(oql)
+        parsed = canonicalize_oqo(parse_oql_to_oqo(oql))
 
         f = parsed.filter_rows[0]
         assert f.column_id == "authorships.countries"
-        assert f.value == "ca"
-    
+        assert f.value == "CA"
+        assert parsed.to_dict() == original.to_dict()
+
     def test_round_trip_comparison(self):
         """Test round-trip for comparison filter."""
         original = OQO(
@@ -534,32 +537,31 @@ class TestRoundTrip:
         assert f.value == 2020
         assert f.operator == ">="
     
-    @pytest.mark.xfail(
-        reason="oxjob #376 Phase-1 window: OLD name-first render vs canonical engine for "
-        "the entity/country filters in this query (see test_round_trip_entity_value). "
-        "Phase 2 render flip closes it. See EXPLORE.md §9.",
-        strict=True,
-    )
     def test_round_trip_complex(self):
-        """Test round-trip for complex query."""
-        original = OQO(
+        """Round-trip for a complex query, now closed (oxjob #376 render merge).
+
+        Canonical id-first render means OQO -> OQL -> OQO is the identity on the
+        canonicalized OQO, entity/country filters included.
+        """
+        original = canonicalize_oqo(OQO(
             get_rows="works",
             filter_rows=[
                 LeafFilter(column_id="open_access.is_oa", value=True),
                 LeafFilter(column_id="sustainable_development_goals.id", value="2"),
-                LeafFilter(column_id="authorships.countries", value="ca"),
+                LeafFilter(column_id="authorships.countries", value="CA"),
                 LeafFilter(column_id="institutions.is_global_south", value=True),
                 LeafFilter(column_id="publication_year", value=2020, operator=">=")
             ],
             sort_by=[SortBy("cited_by_count", "desc")],
-        )
-        
+        ))
+
         oql = render_oqo_to_oql(original)
-        parsed = parse_oql_to_oqo(oql)
-        
+        parsed = canonicalize_oqo(parse_oql_to_oqo(oql))
+
         assert parsed.get_rows == original.get_rows
         assert len(parsed.filter_rows) == len(original.filter_rows)
         assert parsed.sort_by == original.sort_by
+        assert parsed.to_dict() == original.to_dict()
 
 
 class TestEdgeCases:

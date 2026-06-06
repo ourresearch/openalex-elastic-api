@@ -1121,35 +1121,28 @@ def _render_value(fld, value) -> str:
     return str(value)
 
 
-def _value_with_name(fld, value, resolver) -> str:
+def _call_resolver(resolver, value, column_id):
+    """Resolve a value's display name. The engine resolver contract is
+    `resolver(value, column_id)`; a legacy 1-arg `resolver(value)` is supported
+    via fallback so the corpus harness's `lambda v: ...` keeps working."""
+    if not resolver:
+        return None
+    try:
+        return resolver(value, column_id)
+    except TypeError:
+        return resolver(value)
+
+
+def _value_with_name(fld, value, column_id, resolver) -> str:
     """Render a value, appending ` [display name]` when the column resolves names
     and a resolver is supplied (institutions, authors, …, country codes)."""
     rendered = _render_value(fld, value)
     if (resolver and fld and fld.resolves_name and isinstance(value, str)
             and not value.startswith("col_")):
-        name = resolver(value)
+        name = _call_resolver(resolver, value, column_id)
         if name:
             return f"{rendered} [{name}]"
     return rendered
-
-
-def _render_leaf(f: LeafFilter, resolver=None) -> str:
-    if _is_search_leaf(f):
-        return _render_search_leaf(f)
-    fld = _BY_COLUMN.get(f.column_id)
-    name = fld.oql if fld else f.column_id
-    # boolean human phrasing (a negated bool flips the value)
-    if fld and fld.kind == "bool" and isinstance(f.value, bool):
-        effective = f.value != f.is_negated  # XOR
-        phrase = fld.bool_true if effective else fld.bool_false
-        if phrase:
-            return phrase
-    if f.value is None:
-        return f"{name} is {'not ' if f.is_negated else ''}unknown"
-    if f.operator in (">", ">=", "<", "<="):
-        return f"{name} {f.operator} {_render_value(fld, f.value)}"
-    verb = "is not" if f.is_negated else "is"
-    return f"{name} {verb} {_value_with_name(fld, f.value, resolver)}"
 
 
 def _same_field_search_set(f: BranchFilter):
@@ -1188,20 +1181,121 @@ def _same_field_eq_set(f: BranchFilter, negated: bool):
     return cols.pop(), vals
 
 
-def _render_filter(f: FilterType, top=False, resolver=None) -> str:
+# ---------------------------------------------------------------------------
+# Tree-emitting renderer.  The OQL string and the `oql_render` tree share ONE
+# source of truth here: `render()` is literally `stringify(_build_tree(...))`,
+# so Invariant A (`stringify(tree) == oql`) holds by construction. Every clause
+# is a single ClauseNode whose segments concatenate to the canonical clause
+# string; boolean structure is GroupNodes. The formatter (#376 Phase 2) hooks
+# this one walk. The GUI consumes only the resulting `oql` string today, so the
+# tree shape is free as long as the concatenation invariant holds.
+# ---------------------------------------------------------------------------
+from query_translation.oql_render_tree import (  # noqa: E402
+    OQLRenderTree, EntityHead, GroupNode, ClauseNode, Segment, SegmentMeta,
+    ClauseMeta, GroupMeta, EntityValue, SortDirective, SampleDirective,
+    GroupByDirective, GroupByMeta, SortMeta, SampleMeta, ExprNode, stringify,
+)
+
+
+def _seg(kind, text, **meta):
+    return Segment(kind=kind, text=text, meta=SegmentMeta(**meta) if meta else None)
+
+
+def _value_segments(fld, value, column_id, resolver):
+    """Segments for one value, mirroring `_value_with_name`: the bare value, then
+    ` [name]` when the column resolves a display name. Concatenates to exactly
+    what `_value_with_name` returns."""
+    rendered = _render_value(fld, value)
+    segs = [_seg("value", rendered, value=value, column_id=column_id)]
+    entity = None
+    if (resolver and fld and fld.resolves_name and isinstance(value, str)
+            and not value.startswith("col_")):
+        name = _call_resolver(resolver, value, column_id)
+        if name:
+            segs.append(_seg("text", " "))
+            segs.append(_seg("id", f"[{name}]", entity_display_name=name,
+                             entity_display_id=f"[{name}]"))
+            entity = EntityValue(id=value, short_id=value, display_name=name)
+    return segs, entity
+
+
+def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
+    if _is_search_leaf(f):
+        name, mode = _oql_field(f.column_id)
+        if mode == "semantic":
+            v = (f.value or "").strip('"')
+            segs = [_seg("column", name, column_id=f.column_id),
+                    _seg("operator", " is similar to "),
+                    _seg("value", f'"{v}"', value=f.value)]
+        else:
+            verb = "does not contain" if f.is_negated else "contains"
+            segs = [_seg("column", name, column_id=f.column_id),
+                    _seg("operator", f" {verb} "),
+                    _seg("value", _render_term(f.value, f.column_id), value=f.value)]
+        return ClauseNode(segments=segs, clause_kind="text", meta=ClauseMeta(
+            column_id=f.column_id, operator=f.operator or "contains",
+            value=f.value, column_display_name=name))
+
+    fld = _BY_COLUMN.get(f.column_id)
+    name = fld.oql if fld else f.column_id
+    # boolean human phrasing (a negated bool flips the value)
+    if fld and fld.kind == "bool" and isinstance(f.value, bool):
+        effective = f.value != f.is_negated  # XOR
+        phrase = fld.bool_true if effective else fld.bool_false
+        if phrase:
+            return ClauseNode(segments=[_seg("keyword", phrase)],
+                              clause_kind="boolean", meta=ClauseMeta(
+                                  column_id=f.column_id, operator="is",
+                                  value=f.value, column_display_name=name))
+    if f.value is None:
+        op_text = f" is {'not ' if f.is_negated else ''}"
+        segs = [_seg("column", name, column_id=f.column_id),
+                _seg("operator", op_text), _seg("value", "unknown", value=None)]
+        return ClauseNode(segments=segs, clause_kind="null", meta=ClauseMeta(
+            column_id=f.column_id, operator="is", value=None,
+            column_display_name=name))
+    if f.operator in (">", ">=", "<", "<="):
+        segs = [_seg("column", name, column_id=f.column_id),
+                _seg("operator", f" {f.operator} "),
+                _seg("value", _render_value(fld, f.value), value=f.value)]
+        return ClauseNode(segments=segs, clause_kind="comparison", meta=ClauseMeta(
+            column_id=f.column_id, operator=f.operator, value=f.value,
+            column_display_name=name))
+    verb = "is not" if f.is_negated else "is"
+    val_segs, entity = _value_segments(fld, f.value, f.column_id, resolver)
+    segs = [_seg("column", name, column_id=f.column_id),
+            _seg("operator", f" {verb} ")] + val_segs
+    kind = "entity" if (fld and fld.kind == "id") else "other"
+    return ClauseNode(segments=segs, clause_kind=kind, meta=ClauseMeta(
+        column_id=f.column_id, operator="is", value=f.value,
+        column_display_name=name, value_entity=entity))
+
+
+def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
     if isinstance(f, LeafFilter):
-        return _render_leaf(f, resolver)
+        return _leaf_node(f, resolver)
     # BranchFilter
     if f.is_negated:
-        return "not (" + _render_filter(BranchFilter(f.join, f.filters), resolver=resolver) + ")"
-    # factor same-field search OR/AND into `any of/all of`
+        inner = _filter_node(BranchFilter(f.join, f.filters), top=False, resolver=resolver)
+        return GroupNode(join=f.join, children=[inner], prefix="not (", suffix=")",
+                         joiner="", meta=GroupMeta(implicit=False))
+    # factor same-field search OR/AND into `any of/all of` -> one value-list clause
     sset = _same_field_search_set(f)
     if sset:
         col, vals = sset
         name, _ = _oql_field(col)
         kw = "any of" if f.join == "or" else "all of"
-        return f"{name} contains {kw} ({', '.join(_render_term(v, col) for v in vals)})"
-    # factor same-field equality sets
+        segs = [_seg("column", name, column_id=col),
+                _seg("operator", f" contains {kw} "), _seg("text", "(")]
+        for i, v in enumerate(vals):
+            if i:
+                segs.append(_seg("text", ", "))
+            segs.append(_seg("value", _render_term(v, col), value=v))
+        segs.append(_seg("text", ")"))
+        return ClauseNode(segments=segs, clause_kind="text", meta=ClauseMeta(
+            column_id=col, operator="contains", value=None,
+            column_display_name=name))
+    # factor same-field equality sets -> one value-list clause
     for neg in (False, True):
         eqset = _same_field_eq_set(f, neg)
         if eqset:
@@ -1209,36 +1303,92 @@ def _render_filter(f: FilterType, top=False, resolver=None) -> str:
             fld = _BY_COLUMN.get(col)
             name = fld.oql if fld else col
             kw = "is not any of" if neg else "is any of"
-            items = ", ".join(_value_with_name(fld, v, resolver) for v in vals)
-            return f"{name} {kw} ({items})"
-    parts = [_render_filter(c, resolver=resolver) for c in f.filters]
-    joined = f" {f.join} ".join(parts)
-    return joined if top else f"({joined})"
+            segs = [_seg("column", name, column_id=col),
+                    _seg("operator", f" {kw} "), _seg("text", "(")]
+            for i, v in enumerate(vals):
+                if i:
+                    segs.append(_seg("text", ", "))
+                segs.extend(_value_segments(fld, v, col, resolver)[0])
+            segs.append(_seg("text", ")"))
+            kind = "entity" if (fld and fld.kind == "id") else "other"
+            return ClauseNode(segments=segs, clause_kind=kind, meta=ClauseMeta(
+                column_id=col, operator="is", value=None,
+                column_display_name=name))
+    children = [_filter_node(c, top=False, resolver=resolver) for c in f.filters]
+    joiner = f" {f.join} "
+    prefix, suffix = ("", "") if top else ("(", ")")
+    return GroupNode(join=f.join, children=children, prefix=prefix, suffix=suffix,
+                     joiner=joiner, meta=GroupMeta(implicit=False))
+
+
+def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
+    """OQO -> canonical `oql_render` tree. `render()` stringifies this; the two
+    never drift (Invariant A by construction)."""
+    head = EntityHead(id=oqo.get_rows, text=oqo.get_rows.lower())
+    where_keyword = ""
+    where = None
+    if oqo.filter_rows:
+        where_keyword = " where "
+        if len(oqo.filter_rows) == 1:
+            where = _filter_node(oqo.filter_rows[0], top=True, resolver=resolver)
+        else:
+            children = [_filter_node(f, top=False, resolver=resolver)
+                        for f in oqo.filter_rows]
+            where = GroupNode(join="and", children=children, prefix="", suffix="",
+                              joiner=" and ", meta=GroupMeta(implicit=True))
+
+    directives = []
+    if oqo.group_by:
+        segs = []
+        dims = []
+        for i, g in enumerate(oqo.group_by):
+            nm = _oql_field(g.column_id)[0]
+            if i:
+                segs.append(_seg("text", ", "))
+            segs.append(_seg("column", nm, column_id=g.column_id))
+            dims.append({"column_id": g.column_id, "column_display_name": nm})
+        directives.append(GroupByDirective(
+            prefix="; group by ", segments=segs, meta=GroupByMeta(dimensions=dims)))
+    if oqo.sort_by:
+        segs = []
+        keys = []
+        for i, s in enumerate(oqo.sort_by):
+            fld = _BY_COLUMN.get(s.column_id)
+            nm = fld.oql if fld else s.column_id
+            if i:
+                segs.append(_seg("text", ", "))
+            segs.append(_seg("column", nm, column_id=s.column_id))
+            segs.append(_seg("text", " "))
+            segs.append(_seg("keyword", s.direction))
+            keys.append({"column_id": s.column_id, "order": s.direction,
+                         "column_display_name": nm})
+        primary = keys[0]
+        directives.append(SortDirective(
+            prefix="; sort by ", segments=segs,
+            meta=SortMeta(column_id=primary["column_id"], order=primary["order"],
+                          column_display_name=primary["column_display_name"],
+                          keys=keys)))
+    if oqo.sample:
+        segs = [_seg("value", str(oqo.sample), value=oqo.sample)]
+        if oqo.seed is not None:
+            segs.append(_seg("text", " seed "))
+            segs.append(_seg("value", str(oqo.seed), value=oqo.seed))
+        directives.append(SampleDirective(
+            prefix="; sample ", segments=segs, meta=SampleMeta(n=oqo.sample)))
+
+    return OQLRenderTree(version="1.0", entity=head, where_keyword=where_keyword,
+                         where=where, directives=directives)
+
+
+def render_tree(oqo: OQO, resolver=None):
+    """OQO -> (canonical OQL string, oql_render tree). Invariant A holds: the
+    string IS `stringify(tree)`."""
+    tree = _build_tree(oqo, resolver)
+    return stringify(tree), tree
 
 
 def render(oqo: OQO, resolver=None) -> str:
-    """OQO -> canonical OQL. `resolver(id) -> name|None` (optional) synthesizes
-    `[display name]` annotations for opaque-ID / country columns."""
-    entity = oqo.get_rows.lower()
-    out = entity
-    if oqo.filter_rows:
-        if len(oqo.filter_rows) == 1:
-            cond = _render_filter(oqo.filter_rows[0], top=True, resolver=resolver)
-        else:
-            cond = " and ".join(_render_filter(f, resolver=resolver) for f in oqo.filter_rows)
-        out += f" where {cond}"
-    if oqo.group_by:
-        dims = ", ".join(_oql_field(g.column_id)[0] for g in oqo.group_by)
-        out += f"; group by {dims}"
-    if oqo.sort_by:
-        keys = []
-        for s in oqo.sort_by:
-            fld = _BY_COLUMN.get(s.column_id)
-            name = fld.oql if fld else s.column_id
-            keys.append(f"{name} {s.direction}")
-        out += "; sort by " + ", ".join(keys)
-    if oqo.sample:
-        out += f"; sample {oqo.sample}"
-        if oqo.seed is not None:
-            out += f" seed {oqo.seed}"
-    return out
+    """OQO -> canonical OQL. `resolver(value, column_id) -> name|None` (a 1-arg
+    `resolver(value)` is also accepted) synthesizes `[display name]` annotations
+    for opaque-ID / country columns."""
+    return stringify(_build_tree(oqo, resolver))
