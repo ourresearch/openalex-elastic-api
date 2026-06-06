@@ -137,11 +137,8 @@ cases:
     - {text: "title about climate change or climate warming", difficulty: 2}
     - {text: "title: climate and (change or warming)", difficulty: 3}
 
-- ref: 20   # title contains bar*  (prefix wildcard)
-  nl:
-    - {text: "papers whose title has a word starting with bar (like bar, barometer, barrier)", difficulty: 2}
-    - {text: "title contains words beginning bar*", difficulty: 3}
-    - {text: "title has a bar-prefixed word", difficulty: 3}
+# (corpus row 20 = `title contains bar*` is a status:error row — prefix wildcard
+# is a defined OQL error with no gold OQO — so it is intentionally NOT ref'd here.)
 
 # ---------------------------------------------------------------------------
 # D. Proximity & wildcards  (corpus rows 21–32) — arcane by nature.
@@ -477,9 +474,10 @@ cases:
     - {text: "how do I find retracted papers?", difficulty: 2}
     - {text: "show me retractions", difficulty: 1}
 
-- id: NL-ZD-006
-  provenance: {type: "zendesk ticket", label: "how do I find papers from my university (Harvard)"}
-  oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I136199984}]}
+# (was standalone NL-ZD-006, zendesk "papers from my university (Harvard)"; its
+# inline gold canonicalized identically to corpus row 2 `institution is I136199984`,
+# so it now inherits that gold by ref rather than keeping a copy that could drift.)
+- ref: 2
   nl:
     - {text: "how do I find all the papers from my university, Harvard?", difficulty: 2}
     - {text: "I want everything published by Harvard people", difficulty: 1}
