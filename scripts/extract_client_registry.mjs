@@ -12,7 +12,8 @@ import path from "path";
 import os from "os";
 import vm from "vm";
 
-const GUI = path.join(os.homedir(), "Documents/openalex-gui/src/facetConfigs.js");
+const GUI = process.env.GUI_FACETCONFIGS
+  || path.join(os.homedir(), "Documents/openalex-gui/src/facetConfigs.js");
 let src = fs.readFileSync(GUI, "utf8");
 
 // Real entity names that getEntityConfigs() returns (from entityConfigs.js).
@@ -52,6 +53,7 @@ for (const entity of ENTITY_NAMES) {
       key: c.key,
       entityToFilter: c.entityToFilter,
       entityToSelect: c.entityToSelect ?? null,
+      displayName: c.displayName ?? null,
       type: c.type ?? null,
       actions: c.actions ?? [],
       actionsPopular: c.actionsPopular ?? null,
