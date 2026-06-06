@@ -1,0 +1,74 @@
+name: OQL Conformance Gate
+
+# oxjob #363 (oql-bulletproof) — the standing gate for OQL/OQO conformance.
+#
+# Runs the tests/oql/ harness on every push to master (this repo ships
+# direct-to-master, no PR flow — same trigger as properties-gate). It's a static
+# check on the committed tree, so it gives fast feedback and (worst case) catches
+# a regression one deploy cycle after it ships, failing loud + Slack. Covers:
+#   * test_corpus_roundtrip.py — the #330 normative OQL corpus (parse(oql)==oqo,
+#                                OQO->OQL->OQO identity, error-row diagnostics).
+#   * test_nl_eval.py          — the #344 NL eval-set lint: structure, ref
+#                                resolution, gold-OQO validity, and the
+#                                inline-gold drift guard (a standalone nl_eval
+#                                gold identical to a corpus row must be a `ref`).
+#
+# Motivation: docs/oql/nl_eval.yaml was once found already-red (a ref to a
+# status:error corpus row) because nothing ran the lint automatically. This gate
+# closes that gap. Mirrors .github/workflows/properties-gate.yml.
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  oql-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"  # repo targets 3.10 (.python-version); numpy 1.23.5 has no newer wheels
+          cache: pip
+
+      - name: Install dependencies
+        # The NL-eval lint's validate_oqo pulls the property catalog (core.*),
+        # and conftest imports the whole app — so we need the app's runtime deps.
+        # Swap psycopg2 -> psycopg2-binary so we don't need a libpq toolchain
+        # (psycopg2 isn't on the test import path anyway). pytest + pyyaml for the
+        # harness itself.
+        run: |
+          sed 's/^psycopg2==/psycopg2-binary==/' requirements/prod.txt > /tmp/oql-gate-requirements.txt
+          pip install -r /tmp/oql-gate-requirements.txt pytest pyyaml
+
+      - name: Run OQL conformance harness
+        # tests/conftest.py does `from app import create_app` at import time, which
+        # needs valid-scheme URLs for these (a dummy host is fine — nothing
+        # connects; see CLAUDE.md "Running openalex-elastic-api tests locally").
+        env:
+          REDIS_DO_URL: redis://localhost:6379
+          REDISCLOUD_URL: redis://localhost:6379
+          USERS_DB_URL: postgresql://u:p@localhost:5432/db
+        run: python -m pytest tests/oql/ -q
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          channel-id: 'CESFJUHGD'  # #general
+          slack-message: |
+            :rotating_light: *OQL conformance gate FAILED on master!*
+
+            The `tests/oql/` harness is red — the #330 OQL corpus round-trip or the
+            #344 NL eval-set lint (structure / ref resolution / gold-OQO validity /
+            inline-gold drift) broke. Reconcile `docs/oql/corpus.yaml` /
+            `docs/oql/nl_eval.yaml` or the `query_translation/` translator.
+
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+
+            <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View failed workflow>
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
