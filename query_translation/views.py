@@ -675,7 +675,12 @@ def _build_x_query(oqo: OQO) -> dict:
         pass
 
     return {
-        "oql": render_oqo_to_oql(canonical),
+        # Resolve ES-backed entity display names (institution/author/source/…)
+        # so the SERP's x_query.oql reads `institution is I136199984 [Harvard]`,
+        # not a bare ID (#376 readability). Mirrors the /query/oql translate path;
+        # safe_get_display_name caches + swallows lookup errors, and countries /
+        # languages / SDGs still resolve via the built-in tables.
+        "oql": render_oqo_to_oql(canonical, entity_resolver=safe_get_display_name),
         "oqo": canonical.to_dict(),
         "url": url_form,
     }
