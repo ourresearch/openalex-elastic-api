@@ -93,10 +93,31 @@ class TestSeededOverrides:
         _, aliases = resolve_display_name("works", "cited_by_count")
         assert "cited by count" in aliases
 
-    def test_works_freetext_trio_deferred_to_374(self):
-        # no curated override — falls back to humanize until #374 sets them
-        for param in ("default.search", "fulltext.search", "title_and_abstract.search"):
-            assert resolve_display_name("works", param)[0] == humanize(param)
+    def test_works_freetext_labels_from_374(self):
+        # #374 shipped → the broad search keys take its final labels (Phase 4).
+        assert resolve_display_name("works", "fulltext.search")[0] == "full text"
+        assert resolve_display_name("works", "title_and_abstract.search")[0] == "title/abstract"
+
+    def test_phase4_reconciliation(self):
+        # de-paren + reconciliation (#381 Phase 4)
+        cases = {
+            ("works", "is_xpac"): "in extended index",
+            ("works", "locations.source.id"): "any location source",
+            ("works", "raw_affiliation_strings"): "exact raw affiliation",
+            ("works", "apc_paid.value_usd"): "estimated APC paid",
+            ("fields", "domain.id"): "parent domain",
+            ("topics", "siblings"): "sibling topics",
+            ("domains", "fields"): "child fields",
+            # bucket-1 fixes (registry adopts the GUI word)
+            ("authors", "display_name_alternatives"): "observed names",
+            ("awards", "display_name"): "title",
+            # alias key-mismatch fold-in: the server param gets the GUI label
+            ("authors", "orcid"): "ORCID",
+            ("institutions", "ror"): "ROR",
+            ("sources", "host_organization"): "publisher",
+        }
+        for (entity, param), expected in cases.items():
+            assert resolve_display_name(entity, param)[0] == expected, (entity, param)
 
 
 class TestCatalogInvariants:

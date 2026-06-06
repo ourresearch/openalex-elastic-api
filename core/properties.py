@@ -39,7 +39,10 @@ from core.fields import Property
 # changes; agents MUST NOT self-bump — flag the human. The CI drift gate ties
 # this constant to the change class. See docs/PROPERTIES_VERSIONING.md.
 # 1.3.0 (#381): added display_name + aliases to each property (purely additive).
-PROPERTIES_VERSION = "1.3.0"
+# 1.4.0 (#381 Phase 4): reconciled display_name labels with the GUI (de-paren, GUI-wins,
+# is_xpac→"in extended index", #374 works-search labels, alias-param fold-in). Label
+# edits = MINOR (no query breaks).
+PROPERTIES_VERSION = "1.4.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

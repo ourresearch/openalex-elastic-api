@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 22,
-    "fingerprint": "e4e78fb3b22f1ceaa4f029abbd1cdf3e8def70c140d1569fb4044ed56ace40d5",
+    "fingerprint": "c5afde52d725833a1b53d349c585dcb264222c8dd469193eed4ed7fc0b5d4d25",
     "property_count": 824,
-    "version": "1.3.0"
+    "version": "1.4.0"
   },
   "properties": {
     "authors": {
@@ -246,7 +246,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "display name alternatives",
+        "display_name": "observed names",
         "entity_type": null,
         "name": "display_name_alternatives",
         "operators": [],
@@ -510,7 +510,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "orcid",
+        "display_name": "ORCID",
         "entity_type": null,
         "name": "orcid",
         "operators": [
@@ -937,7 +937,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "display name",
+        "display_name": "title",
         "entity_type": null,
         "name": "display_name",
         "operators": [],
@@ -962,7 +962,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "doi",
+        "display_name": "DOI",
         "entity_type": null,
         "name": "doi",
         "operators": [
@@ -1053,7 +1053,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "funder doi",
+        "display_name": "funder DOI",
         "entity_type": null,
         "name": "funder.doi",
         "operators": [
@@ -1085,7 +1085,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "funder ror",
+        "display_name": "funder ROR",
         "entity_type": null,
         "name": "funder.ror",
         "operators": [
@@ -1102,7 +1102,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "funder award id",
+        "display_name": "funder award ID",
         "entity_type": null,
         "name": "funder_award_id",
         "operators": [
@@ -1169,7 +1169,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "openalex ID",
+        "display_name": "OpenAlex ID",
         "entity_type": null,
         "name": "id",
         "operators": [
@@ -1292,7 +1292,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "investigators",
+        "display_name": "investigator",
         "entity_type": null,
         "name": "investigators",
         "operators": [],
@@ -1303,7 +1303,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "landing page url",
+        "display_name": "landing page",
         "entity_type": null,
         "name": "landing_page_url",
         "operators": [],
@@ -2404,7 +2404,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "display name alternatives",
+        "display_name": "alternate names",
         "entity_type": null,
         "name": "display_name_alternatives",
         "operators": [],
@@ -2482,7 +2482,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "is global south",
+        "display_name": "global south",
         "entity_type": null,
         "name": "is_global_south",
         "operators": [],
@@ -2629,7 +2629,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "display name alternatives",
+        "display_name": "alternate names",
         "entity_type": null,
         "name": "display_name_alternatives",
         "operators": [],
@@ -2640,7 +2640,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "fields",
+        "display_name": "child fields",
         "entity_type": null,
         "name": "fields",
         "operators": [],
@@ -2735,7 +2735,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "siblings",
+        "display_name": "sibling domains",
         "entity_type": null,
         "name": "siblings",
         "operators": [],
@@ -2871,7 +2871,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "display name alternatives",
+        "display_name": "alternate names",
         "entity_type": null,
         "name": "display_name_alternatives",
         "operators": [],
@@ -2893,7 +2893,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "domain",
+        "display_name": "parent domain",
         "entity_type": null,
         "name": "domain.id",
         "operators": [
@@ -2976,7 +2976,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "siblings",
+        "display_name": "sibling fields",
         "entity_type": null,
         "name": "siblings",
         "operators": [],
@@ -2987,7 +2987,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "subfields",
+        "display_name": "child subfields",
         "entity_type": null,
         "name": "subfields",
         "operators": [],
@@ -3057,7 +3057,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "alternate titles",
+        "display_name": "alternate names",
         "entity_type": null,
         "name": "alternate_titles",
         "operators": [],
@@ -3267,7 +3267,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "homepage url",
+        "display_name": "homepage URL",
         "entity_type": null,
         "name": "homepage_url",
         "operators": [],
@@ -3300,7 +3300,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "crossref ID",
+        "display_name": "CrossRef ID",
         "entity_type": null,
         "name": "ids.crossref",
         "operators": [
@@ -3962,7 +3962,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "display name acronyms",
+        "display_name": "acronyms",
         "entity_type": null,
         "name": "display_name_acronyms",
         "operators": [],
@@ -3973,7 +3973,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "display name alternatives",
+        "display_name": "alternate names",
         "entity_type": null,
         "name": "display_name_alternatives",
         "operators": [],
@@ -4039,7 +4039,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "homepage url",
+        "display_name": "homepage",
         "entity_type": null,
         "name": "homepage_url",
         "operators": [],
@@ -4303,7 +4303,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "ror",
+        "display_name": "ROR",
         "entity_type": null,
         "name": "ror",
         "operators": [
@@ -5174,7 +5174,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "landing page url",
+        "display_name": "landing page URL",
         "entity_type": null,
         "name": "landing_page_url",
         "operators": [],
@@ -5231,7 +5231,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "native id",
+        "display_name": "native ID",
         "entity_type": null,
         "name": "native_id",
         "operators": [
@@ -5248,7 +5248,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "native id namespace",
+        "display_name": "native ID namespace",
         "entity_type": null,
         "name": "native_id_namespace",
         "operators": [
@@ -5264,7 +5264,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "pdf url",
+        "display_name": "PDF URL",
         "entity_type": null,
         "name": "pdf_url",
         "operators": [],
@@ -5448,7 +5448,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "alternate titles",
+        "display_name": "alternate names",
         "entity_type": null,
         "name": "alternate_titles",
         "operators": [],
@@ -5634,7 +5634,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "homepage url",
+        "display_name": "homepage",
         "entity_type": null,
         "name": "homepage_url",
         "operators": [],
@@ -6394,7 +6394,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "alternate titles",
+        "display_name": "alternate names",
         "entity_type": null,
         "name": "alternate_titles",
         "operators": [],
@@ -6699,7 +6699,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "homepage url",
+        "display_name": "homepage",
         "entity_type": null,
         "name": "homepage_url",
         "operators": [],
@@ -6711,7 +6711,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "host organization",
+        "display_name": "publisher",
         "entity_type": null,
         "name": "host_organization",
         "operators": [
@@ -7006,7 +7006,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "issn",
+        "display_name": "ISSN",
         "entity_type": null,
         "name": "issn",
         "operators": [
@@ -7455,7 +7455,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "display name alternatives",
+        "display_name": "alternate names",
         "entity_type": null,
         "name": "display_name_alternatives",
         "operators": [],
@@ -7504,7 +7504,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "field",
+        "display_name": "parent field",
         "entity_type": null,
         "name": "field.id",
         "operators": [
@@ -7587,7 +7587,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "siblings",
+        "display_name": "sibling subfields",
         "entity_type": null,
         "name": "siblings",
         "operators": [],
@@ -7598,7 +7598,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "topics",
+        "display_name": "child topics",
         "entity_type": null,
         "name": "topics",
         "operators": [],
@@ -7953,7 +7953,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "siblings",
+        "display_name": "sibling topics",
         "entity_type": null,
         "name": "siblings",
         "operators": [],
@@ -7975,7 +7975,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "subfield",
+        "display_name": "parent subfield",
         "entity_type": null,
         "name": "subfield.id",
         "operators": [
@@ -8062,7 +8062,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "crossref types",
+        "display_name": "CrossRef types",
         "entity_type": null,
         "name": "crossref_types",
         "operators": [],
@@ -8399,7 +8399,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "APC paid",
+        "display_name": "estimated APC paid",
         "entity_type": null,
         "name": "apc_paid.value_usd",
         "operators": [
@@ -9144,7 +9144,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "citation percentile",
+        "display_name": "citation percentile by subfield",
         "entity_type": null,
         "name": "citation_normalized_percentile.value",
         "operators": [
@@ -9236,7 +9236,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "citation percentile",
+        "display_name": "citation percentile by year",
         "entity_type": null,
         "name": "cited_by_percentile_year.min",
         "operators": [
@@ -9535,7 +9535,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "doi",
+        "display_name": "DOI",
         "entity_type": null,
         "name": "doi",
         "operators": [
@@ -9611,8 +9611,14 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
-        "display_name": "fulltext",
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "full text"
+        ],
+        "display_name": "full text",
         "entity_type": null,
         "name": "fulltext.search",
         "operators": [
@@ -9685,7 +9691,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "fwci",
+        "display_name": "FWCI",
         "entity_type": null,
         "name": "fwci",
         "operators": [
@@ -10327,7 +10333,7 @@
           "select"
         ],
         "aliases": [],
-        "display_name": "new in data version 2",
+        "display_name": "in extended index",
         "entity_type": null,
         "name": "is_xpac",
         "operators": [
@@ -10593,7 +10599,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "source",
+        "display_name": "any location source",
         "entity_type": "sources",
         "name": "locations.source.id",
         "operators": [
@@ -11319,7 +11325,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "raw affiliation",
+        "display_name": "exact raw affiliation",
         "entity_type": null,
         "name": "raw_affiliation_strings",
         "operators": [
@@ -11561,8 +11567,12 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
-        "display_name": "title and abstract",
+        "aliases": [
+          "title and abstract",
+          "title&abstract",
+          "title_and_abstract"
+        ],
+        "display_name": "title/abstract",
         "entity_type": null,
         "name": "title_and_abstract.search",
         "operators": [
