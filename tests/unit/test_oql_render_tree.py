@@ -107,7 +107,8 @@ class TestStringifyInvariant:
         oql, tree = render_oqo_to_oql_and_tree(oqo)
 
         assert stringify(tree) == oql
-        assert "; sort by" in oql
+        assert "sort by" in oql
+        assert ";" not in oql
 
     def test_multi_column_sort_directive(self):
         """A multi-key sort renders one directive; stringify is invariant (#333)."""
@@ -122,7 +123,8 @@ class TestStringifyInvariant:
         oql, tree = render_oqo_to_oql_and_tree(oqo)
 
         assert stringify(tree) == oql
-        assert "; sort by" in oql
+        assert "sort by" in oql
+        assert ";" not in oql
         # Both keys present, in order, comma-separated.
         sort_directive = next(d for d in tree.directives if d.type == "sort")
         assert [k["column_id"] for k in sort_directive.meta.keys] == [
@@ -139,7 +141,8 @@ class TestStringifyInvariant:
         oql, tree = render_oqo_to_oql_and_tree(oqo)
         
         assert stringify(tree) == oql
-        assert "; sample 100" in oql
+        assert "sample 100" in oql
+        assert ";" not in oql
     
     def test_complex_query(self):
         """Test complex query with filters, sort, and sample."""
@@ -199,6 +202,40 @@ class TestCanonicalization:
         assert canonical.filter_rows[0].value == 2020
         assert isinstance(canonical.filter_rows[0].value, int)
     
+    def test_country_code_uppercased(self):
+        """Country codes canonicalize to uppercase (matching the parser), so an
+        OQO-JSON submit of country=ca is stable and won't miss the indexed CA."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[LeafFilter(column_id="authorships.countries", value="ca")]
+        )
+
+        canonical = canonicalize_oqo(oqo)
+
+        assert canonical.filter_rows[0].value == "CA"
+
+    def test_enum_slug_lowercased(self):
+        """Enum slug values canonicalize to lowercase (e.g. type=Article -> article)."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[LeafFilter(column_id="type", value="Article")]
+        )
+
+        canonical = canonicalize_oqo(oqo)
+
+        assert canonical.filter_rows[0].value == "article"
+
+    def test_canonicalize_matches_parser_casing(self):
+        """The canonicalizer's value-casing must match the parser's, so an OQO-JSON
+        submit and the equivalent OQL parse converge on one canonical OQO."""
+        from tests.oql.oql_v2 import parse
+        submitted = OQO(
+            get_rows="works",
+            filter_rows=[LeafFilter(column_id="authorships.countries", value="ca")]
+        )
+        parsed = parse("works where country is ca")
+        assert canonicalize_oqo(submitted).to_dict() == canonicalize_oqo(parsed).to_dict()
+
     def test_entity_type_lowercase(self):
         """Test that entity type is normalized to lowercase."""
         oqo = OQO(get_rows="Works", filter_rows=[])

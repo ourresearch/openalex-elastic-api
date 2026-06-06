@@ -171,7 +171,8 @@ class TestOQLRenderer:
             sort_by=[SortBy("cited_by_count", "desc")],
         )
         result = render_oqo_to_oql(oqo)
-        assert "; sort by citations desc" in result
+        assert "sort by citations desc" in result
+        assert ";" not in result
 
     def test_multi_column_sort_render_oql(self):
         """A multi-key sort renders comma-separated in tiebreaker order (#333)."""
@@ -183,7 +184,8 @@ class TestOQLRenderer:
             ],
         )
         result = render_oqo_to_oql(oqo)
-        assert "; sort by year desc, citations desc" in result
+        assert "sort by year desc, citations desc" in result
+        assert ";" not in result
 
     def test_sample(self):
         """Test sample clause."""
@@ -195,7 +197,8 @@ class TestOQLRenderer:
             sample=100
         )
         result = render_oqo_to_oql(oqo)
-        assert "; sample 100" in result
+        assert "sample 100" in result
+        assert ";" not in result
 
     def test_negation(self):
         """Negation is the is_negated polarity bit; enum slug renders bare."""
@@ -388,7 +391,18 @@ class TestOQLParser:
 
         assert oqo.sort_by == [SortBy("cited_by_count", "desc")]
         assert oqo.sample == 50
-    
+
+    def test_parse_directives_without_semicolons(self):
+        """Directives now read without `;` separators (oxjob #377); the `;` form
+        still parses (back-compat) and yields an identical OQO."""
+        without = parse_oql_to_oqo(
+            "Works where it's Open Access sort by citations desc sample 50")
+        with_semis = parse_oql_to_oqo(
+            "Works where it's Open Access; sort by citations desc; sample 50")
+        assert without.to_dict() == with_semis.to_dict()
+        assert without.sort_by == [SortBy("cited_by_count", "desc")]
+        assert without.sample == 50
+
     def test_parse_technical_format(self):
         """Test parsing technical (column-id) field names with bare values."""
         oql = "Works where open_access.is_oa is true and sustainable_development_goals.id is 2 and authorships.countries is CA and institutions.is_global_south is true and publication_year >= 2020"

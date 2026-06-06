@@ -182,6 +182,17 @@ for _spellings, _fld in _FIELDS:
 # "fulltext" word so it round-trips into fulltext.search.
 _BY_COLUMN.setdefault("default", _BY_COLUMN["fulltext"])
 
+
+def canon_value_for_column(value, column_id):
+    """Apply a column's canonical value-casing by `column_id` (e.g. country codes
+    -> upper, enum slugs -> lower). Public bridge so the OQO canonicalizer matches
+    the parser's casing on the OQO-JSON submit path (oxjob: oqo-canonicalizer-enum-
+    casing); the parser already routes every parsed value through `_canon_value_case`.
+    Unknown columns and `col_…` set refs pass through untouched."""
+    fld = _BY_COLUMN.get(column_id)
+    return _canon_value_case(value, fld) if fld else value
+
+
 # alias-string -> Field, and the max alias word-length for greedy matching
 _ALIAS = {}
 for _spellings, _fld in _FIELDS:
@@ -332,8 +343,8 @@ class _Parser:
             else:
                 raise OQLError("OQL_TRAILING_TOKENS",
                                f'unexpected text near "{t.val}" (position {t.pos})',
-                               'queries are: <entity> [where <conditions>] [; sort by ...] '
-                               '[; group by ...] [; sample N]', t.pos)
+                               'queries are: <entity> [where <conditions>] [sort by ...] '
+                               '[group by ...] [sample N]', t.pos)
         return OQO(get_rows=entity, filter_rows=filters, sort_by=sort_by,
                    group_by=group_by, sample=sample, seed=seed)
 
@@ -1374,7 +1385,7 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
             segs.append(_seg("column", nm, column_id=g.column_id))
             dims.append({"column_id": g.column_id, "column_display_name": nm})
         directives.append(GroupByDirective(
-            prefix="; group by ", segments=segs, meta=GroupByMeta(dimensions=dims)))
+            prefix="group by ", segments=segs, meta=GroupByMeta(dimensions=dims)))
     if oqo.sort_by:
         segs = []
         keys = []
@@ -1390,7 +1401,7 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
                          "column_display_name": nm})
         primary = keys[0]
         directives.append(SortDirective(
-            prefix="; sort by ", segments=segs,
+            prefix="sort by ", segments=segs,
             meta=SortMeta(column_id=primary["column_id"], order=primary["order"],
                           column_display_name=primary["column_display_name"],
                           keys=keys)))
@@ -1400,7 +1411,7 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
             segs.append(_seg("text", " seed "))
             segs.append(_seg("value", str(oqo.seed), value=oqo.seed))
         directives.append(SampleDirective(
-            prefix="; sample ", segments=segs, meta=SampleMeta(n=oqo.sample)))
+            prefix="sample ", segments=segs, meta=SampleMeta(n=oqo.sample)))
 
     return OQLRenderTree(version="1.0", entity=head, where_keyword=where_keyword,
                          where=where, directives=directives)

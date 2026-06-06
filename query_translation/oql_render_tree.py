@@ -283,7 +283,7 @@ class GroupByMeta:
 
 @dataclass
 class GroupByDirective:
-    """group_by directive (Stage B). Renders `; group by col1, col2`."""
+    """group_by directive (Stage B). Renders `group by col1, col2`."""
     prefix: str
     segments: List[Segment]
     meta: GroupByMeta
@@ -365,10 +365,12 @@ def stringify(tree: OQLRenderTree) -> str:
     if tree.where:
         parts.append(_stringify_expr(tree.where))
     
-    # Directives
+    # Directives. Each is introduced by its own keyword (group by / sort by /
+    # sample) with no separating punctuation — a single space sets it off from the
+    # preceding clause (semicolons were dropped from the grammar, oxjob #377).
     for directive in tree.directives:
-        parts.append(_stringify_directive(directive))
-    
+        parts.append(" " + _stringify_directive(directive))
+
     return "".join(parts)
 
 

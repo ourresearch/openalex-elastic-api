@@ -55,7 +55,7 @@ This invariant is the spec's runnable contract — see §9.
 ## 2. Statement shape
 
 ```
-<entity> [ where <conditions> ] [ ; group by <dims> ] [ ; sort by <keys> ] [ ; sample <n> [ seed <s> ] ]
+<entity> [ where <conditions> ] [ group by <dims> ] [ sort by <keys> ] [ sample <n> [ seed <s> ] ]
 ```
 
 - The entity type names the rows returned (`works`, `authors`, `institutions`,
@@ -63,7 +63,9 @@ This invariant is the spec's runnable contract — see §9.
   lowercase canonically; any case accepted on input. (corpus rows **33**, **39**, **42–44**)
 - `where` introduces the conditions. With no conditions, the bare entity is a valid
   query: `works` (corpus row **33**).
-- Directives (`group by`, `sort by`, `sample`) follow, each introduced by `;`.
+- Directives (`group by`, `sort by`, `sample`) follow, each introduced by its own
+  keyword — no separating punctuation (oxjob #377). A leading `;` is still accepted
+  on **input** for back-compat, but the canonical form never emits one.
 
 OQL covers exactly **OQO Stage A (filter / sort / sample) + Stage B (group_by)**.
 There is deliberately **no Stage-C / HAVING syntax** (§10).
@@ -88,7 +90,7 @@ Implemented in [`query_translation/oql_lang.py`](../query_translation/oql_lang.p
   its children to break.
 - **Top level.** A statement that fits stays on one line. Otherwise the entity
   head, the `where` body, and **each directive** go on their own line(s); the
-  directives (`; group by …`, `; sort by …`, `; sample …`) sit at column 0.
+  directives (`group by …`, `sort by …`, `sample …`) sit at column 0.
 - **Leading connectives.** When a boolean explodes, `and` / `or` **begin** each
   continuation line (one operand per line). A parenthesized group puts `(` on
   the current line, its operands one level deeper, and `)` back at the group's
@@ -112,7 +114,7 @@ where year >= 2020
     fat, obese, obesity, overweight, thin, "anti fat", "being fat",
     "body esteem", "body image", "fat ideal", "thin ideal", "weight bias",
   )
-; sort by citations desc
+sort by citations desc
 ```
 
 ## 3. Conditions — the cases
@@ -381,9 +383,9 @@ technical `<column> is true|false` form is also accepted.
 ## 4. Directives
 
 ```
-authors; sort by works_count desc                          (row 39)
-works where year >= 1976; group by topic, year             (row 48)  (multi-dim: spec-level; live API single-dim → #297)
-works where … ; sort by citations desc; sample 500         (row 63)
+authors sort by works_count desc                           (row 39)
+works where year >= 1976 group by topic, year              (row 48)  (multi-dim: spec-level; live API single-dim → #297)
+works where … sort by citations desc sample 500            (row 63)
 ```
 
 - **`group by <dim>[, <dim>]*`** → `group_by` list (order = dimension order).

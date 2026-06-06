@@ -22,6 +22,7 @@ registry) — there is no entity-id prefix normalization. See docs/oql-spec.md.
 import json
 from typing import List, Union, Any
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, SortBy
+from query_translation.oql_lang import canon_value_for_column
 
 
 def canonicalize_oqo(oqo: OQO) -> OQO:
@@ -169,6 +170,13 @@ def canonicalize_value(value: Any, column_id: str) -> Any:
                 return float(value)
         except ValueError:
             pass
+
+    # Enum value-casing (country codes -> upper, enum slugs -> lower). The OQL
+    # parser already canonicalizes case on its way in; an OQO-JSON submit bypasses
+    # the parser, so apply the same column-casing here for round-trip stability and
+    # to avoid case-sensitive ES misses (e.g. country=ca vs the indexed CA).
+    if isinstance(value, str):
+        return canon_value_for_column(value, column_id)
 
     return value
 

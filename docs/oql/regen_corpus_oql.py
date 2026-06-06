@@ -78,17 +78,37 @@ def main() -> int:
         m_status = re.match(r"\s+status:\s*(\S+)", line)
         if m_status:
             status = m_status.group(1).strip().strip('"').strip("'")
-        m_oql = re.match(r"  oql:\s", line)
+        m_oql = re.match(r"  oql:(\s|$)", line)
         if m_oql and status in ("ok", "hint"):
-            # current oql is a single-line scalar; extract its value via yaml.
             import yaml
-            val = yaml.safe_load(line.split("oql:", 1)[1])
+            rhs = line.split("oql:", 1)[1].strip()
+            if rhs.startswith("|") or rhs.startswith(">"):
+                # Multi-line block scalar (emitted by #376 Phase 2): the value is
+                # the following lines indented under the key. Consume them, dedent
+                # by 4 spaces, and rejoin. Parsing is whitespace-blind, so the
+                # exact layout we read back is irrelevant — it round-trips to the
+                # same OQO and re-renders canonically (this is what makes the
+                # regen idempotent).
+                # Canonical OQL never contains interior blank lines, so the block
+                # is a run of 4-space-indented lines; stop at the first line that
+                # isn't (incl. a blank separator before the next field/row).
+                j = i + 1
+                block = []
+                while j < n and src[j].startswith("    "):
+                    block.append(src[j][4:].rstrip("\n"))
+                    j += 1
+                val = "\n".join(block).strip()
+                consumed = j - i
+            else:
+                # single-line scalar
+                val = yaml.safe_load(line.split("oql:", 1)[1])
+                consumed = 1
             canon = canonical(val, resolver)
             new_lines = emit_oql_field(canon)
-            if new_lines != [line]:
+            if new_lines != src[i:i + consumed]:
                 changed += 1
             out.extend(new_lines)
-            i += 1
+            i += consumed
             continue
         out.append(line)
         i += 1

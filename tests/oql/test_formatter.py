@@ -106,14 +106,16 @@ GOLDENS = {
         "    zh,\n"
         "  )",
 
-    # (f) directives on their own lines at col 0
+    # (f) directives on their own lines at col 0. Input keeps the legacy `;`
+    # separators to prove the parser still accepts them (back-compat); the
+    # canonical output drops them (oxjob #377).
     "works where it's open access and publication_year >= 2020 and type is "
     "article and language is en ; group by publication_year ; sort by "
     "cited_by_count desc":
         "works\n"
         "where language is en and it's open access and year >= 2020 and type is article\n"
-        "; group by year\n"
-        "; sort by citations desc",
+        "group by year\n"
+        "sort by citations desc",
 
     # (g) a nested boolean group that is too wide -> the group explodes
     "works where publication_year >= 2020 and (institution is I27837315 or "

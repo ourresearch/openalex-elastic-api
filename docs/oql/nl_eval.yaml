@@ -194,7 +194,7 @@ cases:
     - {text: "works affiliated with Harvard or UF since 2020", difficulty: hard}
     - {text: "harvard or florida stuff from 2020 onwards", difficulty: hard}
 
-- ref: 36  # institution is Memorial U. of Newfoundland; sort by citations desc
+- ref: 36  # institution is Memorial U. of Newfoundland sort by citations desc
   nl:
     - {text: "papers from Memorial University of Newfoundland, sorted by most cited first", difficulty: easy}
     - {text: "most cited works affiliated with Memorial University of Newfoundland", difficulty: hard}
@@ -212,7 +212,7 @@ cases:
     - {text: "works mentioning climate change anywhere in title or abstract", difficulty: hard}
     - {text: "climate change in title or abstract", difficulty: hard}
 
-- ref: 39  # authors; sort by works_count desc
+- ref: 39  # authors sort by works_count desc
   nl:
     - {text: "authors ranked by number of works, most prolific first", difficulty: easy}
     - {text: "which authors have the most papers", difficulty: hard}
@@ -257,13 +257,13 @@ cases:
 # ---------------------------------------------------------------------------
 # F. Group by  (corpus rows 46–54)
 # ---------------------------------------------------------------------------
-- ref: 46  # works where author is Stephen Hawking; group by author
+- ref: 46  # works where author is Stephen Hawking group by author
   nl:
     - {text: "Stephen Hawking's papers, grouped by author", difficulty: easy}
     - {text: "works by Stephen Hawking broken down by co-author", difficulty: hard}
     - {text: "hawking papers counted per author", difficulty: hard}
 
-- ref: 47  # anywhere contains near "Macrocystis pyrifera"; group by author
+- ref: 47  # anywhere contains near "Macrocystis pyrifera" group by author
   nl:
     - {text: 'papers mentioning "Macrocystis pyrifera" anywhere, grouped by author', difficulty: hard}
     - {text: "macrocystis pyrifera research counted per author", difficulty: hard}
@@ -272,37 +272,37 @@ cases:
 # row 48 (group by topic, year) intentionally omitted — multi-dim group_by isn't
 # executable on the live /query (HTTP 400), so it can't be Tier-2 graded. See header.
 
-- ref: 49  # country is col_eu27 and country is US; group by topic
+- ref: 49  # country is col_eu27 and country is US group by topic
   nl:
     - {text: "papers co-authored between an EU27 country and the US, grouped by topic", difficulty: hard}
     - {text: "US–EU27 collaborations counted by topic", difficulty: hard}
     - {text: "works with both a US and an EU27 affiliation, grouped by topic", difficulty: hard}
 
-- ref: 50  # is retracted; group by institution
+- ref: 50  # is retracted group by institution
   nl:
     - {text: "retracted papers grouped by institution", difficulty: easy}
     - {text: "which institutions have the most retractions", difficulty: hard}
     - {text: "count retractions per institution", difficulty: hard}
 
-- ref: 51  # t&a contains near "coral bleaching" and citations > 100; group by source
+- ref: 51  # t&a contains near "coral bleaching" and citations > 100 group by source
   nl:
     - {text: 'papers about "coral bleaching" with more than 100 citations, grouped by source', difficulty: hard}
     - {text: "highly cited (>100) coral bleaching papers per journal", difficulty: hard}
     - {text: "coral bleaching works cited over 100 times, grouped by source", difficulty: hard}
 
-- ref: 52  # type is book; group by field
+- ref: 52  # type is book group by field
   nl:
     - {text: "books grouped by field", difficulty: easy}
     - {text: "count books per research field", difficulty: hard}
     - {text: "books broken down by field", difficulty: hard}
 
-- ref: 53  # institution UCSB AND retracted; group by author
+- ref: 53  # institution UCSB AND retracted group by author
   nl:
     - {text: "retracted papers from UC Santa Barbara grouped by author", difficulty: easy}
     - {text: "ucsb retractions per author", difficulty: hard}
     - {text: "group retracted UCSB works by author", difficulty: hard}
 
-- ref: 54  # institution Notre Dame; group by SDG
+- ref: 54  # institution Notre Dame group by SDG
   nl:
     - {text: "Notre Dame papers grouped by Sustainable Development Goal", difficulty: easy}
     - {text: "university of notre dame works counted by SDG", difficulty: hard}
@@ -354,7 +354,7 @@ cases:
     - {text: "NCI-funded gold OA works", difficulty: hard}
     - {text: "gold OA research with National Cancer Institute funding", difficulty: hard}
 
-- ref: 63  # CRISPR and near "genome editing" and 2018-2023; sort citations desc; sample 500
+- ref: 63  # CRISPR and near "genome editing" and 2018-2023 sort citations desc sample 500
   nl:
     - {text: 'papers about CRISPR and "genome editing" from 2018 to 2023, sorted by most cited, take a sample of 500', difficulty: hard}
     - {text: "500-paper sample of CRISPR genome editing work 2018–2023, highest cited first", difficulty: hard}
@@ -402,19 +402,19 @@ cases:
     - {text: "covid research excluding anything mentioning pediatric", difficulty: hard}
     - {text: "title/abstract has covid and not pediatric", difficulty: hard}
 
-- ref: 72  # t&a contains quantum computing; group by country
+- ref: 72  # t&a contains quantum computing group by country
   nl:
     - {text: "quantum computing papers grouped by country", difficulty: easy}
     - {text: "count works about quantum computing per country", difficulty: hard}
     - {text: "quantum computing output by country", difficulty: hard}
 
-- ref: 73  # t&a contains CRISPR and Cas9; group by author
+- ref: 73  # t&a contains CRISPR and Cas9 group by author
   nl:
     - {text: "papers mentioning CRISPR and Cas9, grouped by author", difficulty: easy}
     - {text: "crispr cas9 research per author", difficulty: hard}
     - {text: "group CRISPR and Cas9 works by author", difficulty: hard}
 
-- ref: 74  # t&a contains CRISPR; group by funder
+- ref: 74  # t&a contains CRISPR group by funder
   nl:
     - {text: "CRISPR papers grouped by funder", difficulty: easy}
     - {text: "which funders support CRISPR research", difficulty: hard}

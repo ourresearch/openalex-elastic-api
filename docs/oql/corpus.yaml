@@ -526,7 +526,7 @@ rows:
   oql: |-
     works
     where institution is I130438778 [Memorial University of Newfoundland]
-    ; sort by citations desc
+    sort by citations desc
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I130438778}],
         sort_by: [{column_id: cited_by_count, direction: desc}]}
 
@@ -569,7 +569,7 @@ rows:
     label: "OpenAlex analytics question (OAQ#10)"
   oxurl_representable: true
   status: ok
-  oql: 'authors; sort by works_count desc'
+  oql: 'authors sort by works_count desc'
   oqo: {get_rows: authors, sort_by: [{column_id: works_count, direction: desc}]}
 
 - id: 40
@@ -649,7 +649,7 @@ rows:
     label: "OpenAlex analytics question (AKQ#10)"
   oxurl_representable: true
   status: ok
-  oql: 'works where author is A5066175077 [Stephen Hawking]; group by author'
+  oql: 'works where author is A5066175077 [Stephen Hawking] group by author'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.id, value: A5066175077}],
         group_by: [{column_id: authorships.author.id}]}
 
@@ -660,7 +660,7 @@ rows:
     label: "OpenAlex analytics question (AKQ#17)"
   oxurl_representable: true
   status: ok
-  oql: 'works where fulltext contains near "Macrocystis pyrifera"; group by author'
+  oql: 'works where fulltext contains near "Macrocystis pyrifera" group by author'
   # "anywhere" is a back-compat alias of the canonical "fulltext" scope and emits
   # fulltext.search (oxjob #374; default.search is deprecated).
   oqo: {get_rows: works, filter_rows: [{column_id: fulltext.search, value: '"Macrocystis pyrifera"', operator: contains}],
@@ -674,7 +674,7 @@ rows:
     label: "OpenAlex analytics question (AKQ#75)"
   oxurl_representable: true
   status: ok
-  oql: 'works where year >= 1976; group by topic, year'
+  oql: 'works where year >= 1976 group by topic, year'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 1976, operator: '>='}],
         group_by: [{column_id: primary_topic.id}, {column_id: publication_year}]}
   note: Multi-dim group_by is expressible in the spec (live API single-dim only -> #297).
@@ -686,7 +686,7 @@ rows:
     label: "OpenAlex analytics question (AKQ#20)"
   oxurl_representable: true
   status: ok
-  oql: 'works where country is US and country is col_eu27; group by topic'
+  oql: 'works where country is US and country is col_eu27 group by topic'
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.countries, value: col_eu27},
         {column_id: authorships.countries, value: US}],
@@ -700,7 +700,7 @@ rows:
     label: "OpenAlex analytics question (AKQ#48)"
   oxurl_representable: true
   status: ok
-  oql: 'works where it''s retracted; group by institution'
+  oql: 'works where it''s retracted group by institution'
   oqo: {get_rows: works, filter_rows: [{column_id: is_retracted, value: true}],
         group_by: [{column_id: authorships.institutions.lineage}]}
 
@@ -714,7 +714,7 @@ rows:
   oql: |-
     works
     where citations > 100 and title & abstract contains near "coral bleaching"
-    ; group by source
+    group by source
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: '"coral bleaching"', operator: contains},
         {column_id: cited_by_count, value: 100, operator: '>'}],
@@ -727,7 +727,7 @@ rows:
     label: "OpenAlex analytics question (AKQ#13)"
   oxurl_representable: true
   status: ok
-  oql: 'works where type is book; group by field'
+  oql: 'works where type is book group by field'
   oqo: {get_rows: works, filter_rows: [{column_id: type, value: book}],
         group_by: [{column_id: primary_topic.field.id}]}
 
@@ -738,7 +738,7 @@ rows:
     label: "OpenAlex analytics question (AKQ#59)"
   oxurl_representable: true
   status: ok
-  oql: 'works where institution is I154570441 [UCSB] and it''s retracted; group by author'
+  oql: 'works where institution is I154570441 [UCSB] and it''s retracted group by author'
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I154570441},
         {column_id: is_retracted, value: true}],
@@ -751,7 +751,7 @@ rows:
     label: "OpenAlex analytics question (AKQ#22)"
   oxurl_representable: true
   status: ok
-  oql: 'works where institution is I107639228 [Notre Dame]; group by SDG'
+  oql: 'works where institution is I107639228 [Notre Dame] group by SDG'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I107639228}],
         group_by: [{column_id: sustainable_development_goals.id}]}
 
@@ -907,8 +907,8 @@ rows:
       and year >= 2018
       and title & abstract contains CRISPR
       and title & abstract contains near "genome editing"
-    ; sort by citations desc
-    ; sample 500
+    sort by citations desc
+    sample 500
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: CRISPR, operator: contains},
         {column_id: title_and_abstract.search, value: '"genome editing"', operator: contains},
@@ -1024,7 +1024,7 @@ rows:
   oql: |-
     works
     where title & abstract contains computing and title & abstract contains quantum
-    ; group by country
+    group by country
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: quantum, operator: contains},
         {column_id: title_and_abstract.search, value: computing, operator: contains}],
@@ -1042,7 +1042,7 @@ rows:
   oql: |-
     works
     where title & abstract contains CRISPR and title & abstract contains Cas9
-    ; group by author
+    group by author
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: CRISPR, operator: contains},
         {column_id: title_and_abstract.search, value: Cas9, operator: contains}],
@@ -1056,7 +1056,7 @@ rows:
     url: "https://docs.dimensions.ai/dsl/"
   oxurl_representable: true
   status: ok
-  oql: 'works where title & abstract contains CRISPR; group by funder'
+  oql: 'works where title & abstract contains CRISPR group by funder'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: CRISPR, operator: contains}],
         group_by: [{column_id: funders.id}]}
   note: 'Only the group-by-COUNT form is in scope. Ranking groups by mean citation impact is sort-by-aggregate -> #297.'
