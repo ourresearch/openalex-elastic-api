@@ -637,7 +637,9 @@ rows:
   oxurl_representable: true
   status: ok
   oql: 'works where anywhere contains near "Macrocystis pyrifera"; group by author'
-  oqo: {get_rows: works, filter_rows: [{column_id: default.search, value: '"Macrocystis pyrifera"', operator: contains}],
+  # "anywhere" is a back-compat alias of the canonical "fulltext" scope and emits
+  # fulltext.search (oxjob #374; default.search is deprecated).
+  oqo: {get_rows: works, filter_rows: [{column_id: fulltext.search, value: '"Macrocystis pyrifera"', operator: contains}],
         group_by: [{column_id: authorships.author.id}]}
   note: 'A species name is a phrase but recall matters → `near` (stemmed adjacent), not exact quotes.'
 

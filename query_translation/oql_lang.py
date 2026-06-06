@@ -109,8 +109,13 @@ _f("title", "display_name", "search", aliases=["display_name.search", "display_n
 _f("title & abstract", "title_and_abstract", "search",
    aliases=["title and abstract", "title_and_abstract.search", "title_and_abstract", "title&abstract"])
 _f("abstract", "abstract", "search", aliases=["abstract.search"])
-_f("fulltext", "fulltext", "search", aliases=["fulltext.search", "full text"])
-_f("anywhere", "default", "search", aliases=["default", "default.search", "any field"])
+# "fulltext" is the canonical broad full-text scope: title + abstract + full text
+# (oxjob #374). All broad-search spellings — including the old "anywhere" word and the
+# deprecated "default.search" param name — fold in here and emit fulltext.search, so OQL
+# never produces the deprecated default.search key. (Stray default.search columns from
+# external URL→OQO still render to "fulltext" via the _BY_COLUMN alias below.)
+_f("fulltext", "fulltext", "search",
+   aliases=["fulltext.search", "full text", "anywhere", "any field", "default", "default.search"])
 _f("raw affiliation", "raw_affiliation_strings", "search",
    aliases=["raw_affiliation_strings.search", "affiliation", "raw affiliation string"])
 _f("byline", "raw_author_name", "search",
@@ -172,6 +177,10 @@ _f("ORCID", "authorships.author.orcid", "string", aliases=["authorships.author.o
 _BY_COLUMN = {}
 for _spellings, _fld in _FIELDS:
     _BY_COLUMN.setdefault(_fld.column, _fld)
+# default.search is the deprecated alias of fulltext.search (oxjob #374): render any
+# stray default.search column (e.g. from an external URL→OQO) to the canonical
+# "fulltext" word so it round-trips into fulltext.search.
+_BY_COLUMN.setdefault("default", _BY_COLUMN["fulltext"])
 
 # alias-string -> Field, and the max alias word-length for greedy matching
 _ALIAS = {}

@@ -328,7 +328,7 @@ def apply_sorting(params, fields_dict, default_sort, index_name, s):
     # do not allow sorting by relevance score without search query
     if not is_search_query and params["sort"] and "relevance_score" in params["sort"]:
         raise APIQueryParamsError(
-            "Must include a search query (such as ?search=example or /filter=display_name.search:example) in order to sort by relevance_score."
+            "Must include a search query (such as ?search=example or /filter=fulltext.search:example) in order to sort by relevance_score."
         )
 
     if params["sort"] and params["cursor"]:

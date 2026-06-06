@@ -598,13 +598,13 @@ fields = [
     SearchField(
         param="default.search",
         index="works",
-        docstring="Free text search among the work's title, abstract (when available) and full text (when available)",
+        docstring="(DEPRECATED — use fulltext.search) Free text search among the work's title, abstract (when available) and full text (when available)",
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
     SearchField(
         param="default.search.exact",
         index="works",
-        docstring="Free text search among the work's title, abstract and full text, without stemming. The no-stem field wildcards (* and ?) must target.",
+        docstring="(DEPRECATED — use fulltext.search.exact) Free text search among the work's title, abstract and full text, without stemming. The no-stem field wildcards (* and ?) must target.",
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
     SearchField(param="display_name.search", index="works"),
@@ -614,15 +614,13 @@ fields = [
     SearchField(
         param="fulltext.search",
         index="works",
-        custom_es_field="fulltext",
-        docstring="Free text search within the work's full text (body) only",
+        docstring="Free text search among the work's title, abstract (when available) and full text (when available)",
         documentation_link="https://developers.openalex.org/guides/searching",
-        alternate_names=["body", "full", "text"],
     ),
     SearchField(
         param="fulltext.search.exact",
-        custom_es_field="fulltext.no_stem",
-        docstring="Free text search within the work's full text (body) only, without stemming",
+        index="works",
+        docstring="Free text search among the work's title, abstract and full text, without stemming. The no-stem field wildcards (* and ?) must target.",
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
     SearchField(

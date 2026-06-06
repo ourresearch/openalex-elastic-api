@@ -672,21 +672,24 @@ class SearchField(Field):
 
     def build_query(self):
         self.validate(self.value)
-        if self.param == "default.search":
+        # fulltext.search routes through the same broad builder as default.search —
+        # title + abstract + full text, NOT body-only (oxjob #374). Its old body-only
+        # behavior is intentionally removed: no param searches the body in isolation.
+        # default.search is retained but deprecated (see works/fields.py); it behaves
+        # identically.
+        if self.param in ("default.search", "fulltext.search"):
             q = full_search_query(self.index, self.value)
-        elif self.param == "default.search.exact":
-            # No-stem sibling of default.search (#364) — the exact target a
+        elif self.param in ("default.search.exact", "fulltext.search.exact"):
+            # No-stem sibling of the broad search (#364) — the exact target a
             # wildcard on the top-level search must use. Works-only.
             q = full_search_query_exact(self.value)
         elif (
             self.param == "raw_affiliation_strings.search"
             or self.param == "abstract.search"
             or self.param == "abstract.search.exact"
-            or self.param == "fulltext.search"
             or self.param == "keyword.search"
             or self.param == "description.search"
             or self.param == "title.search"
-            or self.param == "fulltext.search.exact"
             or self.param == "title.search.exact"
         ):
             search_oa = SearchOpenAlex(
