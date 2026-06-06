@@ -1,7 +1,7 @@
 import datetime
 import re
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 from elasticsearch_dsl import Q, Search
@@ -106,6 +106,14 @@ class Property:
     means an internal ES remap (e.g. pointing a field at its `.keyword` subfield)
     does NOT flap the fingerprint or trip the version gate — only changes to the
     public surface (name/type/operators/actions/entity_type) do.
+
+    `display_name`/`aliases` (#381) are the canonical human label + input-spelling
+    aliases for the property, resolved from `core.display_names` by the properties
+    builder (where the owning entity_type is known — the same `param` differs per
+    entity). They are carried on the dataclass now but NOT yet emitted by
+    `serialize()`: adding them to the public payload is a breaking-class change
+    (every property's fingerprint moves) that needs a MAJOR `PROPERTIES_VERSION`
+    bump — done in #381 Phase 3, not here.
     """
 
     name: str
@@ -115,11 +123,15 @@ class Property:
     alias: Optional[str] = None
     custom_es_field: Optional[str] = None
     entity_type: Optional[str] = None
+    display_name: Optional[str] = None
+    aliases: List[str] = field(default_factory=list)
 
     def serialize(self) -> dict:
         """The canonical PUBLIC JSON-ready dict. `operators`/`actions` are sorted
         so repeated renders are byte-identical (fingerprint-stable). Server-internal
-        `alias`/`custom_es_field` are intentionally omitted — see the class docstring."""
+        `alias`/`custom_es_field` are intentionally omitted — see the class docstring.
+        `display_name`/`aliases` (#381) are NOT emitted yet — Phase 3 adds them with
+        a MAJOR version bump."""
         return {
             "name": self.name,
             "type": self.type,

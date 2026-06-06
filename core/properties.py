@@ -30,6 +30,7 @@ import importlib
 import json
 from dataclasses import replace
 
+from core.display_names import resolve_display_name
 from core.fields import Property
 
 # Human-curated semver of the published /properties contract (#331 Decision C).
@@ -73,20 +74,32 @@ ENTITY_FIELDS_MODULES = {
 }
 
 
-def _build_entity_properties(module_name):
-    """Introspect one entity's live fields into {property_name: Property}."""
+def _build_entity_properties(entity_type, module_name):
+    """Introspect one entity's live fields into {property_name: Property}.
+
+    Each `Property` is also annotated (#381) with its canonical `display_name` +
+    input `aliases`, resolved from `core.display_names` here — this is the layer
+    that knows the owning `entity_type` (the same `param` can carry a different
+    label per entity), which the entity-agnostic `Field.to_property()` cannot.
+    """
     mod = importlib.import_module(module_name)
     fields_dict = getattr(mod, "fields_dict", None)
     if fields_dict is None:
         fields_dict = {f.param: f for f in getattr(mod, "fields", [])}
-    return {param: field.to_property() for param, field in fields_dict.items()}
+    out = {}
+    for param, field in fields_dict.items():
+        display_name, aliases = resolve_display_name(entity_type, param)
+        out[param] = replace(
+            field.to_property(), display_name=display_name, aliases=aliases
+        )
+    return out
 
 
 def build_properties():
     """Build the full {entity_type: {property_name: Property}} catalog from live fields."""
     properties = {}
     for entity_type, module_name in ENTITY_FIELDS_MODULES.items():
-        properties[entity_type] = _build_entity_properties(module_name)
+        properties[entity_type] = _build_entity_properties(entity_type, module_name)
     return properties
 
 
@@ -147,8 +160,10 @@ def _merged_properties(entity_type):
     for name in get_selectable_fields(entity_type) or set():
         existing = merged.get(name)
         if existing is None:
+            display_name, aliases = resolve_display_name(entity_type, name)
             merged[name] = Property(
                 name=name, type=None, operators=[], actions=["select"],
+                display_name=display_name, aliases=aliases,
             )
         elif "select" not in existing.actions:
             merged[name] = replace(existing, actions=existing.actions + ["select"])
