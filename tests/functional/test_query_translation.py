@@ -908,7 +908,7 @@ class TestSearchAwareSortInExecutor:
     def _sort_for(self, **kw):
         from flask import Flask, request
         from elasticsearch_dsl import Search
-        from query_translation.views import _build_params_from_oqo
+        from query_translation.execution import _build_params_from_oqo
         from core.shared_view import apply_sorting
 
         oqo = parse_url_to_oqo(entity_type="works", **kw)

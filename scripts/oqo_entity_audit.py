@@ -11,7 +11,8 @@ imports per-entity fields modules. Run from repo root with PYTHONPATH=. .
 import importlib
 
 from core.properties import ENTITY_PROPERTIES
-from query_translation.views import _resolve_entity, NATIVE_ENTITY_TYPES
+from query_translation.execution import _resolve_entity
+from query_translation.views import NATIVE_ENTITY_TYPES
 from core.exceptions import APIQueryParamsError
 
 # Legacy list entities, by their canonical /<entity> route name (OQO get_rows form).

@@ -210,7 +210,7 @@ class TestPostExecutes:
             return _StubResponse()
 
         with patch(
-            "query_translation.views.execute_search", side_effect=fake_execute_search
+            "query_translation.execution.execute_search", side_effect=fake_execute_search
         ):
             res_post = _post_oqo(client, oqo_body)
 
@@ -236,7 +236,7 @@ class TestMetaXQuery:
                 return iter([])
 
         with patch(
-            "query_translation.views.execute_search", return_value=_StubResponse()
+            "query_translation.execution.execute_search", return_value=_StubResponse()
         ):
             return _post_oqo(client, oqo_body)
 
@@ -267,13 +267,13 @@ class TestMetaXQuery:
         """#376: the SERP's x_query.oql resolves ES-backed entity display names
         (institution/author/…) instead of bare IDs. _build_x_query passes
         safe_get_display_name as the entity resolver."""
-        from query_translation.views import _build_x_query
+        from query_translation.execution import _build_x_query
         from query_translation.oqo import OQO, LeafFilter
 
         oqo = OQO(get_rows="works", filter_rows=[
             LeafFilter(column_id="authorships.institutions.lineage",
                        value="I136199984")])
-        with patch("query_translation.views.safe_get_display_name",
+        with patch("query_translation.execution.safe_get_display_name",
                    return_value="Harvard University"):
             xq = _build_x_query(oqo)
         assert "I136199984 [Harvard University]" in xq["oql"]

@@ -32,12 +32,12 @@ def index():
     """
     # Lazy import: avoids any import-time coupling between the works and
     # query_translation blueprints (both are fully loaded by request time).
-    from query_translation.views import (
+    from query_translation.execution import (
         execute_oql_string,
         execute_oqo_dict,
         execute_oqo_json_string,
-        _error_response,
     )
+    from query_translation.views import _error_response
 
     if request.method == "POST":
         body = request.get_json(silent=True)

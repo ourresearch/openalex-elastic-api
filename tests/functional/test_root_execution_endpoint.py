@@ -81,7 +81,7 @@ class TestRootExecutes:
         captured = []
         encoded = urllib.parse.quote(json.dumps(WORKS_OQO), safe="")
         with patch(
-            "query_translation.views.execute_search",
+            "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
         ):
             res = client.get(f"/?oqo={encoded}")
@@ -92,7 +92,7 @@ class TestRootExecutes:
     def test_post_oqo_executes(self, client):
         captured = []
         with patch(
-            "query_translation.views.execute_search",
+            "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
         ):
             res = client.post(
@@ -108,7 +108,7 @@ class TestRootExecutes:
         oql = _valid_oql(client)
         captured = []
         with patch(
-            "query_translation.views.execute_search",
+            "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
         ):
             res = client.get("/?oql=" + urllib.parse.quote(oql, safe=""))
@@ -120,7 +120,7 @@ class TestRootExecutes:
         oql = _valid_oql(client)
         captured = []
         with patch(
-            "query_translation.views.execute_search",
+            "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
         ):
             res = client.post(

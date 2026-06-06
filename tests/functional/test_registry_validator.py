@@ -283,7 +283,7 @@ def test_seed_without_sample_is_a_nonblocking_warning():
 # execute. Guard the invariant: every catalog entity must also resolve.
 
 from core.properties import ENTITY_PROPERTIES
-from query_translation.views import _resolve_entity
+from query_translation.execution import _resolve_entity
 from core.exceptions import APIQueryParamsError
 
 
