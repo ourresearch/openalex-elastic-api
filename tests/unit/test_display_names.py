@@ -32,10 +32,12 @@ class TestHumanize:
 
 class TestResolve:
     def test_falls_back_to_humanize_with_empty_aliases(self):
-        assert resolve_display_name("works", "publication_year") == (
-            "publication year",
+        # a param guaranteed absent from the curated override map → humanize default
+        assert resolve_display_name("works", "totally_made_up_param") == (
+            "totally made up param",
             [],
         )
+        assert resolve_display_name("nonsuch_entity", "x_y") == ("x y", [])
 
     def test_override_wins(self, monkeypatch):
         monkeypatch.setitem(
@@ -60,10 +62,41 @@ class TestResolve:
         assert DISPLAY_NAME_OVERRIDES["works"]["x"]["aliases"] == ["a"]
 
     def test_entity_aware(self):
-        # Same param, different entity — both resolve (humanized today; Phase 2
-        # gives them distinct curated labels "title" vs "name").
-        assert resolve_display_name("works", "display_name")[0]
-        assert resolve_display_name("authors", "display_name")[0]
+        # Same param, different entity — curated to distinct canonical labels.
+        assert resolve_display_name("works", "display_name")[0] == "title"
+        assert resolve_display_name("authors", "display_name")[0] == "name"
+
+
+class TestSeededOverrides:
+    """Lock in representative Phase 2 reconciliation decisions (2026-06-06)."""
+
+    def test_canonical_labels(self):
+        cases = {
+            ("works", "publication_year"): "year",
+            ("works", "authorships.author.id"): "author",
+            ("works", "primary_topic.id"): "topic",
+            ("works", "ids.openalex"): "openalex id",  # exception: GUI "Work" rejected
+            ("works", "open_access.oa_status"): "open access status",  # GUI wins
+            ("works", "primary_location.source.is_in_doaj"): "indexed by DOAJ",
+            ("sources", "apc_usd"): "article processing charge",
+        }
+        for (entity, param), expected in cases.items():
+            assert resolve_display_name(entity, param)[0] == expected
+
+    def test_acronym_casing_preserved(self):
+        # lowercased except acronyms the GUI wrote in caps / mixed
+        assert resolve_display_name("works", "authorships.author.orcid")[0] == "ORCID"
+        assert resolve_display_name("works", "doi_starts_with")[0] == "DOI prefix"
+        assert resolve_display_name("works", "has_pmid")[0] == "indexed by PubMed"
+
+    def test_oql_aliases_attached(self):
+        _, aliases = resolve_display_name("works", "cited_by_count")
+        assert "cited by count" in aliases
+
+    def test_works_freetext_trio_deferred_to_374(self):
+        # no curated override — falls back to humanize until #374 sets them
+        for param in ("default.search", "fulltext.search", "title_and_abstract.search"):
+            assert resolve_display_name("works", param)[0] == humanize(param)
 
 
 class TestCatalogInvariants:
