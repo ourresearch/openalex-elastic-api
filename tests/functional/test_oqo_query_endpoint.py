@@ -219,17 +219,12 @@ class TestPostExecutes:
 
 
 # ---------------------------------------------------------------------------
-# OQO echo in the response
+# meta.x_query triple in the response (#373 — replaces #372's top-level oqo echo)
 # ---------------------------------------------------------------------------
 
 
-class TestOqoEcho:
-    def test_response_includes_canonicalized_oqo_echo(self, client):
-        oqo_body = {
-            "get_rows": "works",
-            "filter_rows": [{"column_id": "type", "value": "article"}],
-        }
-
+class TestMetaXQuery:
+    def _stub_run(self, client, oqo_body):
         class _StubHits:
             total = type("T", (), {"value": 0})()
 
@@ -243,12 +238,90 @@ class TestOqoEcho:
         with patch(
             "query_translation.views.execute_search", return_value=_StubResponse()
         ):
-            res = _post_oqo(client, oqo_body)
+            return _post_oqo(client, oqo_body)
+
+    def test_response_includes_meta_x_query_triple(self, client):
+        oqo_body = {
+            "get_rows": "works",
+            "filter_rows": [{"column_id": "type", "value": "article"}],
+        }
+        res = self._stub_run(client, oqo_body)
 
         assert res.status_code == 200, res.get_json()
         body = res.get_json()
-        assert "oqo" in body
-        assert body["oqo"]["get_rows"] == "works"
+        # The old top-level `oqo` echo (#372) is gone; the canonical home is now
+        # meta.x_query (#373).
+        assert "oqo" not in body
+        x_query = body["meta"]["x_query"]
+        assert set(x_query) == {"oql", "oqo", "url"}
+        assert x_query["oqo"]["get_rows"] == "works"
+        # A simple flat filter IS URL-expressible → url is a /works?filter=… form.
+        assert x_query["url"] and x_query["url"].startswith("/works?filter=")
+        # oql round-trips: re-parsing it canonicalizes back to the same oqo.
+        from query_translation.oql_parser import parse_oql_to_oqo
+        from query_translation.oqo_canonicalizer import canonicalize_oqo
+        reparsed = canonicalize_oqo(parse_oql_to_oqo(x_query["oql"])).to_dict()
+        assert reparsed == x_query["oqo"]
+
+    def test_nested_boolean_x_query_url_is_null(self, client):
+        # (A and B) or (C and D) — a nested boolean tree the OXURL syntax can't
+        # express → url must be None (graceful), never a 500.
+        oqo_body = {
+            "get_rows": "works",
+            "filter_rows": [
+                {
+                    "join": "or",
+                    "filters": [
+                        {
+                            "join": "and",
+                            "filters": [
+                                {"column_id": "type", "value": "article"},
+                                {"column_id": "publication_year", "value": "2024"},
+                            ],
+                        },
+                        {
+                            "join": "and",
+                            "filters": [
+                                {"column_id": "type", "value": "review"},
+                                {"column_id": "publication_year", "value": "2023"},
+                            ],
+                        },
+                    ],
+                }
+            ],
+        }
+        res = self._stub_run(client, oqo_body)
+
+        assert res.status_code == 200, res.get_json()
+        x_query = res.get_json()["meta"]["x_query"]
+        assert x_query["url"] is None
+        assert x_query["oql"]  # still renders to OQL
+
+
+# ---------------------------------------------------------------------------
+# OQL parse errors surface position + context (#373)
+# ---------------------------------------------------------------------------
+
+
+class TestOqlParseErrorHints:
+    def test_malformed_oql_returns_structured_400_with_position(self, client):
+        # `===` is not a valid operator → the parser raises OQLParseError.
+        res = client.get("/?oql=works where type === article")
+        assert res.status_code == 400, res.get_json()
+        body = res.get_json()
+        assert body["validation"]["valid"] is False
+        errors = body["validation"]["errors"]
+        assert errors, "expected at least one parse error"
+        # Minimal hints (#373 D4): each error carries message + position + context
+        # keys (values may be None until #357 enriches them) and is NOT a single
+        # stringified "Failed to parse OQL: …" blob.
+        for e in errors:
+            assert "message" in e
+            assert "position" in e
+            assert "context" in e
+        assert not body["validation"]["errors"][0]["message"].startswith(
+            "Failed to parse OQL"
+        )
 
 
 # ---------------------------------------------------------------------------

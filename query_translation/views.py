@@ -38,7 +38,7 @@ from query_translation.oqo_to_es import (
     OQOTranslationError,
     oqo_to_search_and_filter_q,
 )
-from query_translation.oql_parser import parse_oql_to_oqo
+from query_translation.oql_parser import OQLParseError, parse_oql_to_oqo
 from query_translation.oql_renderer import render_oqo_to_oql
 from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
 from query_translation.url_parser import parse_url_to_oqo
@@ -476,7 +476,9 @@ def execute_oql_string(oql_str):
         return _error_response("Empty OQL query.", "invalid_oql", status=400)
     try:
         oqo = parse_oql_to_oqo(oql_str)
-    except Exception as e:  # OQLParseError and friends → 400, never 500
+    except OQLParseError as e:  # surface position + context (#373)
+        return _oql_parse_error_response(e)
+    except Exception as e:  # any other parse failure → 400, never 500
         return _error_response(
             f"Failed to parse OQL: {e}", "parse_error", status=400
         )
@@ -636,9 +638,76 @@ def _execute_oqo(oqo_dict: dict):
         )
     message_schema = MessageSchema(only=only_fields) if only_fields else MessageSchema()
     serialized = message_schema.dump(result)
-    # Echo a canonicalized OQO so clients can confirm what we actually executed.
-    serialized["oqo"] = canonicalize_oqo(oqo).to_dict()
+    # Attach the private `meta.x_query` triple {oql, oqo, url} so clients can
+    # confirm what we executed and rehydrate from it (#373). Injected here, after
+    # marshmallow `.dump()` (which would drop an unknown `meta` key), and only on
+    # this execute path — keeps `x_query` off `/works?filter=` and out of
+    # `/properties`/docs. Replaces #372's top-level `oqo` echo (single canonical
+    # home; no other consumer reads the echo — the GUI uses `/query/*`).
+    serialized.setdefault("meta", {})["x_query"] = _build_x_query(oqo)
     return jsonify(serialized), 200
+
+
+def _build_x_query(oqo: OQO) -> dict:
+    """Build the private `meta.x_query` triple {oql, oqo, url} (oxjob #373).
+
+    The canonical multi-form representation of the executed query:
+      - oql: re-rendered canonical OQL (round-trips: re-parsing it yields `oqo`)
+      - oqo: the canonical structured query object the client hydrates from
+      - url: the OXURL (`/works?filter=…`) form, or None when the OQO isn't
+             URL-expressible (nested boolean trees, multi-dim group_by) — the URL
+             syntax is a lossy subset of OQO, so this is null, never a 500.
+
+    `x_query` is deliberately **private/unstable**: `x_` prefix, undocumented,
+    injected onto the serialized `meta` AFTER marshmallow `.dump()` (so it never
+    needs a schema field) and only on the OQL/OQO execute path — it stays out of
+    `/properties` and the public docs.
+    """
+    canonical = canonicalize_oqo(oqo)
+
+    url_form = None
+    try:
+        components = render_oqo_to_url(canonical)
+        url_form = _components_to_oxurl(canonical.get_rows, components)
+    except URLRenderError:
+        # Not URL-expressible (e.g. nested boolean tree). url stays None; the
+        # client treats null as an "advanced query" it can't render as chips.
+        pass
+
+    return {
+        "oql": render_oqo_to_oql(canonical),
+        "oqo": canonical.to_dict(),
+        "url": url_form,
+    }
+
+
+def _oql_parse_error_response(exc: OQLParseError):
+    """Structured 400 for an OQL parse failure, surfacing per-error position +
+    context (oxjob #373, minimal hints — richer named diagnostics are #357's)."""
+    errors = []
+    for pe in (exc.errors or []):
+        errors.append(
+            {
+                "type": "parse_error",
+                "message": pe.message,
+                "position": pe.position,
+                "context": pe.context,
+                "location": None,
+            }
+        )
+    if not errors:
+        errors.append(
+            {
+                "type": "parse_error",
+                "message": str(exc),
+                "position": None,
+                "context": None,
+                "location": None,
+            }
+        )
+    return jsonify(
+        {"validation": {"valid": False, "errors": errors, "warnings": []}}
+    ), 400
 
 
 def _error_response(message, error_type, status=400):
