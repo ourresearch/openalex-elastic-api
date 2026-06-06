@@ -17,7 +17,7 @@ execution equivalence) — OQL is display-only — so these checks key on the OQ
 
 Checks (hard failures = "the data is broken"):
   * structure: every case is {ref,nl} or {id,oqo,nl}; nl non-empty; each
-    formulation is {text, difficulty} with difficulty in {1,2,3}.
+    formulation is {text, difficulty} with difficulty in {easy, hard}.
   * refs resolve to a corpus id that carries a gold OQO.
   * every gold OQO (inherited or inline) parses, VALIDATES, and canonicalizes.
   * standalone ids are unique and don't collide with corpus ids.
@@ -133,8 +133,8 @@ def _validate_case(case):
             continue
         if not str(f["text"]).strip():
             errors.append(f"[{cid}] nl[{j}] has empty text")
-        if f["difficulty"] not in (1, 2, 3):
-            errors.append(f"[{cid}] nl[{j}] difficulty {f['difficulty']!r} not in 1..3")
+        if f["difficulty"] not in ("easy", "hard"):
+            errors.append(f"[{cid}] nl[{j}] difficulty {f['difficulty']!r} not in {{easy, hard}}")
 
     if is_standalone and not case.get("provenance"):
         errors.append(f"[{cid}] standalone case must cite a `provenance` source")
