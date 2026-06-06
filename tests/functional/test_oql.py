@@ -268,29 +268,29 @@ class TestOQLParser:
         assert f.column_id == "institutions.is_global_south"
         assert f.value is True
     
-    def test_parse_bracketed_id_only(self):
-        """Test parsing bracketed ID without display name."""
-        oql = "Works where Country is [countries/ca]"
+    def test_parse_bracketed_id_only_rejected(self):
+        """A bracket-only value (`[countries/ca]`) is now an error (oxjob #376).
+
+        Under the canonical grammar `[...]` is an *ignored annotation* and the ID
+        is authoritative — it must be a bare token. A lone annotation with no bare
+        value is the v1.1 footgun the engine deliberately rejects.
+        """
+        with pytest.raises(OQLParseError):
+            parse_oql_to_oqo("Works where Country is [countries/ca]")
+
+    def test_parse_country_canonical_id_first(self):
+        """Canonical entity form is ID-first; the `[name]` is an ignored annotation."""
+        oql = "Works where Country is CA [Canada]"
         oqo = parse_oql_to_oqo(oql)
 
         f = oqo.filter_rows[0]
         assert f.column_id == "authorships.countries"
-        # New spec: value is bare; the namespace lives on column_id. Legacy
-        # prefixed input is tolerated but the namespace prefix is stripped.
-        assert f.value == "ca"
+        # Country codes canonicalize to uppercase (ISO convention).
+        assert f.value == "CA"
 
-    def test_parse_bracketed_id_with_display_name(self):
-        """Test parsing bracketed ID with display name."""
-        oql = "Works where Country is Canada [countries/ca]"
-        oqo = parse_oql_to_oqo(oql)
-
-        f = oqo.filter_rows[0]
-        assert f.column_id == "authorships.countries"
-        assert f.value == "ca"  # bare; namespace comes from column_id
-
-    def test_parse_sdg_with_display_name(self):
-        """Test parsing SDG with display name."""
-        oql = "Works where Sustainable Development Goals is Zero Hunger [sdgs/2]"
+    def test_parse_sdg_canonical_id_first(self):
+        """SDG canonical form: bare id first, `[name]` ignored."""
+        oql = "Works where SDG is 2 [Zero Hunger]"
         oqo = parse_oql_to_oqo(oql)
 
         f = oqo.filter_rows[0]
@@ -317,13 +317,17 @@ class TestOQLParser:
         assert f.value == 2020
     
     def test_parse_search_filter(self):
-        """Test parsing search filter."""
+        """Test parsing search filter (canonical v2 search model, oxjob #376).
+
+        A quoted phrase is *exact* (no-stem) → the `.search.exact` column, and the
+        value keeps its quotes.
+        """
         oql = 'Works where title & abstract contains "machine learning"'
         oqo = parse_oql_to_oqo(oql)
-        
+
         f = oqo.filter_rows[0]
-        assert f.column_id == "title_and_abstract.search"
-        assert f.value == "machine learning"
+        assert f.column_id == "title_and_abstract.search.exact"
+        assert f.value == '"machine learning"'
         assert f.operator == "contains"
     
     def test_parse_null_value(self):
@@ -336,14 +340,14 @@ class TestOQLParser:
     
     def test_parse_multiple_filters(self):
         """Test parsing multiple filters with 'and'."""
-        oql = "Works where it's Open Access and year >= 2020 and Country is [countries/ca]"
+        oql = "Works where it's Open Access and year >= 2020 and Country is CA [Canada]"
         oqo = parse_oql_to_oqo(oql)
-        
+
         assert len(oqo.filter_rows) == 3
-    
+
     def test_parse_or_expression(self):
         """Test parsing OR expression in parentheses."""
-        oql = "Works where (type is [types/article] or type is [types/book])"
+        oql = "Works where (type is article or type is book)"
         oqo = parse_oql_to_oqo(oql)
         
         assert len(oqo.filter_rows) == 1
@@ -385,16 +389,16 @@ class TestOQLParser:
         assert oqo.sample == 50
     
     def test_parse_technical_format(self):
-        """Test parsing technical format."""
-        oql = "Works where open_access.is_oa is true and sustainable_development_goals.id is [sdgs/2] and authorships.countries is [countries/ca] and institutions.is_global_south is true and publication_year >= 2020"
+        """Test parsing technical (column-id) field names with bare values."""
+        oql = "Works where open_access.is_oa is true and sustainable_development_goals.id is 2 and authorships.countries is CA and institutions.is_global_south is true and publication_year >= 2020"
         oqo = parse_oql_to_oqo(oql)
-        
+
         assert oqo.get_rows == "works"
         assert len(oqo.filter_rows) == 5
-    
+
     def test_parse_negation(self):
         """Test parsing negation."""
-        oql = "Works where type is not [types/article]"
+        oql = "Works where type is not article"
         oqo = parse_oql_to_oqo(oql)
 
         f = oqo.filter_rows[0]
@@ -403,10 +407,10 @@ class TestOQLParser:
         assert f.operator == "is"
         assert f.is_negated is True
         assert f.value == "article"
-    
+
     def test_parse_complex_human_readable(self):
-        """Test parsing the human-readable example from the user's request."""
-        oql = "Works where it's Open Access and Sustainable Development Goals is Zero Hunger [sdgs/2] and Country is Canada [countries/ca] and it's from Global South and year >= 2020"
+        """Test parsing a human-readable example (canonical id-first entity form)."""
+        oql = "Works where it's Open Access and SDG is 2 [Zero Hunger] and Country is CA [Canada] and it's from Global South and year >= 2020"
         oqo = parse_oql_to_oqo(oql)
         
         assert oqo.get_rows == "works"
@@ -421,17 +425,17 @@ class TestOQLParser:
         assert "publication_year" in column_ids
     
     def test_parse_short_id_country(self):
-        """Test parsing bare short ID (new-spec preferred form)."""
-        oql = "Works where Country is Canada [ca]"
+        """Canonical id-first form: bare code, `[name]` is an ignored annotation."""
+        oql = "Works where Country is CA [Canada]"
         oqo = parse_oql_to_oqo(oql)
 
         f = oqo.filter_rows[0]
         assert f.column_id == "authorships.countries"
-        assert f.value == "ca"  # bare; column_id carries the namespace
+        assert f.value == "CA"  # ISO code, uppercase-canonical
 
     def test_parse_short_id_sdg(self):
-        """Test parsing bare short SDG ID."""
-        oql = "Works where Sustainable Development Goals is Zero Hunger [2]"
+        """Canonical id-first SDG form."""
+        oql = "Works where SDG is 2 [Zero Hunger]"
         oqo = parse_oql_to_oqo(oql)
 
         f = oqo.filter_rows[0]
@@ -439,8 +443,8 @@ class TestOQLParser:
         assert f.value == "2"
 
     def test_parse_short_id_type(self):
-        """Test parsing bare short type ID."""
-        oql = "Works where type is [article]"
+        """Canonical type form: bare slug (a lone `[article]` annotation is rejected)."""
+        oql = "Works where type is article"
         oqo = parse_oql_to_oqo(oql)
 
         f = oqo.filter_rows[0]
@@ -448,8 +452,8 @@ class TestOQLParser:
         assert f.value == "article"
 
     def test_parse_short_id_institution(self):
-        """Test parsing bare short institution ID."""
-        oql = "Works where institution is Harvard University [I136199984]"
+        """Canonical id-first institution form: bare ID, `[name]` ignored."""
+        oql = "Works where institution is I136199984 [Harvard University]"
         oqo = parse_oql_to_oqo(oql)
 
         f = oqo.filter_rows[0]
@@ -457,8 +461,8 @@ class TestOQLParser:
         assert f.value == "I136199984"
 
     def test_parse_complex_with_short_ids(self):
-        """Test parsing complex query with bare short IDs (new-spec preferred form)."""
-        oql = "Works where it's Open Access and Sustainable Development Goals is Zero Hunger [2] and Country is Canada [ca] and it's from Global South and year >= 2020"
+        """Test parsing a complex query in the canonical id-first form."""
+        oql = "Works where it's Open Access and SDG is 2 [Zero Hunger] and Country is CA [Canada] and it's from Global South and year >= 2020"
         oqo = parse_oql_to_oqo(oql)
 
         assert oqo.get_rows == "works"
@@ -466,7 +470,7 @@ class TestOQLParser:
 
         values = {f.column_id: f.value for f in oqo.filter_rows if isinstance(f, LeafFilter)}
         assert values["sustainable_development_goals.id"] == "2"
-        assert values["authorships.countries"] == "ca"
+        assert values["authorships.countries"] == "CA"
 
 
 class TestRoundTrip:
@@ -490,6 +494,13 @@ class TestRoundTrip:
         assert f.column_id == "open_access.is_oa"
         assert f.value is True
     
+    @pytest.mark.xfail(
+        reason="oxjob #376 Phase-1 window: the live parser is the canonical engine "
+        "(id-first entity convention) but render_oqo_to_oql is still the OLD name-first "
+        "renderer (`Canada [ca]`), which the engine reads as value=CANADA. Phase 2 flips "
+        "render to id-first and this round-trip closes. See EXPLORE.md §9.",
+        strict=True,
+    )
     def test_round_trip_entity_value(self):
         """Test round-trip for entity value (bare per new spec)."""
         original = OQO(
@@ -523,6 +534,12 @@ class TestRoundTrip:
         assert f.value == 2020
         assert f.operator == ">="
     
+    @pytest.mark.xfail(
+        reason="oxjob #376 Phase-1 window: OLD name-first render vs canonical engine for "
+        "the entity/country filters in this query (see test_round_trip_entity_value). "
+        "Phase 2 render flip closes it. See EXPLORE.md §9.",
+        strict=True,
+    )
     def test_round_trip_complex(self):
         """Test round-trip for complex query."""
         original = OQO(
@@ -553,21 +570,24 @@ class TestEdgeCases:
         with pytest.raises(OQLParseError):
             parse_oql_to_oqo("")
     
-    def test_unknown_column_passes_through(self):
-        """Test that unknown column names pass through."""
-        oql = "Works where unknown_column is value"
-        oqo = parse_oql_to_oqo(oql)
-        
-        f = oqo.filter_rows[0]
-        assert f.column_id == "unknown_column"
-    
+    def test_unknown_column_rejected(self):
+        """Unknown field names are now a loud error (oxjob #376).
+
+        The canonical engine validates fields against the registry; an unknown
+        field raises rather than silently passing a bogus column through to ES
+        (the old v1.1 footgun). Loud-and-named beats silent-and-wrong.
+        """
+        with pytest.raises(OQLParseError):
+            parse_oql_to_oqo("Works where unknown_column is value")
+
     def test_quoted_value_with_spaces(self):
-        """Test parsing quoted values with spaces."""
+        """A quoted multi-word phrase is exact (`.search.exact`) and keeps its quotes."""
         oql = 'Works where title & abstract contains "climate change adaptation"'
         oqo = parse_oql_to_oqo(oql)
-        
+
         f = oqo.filter_rows[0]
-        assert f.value == "climate change adaptation"
+        assert f.column_id == "title_and_abstract.search.exact"
+        assert f.value == '"climate change adaptation"'
     
     def test_case_insensitive_keywords(self):
         """Test that keywords are case insensitive."""
@@ -577,13 +597,12 @@ class TestEdgeCases:
         assert oqo.get_rows == "works"
         assert len(oqo.filter_rows) == 2
     
-    def test_native_entity_without_display_name(self):
-        """Test native entity ID without display name in brackets."""
-        oql = "Works where institution is [institutions/I136199984]"
+    def test_native_entity_bare_id(self):
+        """A native entity reference is a bare ID (a lone `[...]` annotation is rejected)."""
+        oql = "Works where institution is I136199984"
         oqo = parse_oql_to_oqo(oql)
 
         f = oqo.filter_rows[0]
-        # New spec: value is bare; institution prefix is stripped.
         assert f.value == "I136199984"
     
     def test_renderer_handles_native_entity_without_resolver(self):

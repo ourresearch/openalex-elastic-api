@@ -13,6 +13,7 @@ from typing import Optional, Dict, List, Tuple, Any, Union
 from dataclasses import dataclass
 
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy
+from query_translation.oql_lang import parse as _engine_parse, OQLError as _OQLError
 
 
 @dataclass
@@ -664,15 +665,45 @@ class OQLParser:
 def parse_oql_to_oqo(oql: str) -> OQO:
     """
     Parse an OQL string into an OQO object.
-    
+
+    As of oxjob #376 (Phase 1) this delegates to the single OQL engine
+    (`query_translation/oql_lang.py`, promoted from the v2 conformance oracle).
+    The legacy split-based `OQLParser` below is retained only for back-compat
+    imports; it is no longer on the live execute path. The engine's named
+    `OQLError` (code + message + fix-it + position) is translated into the
+    prod-facing `OQLParseError` shape that `views.py:_oql_parse_error_response`
+    consumes (message + position + context).
+
     Args:
         oql: The OQL string to parse
-    
+
     Returns:
         OQO object
-    
+
     Raises:
         OQLParseError: If parsing fails
     """
-    parser = OQLParser()
-    return parser.parse(oql)
+    try:
+        return _engine_parse(oql)
+    except _OQLError as e:
+        message = f"{e.message}  Fix: {e.fixit}" if e.fixit else e.message
+        perr = ParseError(
+            message=message,
+            position=e.position,
+            context=_error_context(oql, e.position),
+        )
+        raise OQLParseError(message, errors=[perr]) from e
+
+
+def _error_context(oql: str, position: Optional[int], window: int = 24) -> Optional[str]:
+    """A short substring of the query around `position`, for error display.
+
+    Mirrors the (always-None) old behavior when there's no position; otherwise a
+    +/- `window`-char snippet so the client can point at the offending text.
+    """
+    if position is None or not oql:
+        return None
+    start = max(0, position - window)
+    end = min(len(oql), position + window)
+    snippet = oql[start:end]
+    return ("…" if start > 0 else "") + snippet + ("…" if end < len(oql) else "")
