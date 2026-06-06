@@ -110,10 +110,12 @@ class Property:
     `display_name`/`aliases` (#381) are the canonical human label + input-spelling
     aliases for the property, resolved from `core.display_names` by the properties
     builder (where the owning entity_type is known — the same `param` differs per
-    entity). They are carried on the dataclass now but NOT yet emitted by
-    `serialize()`: adding them to the public payload is a breaking-class change
-    (every property's fingerprint moves) that needs a MAJOR `PROPERTIES_VERSION`
-    bump — done in #381 Phase 3, not here.
+    entity), and emitted in the public `serialize()` payload as of #381 Phase 3.
+    Adding them was a purely-additive (MINOR) contract change — no previously-valid
+    query breaks — so `PROPERTIES_VERSION` went 1.2.0 → 1.3.0; the drift-gate
+    classifier (`scripts/classify_properties_diff.py`) was extended in the same ship
+    to see these fields (label add/tweak = MINOR; field or alias removal = MAJOR,
+    since an alias is a parseable query-input spelling).
     """
 
     name: str
@@ -127,17 +129,19 @@ class Property:
     aliases: List[str] = field(default_factory=list)
 
     def serialize(self) -> dict:
-        """The canonical PUBLIC JSON-ready dict. `operators`/`actions` are sorted
-        so repeated renders are byte-identical (fingerprint-stable). Server-internal
-        `alias`/`custom_es_field` are intentionally omitted — see the class docstring.
-        `display_name`/`aliases` (#381) are NOT emitted yet — Phase 3 adds them with
-        a MAJOR version bump."""
+        """The canonical PUBLIC JSON-ready dict. `operators`/`actions`/`aliases` are
+        sorted so repeated renders are byte-identical (fingerprint-stable).
+        Server-internal `alias`/`custom_es_field` are intentionally omitted — see the
+        class docstring. `display_name`/`aliases` (#381) are part of the public
+        contract as of v1.3.0."""
         return {
             "name": self.name,
             "type": self.type,
             "operators": sorted(self.operators),
             "actions": sorted(self.actions),
             "entity_type": self.entity_type,
+            "display_name": self.display_name,
+            "aliases": sorted(self.aliases),
         }
 
 

@@ -23,7 +23,10 @@ the rendered payload and therefore the `meta.fingerprint`.
 | Change | Bump |
 |---|---|
 | Add an entity, property, operator, action, or selectable field | **MINOR** |
+| Add or tweak a property's `display_name` (#381 — a label is display metadata, not query semantics) | **MINOR** |
+| Add an `alias` (#381 — an extra accepted input spelling) | **MINOR** |
 | Remove any of the above; rename a property/param; change a property's `type`; change an `entity_type` cross-link; drop an operator/action | **MAJOR** (breaks existing queries) |
+| Remove a `display_name` or an `alias` (#381 — dropping an alias can invalidate a query a client was sending) | **MAJOR** |
 
 **Rule of thumb:** could a query that was valid yesterday become invalid or change
 meaning after your change? → **MAJOR**. Purely additive? → **MINOR**.

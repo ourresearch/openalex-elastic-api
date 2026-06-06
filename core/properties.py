@@ -38,7 +38,8 @@ from core.fields import Property
 # payload changed). Bumped by a human (Jason/Casey) when the rendered payload
 # changes; agents MUST NOT self-bump — flag the human. The CI drift gate ties
 # this constant to the change class. See docs/PROPERTIES_VERSIONING.md.
-PROPERTIES_VERSION = "1.2.0"
+# 1.3.0 (#381): added display_name + aliases to each property (purely additive).
+PROPERTIES_VERSION = "1.3.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

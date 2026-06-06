@@ -111,13 +111,15 @@ class TestCatalogInvariants:
         ]
         assert not missing, f"properties with no display_name: {missing[:20]}"
 
-    def test_display_name_not_yet_in_public_contract(self):
-        """Phase 1 invariant: the public wire form is unchanged, so the snapshot
-        and fingerprint can't move (no version bump in Phase 1)."""
-        from core.properties import ENTITY_PROPERTIES
+    def test_display_name_and_aliases_in_public_contract(self):
+        """Phase 3: display_name + aliases are part of the public /properties wire
+        form (v1.3.0). aliases are sorted for fingerprint stability."""
+        from core.properties import get_property
 
-        prop = next(iter(next(iter(ENTITY_PROPERTIES.values())).values()))
-        keys = set(prop.serialize())
-        assert "display_name" not in keys
-        assert "aliases" not in keys
-        assert keys == {"name", "type", "operators", "actions", "entity_type"}
+        ser = get_property("works", "cited_by_count").serialize()
+        assert set(ser) == {
+            "name", "type", "operators", "actions", "entity_type",
+            "display_name", "aliases",
+        }
+        assert ser["display_name"] == "citation count"
+        assert ser["aliases"] == sorted(ser["aliases"])

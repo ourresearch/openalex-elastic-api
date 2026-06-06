@@ -12,11 +12,13 @@ in CI and is unit-testable in isolation: the classification operates only on the
 two committed JSON snapshots, never on the live catalog.
 
 The bump rule (docs/PROPERTIES_VERSIONING.md):
-    MINOR  — purely additive: add an entity / property / operator / action.
+    MINOR  — purely additive: add an entity / property / operator / action /
+             alias; add or tweak a display_name (#381 — labels are display
+             metadata, not query semantics).
     MAJOR  — anything that could invalidate a previously-valid query: remove an
-             entity/property/operator/action, rename a property (= remove + add,
+             entity/property/operator/action/alias, rename a property (= remove + add,
              so the removal side already forces MAJOR), change a property's
-             `type`, or change its cross-type `entity_type`.
+             `type`, or change its cross-type `entity_type`, or drop a display_name.
     none   — the properties payload is byte-identical (meta is ignored here).
 
 Exact-match policy (deliberately strict — the whole point of #331 is a mechanical
@@ -102,6 +104,24 @@ def classify_change(old, new):
                 major.append(f"action removed: {e}.{name}: {removed}")
             for added in sorted(na - oa):
                 minor.append(f"action added: {e}.{name}: {added}")
+            # display_name (#381) is display metadata, not query semantics: adding or
+            # tweaking a label breaks no query (MINOR); dropping it back to null
+            # removes a contract field consumers may read (MAJOR).
+            od, nd = o.get("display_name"), n.get("display_name")
+            if od is None and nd is not None:
+                minor.append(f"display_name added: {e}.{name}: {nd!r}")
+            elif od is not None and nd is None:
+                major.append(f"display_name removed: {e}.{name}")
+            elif od != nd:
+                minor.append(f"display_name changed: {e}.{name}: {od!r} -> {nd!r}")
+            # aliases (#381) are parseable query-input spellings (like operators):
+            # adding one is additive (MINOR); removing one can invalidate a query a
+            # client was sending (MAJOR).
+            oal, nal = set(o.get("aliases") or []), set(n.get("aliases") or [])
+            for added in sorted(nal - oal):
+                minor.append(f"alias added: {e}.{name}: {added}")
+            for removed in sorted(oal - nal):
+                major.append(f"alias removed: {e}.{name}: {removed}")
 
     if major:
         return "major", major + minor

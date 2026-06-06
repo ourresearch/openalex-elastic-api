@@ -142,6 +142,61 @@ def test_major_dominates_when_both_added_and_removed():
 
 
 # --------------------------------------------------------------------------- #
+# display_name + aliases (#381) — labels are display metadata; aliases are
+# parseable query-input spellings.
+# --------------------------------------------------------------------------- #
+
+def _with(prop, **extra):
+    return {**prop, **extra}
+
+
+def test_display_name_added_is_minor():
+    # the #381 Phase 3 case: every property gains a display_name → MINOR.
+    new = {**BASE_PROPS, "works": {**BASE_PROPS["works"],
+           "publication_year": _with(BASE_PROPS["works"]["publication_year"], display_name="year")}}
+    cls, reasons = clf.classify_change(_snapshot("1.0.0", BASE_PROPS), _snapshot("1.0.0", new))
+    assert cls == "minor"
+    assert any("display_name added: works.publication_year" in r for r in reasons)
+
+
+def test_display_name_tweak_is_minor():
+    base = {**BASE_PROPS, "works": {**BASE_PROPS["works"],
+            "publication_year": _with(BASE_PROPS["works"]["publication_year"], display_name="year")}}
+    new = {**BASE_PROPS, "works": {**BASE_PROPS["works"],
+           "publication_year": _with(BASE_PROPS["works"]["publication_year"], display_name="publication year")}}
+    cls, reasons = clf.classify_change(_snapshot("1.0.0", base), _snapshot("1.0.0", new))
+    assert cls == "minor"
+    assert any("display_name changed: works.publication_year" in r for r in reasons)
+
+
+def test_display_name_removed_is_major():
+    base = {**BASE_PROPS, "works": {**BASE_PROPS["works"],
+            "publication_year": _with(BASE_PROPS["works"]["publication_year"], display_name="year")}}
+    cls, reasons = clf.classify_change(_snapshot("1.0.0", base), _snapshot("1.0.0", BASE_PROPS))
+    assert cls == "major"
+    assert any("display_name removed: works.publication_year" in r for r in reasons)
+
+
+def test_alias_added_is_minor():
+    new = {**BASE_PROPS, "works": {**BASE_PROPS["works"],
+           "publication_year": _with(BASE_PROPS["works"]["publication_year"], aliases=["year"])}}
+    cls, reasons = clf.classify_change(_snapshot("1.0.0", BASE_PROPS), _snapshot("1.0.0", new))
+    assert cls == "minor"
+    assert any("alias added: works.publication_year: year" in r for r in reasons)
+
+
+def test_alias_removed_is_major():
+    # an alias is a parseable query-input spelling — dropping it can break a query.
+    base = {**BASE_PROPS, "works": {**BASE_PROPS["works"],
+            "publication_year": _with(BASE_PROPS["works"]["publication_year"], aliases=["year", "pubyear"])}}
+    new = {**BASE_PROPS, "works": {**BASE_PROPS["works"],
+           "publication_year": _with(BASE_PROPS["works"]["publication_year"], aliases=["year"])}}
+    cls, reasons = clf.classify_change(_snapshot("1.0.0", base), _snapshot("1.0.0", new))
+    assert cls == "major"
+    assert any("alias removed: works.publication_year: pubyear" in r for r in reasons)
+
+
+# --------------------------------------------------------------------------- #
 # classify_version_delta
 # --------------------------------------------------------------------------- #
 

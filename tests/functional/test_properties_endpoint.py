@@ -83,7 +83,12 @@ def test_registry_unknown_entity_alias_is_404(client):
 def test_public_payload_omits_server_internal_keys(client):
     body = client.get("/properties?entity=works").get_json()
     sample = next(iter(body["properties"]["works"].values()))
-    assert set(sample.keys()) == {"name", "type", "operators", "actions", "entity_type"}
+    # display_name + aliases are public as of v1.3.0 (#381); alias/custom_es_field
+    # remain server-internal and must never leak.
+    assert set(sample.keys()) == {
+        "name", "type", "operators", "actions", "entity_type",
+        "display_name", "aliases",
+    }
     assert "custom_es_field" not in sample
     assert "alias" not in sample
 
