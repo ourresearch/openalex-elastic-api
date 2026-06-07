@@ -162,7 +162,6 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
     'funders': {
         'alternate_titles': {"display_name": 'alternate names'},
         'awards_count': {"display_name": 'awards count'},
-        'cited_by_count': {"display_name": 'cited by count'},
         'country_code': {"display_name": 'country'},
         'default.search': {"display_name": 'name'},
         'description': {"display_name": 'description'},
@@ -322,7 +321,6 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'best_oa_location.license': {"display_name": 'license'},
         'citation_normalized_percentile.value': {"display_name": 'citation percentile by subfield'},
         'cited_by': {"display_name": 'cited by'},
-        'cited_by_count': {"display_name": 'citation count', "aliases": ['cited by count']},
         'cited_by_count_sum': {"display_name": 'citations sum'},
         'cited_by_percentile_year.min': {"display_name": 'citation percentile by year'},
         'cites': {"display_name": 'cites'},
@@ -379,7 +377,6 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'raw_affiliation_strings': {"display_name": 'exact raw affiliation'},
         'raw_affiliation_strings.search': {"display_name": 'raw affiliation', "aliases": ['affiliation', 'raw affiliation string']},
         'raw_author_name.search': {"display_name": 'byline', "aliases": ['raw author name']},
-        'referenced_works_count': {"display_name": 'references count'},
         'related_to': {"display_name": 'related to'},
         'sustainable_development_goals.id': {"display_name": 'sustainable development goal', "aliases": ['sustainable development goals']},
         'title.search': {"display_name": 'title'},
@@ -390,13 +387,36 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
 }
 
 
+# Global, entity-agnostic overrides keyed by ``param`` only. For properties whose
+# canonical label is the SAME across every entity that carries them, this avoids
+# repeating the same entry under 20+ entity keys. A per-entity override in
+# DISPLAY_NAME_OVERRIDES still wins (more specific), so an entity can opt out.
+#
+# The citation/reference family is named to match the field consensus and to keep
+# every filter's name distinct from its neighbours (#381 research, 2026-06-07):
+#   * the COUNT is "citation count" (singular) — what Semantic Scholar
+#     (citationCount), iCite (citation_count), Europe PMC (citedByCount) call it;
+#   * "cited by" / "cites" stay reserved for the RELATIONSHIP filters (no system
+#     reuses one word for both a count and a relationship);
+#   * outgoing references use the near-universal word "references", its count
+#     "reference count" (cf. Semantic Scholar referenceCount, WoS "Cited Reference
+#     Count"). Old spellings are kept as OQL-parse aliases for back-compat.
+GLOBAL_DISPLAY_NAME_OVERRIDES: Dict[str, dict] = {
+    'cited_by_count': {"display_name": 'citation count', "aliases": ['cited by count']},
+    'referenced_works': {"display_name": 'references', "aliases": ['referenced works']},
+    'referenced_works_count': {"display_name": 'reference count', "aliases": ['references count']},
+}
+
+
 def resolve_display_name(entity_type: str, param: str) -> Tuple[str, List[str]]:
     """Resolve ``(display_name, aliases)`` for one property.
 
-    Curated override wins; otherwise ``(humanize(param), [])``. Always returns a
-    non-empty ``display_name`` for any non-empty ``param``.
+    Resolution order: per-entity override → global-by-param override →
+    ``(humanize(param), [])``. Always returns a non-empty ``display_name`` for any
+    non-empty ``param``.
     """
-    override = DISPLAY_NAME_OVERRIDES.get(entity_type, {}).get(param)
+    override = (DISPLAY_NAME_OVERRIDES.get(entity_type, {}).get(param)
+                or GLOBAL_DISPLAY_NAME_OVERRIDES.get(param))
     if override:
         display_name = override.get("display_name") or humanize(param)
         aliases = list(override.get("aliases", []))

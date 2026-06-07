@@ -93,6 +93,50 @@ class TestSeededOverrides:
         _, aliases = resolve_display_name("works", "cited_by_count")
         assert "cited by count" in aliases
 
+    def test_citation_family_unified_across_entities(self):
+        # #381 consistency gate: cited_by_count is "citation count" (singular) on
+        # EVERY entity, via the global-by-param override — not just works, and not
+        # the humanized "cited by count" on the long tail.
+        for entity in ("works", "authors", "funders", "sources", "sdgs",
+                       "institutions", "topics", "countries"):
+            label, aliases = resolve_display_name(entity, "cited_by_count")
+            assert label == "citation count", entity
+            assert "cited by count" in aliases, entity
+
+    def test_references_family_labels(self):
+        # outgoing references use the field-standard words; old spellings stay as
+        # back-compat OQL-parse aliases.
+        assert resolve_display_name("works", "referenced_works") == (
+            "references", ["referenced works"])
+        assert resolve_display_name("works", "referenced_works_count") == (
+            "reference count", ["references count"])
+
+    def test_relationship_filters_unchanged(self):
+        # the COUNT word ("citation count") must stay distinct from the
+        # RELATIONSHIP filters, which keep their own words (no system reuses one).
+        assert resolve_display_name("works", "cited_by")[0] == "cited by"
+        assert resolve_display_name("works", "cites")[0] == "cites"
+
+    def test_per_entity_override_beats_global(self):
+        # global-by-param is a fallback; a per-entity override still wins.
+        from core.display_names import (
+            DISPLAY_NAME_OVERRIDES,
+            GLOBAL_DISPLAY_NAME_OVERRIDES,
+        )
+
+        assert "cited_by_count" in GLOBAL_DISPLAY_NAME_OVERRIDES
+        # seed a hypothetical per-entity override and confirm it takes precedence
+        DISPLAY_NAME_OVERRIDES.setdefault("works", {})
+        sentinel = DISPLAY_NAME_OVERRIDES["works"].get("cited_by_count")
+        DISPLAY_NAME_OVERRIDES["works"]["cited_by_count"] = {"display_name": "ZZZ"}
+        try:
+            assert resolve_display_name("works", "cited_by_count")[0] == "ZZZ"
+        finally:
+            if sentinel is None:
+                del DISPLAY_NAME_OVERRIDES["works"]["cited_by_count"]
+            else:
+                DISPLAY_NAME_OVERRIDES["works"]["cited_by_count"] = sentinel
+
     def test_works_freetext_labels_from_374(self):
         # #374 shipped → the broad search keys take its final labels (Phase 4).
         assert resolve_display_name("works", "fulltext.search")[0] == "full text"

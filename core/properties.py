@@ -42,7 +42,11 @@ from core.fields import Property
 # 1.4.0 (#381 Phase 4): reconciled display_name labels with the GUI (de-paren, GUI-wins,
 # is_xpac→"in extended index", #374 works-search labels, alias-param fold-in). Label
 # edits = MINOR (no query breaks).
-PROPERTIES_VERSION = "1.4.0"
+# 1.5.0 (#381 consistency gate): unified the citation/reference family to field-standard
+# labels — cited_by_count "citation count" (singular, all entities), referenced_works
+# "references", referenced_works_count "reference count" (old spellings kept as aliases).
+# Jason-approved 2026-06-07. Label edits = MINOR.
+PROPERTIES_VERSION = "1.5.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

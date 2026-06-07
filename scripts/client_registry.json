@@ -872,7 +872,7 @@
       "key": "referenced_works_count",
       "entityToFilter": "works",
       "entityToSelect": null,
-      "displayName": "references count",
+      "displayName": "reference count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -1649,7 +1649,7 @@
       "key": "cited_by_count",
       "entityToFilter": "authors",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -1936,7 +1936,7 @@
       "key": "cited_by_count",
       "entityToFilter": "sources",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -2272,7 +2272,7 @@
       "key": "cited_by_count",
       "entityToFilter": "publishers",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -2511,7 +2511,7 @@
       "key": "cited_by_count",
       "entityToFilter": "funders",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -2811,7 +2811,7 @@
       "key": "cited_by_count",
       "entityToFilter": "institutions",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -3086,7 +3086,7 @@
       "key": "cited_by_count",
       "entityToFilter": "concepts",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -3212,7 +3212,7 @@
       "key": "cited_by_count",
       "entityToFilter": "keywords",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -3280,7 +3280,7 @@
       "key": "cited_by_count",
       "entityToFilter": "topics",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -3471,7 +3471,7 @@
       "key": "cited_by_count",
       "entityToFilter": "subfields",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -3603,7 +3603,7 @@
       "key": "cited_by_count",
       "entityToFilter": "fields",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -3720,7 +3720,7 @@
       "key": "cited_by_count",
       "entityToFilter": "domains",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -3796,7 +3796,7 @@
       "key": "cited_by_count",
       "entityToFilter": "sdgs",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -3886,7 +3886,7 @@
       "key": "cited_by_count",
       "entityToFilter": "countries",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -3976,7 +3976,7 @@
       "key": "cited_by_count",
       "entityToFilter": "continents",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -4040,7 +4040,7 @@
       "key": "cited_by_count",
       "entityToFilter": "languages",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -4094,7 +4094,7 @@
       "key": "cited_by_count",
       "entityToFilter": "types",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -4170,7 +4170,7 @@
       "key": "cited_by_count",
       "entityToFilter": "source-types",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -4234,7 +4234,7 @@
       "key": "cited_by_count",
       "entityToFilter": "institution-types",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -4298,7 +4298,7 @@
       "key": "cited_by_count",
       "entityToFilter": "licenses",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
@@ -4362,7 +4362,7 @@
       "key": "cited_by_count",
       "entityToFilter": "oa-statuses",
       "entityToSelect": null,
-      "displayName": "cited by count",
+      "displayName": "citation count",
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [

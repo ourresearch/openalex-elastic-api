@@ -6,7 +6,7 @@ name: Properties Contract Drift Gate
 # like the post-deploy smoke test (Decision B). Unlike the smoke test it does NOT
 # wait for Heroku — it's a static check on the committed tree, so it gives fast
 # feedback and (worst case) catches drift one deploy cycle after it ships, failing
-# loud + Slack. Three checks:
+# loud + Slack. Four checks:
 #   1. Staleness  — re-render the live catalog, assert it byte-matches the committed
 #                   docs/properties-snapshot.json (you changed a Field but forgot to
 #                   regenerate the snapshot).
@@ -15,6 +15,8 @@ name: Properties Contract Drift Gate
 #                   and assert the PROPERTIES_VERSION delta matches exactly.
 #   3. Client ⊆ server — re-homed #294 invariant: every gui client column claiming a
 #                   server-backed action exists in the live property catalog.
+#   4. Label consistency (#381) — every reconciled gui facet displayName equals the
+#                   registry display_name (the anti-re-drift guard for canonical labels).
 # See docs/PROPERTIES_VERSIONING.md.
 
 on:

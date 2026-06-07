@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 22,
-    "fingerprint": "c5afde52d725833a1b53d349c585dcb264222c8dd469193eed4ed7fc0b5d4d25",
+    "fingerprint": "ee3dd08cb12e3a94da6dd029d8dcd3dc3765ffb1df5dc9edbb468b0e123d36cb",
     "property_count": 824,
-    "version": "1.4.0"
+    "version": "1.5.0"
   },
   "properties": {
     "authors": {
@@ -120,8 +120,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -1663,8 +1665,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -2085,8 +2089,10 @@
         "actions": [
           "filter"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -2299,8 +2305,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -2546,8 +2554,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -2788,8 +2798,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -3086,8 +3098,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -3611,8 +3625,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -3803,8 +3819,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -4549,8 +4567,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -4730,8 +4750,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -4911,8 +4933,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -5459,8 +5483,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -5977,8 +6003,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -6202,8 +6230,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -6467,8 +6497,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -7372,8 +7404,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -7667,8 +7701,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -8033,8 +8069,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "cited by count",
+        "aliases": [
+          "cited by count"
+        ],
+        "display_name": "citation count",
         "entity_type": null,
         "name": "cited_by_count",
         "operators": [
@@ -11372,8 +11410,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "referenced works",
+        "aliases": [
+          "referenced works"
+        ],
+        "display_name": "references",
         "entity_type": null,
         "name": "referenced_works",
         "operators": [
@@ -11389,8 +11429,10 @@
           "filter",
           "select"
         ],
-        "aliases": [],
-        "display_name": "references count",
+        "aliases": [
+          "references count"
+        ],
+        "display_name": "reference count",
         "entity_type": null,
         "name": "referenced_works_count",
         "operators": [
