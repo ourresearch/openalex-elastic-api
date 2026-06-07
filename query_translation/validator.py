@@ -138,6 +138,11 @@ def _operator_fits_column(operator: str, value: Any, operators: List[str]) -> bo
         return "search" in operators or "phrase" in operators
     if operator in COMPARISON_OPERATORS:
         return "range" in operators or "date_range" in operators
+    if operator == "in collection":
+        # col_… membership: valid on the dedicated same-type `collection` column,
+        # and on any equality-capable entity column (cross-type — the Collection
+        # resolves to a set of that column's values). (oxjob #363)
+        return "collection" in operators or "eq" in operators
     # Unknown operator string — surfaced separately as invalid_operator.
     return False
 

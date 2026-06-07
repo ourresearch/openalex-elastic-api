@@ -157,6 +157,14 @@ _f("domain", "domain.id", "id", aliases=["domain.id"])
 _f("field", "primary_topic.field.id", "id", aliases=["primary_topic.field.id"])
 _f("openalex id", "ids.openalex", "id", aliases=["ids.openalex"])
 
+# --- collection (same-type membership) ---
+# The same-type `collection:` filter: "this row's entity is a member of Collection
+# col_…". Surfaced as `<subject> is in collection col_…` where the subject is the
+# queried entity (works-centric registry → "work"). Cross-type membership reuses the
+# referenced entity's own column (e.g. `country`/`institution`/`author`) — no separate
+# field. kind "collection" parses a bare col_… scalar (no name resolution). (oxjob #363)
+_f("work", "collection", "collection", aliases=["works"], resolves_name=False)
+
 # --- enums (slug values) ---
 _f("type", "type", "enum", aliases=[])
 _f("OA status", "open_access.oa_status", "enum", aliases=["open_access.oa_status", "oa status"])
@@ -507,6 +515,11 @@ class _Parser:
                     if self.word_is("any") and self.word_is("of", k=1):
                         self.i += 2
                         return "nin"
+                    # `is not in collection` — MUST precede the bare `is not in`
+                    # (= "is not any of") so "collection" isn't read as a value.
+                    if self.word_is("in") and self.word_is("collection", k=1):
+                        self.i += 2
+                        return "nincoll"
                     if self.word_is("in"):
                         self.next()
                         return "nin"
@@ -514,6 +527,10 @@ class _Parser:
                 if self.word_is("any") and self.word_is("of", k=1):
                     self.i += 2
                     return "in"
+                # `is in collection` — MUST precede the bare `is in` (= "is any of").
+                if self.word_is("in") and self.word_is("collection", k=1):
+                    self.i += 2
+                    return "incoll"
                 if self.word_is("in"):
                     self.next()
                     return "in"
@@ -581,6 +598,15 @@ class _Parser:
     def _parse_value_clause(self, field: str, fld: Field, op: str) -> FilterType:
         # (no _skip_annot here — _parse_scalar must SEE a lone annotation so it
         # can raise OQL_MISSING_ENTITY_ID for "institution is [Harvard]".)
+        # collection membership: is [not] in collection col_… (oxjob #363)
+        if op in ("incoll", "nincoll"):
+            v = self._parse_scalar(fld)
+            if not (isinstance(v, str) and v.startswith("col_")):
+                raise OQLError("OQL_BAD_COLLECTION_REF",
+                               f'"is in collection" needs a collection id (col_…), got "{v}"',
+                               'e.g. work is in collection col_abc123')
+            return LeafFilter(fld.column, v, "in collection",
+                              is_negated=(op == "nincoll"))
         # set: is any of (...) / is not any of (...)
         if op in ("in", "nin"):
             vals = self._parse_value_list(fld)
@@ -1297,6 +1323,14 @@ def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
                 _seg("value", _render_value(fld, f.value), value=f.value)]
         return ClauseNode(segments=segs, clause_kind="comparison", meta=ClauseMeta(
             column_id=f.column_id, operator=f.operator, value=f.value,
+            column_display_name=name))
+    if f.operator == "in collection":  # oxjob #363; col_… value, never name-resolved
+        verb = "is not in collection" if f.is_negated else "is in collection"
+        segs = [_seg("column", name, column_id=f.column_id),
+                _seg("operator", f" {verb} "),
+                _seg("value", _render_value(fld, f.value), value=f.value)]
+        return ClauseNode(segments=segs, clause_kind="collection", meta=ClauseMeta(
+            column_id=f.column_id, operator="in collection", value=f.value,
             column_display_name=name))
     verb = "is not" if f.is_negated else "is"
     val_segs, entity = _value_segments(fld, f.value, f.column_id, resolver)

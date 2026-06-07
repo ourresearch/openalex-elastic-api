@@ -9,6 +9,13 @@ import re
 from typing import Dict, List, Optional, Tuple, Any
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy
 
+# A Collection membership ref: `col_<base58>` (mirrors core/fields.py
+# CollectionField.COLLECTION_ID_RE, `!` stripped before matching). A value of this
+# shape — on the same-type `collection:` key or any cross-type `<entity-field>:col_…`
+# — canonicalizes to the OQO `in collection` operator so a working prod URL round-trips
+# to OQL's `is in collection` form. (oxjob #363)
+_COLLECTION_ID_RE = re.compile(r"^col_[A-Za-z0-9]{1,48}$")
+
 
 def parse_url_to_oqo(
     entity_type: str,
@@ -285,6 +292,14 @@ def parse_single_filter(
 
     if value == "!null":
         return LeafFilter(column_id=field, value=None, operator=default_op, is_negated=True)
+
+    # Collection membership ref (col_…), incl. the negated `!col_…` form — BEFORE the
+    # generic negation handler so the operator is `in collection`, not `is`. (#363)
+    _neg = value.startswith("!")
+    _core = value[1:] if _neg else value
+    if _COLLECTION_ID_RE.match(_core):
+        return LeafFilter(column_id=field, value=_core,
+                          operator="in collection", is_negated=_neg)
 
     # Handle negation
     if value.startswith("!"):

@@ -734,14 +734,14 @@ rows:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#20)"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=authorships.countries:US,authorships.countries:col_eu27&group_by=primary_topic.id'
+  oxurl: 'https://openalex.org/works?filter=authorships.countries:col_eu27,authorships.countries:US&group_by=primary_topic.id'
   status: ok
-  oql: 'works where country is US and country is col_eu27 group by topic'
+  oql: 'works where country is in collection col_eu27 and country is US group by topic'
   oqo: {get_rows: works, filter_rows: [
-        {column_id: authorships.countries, value: col_eu27},
+        {column_id: authorships.countries, value: col_eu27, operator: in collection},
         {column_id: authorships.countries, value: US}],
         group_by: [{column_id: primary_topic.id}]}
-  note: 'col_eu27 is a collection reference — a valid bare value (it self-identifies via col_).'
+  note: 'col_eu27 is a Collection reference. Cross-type membership: the canonical OQL is `is in collection` (oxjob #363); the URL surface stays the bare `<field>:col_…` value (resolved by the cross-type pre-pass).'
 
 - id: 50
   category: "group by"
@@ -1314,3 +1314,59 @@ rows:
     operator: contains}, {column_id: title_and_abstract.search.exact, value: '"focus groups"',
     operator: contains}, {column_id: title_and_abstract.search.exact, value: '"lived experience"',
     operator: contains}]}]}
+
+# ---------------------------------------------------------------------------
+# Collection membership — `is in collection` (oxjob #363). A Collection is a
+# named col_… set; membership is its own operator (distinct from `is`). Same-type
+# (this row's entity, column_id `collection` → `filter=collection:col_…`) and
+# cross-type (a referenced entity, keeps its column → bare `<field>:col_…`).
+# Cross-type also exercised by row 49 (country). See oql-spec §3.10.
+# ---------------------------------------------------------------------------
+- id: 83
+  category: "entity references"
+  provenance:
+    type: "spec design"
+    label: "Collections-in-filters (oxjob #363; IA from #367)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=collection:col_abc123'
+  status: ok
+  oql: 'works where work is in collection col_abc123'
+  oqo: {get_rows: works, filter_rows: [
+        {column_id: collection, value: col_abc123, operator: in collection}]}
+  note: 'Same-type membership: works that are members of a Collection of works. Renders to the dedicated `filter=collection:col_…` API param (CollectionField).'
+
+- id: 84
+  category: "entity references"
+  provenance:
+    type: "spec design"
+    label: "Collections-in-filters (oxjob #363)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=collection:!col_abc123'
+  status: ok
+  oql: 'works where work is not in collection col_abc123'
+  oqo: {get_rows: works, filter_rows: [
+        {column_id: collection, value: col_abc123, operator: in collection, is_negated: true}]}
+  note: 'Negated membership rides the single `is_negated` bit (§3.5) → URL `collection:!col_…`.'
+
+- id: 85
+  category: "entity references"
+  provenance:
+    type: "spec design"
+    label: "Collections-in-filters (oxjob #363)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.author.id:col_xyz789'
+  status: ok
+  oql: 'works where author is in collection col_xyz789'
+  oqo: {get_rows: works, filter_rows: [
+        {column_id: authorships.author.id, value: col_xyz789, operator: in collection}]}
+  note: 'Cross-type membership: works by authors in a Collection of authors. OQO keeps the referenced entity column; URL surface is the bare `<field>:col_…` (resolved by the cross-type pre-pass).'
+
+- id: 86
+  category: "entity references"
+  provenance:
+    type: "spec design"
+    label: "Collections-in-filters (oxjob #363)"
+  status: error
+  oql: 'works where country is in collection US'
+  diagnostic: OQL_BAD_COLLECTION_REF
+  note: '`is in collection` requires a col_… id, not a literal value — a loud error, never a silent miss.'

@@ -380,6 +380,35 @@ access`, `it's retracted`, `it has a DOI`, `it has an ORCID` (corpus rows **37**
 **40**, **50**, **53**). These compile to `{column: …, value: true|false}`. The
 technical `<column> is true|false` form is also accepted.
 
+### 3.10 Collection membership: `is in collection`
+
+```
+works where work is in collection col_abc123                       (same-type: works in a Collection of works)
+works where author is in collection col_xyz789                     (cross-type: works by authors in a Collection of authors)
+works where country is in collection col_eu27                      (row 5x — predefined country set)
+works where work is not in collection col_abc123                   (negation via the is_negated bit)
+```
+
+A **Collection** is a named, predefined or user-saved set of entities, addressed by a
+`col_<base58>` id (`^col_[A-Za-z0-9]{1,48}$`). Membership is its own operator — distinct
+from `is` / `is any of` — because the intent ("is a member of this named set") and its
+value space (a Collection picker) differ from value equality; this keeps the operator→value
+model clean for the editor and downstream tooling.
+
+- **Surface:** `<subject> is [not] in collection <col_id>`. `not` negates via the single
+  `is_negated` mechanism (§3.5), never a separate operator.
+- **OQO:** `operator: "in collection"`, `value: <col_id>`, on a leaf. One collection per
+  clause (v1); union several via `or` clauses.
+- **Same-type** (the Collection is of the queried entity, e.g. works on `/works`): the subject
+  is the entity itself and the OQO uses `column_id: collection`, mirroring the dedicated
+  `filter=collection:<col_id>` API param.
+- **Cross-type** (the Collection is of a *referenced* entity, e.g. a set of authors/countries):
+  the OQO keeps the referenced entity's `column_id` (e.g. `authorships.countries`) and renders
+  to the bare `filter=<field>:<col_id>` URL surface. `col_…` ids are always preserved verbatim
+  (never case-folded), as elsewhere.
+- **URL round-trip:** a working prod URL carrying a `col_…` value (`collection:col_…` or
+  `<field>:col_…`) parses back to the canonical `is in collection` form, so the triple holds.
+
 ## 4. Directives
 
 ```

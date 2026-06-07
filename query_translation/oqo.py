@@ -243,6 +243,10 @@ VALID_OPERATORS = {
     "is",
     ">", ">=", "<", "<=",
     "contains",
+    # Membership in a named Collection (col_… set). Distinct from `is` because the
+    # intent + value space differ; negation still rides the is_negated bit. The
+    # value is always a `col_…` id. See oql-spec §3.10. (oxjob #363)
+    "in collection",
 }
 
 # Valid entity types

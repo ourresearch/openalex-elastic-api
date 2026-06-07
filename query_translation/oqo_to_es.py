@@ -200,6 +200,11 @@ def _encode_leaf_value(leaf: LeafFilter) -> str:
 
     if op == "is" or op == "contains":
         return s
+    # Collection membership: the URL surface carries the bare col_… value (the
+    # field's build_query handles resolution — same-type via CollectionField, which
+    # resolves through core/collection_resolver). (oxjob #363)
+    if op == "in collection":
+        return s
     if op == ">":
         return f">{s}"
     if op == "<":
@@ -214,5 +219,5 @@ def _encode_leaf_value(leaf: LeafFilter) -> str:
 
     raise OQOTranslationError(
         f"Unknown operator '{op}' on column_id '{leaf.column_id}'. "
-        f"Valid operators: is, >, >=, <, <=, contains."
+        f"Valid operators: is, >, >=, <, <=, contains, in collection."
     )
