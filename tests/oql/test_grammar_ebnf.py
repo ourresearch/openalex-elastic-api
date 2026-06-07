@@ -95,6 +95,15 @@ def _parser_recognized_words():
             w = (q[0] or q[1]).strip().lower()
             if w:
                 words.add(w)
+    # The shared operator matcher (match_operator) recognizes keywords through a
+    # lowercased-word helper: `w0 == "x"`, `w(<k>) == "x"`, `w0 in ("a", "b")`.
+    for m in re.finditer(r'\bw(?:0|\([^)]*\))\s*==\s*[\'"]([^\'"]+)[\'"]', src):
+        words.add(m.group(1).lower())
+    for m in re.finditer(r"\bw0\s*in\s*[\(\{]([^\)\}]*)[\)\}]", src):
+        for q in re.findall(r'"([^"]+)"|\'([^\']+)\'', m.group(1)):
+            w = (q[0] or q[1]).strip().lower()
+            if w:
+                words.add(w)
     # `and` / `or` are recognized via the `_CONNECTIVES` set (membership test),
     # not a literal `word_is(...)` — harvest that named set too.
     for m in re.finditer(r"_CONNECTIVES\s*=\s*\{([^}]*)\}", src):

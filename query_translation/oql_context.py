@@ -22,7 +22,16 @@ from typing import List, Optional, Tuple, Dict, Any
 from query_translation.oql_lang import (
     lex, Tok, OQLError, Field,
     _ALIAS, _FIELDS, ENTITY_TYPES, _CONNECTIVES,
+    match_field, match_operator,
 )
+
+# The field/operator matchers are SHARED with the production parser (oql_lang) — this
+# module used to keep parallel reimplementations that had already drifted (they missed
+# the `is in collection` operator). Importing the one true matchers means the editor
+# can never recognize a field/operator the parser would reject (oxjob #363). Aliased to
+# the historical private names that the call sites + tests below already use.
+_match_field = match_field
+_match_operator = match_operator
 
 # --- grammar-state categories -------------------------------------------------
 ENTITY = "entity"
@@ -101,73 +110,9 @@ def _covering(toks: List[Tok], cpos: int):
     return None, None
 
 
-# --- greedy matchers (non-raising mirrors of _Parser) -------------------------
-def _match_field(toks: List[Tok], i: int) -> Optional[Tuple[str, Field, int]]:
-    """Greedy longest field-alias match (up to 4 words), mirroring
-    oql_lang._parse_field. Returns (spelling, Field, n_tokens) or None."""
-    best, best_len = None, 0
-    parts: List[str] = []
-    for k in range(4):
-        t = toks[i + k] if i + k < len(toks) else None
-        if not t or t.kind != "WORD":
-            break
-        parts.append(t.val)
-        if " ".join(parts).lower() in _ALIAS:
-            best, best_len = _ALIAS[" ".join(parts).lower()], k + 1
-    if best is None:
-        return None
-    spelling = " ".join(toks[i + k].val for k in range(best_len))
-    return spelling, best, best_len
-
-
 def _word(toks: List[Tok], i: int) -> Optional[str]:
     t = toks[i] if 0 <= i < len(toks) else None
     return t.val.lower() if t and t.kind == "WORD" else None
-
-
-def _match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool, bool]]:
-    """Greedy operator match mirroring oql_lang._parse_operator.
-    Returns (op, n_tokens, complete, opens_list) or None if the next token can't
-    begin an operator. `complete=False` means a multi-word operator is still being
-    typed (e.g. `is any` without `of`). `opens_list` is True for in/nin/any-of."""
-    if i >= len(toks):
-        return None
-    t = toks[i]
-    if t.kind == "OP":  # > >= < <=
-        return t.val, 1, True, False
-    w = _word(toks, i)
-    if w == "contains":
-        return "contains", 1, True, False
-    if w == "is":
-        n1 = _word(toks, i + 1)
-        if n1 == "similar":
-            if _word(toks, i + 2) == "to":
-                return "similar", 3, True, False
-            return "similar", 2, False, False  # `is similar` — still typing
-        if n1 == "not":
-            n2 = _word(toks, i + 2)
-            if n2 == "any":
-                if _word(toks, i + 3) == "of":
-                    return "nin", 4, True, True
-                return "nin", 3, False, True   # `is not any` — typing
-            if n2 == "in":
-                return "nin", 3, True, True
-            return "isnot", 2, True, False     # `is not` (scalar)
-        if n1 == "any":
-            if _word(toks, i + 2) == "of":
-                return "in", 3, True, True
-            return "in", 2, False, True        # `is any` — typing
-        if n1 == "in":
-            return "in", 2, True, True
-        return "is", 1, True, False
-    if w in ("does", "doesn't", "doesnt"):
-        j = i + 1
-        if _word(toks, j) == "not":
-            j += 1
-        if _word(toks, j) == "contain":
-            return "ncontains", j - i + 1, True, False
-        return "ncontains", j - i, False, False  # `does not` — typing
-    return None
 
 
 # --- value-list / paren analysis ---------------------------------------------

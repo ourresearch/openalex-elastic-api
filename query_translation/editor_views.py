@@ -15,8 +15,11 @@ to avoid import-time coupling to `views.py`.
 """
 from flask import Blueprint, jsonify, request
 
+from query_translation.diagnostics import (
+    parse_diagnostic, validation_diagnostic, OQLError as _OQLError,
+)
 from query_translation.oql_context import parse_context as _parse_context
-from query_translation.oql_lang import parse as _engine_parse, OQLError as _OQLError
+from query_translation.oql_lang import parse as _engine_parse
 from query_translation.validator import validate_oqo
 
 blueprint = Blueprint("oql_editor", __name__)
@@ -56,9 +59,10 @@ def validate_oql_route():
     Always 200; the verdict is in the body.
 
     Returns {valid, oql (canonical), oqo, oxurl, diagnostics:[{code, message, fixit,
-    severity, start, end, location}]}. Parse errors carry the engine's rich OQLError
-    (code + fix-it + byte position); validation errors carry the property-catalog
-    ValidationError (code + OQO location).
+    severity, start, end, location}]}. Both layers flow through the shared
+    `diagnostics` registry: parse errors carry the engine's rich OQLError (code +
+    fix-it + byte position); validation errors carry the property-catalog
+    ValidationError (code + OQO location) plus the registry's fix-it + severity.
     """
     oql = request.args.get("q", "")
     # Parse with the engine directly (preserves code + fixit + position that
@@ -66,18 +70,19 @@ def validate_oql_route():
     try:
         oqo = _engine_parse(oql)
     except _OQLError as e:
-        return jsonify(_parse_error_body(e.code, e.message, e.fixit, e.position)), 200
+        return jsonify(_parse_error_body(parse_diagnostic(e))), 200
     except Exception as e:  # any other engine failure -> one generic diagnostic
-        return jsonify(_parse_error_body("OQL_PARSE_ERROR", str(e), "", None)), 200
+        return jsonify(_parse_error_body(
+            parse_diagnostic(_OQLError("OQL_PARSE_ERROR", str(e))))), 200
 
     vr = validate_oqo(oqo)
+    # Validator errors/warnings flow through the shared registry, so they pick up the
+    # canonical fix-it + severity their (type, message, location) shape never carried.
     diagnostics = [
-        {"code": er.type, "message": er.message, "fixit": "", "severity": "error",
-         "start": None, "end": None, "location": er.location}
+        validation_diagnostic(er.type, er.message, er.location).to_dict()
         for er in vr.errors
     ] + [
-        {"code": w.type, "message": w.message, "fixit": "", "severity": "warning",
-         "start": None, "end": None, "location": w.location}
+        validation_diagnostic(w.type, w.message, w.location).to_dict()
         for w in vr.warnings
     ]
 
@@ -92,12 +97,8 @@ def validate_oql_route():
     }), 200
 
 
-def _parse_error_body(code, message, fixit, position):
+def _parse_error_body(diag):
     return {
         "valid": False, "oql": None, "oqo": None, "oxurl": None,
-        "diagnostics": [{
-            "code": code, "message": message, "fixit": fixit,
-            "severity": "error", "start": position, "end": position,
-            "location": None,
-        }],
+        "diagnostics": [diag.to_dict()],
     }

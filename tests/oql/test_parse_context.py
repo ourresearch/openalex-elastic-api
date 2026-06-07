@@ -157,3 +157,24 @@ def test_operator_matcher_agrees_with_parser():
         op = C._match_operator(toks, flen)
         assert op is not None and op[2], f"{text!r}: walker op incomplete: {op}"
         assert op[0] == expected_op, f"{text!r}: walker {op[0]} != {expected_op}"
+
+
+def test_editor_matchers_are_the_shared_engine_matchers():
+    # oxjob #363: the editor no longer keeps a parallel reimplementation — its
+    # matchers ARE the production engine's, so they cannot drift.
+    from query_translation.oql_lang import match_field, match_operator
+    assert C._match_field is match_field
+    assert C._match_operator is match_operator
+
+
+def test_editor_recognizes_is_in_collection_operator():
+    # The old parallel walker missed `is [not] in collection` entirely (it had no
+    # collection branch); sharing the engine matcher fixes that latent drift.
+    toks = lex("work is in collection col_abc")
+    flen = C._match_field(toks, 0)[2]
+    op = C._match_operator(toks, flen)
+    assert op is not None and op[0] == "incoll" and op[2]  # complete
+    toks2 = lex("work is not in collection col_abc")
+    flen2 = C._match_field(toks2, 0)[2]
+    op2 = C._match_operator(toks2, flen2)
+    assert op2 is not None and op2[0] == "nincoll" and op2[2]

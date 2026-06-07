@@ -30,22 +30,14 @@ from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, Gro
 # ---------------------------------------------------------------------------
 # Diagnostics — a named code + human message + fix-it for every error/hint.
 # Codes are the language-agnostic contract (charter decision 5); prose localizes.
+# The vocabulary (every code + its severity / summary / default fix-it) and the
+# carriers (OQLError, OQLHint) live in the shared `diagnostics` registry so the
+# parser, the OQO validator, and the editor can't drift (oxjob #363). Re-exported
+# here for backwards compatibility (`from ...oql_lang import OQLError` still works).
+# Raises go through `oql_error(...)`, which validates the code against the registry
+# and fills in the canonical fix-it when a site doesn't supply one.
 # ---------------------------------------------------------------------------
-class OQLError(Exception):
-    def __init__(self, code: str, message: str, fixit: str = "", position: Optional[int] = None):
-        self.code = code
-        self.message = message
-        self.fixit = fixit
-        self.position = position
-        super().__init__(f"[{code}] {message}" + (f"  Fix: {fixit}" if fixit else ""))
-
-
-# Hints are non-fatal: collected on the parse, never raised.
-@dataclass
-class OQLHint:
-    code: str
-    message: str
-    fixit: str = ""
+from query_translation.diagnostics import OQLError, OQLHint, oql_error  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -241,7 +233,7 @@ def lex(s: str) -> List[Tok]:
         if c == '"':
             j = s.find('"', i + 1)
             if j == -1:
-                raise OQLError("OQL_UNTERMINATED_STRING",
+                raise oql_error("OQL_UNTERMINATED_STRING",
                                f'unterminated string starting at position {i}',
                                'add a closing double-quote (")', i)
             toks.append(Tok("STRING", s[i + 1:j], i))
@@ -250,7 +242,7 @@ def lex(s: str) -> List[Tok]:
         if c == '[':
             j = s.find(']', i + 1)
             if j == -1:
-                raise OQLError("OQL_UNTERMINATED_ANNOTATION",
+                raise oql_error("OQL_UNTERMINATED_ANNOTATION",
                                f'unterminated annotation [ starting at position {i}',
                                'add a closing bracket (])', i)
             toks.append(Tok("ANNOT", s[i + 1:j], i))
@@ -276,6 +268,99 @@ def lex(s: str) -> List[Tok]:
         toks.append(Tok("WORD", s[i:j], i))
         i = j
     return toks
+
+
+# ---------------------------------------------------------------------------
+# Shared greedy matchers — the SINGLE source of truth for how the grammar
+# recognizes a field and an operator. Pure, index-based, non-raising: they take a
+# token list + a start index and return (match, …) or None without mutating state.
+#
+# Both the fail-fast parser (`_Parser`, below) and the non-raising editor-context
+# walker (`oql_context.py`, oxjob #357) call these, so the editor can never offer or
+# accept a field/operator the parser would reject — previously `oql_context` kept a
+# *parallel* reimplementation that had already drifted (it didn't recognize the
+# `is in collection` operator). oxjob #363, charter decision 13 ("the real lever is the
+# framework-independent semantic layer"). `test_parse_context.py` asserts the two call
+# sites agree.
+# ---------------------------------------------------------------------------
+def match_field(toks: List[Tok], i: int) -> Optional[Tuple[str, "Field", int]]:
+    """Greedy longest field-alias match (up to 4 words) at ``toks[i]``.
+    Returns ``(spelling, Field, n_tokens)`` or ``None``."""
+    best: Optional[Field] = None
+    best_len = 0
+    parts: List[str] = []
+    for k in range(0, 4):
+        t = toks[i + k] if i + k < len(toks) else None
+        if not t or t.kind != "WORD":
+            break
+        parts.append(t.val)
+        key = " ".join(parts).lower()
+        if key in _ALIAS:
+            best = _ALIAS[key]
+            best_len = k + 1
+    if best is None:
+        return None
+    spelling = " ".join(toks[i + k].val for k in range(best_len))
+    return spelling, best, best_len
+
+
+def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool, bool]]:
+    """Greedy operator match at ``toks[i]``.
+
+    Returns ``(op, n_tokens, complete, opens_list)`` or ``None`` if the token can't
+    begin an operator. For every ``complete=True`` result, ``n_tokens``/``op`` are
+    exactly what the fail-fast parser consumes/returns. ``complete=False`` means a
+    multi-word operator is still being typed (e.g. ``is any`` without ``of``) — the
+    editor treats that as "keep typing"; the parser falls back to the shorter complete
+    operator (``is``) or raises. ``opens_list`` is True for the value-list openers
+    (``is any of`` / ``is not any of`` / ``is in`` / ``is not in``).
+    """
+    if i >= len(toks):
+        return None
+    t = toks[i]
+    if t.kind == "OP":  # > >= < <=
+        return t.val, 1, True, False
+    if t.kind != "WORD":
+        return None
+
+    def w(k: int) -> Optional[str]:
+        tk = toks[i + k] if i + k < len(toks) else None
+        return tk.val.lower() if tk and tk.kind == "WORD" else None
+
+    w0 = w(0)
+    if w0 == "contains":
+        return "contains", 1, True, False
+    if w0 == "is":
+        if w(1) == "similar":
+            if w(2) == "to":
+                return "similar", 3, True, False
+            return "similar", 2, False, False        # `is similar` — still typing
+        if w(1) == "not":
+            if w(2) == "any":
+                if w(3) == "of":
+                    return "nin", 4, True, True
+                return "nin", 3, False, True          # `is not any` — typing
+            if w(2) == "in":
+                # `is not in collection` MUST precede the bare `is not in`
+                if w(3) == "collection":
+                    return "nincoll", 4, True, False
+                return "nin", 3, True, True            # `is not in` == "is not any of"
+            return "isnot", 2, True, False            # `is not` (scalar)
+        if w(1) == "any":
+            if w(2) == "of":
+                return "in", 3, True, True
+            return "in", 2, False, True               # `is any` — typing
+        if w(1) == "in":
+            if w(2) == "collection":
+                return "incoll", 3, True, False
+            return "in", 2, True, True                # `is in` == "is any of"
+        return "is", 1, True, False
+    if w0 in ("does", "doesn't", "doesnt"):
+        j = 1 if w(1) == "not" else 0
+        if w(1 + j) == "contain":
+            return "ncontains", 2 + j, True, False
+        return "ncontains", 1 + j, False, False        # `does not` — typing
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -349,7 +434,7 @@ class _Parser:
                 self.next()
                 sample, seed = self._parse_sample()
             else:
-                raise OQLError("OQL_TRAILING_TOKENS",
+                raise oql_error("OQL_TRAILING_TOKENS",
                                f'unexpected text near "{t.val}" (position {t.pos})',
                                'queries are: <entity> [where <conditions>] [sort by ...] '
                                '[group by ...] [sample N]', t.pos)
@@ -360,7 +445,7 @@ class _Parser:
         # Greedy longest match against ENTITY_TYPES (handles "source types").
         t = self.peek()
         if t is None or t.kind != "WORD":
-            raise OQLError("OQL_MISSING_ENTITY",
+            raise oql_error("OQL_MISSING_ENTITY",
                            "a query must start with an entity type",
                            'e.g. "works where ..."', t.pos if t else None)
         # try two-word then one-word
@@ -374,7 +459,7 @@ class _Parser:
         if one in ENTITY_TYPES:
             self.next()
             return one
-        raise OQLError("OQL_UNKNOWN_ENTITY",
+        raise oql_error("OQL_UNKNOWN_ENTITY",
                        f'unknown entity type "{t.val}"',
                        f'use one of: works, authors, institutions, sources, ...', t.pos)
 
@@ -404,7 +489,7 @@ class _Parser:
             return operands[0]
         if len(set(conns)) > 1:
             first = self.toks[0]
-            raise OQLError(
+            raise oql_error(
                 "OQL_MIXED_BOOL_NEEDS_PARENS",
                 "mixed AND/OR at one level is ambiguous — add parentheses",
                 'group explicitly, e.g. "a and (b or c)" or "(a and b) or c"',
@@ -413,7 +498,7 @@ class _Parser:
         return BranchFilter(join=join, filters=operands)
 
     def _adjacency_error(self, t: Tok):
-        raise OQLError("OQL_IMPLICIT_ADJACENCY",
+        raise oql_error("OQL_IMPLICIT_ADJACENCY",
                        f'two conditions with no AND/OR between them (near "{t.val}")',
                        'insert an explicit AND or OR', t.pos)
 
@@ -421,7 +506,7 @@ class _Parser:
         self._skip_annot()
         t = self.peek()
         if t is None:
-            raise OQLError("OQL_EMPTY", "expected a condition", "")
+            raise oql_error("OQL_EMPTY", "expected a condition", "")
         if t.kind == "WORD" and t.val.lower() == "not":
             self.next()
             inner = self._parse_operand()
@@ -437,7 +522,7 @@ class _Parser:
         self._skip_annot()
         t = self.peek()
         if t is None or t.kind != "RP":
-            raise OQLError("OQL_UNBALANCED_PARENS", "missing a closing parenthesis",
+            raise oql_error("OQL_UNBALANCED_PARENS", "missing a closing parenthesis",
                            "add a )", t.pos if t else None)
         self.next()
 
@@ -453,7 +538,7 @@ class _Parser:
             if op == "similar":
                 return self._parse_semantic(fld)
             if op not in ("contains", "ncontains"):
-                raise OQLError("OQL_BAD_OPERATOR_FOR_FIELD",
+                raise oql_error("OQL_BAD_OPERATOR_FOR_FIELD",
                                f'search field "{field}" needs "contains" (not "{op}")',
                                'use: <field> contains <terms>')
             tree = self._parse_search_expr(fld.column)
@@ -462,91 +547,46 @@ class _Parser:
             return tree
         # non-search
         if op in ("contains", "ncontains", "similar"):
-            raise OQLError("OQL_BAD_OPERATOR_FOR_FIELD",
+            raise oql_error("OQL_BAD_OPERATOR_FOR_FIELD",
                            f'field "{field}" does not support "{op}"',
                            'use "is" / a comparison')
         return self._parse_value_clause(field, fld, op)
 
     def _parse_field(self) -> Tuple[str, Field]:
-        # greedy longest alias match (up to 4 words)
-        best = None
-        best_len = 0
-        parts = []
-        for k in range(0, 4):
-            t = self.peek(k)
-            if not t or t.kind != "WORD":
-                break
-            parts.append(t.val)
-            key = " ".join(parts).lower()
-            if key in _ALIAS:
-                best = _ALIAS[key]
-                best_len = k + 1
-        if best is None:
+        # greedy longest alias match (up to 4 words) — shared with the editor walker
+        m = match_field(self.toks, self.i)
+        if m is None:
             t = self.peek()
-            raise OQLError("OQL_UNKNOWN_FIELD",
+            raise oql_error("OQL_UNKNOWN_FIELD",
                            f'unknown field "{t.val if t else ""}"',
-                           'check the field name against the properties registry',
-                           t.pos if t else None)
-        spelling = " ".join(self.toks[self.i + k].val for k in range(best_len))
-        self.i += best_len
-        return spelling, best
+                           None, t.pos if t else None)
+        spelling, fld, n = m
+        self.i += n
+        return spelling, fld
 
     def _parse_operator(self) -> str:
         self._skip_annot()
         t = self.peek()
         if t is None:
-            raise OQLError("OQL_MISSING_OPERATOR", "expected an operator", "")
-        if t.kind == "OP":
+            raise oql_error("OQL_MISSING_OPERATOR", "expected an operator")
+        # The shared matcher recognizes every COMPLETE operator (incl. the collection
+        # `is [not] in collection` forms); for those, consume exactly what it reports.
+        m = match_operator(self.toks, self.i)
+        if m is not None and m[2]:  # complete
+            op, n, _complete, _opens = m
+            self.i += n
+            return op
+        # Not a complete operator. Replicate the fail-fast fallbacks: a partial
+        # `is …` (e.g. `is any`, `is similar`) degrades to the bare `is` operator
+        # (the tail becomes the value); a partial `does …` has no shorter form, so
+        # it's a missing-operator error; anything else isn't an operator at all.
+        if t.kind == "WORD" and t.val.lower() == "is":
             self.next()
-            return t.val
-        if t.kind == "WORD":
-            w = t.val.lower()
-            if w == "contains":
-                self.next()
-                return "contains"
-            if w == "is":
-                self.next()
-                # is similar to | is not any of | is any of | is in | is not | is
-                if self.word_is("similar") and self.word_is("to", k=1):
-                    self.i += 2
-                    return "similar"
-                if self.word_is("not"):
-                    self.next()
-                    if self.word_is("any") and self.word_is("of", k=1):
-                        self.i += 2
-                        return "nin"
-                    # `is not in collection` — MUST precede the bare `is not in`
-                    # (= "is not any of") so "collection" isn't read as a value.
-                    if self.word_is("in") and self.word_is("collection", k=1):
-                        self.i += 2
-                        return "nincoll"
-                    if self.word_is("in"):
-                        self.next()
-                        return "nin"
-                    return "isnot"
-                if self.word_is("any") and self.word_is("of", k=1):
-                    self.i += 2
-                    return "in"
-                # `is in collection` — MUST precede the bare `is in` (= "is any of").
-                if self.word_is("in") and self.word_is("collection", k=1):
-                    self.i += 2
-                    return "incoll"
-                if self.word_is("in"):
-                    self.next()
-                    return "in"
-                return "is"
-            if w in ("does", "doesn't", "doesnt") :
-                # does not contain / doesn't contain
-                self.next()
-                if self.word_is("not"):
-                    self.next()
-                if self.word_is("contain"):
-                    self.next()
-                    return "ncontains"
-                raise OQLError("OQL_MISSING_OPERATOR", 'expected "does not contain"', "")
-        raise OQLError("OQL_MISSING_OPERATOR",
-                       f'expected an operator, got "{t.val}"',
-                       'e.g. is / is any of / contains / >= ', t.pos)
+            return "is"
+        if t.kind == "WORD" and t.val.lower() in ("does", "doesn't", "doesnt"):
+            raise oql_error("OQL_MISSING_OPERATOR", 'expected "does not contain"')
+        raise oql_error("OQL_MISSING_OPERATOR",
+                       f'expected an operator, got "{t.val}"', None, t.pos)
 
     def _parse_boolean_clause(self) -> LeafFilter:
         # it's [not] <bool-field-phrase>  |  it has a <x> | it doesn't have a <x>
@@ -590,7 +630,7 @@ class _Parser:
             if alt:
                 fld = _ALIAS[alt.lower()]
         if fld is None:
-            raise OQLError("OQL_UNKNOWN_BOOLEAN",
+            raise oql_error("OQL_UNKNOWN_BOOLEAN",
                            f'unknown boolean property "{phrase}"',
                            'e.g. "it\'s open access", "it has a DOI"')
         return LeafFilter(column_id=fld.column, value=(False if negate else True), operator="is")
@@ -602,7 +642,7 @@ class _Parser:
         if op in ("incoll", "nincoll"):
             v = self._parse_scalar(fld)
             if not (isinstance(v, str) and v.startswith("col_")):
-                raise OQLError("OQL_BAD_COLLECTION_REF",
+                raise oql_error("OQL_BAD_COLLECTION_REF",
                                f'"is in collection" needs a collection id (col_…), got "{v}"',
                                'e.g. work is in collection col_abc123')
             return LeafFilter(fld.column, v, "in collection",
@@ -636,7 +676,7 @@ class _Parser:
         self._skip_annot()
         t = self.peek()
         if not t or t.kind != "LP":
-            raise OQLError("OQL_EXPECTED_LIST",
+            raise oql_error("OQL_EXPECTED_LIST",
                            'expected a parenthesized list after "any of"',
                            'e.g. is any of (a, b, c)', t.pos if t else None)
         self.next()
@@ -663,14 +703,14 @@ class _Parser:
         if fld.kind == "id":
             t0 = self.peek()
             if t0 is not None and t0.kind == "ANNOT":
-                raise OQLError("OQL_MISSING_ENTITY_ID",
+                raise oql_error("OQL_MISSING_ENTITY_ID",
                                f'"{fld.oql}" needs an ID, not just a [display name]',
                                'put the OpenAlex ID first, e.g. institution is I136199984 [Harvard]',
                                t0.pos)
         self._skip_annot()
         t = self.peek()
         if t is None:
-            raise OQLError("OQL_MISSING_VALUE", f'expected a value for "{fld.oql}"', "")
+            raise oql_error("OQL_MISSING_VALUE", f'expected a value for "{fld.oql}"', "")
         if t.kind == "STRING":
             self.next()
             val = t.val
@@ -678,7 +718,7 @@ class _Parser:
             self.next()
             val = t.val
         else:
-            raise OQLError("OQL_MISSING_VALUE",
+            raise oql_error("OQL_MISSING_VALUE",
                            f'expected a value for "{fld.oql}", got "{t.val}"', "", t.pos)
         self._skip_annot()  # drop a trailing [display name] annotation
         # type coercion per kind
@@ -686,7 +726,7 @@ class _Parser:
             try:
                 return int(val)
             except ValueError:
-                raise OQLError("OQL_BAD_NUMBER",
+                raise oql_error("OQL_BAD_NUMBER",
                                f'"{val}" is not a number for "{fld.oql}"', "", t.pos)
         if fld.kind == "bool":
             low = val.lower()
@@ -701,7 +741,7 @@ class _Parser:
         self._skip_annot()
         t = self.peek()
         if t is None or t.kind != "STRING":
-            raise OQLError("OQL_SEMANTIC_NEEDS_TEXT",
+            raise oql_error("OQL_SEMANTIC_NEEDS_TEXT",
                            '"is similar to" needs a quoted text passage',
                            'e.g. abstract is similar to "..."', t.pos if t else None)
         self.next()
@@ -736,7 +776,7 @@ class _Parser:
             break
         effective = set(conns) | ({"and"} if implicit_and else set())
         if "and" in effective and "or" in effective:
-            raise OQLError(
+            raise oql_error(
                 "OQL_MIXED_BOOL_NEEDS_PARENS",
                 "mixed and/or at one level is ambiguous — add parentheses "
                 "(a space between words is an AND)",
@@ -798,7 +838,7 @@ class _Parser:
         self._skip_annot()
         t = self.peek()
         if t is None:
-            raise OQLError("OQL_MISSING_VALUE", "expected a search term", "")
+            raise oql_error("OQL_MISSING_VALUE", "expected a search term", "")
         if t.kind == "WORD" and t.val.lower() == "not":
             self.next()
             return _negate(self._parse_search_operand(base))
@@ -814,7 +854,7 @@ class _Parser:
             self.i += 2
             tt = self.peek()
             if not tt or tt.kind != "LP":
-                raise OQLError("OQL_EXPECTED_LIST",
+                raise oql_error("OQL_EXPECTED_LIST",
                                f'expected a list after "{t.val.lower()} of"',
                                'e.g. any of (a, b, c)', tt.pos if tt else None)
             self.next()
@@ -850,7 +890,7 @@ class _Parser:
             stemmed_phrase = True
         t = self.peek()
         if t is None or t.kind not in ("WORD", "STRING"):
-            raise OQLError("OQL_MISSING_VALUE", "expected a search term",
+            raise oql_error("OQL_MISSING_VALUE", "expected a search term",
                            "", t.pos if t else None)
         if t.kind == "STRING":
             text = t.val
@@ -876,12 +916,12 @@ class _Parser:
             self.next()
             nt = self.peek()
             if not nt or nt.kind != "WORD" or not nt.val.isdigit():
-                raise OQLError("OQL_BAD_PROXIMITY", 'expected a number after "within"',
+                raise oql_error("OQL_BAD_PROXIMITY", 'expected a number after "within"',
                                'e.g. within 3 words', nt.pos if nt else None)
             n = int(nt.val)
             self.next()
             if not self.word_is("words", "word"):
-                raise OQLError("OQL_BAD_PROXIMITY", 'expected "words" after the number',
+                raise oql_error("OQL_BAD_PROXIMITY", 'expected "words" after the number',
                                'e.g. within 3 words')
             self.next()
             if self.word_is("of"):
@@ -892,7 +932,7 @@ class _Parser:
                 self.next()
                 bt = self.peek()
                 if bt is None or bt.kind != "STRING":
-                    raise OQLError("OQL_BINARY_PROXIMITY_NEEDS_PHRASES",
+                    raise oql_error("OQL_BINARY_PROXIMITY_NEEDS_PHRASES",
                                    'binary proximity needs a quoted phrase after "of"',
                                    'e.g. "smart" within 3 words of "phone"',
                                    bt.pos if bt else None)
@@ -901,7 +941,7 @@ class _Parser:
                 # Binary proximity is exact-only (both operands quoted, no-stem). `near`
                 # (stemmed) on operand A is not supported here.
                 if not phrase or stemmed_phrase:
-                    raise OQLError("OQL_BINARY_PROXIMITY_NEEDS_PHRASES",
+                    raise oql_error("OQL_BINARY_PROXIMITY_NEEDS_PHRASES",
                                    'binary proximity needs two quoted phrases',
                                    'e.g. "smart" within 3 words of "phone"', t.pos)
                 # Validate each wildcard token's shape across BOTH operands (keep #337's
@@ -916,11 +956,11 @@ class _Parser:
             # A bare (unquoted) wildcard token can't carry proximity
             # (e.g. `smart* within 3 words`).
             if has_wildcard and not phrase:
-                raise OQLError("OQL_WILDCARD_IN_PROXIMITY",
+                raise oql_error("OQL_WILDCARD_IN_PROXIMITY",
                                'a wildcard cannot be combined with proximity',
                                'drop the wildcard, or drop "within N words"', t.pos)
             if not phrase or len(text.split()) < 2:
-                raise OQLError("OQL_PROXIMITY_NEEDS_PHRASE",
+                raise oql_error("OQL_PROXIMITY_NEEDS_PHRASE",
                                'proximity needs a quoted multi-word phrase',
                                'e.g. "smart phone" within 3 words', t.pos)
             # A wildcard inside a quoted proximity phrase IS supported (oxjob #355): the
@@ -941,11 +981,11 @@ class _Parser:
         # quotes are now where wildcards belong.)
         if has_wildcard and stemmed:
             if stemmed_phrase:
-                raise OQLError("OQL_WILDCARD_NEEDS_EXACT",
+                raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
                                f'wildcards run on exact (no-stem) text, but "near" '
                                f'keeps the phrase stemmed: "{text}"',
                                'drop "near" so the wildcard runs on exact text', t.pos)
-            raise OQLError("OQL_WILDCARD_NEEDS_EXACT",
+            raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
                            f'wildcards run on exact (no-stem) text: {text}',
                            f'quote it: "{text}"', t.pos)
         # A quoted wildcard (`"studies*"`) is exact — validate each token's shape
@@ -984,7 +1024,7 @@ class _Parser:
         # accept a known field OR a bare technical column / synthetic key
         t = self.peek()
         if not t or t.kind != "WORD":
-            raise OQLError("OQL_BAD_SORT", "expected a field to sort by", "")
+            raise oql_error("OQL_BAD_SORT", "expected a field to sort by", "")
         # try field alias
         for k in range(3, 0, -1):
             parts = [self.peek(j).val for j in range(k) if self.peek(j) and self.peek(j).kind == "WORD"]
@@ -1011,7 +1051,7 @@ class _Parser:
     def _parse_sample(self):
         t = self.peek()
         if not t or t.kind != "WORD" or not t.val.isdigit():
-            raise OQLError("OQL_BAD_SAMPLE", 'expected a number after "sample"',
+            raise oql_error("OQL_BAD_SAMPLE", 'expected a number after "sample"',
                            'e.g. sample 100', t.pos if t else None)
         n = int(t.val)
         self.next()
@@ -1047,7 +1087,7 @@ def _validate_wildcards(word: str, pos: int):
     if "*" not in word and "?" not in word:
         return
     if word[0] in "*?":
-        raise OQLError("OQL_LEADING_WILDCARD",
+        raise oql_error("OQL_LEADING_WILDCARD",
                        f'leading wildcard "{word}" is not supported (too expensive)',
                        'anchor the wildcard with leading characters, e.g. cycle*', pos)
     star = word.find("*")
@@ -1057,13 +1097,13 @@ def _validate_wildcards(word: str, pos: int):
             # require >=3 word chars immediately before the *
             chars_before = len(re.match(r"\w*", word).group(0)[:star])
             if chars_before < 3:
-                raise OQLError("OQL_SHORT_WILDCARD_PREFIX",
+                raise oql_error("OQL_SHORT_WILDCARD_PREFIX",
                                f'wildcard needs at least 3 leading characters: "{word}"',
                                'add characters before the *, e.g. abc*', pos)
     q = word.find("?")
     if q != -1:
         if q == 0 or not (word[q - 1].isalnum()):
-            raise OQLError("OQL_LEADING_WILDCARD",
+            raise oql_error("OQL_LEADING_WILDCARD",
                            f'"?" needs a character before it: "{word}"',
                            'e.g. wom?n', pos)
 
@@ -1082,7 +1122,7 @@ def _validate_wildcard_budget(words: List[str], pos: int):
     if len(wild) <= 1:
         return
     if len(wild) > MAX_WILDCARDS_PER_INTERVALS:
-        raise OQLError("OQL_TOO_MANY_WILDCARDS",
+        raise oql_error("OQL_TOO_MANY_WILDCARDS",
                        f'at most {MAX_WILDCARDS_PER_INTERVALS} wildcards are allowed in '
                        f'one phrase or proximity search (this has {len(wild)})',
                        'remove a wildcard, or split into separate searches', pos)
@@ -1091,7 +1131,7 @@ def _validate_wildcard_budget(words: List[str], pos: int):
         # anchor for it when a second wildcard is present.
         if w.endswith("*") and w.count("*") == 1 and "?" not in w:
             if len(w) - 1 < MULTI_WILDCARD_MIN_PREFIX:
-                raise OQLError("OQL_MULTI_WILDCARD_SHORT_PREFIX",
+                raise oql_error("OQL_MULTI_WILDCARD_SHORT_PREFIX",
                                f'with two wildcards in one phrase or proximity search, '
                                f'each * needs at least {MULTI_WILDCARD_MIN_PREFIX} '
                                f'leading characters (for performance): "{w}"',
@@ -1102,7 +1142,7 @@ def parse(oql: str) -> OQO:
     """OQL text -> OQO. Raises OQLError (with .code/.fixit) on any error case."""
     toks = lex(oql)
     if not toks:
-        raise OQLError("OQL_EMPTY", "empty query", 'e.g. "works where year >= 2020"')
+        raise oql_error("OQL_EMPTY", "empty query", 'e.g. "works where year >= 2020"')
     p = _Parser(toks)
     oqo = p.parse()
     return oqo
