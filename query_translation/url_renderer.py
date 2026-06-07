@@ -137,20 +137,67 @@ def render_group_by(group_by) -> Optional[str]:
 def render_filters(filters: List[FilterType]) -> Optional[str]:
     """
     Render a list of filters to URL filter string.
-    
+
     Top-level filters are AND-ed (joined by comma).
     """
     if not filters:
         return None
-    
+
+    # Collapse a `>=a` + `<=b` pair on the same column into one inclusive-range
+    # clause `col:a-b` (oxjob #378 S4). The OQO canonicalizer represents a bounded
+    # range as two leaves; without this, meta.x_query.url shows two clauses and the
+    # GUI hydrates two bound chips instead of one range chip (#378 V1 gate).
+    collapsed_range_at, consumed = _bounded_range_collapse(filters)
+
     parts = []
-    
-    for f in filters:
-        rendered = render_single_filter(f)
-        if rendered:
-            parts.append(rendered)
-    
+    for i, f in enumerate(filters):
+        if i in collapsed_range_at:
+            parts.append(collapsed_range_at[i])
+        elif i in consumed:
+            continue  # the other half of an already-emitted collapsed range
+        else:
+            rendered = render_single_filter(f)
+            if rendered:
+                parts.append(rendered)
+
     return ",".join(parts) if parts else None
+
+
+def _bounded_range_collapse(filters: List[FilterType]):
+    """Find same-column inclusive-bound pairs (`>=a` and `<=b`) among the top-level
+    leaves and pre-render each as a single `col:a-b` clause.
+
+    Returns (collapsed_range_at, consumed):
+      - collapsed_range_at: {anchor_index: "col:a-b"} — the merged clause is emitted
+        at the position of whichever bound came first (order otherwise preserved).
+      - consumed: set of indices whose leaf was folded into a merged clause.
+
+    Only non-negated inclusive bounds (>=, <=) with non-null values collapse —
+    strict >/< (rendered `>a`/`<b`) and open-ended single bounds are left untouched,
+    so `col:a-b` keeps its exact oxurl meaning (`>=a AND <=b`). Round-trips faithfully:
+    `a-b` parses back to the same two leaves.
+    """
+    GE_OPS = (">=", "is greater than or equal to")
+    LE_OPS = ("<=", "is less than or equal to")
+    ge, le = {}, {}
+    for i, f in enumerate(filters):
+        if not isinstance(f, LeafFilter) or f.is_negated or f.value is None:
+            continue
+        if f.operator in GE_OPS:
+            ge.setdefault(f.column_id, (i, f.value))
+        elif f.operator in LE_OPS:
+            le.setdefault(f.column_id, (i, f.value))
+
+    collapsed_range_at, consumed = {}, set()
+    for col, (gi, gv) in ge.items():
+        if col not in le:
+            continue
+        li, lv = le[col]
+        anchor = min(gi, li)
+        collapsed_range_at[anchor] = f"{col}:{gv}-{lv}"
+        consumed.add(gi)
+        consumed.add(li)
+    return collapsed_range_at, consumed
 
 
 def render_single_filter(f: FilterType, depth: int = 0) -> str:

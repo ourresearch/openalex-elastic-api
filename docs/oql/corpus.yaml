@@ -913,7 +913,7 @@ rows:
     label: "KCL/Stirling systematic-review template"
     url: "https://libguides.kcl.ac.uk/systematicreview/advanced"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=language:en,publication_year:-2024,publication_year:2015-,title_and_abstract.search:ASD|%22autism%20spectrum%20disorder%22|autism,title_and_abstract.search:intervention|therapy|treatment,type:article|review'
+  oxurl: 'https://openalex.org/works?filter=language:en,publication_year:2015-2024,title_and_abstract.search:ASD|%22autism%20spectrum%20disorder%22|autism,title_and_abstract.search:intervention|therapy|treatment,type:article|review'
   status: ok
   oql: |-
     works
@@ -963,7 +963,7 @@ rows:
     label: "Dimensions DSL reference + cookbook"
     url: "https://docs.dimensions.ai/dsl/"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=publication_year:-2023,publication_year:2018-,title_and_abstract.search:CRISPR,title_and_abstract.search:%22genome%20editing%22&sort=cited_by_count:desc&sample=500'
+  oxurl: 'https://openalex.org/works?filter=publication_year:2018-2023,title_and_abstract.search:CRISPR,title_and_abstract.search:%22genome%20editing%22&sort=cited_by_count:desc&sample=500'
   status: ok
   oql: |-
     works
