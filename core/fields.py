@@ -846,6 +846,42 @@ class TermField(Field):
             return null_query
         return terms_query
 
+    @staticmethod
+    def _strip_openalex_prefix(value, *entity_prefixes):
+        """Reduce a canonical entity URL or short form to its bare ES-indexed code.
+
+        Strips a leading ``https://openalex.org/`` and then a single leading entity
+        prefix (e.g. ``languages/``, ``countries/``, ``domains/``). This mirrors the
+        long-standing keywords/license normalization (which strips the host FIRST) and
+        is the fix for the canonical-id round-trip bug (#275): the old
+        ``.replace("languages/", "")`` removed the substring but left the
+        ``https://openalex.org`` host on, so the canonical id a user copies off an
+        entity page matched zero docs.
+        """
+        if value.startswith("https://openalex.org/"):
+            value = value[len("https://openalex.org/"):]
+        for prefix in entity_prefixes:
+            if value.startswith(prefix):
+                return value[len(prefix):]
+        return value
+
+    @staticmethod
+    def _normalize_sdg_value(value):
+        """Normalize any accepted SDG filter form to the ES-indexed metadata URL.
+
+        SDGs are indexed as ``https://metadata.un.org/sdg/N`` (NOT a bare code or an
+        openalex.org URL), so the canonical ``https://openalex.org/sdgs/N`` a user
+        copies from /sdgs/N must be *rewritten*, not merely stripped (#275). Accepts
+        the bare number, ``sdgs/N``, the canonical openalex URL, and the already-indexed
+        metadata URL.
+        """
+        if value.startswith("https://metadata.un.org/sdg/"):
+            return value
+        number = TermField._strip_openalex_prefix(value, "sdgs/")
+        if number.isdigit():
+            return f"https://metadata.un.org/sdg/{number}"
+        return value
+
     def _get_formatted_value(self):
         """
         Get the formatted value for a single term, handling all the special cases.
@@ -870,29 +906,30 @@ class TermField(Field):
             "wikidata_id",
         ]
 
-        # Apply the same transformations as in build_query
+        # Apply the same transformations as in build_query. Each strips a LEADING
+        # https://openalex.org/ + entity prefix (via _strip_openalex_prefix) so the
+        # canonical id copied off an entity page round-trips as a filter value (#275).
         if self.param == "sustainable_development_goals.id":
-            if len(self.value) == 1 or len(self.value) == 2:
-                return f"https://metadata.un.org/sdg/{self.value}"
-            elif self.value.startswith("sdgs/"):
-                sdg_number = self.value.replace("sdgs/", "")
-                return f"https://metadata.un.org/sdg/{sdg_number}"
+            return self._normalize_sdg_value(self.value)
         elif self.param == "language":
-            return self.value.replace("languages/", "")
+            return self._strip_openalex_prefix(self.value, "languages/").lower()
         elif self.param == "type" or self.param == "last_known_institution.type":
-            return (
-                self.value.replace("work-types/", "")
-                .replace("institution-types/", "")
-                .replace("source-types/", "")
-                .replace("types/", "")
+            return self._strip_openalex_prefix(
+                self.value,
+                "work-types/",
+                "institution-types/",
+                "source-types/",
+                "types/",
             )
         elif (
             self.param == "primary_location.source.type"
             or self.param == "locations.source.type"
         ):
-            return self.value.replace("source-types/", "").replace("%20", " ")
+            return self._strip_openalex_prefix(self.value, "source-types/").replace(
+                "%20", " "
+            )
         elif "country_code" in self.param or "countries" in self.param:
-            return self.value.replace("countries/", "")
+            return self._strip_openalex_prefix(self.value, "countries/")
         elif self.param == "keywords.id":
             if self.value.startswith("https://openalex.org/keywords/"):
                 return self.value
@@ -923,8 +960,6 @@ class TermField(Field):
                 return f"https://doi.org/{self.value}".lower()
         elif self.param == "display_name":
             return self.value
-        elif self.param == "language":
-            return self.value.lower()
         elif self.param == "topics.id" or self.param == "topic_share.id":
             if self.value.startswith("https://openalex.org/"):
                 return self.value
@@ -992,34 +1027,36 @@ class TermField(Field):
             "ror",
             "wikidata_id",
         ]
+        # Strip a leading https://openalex.org/ + entity prefix so the canonical id a
+        # user copies off an entity page round-trips (#275). Shares the exact stripping
+        # logic with _get_formatted_value via _strip_openalex_prefix (anti-drift).
         if self.param == "sustainable_development_goals.id":
-            if len(self.value) == 1 or len(self.value) == 2:
-                self.value = f"https://metadata.un.org/sdg/{self.value}"
-            elif self.value.startswith("sdgs/"):
-                sdg_number = self.value.replace("sdgs/", "")
-                self.value = f"https://metadata.un.org/sdg/{sdg_number}"
+            self.value = self._normalize_sdg_value(self.value)
         elif self.param == "language":
-            self.value = self.value.replace("languages/", "")
+            self.value = self._strip_openalex_prefix(self.value, "languages/")
         elif self.param == "type" or self.param == "last_known_institution.type":
-            self.value = (
-                self.value.replace("work-types/", "")
-                .replace("institution-types/", "")
-                .replace("source-types/", "")
-                .replace("types/", "")
+            self.value = self._strip_openalex_prefix(
+                self.value,
+                "work-types/",
+                "institution-types/",
+                "source-types/",
+                "types/",
             )
         elif (
             self.param == "primary_location.source.type"
             or self.param == "locations.source.type"
         ):
-            self.value = self.value.replace("source-types/", "").replace("%20", " ")
+            self.value = self._strip_openalex_prefix(self.value, "source-types/").replace(
+                "%20", " "
+            )
         elif "country_code" in self.param or "countries" in self.param:
-            self.value = self.value.replace("countries/", "")
+            self.value = self._strip_openalex_prefix(self.value, "countries/")
         elif "domain" in self.param:
-            self.value = self.value.replace("domains/", "")
+            self.value = self._strip_openalex_prefix(self.value, "domains/")
         elif "field" in self.param and "subfield" not in self.param:
-            self.value = self.value.replace("fields/", "")
+            self.value = self._strip_openalex_prefix(self.value, "fields/")
         elif "subfield" in self.param:
-            self.value = self.value.replace("subfields/", "")
+            self.value = self._strip_openalex_prefix(self.value, "subfields/")
         elif self.param == "keywords.id":
             self.value = self.value.replace("https://openalex.org/", "").replace(
                 "keywords/", ""
@@ -1038,9 +1075,11 @@ class TermField(Field):
             "authorships.institutions.type",
         ):
             if self.param == "authorships.institutions.country_code":
-                self.value = self.value.replace("countries/", "")
+                self.value = self._strip_openalex_prefix(self.value, "countries/")
             elif self.param == "authorships.institutions.type":
-                self.value = self.value.replace("institution-types/", "")
+                self.value = self._strip_openalex_prefix(
+                    self.value, "institution-types/"
+                )
 
             field_name = self.es_field().replace("__", ".")
             if self.value == "null":
