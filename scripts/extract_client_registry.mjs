@@ -34,6 +34,13 @@ const uniqueObjects = (arr) => arr;
 const unravel = () => "";
 const getEntityConfigs = () => (${JSON.stringify(ENTITY_NAMES)}).map(name => ({name}));
 const countryCodeLookup = { byIso: () => null, byCountry: () => null };
+// collectionFilterLabel/continentForCountryCode are imported by facetConfigs.js
+// (@/collectionFilter, @/continents). The first builds the per-entity "<Entity>
+// is in collection" verbatim label (collection facet is displayNameVerbatim →
+// skipped by the label-consistency gate); the second is only referenced inside an
+// uninvoked extractFn closure. Trivial stubs keep the harness from crashing.
+const collectionFilterLabel = (name) => name;
+const continentForCountryCode = () => null;
 ${src}
 globalThis.__facetConfigs = facetConfigs;
 `;
@@ -54,6 +61,7 @@ for (const entity of ENTITY_NAMES) {
       entityToFilter: c.entityToFilter,
       entityToSelect: c.entityToSelect ?? null,
       displayName: c.displayName ?? null,
+      displayNameVerbatim: c.displayNameVerbatim ?? false,
       type: c.type ?? null,
       actions: c.actions ?? [],
       actionsPopular: c.actionsPopular ?? null,

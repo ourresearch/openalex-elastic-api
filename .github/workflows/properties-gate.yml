@@ -55,6 +55,13 @@ jobs:
       - name: Client ⊆ server catalog check
         run: PYTHONPATH=. python scripts/check_client_subset.py
 
+      - name: Label consistency check (gui displayName == registry display_name)
+        # oxjob #381 anti-re-drift guard: the registry is the single source of truth
+        # for each property's canonical label; this asserts the vendored gui snapshot
+        # hasn't drifted back. Like the subset check it reads scripts/client_registry.json
+        # (refresh with scripts/extract_client_registry.mjs against an openalex-gui checkout).
+        run: PYTHONPATH=. python scripts/check_label_consistency.py
+
       - name: Notify Slack on failure
         if: failure()
         uses: slackapi/slack-github-action@v1.27.0
