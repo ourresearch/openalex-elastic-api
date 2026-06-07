@@ -117,6 +117,12 @@ _f("byline", "raw_author_name", "search",
    aliases=["raw_author_name.search", "raw author name"])
 _f("institution name", "institutions.display_name", "search",
    aliases=["institutions.display_name.search"])
+# Free-text search within a work's curated keywords only (engine param keyword.search →
+# keywords.display_name). Distinct from `topic` (an entity id): keywords are short curated
+# phrases searched as text. Engine recall is narrow (matches single curated tokens; common
+# multi-word terms return 0), but `?filter=keyword.search:…` is a real working oxurl, so
+# OQL must be able to represent it. (oxjob #363 discovery loop run #1)
+_f("keyword", "keyword", "search", aliases=["keyword.search"])
 
 # --- numeric ---
 _f("year", "publication_year", "num", aliases=["publication_year"])
@@ -146,6 +152,11 @@ _f("source", "primary_location.source.id", "id", aliases=["primary_location.sour
 _f("topic", "primary_topic.id", "id", aliases=["primary_topic.id"])
 _f("topics", "topics.id", "id", aliases=["topics.id"])
 _f("funder", "funders.id", "id", aliases=["funders.id", "grants.funder"])
+# Publisher of the work's primary source (engine param primary_location.source.publisher_lineage,
+# a P-id; lineage so a parent publisher matches its imprints). Mirrors `funder`: an entity-id
+# reference, name-resolved via the publishers namespace. (oxjob #363 discovery loop run #1)
+_f("publisher", "primary_location.source.publisher_lineage", "id",
+   aliases=["primary_location.source.publisher_lineage", "primary_location.source.host_organization_lineage"])
 # Render word "SDG" = the registry display_name (#381 Phase 5: acronym made canonical
 # everywhere). Long forms stay parse aliases.
 _f("SDG", "sustainable_development_goals.id", "id",
@@ -182,6 +193,11 @@ _f("language", "language", "enum", aliases=[])
 # --- literal strings ---
 _f("DOI", "doi", "string", aliases=["doi"])
 _f("ORCID", "authorships.author.orcid", "string", aliases=["authorships.author.orcid", "author orcid"])
+# The work's journal, by ISSN (engine param primary_location.source.issn; accepts ISSN-L or
+# any of a source's ISSNs). Literal string like DOI/ORCID — no name resolution. WoS `IS=`,
+# Scopus `ISSN()`. (oxjob #363 discovery loop run #1)
+_f("ISSN", "primary_location.source.issn", "string",
+   aliases=["issn", "primary_location.source.issn", "source.issn"])
 
 # Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
 _BY_COLUMN = {}
