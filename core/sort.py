@@ -2,6 +2,7 @@ from elasticsearch_dsl import Q
 
 import settings
 from core.exceptions import APIQueryParamsError
+from core.group_by.buckets import parse_metric_sort_key
 from core.utils import get_field
 from core.preference import clean_preference
 
@@ -24,9 +25,18 @@ def get_sort_fields(fields_dict, group_by, sort_params):
             and (key == "count" and (value == "desc" or value == "asc"))
         ):
             return sort_fields
+        elif group_by and parse_metric_sort_key(key)[0] and value in ("asc", "desc"):
+            # Metric-aggregate group sort (oxjob #389): e.g.
+            # `group_by=primary_funder.id&sort=cited_by_count.mean:desc`. The
+            # ordering is applied on the terms agg itself (create_sorted_group_by_buckets
+            # builds the metric sub-agg + `order`), not on the entity rows — so,
+            # like key/count, return no row-level sort fields here.
+            return sort_fields
         elif group_by:
             raise APIQueryParamsError(
-                "Valid sort params with group by are: key or count"
+                "Valid sort params with group by are: key, count, or "
+                "<numeric_field>.<metric> (mean/sum/min/max), e.g. "
+                "cited_by_count.mean:desc"
             )
 
         # relevance key

@@ -125,18 +125,30 @@ class SortBy:
     `column_id` may be a real entity column or a synthetic sort key:
     `relevance_score` (→ ES `_score`, desc-only, requires a search clause) or,
     when a `group_by` is present, the bucket-ordering keys `count` / `key`.
+
+    `aggregate` (oxjob #389) is set ONLY for a metric-aggregate group sort: it
+    orders the group_by buckets by a metric sub-aggregation of a numeric column
+    (`mean`/`sum`/`min`/`max` of `column_id`), e.g. funders ranked by their works'
+    mean citation impact. None ⇒ an ordinary row/bucket sort. The URL surface is
+    the dotted pseudo-field `sort=<column_id>.<aggregate>:<direction>`
+    (e.g. `cited_by_count.mean:desc`). Only meaningful with a group_by present.
     """
     column_id: str
     direction: Literal["asc", "desc"] = "asc"
+    aggregate: Optional[Literal["mean", "sum", "min", "max"]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"column_id": self.column_id, "direction": self.direction}
+        d = {"column_id": self.column_id, "direction": self.direction}
+        if self.aggregate is not None:
+            d["aggregate"] = self.aggregate
+        return d
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SortBy":
         return cls(
             column_id=data["column_id"],
             direction=data.get("direction", "asc"),
+            aggregate=data.get("aggregate"),
         )
 
 

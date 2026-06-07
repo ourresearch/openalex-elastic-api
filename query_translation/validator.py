@@ -161,6 +161,13 @@ RELEVANCE_SORT_COLUMN = "relevance_score"
 # (#323 Pattern G1 — without it `?group_by=type&sort=count:desc` 400s `invalid_column`).
 GROUP_BY_SORT_KEYS = {"count", "key"}
 
+# Metric-aggregate group sort (oxjob #389): a `SortBy` may carry an `aggregate`
+# (mean/sum/min/max) to order the group_by buckets by a metric sub-aggregation of
+# its (numeric) `column_id`, e.g. funders ranked by mean(cited_by_count). Mirrors
+# core.group_by.buckets.GROUP_BY_METRICS keys; kept local so the validator doesn't
+# import the elasticsearch-heavy buckets module.
+VALID_SORT_AGGREGATES = {"mean", "sum", "min", "max"}
+
 
 def _has_search_clause(filter_rows: List["FilterType"]) -> bool:
     """True if any leaf in the filter tree is a `*.search` (free-text) clause.
@@ -347,6 +354,49 @@ class OQOValidator:
                     type="invalid_sort_order",
                     message="Sorting by 'relevance_score' ascending is not allowed.",
                     location=f"{loc}.direction",
+                ))
+        elif key.aggregate is not None:
+            # Metric-aggregate group sort (oxjob #389): order the group_by buckets
+            # by a metric sub-aggregation (mean/sum/min/max) of a numeric column.
+            # Valid only when (a) a group_by is present, (b) the aggregate name is
+            # known, and (c) `column_id` is a real NUMERIC column on the entity.
+            if not has_group_by:
+                errors.append(ValidationError(
+                    type="aggregate_sort_requires_group_by",
+                    message=(
+                        "A metric-aggregate sort "
+                        f"('{key.column_id}.{key.aggregate}') is only valid with a "
+                        "group_by."
+                    ),
+                    location=f"{loc}.aggregate",
+                ))
+            if key.aggregate not in VALID_SORT_AGGREGATES:
+                errors.append(ValidationError(
+                    type="invalid_sort_aggregate",
+                    message=(
+                        f"'{key.aggregate}' is not a valid sort aggregate. "
+                        f"Use one of: {', '.join(sorted(VALID_SORT_AGGREGATES))}."
+                    ),
+                    location=f"{loc}.aggregate",
+                ))
+            entry = columns.get(key.column_id)
+            if entry is None:
+                errors.append(ValidationError(
+                    type="invalid_column",
+                    message=(
+                        f"'{key.column_id}' is not a column on '{get_rows}'"
+                    ),
+                    location=f"{loc}.column_id",
+                ))
+            elif entry.type != "number":
+                errors.append(ValidationError(
+                    type="invalid_sort_aggregate_column",
+                    message=(
+                        f"Cannot compute a metric aggregate over non-numeric "
+                        f"column '{key.column_id}' (type '{entry.type}'). "
+                        f"Metric-aggregate sort requires a numeric column."
+                    ),
+                    location=f"{loc}.column_id",
                 ))
         elif has_group_by and key.column_id in GROUP_BY_SORT_KEYS:
             # Bucket-ordering sort key (count/key) — valid because group_by is set.

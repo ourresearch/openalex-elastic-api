@@ -1,4 +1,11 @@
-from marshmallow import INCLUDE, Schema, fields
+from marshmallow import INCLUDE, Schema, fields, post_dump
+
+# Metric-aggregate group sort (oxjob #389) surfaces the metric value per group
+# under a dynamic key `<metric>_<field>` (e.g. `mean_cited_by_count`). marshmallow
+# drops undeclared keys on dump and the key name varies with the request, so we
+# can't declare a fixed field; instead a @post_dump hook copies it back from the
+# original group dict. These are the only metric prefixes we emit.
+_GROUP_BY_METRIC_PREFIXES = ("mean_", "sum_", "min_", "max_")
 
 
 class MetaSchema(Schema):
@@ -39,6 +46,19 @@ class GroupBySchema(Schema):
 
     class Meta:
         ordered = True
+
+    @post_dump(pass_original=True)
+    def _surface_metric_value(self, data, original, **kwargs):
+        """Re-inject the dynamic metric-aggregate value (oxjob #389). The group
+        dict from core.group_by.results carries a `<metric>_<field>` key (e.g.
+        `mean_cited_by_count`) that marshmallow drops because it isn't a declared
+        field; copy it through here. Appended after the declared fields so the
+        output order stays key, key_display_name, count, [groups], <metric>."""
+        if isinstance(original, dict):
+            for k, v in original.items():
+                if k.startswith(_GROUP_BY_METRIC_PREFIXES):
+                    data[k] = v
+        return data
 
 
 class GroupBysSchema(Schema):

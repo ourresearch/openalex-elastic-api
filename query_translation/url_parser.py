@@ -689,6 +689,12 @@ def parse_sort_string(sort_string: str) -> List[SortBy]:
     URL path: core/utils.py:map_sort_params assigns "asc" for a directionless
     sort. A desc default here silently reversed the page vs legacy (#323
     Pattern F1). Blank segments (e.g. a trailing comma) are skipped.
+
+    A metric-aggregate group sort (oxjob #389) uses the dotted pseudo-field form
+    `<column>.<metric>` (metric ∈ mean/sum/min/max), e.g. `cited_by_count.mean:desc`.
+    It parses to `SortBy(column_id="cited_by_count", aggregate="mean", ...)`. Only
+    the trailing `.<metric>` is peeled off, so dotted column names with a non-metric
+    last segment (e.g. `primary_topic.id`) are left intact as ordinary sort columns.
     """
     sort_by = []
     for segment in sort_string.split(","):
@@ -702,5 +708,25 @@ def parse_sort_string(sort_string: str) -> List[SortBy]:
         else:
             column = segment
             direction = "asc"
-        sort_by.append(SortBy(column_id=column, direction=direction))
+        column, aggregate = _split_metric_sort_column(column)
+        sort_by.append(
+            SortBy(column_id=column, direction=direction, aggregate=aggregate)
+        )
     return sort_by
+
+
+# Public metric names valid in the dotted `<column>.<metric>` group-sort form
+# (oxjob #389). Mirrors core.group_by.buckets.GROUP_BY_METRICS keys; kept local so
+# the pure URL parser stays free of the elasticsearch-importing buckets module.
+_METRIC_SORT_AGGREGATES = ("mean", "sum", "min", "max")
+
+
+def _split_metric_sort_column(column):
+    """Peel a trailing `.<metric>` off a sort column, returning
+    `(column_id, aggregate)`. `(column, None)` when there is no metric suffix.
+    Only the LAST dotted segment is considered the metric, so a column like
+    `apc_paid.value_usd` (no metric tail) is returned unchanged."""
+    field_part, _, last = column.rpartition(".")
+    if field_part and last in _METRIC_SORT_AGGREGATES:
+        return field_part, last
+    return column, None

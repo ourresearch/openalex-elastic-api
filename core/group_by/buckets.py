@@ -18,6 +18,42 @@ from country_list import GLOBAL_SOUTH_COUNTRIES
 MAX_GROUP_BY_DIMENSIONS = 3
 
 
+# Sort group_by buckets by a metric SUB-AGGREGATION — oxjob #389 (old corpus row
+# L18, e.g. funders ranked by mean(cited_by_count) of their works). ES computes a
+# metric sub-agg on each bucket and orders the terms agg by its path natively (no
+# mapping change). The URL/sort surface is a dotted pseudo-field
+# `sort=<numeric_field>.<metric>:desc` (e.g. `cited_by_count.mean:desc`).
+#
+# Maps our public metric names -> ES metric agg types. `mean` -> ES `avg`.
+GROUP_BY_METRICS = {
+    "mean": "avg",
+    "sum": "sum",
+    "min": "min",
+    "max": "max",
+}
+
+# The sub-agg name we attach to each bucket and order by. Also the prefix of the
+# surfaced response key (`<metric>_<field>`, e.g. `mean_cited_by_count`).
+GROUP_BY_METRIC_AGG_NAME = "group_by_metric"
+
+
+def parse_metric_sort_key(key):
+    """Split a dotted metric sort key `<field>.<metric>` into `(field, metric)`,
+    or return `(None, None)` when `key` is not a metric-aggregate sort key.
+
+    `metric` must be one of GROUP_BY_METRICS (mean/sum/min/max). The field part
+    may itself contain dots (e.g. `apc_paid.value_usd.mean`) — only the LAST
+    dotted segment is the metric, so we rsplit once. Plain bucket-order keys
+    (`count`/`key`) and non-metric sort columns return `(None, None)`.
+    """
+    if not isinstance(key, str) or "." not in key:
+        return None, None
+    field_part, _, metric = key.rpartition(".")
+    if metric in GROUP_BY_METRICS and field_part:
+        return field_part, metric
+    return None, None
+
+
 """
 Bucket creation.
 """
@@ -55,6 +91,7 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params):
             s,
             shard_size,
             sort_params,
+            fields_dict,
         )
     elif "is_global_south" in field.param:
         create_global_south_group_by_buckets(bucket_keys, group_by_field, s)
@@ -96,6 +133,7 @@ def create_sorted_group_by_buckets(
     s,
     shard_size,
     sort_params,
+    fields_dict=None,
 ):
     for key, order in sort_params.items():
         if key in ["count", "key"]:
@@ -112,7 +150,55 @@ def create_sorted_group_by_buckets(
             if "cited_by_percentile_year" in group_by_field:
                 a.format = "0.0"
             s.aggs.bucket(bucket_keys["default"], a)
+            continue
+
+        # Metric-aggregate sort (oxjob #389): order the buckets by a metric
+        # sub-aggregation (mean/sum/min/max of a numeric field). ES computes the
+        # sub-agg per bucket and orders the terms agg by its path natively.
+        metric_field, metric = parse_metric_sort_key(key)
+        if metric_field and metric:
+            metric_es_field = resolve_metric_es_field(fields_dict, metric_field)
+            a = A(
+                "terms",
+                field=group_by_field,
+                order={GROUP_BY_METRIC_AGG_NAME: order},
+                size=per_page,
+                shard_size=shard_size,
+            )
+            if include_unknown:
+                a.missing = missing
+            if "cited_by_percentile_year" in group_by_field:
+                a.format = "0.0"
+            # Attach the metric sub-agg the terms agg orders by; its value is also
+            # surfaced per group (core.group_by.results.get_result reads it back).
+            a.metric(
+                GROUP_BY_METRIC_AGG_NAME,
+                GROUP_BY_METRICS[metric],
+                field=metric_es_field,
+            )
+            s.aggs.bucket(bucket_keys["default"], a)
+            continue
     return s
+
+
+def resolve_metric_es_field(fields_dict, metric_field):
+    """Resolve the metric sort key's field part to its ES field path, rejecting
+    non-numeric (non-RangeField) columns with a clear 400. A metric sub-agg
+    (avg/sum/min/max) only makes sense over a numeric field; ordering by a metric
+    of a keyword/date field is a user error, not a silent empty result."""
+    if not fields_dict or metric_field not in fields_dict:
+        raise APIQueryParamsError(
+            f"Invalid sort field '{metric_field}'. Metric-aggregate group sort "
+            f"requires a numeric field, e.g. cited_by_count.mean:desc."
+        )
+    field = fields_dict[metric_field]
+    if type(field).__name__ != "RangeField":
+        raise APIQueryParamsError(
+            f"Cannot compute a metric aggregate over non-numeric field "
+            f"'{metric_field}'. Metric-aggregate group sort "
+            f"(mean/sum/min/max) requires a numeric field."
+        )
+    return field.es_field()
 
 
 def create_global_south_group_by_buckets(bucket_keys, group_by_field, s):

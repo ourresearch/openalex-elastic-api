@@ -5,6 +5,8 @@ from core.group_by.buckets import (
     buckets_to_keep,
     not_exists_bucket_count,
     exists_bucket_count,
+    parse_metric_sort_key,
+    GROUP_BY_METRIC_AGG_NAME,
 )
 from core.group_by.custom_results import (
     group_by_best_open_version,
@@ -57,7 +59,9 @@ def get_group_by_results(
     ):
         results = get_topics_group_by_results(group_by, response, index_name, connection)
     else:
-        results = get_default_group_by_results(group_by, response, index_name, connection)
+        results = get_default_group_by_results(
+            group_by, response, index_name, connection, get_metric_result_key(params)
+        )
     results = add_zero_values(results, include_unknown, index_name, group_by, params, connection)
 
     # support new id formats so duplicates do not show up with 0 values
@@ -215,7 +219,24 @@ def get_boolean_group_by_results(response, group_by):
     return group_by_results
 
 
-def get_default_group_by_results(group_by, response, index_name, connection='default'):
+def get_metric_result_key(params):
+    """If the request sorts group_by buckets by a metric aggregate (oxjob #389,
+    e.g. `sort=cited_by_count.mean:desc`), return the response key under which the
+    metric value is surfaced per group: `<metric>_<field>` (e.g.
+    `mean_cited_by_count`). Returns None for plain count/key/no sort."""
+    sort_params = params.get("sort") if params else None
+    if not sort_params:
+        return None
+    for key in sort_params:
+        metric_field, metric = parse_metric_sort_key(key)
+        if metric_field and metric:
+            return f"{metric}_{metric_field.replace('.', '_')}"
+    return None
+
+
+def get_default_group_by_results(
+    group_by, response, index_name, connection='default', metric_key=None
+):
     """
     Default group by results.
     """
@@ -230,7 +251,7 @@ def get_default_group_by_results(group_by, response, index_name, connection='def
         key_display_names = {}
 
     for b in buckets:
-        result = get_result(b, key_display_names, group_by, index_name)
+        result = get_result(b, key_display_names, group_by, index_name, metric_key)
         if result:
             group_by_results.append(result)
 
@@ -284,7 +305,7 @@ def get_topics_group_by_results(group_by, response, index_name, connection='defa
     return group_by_results
 
 
-def get_result(b, key_display_names, group_by, index_name):
+def get_result(b, key_display_names, group_by, index_name, metric_key=None):
     if group_by in ["authorships.author.id", "author.id"] or "licenses/None" in str(
         b.key
     ):
@@ -305,7 +326,16 @@ def get_result(b, key_display_names, group_by, index_name):
         b.key = str(round(b.key, 1))
 
     key = format_key(b.key, group_by, index_name)
-    return {"key": key, "key_display_name": key_display_name, "doc_count": doc_count}
+    result = {"key": key, "key_display_name": key_display_name, "doc_count": doc_count}
+
+    # Surface the metric sub-agg value per group (oxjob #389). The terms-agg
+    # bucket carries the metric sub-agg `GROUP_BY_METRIC_AGG_NAME`; expose its
+    # `.value` under `<metric>_<field>` (declared on GroupBySchema so marshmallow
+    # keeps it). ES returns None for an empty/all-missing bucket -> pass through.
+    if metric_key and GROUP_BY_METRIC_AGG_NAME in b:
+        result[metric_key] = b[GROUP_BY_METRIC_AGG_NAME].value
+
+    return result
 
 
 def add_zero_values(results, include_unknown, index_name, field, params, connection='default'):

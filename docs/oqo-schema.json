@@ -249,7 +249,7 @@
     },
     "SortBy": {
       "type": "object",
-      "description": "A single sort key: a column plus a direction. `column_id` may be a real sortable column or a synthetic sort key — 'relevance_score' (requires a search clause; descending only) or, when a group_by is present, the bucket-ordering keys 'count' / 'key'.",
+      "description": "A single sort key: a column plus a direction. `column_id` may be a real sortable column or a synthetic sort key — 'relevance_score' (requires a search clause; descending only) or, when a group_by is present, the bucket-ordering keys 'count' / 'key'. With a group_by, `aggregate` (mean/sum/min/max) orders the buckets by a metric sub-aggregation of a numeric `column_id` — e.g. funders ranked by mean(cited_by_count); URL form 'cited_by_count.mean:desc'.",
       "required": [
         "column_id"
       ],
@@ -275,6 +275,16 @@
           ],
           "description": "Sort direction. 'asc' ascending, 'desc' descending. Defaults to 'asc'.",
           "default": "asc"
+        },
+        "aggregate": {
+          "type": "string",
+          "enum": [
+            "mean",
+            "sum",
+            "min",
+            "max"
+          ],
+          "description": "Metric sub-aggregation to order group_by buckets by (only valid with a group_by, over a numeric column_id). URL form: '<column_id>.<aggregate>:<direction>', e.g. 'cited_by_count.mean:desc'."
         }
       }
     },

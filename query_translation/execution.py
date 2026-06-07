@@ -258,7 +258,16 @@ def _build_params_from_oqo(oqo: OQO, request):
         # dict) so multi-column tiebreakers apply primary→secondary, and a
         # duplicate column collapses to its last direction (same as legacy).
         # "asc" default matches legacy for a directionless sort (#323 Pattern F1).
-        sort = {s.column_id: (s.direction or "asc") for s in oqo.sort_by}
+        # A metric-aggregate group sort (oxjob #389) carries `aggregate`; rebuild
+        # the dotted pseudo-field key (`<column>.<metric>`) the legacy group_by
+        # path parses (core.group_by.buckets.parse_metric_sort_key /
+        # core.sort.get_sort_fields), so the OQO path orders buckets identically.
+        sort = {
+            (f"{s.column_id}.{s.aggregate}" if s.aggregate else s.column_id): (
+                s.direction or "asc"
+            )
+            for s in oqo.sort_by
+        }
 
     # Search-awareness for sorting (#323 2b/2c). `apply_sorting` decides the
     # implicit default sort and gates `relevance_score` via

@@ -333,11 +333,19 @@ def render_sort(sort_by: List[SortBy]) -> Optional[str]:
     order, e.g. [pub_year:desc, cited_by_count:desc] ->
     "publication_year:desc,cited_by_count:desc". Direction is always rendered
     explicitly so the string round-trips back to the same SortBy list.
+
+    A metric-aggregate group sort (oxjob #389) round-trips through the dotted
+    pseudo-field form `<column>.<aggregate>:<direction>`, e.g.
+    `cited_by_count.mean:desc`, so `parse_sort_string` re-derives the same SortBy.
     """
     if not sort_by:
         return None
 
-    return ",".join(f"{s.column_id}:{s.direction or 'asc'}" for s in sort_by)
+    def _render_one(s: SortBy) -> str:
+        column = f"{s.column_id}.{s.aggregate}" if s.aggregate else s.column_id
+        return f"{column}:{s.direction or 'asc'}"
+
+    return ",".join(_render_one(s) for s in sort_by)
 
 
 def can_render_to_url(oqo: OQO) -> Tuple[bool, Optional[str]]:
