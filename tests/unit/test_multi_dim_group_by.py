@@ -148,6 +148,38 @@ class TestNestedResults:
         assert calculate_nested_group_by_count(params, self._resp()) == 2
 
 
+class TestGroupBySchemaSerialization:
+    """marshmallow drops undeclared keys on dump — the nested `groups` list must
+    be a declared self-referential field, or it's silently stripped (oxjob #387;
+    same footgun class as the meta.x_query pass-through)."""
+
+    def test_nested_groups_survive_dump_with_count_rename(self):
+        from core.schemas import GroupBySchema
+
+        nested = [
+            {
+                "key": "T1",
+                "key_display_name": "Topic 1",
+                "doc_count": 500,
+                "groups": [
+                    {"key": "2020", "key_display_name": "2020", "doc_count": 120},
+                ],
+            }
+        ]
+        out = GroupBySchema(many=True).dump(nested)
+        assert out[0]["count"] == 500
+        assert out[0]["groups"][0]["key"] == "2020"
+        assert out[0]["groups"][0]["count"] == 120  # doc_count renamed at each level
+
+    def test_single_dim_dump_has_no_groups_key(self):
+        from core.schemas import GroupBySchema
+
+        out = GroupBySchema(many=True).dump(
+            [{"key": "2020", "key_display_name": "2020", "doc_count": 120}]
+        )
+        assert "groups" not in out[0]  # byte-compatible with pre-#387
+
+
 class TestOqoExecutionPath:
     """The OQO/OQL execution path (corpus case 48) must no longer 400 on
     multi-dim group_by; it flows the dimension list through as the comma string."""

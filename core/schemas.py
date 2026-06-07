@@ -29,6 +29,13 @@ class GroupBySchema(Schema):
     key = fields.Str()
     key_display_name = fields.Str()
     count = fields.Int(attribute="doc_count")
+    # Nested sub-groups for multi-dimensional (nested) group_by — oxjob #387.
+    # Self-referential so every level renames doc_count -> count consistently.
+    # marshmallow drops undeclared keys on dump, so without this the inner
+    # `groups` list computed by core.group_by.results.get_nested_group_by_results
+    # is silently stripped. Omitted from output for single-dim results (which
+    # carry no `groups` key), so those responses stay byte-compatible.
+    groups = fields.Nested(lambda: GroupBySchema(), many=True)
 
     class Meta:
         ordered = True
