@@ -12,6 +12,14 @@ class MetaSchema(Schema):
     apc_list_sum_usd = fields.Int()
     apc_paid_sum_usd = fields.Int()
     cited_by_count_sum = fields.Int()
+    # Private, unstable query echo {oql, oqo, url} the GUI rehydrates from (oxjob
+    # #373/#378). `fields.Raw` is a pass-through: marshmallow drops undeclared meta
+    # keys on dump, so this field is what lets `core.shared_view`'s injected
+    # `meta.x_query` survive serialization on every entity response. Omitted from
+    # the payload when absent (no `dump_default`). The `x_` prefix signals it's
+    # undocumented/mutable; it is deliberately NOT a `/properties` Field, so it
+    # does not touch the properties drift gate.
+    x_query = fields.Raw()
 
     class Meta:
         ordered = True

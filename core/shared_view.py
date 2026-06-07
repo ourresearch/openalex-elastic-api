@@ -50,9 +50,75 @@ def shared_view(request, fields_dict, index_name, default_sort, connection=None,
     s = construct_query(params, fields_dict, index_name, default_sort, connection)
     response = execute_search(s, params)
     result = format_response(response, params, index_name, fields_dict, s, connection)
+    attach_x_query(result, request, index_name)
     if settings.DEBUG:
         print(s.to_dict())
     return result
+
+
+def attach_x_query(result, request, index_name):
+    """Attach the private `meta.x_query` echo {oql, oqo, url} so the GUI can source
+    its chip state from the server's canonical query object instead of re-parsing
+    the route (oxjob #378). The corresponding MetaSchema `x_query` pass-through
+    field lets it survive marshmallow's `.dump()`.
+
+    Best-effort: x_query is additive metadata, so any failure here just omits it —
+    it must never break a results response (this is the hot path serving every
+    entity query).
+
+    Built from the RAW request args, not `params`: `params["filters"]` folds in
+    server-injected defaults (e.g. `is_xpac:false`), but x_query must mirror the
+    user's own query so the chips match what the user typed.
+
+    `entity_resolver` is left as None (default) on this path — resolving entity
+    display names would add per-request ES lookups to every SERP call. The
+    legacy-path `oql` therefore renders bare IDs; that's fine because the client
+    sources chips from `url`, and the "too complex → view as OQL" card (which is
+    the only consumer of `oql`) only appears when `url is None`, which never
+    happens for a query that arrived as a URL.
+
+    Known gaps (acceptable for #378 S1 — x_query is not yet consumed; the #378 V1
+    differential gate will enumerate these before the client cutover): the
+    two-phase semantic search path returns earlier and never reaches here, and
+    scoped search params (`search.title`, `search.title_and_abstract`, `.exact`)
+    are not threaded into the OQO.
+    """
+    try:
+        if not isinstance(result, dict) or "meta" not in result:
+            return
+        # Imported lazily, at request time: `query_translation/__init__` imports
+        # `views`, which imports back from `core.shared_view`, so a module-level
+        # import here deadlocks when shared_view is the entry point of the import
+        # graph. By call time everything is fully initialized.
+        from query_translation.url_parser import parse_url_to_oqo
+        from query_translation.x_query import build_x_query
+
+        entity_type = index_name.split("-")[0]
+        if not entity_type:
+            return
+        group_by_string = (
+            request.args.get("group_by") or request.args.get("group-by")
+            or request.args.get("group_bys") or request.args.get("group-bys")
+        )
+        oqo = parse_url_to_oqo(
+            entity_type=entity_type,
+            filter_string=request.args.get("filter"),
+            sort_string=request.args.get("sort"),
+            sample=request.args.get("sample", type=int),
+            group_by_string=group_by_string,
+            select_string=request.args.get("select"),
+            seed=request.args.get("seed"),
+            per_page=request.args.get("per-page", type=int)
+            or request.args.get("per_page", type=int),
+            page=request.args.get("page", type=int),
+            cursor=request.args.get("cursor"),
+            search_string=request.args.get("search"),
+            semantic_search_string=request.args.get("search.semantic"),
+        )
+        result["meta"]["x_query"] = build_x_query(oqo)
+    except Exception:
+        # Additive metadata only — never let it break the results response.
+        pass
 
 
 def construct_query(params, fields_dict, index_name, default_sort, connection):

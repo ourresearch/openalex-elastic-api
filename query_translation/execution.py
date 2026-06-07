@@ -33,23 +33,18 @@ from core.shared_view import (
 )
 from core.utils import get_data_version_connection
 from query_translation.oqo import OQO, VALID_OPERATORS
-from query_translation.oqo_canonicalizer import canonicalize_oqo
 from query_translation.oqo_to_es import (
     OQOTranslationError,
     oqo_to_search_and_filter_q,
 )
 from query_translation.oql_parser import OQLParseError, parse_oql_to_oqo
-from query_translation.oql_renderer import render_oqo_to_oql
-from query_translation.url_renderer import URLRenderError, render_oqo_to_url
 from query_translation.validator import validate_oqo, _has_search_clause
 
-# Shared response/render helpers live with the translation resource; execution
-# reuses them (no cycle — views.py never imports this module).
-from query_translation.views import (
-    safe_get_display_name,
-    _components_to_oxurl,
-    _error_response,
-)
+# Shared response/render helpers. `build_x_query`/`safe_get_display_name` live in
+# the dependency-light `x_query` module (shared with `core.shared_view`, #378);
+# `_error_response` stays with the translation resource. No cycle either way.
+from query_translation.x_query import build_x_query, safe_get_display_name
+from query_translation.views import _error_response
 
 # ---------------------------------------------------------------------------
 # Entity dispatch — maps OQO `get_rows` to (fields_dict, index_name, default_sort).
@@ -519,46 +514,13 @@ def _execute_oqo(oqo_dict: dict):
     # this execute path — keeps `x_query` off `/works?filter=` and out of
     # `/properties`/docs. Replaces #372's top-level `oqo` echo (single canonical
     # home; no other consumer reads the echo — the GUI uses `/query/*`).
-    serialized.setdefault("meta", {})["x_query"] = _build_x_query(oqo)
+    # Resolve ES-backed entity display names on this explicit execute path so the
+    # OQL reads `institution is I136199984 [Harvard]`, not a bare ID (#376). The
+    # hot per-entity SERP path (core/shared_view.py, #378) passes no resolver.
+    serialized.setdefault("meta", {})["x_query"] = build_x_query(
+        oqo, entity_resolver=safe_get_display_name
+    )
     return jsonify(serialized), 200
-
-
-def _build_x_query(oqo: OQO) -> dict:
-    """Build the private `meta.x_query` triple {oql, oqo, url} (oxjob #373).
-
-    The canonical multi-form representation of the executed query:
-      - oql: re-rendered canonical OQL (round-trips: re-parsing it yields `oqo`)
-      - oqo: the canonical structured query object the client hydrates from
-      - url: the OXURL (`/works?filter=…`) form, or None when the OQO isn't
-             URL-expressible (nested boolean trees, multi-dim group_by) — the URL
-             syntax is a lossy subset of OQO, so this is null, never a 500.
-
-    `x_query` is deliberately **private/unstable**: `x_` prefix, undocumented,
-    injected onto the serialized `meta` AFTER marshmallow `.dump()` (so it never
-    needs a schema field) and only on the OQL/OQO execute path — it stays out of
-    `/properties` and the public docs.
-    """
-    canonical = canonicalize_oqo(oqo)
-
-    url_form = None
-    try:
-        components = render_oqo_to_url(canonical)
-        url_form = _components_to_oxurl(canonical.get_rows, components)
-    except URLRenderError:
-        # Not URL-expressible (e.g. nested boolean tree). url stays None; the
-        # client treats null as an "advanced query" it can't render as chips.
-        pass
-
-    return {
-        # Resolve ES-backed entity display names (institution/author/source/…)
-        # so the SERP's x_query.oql reads `institution is I136199984 [Harvard]`,
-        # not a bare ID (#376 readability). Mirrors the /query/oql translate path;
-        # safe_get_display_name caches + swallows lookup errors, and countries /
-        # languages / SDGs still resolve via the built-in tables.
-        "oql": render_oqo_to_oql(canonical, entity_resolver=safe_get_display_name),
-        "oqo": canonical.to_dict(),
-        "url": url_form,
-    }
 
 
 def _oql_parse_error_response(exc: OQLParseError):

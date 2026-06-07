@@ -35,7 +35,6 @@ from core.shared_view import (
 from core.preference import clean_preference, combine_preferences
 from core.properties import get_entity_properties, render_properties
 from core.utils import get_data_version_connection
-from core.utils import get_display_name as _get_display_name
 from query_translation.oqo import OQO, VALID_OPERATORS, filter_from_dict
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 from query_translation.oqo_to_es import (
@@ -46,39 +45,10 @@ from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
 from query_translation.url_parser import parse_url_to_oqo
 from query_translation.url_renderer import (
     URLRenderError, can_render_to_url, render_oqo_to_url, )
+from query_translation.x_query import (
+    _components_to_oxurl, safe_get_display_name, )
 from query_translation.validator import (
     ValidationError, ValidationResult, validate_oqo, _has_search_clause, )
-
-
-# Entity types that exist in Elasticsearch and can be looked up
-NATIVE_ENTITY_TYPES = {
-    "institutions", "authors", "sources", "publishers", "funders", "topics", "subfields", "fields", "domains", "keywords", "concepts"
-}
-
-
-def safe_get_display_name(entity_id: str):
-    """
-    Resolve entity display name from Elasticsearch for native entity types.
-
-    Only queries Elasticsearch for entities that actually exist there.
-    Non-native types (types, languages, countries, etc.) return None
-    and are handled by the renderer's built-in lookup tables.
-
-    The entity_id comes in as "institutions/i33213144" but get_display_name
-    expects just the short ID "i33213144" (it prepends https://openalex.org/).
-    """
-    if not entity_id or "/" not in entity_id:
-        return None
-
-    entity_type, short_id = entity_id.split("/", 1)
-    if entity_type not in NATIVE_ENTITY_TYPES:
-        return None  # Let default resolver handle it
-
-    try:
-        # Pass just the short ID - get_display_name prepends the URL
-        return _get_display_name(short_id)
-    except Exception:
-        return None
 
 
 blueprint = Blueprint("query_translation", __name__)
@@ -341,32 +311,6 @@ def parse_oqo_input(entity_type: str, input_data):
         return oqo, None
     except Exception as e:
         return None, f"Failed to parse OQO format: {str(e)}"
-
-
-# oxurl component order — the readable order the GUI/users emit. Bare/keyword
-# `search` is folded into `filter` as a `default.search:` clause by
-# render_oqo_to_url, so it is not a separate key here. `search.semantic` is the
-# exception: vector search has no `filter=` form, so it rides as its own
-# top-level param (rendered first, ahead of `filter`).
-_OXURL_COMPONENT_ORDER = (
-    "search.semantic", "filter", "sort", "group_by", "select", "sample", "seed", "per_page", "page", "cursor", )
-
-
-def _components_to_oxurl(entity_type: str, components: dict) -> str:
-    """Build a readable OpenAlex URL string (e.g. `/works?filter=type:article`)
-    from the entity type + the component dict returned by render_oqo_to_url.
-
-    `:` `, ` `|` are left un-encoded (readable filter syntax); spaces and other
-    reserved chars are percent-encoded so the URL is still valid.
-    """
-    pairs = []
-    for key in _OXURL_COMPONENT_ORDER:
-        value = components.get(key)
-        if value is None or value == "":
-            continue
-        pairs.append(f"{key}={urllib.parse.quote(str(value), safe=':, |')}")
-    base = f"/{entity_type}"
-    return base + ("?" + "&".join(pairs) if pairs else "")
 
 
 def render_all_formats(oqo: OQO, validation_result: ValidationResult):
