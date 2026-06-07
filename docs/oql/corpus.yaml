@@ -12,8 +12,9 @@
 #
 # `oqo` is the independent oracle (authored from intent / the #284 corpus, NOT
 # from this parser). Equality is checked after canonicalization, so operand
-# order and string-vs-typed scalars don't matter here. When `oqo` is omitted the
-# harness only asserts round-trip identity (used for row 78, the huge SR tree).
+# order and string-vs-typed scalars don't matter here. Every ok/hint row carries
+# an `oqo`; row 78 (the 114-leaf zd#8101 SR tree) is the one materialized from
+# its `oql` by regen_corpus_oql.py (#384) so the GUI mirror needs no live parser.
 #
 # Per-row facets (#345):
 #   * category   — topical grouping (7 values; the GUI playground filters on it).
@@ -27,12 +28,28 @@
 #     This replaced the old conflated `source` ("spec spine" / "#284 worked
 #     examples"); see archived/oqo-spec/work/EXAMPLES.md for the per-row sources
 #     (each #284 OXURL verified live 2026-05-30).
-#   * oxurl_representable — does the spec say this query is expressible as a
-#     classic api.openalex.org URL? false for the invalid-OQL error rows and the
-#     genuinely non-representable `out-of-scope` rows (row 68 funder-by-acronym,
-#     row 76 set-reference). The GUI playground auto-renders the
-#     oxurl for the `true` rows via query_translation/url_renderer.py; a `true`
-#     row that fails to render is a *translator gap* to fix, not a corpus error.
+#   * oxurl_status — for each `ok` row, how it relates to the classic
+#     api.openalex.org / openalex.org URL syntax (oxjob #384). One of:
+#       has-oxurl          — renders to a classic SERP URL (the common case).
+#       oql-only           — a valid OQO the server runs, but OXURL *can't*
+#                            express it (e.g. row 78's OR across stemmed
+#                            `display_name.search` and no-stem
+#                            `display_name.search.exact` — `|` only ORs within one
+#                            key). This is an OQL expressiveness WIN, not a bug.
+#       translator-bug     — OXURL *should* express it per spec, but the renderer
+#                            is wrong/incomplete (a query_translation/ bug to fix).
+#       server-unsupported — valid OQO the live API can't execute yet (e.g. row 48
+#                            multi-dim group_by, single-dim only -> #297). The URL
+#                            renders; the server won't run it.
+#     Authored (editorial) — the three failure modes are NOT mechanically
+#     distinguishable from a render success/failure. Only `ok` rows carry it;
+#     error / out-of-scope rows are non-queries with no oxurl status.
+#   * oxurl — the rendered classic URL string, a DERIVED field written by
+#     docs/oql/regen_corpus_oql.py (render via query_translation/url_renderer.py).
+#     null for `oql-only` rows (the renderer raises) and absent on error/oos rows.
+#     The GUI playground (openalex-gui/src/oqlCorpus.js) is now a pure yaml->js
+#     copy of these fields — no live parser call. Kept fresh by the #384 drift
+#     gate; re-run regen_corpus_oql.py after any oql/oqo edit.
 version: 2
 rows:
 
@@ -44,7 +61,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I136199984'
   status: ok
   oql: 'works where institution is I136199984 [Harvard]'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I136199984}]}
@@ -55,7 +73,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I136199984'
   status: ok
   oql: 'works where institution is I136199984 [Harvard]'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I136199984}]}
@@ -66,7 +85,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I33213144|I97018004'
   status: ok
   oql: 'works where institution is any of (I33213144 [Harvard], I97018004 [Stanford])'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
@@ -79,7 +99,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:!I33213144,authorships.institutions.lineage:!I97018004'
   status: ok
   oql: |-
     works
@@ -95,7 +116,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=type:article|review'
   status: ok
   oql: 'works where type is any of (article, review)'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
@@ -107,7 +129,6 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: false
   status: error
   oql: 'works where institution is [Harvard]'
   diagnostic: OQL_MISSING_ENTITY_ID
@@ -121,7 +142,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:apple,display_name.search:banana|cherry'
   status: ok
   oql: 'works where title contains apple and title contains any of (banana, cherry)'
   oqo: {get_rows: works, filter_rows: [
@@ -136,7 +158,6 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: false
   status: error
   oql: 'works where title contains apple and banana or cherry'
   diagnostic: OQL_MIXED_BOOL_NEEDS_PARENS
@@ -147,7 +168,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:apple,display_name.search:banana,display_name.search:cherry'
   status: ok
   oql: |-
     works
@@ -163,7 +185,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:apple,display_name.search:banana,display_name.search:cherry'
   status: ok
   oql: |-
     works
@@ -183,7 +206,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:change,display_name.search:climate'
   status: ok
   oql: 'works where title contains change and title contains climate'
   oqo: {get_rows: works, filter_rows: [
@@ -196,7 +220,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22climate%20change%22'
   status: ok
   oql: 'works where title contains "climate change"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"climate change"', operator: contains}]}
@@ -207,7 +232,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:%22whopper%20junior%22'
   status: ok
   oql: 'works where title contains near "whopper junior"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"whopper junior"', operator: contains}]}
@@ -218,7 +244,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:cat'
   status: ok
   oql: 'works where title contains "cat"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: cat, operator: contains}]}
@@ -229,7 +256,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:cat'
   status: ok
   oql: 'works where title contains cat'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: cat, operator: contains}]}
@@ -240,7 +268,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22rock%20or%20roll%22'
   status: ok
   oql: 'works where title contains "rock or roll"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"rock or roll"', operator: contains}]}
@@ -251,7 +280,6 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: false
   status: error
   oql: 'works where title contains climate change or warming'
   diagnostic: OQL_MIXED_BOOL_NEEDS_PARENS
@@ -262,7 +290,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:climate,display_name.search:change|warming'
   status: ok
   oql: 'works where title contains climate and title contains any of (change, warming)'
   oqo: {get_rows: works, filter_rows: [
@@ -277,7 +306,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:bar*'
   status: ok
   oql: 'works where title contains "bar*"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'bar*', operator: contains}]}
@@ -288,7 +318,6 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: false
   status: error
   oql: 'works where title contains bar*'
   diagnostic: OQL_WILDCARD_NEEDS_EXACT
@@ -302,7 +331,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22smart%20phone%22~3'
   status: ok
   oql: 'works where title contains "smart phone" within 3 words'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart phone"~3', operator: contains}]}
@@ -313,7 +343,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:foo*bar'
   status: ok
   oql: 'works where title contains "foo*bar"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'foo*bar', operator: contains}]}
@@ -324,7 +355,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:wom%3Fn'
   status: ok
   oql: 'works where title contains "wom?n"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'wom?n', operator: contains}]}
@@ -335,7 +367,6 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: false
   status: error
   oql: 'works where title contains *cycle'
   diagnostic: OQL_LEADING_WILDCARD
@@ -346,7 +377,6 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: false
   status: error
   oql: 'works where title contains ?cycle'
   diagnostic: OQL_LEADING_WILDCARD
@@ -357,7 +387,6 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: false
   status: error
   oql: 'works where title contains ab*'
   diagnostic: OQL_SHORT_WILDCARD_PREFIX
@@ -368,7 +397,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22smart%20phone*%22~3'
   status: ok
   oql: 'works where title contains "smart phone*" within 3 words'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart phone*"~3', operator: contains}]}
@@ -379,7 +409,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22smart%22~3~%22phone%22'
   status: ok
   oql: 'works where title contains "smart" within 3 words of "phone"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart"~3~"phone"', operator: contains}]}
@@ -390,7 +421,6 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: false
   status: error
   oql: 'works where title contains smart* within 3 words'
   diagnostic: OQL_WILDCARD_IN_PROXIMITY
@@ -401,7 +431,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22smart*%20phone%22'
   status: ok
   oql: 'works where title contains "smart* phone"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart* phone"', operator: contains}]}
@@ -412,7 +443,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22machine%20learning%22~5~%22neural%20network%22'
   status: ok
   oql: 'works where title contains "machine learning" within 5 words of "neural network"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"machine learning"~5~"neural network"', operator: contains}]}
@@ -423,7 +455,6 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: false
   status: error
   oql: 'works where title contains "pro*" within 3 words of "pre*"'
   diagnostic: OQL_MULTI_WILDCARD_SHORT_PREFIX
@@ -434,7 +465,6 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: false
   status: error
   oql: 'works where title contains "big* cat* dog*"'
   diagnostic: OQL_TOO_MANY_WILDCARDS
@@ -445,7 +475,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?search.semantic=graph%20neural%20networks%20for%20molecular%20property%20prediction'
   status: ok
   oql: |-
     works
@@ -459,7 +490,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:%22machine%20learning%22'
   status: ok
   oql: 'works where title & abstract contains "machine learning"'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"machine learning"', operator: contains}]}
@@ -470,7 +502,8 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:%22smart%20phone%22~3'
   status: ok
   oql: 'works where title contains near "smart phone" within 3 words'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"smart phone"~3', operator: contains}]}
@@ -483,7 +516,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#2)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works'
   status: ok
   oql: 'works'
   oqo: {get_rows: works}
@@ -494,7 +528,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#3)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=publication_year:2020'
   status: ok
   oql: 'works where year is 2020'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 2020}]}
@@ -504,7 +539,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#23)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=publication_year:2020-,authorships.institutions.lineage:I136199984|I33213144'
   status: ok
   oql: |-
     works
@@ -521,7 +557,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#8)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I130438778&sort=cited_by_count:desc'
   status: ok
   oql: |-
     works
@@ -535,7 +572,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#19)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I201448701,funders.id:F4320332161,open_access.is_oa:false'
   status: ok
   oql: |-
     works
@@ -552,7 +590,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#46)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:change,title_and_abstract.search:climate'
   status: ok
   oql: |-
     works
@@ -567,7 +606,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#10)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/authors?sort=works_count:desc'
   status: ok
   oql: 'authors sort by works_count desc'
   oqo: {get_rows: authors, sort_by: [{column_id: works_count, direction: desc}]}
@@ -577,7 +617,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#18)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/authors?filter=has_orcid:true,last_known_institutions.country_code:BR'
   status: ok
   oql: 'authors where it has an ORCID and author country is BR'
   oqo: {get_rows: authors, filter_rows: [
@@ -589,7 +630,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#17)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/authors?filter=ids.openalex:A5022654839'
   status: ok
   oql: 'authors where openalex id is A5022654839'
   oqo: {get_rows: authors, filter_rows: [{column_id: ids.openalex, value: A5022654839}]}
@@ -599,7 +641,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#6)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/sources?filter=type:journal'
   status: ok
   oql: 'sources where type is journal'
   oqo: {get_rows: sources, filter_rows: [{column_id: type, value: journal}]}
@@ -609,7 +652,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#12)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/institutions?filter=country_code:FR'
   status: ok
   oql: 'institutions where country code is FR'
   oqo: {get_rows: institutions, filter_rows: [{column_id: country_code, value: FR}]}
@@ -619,7 +663,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#14)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/topics?filter=domain.id:3'
   status: ok
   oql: 'topics where domain is 3'
   oqo: {get_rows: topics, filter_rows: [{column_id: domain.id, value: '3'}]}
@@ -629,7 +674,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#37)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/authors?filter=last_known_institutions.id:I114027177,topics.id:T10895'
   status: ok
   oql: |-
     authors
@@ -647,7 +693,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#10)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.author.id:A5066175077&group_by=authorships.author.id'
   status: ok
   oql: 'works where author is A5066175077 [Stephen Hawking] group by author'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.id, value: A5066175077}],
@@ -658,7 +705,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#17)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=fulltext.search:%22Macrocystis%20pyrifera%22&group_by=authorships.author.id'
   status: ok
   oql: 'works where fulltext contains near "Macrocystis pyrifera" group by author'
   # "anywhere" is a back-compat alias of the canonical "fulltext" scope and emits
@@ -672,7 +720,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#75)"
-  oxurl_representable: true
+  oxurl_status: server-unsupported
+  oxurl: 'https://openalex.org/works?filter=publication_year:1976-&group_by=primary_topic.id,publication_year'
   status: ok
   oql: 'works where year >= 1976 group by topic, year'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 1976, operator: '>='}],
@@ -684,7 +733,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#20)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.countries:US,authorships.countries:col_eu27&group_by=primary_topic.id'
   status: ok
   oql: 'works where country is US and country is col_eu27 group by topic'
   oqo: {get_rows: works, filter_rows: [
@@ -698,7 +748,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#48)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=is_retracted:true&group_by=authorships.institutions.lineage'
   status: ok
   oql: 'works where it''s retracted group by institution'
   oqo: {get_rows: works, filter_rows: [{column_id: is_retracted, value: true}],
@@ -709,7 +760,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#27)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=cited_by_count:>100,title_and_abstract.search:%22coral%20bleaching%22&group_by=primary_location.source.id'
   status: ok
   oql: |-
     works
@@ -725,7 +777,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#13)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=type:book&group_by=primary_topic.field.id'
   status: ok
   oql: 'works where type is book group by field'
   oqo: {get_rows: works, filter_rows: [{column_id: type, value: book}],
@@ -736,7 +789,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#59)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I154570441,is_retracted:true&group_by=authorships.author.id'
   status: ok
   oql: 'works where institution is I154570441 [UCSB] and it''s retracted group by author'
   oqo: {get_rows: works, filter_rows: [
@@ -749,7 +803,8 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#22)"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I107639228&group_by=sustainable_development_goals.id'
   status: ok
   oql: 'works where institution is I107639228 [Notre Dame] group by SDG'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I107639228}],
@@ -764,7 +819,8 @@ rows:
     type: "librarian guide"
     label: "Cranfield SLR combining-strings guide"
     url: "https://blogs.cranfield.ac.uk/library/slr-combining-strings/"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:agile,title_and_abstract.search:%22cycle%20time%22|%22lead%20time%22,title_and_abstract.search:%22demand%20chain%22|%22supply%20chain%22|%22value%20chain%22'
   status: ok
   oql: |-
     works
@@ -792,7 +848,8 @@ rows:
     type: "librarian guide"
     label: "U. Manitoba Scopus proximity guide"
     url: "https://libguides.lib.umanitoba.ca/scopus/phrases"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:%22smart%20phone%22~3'
   status: ok
   oql: 'works where title & abstract contains near "smart phone" within 3 words'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: '"smart phone"~3', operator: contains}]}
@@ -804,7 +861,8 @@ rows:
     type: "librarian guide"
     label: "U. Manitoba Scopus proximity guide"
     url: "https://libguides.lib.umanitoba.ca/scopus/phrases"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:phone*'
   status: ok
   oql: 'works where title & abstract contains "phone*"'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: 'phone*', operator: contains}]}
@@ -816,7 +874,8 @@ rows:
     type: "librarian guide"
     label: "U. Manitoba Scopus proximity guide"
     url: "https://libguides.lib.umanitoba.ca/scopus/phrases"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:%22smart%20phone*%22~3'
   status: ok
   oql: 'works where title & abstract contains "smart phone*" within 3 words'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"smart phone*"~3', operator: contains}]}
@@ -828,7 +887,8 @@ rows:
     type: "librarian guide"
     label: "UCL Scopus search-techniques guide"
     url: "https://library-guides.ucl.ac.uk/scopus/search-techniques"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:%22oyster%20toadfish%22'
   status: ok
   oql: 'works where title & abstract contains "oyster toadfish"'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"oyster toadfish"', operator: contains}]}
@@ -839,7 +899,8 @@ rows:
   provenance:
     type: "librarian guide"
     label: "Caltech Web of Science wildcard guide"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:behavio*r'
   status: ok
   oql: 'works where title & abstract contains "behavio*r"'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: 'behavio*r', operator: contains}]}
@@ -851,7 +912,8 @@ rows:
     type: "librarian guide"
     label: "KCL/Stirling systematic-review template"
     url: "https://libguides.kcl.ac.uk/systematicreview/advanced"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=language:en,publication_year:-2024,publication_year:2015-,title_and_abstract.search:ASD|%22autism%20spectrum%20disorder%22|autism,title_and_abstract.search:intervention|therapy|treatment,type:article|review'
   status: ok
   oql: |-
     works
@@ -886,7 +948,8 @@ rows:
     type: "vendor docs"
     label: "Dimensions DSL reference + cookbook"
     url: "https://docs.dimensions.ai/dsl/"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=funders.id:F4320337351,open_access.oa_status:gold'
   status: ok
   oql: 'works where funder is F4320337351 [NCI] and OA status is gold'
   oqo: {get_rows: works, filter_rows: [
@@ -899,7 +962,8 @@ rows:
     type: "vendor docs"
     label: "Dimensions DSL reference + cookbook"
     url: "https://docs.dimensions.ai/dsl/"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=publication_year:-2023,publication_year:2018-,title_and_abstract.search:CRISPR,title_and_abstract.search:%22genome%20editing%22&sort=cited_by_count:desc&sample=500'
   status: ok
   oql: |-
     works
@@ -922,7 +986,8 @@ rows:
   provenance:
     type: "librarian guide"
     label: "Bibliometric study of librarian-authored SRs"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search:library'
   status: ok
   oql: 'works where raw affiliation contains library'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: library, operator: contains}]}
@@ -933,7 +998,8 @@ rows:
     type: "vendor docs"
     label: "Elsevier Scopus Search Tips"
     url: "https://schema.elsevier.com/dtds/document/bkapi/search/SCOPUSSearchTips.htm"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search:%22london%20hospital%22~5'
   status: ok
   oql: 'works where raw affiliation contains near "london hospital" within 5 words'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"london hospital"~5', operator: contains}]}
@@ -945,7 +1011,8 @@ rows:
     type: "vendor docs"
     label: "Elsevier Scopus Search Tips"
     url: "https://schema.elsevier.com/dtds/document/bkapi/search/SCOPUSSearchTips.htm"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=doi:10.1021/es052595%2B'
   status: ok
   oql: 'works where DOI is 10.1021/es052595+'
   oqo: {get_rows: works, filter_rows: [{column_id: doi, value: '10.1021/es052595+'}]}
@@ -957,7 +1024,8 @@ rows:
     type: "vendor docs"
     label: "Clarivate Web of Science field tags"
     url: "https://webofscience.zendesk.com/hc/en-us/articles/26916347018257-Web-of-Science-Core-Collection-Advanced-Search-Field-Tags"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.author.orcid:0000-0002-1838-9363'
   status: ok
   oql: 'works where ORCID is 0000-0002-1838-9363'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.orcid, value: '0000-0002-1838-9363'}]}
@@ -968,7 +1036,6 @@ rows:
     type: "vendor docs"
     label: "Dimensions DSL reference + cookbook"
     url: "https://docs.dimensions.ai/dsl/"
-  oxurl_representable: false
   status: out-of-scope
   oql: null
   note: '"funded by the acronym DFG" — out of scope (not representable). OQO only expresses funders.id equality AFTER an out-of-band /funders?search=DFG -> ID resolution; the acronym has no OQL/OQO form.'
@@ -979,7 +1046,8 @@ rows:
     type: "vendor docs"
     label: "Elsevier Scopus Search Tips"
     url: "https://schema.elsevier.com/dtds/document/bkapi/search/SCOPUSSearchTips.htm"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=type:article|review'
   status: ok
   oql: 'works where type is any of (article, review)'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
@@ -991,7 +1059,8 @@ rows:
     type: "vendor docs"
     label: "Elsevier Scopus Search Tips"
     url: "https://schema.elsevier.com/dtds/document/bkapi/search/SCOPUSSearchTips.htm"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=language:es'
   status: ok
   oql: 'works where language is es'
   oqo: {get_rows: works, filter_rows: [{column_id: language, value: es}]}
@@ -1002,7 +1071,8 @@ rows:
     type: "librarian guide"
     label: "UCL Web of Science search-tips guide"
     url: "https://library-guides.ucl.ac.uk/web-of-science/search-tips"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:!pediatric,title_and_abstract.search:covid'
   status: ok
   oql: |-
     works
@@ -1019,7 +1089,8 @@ rows:
     type: "vendor docs"
     label: "Clarivate Web of Science field tags"
     url: "https://webofscience.zendesk.com/hc/en-us/articles/26916347018257-Web-of-Science-Core-Collection-Advanced-Search-Field-Tags"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:computing,title_and_abstract.search:quantum&group_by=authorships.countries'
   status: ok
   oql: |-
     works
@@ -1037,7 +1108,8 @@ rows:
     type: "vendor docs"
     label: "Dimensions DSL reference + cookbook"
     url: "https://docs.dimensions.ai/dsl/"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:CRISPR,title_and_abstract.search:Cas9&group_by=authorships.author.id'
   status: ok
   oql: |-
     works
@@ -1054,7 +1126,8 @@ rows:
     type: "vendor docs"
     label: "Dimensions DSL reference + cookbook"
     url: "https://docs.dimensions.ai/dsl/"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:CRISPR&group_by=funders.id'
   status: ok
   oql: 'works where title & abstract contains CRISPR group by funder'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: CRISPR, operator: contains}],
@@ -1067,7 +1140,8 @@ rows:
     type: "librarian guide"
     label: "Tufts Web of Science proximity examples"
     url: "https://researchguides.library.tufts.edu/c.php?g=249270&p=1660077"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search:%22tufts%20boston%22~5'
   status: ok
   oql: 'works where raw affiliation contains near "tufts boston" within 5 words'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"tufts boston"~5', operator: contains}]}
@@ -1078,7 +1152,6 @@ rows:
     type: "librarian guide"
     label: "UCL Web of Science search-tips guide"
     url: "https://library-guides.ucl.ac.uk/web-of-science/search-tips"
-  oxurl_representable: false
   status: out-of-scope
   oql: null
   note: Set-reference / stateful query composition (refine a saved search) — no single OQO; out of scope.
@@ -1089,7 +1162,8 @@ rows:
     type: "zendesk ticket"
     label: "OpenAlex zd#8101 + PR #240 (byline recall)"
     url: "https://openalex.zendesk.com/agent/tickets/8101"
-  oxurl_representable: true
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=raw_author_name.search:%22john%20smith%22~2'
   status: ok
   oql: 'works where byline contains near "john smith" within 2 words'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_author_name.search, value: '"john smith"~2', operator: contains}]}
@@ -1101,7 +1175,8 @@ rows:
     type: "zendesk ticket"
     label: "OpenAlex zd#8101 — Claire's real systematic review"
     url: "https://openalex.zendesk.com/agent/tickets/8101"
-  oxurl_representable: true
+  oxurl_status: oql-only
+  oxurl: null
   status: ok
   note: >-
     The real zd#8101 systematic-review tree (Claire): a 5-block AND of large
@@ -1143,3 +1218,99 @@ rows:
         questionnaire, questionnaires, "focus group", "focus groups",
         "lived experience",
       )
+  oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: display_name.search, value: Boy,
+    operator: contains}, {column_id: display_name.search, value: Girl, operator: contains},
+    {column_id: display_name.search, value: Minors, operator: contains}, {column_id: display_name.search,
+    value: Prepubescent, operator: contains}, {column_id: display_name.search, value: adolescent,
+    operator: contains}, {column_id: display_name.search, value: boys, operator: contains},
+    {column_id: display_name.search, value: child's, operator: contains}, {column_id: display_name.search,
+    value: children, operator: contains}, {column_id: display_name.search, value: girls,
+    operator: contains}, {column_id: display_name.search, value: juvenile, operator: contains},
+    {column_id: display_name.search, value: preadolescent, operator: contains}, {column_id: display_name.search,
+    value: preteen, operator: contains}, {column_id: display_name.search, value: pubertal,
+    operator: contains}, {column_id: display_name.search, value: pubescent, operator: contains},
+    {column_id: display_name.search, value: schoolboy, operator: contains}, {column_id: display_name.search,
+    value: schoolchild, operator: contains}, {column_id: display_name.search, value: schoolgirl,
+    operator: contains}, {column_id: display_name.search, value: teen, operator: contains},
+    {column_id: display_name.search, value: tweenage, operator: contains}, {column_id: display_name.search,
+    value: tweens, operator: contains}, {column_id: display_name.search, value: youth, operator: contains},
+    {column_id: display_name.search, value: youths, operator: contains}, {column_id: display_name.search.exact,
+    value: '"Pre pubescent"', operator: contains}, {column_id: display_name.search.exact,
+    value: '"early adolescent"', operator: contains}, {column_id: display_name.search.exact,
+    value: '"pre adolescent"', operator: contains}, {column_id: display_name.search.exact,
+    value: '"pre pubertal"', operator: contains}, {column_id: display_name.search.exact,
+    value: '"school aged"', operator: contains}, {column_id: display_name.search.exact,
+    value: '"young people"', operator: contains}, {column_id: display_name.search.exact,
+    value: '"young person"', operator: contains}]}, {join: or, filters: [{column_id: display_name.search,
+    value: Height, operator: contains}, {column_id: display_name.search, value: bodyweight,
+    operator: contains}, {column_id: display_name.search, value: fat, operator: contains},
+    {column_id: display_name.search, value: fatness, operator: contains}, {column_id: display_name.search,
+    value: obese, operator: contains}, {column_id: display_name.search, value: obesity,
+    operator: contains}, {column_id: display_name.search, value: overweight, operator: contains},
+    {column_id: display_name.search, value: thin, operator: contains}, {column_id: display_name.search,
+    value: thinness, operator: contains}, {column_id: display_name.search, value: weight,
+    operator: contains}, {column_id: display_name.search.exact, value: '"anti fat"', operator: contains},
+    {column_id: display_name.search.exact, value: '"being fat"', operator: contains}, {column_id: display_name.search.exact,
+    value: '"being thin"', operator: contains}, {column_id: display_name.search.exact, value: '"body
+    esteem"', operator: contains}, {column_id: display_name.search.exact, value: '"body
+    hatred"', operator: contains}, {column_id: display_name.search.exact, value: '"body
+    ideal"', operator: contains}, {column_id: display_name.search.exact, value: '"body
+    image"', operator: contains}, {column_id: display_name.search.exact, value: '"body
+    positive"', operator: contains}, {column_id: display_name.search.exact, value: '"body
+    shame"', operator: contains}, {column_id: display_name.search.exact, value: '"body
+    shape"', operator: contains}, {column_id: display_name.search.exact, value: '"body
+    size"', operator: contains}, {column_id: display_name.search.exact, value: '"body
+    sizes"', operator: contains}, {column_id: display_name.search.exact, value: '"fat
+    ideal"', operator: contains}, {column_id: display_name.search.exact, value: '"ideal
+    body"', operator: contains}, {column_id: display_name.search.exact, value: '"thin
+    ideal"', operator: contains}, {column_id: display_name.search.exact, value: '"weight
+    bias"', operator: contains}]}, {join: or, filters: [{column_id: fulltext.search, value: Britain,
+    operator: contains}, {column_id: fulltext.search, value: England, operator: contains},
+    {column_id: fulltext.search, value: GB, operator: contains}, {column_id: fulltext.search,
+    value: Scotland, operator: contains}, {column_id: fulltext.search, value: Scottish,
+    operator: contains}, {column_id: fulltext.search, value: UK, operator: contains}, {
+    column_id: fulltext.search, value: Wales, operator: contains}, {column_id: fulltext.search,
+    value: Welsh, operator: contains}, {column_id: fulltext.search.exact, value: '"English
+    adolescent"', operator: contains}, {column_id: fulltext.search.exact, value: '"English
+    children"', operator: contains}, {column_id: fulltext.search.exact, value: '"English
+    girls"', operator: contains}, {column_id: fulltext.search.exact, value: '"English
+    schoolchild"', operator: contains}, {column_id: fulltext.search.exact, value: '"English
+    teen"', operator: contains}, {column_id: fulltext.search.exact, value: '"English young
+    people"', operator: contains}, {column_id: fulltext.search.exact, value: '"North Ireland"',
+    operator: contains}, {column_id: fulltext.search.exact, value: '"North Irish"', operator: contains},
+    {column_id: fulltext.search.exact, value: '"Northern Ireland"', operator: contains}, {
+    column_id: fulltext.search.exact, value: '"Northern Irish"', operator: contains}, {
+    column_id: fulltext.search.exact, value: '"United Kingdom"', operator: contains}, {
+    column_id: fulltext.search.exact, value: '"english boys"', operator: contains}, {column_id: fulltext.search.exact,
+    value: '"english school"', operator: contains}]}, {join: or, filters: [{column_id: title_and_abstract.search,
+    value: attitude, operator: contains}, {column_id: title_and_abstract.search, value: attitudes,
+    operator: contains}, {column_id: title_and_abstract.search, value: beliefs, operator: contains},
+    {column_id: title_and_abstract.search, value: diaries, operator: contains}, {column_id: title_and_abstract.search,
+    value: diary, operator: contains}, {column_id: title_and_abstract.search, value: experiences,
+    operator: contains}, {column_id: title_and_abstract.search, value: in-depth, operator: contains},
+    {column_id: title_and_abstract.search, value: indepth, operator: contains}, {column_id: title_and_abstract.search,
+    value: informal, operator: contains}, {column_id: title_and_abstract.search, value: open,
+    operator: contains}, {column_id: title_and_abstract.search, value: perceptions, operator: contains},
+    {column_id: title_and_abstract.search, value: perspective, operator: contains}, {column_id: title_and_abstract.search,
+    value: perspectives, operator: contains}, {column_id: title_and_abstract.search, value: qualitative,
+    operator: contains}, {column_id: title_and_abstract.search, value: semistructured, operator: contains},
+    {column_id: title_and_abstract.search, value: unstructured, operator: contains}, {column_id: title_and_abstract.search.exact,
+    value: '"focus group"', operator: contains}, {column_id: title_and_abstract.search.exact,
+    value: '"focus groups"', operator: contains}, {column_id: title_and_abstract.search.exact,
+    value: '"lived experience"', operator: contains}, {column_id: title_and_abstract.search.exact,
+    value: '"open ended"', operator: contains}, {column_id: title_and_abstract.search.exact,
+    value: '"semi structured"', operator: contains}]}, {join: or, filters: [{column_id: title_and_abstract.search,
+    value: attitude, operator: contains}, {column_id: title_and_abstract.search, value: attitudes,
+    operator: contains}, {column_id: title_and_abstract.search, value: beliefs, operator: contains},
+    {column_id: title_and_abstract.search, value: diaries, operator: contains}, {column_id: title_and_abstract.search,
+    value: diary, operator: contains}, {column_id: title_and_abstract.search, value: experiences,
+    operator: contains}, {column_id: title_and_abstract.search, value: interview, operator: contains},
+    {column_id: title_and_abstract.search, value: interviews, operator: contains}, {column_id: title_and_abstract.search,
+    value: perceptions, operator: contains}, {column_id: title_and_abstract.search, value: perspective,
+    operator: contains}, {column_id: title_and_abstract.search, value: perspectives, operator: contains},
+    {column_id: title_and_abstract.search, value: qualitative, operator: contains}, {column_id: title_and_abstract.search,
+    value: questionnaire, operator: contains}, {column_id: title_and_abstract.search, value: questionnaires,
+    operator: contains}, {column_id: title_and_abstract.search.exact, value: '"focus group"',
+    operator: contains}, {column_id: title_and_abstract.search.exact, value: '"focus groups"',
+    operator: contains}, {column_id: title_and_abstract.search.exact, value: '"lived experience"',
+    operator: contains}]}]}

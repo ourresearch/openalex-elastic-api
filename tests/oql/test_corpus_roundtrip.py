@@ -163,12 +163,16 @@ def test_corpus_covers_every_locked_behavior():
     assert not missing, f"corpus missing locked-behavior cases: {sorted(missing)}"
 
 
+OXURL_STATUSES = {"has-oxurl", "oql-only", "translator-bug", "server-unsupported"}
+
+
 def test_every_row_has_valid_facets():
-    """Every case carries a `category` (topical) facet, a structured
-    `provenance` (real origin) facet, and an explicit `oxurl_representable`
-    flag. These replaced the old conflated `group` / coarse `source` fields
-    (#345); keeping them mechanical means the dev playground never has to infer
-    semantics from the ID prefix."""
+    """Every case carries a `category` (topical) facet and a structured
+    `provenance` (real origin) facet; every ok/hint row also carries an explicit
+    `oxurl_status` (#384, replacing the old `oxurl_representable` bool). These
+    replaced the old conflated `group` / coarse `source` fields (#345); keeping
+    them mechanical means the dev playground never has to infer semantics from
+    the ID prefix."""
     categories = {
         "entity references", "boolean logic", "search semantics",
         "proximity & wildcards", "filter, sort & sample", "group by",
@@ -186,33 +190,61 @@ def test_every_row_has_valid_facets():
             and isinstance(prov, dict)
             and prov.get("type") in provenance_types
             and bool(prov.get("label"))
-            and isinstance(r.get("oxurl_representable"), bool)
         )
+        if r["status"] in ("ok", "hint"):
+            # ok rows carry an oxurl_status enum; error / out-of-scope rows are
+            # non-queries and carry neither oxurl_status nor oxurl.
+            ok = ok and r.get("oxurl_status") in OXURL_STATUSES
+        else:
+            ok = ok and "oxurl_status" not in r and "oxurl" not in r
         if not ok:
             bad.append((r["id"], r.get("category"), prov.get("type"),
-                        r.get("oxurl_representable")))
+                        r.get("oxurl_status")))
     assert not bad, f"rows with missing/unknown facets: {bad}"
 
-    # The non-representable set is a deliberate, reviewed list: the 9 invalid-OQL
-    # error rows plus the 2 genuine boundaries. If this drifts, it's a real
-    # editorial change — update the list, don't loosen the assert.
-    # (oxjob #355 lifted PW7=27 and L02c=58 to `ok`: wildcard-in-quoted-proximity now
-    #  compiles to an ES `intervals` query, so both are representable.)
-    # (oxjob #364 swapped 19<->20: a QUOTED wildcard `"bar*"` (19) is now the
-    #  sanctioned no-stem path (representable); a BARE wildcard `bar*` (20) is now
-    #  OQL_WILDCARD_NEEDS_EXACT (error, not representable).)
-    not_representable = {r["id"] for r in ROWS if not r["oxurl_representable"]}
-    # Opaque ints since #360; old semantic ids in comments (work/id_map.yaml).
-    expected_not = {
-        # ENT6, BOOL2, G7, G8(20=bare-wildcard error), PW4, PW5, PW6, PW9
-        # (PW8/28 binary proximity is now SUPPORTED → representable, oxjob #355 Goal B)
-        6, 8, 17, 20, 24, 25, 26, 29,
-        # L12, L20  (the 2 remaining genuine boundaries)
-        68, 76,
-        # oxjob #355 perf-guard rejections (binary/phrase wildcard budget)
-        81, 82,
+    # The non-`has-oxurl` ok rows are a deliberate, reviewed list. If this drifts
+    # it's a real editorial change — update the map, don't loosen the assert.
+    #   server-unsupported — valid OQO the live API can't execute yet.
+    #   oql-only           — valid OQO that OXURL genuinely can't express (a win).
+    #   translator-bug     — should render per spec but the translator is wrong.
+    # (oxjob #384: row 30's semantic-search "translator gap" was fixed by #363 —
+    #  it now renders ?search.semantic= and is `has-oxurl`, so there is currently
+    #  no `translator-bug` row.)
+    non_has_oxurl = {
+        r["id"]: r["oxurl_status"]
+        for r in OK_ROWS if r["oxurl_status"] != "has-oxurl"
     }
-    assert not_representable == expected_not, (
-        f"oxurl_representable set drifted: "
-        f"+{not_representable - expected_not} -{expected_not - not_representable}"
+    expected = {
+        48: "server-unsupported",  # AKQ#75 multi-dim group_by (single-dim only, #297)
+        78: "oql-only",            # zd#8101 OR across stemmed/exact match-modes
+    }
+    assert non_has_oxurl == expected, (
+        f"oxurl_status classification drifted: "
+        f"+{set(non_has_oxurl) - set(expected)} -{set(expected) - set(non_has_oxurl)}"
     )
+
+
+def test_corpus_oxurl_is_canonical():
+    """`oxurl` is a DERIVED field — every ok/hint row's stored value must equal a
+    fresh render of its OQO (oxjob #384). This is the elastic-api side of the
+    drift gate: edit an oql/oqo without re-running docs/oql/regen_corpus_oql.py
+    and this goes red. `oql-only` rows (the renderer raises) store null.
+
+    Invariant the playground relies on: oxurl is null IFF the row is oql-only."""
+    import sys
+    sys.path.insert(0, os.path.dirname(CORPUS))  # docs/oql/
+    from regen_corpus_oql import build_oxurl, canonical_oqo_dict
+
+    stale = []
+    for r in OK_ROWS:
+        want = build_oxurl(canonical_oqo_dict(r))
+        if r.get("oxurl") != want:
+            stale.append((r["id"], r.get("oxurl"), want))
+        is_null = r.get("oxurl") is None
+        is_oql_only = r["oxurl_status"] == "oql-only"
+        assert is_null == is_oql_only, (
+            f"{r['id']}: oxurl null ({is_null}) must match oql-only "
+            f"({is_oql_only}) — status={r['oxurl_status']}")
+    assert not stale, (
+        "oxurl is stale — run `python docs/oql/regen_corpus_oql.py`:\n  "
+        + "\n  ".join(f"{i}: stored={s!r} fresh={w!r}" for i, s, w in stale))
