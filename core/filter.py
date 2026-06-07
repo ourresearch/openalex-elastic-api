@@ -280,6 +280,34 @@ def _value_is_pure_collection_ref(value):
     return bool(CollectionField.COLLECTION_ID_RE.match(value or ""))
 
 
+def resolve_collection_for_field(field, collection_id):
+    """Resolve a cross-type `col_…` reference against an entity-id `field`,
+    enforcing that the collection's entity_type matches the field's.
+
+    Shared by the URL pre-pass (`_apply_cross_type_collection_filters`) and the
+    OQO execution path (`query_translation/oqo_to_es`) so both run the *same*
+    resolver call + type check and can't silently diverge (oxjob #363). Before
+    this, the OQO path read a bare `col_…` as a literal OpenAlex ID and matched
+    ~zero — see `query_translation/oqo_to_es._cross_type_collection_query`.
+
+    Returns `(entity_type, entity_ids)`:
+      - `(None, [])` for an unknown / deleted collection (the caller matches zero
+        / no-ops per spec).
+    Raises `APIQueryParamsError` if the resolved collection's entity_type doesn't
+    match `field.entity_type`.
+
+    `collection_id` must be the bare id (no leading `!`); negation, the match-zero
+    empty clause, and the per-request ID budget are the caller's concern.
+    """
+    etype, ids = resolve_collection(collection_id)
+    if etype is not None and etype != field.entity_type:
+        raise APIQueryParamsError(
+            f"collection {collection_id} is type '{etype}', not valid for "
+            f"the `{field.param}` filter (expects '{field.entity_type}')."
+        )
+    return etype, ids
+
+
 def _apply_cross_type_collection_filters(fields_dict, filter_params, s):
     """Pre-pass: resolve `<entity-id-field>:col_xxx` filters into terms clauses on
     the target field. Runs after `_apply_collection_filters`.
@@ -362,7 +390,7 @@ def _apply_cross_type_collection_filters(fields_dict, filter_params, s):
         negate = value.startswith("!")
         collection_id = value[1:] if negate else value
 
-        etype, ids = resolve_collection(collection_id)
+        etype, ids = resolve_collection_for_field(field, collection_id)
 
         # Unknown / deleted collection:
         # - positive: silently match zero (spec)
@@ -372,12 +400,6 @@ def _apply_cross_type_collection_filters(fields_dict, filter_params, s):
                 continue
             s = s.filter(Q("terms", **{field.es_field(): []}))
             continue
-
-        if etype != field.entity_type:
-            raise APIQueryParamsError(
-                f"collection {collection_id} is type '{etype}', not valid for "
-                f"the `{field.param}` filter (expects '{field.entity_type}')."
-            )
 
         _budget(len(ids))
 

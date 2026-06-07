@@ -19,6 +19,8 @@ from typing import Optional
 from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
+from core.fields import CollectionField
+from core.filter import MAX_RESOLVED_IDS_PER_REQUEST, resolve_collection_for_field
 from core.utils import get_field
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
 
@@ -135,12 +137,52 @@ def _translate_branch(branch: BranchFilter, fields_dict) -> Optional[Q]:
     return q
 
 
+def _cross_type_collection_query(field, collection_id: str) -> Q:
+    """Resolve a cross-type `col_…` reference on an entity-id field into a
+    positive membership `terms` clause for the OQO execution path (oxjob #363).
+
+    The same-type `collection` column resolves natively via
+    `CollectionField.build_query`; a *cross-type* entity field (e.g.
+    `authorships.author.id`, `authorships.countries`) would otherwise treat the
+    bare `col_…` as a literal OpenAlex ID and match ~zero. This runs the same
+    resolver + type check the URL pre-pass uses
+    (`core.filter.resolve_collection_for_field`) and builds the clause via the
+    field's `build_terms_query` — so OQO-native execution and the rendered-URL
+    pre-pass can't diverge.
+
+    Unknown / deleted / empty collection → a match-zero clause (`terms []`); the
+    caller's negation (`~q`) turns that into match-all, reproducing the spec
+    "negation no-op". Negation itself is the caller's concern.
+    """
+    etype, ids = resolve_collection_for_field(field, collection_id)
+    if etype is None or not ids:
+        return Q("terms", **{field.es_field(): []})
+    if len(ids) > MAX_RESOLVED_IDS_PER_REQUEST:
+        raise OQOTranslationError(
+            f"cross-type collection filter resolved to too many entities "
+            f"(max {MAX_RESOLVED_IDS_PER_REQUEST})"
+        )
+    return field.build_terms_query(ids)
+
+
 def _translate_leaf(leaf: LeafFilter, fields_dict) -> Q:
     try:
         field = get_field(fields_dict, leaf.column_id)
     except APIQueryParamsError as e:
         # Re-raise with the same shape so the route returns 400, not 500.
         raise OQOTranslationError(str(e))
+
+    # Cross-type collection membership (`<entity-field> is in collection col_…`):
+    # the bare col_ must be resolved to its member IDs, exactly as the URL
+    # pre-pass does — the entity field's own build_query would read it as a
+    # literal ID and match ~zero. The same-type `collection` column is a
+    # CollectionField whose build_query resolves natively, so it stays on the
+    # default path below. (oxjob #363)
+    if leaf.operator == "in collection" and not isinstance(field, CollectionField):
+        q = _cross_type_collection_query(field, str(leaf.value))
+        if leaf.is_negated:
+            q = ~q
+        return q
 
     url_value = _encode_leaf_value(leaf)
     # Field instances are stateful; build_query() reads self.value. This matches

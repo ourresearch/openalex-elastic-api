@@ -10,9 +10,12 @@ leaf-level — we cross-check by also running `filter_records` on the equivalent
 URL filter dict and asserting both routes produce the same Q.
 """
 
+import json
+
 import pytest
 from elasticsearch_dsl import Q, Search
 
+from core.exceptions import APIQueryParamsError
 from core.filter import filter_records
 from query_translation.oqo import OQO, LeafFilter, BranchFilter
 from query_translation.oqo_to_es import (
@@ -376,3 +379,169 @@ class TestErrors:
         )
         with pytest.raises(OQOTranslationError):
             oqo_to_q(oqo, works_fields)
+
+
+# ---------------------------------------------------------------------------
+# Cross-type `is in collection` execution (oxjob #363)
+# ---------------------------------------------------------------------------
+#
+# A cross-type col_ ref (e.g. `works where author is in collection col_…`) must
+# resolve to the collection's member IDs on the OQO-native execution path, just
+# like the URL pre-pass (`core.filter._apply_cross_type_collection_filters`)
+# does. Before #363 the OQO path read the bare `col_…` as a literal OpenAlex ID
+# and matched ~zero — the regression guard below pins that the resolved terms
+# clause is emitted (and equals the URL pre-pass's clause), not the old bug.
+
+
+class TestCrossTypeCollectionExecution:
+    def _patch_resolver(self, monkeypatch, ret):
+        # Cross-type resolves via core.filter.resolve_collection (the #266 URL
+        # tests patch the same site); same-type CollectionField.build_query does
+        # a local `from core.collection_resolver import resolve_collection`, so
+        # patch both sites to cover either path.
+        monkeypatch.setattr("core.filter.resolve_collection", lambda lid: ret)
+        monkeypatch.setattr(
+            "core.collection_resolver.resolve_collection", lambda lid: ret
+        )
+
+    def test_cross_type_positive_resolves_to_member_terms(self, monkeypatch):
+        self._patch_resolver(monkeypatch, ("authors", ["A111", "A222"]))
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[
+                LeafFilter(
+                    "authorships.author.id", "col_au", operator="in collection"
+                )
+            ],
+        )
+        q = oqo_to_q(oqo, works_fields)
+        assert q.to_dict() == {
+            "terms": {
+                "authorships.author.id.lower": [
+                    "https://openalex.org/A111",
+                    "https://openalex.org/A222",
+                ]
+            }
+        }
+
+    def test_cross_type_is_not_the_old_literal_id_bug(self, monkeypatch):
+        # Regression: pre-#363 this emitted a literal `term` on a mangled ID
+        # (`col_a48SaZFvdS` → `A48`) and silently matched ~zero.
+        self._patch_resolver(monkeypatch, ("authors", ["A111"]))
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[
+                LeafFilter(
+                    "authorships.author.id",
+                    "col_a48SaZFvdS",
+                    operator="in collection",
+                )
+            ],
+        )
+        body = json.dumps(oqo_to_q(oqo, works_fields).to_dict())
+        assert "col_" not in body
+        assert "/A48" not in body  # the old mangled-ID artifact
+        assert "https://openalex.org/A111" in body
+
+    def test_cross_type_parity_with_url_prepass(self, monkeypatch):
+        # The OQO-native terms clause must match the URL pre-pass's clause
+        # (the executor applies it via s.filter(), so the inner clause is what
+        # counts). Compare the inner terms against the pre-pass body.
+        self._patch_resolver(monkeypatch, ("sources", ["S123", "S456"]))
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[
+                LeafFilter(
+                    "primary_location.source.id",
+                    "col_src",
+                    operator="in collection",
+                )
+            ],
+        )
+        oqo_clause = oqo_to_q(oqo, works_fields).to_dict()
+        url_body = url_filter_q([{"primary_location.source.id": "col_src"}])
+        # url_body wraps the same terms clause in bool.filter (from s.filter()).
+        assert url_body == {"bool": {"filter": [oqo_clause]}}
+
+    def test_cross_type_negation_wraps_must_not(self, monkeypatch):
+        self._patch_resolver(monkeypatch, ("authors", ["A1234"]))
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[
+                LeafFilter(
+                    "authorships.author.id",
+                    "col_au",
+                    operator="in collection",
+                    is_negated=True,
+                )
+            ],
+        )
+        body = json.dumps(oqo_to_q(oqo, works_fields).to_dict())
+        assert "must_not" in body
+        assert "https://openalex.org/A1234" in body
+
+    def test_unknown_collection_positive_matches_zero(self, monkeypatch):
+        self._patch_resolver(monkeypatch, (None, []))
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[
+                LeafFilter(
+                    "authorships.author.id", "col_gone", operator="in collection"
+                )
+            ],
+        )
+        # Empty terms clause → matches zero (spec).
+        assert oqo_to_q(oqo, works_fields).to_dict() == {
+            "terms": {"authorships.author.id.lower": []}
+        }
+
+    def test_unknown_collection_negation_is_noop_match_all(self, monkeypatch):
+        # Negating a match-zero clause yields match-all — the spec "negation of a
+        # deleted collection is a no-op" behavior, reproduced via ~q.
+        self._patch_resolver(monkeypatch, (None, []))
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[
+                LeafFilter(
+                    "authorships.author.id",
+                    "col_gone",
+                    operator="in collection",
+                    is_negated=True,
+                )
+            ],
+        )
+        assert oqo_to_q(oqo, works_fields).to_dict() == {
+            "bool": {"must_not": [{"terms": {"authorships.author.id.lower": []}}]}
+        }
+
+    def test_cross_type_type_mismatch_raises(self, monkeypatch):
+        self._patch_resolver(monkeypatch, ("works", ["W1"]))
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[
+                LeafFilter(
+                    "primary_location.source.id",
+                    "col_wrong",
+                    operator="in collection",
+                )
+            ],
+        )
+        with pytest.raises(APIQueryParamsError) as exc:
+            oqo_to_q(oqo, works_fields)
+        msg = str(exc.value)
+        assert "works" in msg and "sources" in msg
+
+    def test_same_type_collection_unaffected(self, monkeypatch):
+        # Same-type `collection` column is a CollectionField that resolves
+        # natively via build_query — it must NOT route through the cross-type
+        # branch, and still emits a terms clause on the entity `id`.
+        self._patch_resolver(monkeypatch, ("works", ["W111", "W222"]))
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[
+                LeafFilter("collection", "col_w", operator="in collection")
+            ],
+        )
+        body = json.dumps(oqo_to_q(oqo, works_fields).to_dict())
+        assert "https://openalex.org/W111" in body
+        assert "https://openalex.org/W222" in body
