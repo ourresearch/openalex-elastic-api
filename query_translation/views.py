@@ -305,6 +305,7 @@ def parse_url_input(entity_type: str, input_data):
             page = input_data.get("page")
             cursor = input_data.get("cursor")
             search_string = input_data.get("search")
+            semantic_search_string = input_data.get("search.semantic")
         else:
             # Input is just the filter string
             filter_string = input_data
@@ -317,9 +318,10 @@ def parse_url_input(entity_type: str, input_data):
             page = None
             cursor = None
             search_string = None
+            semantic_search_string = None
 
         oqo = parse_url_to_oqo(
-            entity_type=entity_type, filter_string=filter_string, sort_string=sort_string, sample=sample, group_by_string=group_by_string, select_string=select_string, seed=seed, per_page=per_page, page=page, cursor=cursor, search_string=search_string, )
+            entity_type=entity_type, filter_string=filter_string, sort_string=sort_string, sample=sample, group_by_string=group_by_string, select_string=select_string, seed=seed, per_page=per_page, page=page, cursor=cursor, search_string=search_string, semantic_search_string=semantic_search_string, )
         return oqo, None
     except Exception as e:
         return None, f"Failed to parse URL format: {str(e)}"
@@ -342,11 +344,13 @@ def parse_oqo_input(entity_type: str, input_data):
         return None, f"Failed to parse OQO format: {str(e)}"
 
 
-# oxurl component order — the readable order the GUI/users emit. `search` is
-# folded into `filter` as a `default.search:` clause by render_oqo_to_url, so it
-# is not a separate key here.
+# oxurl component order — the readable order the GUI/users emit. Bare/keyword
+# `search` is folded into `filter` as a `default.search:` clause by
+# render_oqo_to_url, so it is not a separate key here. `search.semantic` is the
+# exception: vector search has no `filter=` form, so it rides as its own
+# top-level param (rendered first, ahead of `filter`).
 _OXURL_COMPONENT_ORDER = (
-    "filter", "sort", "group_by", "select", "sample", "seed", "per_page", "page", "cursor", )
+    "search.semantic", "filter", "sort", "group_by", "select", "sample", "seed", "per_page", "page", "cursor", )
 
 
 def _components_to_oxurl(entity_type: str, components: dict) -> str:

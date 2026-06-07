@@ -453,6 +453,102 @@ class TestURLRenderer:
         with pytest.raises(URLRenderError):
             render_oqo_to_url(oqo)
 
+    # -- semantic search routing (oxjob #363, corpus case 30) --
+    # `<field> is similar to "…"` (OQO `*.search.semantic`) must render as the
+    # top-level `?search.semantic=` param, NOT a `filter=…search.semantic:` clause
+    # — the engine exposes vector search only that way (core/vector_index.py).
+
+    def test_semantic_routes_to_top_level_param(self):
+        """A semantic leaf becomes search.semantic= and leaves filter= empty."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[LeafFilter(
+                column_id="abstract.search.semantic",
+                value="graph neural networks", operator="contains")],
+        )
+
+        result = render_oqo_to_url(oqo)
+
+        assert result["search.semantic"] == "graph neural networks"
+        assert result["filter"] is None
+
+    def test_semantic_alongside_regular_filter(self):
+        """Semantic lifts out; other filters still render into filter=."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[
+                LeafFilter(column_id="abstract.search.semantic",
+                           value="graph neural networks", operator="contains"),
+                LeafFilter(column_id="type", value="article"),
+            ],
+        )
+
+        result = render_oqo_to_url(oqo)
+
+        assert result["search.semantic"] == "graph neural networks"
+        assert result["filter"] == "type:article"
+
+    def test_negated_semantic_fails(self):
+        """The top-level param has no negated form."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[LeafFilter(
+                column_id="abstract.search.semantic",
+                value="x", operator="contains", is_negated=True)],
+        )
+
+        with pytest.raises(URLRenderError):
+            render_oqo_to_url(oqo)
+
+    def test_two_semantic_clauses_fail(self):
+        """Only one semantic clause fits the single search.semantic= param."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[
+                LeafFilter(column_id="abstract.search.semantic",
+                           value="a", operator="contains"),
+                LeafFilter(column_id="abstract.search.semantic",
+                           value="b", operator="contains"),
+            ],
+        )
+
+        with pytest.raises(URLRenderError):
+            render_oqo_to_url(oqo)
+
+    def test_semantic_nested_in_branch_fails(self):
+        """A semantic leaf buried in a boolean branch can't be the param."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[BranchFilter(join="or", filters=[
+                LeafFilter(column_id="abstract.search.semantic",
+                           value="a", operator="contains"),
+                LeafFilter(column_id="abstract.search.semantic",
+                           value="b", operator="contains"),
+            ])],
+        )
+
+        with pytest.raises(URLRenderError):
+            render_oqo_to_url(oqo)
+
+    def test_semantic_url_round_trip(self):
+        """OQO → URL → OQO is identity for a semantic query (#363)."""
+        oqo = OQO(
+            get_rows="works",
+            filter_rows=[LeafFilter(
+                column_id="abstract.search.semantic",
+                value="graph neural networks", operator="contains")],
+        )
+
+        result = render_oqo_to_url(oqo)
+        back = parse_url_to_oqo(
+            "works",
+            filter_string=result["filter"],
+            semantic_search_string=result["search.semantic"],
+        )
+
+        assert back.filter_rows[0].column_id == "abstract.search.semantic"
+        assert back.filter_rows[0].value == "graph neural networks"
+
 
 class TestRoundTrip:
     """Tests for URL → OQO → URL round-trip consistency."""

@@ -14,6 +14,9 @@ class URLRenderError(Exception):
     pass
 
 
+SEMANTIC_SUFFIX = ".search.semantic"
+
+
 def render_oqo_to_url(oqo: OQO) -> Dict[str, Any]:
     """
     Render an OQO object to URL format.
@@ -22,20 +25,26 @@ def render_oqo_to_url(oqo: OQO) -> Dict[str, Any]:
         oqo: The OQO object to render
 
     Returns:
-        Dict with 'filter', 'sort', 'sample', 'group_by', and (logistics
-        layer, #318) 'select', 'seed', 'per_page', 'page', 'cursor' keys.
+        Dict with 'filter', 'search.semantic', 'sort', 'sample', 'group_by',
+        and (logistics layer, #318) 'select', 'seed', 'per_page', 'page',
+        'cursor' keys.
 
     Raises:
         URLRenderError: If the OQO contains structures that cannot be
                        expressed in URL format (e.g., nested boolean logic)
     """
-    filter_string = render_filters(oqo.filter_rows)
+    # Semantic search (`<field> is similar to "..."`) is lifted OUT of the
+    # `filter=` string into its own top-level `search.semantic=` param — the
+    # engine exposes vector search only that way (see _extract_semantic).
+    semantic_value, filter_rows = _extract_semantic(oqo.filter_rows)
+    filter_string = render_filters(filter_rows)
     sort_string = render_sort(oqo.sort_by)
     group_by_string = render_group_by(oqo.group_by)
     select_string = render_select(oqo.select)
 
     return {
         "filter": filter_string if filter_string else None,
+        "search.semantic": semantic_value,
         "sort": sort_string if sort_string else None,
         "sample": oqo.sample,
         "group_by": group_by_string if group_by_string else None,
@@ -47,6 +56,62 @@ def render_oqo_to_url(oqo: OQO) -> Dict[str, Any]:
         "page": oqo.page,
         "cursor": oqo.cursor,
     }
+
+
+def _is_semantic_leaf(f: FilterType) -> bool:
+    return (
+        isinstance(f, LeafFilter)
+        and isinstance(f.column_id, str)
+        and f.column_id.endswith(SEMANTIC_SUFFIX)
+    )
+
+
+def _reject_nested_semantic(f: FilterType) -> None:
+    """A semantic leaf buried inside a boolean branch can't become the single
+    top-level `search.semantic=` param — flag it rather than silently dropping
+    it into a `filter=` clause the engine would reject."""
+    if isinstance(f, BranchFilter):
+        for sub in f.filters:
+            if _is_semantic_leaf(sub):
+                raise URLRenderError(
+                    "Semantic search nested in boolean logic cannot be "
+                    "expressed in URL format"
+                )
+            _reject_nested_semantic(sub)
+
+
+def _extract_semantic(filters: List[FilterType]) -> Tuple[Optional[str], List[FilterType]]:
+    """Lift a top-level semantic-search leaf out of the filter list.
+
+    Semantic search (`<field> is similar to "..."`, OQO column
+    `*.search.semantic`) is a two-phase vector search the engine exposes ONLY as
+    the top-level `?search.semantic=` param — there is no `filter=…search.semantic:`
+    form (core/vector_index.py refuses to combine `search.semantic` with a filter
+    clause). So it must be pulled out of the comma-joined `filter=` string into its
+    own param, or any rendered URL would silently not run a vector search.
+
+    Returns (semantic_value or None, remaining_filters). Raises URLRenderError for
+    shapes the single top-level param can't carry: a negated semantic clause, more
+    than one semantic clause, or a semantic leaf nested in a boolean branch.
+    """
+    semantic_values = []
+    remaining = []
+    for f in filters:
+        if _is_semantic_leaf(f):
+            if getattr(f, "is_negated", False):
+                raise URLRenderError(
+                    "Negated semantic search cannot be expressed in URL format"
+                )
+            semantic_values.append(str(f.value))
+        else:
+            _reject_nested_semantic(f)
+            remaining.append(f)
+
+    if len(semantic_values) > 1:
+        raise URLRenderError(
+            "Only one semantic search clause can be expressed in URL format"
+        )
+    return (semantic_values[0] if semantic_values else None), remaining
 
 
 def render_select(select) -> Optional[str]:
@@ -247,9 +312,20 @@ def can_render_to_url(oqo: OQO) -> Tuple[bool, Optional[str]]:
 def check_filter_expressible(f: FilterType, depth: int = 0):
     """Check if a filter can be expressed in URL format."""
     if isinstance(f, LeafFilter):
-        return  # Leaf filters are always expressible
-    
+        # A semantic leaf becomes the top-level `search.semantic=` param, which
+        # has no negated form (see _extract_semantic). Negated is the only leaf
+        # shape that can't render; a plain semantic leaf is fine.
+        if _is_semantic_leaf(f) and getattr(f, "is_negated", False):
+            raise URLRenderError(
+                "Negated semantic search cannot be expressed in URL format"
+            )
+        return  # other leaf filters are always expressible
+
     if isinstance(f, BranchFilter):
+        # A semantic clause must stand alone as the top-level param; nested in a
+        # boolean branch it can't be expressed.
+        _reject_nested_semantic(f)
+
         if f.join == "and" and depth > 0:
             raise URLRenderError(
                 "Nested AND logic cannot be expressed in URL format"

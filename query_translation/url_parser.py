@@ -23,6 +23,7 @@ def parse_url_to_oqo(
     page: Optional[int] = None,
     cursor: Optional[str] = None,
     search_string: Optional[str] = None,
+    semantic_search_string: Optional[str] = None,
 ) -> OQO:
     """
     Parse URL filter/sort/group_by strings into an OQO object.
@@ -56,6 +57,15 @@ def parse_url_to_oqo(
             so a free-text value containing commas stays one search clause; this
             also gives `.search` columns the `contains` operator and Lucene
             boolean lifting for free.
+        semantic_search_string: Optional top-level `?search.semantic=` value. The
+            engine exposes two-phase vector search ONLY as this param — there is
+            no `filter=…search.semantic:` form (core/vector_index.py refuses to
+            combine it with a filter) — and it is field-less (whole-document). It
+            maps to the canonical OQL semantic surface `abstract is similar to
+            "…"` → a `LeafFilter("abstract.search.semantic", value, "contains")`
+            (spec §search-modes, corpus row 30). Inverse of the
+            `render_oqo_to_url` semantic-routing branch, so a working prod
+            `?search.semantic=` URL round-trips to OQL.
 
     Returns:
         OQO object representing the query
@@ -76,6 +86,15 @@ def parse_url_to_oqo(
             filter_rows.extend(parsed_search)
         else:
             filter_rows.append(parsed_search)
+
+    if semantic_search_string:
+        filter_rows.append(
+            LeafFilter(
+                column_id="abstract.search.semantic",
+                value=semantic_search_string,
+                operator="contains",
+            )
+        )
 
     sort_by = []
     if sort_string:
