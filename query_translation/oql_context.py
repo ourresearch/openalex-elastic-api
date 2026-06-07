@@ -4,51 +4,59 @@ Given an OQL string and a cursor offset, answer: *what grammar element is expect
 here?* — a field name? an operator? an entity-value (and which entity type)? a
 connective? a directive keyword? — so the editor can show the right autocomplete.
 
-This is the editor counterpart to the parser. The production parser
-(`oql_lang._Parser`) is a strict, fail-fast recognizer — almost every method raises
-`OQLError` on the first incomplete token, which is exactly the state an in-progress
-query is always in. So we do NOT reuse `_Parser`; instead we mirror its greedy
-field/operator matchers (`_parse_field`, `_parse_operator`, `_starts_new_clause`) in a
-lightweight, non-raising token walker that classifies the trailing context.
+**Single source of grammar truth (oxjob #363, charter decision 15).** This module no
+longer re-implements the grammar. It does two framework-independent jobs —
 
-Pure module: imports only the lexer + registry from `oql_lang` (no Flask / ES / DB), so
-it is unit-testable under the `.venv-oql` venv with `PYTHONPATH=.`. The HTTP route layer
-(`query_translation/views.py`) enriches the result with the authoritative full
-suggestion lists from `/properties`; here we use the focused `oql_lang._FIELDS` registry
-that the grammar itself uses.
+  1. **cursor geometry** — defensively lex, find the token under the cursor, derive the
+     replacement `prefix` + `replace_range`, and the `prior` tokens before the cursor;
+  2. **presentation** — turn the engine's reported grammar-state category into concrete
+     suggestion lists from the OQL field registry —
+
+and delegates the actual *"what does the grammar expect at the cursor?"* question to the
+production parser running in **context mode** (`oql_lang._Parser.parse_for_context`). The
+old parallel token-walker (`_classify*`, paren/clause analysis, entity-consume) has been
+**retired**: it was a second encoding of the grammar that could drift from `_Parser`, and
+since the parser is the thing that ultimately accepts or rejects a query, the editor must
+agree with it by construction. (The field/operator matchers were already shared in part 1
+of the #386 pair; this retires the last parallel piece — grammar-state classification.)
+
+Pure module: imports only the lexer + parser + registry from `oql_lang` (no Flask / ES /
+DB), so it is unit-testable under the OQL venv with `PYTHONPATH=.`. The HTTP route layer
+(`query_translation/editor_views.py`) wraps `parse_context`; the engine's own `_FIELDS`
+registry (everything the grammar will actually parse) is the suggestion vocabulary, so the
+editor never offers a field the parser would then reject.
 """
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional, Dict, Any
 
 from query_translation.oql_lang import (
-    lex, Tok, OQLError, Field,
+    lex, Tok, OQLError, Field, _Parser,
     _ALIAS, _FIELDS, ENTITY_TYPES, _CONNECTIVES,
     match_field, match_operator,
+    CTX_ENTITY, CTX_FIELD, CTX_OPERATOR, CTX_VALUE, CTX_CONNECTIVE,
+    CTX_DIRECTIVE, CTX_END, CTX_NONE,
 )
 
-# The field/operator matchers are SHARED with the production parser (oql_lang) — this
-# module used to keep parallel reimplementations that had already drifted (they missed
-# the `is in collection` operator). Importing the one true matchers means the editor
-# can never recognize a field/operator the parser would reject (oxjob #363). Aliased to
-# the historical private names that the call sites + tests below already use.
+# The field/operator matchers are SHARED with the production parser (oxjob #363) — aliased
+# to the historical private names the tests below already use.
 _match_field = match_field
 _match_operator = match_operator
 
-# --- grammar-state categories -------------------------------------------------
-ENTITY = "entity"
-FIELD = "field"
-OPERATOR = "operator"
-VALUE = "value"
-CONNECTIVE = "connective"
-DIRECTIVE = "directive-keyword"
-END = "annotation-or-end"
-NONE = "none"
+# --- grammar-state categories (re-exported from the engine — single source) ---------
+ENTITY = CTX_ENTITY
+FIELD = CTX_FIELD
+OPERATOR = CTX_OPERATOR
+VALUE = CTX_VALUE
+CONNECTIVE = CTX_CONNECTIVE
+DIRECTIVE = CTX_DIRECTIVE
+END = CTX_END
+NONE = CTX_NONE
 
-# Bool-clause openers ("it's open access") and directive keywords.
-_BOOL_OPENERS = {"it's", "its", "it"}
+# Directive words that bound a partially-typed multi-word field alias when widening
+# the replace-range backwards.
 _DIRECTIVE_WORDS = {"where", "sort", "group", "sample"}
 
 # Operators offered per field kind, in canonical OQL spelling (mirrors the shapes
-# `_parse_operator` accepts; `within N words` / `near "..."` are search-value modes).
+# `match_operator` accepts; `within N words` / `near "..."` are search-value modes).
 KIND_OPERATORS: Dict[str, List[str]] = {
     "search": ["contains", "does not contain", "near", "is similar to"],
     "bool":   [],  # surfaced via the "it's ..." phrasings instead
@@ -78,7 +86,7 @@ _COLUMN_AUTOCOMPLETE_ENTITY: Dict[str, str] = {
 }
 
 
-# --- token-span helpers -------------------------------------------------------
+# --- token-span helpers (cursor geometry) ------------------------------------
 def _tok_raw_len(t: Tok) -> int:
     """Length of the token's raw source text (Tok.val is the *inner* text for
     STRING/ANNOT, so add the two delimiter chars)."""
@@ -110,40 +118,7 @@ def _covering(toks: List[Tok], cpos: int):
     return None, None
 
 
-def _word(toks: List[Tok], i: int) -> Optional[str]:
-    t = toks[i] if 0 <= i < len(toks) else None
-    return t.val.lower() if t and t.kind == "WORD" else None
-
-
-# --- value-list / paren analysis ---------------------------------------------
-def _unclosed_lp_index(toks: List[Tok]) -> Optional[int]:
-    """Index of the last unmatched '(' in `toks`, else None."""
-    stack: List[int] = []
-    for idx, t in enumerate(toks):
-        if t.kind == "LP":
-            stack.append(idx)
-        elif t.kind == "RP" and stack:
-            stack.pop()
-    return stack[-1] if stack else None
-
-
-def _current_clause_start(toks: List[Tok]) -> int:
-    """Index where the clause containing the cursor begins: just after the last
-    top-level (depth-0) connective at the END of `toks`. (Paren/list handling is
-    done by the caller before this is reached.)"""
-    depth = 0
-    for idx in range(len(toks) - 1, -1, -1):
-        t = toks[idx]
-        if t.kind == "RP":
-            depth += 1
-        elif t.kind == "LP":
-            depth -= 1
-        elif depth == 0 and t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
-            return idx + 1
-    return 0
-
-
-# --- response builders --------------------------------------------------------
+# --- response builders (presentation) ----------------------------------------
 def _suppressed(entity, diagnostic=None) -> Dict[str, Any]:
     ctx = {"category": NONE, "prefix": "", "replace_range": None}
     return {"entity": entity, "context": ctx,
@@ -204,6 +179,71 @@ def _value_context(category, fld: Field, in_list=False) -> Dict[str, Any]:
     return ctx
 
 
+def _directive_suggestions() -> List[Dict[str, str]]:
+    return [{"value": w, "kind": "directive"}
+            for w in ("where", "sort by", "group by", "sample")]
+
+
+def _shape(raw: Dict[str, Any]) -> Dict[str, Any]:
+    """Turn the engine's reported (category + Field/payload) into the editor's
+    context dict (concrete suggestion lists, value_kind, autocomplete_entity)."""
+    cat = raw["category"]
+    if cat == ENTITY:
+        return {"category": ENTITY, "suggestions": _entity_suggestions("")}
+    if cat == FIELD:
+        out = {"category": FIELD, "suggestions": _field_suggestions()}
+        if raw.get("directive"):
+            out["directive"] = raw["directive"]
+        return out
+    if cat == OPERATOR:
+        fld = raw.get("fld")
+        kind = fld.kind if fld is not None else None
+        ops = KIND_OPERATORS.get(kind, [])
+        return {"category": OPERATOR, "field": fld.oql if fld is not None else None,
+                "value_kind": kind, "operators": ops,
+                "suggestions": [{"value": o, "kind": "operator"} for o in ops]}
+    if cat == VALUE:
+        fld = raw.get("fld")
+        if fld is not None:
+            return _value_context(VALUE, fld, in_list=raw.get("in_list", False))
+        kind = raw.get("kind")
+        if kind == "bool":
+            return {"category": VALUE, "value_kind": "bool", "field": "it's",
+                    "operators": [], "autocomplete_entity": None,
+                    "suggestions": _bool_phrase_suggestions()}
+        # kind-only value slot (e.g. `sample N`)
+        return {"category": VALUE, "value_kind": kind, "field": raw.get("field"),
+                "operators": [], "autocomplete_entity": None, "suggestions": []}
+    if cat == CONNECTIVE:
+        return {"category": CONNECTIVE,
+                "suggestions": [{"value": "and", "kind": "connective"},
+                                {"value": "or", "kind": "connective"}]}
+    if cat in (DIRECTIVE, END):
+        return {"category": cat, "suggestions": _directive_suggestions()}
+    # NONE / unclassifiable
+    return {"category": NONE}
+
+
+# --- engine-backed classification --------------------------------------------
+def _classify_via_engine(prior: List[Tok]) -> Dict[str, Any]:
+    """Run the production parser over the `prior` tokens in context mode and return
+    its raw grammar-state report ({category, entity, **payload})."""
+    return _Parser(list(prior)).parse_for_context()
+
+
+def _leading_entity(q: str) -> Optional[str]:
+    """Best-effort entity for the suppressed (inside string/annotation) replies."""
+    try:
+        toks = lex(q)
+    except OQLError:
+        try:
+            first = q.strip().split()[0].lower()
+            return first if first in ENTITY_TYPES else None
+        except IndexError:
+            return None
+    return _classify_via_engine(toks).get("entity")
+
+
 # --- main entry ---------------------------------------------------------------
 def parse_context(q: str, pos: Optional[int] = None) -> Dict[str, Any]:
     """Resolve the grammar context at `pos` (code-point offset) in OQL string `q`."""
@@ -238,181 +278,16 @@ def parse_context(q: str, pos: Optional[int] = None) -> Dict[str, Any]:
         replace = {"start": cpos, "end": cpos}
         prior = [t for t in toks if _tok_end(t) <= cpos]
 
-    # (C) classify
-    ctx = _classify(prior)
+    # (C) classify via the production parser (single source of grammar truth)
+    raw = _classify_via_engine(prior)
+    ctx = _shape(raw)
     ctx["prefix"] = prefix
     ctx["replace_range"] = replace
     # widen the replace range backwards across a partially-typed multi-word field
     if ctx["category"] == FIELD and prefix:
         _extend_multiword_prefix(prior, ctx, replace)
-    return {"entity": _consumed_entity(prior), "context": ctx,
+    return {"entity": raw.get("entity"), "context": ctx,
             "diagnostic": _diag(diagnostic) if diagnostic else None}
-
-
-def _classify(prior: List[Tok]) -> Dict[str, Any]:
-    # strip trailing inert annotations
-    p = list(prior)
-    while p and p[-1].kind == "ANNOT":
-        p.pop()
-    # SEMI resets to a fresh statement segment
-    if p and p[-1].kind == "SEMI":
-        return {"category": DIRECTIVE,
-                "suggestions": [{"value": w, "kind": "directive"}
-                                for w in ("where", "sort by", "group by", "sample")]}
-    if any(t.kind == "SEMI" for t in p):
-        last_semi = max(i for i, t in enumerate(p) if t.kind == "SEMI")
-        p = p[last_semi + 1:]
-
-    if not p:
-        return {"category": ENTITY, "suggestions": _entity_suggestions("")}
-
-    entity, rest = _consume_entity_tokens(p)
-    if entity is None:
-        # first word isn't (yet) a known entity — still the entity slot
-        return {"category": ENTITY, "suggestions": _entity_suggestions("")}
-
-    if not rest:
-        return {"category": DIRECTIVE,
-                "suggestions": [{"value": w, "kind": "directive"}
-                                for w in ("where", "sort by", "group by", "sample")]}
-
-    head = rest[0].val.lower() if rest[0].kind == "WORD" else None
-    if head == "where":
-        return _classify_conditions(rest[1:])
-    if head in ("sort", "group"):
-        # after "sort by" / "group by" -> a (sortable/groupable) field name
-        body = rest[2:] if (len(rest) > 1 and rest[1].kind == "WORD"
-                            and rest[1].val.lower() == "by") else rest[1:]
-        # between keys, a comma or asc/desc may intervene; offer field names
-        return {"category": FIELD, "suggestions": _field_suggestions(),
-                "directive": head}
-    if head == "sample":
-        return {"category": VALUE, "value_kind": "num", "field": "sample",
-                "operators": [], "autocomplete_entity": None, "suggestions": []}
-    # entity present, trailing junk -> offer directives/end
-    return {"category": END,
-            "suggestions": [{"value": w, "kind": "directive"}
-                            for w in ("where", "sort by", "group by", "sample")]}
-
-
-def _classify_conditions(cond: List[Tok]) -> Dict[str, Any]:
-    """Classify the cursor's position within the `where`-conditions tokens."""
-    if not cond:
-        return {"category": FIELD, "suggestions": _field_suggestions()}
-
-    # value-list / boolean-group: is the cursor inside an unmatched '(' ?
-    lp = _unclosed_lp_index(cond)
-    if lp is not None:
-        before_lp = cond[:lp]
-        # what governs this paren? the operator immediately before it.
-        gov = _governing_list_field(before_lp)
-        inside = cond[lp + 1:]
-        if gov is not None and not _has_value_after_comma_boundary(inside):
-            # inside a value list: each comma-separated slot expects a value
-            return _value_context(VALUE, gov, in_list=True)
-        if gov is not None:
-            return _value_context(VALUE, gov, in_list=True)
-        # boolean group: a fresh sub-expression begins after '('
-        return _classify_conditions(inside)
-
-    # not in a paren: take the trailing clause
-    clause = cond[_current_clause_start(cond):]
-    return _classify_clause(clause)
-
-
-def _governing_list_field(before_lp: List[Tok]) -> Optional[Field]:
-    """If the tokens right before an open '(' end in a value-list operator
-    (is any of / is not any of / is in), return the Field being listed; else None
-    (the '(' is a boolean group)."""
-    fm = None
-    # find the last field+operator pair ending at before_lp's tail
-    start = _current_clause_start(before_lp)
-    clause = before_lp[start:]
-    m = _match_field(clause, 0)
-    if not m:
-        return None
-    _spelling, fld, flen = m
-    op = _match_operator(clause, flen)
-    if op and op[2] and op[3]:  # complete & opens_list
-        return fld
-    return None
-
-
-def _has_value_after_comma_boundary(inside: List[Tok]) -> bool:
-    # placeholder hook for finer in-list cursor logic; always treat as value slot
-    return False
-
-
-def _classify_clause(clause: List[Tok]) -> Dict[str, Any]:
-    if not clause:
-        return {"category": FIELD, "suggestions": _field_suggestions()}
-
-    # boolean "it's ..." clause
-    if clause[0].kind == "WORD" and clause[0].val.lower() in _BOOL_OPENERS:
-        return {"category": VALUE, "value_kind": "bool", "field": "it's",
-                "operators": [], "autocomplete_entity": None,
-                "suggestions": _bool_phrase_suggestions()}
-
-    m = _match_field(clause, 0)
-    if m is None:
-        return {"category": FIELD, "suggestions": _field_suggestions()}
-    _spelling, fld, flen = m
-    rest = clause[flen:]
-    if not rest:
-        return {"category": OPERATOR, "field": fld.oql, "value_kind": fld.kind,
-                "operators": KIND_OPERATORS.get(fld.kind, []),
-                "suggestions": [{"value": o, "kind": "operator"}
-                                for o in KIND_OPERATORS.get(fld.kind, [])]}
-
-    op = _match_operator(rest, 0)
-    if op is None or not op[2]:
-        # still typing the operator (or unknown token where an op is expected)
-        return {"category": OPERATOR, "field": fld.oql, "value_kind": fld.kind,
-                "operators": KIND_OPERATORS.get(fld.kind, []),
-                "suggestions": [{"value": o, "kind": "operator"}
-                                for o in KIND_OPERATORS.get(fld.kind, [])]}
-    _opstr, olen, _complete, opens_list = op
-    after = rest[olen:]
-    # a value present after the operator -> we're past the value: connective/end
-    has_value = any(t.kind in ("WORD", "STRING") for t in after)
-    if has_value:
-        return {"category": CONNECTIVE,
-                "suggestions": [{"value": "and", "kind": "connective"},
-                                {"value": "or", "kind": "connective"}]}
-    # no value yet -> expect a value of the field's kind
-    return _value_context(VALUE, fld, in_list=opens_list)
-
-
-# --- entity helpers -----------------------------------------------------------
-def _consume_entity_tokens(toks: List[Tok]) -> Tuple[Optional[str], List[Tok]]:
-    """Mirror _parse_entity's greedy 2-then-1 word match. Returns (entity, rest)."""
-    if not toks or toks[0].kind != "WORD":
-        return None, toks
-    if len(toks) > 1 and toks[1].kind == "WORD":
-        two = f"{toks[0].val} {toks[1].val}".lower()
-        if two in ENTITY_TYPES:
-            return two, toks[2:]
-    one = toks[0].val.lower()
-    if one in ENTITY_TYPES:
-        return one, toks[1:]
-    return None, toks
-
-
-def _consumed_entity(prior: List[Tok]) -> Optional[str]:
-    p = [t for t in prior if t.kind != "ANNOT"]
-    entity, _ = _consume_entity_tokens(p)
-    return entity
-
-
-def _leading_entity(q: str) -> Optional[str]:
-    try:
-        return _consumed_entity(lex(q))
-    except OQLError:
-        try:
-            first = q.strip().split()[0].lower()
-            return first if first in ENTITY_TYPES else None
-        except IndexError:
-            return None
 
 
 def _extend_multiword_prefix(prior: List[Tok], ctx: Dict[str, Any],
