@@ -14,6 +14,17 @@
 #   * {id, oqo, nl: [...]}             standalone NL-only case, own gold OQO
 #                                      (Zendesk "how do I search for X" / guides).
 #
+# Two optional per-case fields:
+#   * gold: <OQO>    a SIDECAR gold-override on a `ref` case. Shadows the corpus
+#                    gold for THIS case only, so the NL set can carry a
+#                    convention-correct gold (e.g. the near-phrase search
+#                    convention, oxjob #344 decision 1) WITHOUT editing the frozen
+#                    #330 corpus.yaml. The `ref` is kept for provenance/display.
+#   * exempt: <why>  exclude this case from the GRADED score (numerator AND
+#                    denominator) while keeping it loaded, run, and visible in the
+#                    GUI. For cases the eval intentionally doesn't grade — e.g.
+#                    case 49 (collections are out of NL v1 scope).
+#
 # Each NL formulation is {text, difficulty} with difficulty:
 #   easy = clean / well-formed — how a careful user phrases it.
 #   hard = casual / conversational / indirect / arcane / messy / terse — the
@@ -57,11 +68,10 @@ cases:
     - {text: "works affiliated with either Stanford or UF", difficulty: hard}
     - {text: "anything out of stanford or florida", difficulty: hard}
 
-- ref: 4   # institution is NOT any of (U. of Florida, Stanford)
-  nl:
-    - {text: "papers not affiliated with the University of Florida or Stanford", difficulty: easy}
-    - {text: "works from anywhere except Stanford and UF", difficulty: hard}
-    - {text: "exclude florida and stanford papers", difficulty: hard}
+# (corpus row 4 = `institution is NOT any of (UF, Stanford)` intentionally NOT
+# ref'd: "all papers except Florida or Stanford" is a query *fragment* nobody
+# asks in NL — removed from the eval set per Jason's 2026-06-05 review. The
+# De Morgan / negated-set behavior is still exercised by NL-LG-006 (exclusion).)
 
 - ref: 5   # type is any of (article, review)
   nl:
@@ -82,7 +92,7 @@ cases:
   nl:
     - {text: "papers whose title contains apple, banana, and cherry", difficulty: easy}
     - {text: "title mentions all three of apple, banana and cherry", difficulty: hard}
-    - {text: "title has apple banana cherry all together", difficulty: hard}
+    - {text: "title has all of apple and banana and cherry", difficulty: hard}
 
 - ref: 10  # title contains apple banana cherry (space = implicit AND)
   nl:
@@ -95,7 +105,12 @@ cases:
 #    distinctions. Inherently subtle: the NL must signal which lever. The
 #    grader's human fail-list owns the genuinely-ambiguous misses (EXPLORE §1).
 # ---------------------------------------------------------------------------
-- ref: 11   # title contains climate change  (stemmed AND, words may be apart)
+- ref: 11   # title contains climate change
+  # GOLD OVERRIDE (decision 1): a bare multi-word search term is ONE stemmed
+  # near-phrase leaf, not two split words. The corpus row splits it (climate AND
+  # change) — but no human phrasing a bare "climate change" means "the two words
+  # anywhere apart". corpus.yaml stays frozen; this shadows it for the NL set.
+  gold: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"climate change"', operator: contains}]}
   nl:
     - {text: "papers with climate change in the title", difficulty: easy}
     - {text: "title mentions climate change", difficulty: hard}
@@ -114,10 +129,13 @@ cases:
     - {text: "title: whopper junior together, stemming on", difficulty: hard}
 
 - ref: 14   # title contains "cat"  (quoted single word = EXACT, no plurals)
+  # Exact (non-stemmed) search is a rare, deliberate ask — every formulation
+  # carries a STRONG explicit exactness signal (decision 2); the agent should
+  # otherwise resist exact.
   nl:
-    - {text: 'papers with the exact word "cat" in the title, not cats', difficulty: easy}
-    - {text: "title contains cat exactly, excluding the plural", difficulty: hard}
-    - {text: 'title has just "cat", no stemming', difficulty: hard}
+    - {text: 'papers with the exact literal word "cat" in the title — no stemming, must NOT match cats', difficulty: easy}
+    - {text: "title contains cat as an exact match, plurals excluded, no word variations", difficulty: hard}
+    - {text: 'title has just the exact token "cat", stemming off', difficulty: hard}
 
 - ref: 15   # title contains cat  (bare = stemmed, matches cats)
   nl:
@@ -131,10 +149,10 @@ cases:
     - {text: 'title has the literal phrase "rock or roll" (or being part of the phrase)', difficulty: hard}
     - {text: 'exact title phrase "rock or roll"', difficulty: hard}
 
-- ref: 18  # title contains climate (change or warming)
+- ref: 18  # title contains climate (change or warming)  — genuine boolean, NOT a phrase
   nl:
-    - {text: "papers whose title contains climate and either change or warming", difficulty: easy}
-    - {text: "title about climate change or climate warming", difficulty: hard}
+    - {text: "papers whose title contains the word climate and either change or warming", difficulty: easy}
+    - {text: "title with the word climate plus either the word change or the word warming", difficulty: hard}
     - {text: "title: climate and (change or warming)", difficulty: hard}
 
 # (corpus row 20 = `title contains bar*` is a status:error row — prefix wildcard
@@ -146,8 +164,8 @@ cases:
 - ref: 21  # title contains "smart phone" within 3 words  (EXACT proximity)
   nl:
     - {text: 'title has "smart" and "phone" within 3 words of each other, exact', difficulty: hard}
-    - {text: "papers where smart and phone appear within three words in the title", difficulty: hard}
-    - {text: 'title proximity: "smart phone" within 3', difficulty: hard}
+    - {text: "papers where the exact words smart and phone appear within three words in the title, no stemming", difficulty: hard}
+    - {text: 'title exact proximity: "smart phone" within 3, no word variations', difficulty: hard}
 
 - ref: 22  # title contains foo*bar  (mid-word wildcard within one token)
   nl:
@@ -206,11 +224,15 @@ cases:
     - {text: "closed-access UW research with NIH funding", difficulty: hard}
     - {text: "non-OA papers, uw, nih funded", difficulty: hard}
 
-- ref: 38  # title & abstract contains climate change  (stemmed AND)
+- ref: 38  # title & abstract contains change AND climate  (stemmed AND, words apart)
+  # The corpus gold splits the words (climate AND change, may be apart) — the
+  # EXPLICIT-separate-words exception to decision 1's near-phrase default. So the
+  # NL must signal "two separate words", not a bare "climate change" phrase
+  # (which would now resolve to a near-phrase — see ref 11).
   nl:
-    - {text: "papers about climate change (in the title or abstract)", difficulty: easy}
-    - {text: "works mentioning climate change anywhere in title or abstract", difficulty: hard}
-    - {text: "climate change in title or abstract", difficulty: hard}
+    - {text: "papers where the title or abstract has the word climate and the word change (not necessarily together)", difficulty: easy}
+    - {text: "title or abstract contains both the word climate and, separately, the word change", difficulty: hard}
+    - {text: "title/abstract: the word climate AND the word change, as two separate words", difficulty: hard}
 
 - ref: 39  # authors sort by works_count desc
   nl:
@@ -249,6 +271,9 @@ cases:
     - {text: "list the topics belonging to domain 3", difficulty: easy}
 
 - ref: 45  # authors where last known institution is UNC and topics is climate change
+  # Tolerated miss (Jason 2026-06-05): OX has many granular climate topics and no
+  # single overarching one, so topic-as-author-filter is inherently fuzzy. Kept
+  # for coverage but not a tuning target; reworded to name the topic concretely.
   nl:
     - {text: "authors whose last known institution is UNC and who work on the climate change topic", difficulty: easy}
     - {text: "climate-change researchers currently at the University of North Carolina", difficulty: hard}
@@ -258,10 +283,12 @@ cases:
 # F. Group by  (corpus rows 46–54)
 # ---------------------------------------------------------------------------
 - ref: 46  # works where author is Stephen Hawking group by author
+  # Only the co-author phrasing survives Jason's review: the one real reason to
+  # filter by an author AND group by author is to surface co-authors, and a human
+  # says "co-author". The other two formulations ("…grouped by author",
+  # "…counted per author") were nonsense and were deleted.
   nl:
-    - {text: "Stephen Hawking's papers, grouped by author", difficulty: easy}
     - {text: "works by Stephen Hawking broken down by co-author", difficulty: hard}
-    - {text: "hawking papers counted per author", difficulty: hard}
 
 - ref: 47  # anywhere contains near "Macrocystis pyrifera" group by author
   nl:
@@ -273,6 +300,12 @@ cases:
 # executable on the live /query (HTTP 400), so it can't be Tier-2 graded. See header.
 
 - ref: 49  # country is col_eu27 and country is US group by topic
+  # EXEMPT from the graded score (decision 4): col_eu27 is a COLLECTION, which NL
+  # v1 deliberately does not support (collections need per-user authorization we
+  # won't touch). The agent REFUSES collection requests with a structured error,
+  # so this would always "fail" grading — exempt it but keep it visible as the
+  # canonical example of the refusal path.
+  exempt: "collections (col_eu27) out of NL v1 scope — agent refuses; see oxjob #344 decision 4"
   nl:
     - {text: "papers co-authored between an EU27 country and the US, grouped by topic", difficulty: hard}
     - {text: "US–EU27 collaborations counted by topic", difficulty: hard}
@@ -285,8 +318,11 @@ cases:
     - {text: "count retractions per institution", difficulty: hard}
 
 - ref: 51  # t&a contains near "coral bleaching" and citations > 100 group by source
+  # NB: the gold uses `near` (stemmed phrase). A bare unquoted "coral bleaching"
+  # now maps to that near-phrase (decision 1), so the formulations stay unquoted —
+  # quoting it would (correctly) become an exact phrase and mismatch the gold.
   nl:
-    - {text: 'papers about "coral bleaching" with more than 100 citations, grouped by source', difficulty: hard}
+    - {text: "papers about coral bleaching with more than 100 citations, grouped by source", difficulty: hard}
     - {text: "highly cited (>100) coral bleaching papers per journal", difficulty: hard}
     - {text: "coral bleaching works cited over 100 times, grouped by source", difficulty: hard}
 
@@ -336,11 +372,11 @@ cases:
     - {text: "title or abstract containing oyster toadfish exactly", difficulty: hard}
     - {text: 'exact "oyster toadfish" anywhere in title/abstract', difficulty: hard}
 
-- ref: 60  # t&a contains behavio*r  (mid-word wildcard, UK/US spelling)
-  nl:
-    - {text: "papers matching both behavior and behaviour in title or abstract", difficulty: hard}
-    - {text: "title/abstract with behavio*r covering both spellings", difficulty: hard}
-    - {text: "US or UK spelling of behavior in title or abstract", difficulty: hard}
+# (corpus row 60 = `t&a contains behavio*r` (mid-word wildcard for UK/US
+# spelling) intentionally NOT ref'd: the machine's `behavior OR behaviour`
+# (two stemmed leaves) is more readable than a mid-word wildcard and Jason
+# prefers it; uncommon ask — removed so the agent is never pushed toward
+# behavio*r. (Trailing-wildcard behavior is still tested by ref 57 = phone*.))
 
 - ref: 61  # autism/ASD synonyms AND intervention synonyms AND 2015-2024 AND article/review AND en
   nl:
@@ -403,15 +439,18 @@ cases:
     - {text: "title/abstract has covid and not pediatric", difficulty: hard}
 
 - ref: 72  # t&a contains quantum computing group by country
+  # GOLD OVERRIDE (decision 1): "quantum computing" is a bare multi-word concept →
+  # one stemmed near-phrase leaf, not split words. (corpus.yaml stays frozen.)
+  gold: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: '"quantum computing"', operator: contains}], group_by: [{column_id: authorships.countries}]}
   nl:
     - {text: "quantum computing papers grouped by country", difficulty: easy}
     - {text: "count works about quantum computing per country", difficulty: hard}
     - {text: "quantum computing output by country", difficulty: hard}
 
-- ref: 73  # t&a contains CRISPR and Cas9 group by author
+- ref: 73  # t&a contains CRISPR and Cas9 group by author  (two distinct terms, AND-ed)
   nl:
     - {text: "papers mentioning CRISPR and Cas9, grouped by author", difficulty: easy}
-    - {text: "crispr cas9 research per author", difficulty: hard}
+    - {text: "research mentioning both CRISPR and Cas9, counted per author", difficulty: hard}
     - {text: "group CRISPR and Cas9 works by author", difficulty: hard}
 
 - ref: 74  # t&a contains CRISPR group by funder
@@ -465,7 +504,7 @@ cases:
   oqo: {get_rows: works, filter_rows: [{column_id: language, value: fr}]}
   nl:
     - {text: "how do I search for papers written in French?", difficulty: hard}
-    - {text: "french papers only", difficulty: easy}
+    - {text: "papers in the French language only", difficulty: easy}
 
 - id: NL-ZD-005
   provenance: {type: "zendesk ticket", label: "how do I find retracted papers"}
@@ -486,15 +525,15 @@ cases:
   provenance: {type: "librarian guide", label: "highly cited topic search"}
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: CRISPR, operator: contains},
-        {column_id: cited_by_count, value: 1000, operator: ">"}]}
+        {column_id: cited_by_count, value: 1000, operator: ">="}]}
   nl:
-    - {text: "highly cited papers about CRISPR — more than 1000 citations", difficulty: easy}
-    - {text: "CRISPR research with over a thousand citations", difficulty: hard}
+    - {text: "papers about CRISPR with at least 1000 citations", difficulty: easy}
+    - {text: "CRISPR research with 1000 or more citations", difficulty: hard}
 
 - id: NL-LG-002
   provenance: {type: "librarian guide", label: "recent topic search, ranked by impact"}
   oqo: {get_rows: works, filter_rows: [
-        {column_id: title_and_abstract.search, value: "machine learning", operator: contains},
+        {column_id: title_and_abstract.search, value: '"machine learning"', operator: contains},
         {column_id: publication_year, value: 2020, operator: ">="}],
         sort_by: [{column_id: cited_by_count, direction: desc}]}
   nl:
@@ -511,7 +550,7 @@ cases:
 - id: NL-LG-004
   provenance: {type: "librarian guide", label: "topic counts by country"}
   oqo: {get_rows: works,
-        filter_rows: [{column_id: title_and_abstract.search, value: "quantum computing", operator: contains}],
+        filter_rows: [{column_id: title_and_abstract.search, value: '"quantum computing"', operator: contains}],
         group_by: [{column_id: authorships.countries}]}
   nl:
     - {text: "how many quantum computing papers does each country have?", difficulty: hard}
@@ -527,7 +566,7 @@ cases:
 - id: NL-LG-006
   provenance: {type: "librarian guide", label: "topic with exclusion"}
   oqo: {get_rows: works, filter_rows: [
-        {column_id: title_and_abstract.search, value: "deep learning", operator: contains},
+        {column_id: title_and_abstract.search, value: '"deep learning"', operator: contains},
         {column_id: title_and_abstract.search, value: survey, operator: contains, is_negated: true}]}
   nl:
     - {text: "deep learning papers but not surveys", difficulty: easy}

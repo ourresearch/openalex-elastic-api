@@ -272,8 +272,15 @@ Dimension order is meaningful and is preserved by the canonicalizer.
 - Multi-dimensional `group_by` (>1 dimension) is single-dimension only in the live
   serving impl → **#297** (`group-by-extensions`).
 - Sorting groups by an aggregate metric (e.g. funders by mean citation impact) is
-  out of scope here (adjacent to Stage C) → **#297**. Groups sort by `_count` /
-  `_key`.
+  out of scope here (adjacent to Stage C) → **#297**. **Group buckets always
+  auto-sort by `_count` descending (= works_count desc) by default**; a `sort_by`
+  alongside `group_by` may only re-order buckets via the synthetic `count` / `key`
+  keys — a `sort_by` naming a *real* column under a `group_by` is **not** supported
+  (it orders rows, which don't exist in a grouped response) and is treated as
+  ignored. The NL→OQO agent (oxjob #344) therefore OMITS `sort_by` when it emits a
+  `group_by`; supporting real-column bucket ordering was scoped and deferred as
+  non-trivial (sub-aggregation wiring across buckets.py / sort.py / validator.py —
+  oxjob #344 decision 3).
 
 ---
 
