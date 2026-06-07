@@ -197,6 +197,27 @@ rows:
         {column_id: display_name.search, value: cherry, operator: contains}]}
   note: 'SPACE = implicit AND (Google/PubMed convention) — `apple banana cherry` == `apple and banana and cherry`.'
 
+- id: 87
+  category: "boolean logic"
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: 'works where abstract contains banana or title contains apple'
+  oqo: {get_rows: works, filter_rows: [
+        {join: or, filters: [
+          {column_id: display_name.search, value: apple, operator: contains},
+          {column_id: abstract.search, value: banana, operator: contains}]}]}
+  note: >-
+    Cross-field OR — an OR branch whose two arms scope DIFFERENT search fields
+    (title vs. abstract). The contrast to row 7's same-field OR. Parses,
+    validates, and executes natively (`bool.should`, minimum_should_match=1),
+    but oxurl has no top-level OR across distinct filter keys (commas = AND), so
+    the renderer correctly raises `URLRenderError: OR across different fields` →
+    `oql-only`. An OQL-over-OXURL expressiveness win, same class as row 78.
+
 # ---------------------------------------------------------------------------
 # C. The gauntlet — search semantics  (the spine; teaches the v2 model)
 #    Stemming is ON by default; quotes turn it OFF (exact); `near` is the bridge.

@@ -248,6 +248,7 @@ def test_every_row_has_valid_facets():
         # row 48 (AKQ#75 multi-dim group_by) was server-unsupported; oxjob #387
         # shipped nested execution, so it is now `has-oxurl`.
         78: "oql-only",            # zd#8101 OR across stemmed/exact match-modes
+        87: "oql-only",            # cross-field OR (title vs. abstract); #363
     }
     assert non_has_oxurl == expected, (
         f"oxurl_status classification drifted: "
