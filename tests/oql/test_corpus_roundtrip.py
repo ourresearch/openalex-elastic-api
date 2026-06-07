@@ -81,6 +81,36 @@ def test_value_case_is_canonicalized():
     assert rows("works where country is col_eu27")[0]["value"] == "col_eu27"        # preserved
 
 
+def test_unparenthesized_or_connective_is_not_absorbed_into_value():
+    """An `or` connective between two full `field is value` comparisons parses to
+    an OR branch — it must NOT be swallowed into the preceding value.
+
+    Regression guard for the production-`oql_parser.py` bug found via #373 live-verify
+    (oxjob #363): `parse_oql_to_oqo("works where type is article or type is review")`
+    once returned a single leaf `{column_id: type, value: "article or type is review"}`
+    (count 0) instead of an OR of two leaves. Fixed by the #376 engine unification that
+    made `parse_oql_to_oqo` delegate to the oracle grammar. This guards the **production
+    entry point** the #373 OQL-submit pipeline calls, and the **un-parenthesized** shape
+    (TestOQLParser.test_parse_or_expression only covers the parenthesized form). Distinct
+    parser production from the `is any of (...)` value-list sugar (corpus rows 5 / 7)."""
+    from query_translation.oql_parser import parse_oql_to_oqo
+
+    # Same-field OR, no parens.
+    fr = parse_oql_to_oqo("works where type is article or type is review").to_dict()["filter_rows"]
+    assert len(fr) == 1
+    branch = fr[0]
+    assert branch.get("join") == "or"
+    assert [f["value"] for f in branch["filters"]] == ["article", "review"]
+    assert [f["column_id"] for f in branch["filters"]] == ["type", "type"]
+
+    # Three-way OR stays flat — no value carries an `or ... is ...` tail.
+    fr3 = parse_oql_to_oqo(
+        "works where type is article or type is review or type is book"
+    ).to_dict()["filter_rows"]
+    assert len(fr3) == 1 and fr3[0]["join"] == "or"
+    assert [f["value"] for f in fr3[0]["filters"]] == ["article", "review", "book"]
+
+
 def test_canonical_output_is_lowercase_connectives():
     from tests.oql.oql_v2 import parse as p, render as r
     # different-column OR won't factor into `any of`, so an `or` survives to output
