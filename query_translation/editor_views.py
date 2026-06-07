@@ -19,7 +19,9 @@ from query_translation.diagnostics import (
     parse_diagnostic, validation_diagnostic, OQLError as _OQLError,
 )
 from query_translation.oql_context import parse_context as _parse_context
-from query_translation.oql_lang import parse as _engine_parse
+from query_translation.oql_lang import (
+    parse as _engine_parse, parse_collecting as _engine_parse_collecting,
+)
 from query_translation.validator import validate_oqo
 
 blueprint = Blueprint("oql_editor", __name__)
@@ -63,17 +65,26 @@ def validate_oql_route():
     `diagnostics` registry: parse errors carry the engine's rich OQLError (code +
     fix-it + byte position); validation errors carry the property-catalog
     ValidationError (code + OQO location) plus the registry's fix-it + severity.
+
+    `diagnostics` can hold MORE THAN ONE entry: on a parse failure the engine
+    re-parses in recover mode and reports every clause-level error in the doc (not
+    just the first), so the editor can squiggle the whole document at once.
     """
     oql = request.args.get("q", "")
     # Parse with the engine directly (preserves code + fixit + position that
-    # oql_parser.parse_oql_to_oqo flattens away).
+    # oql_parser.parse_oql_to_oqo flattens away). The happy path stays on strict
+    # `parse()` so a valid query is byte-identical to production parsing.
     try:
         oqo = _engine_parse(oql)
-    except _OQLError as e:
-        return jsonify(_parse_error_body(parse_diagnostic(e))), 200
+    except _OQLError:
+        # The query is broken — re-run in recover mode to collect EVERY clause-level
+        # parse error, so the editor squiggles the whole doc instead of just the first
+        # error (oxjob #363, multi-error /validate). Always 200; verdict in the body.
+        _oqo, diags = _engine_parse_collecting(oql)
+        return jsonify(_parse_error_body([parse_diagnostic(d) for d in diags])), 200
     except Exception as e:  # any other engine failure -> one generic diagnostic
         return jsonify(_parse_error_body(
-            parse_diagnostic(_OQLError("OQL_PARSE_ERROR", str(e))))), 200
+            [parse_diagnostic(_OQLError("OQL_PARSE_ERROR", str(e)))])), 200
 
     vr = validate_oqo(oqo)
     # Validator errors/warnings flow through the shared registry, so they pick up the
@@ -97,8 +108,14 @@ def validate_oql_route():
     }), 200
 
 
-def _parse_error_body(diag):
+def _parse_error_body(diags):
+    """Body for a query that failed to parse. ``diags`` is a list of ``Diagnostic``
+    (multi-error recovery may report more than one); a clean parse never reaches here.
+    Defensive: if recovery somehow collected nothing, still report a generic error so
+    the response is never a silent "valid: false, diagnostics: []"."""
+    if not diags:
+        diags = [parse_diagnostic(_OQLError("OQL_PARSE_ERROR", "could not parse query"))]
     return {
         "valid": False, "oql": None, "oqo": None, "oxurl": None,
-        "diagnostics": [diag.to_dict()],
+        "diagnostics": [d.to_dict() for d in diags],
     }

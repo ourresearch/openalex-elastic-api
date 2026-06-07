@@ -413,6 +413,17 @@ class _Parser:
         self._cur_fld = None      # field of the clause currently being parsed
         self._in_list = False     # are we inside a parenthesized value list?
         self._directive = None    # "sort" / "group" when inside a directive
+        # --- dual-mode (editor-recover) state (oxjob #363, decision 15) ---
+        # `_recover_mode` is the second, INDEPENDENT dual mode (never on at the same
+        # time as `_ctx_mode`). False for all production parsing, so the recover
+        # branches below are inert no-ops on the strict path — strict behavior is
+        # byte-identical (locked by tests/oql). When True (the editor `/validate`
+        # path via `parse_collecting`), a clause-level `OQLError` is recorded into
+        # `_diagnostics` and the parser SYNCHRONIZES to the next safe boundary and
+        # keeps going, so the editor can squiggle the WHOLE doc instead of just the
+        # first error.
+        self._recover_mode = False
+        self._diagnostics: List[OQLError] = []
 
     # -- editor-context hook (no-op in strict mode) --
     def _want(self, category, **payload):
@@ -527,6 +538,114 @@ class _Parser:
                 return {"category": cat, "entity": self._entity, **payload}
             return {"category": CTX_NONE, "entity": self._entity}
 
+    # -- editor-recover entry (dual mode; oxjob #363, decision 15) --
+    def parse_collecting(self) -> Tuple[Optional[OQO], List[OQLError]]:
+        """Run the SAME grammar over the full input collecting ALL clause-level
+        diagnostics instead of failing on the first. Returns
+        ``(oqo_or_None, diagnostics)``.
+
+        Recovery happens at two boundaries (charter decision 15): each
+        ``_operand()`` and each value-list element catches its ``OQLError``, records
+        it, and synchronizes to the next safe boundary so parsing of the rest of the
+        query resumes. An error OUTSIDE a recoverable boundary (entity, a directive,
+        trailing tokens, an unbalanced paren at the top level) is recorded as the
+        terminal diagnostic. The returned OQO is best-effort (it may contain recovery
+        placeholders) and is meant only for the caller to know whether the parse was
+        clean — when ``diagnostics`` is non-empty the editor uses the diagnostics, not
+        the OQO. Strict ``parse()`` never enters this mode."""
+        self._recover_mode = True
+        oqo = None
+        try:
+            oqo = self.parse()
+        except OQLError as e:
+            self._diagnostics.append(e)
+        return oqo, list(self._diagnostics)
+
+    def _recovery_placeholder(self) -> LeafFilter:
+        """A throwaway leaf inserted where a clause failed to parse, so the enclosing
+        expression keeps a valid shape during recovery. Never reaches execution: the
+        editor surfaces diagnostics, not this OQO."""
+        return LeafFilter(column_id="__recovery_error__", value=None, operator="is")
+
+    def _operand(self) -> FilterType:
+        """Parse one operand. In recover mode an ``OQLError`` is recorded and we
+        synchronize to the next clause boundary, returning a placeholder so the
+        enclosing ``_parse_expr`` keeps its shape; strict mode just delegates (the
+        recover branch is dead code on the strict path)."""
+        if not self._recover_mode:
+            return self._parse_operand()
+        start_i = self.i
+        try:
+            return self._parse_operand()
+        except OQLError as e:
+            self._diagnostics.append(e)
+            self._synchronize()
+            if self.i == start_i and self.peek() is not None:
+                self.next()  # guarantee forward progress -> no infinite loop
+            return self._recovery_placeholder()
+
+    def _synchronize(self):
+        """Recovery: advance to the next safe boundary so clause parsing can resume
+        after an error — a top-level connective (and/or), a directive keyword
+        (sort/group/sample), the start of a new field clause (so an
+        adjacency-after-error still gets reported, not swallowed), a closing paren, a
+        semicolon, or end. Parens are depth-tracked so a half-parsed group doesn't let
+        recovery escape it. Forward progress at the error site is guaranteed by the
+        caller (`_operand` force-advances when synchronize consumes nothing AND the
+        operand consumed nothing), so a clause-start sitting right at the cursor is
+        safe to stop on."""
+        depth = 0
+        while True:
+            t = self.peek()
+            if t is None:
+                return
+            if t.kind == "LP":
+                depth += 1
+                self.next()
+                continue
+            if t.kind == "RP":
+                if depth == 0:
+                    return  # let the enclosing group's _expect_rp consume it
+                depth -= 1
+                self.next()
+                continue
+            if depth == 0:
+                if t.kind == "SEMI":
+                    return
+                if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
+                    return
+                if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample"):
+                    return
+                # A new field clause begins here (e.g. `... year is abc title is x`):
+                # stop so the connective loop reports the missing AND/OR rather than
+                # swallowing the clause.
+                if self._starts_new_clause(0):
+                    return
+            self.next()
+
+    def _sync_list_element(self):
+        """Recovery within a value list: advance to the next element boundary
+        (a comma) or the closing paren so the next ``is any of (...)`` element can be
+        parsed after a bad one."""
+        depth = 0
+        while True:
+            t = self.peek()
+            if t is None:
+                return
+            if t.kind == "LP":
+                depth += 1
+                self.next()
+                continue
+            if t.kind == "RP":
+                if depth == 0:
+                    return
+                depth -= 1
+                self.next()
+                continue
+            if depth == 0 and t.kind == "COMMA":
+                return
+            self.next()
+
     def _parse_entity(self) -> str:
         # Greedy longest match against ENTITY_TYPES (handles "source types").
         self._want(CTX_ENTITY)
@@ -556,7 +675,7 @@ class _Parser:
 
     # -- boolean expression with single-connective-per-level enforcement --
     def _parse_expr(self, top=False) -> FilterType:
-        operands = [self._parse_operand()]
+        operands = [self._operand()]
         conns: List[str] = []
         while True:
             self._skip_annot()
@@ -568,33 +687,53 @@ class _Parser:
                 break
             if t.kind == "WORD" and t.val.lower() == "not":
                 # NOT at a connective position means "a NOT b" with no AND/OR.
+                if self._recover_mode:
+                    self._diagnostics.append(self._adjacency_err(t))
+                    operands.append(self._operand())  # recover: treat as implicit AND
+                    continue
                 self._adjacency_error(t)
             if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
                 conns.append(t.val.lower())
                 self.next()
-                operands.append(self._parse_operand())
+                operands.append(self._operand())
                 continue
             # directive keywords end the where-expression
             if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample"):
                 break
             # anything else with no connective = implicit adjacency
+            if self._recover_mode:
+                self._diagnostics.append(self._adjacency_err(t))
+                operands.append(self._operand())  # recover: treat as implicit AND
+                continue
             self._adjacency_error(t)
         if not conns:
             return operands[0]
         if len(set(conns)) > 1:
             first = self.toks[0]
-            raise oql_error(
-                "OQL_MIXED_BOOL_NEEDS_PARENS",
-                "mixed AND/OR at one level is ambiguous — add parentheses",
-                'group explicitly, e.g. "a and (b or c)" or "(a and b) or c"',
-                first.pos)
+            if self._recover_mode:
+                # Don't abort the whole parse for a mixed-bool ambiguity: record it
+                # and pick the first connective so recovery keeps the tree's shape.
+                self._diagnostics.append(oql_error(
+                    "OQL_MIXED_BOOL_NEEDS_PARENS",
+                    "mixed AND/OR at one level is ambiguous — add parentheses",
+                    'group explicitly, e.g. "a and (b or c)" or "(a and b) or c"',
+                    first.pos))
+            else:
+                raise oql_error(
+                    "OQL_MIXED_BOOL_NEEDS_PARENS",
+                    "mixed AND/OR at one level is ambiguous — add parentheses",
+                    'group explicitly, e.g. "a and (b or c)" or "(a and b) or c"',
+                    first.pos)
         join = conns[0]
         return BranchFilter(join=join, filters=operands)
 
     def _adjacency_error(self, t: Tok):
-        raise oql_error("OQL_IMPLICIT_ADJACENCY",
-                       f'two conditions with no AND/OR between them (near "{t.val}")',
-                       'insert an explicit AND or OR', t.pos)
+        raise self._adjacency_err(t)
+
+    def _adjacency_err(self, t: Tok) -> OQLError:
+        return oql_error("OQL_IMPLICIT_ADJACENCY",
+                        f'two conditions with no AND/OR between them (near "{t.val}")',
+                        'insert an explicit AND or OR', t.pos)
 
     def _parse_operand(self) -> FilterType:
         self._skip_annot()
@@ -804,7 +943,20 @@ class _Parser:
         vals = []
         self._in_list = True
         while True:
-            vals.append(self._parse_scalar(fld))
+            if self._recover_mode:
+                si = self.i
+                try:
+                    vals.append(self._parse_scalar(fld))
+                except OQLError as e:
+                    # recover at the list-element boundary: record + skip to the next
+                    # comma / closing paren so the remaining elements still parse.
+                    self._diagnostics.append(e)
+                    self._sync_list_element()
+                    t0 = self.peek()
+                    if self.i == si and t0 is not None and t0.kind not in ("COMMA", "RP"):
+                        self.next()  # guarantee forward progress
+            else:
+                vals.append(self._parse_scalar(fld))
             self._skip_annot()
             t = self.peek()
             if t and t.kind == "COMMA":
@@ -1282,6 +1434,25 @@ def parse_with_hints(oql: str):
     toks = lex(oql)
     p = _Parser(toks)
     return p.parse(), p.hints
+
+
+def parse_collecting(oql: str) -> Tuple[Optional[OQO], List[OQLError]]:
+    """OQL text -> (OQO_or_None, [OQLError, ...]) collecting EVERY clause-level parse
+    error instead of failing on the first (the editor `/validate` path; oxjob #363).
+
+    The strict ``parse()`` above is unchanged — recovery lives entirely behind the
+    parser's ``_recover_mode`` flag, branched only at the operand and list-element
+    boundaries. A clean parse returns ``(oqo, [])``; an empty input or a lexer error
+    (unterminated string/annotation — there are no tokens to recover across) returns
+    a single diagnostic, matching ``parse()``'s first-error for those cases."""
+    try:
+        toks = lex(oql)
+    except OQLError as e:
+        return None, [e]
+    if not toks:
+        return None, [oql_error("OQL_EMPTY", "empty query",
+                                'e.g. "works where year >= 2020"')]
+    return _Parser(toks).parse_collecting()
 
 
 # ---------------------------------------------------------------------------
