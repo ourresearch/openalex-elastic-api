@@ -273,14 +273,14 @@ def _build_params_from_oqo(oqo: OQO, request):
     # sort — there is no second search application.
     has_search = _has_search_clause(oqo.filter_rows)
 
+    # group_by flows to the shared_view stages as the legacy comma-joined string.
+    # A single column → single-dim (unchanged). Multiple columns → the NESTED
+    # multi-dim path (oxjob #387): apply_grouping/format_response detect the comma
+    # and build/format nested buckets. This is the execution half of corpus case
+    # 48 ("top topics each year") — render already worked; this makes it run.
     group_by = None
     if oqo.group_by:
-        if len(oqo.group_by) > 1:
-            raise APIQueryParamsError(
-                "Multi-dimensional group_by is in the OQO spec but not yet "
-                "supported by the live API. See oxjob #297."
-            )
-        group_by = oqo.group_by[0].column_id
+        group_by = ",".join(g.column_id for g in oqo.group_by)
 
     # OQO value wins; request arg is the back-compat fallback.
     cursor = oqo.cursor if oqo.cursor is not None else request.args.get("cursor")

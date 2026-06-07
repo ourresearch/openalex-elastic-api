@@ -17,6 +17,20 @@ def format_key(base, group_by):
     return f"{base}_{group_by.replace('.', '_')}"
 
 
+def is_multi_dim_group_by(group_by_string):
+    """A comma in the (singular) `group_by` param means multi-dimensional,
+    NESTED grouping (cross-product) — distinct from `group_bys` (plural), which
+    is independent side-by-side facets. See oxjob #387."""
+    return bool(group_by_string) and "," in group_by_string
+
+
+def parse_group_by_dimensions(group_by_string):
+    """Split a multi-dim `group_by=a,b[,c]` string into an ordered list of
+    (field, include_unknown) tuples — one per nesting level, outermost first.
+    A single-dim string yields a one-element list."""
+    return [parse_group_by(part) for part in group_by_string.split(",")]
+
+
 def parse_group_by(group_by):
     include_unknown = False
     if ":" in group_by:

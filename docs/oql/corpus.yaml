@@ -38,9 +38,9 @@
 #                            key). This is an OQL expressiveness WIN, not a bug.
 #       translator-bug     — OXURL *should* express it per spec, but the renderer
 #                            is wrong/incomplete (a query_translation/ bug to fix).
-#       server-unsupported — valid OQO the live API can't execute yet (e.g. row 48
-#                            multi-dim group_by, single-dim only -> #297). The URL
-#                            renders; the server won't run it.
+#       server-unsupported — valid OQO the live API can't execute yet. The URL
+#                            renders; the server won't run it. (No rows currently:
+#                            row 48 multi-dim group_by was resolved by oxjob #387.)
 #     Authored (editorial) — the three failure modes are NOT mechanically
 #     distinguishable from a render success/failure. Only `ok` rows carry it;
 #     error / out-of-scope rows are non-queries with no oxurl status.
@@ -720,13 +720,13 @@ rows:
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#75)"
-  oxurl_status: server-unsupported
+  oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=publication_year:1976-&group_by=primary_topic.id,publication_year'
   status: ok
   oql: 'works where year >= 1976 group by topic, year'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 1976, operator: '>='}],
         group_by: [{column_id: primary_topic.id}, {column_id: publication_year}]}
-  note: Multi-dim group_by is expressible in the spec (live API single-dim only -> #297).
+  note: 'Multi-dim group_by, now SUPPORTED (oxjob #387): the live API nests the ES terms aggs (groups within groups). Was server-unsupported (single-dim only -> #297).'
 
 - id: 49
   category: "group by"

@@ -245,7 +245,8 @@ def test_every_row_has_valid_facets():
         for r in OK_ROWS if r["oxurl_status"] != "has-oxurl"
     }
     expected = {
-        48: "server-unsupported",  # AKQ#75 multi-dim group_by (single-dim only, #297)
+        # row 48 (AKQ#75 multi-dim group_by) was server-unsupported; oxjob #387
+        # shipped nested execution, so it is now `has-oxurl`.
         78: "oql-only",            # zd#8101 OR across stemmed/exact match-modes
     }
     assert non_has_oxurl == expected, (

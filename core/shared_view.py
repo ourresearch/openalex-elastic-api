@@ -7,11 +7,24 @@ import settings
 from core.cursor import get_next_cursor, handle_cursor
 from core.exceptions import APIPaginationError, APIQueryParamsError
 from core.filter import filter_records
-from core.group_by.results import get_group_by_results, calculate_group_by_count
+from core.group_by.results import (
+    get_group_by_results,
+    get_nested_group_by_results,
+    calculate_group_by_count,
+    calculate_nested_group_by_count,
+)
 from core.group_by.filter import filter_group_by
-from core.group_by.utils import parse_group_by
+from core.group_by.utils import (
+    parse_group_by,
+    parse_group_by_dimensions,
+    is_multi_dim_group_by,
+)
 from core.group_by.search import search_group_by_strings_with_q
-from core.group_by.buckets import add_meta_sums, create_group_by_buckets
+from core.group_by.buckets import (
+    add_meta_sums,
+    create_group_by_buckets,
+    create_nested_group_by_buckets,
+)
 from core.knn import KNNQueryWithFilter
 from core.paginate import get_pagination
 from core.params import parse_params
@@ -434,7 +447,10 @@ def apply_sorting(params, fields_dict, default_sort, index_name, s):
 
 
 def apply_grouping(params, fields_dict, s):
-    if params["group_by"]:
+    if params["group_by"] and is_multi_dim_group_by(params["group_by"]):
+        dimensions = parse_group_by_dimensions(params["group_by"])
+        s = create_nested_group_by_buckets(fields_dict, dimensions, s, params)
+    elif params["group_by"]:
         group_by, include_unknown = parse_group_by(params["group_by"])
         s = create_group_by_buckets(fields_dict, group_by, include_unknown, s, params)
     elif params["group_bys"]:
@@ -447,7 +463,12 @@ def apply_grouping(params, fields_dict, s):
 
 
 def filter_group_with_q(params, fields_dict, s):
-    if params["group_by"] and params["q"] and params["q"] != "''":
+    if (
+        params["group_by"]
+        and not is_multi_dim_group_by(params["group_by"])
+        and params["q"]
+        and params["q"] != "''"
+    ):
         group_by, _ = parse_group_by(params["group_by"])
         field = get_field(fields_dict, group_by)
         s = filter_group_by(field, group_by, params["q"], s)
@@ -523,7 +544,11 @@ def format_meta(response, params, s):
         "db_response_time_ms": response.took,
         "page": params["page"] if not params["cursor"] else None,
         "per_page": params["per_page"],
-        "groups_count": calculate_group_by_count(params, response)
+        "groups_count": (
+            calculate_nested_group_by_count(params, response)
+            if is_multi_dim_group_by(params["group_by"])
+            else calculate_group_by_count(params, response)
+        )
         if params["group_by"]
         else None,
     }
@@ -554,6 +579,11 @@ def format_meta(response, params, s):
 
 
 def format_group_by(response, params, index_name, fields_dict, connection='default'):
+    if is_multi_dim_group_by(params["group_by"]):
+        dimensions = parse_group_by_dimensions(params["group_by"])
+        return get_nested_group_by_results(
+            dimensions, params, index_name, fields_dict, response, connection
+        )
     group_by, include_unknown = parse_group_by(params["group_by"])
     group_by_data = get_group_by_results(
         group_by, include_unknown, params, index_name, fields_dict, response, connection

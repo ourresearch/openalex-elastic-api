@@ -96,6 +96,97 @@ def get_group_by_results(
     return results
 
 
+def _keep_only_openalex_keys(results, field, include_unknown):
+    """Mirror the single-dim id-field filter (keep only openalex.org keys, plus
+    `unknown` when requested) so nested levels behave like a single-dim group_by
+    on the same field."""
+    filtered_params = (
+        "country_code",
+        "countries",
+        "language",
+        "sustainable_development_goals.id",
+        "locations.source.type",
+        "primary_location.source.type",
+        "keywords.id",
+        "best_oa_location.license",
+        "best_oa_location.license_id",
+        "locations.license",
+        "locations.license_id",
+        "primary_location.license",
+        "primary_location.license_id",
+    )
+    if field.param not in filtered_params and field.param != "type":
+        return results
+    return [
+        r
+        for r in results
+        if "openalex.org" in str(r["key"])
+        or (include_unknown and r["key"] == "unknown")
+    ]
+
+
+def get_nested_group_by_results(
+    dimensions, params, index_name, fields_dict, response, connection="default"
+):
+    """Multi-dim (nested) group_by results — oxjob #387. Walks the nested bucket
+    tree the matching builder produced (core.group_by.buckets
+    .create_nested_group_by_buckets) and emits the nested shape:
+        [{key, key_display_name, doc_count, groups: [ ...same shape... ]}]
+    Each level resolves display names in one batch (like single-dim)."""
+    outer_group_by = dimensions[0][0]
+    bucket_key = get_bucket_keys(outer_group_by)["default"]
+    buckets = response.aggregations[bucket_key].buckets
+    return _build_nested_level(
+        buckets, dimensions, 0, index_name, fields_dict, connection
+    )
+
+
+def _build_nested_level(
+    buckets, dimensions, level, index_name, fields_dict, connection
+):
+    group_by, include_unknown = dimensions[level]
+    field = get_field(fields_dict, group_by)
+
+    if requires_display_name_conversion(group_by):
+        keys = [b.key for b in buckets]
+        key_display_names = get_display_name_mapping(keys, group_by, connection) or {}
+    else:
+        key_display_names = {}
+
+    has_child = level + 1 < len(dimensions)
+    if has_child:
+        child_group_by = dimensions[level + 1][0]
+        child_bucket_key = get_bucket_keys(child_group_by)["default"]
+
+    results = []
+    for b in buckets:
+        result = get_result(b, key_display_names, group_by, index_name)
+        if not result:
+            continue
+        if has_child:
+            child_buckets = b[child_bucket_key].buckets
+            result["groups"] = _build_nested_level(
+                child_buckets,
+                dimensions,
+                level + 1,
+                index_name,
+                fields_dict,
+                connection,
+            )
+        results.append(result)
+
+    return _keep_only_openalex_keys(results, field, include_unknown)
+
+
+def calculate_nested_group_by_count(params, response):
+    """`meta.groups_count` for a nested group_by = number of top-level buckets."""
+    from core.group_by.utils import parse_group_by_dimensions
+
+    dimensions = parse_group_by_dimensions(params["group_by"])
+    bucket_key = get_bucket_keys(dimensions[0][0])["default"]
+    return len(response.aggregations[bucket_key].buckets)
+
+
 def is_boolean_group_by(group_by):
     return (
         group_by in settings.EXTERNAL_ID_FIELDS

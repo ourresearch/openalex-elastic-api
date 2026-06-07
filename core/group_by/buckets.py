@@ -4,11 +4,18 @@ from flask import current_app as app
 
 import settings
 from core.cursor import decode_group_by_cursor
+from core.exceptions import APIQueryParamsError
 from core.group_by.utils import get_bucket_keys
 from core.validate import validate_group_by
 from core.preference import clean_preference
 from core.utils import get_field
 from country_list import GLOBAL_SOUTH_COUNTRIES
+
+
+# Multi-dimensional (nested) group_by — oxjob #387. ES nests terms aggs natively
+# (no mapping change). We cap the depth: each level multiplies bucket cardinality,
+# so deep nesting is an ES-load footgun.
+MAX_GROUP_BY_DIMENSIONS = 3
 
 
 """
@@ -188,6 +195,83 @@ def create_default_group_by_buckets(
     if "cited_by_percentile_year" in group_by_field:
         a.format = "0.0"
     s.aggs.bucket(bucket_keys["default"], a)
+    return s
+
+
+def _reject_unsupported_nested_field(field):
+    """The exotic single-dim group_by shapes (boolean exists/not-exists pairs,
+    external-id booleans, global-south, mag_only, continent, version,
+    best_open_version) use bespoke bucket builders + result paths that don't
+    nest. Multi-dim group_by supports the plain `terms`-agg fields only — reject
+    the rest with a clear 400 rather than silently producing wrong buckets."""
+    # Topic-hierarchy id fields carry bare-integer bucket keys that a dedicated
+    # single-dim path (results.get_topics_group_by_results) rewrites to URLs and
+    # de-dupes; that logic doesn't nest. Reject for now (oxjob #387 scope; can be
+    # added later). `primary_topic.id` itself is a normal URL-keyed field and is
+    # fully supported.
+    topic_hierarchy_fields = (
+        "topics.domain.id",
+        "topics.subdomain.id",
+        "topics.field.id",
+        "primary_topic.domain.id",
+        "primary_topic.field.id",
+        "primary_topic.subfield.id",
+    )
+    if (
+        field.param in settings.EXTERNAL_ID_FIELDS
+        or field.param in settings.BOOLEAN_TEXT_FIELDS
+        or type(field).__name__ == "BooleanField"
+        or "is_global_south" in field.param
+        or field.param == "mag_only"
+        or "continent" in field.param
+        or field.param in ("version", "best_open_version")
+        or field.param in topic_hierarchy_fields
+    ):
+        raise APIQueryParamsError(
+            f"Field '{field.param}' is not supported in a multi-dimensional "
+            f"group_by. Combine plain group-able fields instead."
+        )
+
+
+def create_nested_group_by_buckets(fields_dict, dimensions, s, params):
+    """Build a NESTED chain of terms aggregations — one level per dimension,
+    outermost first — so the response is a cross-product (e.g. years within each
+    topic). oxjob #387. Single-dim grouping is untouched; this path runs only
+    when `group_by=a,b[,c]`."""
+    if len(dimensions) > MAX_GROUP_BY_DIMENSIONS:
+        raise APIQueryParamsError(
+            f"group_by supports at most {MAX_GROUP_BY_DIMENSIONS} dimensions; "
+            f"got {len(dimensions)}."
+        )
+    if params.get("cursor"):
+        raise APIQueryParamsError(
+            "Cursor pagination is not supported with multi-dimensional group_by."
+        )
+
+    q = params.get("q")
+    per_page = 500 if q else params.get("per_page")
+    shard_size = determine_shard_size(q)
+
+    preference_seed = ",".join(group_by for group_by, _ in dimensions)
+    s = s.params(preference=clean_preference(preference_seed))
+
+    parent = s.aggs
+    for group_by, include_unknown in dimensions:
+        field = get_field(fields_dict, group_by)
+        validate_group_by(field, params)
+        _reject_unsupported_nested_field(field)
+        s = filter_by_repository_or_journal(field, s)
+
+        group_by_field = field.alias if field.alias else field.es_sort_field()
+        bucket_key = get_bucket_keys(group_by)["default"]
+
+        a = A("terms", field=group_by_field, size=per_page, shard_size=shard_size)
+        if include_unknown:
+            a.missing = get_missing(field)
+        if "cited_by_percentile_year" in group_by_field:
+            a.format = "0.0"
+
+        parent = parent.bucket(bucket_key, a)
     return s
 
 
