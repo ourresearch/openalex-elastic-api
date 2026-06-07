@@ -263,19 +263,33 @@ class TestMetaXQuery:
         reparsed = canonicalize_oqo(parse_oql_to_oqo(x_query["oql"])).to_dict()
         assert reparsed == x_query["oqo"]
 
-    def test_x_query_oql_resolves_entity_display_names(self):
-        """#376: the SERP's x_query.oql resolves ES-backed entity display names
-        (institution/author/…) instead of bare IDs. _build_x_query passes
-        safe_get_display_name as the entity resolver."""
-        from query_translation.execution import _build_x_query
+    def test_execute_path_x_query_oql_is_bare_id(self, client):
+        """OQLO charter decision 14 (#378 S3): the execute path emits CANONICAL
+        bare-ID OQL — no eager ES display-name lookups. Display-name annotation is
+        a display-time/on-demand concern handled by the `/query/*` translate
+        endpoints, not baked into the execute response's x_query.oql."""
+        oqo_body = {
+            "get_rows": "works",
+            "filter_rows": [{"column_id": "authorships.institutions.lineage",
+                             "value": "I136199984"}],
+        }
+        res = self._stub_run(client, oqo_body)
+        assert res.status_code == 200, res.get_json()
+        oql = res.get_json()["meta"]["x_query"]["oql"]
+        assert "I136199984" in oql
+        assert "[" not in oql  # bare ID, no `[Harvard University]` annotation
+
+    def test_display_service_resolves_entity_display_names(self):
+        """The flip side of decision 14: when a resolver IS passed (as the
+        `/query/*` translate endpoints do — they ARE the on-demand display
+        service), build_x_query annotates entity display names."""
+        from query_translation.x_query import build_x_query
         from query_translation.oqo import OQO, LeafFilter
 
         oqo = OQO(get_rows="works", filter_rows=[
             LeafFilter(column_id="authorships.institutions.lineage",
                        value="I136199984")])
-        with patch("query_translation.execution.safe_get_display_name",
-                   return_value="Harvard University"):
-            xq = _build_x_query(oqo)
+        xq = build_x_query(oqo, entity_resolver=lambda _id: "Harvard University")
         assert "I136199984 [Harvard University]" in xq["oql"]
 
     def test_nested_boolean_x_query_url_is_null(self, client):

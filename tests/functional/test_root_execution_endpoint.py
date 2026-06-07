@@ -87,7 +87,8 @@ class TestRootExecutes:
             res = client.get(f"/?oqo={encoded}")
         assert res.status_code == 200, res.get_json()
         assert len(captured) == 1
-        assert res.get_json()["oqo"]["get_rows"] == "works"
+        # Canonical query echo moved from top-level `oqo` (#372) to meta.x_query (#373).
+        assert res.get_json()["meta"]["x_query"]["oqo"]["get_rows"] == "works"
 
     def test_post_oqo_executes(self, client):
         captured = []
@@ -102,7 +103,8 @@ class TestRootExecutes:
             )
         assert res.status_code == 200, res.get_json()
         assert len(captured) == 1
-        assert res.get_json()["oqo"]["get_rows"] == "works"
+        # Canonical query echo moved from top-level `oqo` (#372) to meta.x_query (#373).
+        assert res.get_json()["meta"]["x_query"]["oqo"]["get_rows"] == "works"
 
     def test_get_oql_executes(self, client):
         oql = _valid_oql(client)
@@ -114,7 +116,8 @@ class TestRootExecutes:
             res = client.get("/?oql=" + urllib.parse.quote(oql, safe=""))
         assert res.status_code == 200, res.get_json()
         assert len(captured) == 1
-        assert res.get_json()["oqo"]["get_rows"] == "works"
+        # Canonical query echo moved from top-level `oqo` (#372) to meta.x_query (#373).
+        assert res.get_json()["meta"]["x_query"]["oqo"]["get_rows"] == "works"
 
     def test_post_oql_executes(self, client):
         oql = _valid_oql(client)

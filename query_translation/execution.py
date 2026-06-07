@@ -40,10 +40,10 @@ from query_translation.oqo_to_es import (
 from query_translation.oql_parser import OQLParseError, parse_oql_to_oqo
 from query_translation.validator import validate_oqo, _has_search_clause
 
-# Shared response/render helpers. `build_x_query`/`safe_get_display_name` live in
-# the dependency-light `x_query` module (shared with `core.shared_view`, #378);
-# `_error_response` stays with the translation resource. No cycle either way.
-from query_translation.x_query import build_x_query, safe_get_display_name
+# Shared response/render helpers. `build_x_query` lives in the dependency-light
+# `x_query` module (shared with `core.shared_view`, #378); `_error_response` stays
+# with the translation resource. No cycle either way.
+from query_translation.x_query import build_x_query
 from query_translation.views import _error_response
 
 # ---------------------------------------------------------------------------
@@ -514,12 +514,13 @@ def _execute_oqo(oqo_dict: dict):
     # this execute path — keeps `x_query` off `/works?filter=` and out of
     # `/properties`/docs. Replaces #372's top-level `oqo` echo (single canonical
     # home; no other consumer reads the echo — the GUI uses `/query/*`).
-    # Resolve ES-backed entity display names on this explicit execute path so the
-    # OQL reads `institution is I136199984 [Harvard]`, not a bare ID (#376). The
-    # hot per-entity SERP path (core/shared_view.py, #378) passes no resolver.
-    serialized.setdefault("meta", {})["x_query"] = build_x_query(
-        oqo, entity_resolver=safe_get_display_name
-    )
+    # No entity resolver: `x_query.oql` is canonical bare-ID OQL, rendered cheaply
+    # (OQLO charter decision 14, #378 S3 — canonical OQL = bare IDs; display-name
+    # annotation is a display-time/on-demand concern). The GUI renders the readable,
+    # name-annotated OQL by translating this query via `/query/*` (which keeps its
+    # resolver — it IS the on-demand display service), so this path no longer does
+    # per-submit ES display-name lookups.
+    serialized.setdefault("meta", {})["x_query"] = build_x_query(oqo)
     return jsonify(serialized), 200
 
 
