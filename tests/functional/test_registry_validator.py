@@ -276,6 +276,31 @@ def test_seed_without_sample_is_a_nonblocking_warning():
     assert "seed_without_sample" in {w.type for w in result.warnings}
 
 
+# --- Semantic (vector) search column (oxjob #363) ----------------------------
+
+def test_semantic_search_column_validates():
+    """The OQL-canonical `<field>.search.semantic` column (Case 30) validates by
+    mapping to the registry's `semantic.search` capability — so a semantic OQO
+    can be executed natively via `/?oqo=` (not just rendered to a URL)."""
+    result = validate_oqo(OQO.from_dict({
+        "get_rows": "works",
+        "filter_rows": [{"column_id": "abstract.search.semantic",
+                         "value": "graph neural networks", "operator": "contains"}],
+    }))
+    assert result.valid, [(e.type, e.message) for e in result.errors]
+
+
+def test_non_semantic_search_suffix_column_still_rejected():
+    """The mapping is scoped to the `.search.semantic` suffix — a bogus column
+    that merely contains 'semantic' is still rejected."""
+    result = validate_oqo(OQO.from_dict({
+        "get_rows": "works",
+        "filter_rows": [{"column_id": "semantic_bogus", "value": "x"}],
+    }))
+    assert not result.valid
+    assert "invalid_column" in {e.type for e in result.errors}
+
+
 # --- Property catalog <-> executor coverage (#334) ---------------------------
 # The #334 bug: an entity can be in the property catalog (so the validator accepts
 # it) yet missing a branch in `_resolve_entity` (so `/query` 400s `invalid_entity`

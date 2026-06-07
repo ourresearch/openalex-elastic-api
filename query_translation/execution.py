@@ -20,24 +20,32 @@ import json
 from elasticsearch_dsl import Q, Search
 from flask import jsonify, request
 
+import settings
 from core.cursor import handle_cursor
 from core.exceptions import APIError, APIQueryParamsError
 from core.paginate import get_per_page
 from core.preference import clean_preference, combine_preferences
 from core.shared_view import (
+    add_semantic_search,
     apply_grouping,
     apply_sorting,
     execute_search,
     format_response,
     set_source,
 )
-from core.utils import get_data_version_connection
+from core.utils import get_data_version_connection, map_filter_params
+from core.vector_index import vector_semantic_search
 from query_translation.oqo import OQO, VALID_OPERATORS
 from query_translation.oqo_to_es import (
     OQOTranslationError,
     oqo_to_search_and_filter_q,
 )
 from query_translation.oql_parser import OQLParseError, parse_oql_to_oqo
+from query_translation.url_renderer import (
+    URLRenderError,
+    _extract_semantic,
+    render_filters,
+)
 from query_translation.validator import validate_oqo, _has_search_clause
 
 # Shared response/render helpers. `build_x_query` lives in the dependency-light
@@ -431,6 +439,33 @@ def _execute_oqo(oqo_dict: dict):
     except APIQueryParamsError as e:
         return _error_response(str(e), "invalid_params", status=400)
 
+    # Semantic (vector) search routing (oxjob #363 — follow-up to Case 30).
+    # A `*.search.semantic` leaf is a two-phase kNN over the dedicated vector
+    # index, NOT an ordinary `Q` match. Mirror core/shared_view.shared_view:
+    # detect it and route to the vector path, feeding it the SAME params the
+    # legacy URL path would. Without this an OQO carrying a semantic clause
+    # silently runs a plain single-pass match (Case 30 fixed only the OQO→URL
+    # render direction; OQO-native execution diverged — same class as the
+    # cross-type collection fix). `_extract_semantic` (shared with the renderer)
+    # raises URLRenderError for the shapes the single vector param can't carry
+    # (negated / >1 / nested), so render and execute agree on what's a valid
+    # semantic query.
+    try:
+        semantic_value, _ = _extract_semantic(oqo.filter_rows)
+    except URLRenderError as e:
+        return _error_response(str(e), "translation_error", status=400)
+    if semantic_value is not None:
+        if not index_name.lower().startswith("works"):
+            return _error_response(
+                "Semantic search is only supported on works.",
+                "invalid_params",
+                status=400,
+            )
+        return _execute_semantic_oqo(
+            oqo, params, index_name, connection, fields_dict, default_sort,
+            MessageSchema,
+        )
+
     # Translate the OQO filter tree, splitting `.search` (scoring) clauses from
     # exact filters so search runs in *query* context (relevance scoring) and
     # filters in *filter* context — exactly like legacy construct_query. Applying
@@ -502,12 +537,29 @@ def _execute_oqo(oqo_dict: dict):
         )
 
     result = format_response(response, params, index_name, fields_dict, s, connection)
-    # Marshall the ES response objects into JSON-serializable dicts via the
-    # entity's MessageSchema — the same path the per-entity views use. Apply the
-    # OQO `select` projection (#318) the same way `core.utils.process_only_fields`
-    # does for the URL `?select=`: marshmallow `only` of `results.<field>` plus
-    # the always-present `meta`/`group_by` envelope. select columns were already
-    # validated against the entity's selectable fields, so they're safe here.
+    return _finalize_oqo_response(result, oqo, MessageSchema)
+
+
+def _finalize_oqo_response(result, oqo: OQO, MessageSchema):
+    """Serialize an execution result dict and return the Flask response.
+
+    Shared tail of both the normal and the semantic (vector) execution paths.
+    Marshalls the ES response objects into JSON-serializable dicts via the
+    entity's MessageSchema — the same path the per-entity views use. Applies the
+    OQO `select` projection (#318) the same way `core.utils.process_only_fields`
+    does for the URL `?select=`: marshmallow `only` of `results.<field>` plus the
+    always-present `meta`/`group_by` envelope. select columns were already
+    validated against the entity's selectable fields, so they're safe here.
+
+    Attaches the private `meta.x_query` triple {oql, oqo, url} so clients can
+    confirm what we executed and rehydrate from it (#373) — injected after
+    marshmallow `.dump()` (which would drop an unknown `meta` key), only on this
+    execute path (keeps `x_query` off `/works?filter=` and out of
+    `/properties`/docs). No entity resolver: `x_query.oql` is canonical bare-ID
+    OQL (OQLO charter decision 14, #378 S3); the GUI renders the readable,
+    name-annotated OQL on demand via `/query/*`, so this path does no per-submit
+    ES display-name lookups.
+    """
     only_fields = None
     if oqo.select:
         only_fields = (
@@ -517,20 +569,93 @@ def _execute_oqo(oqo_dict: dict):
         )
     message_schema = MessageSchema(only=only_fields) if only_fields else MessageSchema()
     serialized = message_schema.dump(result)
-    # Attach the private `meta.x_query` triple {oql, oqo, url} so clients can
-    # confirm what we executed and rehydrate from it (#373). Injected here, after
-    # marshmallow `.dump()` (which would drop an unknown `meta` key), and only on
-    # this execute path — keeps `x_query` off `/works?filter=` and out of
-    # `/properties`/docs. Replaces #372's top-level `oqo` echo (single canonical
-    # home; no other consumer reads the echo — the GUI uses `/query/*`).
-    # No entity resolver: `x_query.oql` is canonical bare-ID OQL, rendered cheaply
-    # (OQLO charter decision 14, #378 S3 — canonical OQL = bare IDs; display-name
-    # annotation is a display-time/on-demand concern). The GUI renders the readable,
-    # name-annotated OQL by translating this query via `/query/*` (which keeps its
-    # resolver — it IS the on-demand display service), so this path no longer does
-    # per-submit ES display-name lookups.
     serialized.setdefault("meta", {})["x_query"] = build_x_query(oqo)
     return jsonify(serialized), 200
+
+
+def _execute_semantic_oqo(
+    oqo: OQO, params, index_name, connection, fields_dict, default_sort,
+    MessageSchema,
+):
+    """Execute a semantic (vector) OQO, mirroring the legacy URL semantic path.
+
+    The non-semantic filters are rendered to the URL `filter=` string and parsed
+    back into the legacy `params["filters"]` list-of-dicts via the SAME helpers
+    the URL path uses (`render_filters` + `map_filter_params`) — so OQO-native
+    execution feeds the vector index byte-identical filters to the rendered-URL
+    path and the two can't diverge (the parity guarantee, same as the cross-type
+    collection fix). `_extract_semantic` already validated the semantic clause's
+    shape; re-run it here to split off the value + the remaining filter rows.
+
+    Routes exactly like `core/shared_view.shared_view`: the two-phase
+    `vector_semantic_search` when `USE_VECTOR_INDEX` is on (the prod path), else
+    the single-index `add_semantic_search` kNN fallback.
+    """
+    semantic_value, remaining_rows = _extract_semantic(oqo.filter_rows)
+
+    params = dict(params)
+    params["search"] = semantic_value
+    params["search_type"] = "semantic"
+    params["searches"] = [
+        {"search": semantic_value, "search_type": "semantic", "search_scope": None}
+    ]
+
+    # Render the remaining (non-semantic) OQO filters to the URL filter string,
+    # then parse to the params list-of-dicts form the vector / kNN pre-filter
+    # builders consume. Raises for filter shapes the URL surface (hence the
+    # vector path) can't carry (e.g. cross-field OR, nested boolean).
+    try:
+        filter_string = render_filters(remaining_rows)
+    except URLRenderError as e:
+        return _error_response(str(e), "translation_error", status=400)
+    filters = map_filter_params(filter_string) if filter_string else []
+    if filters is None:
+        filters = []
+
+    # Apply the works-walden is_xpac:false default exactly as works/views.py does
+    # before shared_view's semantic check: the vector path strips it (the vector
+    # index holds only non-xpac works) and the single-index fallback applies it
+    # as a kNN pre-filter — so adding it here matches legacy on both branches.
+    if oqo.get_rows == "works" and connection == "walden":
+        include_xpac = (
+            request.args.get("include_xpac") == "true"
+            or request.args.get("include-xpac") == "true"
+        )
+        if not include_xpac and not _oqo_mentions_column(oqo.filter_rows, "is_xpac"):
+            filters = filters + [{"is_xpac": "false"}]
+    params["filters"] = filters or None
+
+    # Two-phase vector index (the prod path: USE_VECTOR_INDEX=true). Builds and
+    # returns the result dict directly, same as shared_view does.
+    if settings.USE_VECTOR_INDEX:
+        try:
+            result = vector_semantic_search(params, index_name, connection)
+        except APIQueryParamsError as e:
+            return _error_response(str(e), "invalid_params", status=400)
+        return _finalize_oqo_response(result, oqo, MessageSchema)
+
+    # Fallback: single-index kNN on the works index (USE_VECTOR_INDEX off),
+    # mirroring construct_query's `add_semantic_search` sub-path. Reuses the OQO
+    # executor's own pipeline stages (set_source / size / cursor / sort / group)
+    # for parity with the normal OQO path rather than legacy's extra stages.
+    s = Search(index=index_name, using=connection)
+    s = set_source(index_name, s)
+    s = _set_size(params, s)
+    s = _set_cursor_pagination(params, s)
+    try:
+        s = add_semantic_search(params, fields_dict, s)
+    except APIQueryParamsError as e:
+        return _error_response(str(e), "invalid_params", status=400)
+    s = apply_sorting(params, fields_dict, default_sort, index_name, s)
+    s = apply_grouping(params, fields_dict, s)
+    try:
+        response = execute_search(s, params)
+    except APIError:
+        raise
+    except Exception as e:  # pragma: no cover — defensive
+        return _error_response(f"Elasticsearch error: {e}", "es_error", status=500)
+    result = format_response(response, params, index_name, fields_dict, s, connection)
+    return _finalize_oqo_response(result, oqo, MessageSchema)
 
 
 def _oql_parse_error_response(exc: OQLParseError):

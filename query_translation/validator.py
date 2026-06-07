@@ -449,6 +449,19 @@ class OQOValidator:
         # (a) column registered on the entity.
         entry = columns.get(f.column_id)
         if entry is None:
+            # Semantic (vector) search uses the OQL-canonical
+            # `<field>.search.semantic` column (Case 30 / spec §search-modes), but
+            # the engine exposes whole-document vector search under the single
+            # registry capability `semantic.search` — the field prefix is surface
+            # convention (the engine embeds the whole work, not just that field).
+            # Map it to that capability so the canonical semantic OQO validates
+            # against what the server actually runs and can be executed natively
+            # via `/?oqo=`. (oxjob #363)
+            if isinstance(f.column_id, str) and f.column_id.endswith(
+                ".search.semantic"
+            ):
+                entry = columns.get("semantic.search")
+        if entry is None:
             errors.append(ValidationError(
                 type="invalid_column",
                 message=f"'{f.column_id}' is not a valid column",

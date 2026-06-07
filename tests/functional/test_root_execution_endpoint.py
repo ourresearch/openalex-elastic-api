@@ -193,3 +193,170 @@ class TestOldExecuteFormRemoved:
             content_type="application/json",
         )
         assert res.status_code in (404, 405), res.status_code
+
+
+# ---------------------------------------------------------------------------
+# Semantic (vector) search routes through the OQO execution path (oxjob #363).
+#
+# A `*.search.semantic` leaf is a two-phase kNN over the dedicated vector index,
+# NOT an ordinary `Q` match. Case 30 fixed only the OQO→URL render direction; an
+# OQO *executed* directly (`/?oqo=`) used to silently run a plain single-pass
+# match. These assert it now routes to `vector_semantic_search` (prod path) /
+# `add_semantic_search` (single-index fallback) instead — and that the
+# non-semantic filters reach the vector pre-filter via the same renderer the
+# URL path uses, so the two can't diverge.
+# ---------------------------------------------------------------------------
+
+
+def _semantic_result():
+    """A minimal vector_semantic_search-shaped result (no live ES)."""
+    return {
+        "meta": {
+            "count": 0,
+            "db_response_time_ms": 1,
+            "page": 1,
+            "per_page": 25,
+            "groups_count": None,
+        },
+        "group_by": [],
+        "results": [],
+    }
+
+
+def _semantic_oqo(extra_filters=None):
+    oqo = {
+        "get_rows": "works",
+        "filter_rows": [
+            {
+                "column_id": "abstract.search.semantic",
+                "value": "graph neural networks",
+                "operator": "contains",
+            }
+        ],
+    }
+    if extra_filters:
+        oqo["filter_rows"].extend(extra_filters)
+    return oqo
+
+
+class TestSemanticOqoExecution:
+    def test_semantic_oqo_routes_to_vector_search(self, client):
+        """A semantic OQO hits vector_semantic_search, NOT the plain Q path."""
+        captured = {}
+
+        def _fake_vss(params, index_name, connection):
+            captured["params"] = params
+            captured["index_name"] = index_name
+            return _semantic_result()
+
+        encoded = urllib.parse.quote(json.dumps(_semantic_oqo()), safe="")
+        with patch("settings.USE_VECTOR_INDEX", True), patch(
+            "query_translation.execution.vector_semantic_search",
+            side_effect=_fake_vss,
+        ), patch(
+            "query_translation.execution.execute_search",
+            side_effect=AssertionError("plain ES path must not run for semantic"),
+        ):
+            res = client.get(f"/?oqo={encoded}")
+
+        assert res.status_code == 200, res.get_json()
+        # The query text reaches the vector search as params["search"].
+        assert captured["params"]["search"] == "graph neural networks"
+        assert captured["params"]["search_type"] == "semantic"
+        assert captured["index_name"].lower().startswith("works")
+        # Canonical echo still attached.
+        assert res.get_json()["meta"]["x_query"]["oqo"]["get_rows"] == "works"
+
+    def test_semantic_oqo_passes_filters_to_vector_prefilter(self, client):
+        """Non-semantic filters reach the vector pre-filter in legacy URL-dict
+        form (same shape build_vector_filter consumes), plus the is_xpac default."""
+        captured = {}
+
+        def _fake_vss(params, index_name, connection):
+            captured["params"] = params
+            return _semantic_result()
+
+        oqo = _semantic_oqo(
+            extra_filters=[
+                {"column_id": "publication_year", "value": 2020, "operator": ">"},
+                {"column_id": "type", "value": "article", "operator": "is"},
+            ]
+        )
+        encoded = urllib.parse.quote(json.dumps(oqo), safe="")
+        with patch("settings.USE_VECTOR_INDEX", True), patch(
+            "query_translation.execution.vector_semantic_search",
+            side_effect=_fake_vss,
+        ):
+            res = client.get(f"/?oqo={encoded}")
+
+        assert res.status_code == 200, res.get_json()
+        filters = captured["params"]["filters"]
+        assert {"publication_year": ">2020"} in filters
+        assert {"type": "article"} in filters
+        # works-walden default applied (vector_semantic_search strips it itself).
+        assert {"is_xpac": "false"} in filters
+
+    def test_semantic_oqo_respects_include_xpac(self, client):
+        """include_xpac=true suppresses the is_xpac:false default."""
+        captured = {}
+
+        def _fake_vss(params, index_name, connection):
+            captured["params"] = params
+            return _semantic_result()
+
+        encoded = urllib.parse.quote(json.dumps(_semantic_oqo()), safe="")
+        with patch("settings.USE_VECTOR_INDEX", True), patch(
+            "query_translation.execution.vector_semantic_search",
+            side_effect=_fake_vss,
+        ):
+            res = client.get(f"/?oqo={encoded}&include_xpac=true")
+
+        assert res.status_code == 200, res.get_json()
+        # Pure semantic + no default → no filters at all.
+        assert captured["params"]["filters"] is None
+
+    def test_negated_semantic_oqo_is_400_not_silent_match(self, client):
+        """A negated semantic clause can't ride the single vector param → 400
+        (rather than silently degrading to a normal match)."""
+        oqo = {
+            "get_rows": "works",
+            "filter_rows": [
+                {
+                    "column_id": "abstract.search.semantic",
+                    "value": "graph neural networks",
+                    "operator": "contains",
+                    "is_negated": True,
+                }
+            ],
+        }
+        encoded = urllib.parse.quote(json.dumps(oqo), safe="")
+        with patch("settings.USE_VECTOR_INDEX", True), patch(
+            "query_translation.execution.vector_semantic_search",
+            side_effect=AssertionError("must not run for an invalid semantic shape"),
+        ):
+            res = client.get(f"/?oqo={encoded}")
+        assert res.status_code == 400, res.get_json()
+
+    def test_semantic_oqo_fallback_to_single_index_when_vector_off(self, client):
+        """USE_VECTOR_INDEX off → route to add_semantic_search (single-index kNN),
+        still NOT the plain non-semantic Q path."""
+        calls = {"add_semantic": 0}
+
+        def _fake_add_semantic(params, fields_dict, s):
+            calls["add_semantic"] += 1
+            return s
+
+        captured = []
+        with patch("settings.USE_VECTOR_INDEX", False), patch(
+            "query_translation.execution.add_semantic_search",
+            side_effect=_fake_add_semantic,
+        ), patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            encoded = urllib.parse.quote(json.dumps(_semantic_oqo()), safe="")
+            res = client.get(f"/?oqo={encoded}")
+
+        assert res.status_code == 200, res.get_json()
+        assert calls["add_semantic"] == 1
+        assert len(captured) == 1  # went through execute_search exactly once
