@@ -31,6 +31,7 @@ import oql
 import publishers
 import query_translation
 import query_translation.editor_views  # #357 OQL editor support (separate blueprint)
+import query_translation.spec_views  # #361 OQL/OQO spec-artifact serving (separate blueprint)
 import raw_affiliation_strings
 import settings
 import sdgs
@@ -115,6 +116,7 @@ def register_blueprints(app):
     app.register_blueprint(publishers.views.blueprint)
     app.register_blueprint(query_translation.views.blueprint)
     app.register_blueprint(query_translation.editor_views.blueprint)  # #357 OQL editor support
+    app.register_blueprint(query_translation.spec_views.blueprint)  # #361 OQL/OQO spec artifacts
     app.register_blueprint(raw_affiliation_strings.views.blueprint)
     app.register_blueprint(sdgs.views.blueprint)
     app.register_blueprint(changefiles.views.blueprint)

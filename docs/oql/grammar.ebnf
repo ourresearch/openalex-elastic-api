@@ -1,0 +1,80 @@
+/* OQL (OpenAlex Query Language) v2.1 -- derived reference grammar (W3C-EBNF). */
+/* Hand-written from the spec/parser; NOT generated, NOT the parser itself. */
+/* Single source of truth = query_translation/oql_lang.py + docs/oql/corpus.yaml. */
+/* No-drift gate: tests/oql/test_grammar_ebnf.py (oxjob #361). */
+/* Renders to a railroad diagram via the rr tool (oxjob #386 recipe). */
+
+query        ::= entity ( 'where' conditions )? directive*
+
+entity       ::= word
+
+directive    ::= groupBy | sortBy | sample | ';'
+
+groupBy      ::= 'group' 'by' word ( ',' word )*
+
+sortBy       ::= 'sort' 'by' sortKey ( ',' sortKey )*
+
+sortKey      ::= word ( 'asc' | 'desc' )?
+
+sample       ::= 'sample' NUMBER ( 'seed' NUMBER )?
+
+conditions   ::= operand ( connective operand )*
+
+connective   ::= 'and' | 'or'
+
+operand      ::= 'not' operand
+               | '(' conditions ')'
+               | clause
+
+clause       ::= booleanClause | valueClause | searchClause
+
+booleanClause ::= ( "it's" | 'its' | 'it' ) 'not'? ( "doesn't" | 'doesnt' )?
+                  ( 'has' | 'have' )? ( 'a' | 'an' | 'the' | 'from' )* word+
+
+valueClause  ::= field operator value
+
+field        ::= word+
+
+operator     ::= 'is' 'not'? ( 'any' 'of' | 'in' 'collection'? | 'in' )?
+               | 'is' 'similar' 'to'
+               | 'contains'
+               | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'contain'
+               | '>=' | '<=' | '>' | '<'
+
+value        ::= valueList | 'unknown' | 'null' | scalar
+
+valueList    ::= '(' scalar ( ',' scalar )* ','? ')'
+
+scalar       ::= ( WORD | NUMBER | STRING ) ANNOT?
+
+searchClause ::= searchField ( 'contains' | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'contain' ) searchExpr
+               | searchField 'is' 'similar' 'to' STRING
+
+searchField  ::= word ( ( '&' | 'and' ) word )*
+
+searchExpr   ::= termRun ( connective termRun )*
+
+termRun      ::= searchOperand+
+
+searchOperand ::= 'not' searchOperand
+               | '(' searchExpr ')'
+               | ( 'any' | 'all' ) 'of' '(' searchAtom ( ',' searchAtom )* ','? ')'
+               | searchAtom
+
+searchAtom   ::= 'near'? term proximity?
+
+proximity    ::= 'within' NUMBER ( 'words' | 'word' ) ( 'of' STRING )?
+
+term         ::= STRING | word
+
+word         ::= WORD | NUMBER
+
+WORD         ::= wordChar+
+
+NUMBER       ::= [0-9]+
+
+STRING       ::= '"' [#x20-#x10FFFF]* '"'
+
+ANNOT        ::= '[' [#x20-#x10FFFF]* ']'
+
+wordChar     ::= [#x21-#x10FFFF]
