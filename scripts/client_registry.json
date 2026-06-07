@@ -928,6 +928,22 @@
       "isId": true,
       "hasExport": false
     },
+    "sustainable_development_goals.id": {
+      "key": "sustainable_development_goals.id",
+      "entityToFilter": "works",
+      "entityToSelect": "sdgs",
+      "displayName": "SDG",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by",
+        "edit"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
     "primary_location.source.id": {
       "key": "primary_location.source.id",
       "entityToFilter": "works",
@@ -971,22 +987,6 @@
         "group_by"
       ],
       "actionsPopular": [],
-      "isId": false,
-      "hasExport": false
-    },
-    "sustainable_development_goals.id": {
-      "key": "sustainable_development_goals.id",
-      "entityToFilter": "works",
-      "entityToSelect": "sdgs",
-      "displayName": "Sustainable Development Goal",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "filter",
-        "group_by",
-        "edit"
-      ],
-      "actionsPopular": null,
       "isId": false,
       "hasExport": false
     },

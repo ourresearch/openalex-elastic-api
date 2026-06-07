@@ -98,16 +98,19 @@ def _canon_value_case(value, fld: "Field"):
 
 # --- search fields (column is the *base*; .search suffix added per mode) ---
 _f("title", "display_name", "search", aliases=["display_name.search", "display_name"])
-_f("title & abstract", "title_and_abstract", "search",
-   aliases=["title and abstract", "title_and_abstract.search", "title_and_abstract", "title&abstract"])
+# Render word "title/abstract" is the registry's canonical display_name (#381 Phase 5);
+# the old "title & abstract" spelling stays a parse alias for back-compat.
+_f("title/abstract", "title_and_abstract", "search",
+   aliases=["title & abstract", "title and abstract", "title_and_abstract.search", "title_and_abstract", "title&abstract"])
 _f("abstract", "abstract", "search", aliases=["abstract.search"])
-# "fulltext" is the canonical broad full-text scope: title + abstract + full text
-# (oxjob #374). All broad-search spellings — including the old "anywhere" word and the
+# "full text" is the canonical broad full-text scope: title + abstract + full text
+# (oxjob #374; render word = the registry display_name, #381 Phase 5). All broad-search
+# spellings — including the one-word "fulltext", the old "anywhere" word, and the
 # deprecated "default.search" param name — fold in here and emit fulltext.search, so OQL
 # never produces the deprecated default.search key. (Stray default.search columns from
-# external URL→OQO still render to "fulltext" via the _BY_COLUMN alias below.)
-_f("fulltext", "fulltext", "search",
-   aliases=["fulltext.search", "full text", "anywhere", "any field", "default", "default.search"])
+# external URL→OQO still render to "full text" via the _BY_COLUMN alias below.)
+_f("full text", "fulltext", "search",
+   aliases=["fulltext.search", "fulltext", "anywhere", "any field", "default", "default.search"])
 _f("raw affiliation", "raw_affiliation_strings", "search",
    aliases=["raw_affiliation_strings.search", "affiliation", "raw affiliation string"])
 _f("byline", "raw_author_name", "search",
@@ -117,7 +120,9 @@ _f("institution name", "institutions.display_name", "search",
 
 # --- numeric ---
 _f("year", "publication_year", "num", aliases=["publication_year"])
-_f("citations", "cited_by_count", "num", aliases=["cited_by_count", "cited by count"])
+# Render word "citation count" = the registry display_name (#381 v1.5.0): the COUNT,
+# kept distinct from the cited_by/cites relationship filters. Old "citations" → alias.
+_f("citation count", "cited_by_count", "num", aliases=["citations", "cited_by_count", "cited by count"])
 _f("FWCI", "fwci", "num", aliases=["fwci"])
 
 # --- booleans ---
@@ -141,8 +146,10 @@ _f("source", "primary_location.source.id", "id", aliases=["primary_location.sour
 _f("topic", "primary_topic.id", "id", aliases=["primary_topic.id"])
 _f("topics", "topics.id", "id", aliases=["topics.id"])
 _f("funder", "funders.id", "id", aliases=["funders.id", "grants.funder"])
+# Render word "SDG" = the registry display_name (#381 Phase 5: acronym made canonical
+# everywhere). Long forms stay parse aliases.
 _f("SDG", "sustainable_development_goals.id", "id",
-   aliases=["sustainable_development_goals.id", "sustainable development goals", "sdg"])
+   aliases=["sustainable_development_goals.id", "sustainable development goal", "sustainable development goals", "sdg"])
 _f("last known institution", "last_known_institutions.id", "id",
    aliases=["last_known_institutions.id"])
 _f("domain", "domain.id", "id", aliases=["domain.id"])
@@ -159,7 +166,10 @@ _f("work", "collection", "collection", aliases=["works"], resolves_name=False)
 
 # --- enums (slug values) ---
 _f("type", "type", "enum", aliases=[])
-_f("OA status", "open_access.oa_status", "enum", aliases=["open_access.oa_status", "oa status"])
+# Render word "open access status" = the registry display_name (#381 Phase 5); the
+# greedy field matcher prefers it over the 2-word "open access" bool when "status"
+# follows. Old "OA status" → parse alias.
+_f("open access status", "open_access.oa_status", "enum", aliases=["OA status", "open_access.oa_status", "oa status"])
 # Country codes: ISO uppercase canonical + resolve a [display name] (Germany, not de).
 _f("country", "authorships.countries", "enum", aliases=["authorships.countries"],
    casing="upper", resolves_name=True)
@@ -364,6 +374,28 @@ def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool, bo
 
 
 # ---------------------------------------------------------------------------
+# Editor-context grammar-state categories (oxjob #363, charter decision 15).
+# These are the canonical strings the dual-mode parser reports at a cursor; the
+# editor presentation layer (`oql_context.py`) re-exports them and maps them to
+# suggestion lists. Defined HERE so the parser is the single source of grammar truth.
+# ---------------------------------------------------------------------------
+CTX_ENTITY = "entity"
+CTX_FIELD = "field"
+CTX_OPERATOR = "operator"
+CTX_VALUE = "value"
+CTX_CONNECTIVE = "connective"
+CTX_DIRECTIVE = "directive-keyword"
+CTX_END = "annotation-or-end"
+CTX_NONE = "none"
+
+
+class _CtxFound(Exception):
+    """Internal control-flow signal (context mode only): the parser reached the
+    cursor (end of the truncated prefix) at an expect-point and recorded what the
+    grammar wants there. Never raised in strict mode, never escapes the engine."""
+
+
+# ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
 class _Parser:
@@ -371,6 +403,27 @@ class _Parser:
         self.toks = toks
         self.i = 0
         self.hints: List[OQLHint] = []
+        # --- dual-mode (editor-context) state (oxjob #363, decision 15) ---
+        # `_ctx_mode` is False for all production parsing, so every `_want(...)`
+        # call and every `if self._ctx_mode` branch below is an inert no-op on the
+        # strict path — strict behavior is byte-identical (locked by tests/oql).
+        self._ctx_mode = False
+        self._ctx = None          # (category, payload) recorded at the cursor
+        self._entity = None       # resolved get_rows entity (for the context reply)
+        self._cur_fld = None      # field of the clause currently being parsed
+        self._in_list = False     # are we inside a parenthesized value list?
+        self._directive = None    # "sort" / "group" when inside a directive
+
+    # -- editor-context hook (no-op in strict mode) --
+    def _want(self, category, **payload):
+        """Record "the grammar expects <category> here" when the cursor (= end of
+        the truncated prefix) sits at this expect-point. No-op unless we're in
+        context mode AND out of tokens AND nothing deeper already claimed the spot
+        (innermost wins). Raises `_CtxFound` to unwind straight to
+        `parse_for_context`. On the strict path this returns immediately."""
+        if self._ctx_mode and self._ctx is None and self.peek() is None:
+            self._ctx = (category, dict(payload))
+            raise _CtxFound()
 
     # -- token helpers --
     def peek(self, k=0) -> Optional[Tok]:
@@ -399,12 +452,16 @@ class _Parser:
     def parse(self) -> OQO:
         self._skip_annot()
         entity = self._parse_entity()
+        self._entity = entity
         filters: List[FilterType] = []
         sort_by: List[SortBy] = []
         group_by: List[GroupBy] = []
         sample = None
         seed = None
         self._skip_annot()
+        # After a complete entity with nothing typed yet, the cursor sits in the
+        # "where / sort by / group by / sample / end" slot.
+        self._want(CTX_DIRECTIVE)
         if self.word_is("where"):
             self.next()
             cond = self._parse_expr(top=True)
@@ -434,6 +491,10 @@ class _Parser:
                 self.next()
                 sample, seed = self._parse_sample()
             else:
+                if self._ctx_mode:
+                    # trailing junk after a complete query: offer directives / end
+                    self._ctx = (CTX_END, {})
+                    raise _CtxFound()
                 raise oql_error("OQL_TRAILING_TOKENS",
                                f'unexpected text near "{t.val}" (position {t.pos})',
                                'queries are: <entity> [where <conditions>] [sort by ...] '
@@ -441,8 +502,34 @@ class _Parser:
         return OQO(get_rows=entity, filter_rows=filters, sort_by=sort_by,
                    group_by=group_by, sample=sample, seed=seed)
 
+    # -- editor-context entry (dual mode; oxjob #363, decision 15) --
+    def parse_for_context(self) -> dict:
+        """Run the SAME grammar over a prefix in context mode and report what the
+        grammar expects at the cursor (= end of the tokens). Returns
+        ``{"category", "entity", **payload}``. Never raises: a `_CtxFound` carries
+        the recorded expectation; a real OQLError in the prefix degrades to the
+        best expectation recorded so far, else END/NONE. This is what lets the
+        editor's `oql_context` retire its parallel grammar-state walker."""
+        self._ctx_mode = True
+        try:
+            self.parse()
+            # Parsed a complete query with no pending expectation: the cursor is
+            # past a finished query — offer directives / end.
+            return {"category": CTX_END, "entity": self._entity}
+        except _CtxFound:
+            cat, payload = self._ctx
+            return {"category": cat, "entity": self._entity, **payload}
+        except OQLError:
+            # A genuine error sits before the cursor. Prefer any expectation we
+            # already recorded; otherwise we can't classify (suppressed).
+            if self._ctx is not None:
+                cat, payload = self._ctx
+                return {"category": cat, "entity": self._entity, **payload}
+            return {"category": CTX_NONE, "entity": self._entity}
+
     def _parse_entity(self) -> str:
         # Greedy longest match against ENTITY_TYPES (handles "source types").
+        self._want(CTX_ENTITY)
         t = self.peek()
         if t is None or t.kind != "WORD":
             raise oql_error("OQL_MISSING_ENTITY",
@@ -459,6 +546,10 @@ class _Parser:
         if one in ENTITY_TYPES:
             self.next()
             return one
+        if self._ctx_mode:
+            # a leading word that isn't (yet) a known entity is still the entity slot
+            self._ctx = (CTX_ENTITY, {})
+            raise _CtxFound()
         raise oql_error("OQL_UNKNOWN_ENTITY",
                        f'unknown entity type "{t.val}"',
                        f'use one of: works, authors, institutions, sources, ...', t.pos)
@@ -469,6 +560,9 @@ class _Parser:
         conns: List[str] = []
         while True:
             self._skip_annot()
+            # A complete operand with the cursor right after it: the slot wants a
+            # connective (and / or) — or a directive / closing paren / end.
+            self._want(CTX_CONNECTIVE)
             t = self.peek()
             if t is None or t.kind in ("RP", "SEMI"):
                 break
@@ -504,6 +598,9 @@ class _Parser:
 
     def _parse_operand(self) -> FilterType:
         self._skip_annot()
+        # An empty operand slot (start of conditions, or just after "(" / a
+        # connective) expects a field clause.
+        self._want(CTX_FIELD)
         t = self.peek()
         if t is None:
             raise oql_error("OQL_EMPTY", "expected a condition", "")
@@ -533,6 +630,9 @@ class _Parser:
         if self.word_is("it's", "its", "it"):
             return self._parse_boolean_clause()
         field, fld = self._parse_field()
+        self._cur_fld = fld
+        # a complete field with the cursor right after it -> operator slot
+        self._want(CTX_OPERATOR, fld=fld)
         op = self._parse_operator()
         if fld.kind == "search":
             if op == "similar":
@@ -553,9 +653,16 @@ class _Parser:
         return self._parse_value_clause(field, fld, op)
 
     def _parse_field(self) -> Tuple[str, Field]:
+        # an empty / partially-typed field slot at the cursor
+        self._want(CTX_FIELD)
         # greedy longest alias match (up to 4 words) — shared with the editor walker
         m = match_field(self.toks, self.i)
         if m is None:
+            if self._ctx_mode:
+                # an unknown / still-being-typed word where a field is expected is
+                # the FIELD slot (the editor offers field completions there)
+                self._ctx = (CTX_FIELD, {})
+                raise _CtxFound()
             t = self.peek()
             raise oql_error("OQL_UNKNOWN_FIELD",
                            f'unknown field "{t.val if t else ""}"',
@@ -566,12 +673,22 @@ class _Parser:
 
     def _parse_operator(self) -> str:
         self._skip_annot()
+        self._want(CTX_OPERATOR, fld=self._cur_fld)
         t = self.peek()
         if t is None:
             raise oql_error("OQL_MISSING_OPERATOR", "expected an operator")
         # The shared matcher recognizes every COMPLETE operator (incl. the collection
         # `is [not] in collection` forms); for those, consume exactly what it reports.
         m = match_operator(self.toks, self.i)
+        # Editor context: an INCOMPLETE multi-word operator (`is any`, `is not`,
+        # `is similar`, `does not`) whose tokens run right up to the cursor is
+        # "still being typed" — offer operator completion rather than the strict
+        # path's degrade-to-`is`. This is the one intentional parser/editor split
+        # (see match_operator's docstring); it lives HERE so it can't drift.
+        if (self._ctx_mode and m is not None and not m[2]
+                and self.i + m[1] >= len(self.toks)):
+            self._ctx = (CTX_OPERATOR, {"fld": self._cur_fld})
+            raise _CtxFound()
         if m is not None and m[2]:  # complete
             op, n, _complete, _opens = m
             self.i += n
@@ -603,6 +720,8 @@ class _Parser:
         # consume optional article words
         while self.word_is("a", "an", "the", "from"):
             self.next()
+        # the cursor after "it's …" expects a boolean property phrase
+        self._want(CTX_VALUE, kind="bool")
         # read the rest of the phrase words until a connective / end / paren
         parts = []
         while True:
@@ -673,6 +792,8 @@ class _Parser:
         return LeafFilter(fld.column, v, "is", is_negated=negated)
 
     def _parse_value_list(self, fld: Field) -> list:
+        # `is any of ` with the cursor before the list is still a value slot.
+        self._want(CTX_VALUE, fld=fld, in_list=True)
         self._skip_annot()
         t = self.peek()
         if not t or t.kind != "LP":
@@ -681,6 +802,7 @@ class _Parser:
                            'e.g. is any of (a, b, c)', t.pos if t else None)
         self.next()
         vals = []
+        self._in_list = True
         while True:
             vals.append(self._parse_scalar(fld))
             self._skip_annot()
@@ -694,10 +816,13 @@ class _Parser:
                     break
                 continue
             break
+        self._in_list = False
         self._expect_rp()
         return vals
 
     def _parse_scalar(self, fld: Field):
+        # an empty value slot at the cursor (scalar or list element)
+        self._want(CTX_VALUE, fld=fld, in_list=self._in_list)
         # An entity ref with only a [display name] annotation and no ID is the
         # classic v1.1 footgun — the ID is authoritative, so require it.
         if fld.kind == "id":
@@ -739,6 +864,7 @@ class _Parser:
     # -- search sub-grammar --
     def _parse_semantic(self, fld: Field) -> LeafFilter:
         self._skip_annot()
+        self._want(CTX_VALUE, fld=fld, kind="search")
         t = self.peek()
         if t is None or t.kind != "STRING":
             raise oql_error("OQL_SEMANTIC_NEEDS_TEXT",
@@ -836,6 +962,8 @@ class _Parser:
 
     def _parse_search_operand(self, base: str) -> FilterType:
         self._skip_annot()
+        # an empty search-term slot at the cursor (`title contains |`)
+        self._want(CTX_VALUE, fld=self._cur_fld, kind="search")
         t = self.peek()
         if t is None:
             raise oql_error("OQL_MISSING_VALUE", "expected a search term", "")
@@ -1022,6 +1150,7 @@ class _Parser:
 
     def _parse_sort_field(self) -> Tuple[str, str]:
         # accept a known field OR a bare technical column / synthetic key
+        self._want(CTX_FIELD, directive="sort")
         t = self.peek()
         if not t or t.kind != "WORD":
             raise oql_error("OQL_BAD_SORT", "expected a field to sort by", "")
@@ -1049,6 +1178,7 @@ class _Parser:
         return dims
 
     def _parse_sample(self):
+        self._want(CTX_VALUE, kind="num", field="sample")
         t = self.peek()
         if not t or t.kind != "WORD" or not t.val.isdigit():
             raise oql_error("OQL_BAD_SAMPLE", 'expected a number after "sample"',

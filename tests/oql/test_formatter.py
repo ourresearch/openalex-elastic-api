@@ -115,7 +115,7 @@ GOLDENS = {
         "works\n"
         "where language is en and it's open access and year >= 2020 and type is article\n"
         "group by year\n"
-        "sort by citations desc",
+        "sort by citation count desc",
 
     # (g) a nested boolean group that is too wide -> the group explodes
     "works where publication_year >= 2020 and (institution is I27837315 or "

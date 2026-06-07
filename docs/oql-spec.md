@@ -114,7 +114,7 @@ where year >= 2020
     fat, obese, obesity, overweight, thin, "anti fat", "being fat",
     "body esteem", "body image", "fat ideal", "thin ideal", "weight bias",
   )
-sort by citations desc
+sort by citation count desc
 ```
 
 ## 3. Conditions — the cases
@@ -225,7 +225,7 @@ works where title contains FOO AND (bar or baz)          (row 10)  ✓ (any case
 ### 3.5 Negation — one mechanism
 
 ```
-works where title & abstract contains covid and title & abstract does not contain pediatric  (row 71)
+works where title/abstract contains covid and title/abstract does not contain pediatric  (row 71)
 ```
 → `{contains covid}` AND `{contains pediatric, is_negated: true}`.
 
@@ -262,7 +262,7 @@ vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); 
 
 | Axis | OQL surface | OQO encoding |
 |---|---|---|
-| field scope | the field name (`title`, `title & abstract`, `abstract`, `anywhere`, `raw affiliation`, `byline`) | column prefix (`display_name.search`, `title_and_abstract.search`, `default.search`, …) |
+| field scope | the field name (`title`, `title/abstract`, `abstract`, `full text`, `raw affiliation`, `byline`) | column prefix (`display_name.search`, `title_and_abstract.search`, `fulltext.search`, …) |
 | stemming | **default ON**; quotes turn it OFF | column suffix `.search` (stemmed) vs `.search.exact` |
 | stemmed phrase | `near "…"` | `.search` with a quoted value |
 | semantic | `is similar to "…"` | column suffix `.search.semantic` (2-phase) |
@@ -414,7 +414,7 @@ model clean for the editor and downstream tooling.
 ```
 authors sort by works_count desc                           (row 39)
 works where year >= 1976 group by topic, year              (row 48)  (multi-dim: spec-level; live API single-dim → #297)
-works where … sort by citations desc sample 500            (row 63)
+works where … sort by citation count desc sample 500            (row 63)
 ```
 
 - **`group by <dim>[, <dim>]*`** → `group_by` list (order = dimension order).

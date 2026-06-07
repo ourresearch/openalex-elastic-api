@@ -46,7 +46,10 @@ from core.fields import Property
 # labels — cited_by_count "citation count" (singular, all entities), referenced_works
 # "references", referenced_works_count "reference count" (old spellings kept as aliases).
 # Jason-approved 2026-06-07. Label edits = MINOR.
-PROPERTIES_VERSION = "1.5.0"
+# 1.6.0 (#381 Phase 5): sustainable_development_goals.id label "sustainable development
+# goal" → "SDG" (canonical acronym everywhere — registry/GUI/OQL; long forms kept as
+# aliases). Jason-approved 2026-06-07. Label edit = MINOR.
+PROPERTIES_VERSION = "1.6.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 22,
-    "fingerprint": "ee3dd08cb12e3a94da6dd029d8dcd3dc3765ffb1df5dc9edbb468b0e123d36cb",
+    "fingerprint": "a41e00feb776a9be31ed30771ece662484477b9d2f77ddffdc9414d1a8506121",
     "property_count": 824,
-    "version": "1.5.0"
+    "version": "1.6.0"
   },
   "properties": {
     "authors": {
@@ -121,6 +121,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -1666,6 +1667,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -2090,6 +2092,7 @@
           "filter"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -2306,6 +2309,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -2555,6 +2559,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -2799,6 +2804,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -3099,6 +3105,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -3626,6 +3633,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -3820,6 +3828,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -4568,6 +4577,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -4751,6 +4761,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -4934,6 +4945,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -5484,6 +5496,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -6004,6 +6017,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -6231,6 +6245,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -6498,6 +6513,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -7405,6 +7421,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -7702,6 +7719,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -8070,6 +8088,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -9227,6 +9246,7 @@
           "select"
         ],
         "aliases": [
+          "citations",
           "cited by count"
         ],
         "display_name": "citation count",
@@ -9654,7 +9674,8 @@
           "anywhere",
           "default",
           "default.search",
-          "full text"
+          "full text",
+          "fulltext"
         ],
         "display_name": "full text",
         "entity_type": null,
@@ -10872,7 +10893,9 @@
         "actions": [
           "filter"
         ],
-        "aliases": [],
+        "aliases": [
+          "OA status"
+        ],
         "display_name": "open access status",
         "entity_type": null,
         "name": "open_access.oa_status",
@@ -11538,9 +11561,10 @@
           "filter"
         ],
         "aliases": [
+          "sustainable development goal",
           "sustainable development goals"
         ],
-        "display_name": "sustainable development goal",
+        "display_name": "SDG",
         "entity_type": "sdgs",
         "name": "sustainable_development_goals.id",
         "operators": [
@@ -11610,6 +11634,7 @@
           "search"
         ],
         "aliases": [
+          "title & abstract",
           "title and abstract",
           "title&abstract",
           "title_and_abstract"

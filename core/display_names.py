@@ -336,7 +336,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'domain.id': {"display_name": 'domain'},
         'from_created_date': {"display_name": 'created since date'},
         'from_updated_date': {"display_name": 'updated since date'},
-        'fulltext.search': {"display_name": 'full text', "aliases": ['any field', 'anywhere', 'default', 'default.search', 'full text']},
+        'fulltext.search': {"display_name": 'full text', "aliases": ['any field', 'anywhere', 'default', 'default.search', 'full text', 'fulltext']},
         'funders.id': {"display_name": 'funder', "aliases": ['grants.funder']},
         'fwci': {"display_name": 'FWCI'},
         'has_abstract': {"display_name": 'abstract available'},
@@ -360,7 +360,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'mag_only': {"display_name": 'indexed by MAG only'},
         'open_access.any_repository_has_fulltext': {"display_name": 'has repository fulltext'},
         'open_access.is_oa': {"display_name": 'open access'},
-        'open_access.oa_status': {"display_name": 'open access status'},
+        'open_access.oa_status': {"display_name": 'open access status', "aliases": ['OA status']},
         'primary_location.source.id': {"display_name": 'source'},
         'primary_location.source.is_core': {"display_name": 'CWTS core source'},
         'primary_location.source.is_in_doaj': {"display_name": 'indexed by DOAJ'},
@@ -378,9 +378,9 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'raw_affiliation_strings.search': {"display_name": 'raw affiliation', "aliases": ['affiliation', 'raw affiliation string']},
         'raw_author_name.search': {"display_name": 'byline', "aliases": ['raw author name']},
         'related_to': {"display_name": 'related to'},
-        'sustainable_development_goals.id': {"display_name": 'sustainable development goal', "aliases": ['sustainable development goals']},
+        'sustainable_development_goals.id': {"display_name": 'SDG', "aliases": ['sustainable development goal', 'sustainable development goals']},
         'title.search': {"display_name": 'title'},
-        'title_and_abstract.search': {"display_name": 'title/abstract', "aliases": ['title and abstract', 'title&abstract', 'title_and_abstract']},
+        'title_and_abstract.search': {"display_name": 'title/abstract', "aliases": ['title & abstract', 'title and abstract', 'title&abstract', 'title_and_abstract']},
         'topics.id': {"display_name": 'topics'},
         'type': {"display_name": 'type'},
     },
@@ -402,7 +402,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
 #     "reference count" (cf. Semantic Scholar referenceCount, WoS "Cited Reference
 #     Count"). Old spellings are kept as OQL-parse aliases for back-compat.
 GLOBAL_DISPLAY_NAME_OVERRIDES: Dict[str, dict] = {
-    'cited_by_count': {"display_name": 'citation count', "aliases": ['cited by count']},
+    'cited_by_count': {"display_name": 'citation count', "aliases": ['citations', 'cited by count']},
     'referenced_works': {"display_name": 'references', "aliases": ['referenced works']},
     'referenced_works_count': {"display_name": 'reference count', "aliases": ['references count']},
 }
