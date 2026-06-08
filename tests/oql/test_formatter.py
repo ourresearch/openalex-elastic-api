@@ -86,24 +86,24 @@ GOLDENS = {
         "  and year >= 2020\n"
         "  and (institution is I27837315 or type is article)",
 
-    # (d) a value list <=8 items -> one per line, trailing comma
-    'works where title contains any of ("randomized controlled trial", '
-    '"systematic review", "meta analysis", "clinical practice guideline")':
+    # (d) a search group <=8 items -> one per line, trailing connective
+    'works where title contains ("randomized controlled trial" or '
+    '"systematic review" or "meta analysis" or "clinical practice guideline")':
         "works\n"
-        "where title contains any of (\n"
-        '    "clinical practice guideline",\n'
-        '    "meta analysis",\n'
-        '    "randomized controlled trial",\n'
-        '    "systematic review",\n'
+        "where title contains (\n"
+        '    "clinical practice guideline" or\n'
+        '    "meta analysis" or\n'
+        '    "randomized controlled trial" or\n'
+        '    "systematic review"\n'
         "  )",
 
-    # (e) a value list >8 items -> fill/pack to width, trailing comma
-    "works where language is any of (en, zh, es, fr, de, ja, pt, ru, ko, it, "
-    "ar, nl, pl, tr, sv, cs, fa, uk, vi, da)":
+    # (e) a value group >8 items -> fill/pack to width, trailing connective
+    "works where language is (en or zh or es or fr or de or ja or pt or ru or ko "
+    "or it or ar or nl or pl or tr or sv or cs or fa or uk or vi or da)":
         "works\n"
-        "where language is any of (\n"
-        "    ar, cs, da, de, en, es, fa, fr, it, ja, ko, nl, pl, pt, ru, sv, tr, uk, vi,\n"
-        "    zh,\n"
+        "where language is (\n"
+        "    ar or cs or da or de or en or es or fa or fr or it or ja or ko or nl or\n"
+        "    pl or pt or ru or sv or tr or uk or vi or zh\n"
         "  )",
 
     # (f) directives on their own lines at col 0. Input keeps the legacy `;`
@@ -171,9 +171,9 @@ def test_width_ceiling(row):
     for line in _fmt(row["oql"]).split("\n"):
         if len(line) <= HARD_CEILING:
             continue
-        # the only allowed overflow is a single unbreakable list item, which by
-        # construction carries no top-level `", "` separator to break on.
-        assert ", " not in line, (
+        # the only allowed overflow is a single unbreakable group item, which by
+        # construction carries no top-level ` or `/` and ` separator to break on.
+        assert " or " not in line and " and " not in line, (
             f"{row['id']}: breakable line exceeds {HARD_CEILING} cols: {line!r}")
 
 
@@ -184,7 +184,7 @@ def test_long_sr_query_showcase():
     row = max(OK_ROWS, key=lambda r: len(r["oql"]))   # the corpus' widest query
     out = _fmt(row["oql"])
     assert "\n" in out, "the widest corpus query must lay out multi-line"
-    assert "contains any of (" in out, "fill-mode value lists must survive"
+    assert "contains (" in out, "fill-mode search groups must survive"
     assert _oqo(out) == _oqo(row["oql"]), "showcase must round-trip"
     assert _fmt(out) == out, "showcase must be idempotent"
     assert max(len(l) for l in out.split("\n")) <= FORMAT_WIDTH, \
@@ -198,19 +198,19 @@ def test_short_query_stays_inline():
 
 
 # ---------------------------------------------------------------------------
-# Parser trailing-comma tolerance (the formatter emits one in every exploded
-# list; the parser must accept it so the round-trip closes).
+# Commas no longer separate group items (#363): they are a loud error, so the
+# parens-bag form is the only spelling. The connective is the idempotence anchor.
 # ---------------------------------------------------------------------------
-def test_trailing_comma_tolerated():
-    # equality list
-    assert _oqo("works where type is any of (article, review,)") == \
-        _oqo("works where type is any of (article, review)")
-    # search list
-    assert _oqo("works where title contains any of (cat, dog,)") == \
-        _oqo("works where title contains any of (cat, dog)")
-    # single item + trailing comma
-    assert _oqo("works where type is any of (article,)") == \
-        _oqo("works where type is article")
+def test_commas_in_group_are_rejected():
+    from query_translation.oql_lang import OQLError
+    for q in ("works where type is (article, review)",
+              "works where title contains (cat, dog)"):
+        with pytest.raises(OQLError) as ei:
+            _oqo(q)
+        assert ei.value.code == "OQL_COMMA_IN_GROUP", q
+    # the parens-bag form is what works
+    assert _oqo("works where type is (article or review)") == \
+        _oqo("works where type is (review or article)")
 
 
 # ---------------------------------------------------------------------------

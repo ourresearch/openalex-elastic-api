@@ -88,7 +88,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I33213144|I97018004'
   status: ok
-  oql: 'works where institution is any of (I33213144 [Harvard], I97018004 [Stanford])'
+  oql: 'works where institution is (I33213144 [Harvard] or I97018004 [Stanford])'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
         {column_id: authorships.institutions.lineage, value: I33213144},
         {column_id: authorships.institutions.lineage, value: I97018004}]}]}
@@ -119,7 +119,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=type:article|review'
   status: ok
-  oql: 'works where type is any of (article, review)'
+  oql: 'works where type is (article or review)'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
         {column_id: type, value: article}, {column_id: type, value: review}]}]}
   note: '`is in` is accepted on input; canonical output spells it `is any of`.'
@@ -145,7 +145,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search:apple,display_name.search:banana|cherry'
   status: ok
-  oql: 'works where title contains apple and title contains any of (banana, cherry)'
+  oql: 'works where title contains apple and title contains (banana or cherry)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: apple, operator: contains},
         {join: or, filters: [
@@ -160,8 +160,8 @@ rows:
     label: "OQL v2 spec spine"
   status: error
   oql: 'works where title contains apple and banana or cherry'
-  diagnostic: OQL_MIXED_BOOL_NEEDS_PARENS
-  note: Explicit mixed and/or at one level with no parens — the one deliberate departure from WoS/Scopus.
+  diagnostic: OQL_UNDELIMITED_TERM_LIST
+  note: '`apple and banana or cherry` are bare terms after `contains` with no parentheses (#363 requires 2+ terms be parenthesized) — caught before the mixed-and/or check. Fix-it: wrap them, e.g. `contains (apple and (banana or cherry))`.'
 
 - id: 9
   category: "boolean logic"
@@ -303,8 +303,8 @@ rows:
     label: "OQL v2 spec spine"
   status: error
   oql: 'works where title contains climate change or warming'
-  diagnostic: OQL_MIXED_BOOL_NEEDS_PARENS
-  note: 'A space is an AND, so this mixes and/or at one level → loud error (no silent order-of-operations). Fix-it offers `climate (change or warming)` or `(climate change) or warming`.'
+  diagnostic: OQL_UNDELIMITED_TERM_LIST
+  note: 'Bare search terms after `contains` with no parentheses (#363): a reserved word could be silently swallowed, so 2+ terms must be parenthesized. Fix-it offers `contains (climate (change or warming))` or `contains ((climate change) or warming)`.'
 
 - id: 18
   category: "search semantics"
@@ -314,7 +314,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search:climate,display_name.search:change|warming'
   status: ok
-  oql: 'works where title contains climate and title contains any of (change, warming)'
+  oql: 'works where title contains climate and title contains (change or warming)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: climate, operator: contains},
         {join: or, filters: [
@@ -566,7 +566,7 @@ rows:
   oql: |-
     works
     where year >= 2020
-      and institution is any of (I136199984 [Harvard], I33213144 [Harvard])
+      and institution is (I136199984 [Harvard] or I33213144 [Harvard])
   oqo: {get_rows: works, filter_rows: [
         {join: or, filters: [
           {column_id: authorships.institutions.lineage, value: I33213144},
@@ -844,11 +844,11 @@ rows:
   oql: |-
     works
     where title/abstract contains agile
-      and title/abstract contains any of (near "cycle time", near "lead time")
-      and title/abstract contains any of (
-        near "demand chain",
-        near "supply chain",
-        near "value chain",
+      and title/abstract contains (near "cycle time" or near "lead time")
+      and title/abstract contains (
+        near "demand chain" or
+        near "supply chain" or
+        near "value chain"
       )
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: agile, operator: contains},
@@ -939,13 +939,9 @@ rows:
     where language is en
       and year <= 2024
       and year >= 2015
-      and title/abstract contains any of (
-        ASD,
-        near "autism spectrum disorder",
-        autism,
-      )
-      and title/abstract contains any of (intervention, therapy, treatment)
-      and type is any of (article, review)
+      and title/abstract contains (ASD or near "autism spectrum disorder" or autism)
+      and title/abstract contains (intervention or therapy or treatment)
+      and type is (article or review)
   oqo: {get_rows: works, filter_rows: [
         {join: or, filters: [
           {column_id: title_and_abstract.search, value: autism, operator: contains},
@@ -1068,7 +1064,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=type:article|review'
   status: ok
-  oql: 'works where type is any of (article, review)'
+  oql: 'works where type is (article or review)'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
         {column_id: type, value: article}, {column_id: type, value: review}]}]}
 
@@ -1204,38 +1200,40 @@ rows:
     — the harness asserts OQO->OQL->OQO identity through the whole tree.
   oql: |-
     works
-    where title contains any of (
-        Boy, Girl, Minors, Prepubescent, adolescent, boys, child's, children, girls,
-        juvenile, preadolescent, preteen, pubertal, pubescent, schoolboy,
-        schoolchild, schoolgirl, teen, tweenage, tweens, youth, youths,
-        "Pre pubescent", "early adolescent", "pre adolescent", "pre pubertal",
-        "school aged", "young people", "young person",
+    where title contains (
+        Boy or Girl or Minors or Prepubescent or adolescent or boys or child's or
+        children or girls or juvenile or preadolescent or preteen or pubertal or
+        pubescent or schoolboy or schoolchild or schoolgirl or teen or tweenage or
+        tweens or youth or youths or "Pre pubescent" or "early adolescent" or
+        "pre adolescent" or "pre pubertal" or "school aged" or "young people" or
+        "young person"
       )
-      and title contains any of (
-        Height, bodyweight, fat, fatness, obese, obesity, overweight, thin,
-        thinness, weight, "anti fat", "being fat", "being thin", "body esteem",
-        "body hatred", "body ideal", "body image", "body positive", "body shame",
-        "body shape", "body size", "body sizes", "fat ideal", "ideal body",
-        "thin ideal", "weight bias",
+      and title contains (
+        Height or bodyweight or fat or fatness or obese or obesity or overweight or
+        thin or thinness or weight or "anti fat" or "being fat" or "being thin" or
+        "body esteem" or "body hatred" or "body ideal" or "body image" or
+        "body positive" or "body shame" or "body shape" or "body size" or
+        "body sizes" or "fat ideal" or "ideal body" or "thin ideal" or "weight bias"
       )
-      and full text contains any of (
-        Britain, England, GB, Scotland, Scottish, UK, Wales, Welsh,
-        "English adolescent", "English children", "English girls",
-        "English schoolchild", "English teen", "English young people",
-        "North Ireland", "North Irish", "Northern Ireland", "Northern Irish",
-        "United Kingdom", "english boys", "english school",
+      and full text contains (
+        Britain or England or GB or Scotland or Scottish or UK or Wales or Welsh or
+        "English adolescent" or "English children" or "English girls" or
+        "English schoolchild" or "English teen" or "English young people" or
+        "North Ireland" or "North Irish" or "Northern Ireland" or
+        "Northern Irish" or "United Kingdom" or "english boys" or "english school"
       )
-      and title/abstract contains any of (
-        attitude, attitudes, beliefs, diaries, diary, experiences, in-depth,
-        indepth, informal, open, perceptions, perspective, perspectives,
-        qualitative, semistructured, unstructured, "focus group", "focus groups",
-        "lived experience", "open ended", "semi structured",
+      and title/abstract contains (
+        attitude or attitudes or beliefs or diaries or diary or experiences or
+        in-depth or indepth or informal or open or perceptions or perspective or
+        perspectives or qualitative or semistructured or unstructured or
+        "focus group" or "focus groups" or "lived experience" or "open ended" or
+        "semi structured"
       )
-      and title/abstract contains any of (
-        attitude, attitudes, beliefs, diaries, diary, experiences, interview,
-        interviews, perceptions, perspective, perspectives, qualitative,
-        questionnaire, questionnaires, "focus group", "focus groups",
-        "lived experience",
+      and title/abstract contains (
+        attitude or attitudes or beliefs or diaries or diary or experiences or
+        interview or interviews or perceptions or perspective or perspectives or
+        qualitative or questionnaire or questionnaires or "focus group" or
+        "focus groups" or "lived experience"
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: display_name.search, value: Boy,
     operator: contains}, {column_id: display_name.search, value: Girl, operator: contains},
@@ -1432,3 +1430,78 @@ rows:
   oql: 'works where publisher is P4310320990 [Elsevier BV]'
   oqo: {get_rows: works, filter_rows: [{column_id: primary_location.source.publisher_lineage, value: P4310320990}]}
   note: 'Publisher of the work''s primary source, by P-id (lineage → a parent publisher matches its imprints). Mirrors `funder`: an entity-id reference, name-resolved via the publishers namespace. WoS PUBL=.'
+
+# --- search/value delimiter redesign: parens-bag (#363, 2026-06-08) ----------
+# A list of 2+ terms/values must be parenthesized; a single one may be bare.
+# `(…)` holds a boolean of atoms (and/or/not, nests); `any of`/`all of`/comma
+# lists were removed. These rows pin the new grammar + its loud errors.
+
+- id: 91
+  category: "boolean logic"
+  provenance:
+    type: "spec design"
+    label: "OQL parens-bag (#363): nested boolean inside a search group"
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: 'works where title contains (foo or (bar and baz))'
+  oqo: {get_rows: works, filter_rows: [{join: or, filters: [
+        {column_id: display_name.search, value: foo, operator: contains},
+        {join: and, filters: [
+          {column_id: display_name.search, value: bar, operator: contains},
+          {column_id: display_name.search, value: baz, operator: contains}]}]}]}
+  note: 'Parens hold a nested boolean of search terms (the field+operator distribute over every atom). A nested AND inside an OR has no faithful oxurl (URL OR is a flat pipe of one key) → oql-only.'
+
+- id: 92
+  category: "entity references"
+  provenance:
+    type: "spec design"
+    label: "OQL parens-bag (#363): multi-valued AND is meaningful (D7)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.countries:UK,authorships.countries:US'
+  status: ok
+  oql: 'works where country is UK and country is US'
+  oqo: {get_rows: works, filter_rows: [
+        {column_id: authorships.countries, value: US},
+        {column_id: authorships.countries, value: UK}]}
+  note: '`country is (us and uk)` = works with BOTH a US and a UK authorship (D7). A top-level AND, so canonical form is the explicit two-clause `country is US and country is UK` (filter_rows is itself an implicit AND).'
+
+- id: 93
+  category: "boolean logic"
+  provenance:
+    type: "spec design"
+    label: "OQL parens-bag (#363): mixed and/or inside a group still errors"
+  status: error
+  oql: 'works where title contains (apple and banana or cherry)'
+  diagnostic: OQL_MIXED_BOOL_NEEDS_PARENS
+  note: 'Inside a (…) group a space is an AND, so this mixes and/or at one level → loud error (no silent precedence). Fix: `(apple and (banana or cherry))` or `((apple and banana) or cherry)`.'
+
+- id: 94
+  category: "boolean logic"
+  provenance:
+    type: "spec design"
+    label: "OQL parens-bag (#363): the removed `any of` list keyword"
+  status: error
+  oql: 'works where type is any of (article, review)'
+  diagnostic: OQL_LIST_KEYWORD_REMOVED
+  note: '`is any of`/`is in`/`all of` value-list keywords were removed (#363). Fix-it: write it with parentheses, `type is (article or review)`.'
+
+- id: 95
+  category: "boolean logic"
+  provenance:
+    type: "spec design"
+    label: "OQL parens-bag (#363): commas no longer separate group items"
+  status: error
+  oql: 'works where type is (article, review)'
+  diagnostic: OQL_COMMA_IN_GROUP
+  note: 'Items in a (…) group are joined by `or`/`and`, not commas (#363). Fix: `type is (article or review)`.'
+
+- id: 96
+  category: "entity references"
+  provenance:
+    type: "spec design"
+    label: "OQL parens-bag (#363): undelimited 2+ values must be parenthesized"
+  status: error
+  oql: 'works where country is us uk'
+  diagnostic: OQL_UNDELIMITED_TERM_LIST
+  note: 'Two bare values after `is` with no parentheses → loud error (the rule that kills the silent-keyword-truncation footgun). Fix: `country is (us or uk)`.'

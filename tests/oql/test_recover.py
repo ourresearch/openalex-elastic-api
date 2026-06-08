@@ -45,9 +45,9 @@ def test_error_in_each_branch_of_a_group():
         "OQL_UNKNOWN_FIELD", "OQL_UNKNOWN_FIELD"]
 
 
-def test_list_element_recovery_collects_each_bad_element():
-    # `is any of (...)` recovers at the comma boundary
-    assert codes("works where year is any of (2020, abc, 2021, xyz)") == [
+def test_group_operand_recovery_collects_each_bad_element():
+    # a value group `is (a or b or ...)` recovers at each operand boundary (#363)
+    assert codes("works where year is (2020 or abc or 2021 or xyz)") == [
         "OQL_BAD_NUMBER", "OQL_BAD_NUMBER"]
 
 
@@ -81,7 +81,7 @@ def test_mixed_bool_does_not_abort_recovery():
 @pytest.mark.parametrize("q", [
     "works where bogusfield is 1 and otherbogus is 2",
     "works where year is abc or cited_by_count is xyz",
-    "works where year is any of (2020, abc, xyz)",
+    "works where year is (2020 or abc or xyz)",
     "works where (year is abc and cited_by_count is def",
     "works where year is abc title contains cat",
 ])

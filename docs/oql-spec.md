@@ -41,8 +41,8 @@ URL  ↔  OQO  ↔  OQL          (OQO is canonical)
 - **`OQL → OQO` is semantically lossless and order-preserving.** It discards only
   the **non-semantic text layer** — annotations/comments (display-name labels are a
   special case) and whitespace — and **normalizes equivalent spellings** to one
-  canonical OQO (`is in` / `is any of` → one form; a technical column-id and its
-  display name → one column).
+  canonical OQO (an implicit-AND space-run and an explicit `and` → one form; a
+  technical column-id and its display name → one column).
 - **`OQO → OQL` is deterministic** and *synthesizes* display-name labels.
 - **Round-trip identity holds on the OQO side:** **`OQO → OQL → OQO` is the
   identity.** (`OQL-text → OQO → OQL-text` is *normalizing*, not identity —
@@ -95,24 +95,24 @@ Implemented in [`query_translation/oql_lang.py`](../query_translation/oql_lang.p
   continuation line (one operand per line). A parenthesized group puts `(` on
   the current line, its operands one level deeper, and `)` back at the group's
   indent.
-- **Value lists** (`is any of ( … )`, `contains any of ( … )`): inline if they
-  fit; else **≤ 8 items → one per line**, **> 8 items → fill/pack** to the width
-  (this is what tames row 78's synonym blocks).
-- **Trailing comma** on every item of an **exploded** list (an idempotence
-  anchor + clean diffs); **none** inline. The parser tolerates a trailing comma
-  (`is any of (a, b,)` ≡ `is any of (a, b)`), so this stays whitespace-class.
+- **Value/term groups** (`is ( … )`, `contains ( … )`): inline if they fit; else
+  **≤ 8 items → one per line**, **> 8 items → fill/pack** to the width (this is what
+  tames row 78's synonym blocks).
+- **The connective trails every item but the last** of an **exploded** group (the
+  idempotence anchor + clean diffs); the parser is whitespace-blind, so the multi-line
+  form re-parses to the identical OQO.
 - **Idempotence is a hard invariant:** `format(format(x)) == format(x)`. Every
   break decision is a pure function of *(content, width, depth)*.
 - **Hard ceiling 100 columns:** only a **single unbreakable atom** (one quoted
   phrase, ID, or term longer than the budget) may exceed the target; nothing
-  with an internal `, ` break point ever does.
+  with an internal ` or `/` and ` break point ever does.
 
 ```
 works
 where year >= 2020
-  and title contains any of (
-    fat, obese, obesity, overweight, thin, "anti fat", "being fat",
-    "body esteem", "body image", "fat ideal", "thin ideal", "weight bias",
+  and title contains (
+    fat or obese or obesity or overweight or thin or "anti fat" or "being fat" or
+    "body esteem" or "body image" or "fat ideal" or "thin ideal" or "weight bias"
   )
 sort by citation count desc
 ```
@@ -157,27 +157,46 @@ OpenAlex ID's uppercase prefix is conventional; search text is the user's litera
 words). `col_…` references are always preserved. (Per-column canonical case is a
 registry property.)
 
-### 3.2 Sets / value lists: `is any of ( … )`
+### 3.2 Sets / value groups: `is ( … )`  (parens-bag, #363)
 
 ```
-works where institution is any of (I33213144 [Harvard], I97018004 [Stanford])  (row 3)
-works where type is in (article, review)                                       (row 5)
-works where institution is not any of (I33213144, I97018004)                   (row 4)
+works where institution is (I33213144 [Harvard] or I97018004 [Stanford])   (row 3)
+works where type is (article or review)                                    (row 5)
+works where institution is not (I33213144 or I97018004)                    (row 4)
+works where country is (us and uk)                                         (row 92, D7)
 ```
 
-- `( … )` does **double duty**: boolean grouping **and** value lists. The preceding
-  keyword disambiguates.
-- Accept **`is in`** and **`is any of`** on input; **emit `is any of`** canonically
-  (it reads aloud; SQL familiarity is explicitly *not* a goal here).
-- `is any of (a, b)` compiles to an OR-branch of equality leaves. `is not any of
-  (a, b)` is `NOT(a OR b)` = `(NOT a) AND (NOT b)` by De Morgan — canonical NNF
-  carries the negation on the leaves (corpus row **4**).
+- **The arity rule (one rule, both `is` and `contains`):** a list of **2+
+  values/terms must be parenthesized**; a **single** value/term may be bare
+  (`type is article`, `title contains cancer`). An *atom* is one bare word, one
+  quoted phrase, or one parenthesized sub-group, so `"systematic review"` is a
+  single atom and stays bare. `type is article review` → `OQL_UNDELIMITED_TERM_LIST`.
+- This is the rule that **kills the silent keyword-truncation footgun**: a reserved
+  word (`sort by`, `and`, …) can only "float" inside unquoted free text when there
+  are 2+ unparenthesized terms — which the rule forbids.
+- **Inside `( … )` is a boolean of atoms**: `or` / `and` / `not`, nesting allowed;
+  the field + operator distribute over every atom. `country is (us or uk)` is an
+  OR-branch of equality leaves; `country is (us and uk)` means works with **both** a
+  US and a UK authorship (corpus row 92 — D7; for a single-valued field it is the
+  empty set, which is coherent, not a footgun).
+- `is not ( … )` negates the whole group: `is not (a or b)` = `NOT(a OR b)` =
+  `(NOT a) AND (NOT b)` by De Morgan — canonical NNF carries the negation on the
+  leaves and (since `filter_rows` is itself an implicit AND) renders as the explicit
+  two-clause form `x is not a and x is not b` (corpus row **4**).
+- **Removed:** the `any of` / `all of` / `is in` list keywords and comma-separated
+  lists (`OQL_LIST_KEYWORD_REMOVED` / `OQL_COMMA_IN_GROUP`). `(a or b)` / `(a and b)`
+  are strictly more expressive (they nest; flat keyword lists can't) and lose no
+  capability. Re-adding `any of` later as a non-breaking accepted spelling is allowed.
+- `( … )` does **double duty**: a clause-group at the clause level
+  (`(year >= 2020 or it's open access)`) and a value/term group after an operator.
+  The position disambiguates (a group right after `is`/`contains` is a value/term
+  group; one where a clause is expected is a clause group).
 
 ### 3.3 Delimiters and the no-escaping result
 
 | Delimiter | Meaning |
 |---|---|
-| `( … )` | boolean grouping **and** value lists (`is any of ( … )`) |
+| `( … )` | boolean grouping: a group of clauses **and** a group of values/terms (`is (a or b)`, `contains (a or b)`) |
 | `[ … ]` | annotation slot — ignored on input, regenerated as a display name on output |
 | `" … "` | literal text to match (a phrase) |
 | `{ … }` | **unused** — banked for later |
@@ -195,10 +214,10 @@ punctuation away, so it is meaningless anyway) and documented, not escaped.
 ### 3.4 Booleans, casing, precedence
 
 ```
-works where title contains "foo" and ("bar" or "baz")    (row 7)   ✓
-works where title contains "foo" and "bar" or "baz"       (row 8)   ✗ OQL_MIXED_BOOL_NEEDS_PARENS
-works where title contains "a" and "b" and "c"           (row 9)   ✓ (pure-AND, associative)
-works where title contains FOO AND (bar or baz)          (row 10)  ✓ (any case accepted on input)
+works where title contains apple and title contains (banana or cherry)  (row 7)  ✓
+works where title contains apple and banana or cherry      (row 8)   ✗ OQL_UNDELIMITED_TERM_LIST
+works where title contains ("a" and "b" and "c")           (row 9)   ✓ (pure-AND, associative)
+works where title contains FOO and (bar or baz)            (row 10)  ✓ (any case accepted on input)
 ```
 
 - **Operators always sit OUTSIDE quotes.** Inside quotes, even `or` is a literal
@@ -209,18 +228,21 @@ works where title contains FOO AND (bar or baz)          (row 10)  ✓ (any case
   *always* operators — quote them to search them literally**" removes any ambiguity
   with content words, so the uppercase-for-disambiguation convention scholarly DBs
   rely on buys us nothing. (All keywords are lowercase: `where`, `is`, `contains`,
-  `within`, `near`, `any of`, `and`/`or`/`not`.)
+  `within`, `near`, `and`/`or`/`not`.)
 - **Mixed and/or at one grouping level REQUIRES explicit parentheses — a loud error
   otherwise** (`OQL_MIXED_BOOL_NEEDS_PARENS`). Pure-and or pure-or runs are
   associative, so they need no parens. This is the **one deliberate departure** from
   WoS/Scopus muscle memory, and it is where the field is already heading (Scopus
   mid-migration; Dimensions enforces; Lucene/Sourcegraph advise full
   parenthesization). Canonical output fully parenthesizes mixed logic.
-- **Adjacency (space) = AND between *search terms*** (§3.6), and it counts as AND
-  for this parens rule (so `climate change or warming` errors — §3.6 row 17). Between
-  *whole clauses* at the top level, a connective is still required (`year >= 2020 and
-  it's open access`); two full clauses jammed together with no `and` is
-  `OQL_IMPLICIT_ADJACENCY`.
+- **Adjacency (space) = AND between *search terms* inside a `( … )` group** (§3.6):
+  `title contains (climate change)` = climate AND change. At the top level a 2+ term
+  list must be parenthesized (`title contains climate change` → `OQL_UNDELIMITED_TERM_LIST`,
+  §3.6 row 17), and inside a group a space mixed with an explicit `or` still needs
+  nested parens (`(climate change or warming)` → `OQL_MIXED_BOOL_NEEDS_PARENS`).
+  Between *whole clauses* at the top level a connective is still required
+  (`year >= 2020 and it's open access`); two full clauses jammed together with no
+  `and` is `OQL_IMPLICIT_ADJACENCY`.
 
 ### 3.5 Negation — one mechanism
 
@@ -230,7 +252,7 @@ works where title/abstract contains covid and title/abstract does not contain pe
 → `{contains covid}` AND `{contains pediatric, is_negated: true}`.
 
 There is **one** negation mechanism, mapping to OQO's `is_negated` (NNF). On the
-surface it reads naturally — `is not`, `does not contain`, `is not any of`, or a
+surface it reads naturally — `is not`, `does not contain`, `is not (…)`, or a
 prefix `not (…)` on a group. All compile to `is_negated` on the appropriate node;
 the canonical form pushes it to the leaves.
 
@@ -269,31 +291,34 @@ vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); 
 | adjacency (phrase) | `" … "` | quotes in the value |
 | proximity | `within N words` | `"phrase"~N` in the value |
 | wildcard | bare `*` / `?` | `*` / `?` in the value |
-| boolean | space (=AND) / infix `and`/`or`/`not` / `any of`/`all of` | the BranchFilter tree |
+| boolean | space (=AND) / infix `and`/`or`/`not` inside `( … )` | the BranchFilter tree |
 
 The gauntlet pins the consequences (all are corpus rows):
 
 | row | OQL (`title contains …`) | Result |
 |---|---|---|
-| 11 | `climate change` | **space = stemmed AND**; words may be apart (recall). The default. |
+| 11 | `(climate change)` | **space inside a group = stemmed AND**; words may be apart (recall). The default. |
 | 12 | `"climate change"` | **quotes = exact adjacent phrase**, no stemming (`.search.exact`) |
 | 13 | `near "whopper junior"` | **`near` = stemmed adjacent phrase** → matches "whoppers junior" |
 | 14 | `"cat"` | quoting a **single** word = exact (no plurals) — quotes always mean exact |
-| 15 | `cat` | bare word = stemmed (matches cats) |
+| 15 | `cat` | bare word = stemmed (matches cats) — a single bare term is fine |
 | 16 | `"rock or roll"` | inside quotes = literal: `or` is a word, one exact phrase |
-| 17 | `climate change or warming` | ✗ `OQL_MIXED_BOOL_NEEDS_PARENS` — a space is an AND, so this mixes and/or |
-| 18 | `climate (change or warming)` | ✓ `climate AND (change OR warming)` — the disambiguated form |
+| 17 | `climate change or warming` | ✗ `OQL_UNDELIMITED_TERM_LIST` — 2+ bare terms must be parenthesized |
+| 18 | `(climate and (change or warming))` | ✓ `climate AND (change OR warming)` — the disambiguated form |
 | 19 | `"bar*"` | ✓ quoted wildcard = the sanctioned path → no-stem `.search.exact` (oxjob #364) |
 | 20 | `bar*` | ✗ `OQL_WILDCARD_NEEDS_EXACT` — bare wildcard is stemmed (wrong); fix-it: quote it `"bar*"` |
 
 Key rules these encode:
 
-- **Space = AND, and a space counts as AND for the parens rule.** There is **no
-  silent order of operations**: mixing a space-run with an explicit `or` at one
-  level is `OQL_MIXED_BOOL_NEEDS_PARENS`, just like an explicit `and`/`or` mix
-  (rows 17, 8). `climate change or warming` errors; you say which you mean —
-  `climate (change or warming)` (row 18) or `(climate change) or warming`. (Pure runs —
-  all-space, all-`and`, or all-`or` — need no parens.)
+- **A single bare term is fine; 2+ bare terms must be parenthesized** (the arity
+  rule, §3.2). `title contains cancer` ✓; `title contains climate change` →
+  `OQL_UNDELIMITED_TERM_LIST` (row 17) — this is the rule that kills the silent
+  keyword-truncation footgun. **Inside a `( … )` group**, a space = AND, and there is
+  **no silent order of operations**: mixing a space-run with an explicit `or` at one
+  level is `OQL_MIXED_BOOL_NEEDS_PARENS`. `(climate change or warming)` errors; you
+  say which you mean — `(climate (change or warming))` (row 18) or
+  `((climate change) or warming)`. (Pure runs — all-space, all-`and`, all-`or` —
+  need no inner parens.)
 - **Quotes = exact, single word or phrase.** `"cat"` excludes "cats"; `"climate
   change"` is the adjacent, unstemmed phrase. This is the mainstream "quotes = exact
   match" people already expect.
@@ -301,18 +326,17 @@ Key rules these encode:
   when you want phrase precision without losing recall (corpus rows **13**, **32**).
   Without quotes you don't need `near`: bare terms are already stemmed.
 - **Booleans are structural, never lexical.** `contains "foo or bar"` searches the
-  literal phrase; the boolean is the tree (`contains any of (foo, bar)`).
+  literal phrase; the boolean is the tree (`contains (foo or bar)`).
 - **`is similar to "…"` is semantic** vector search (`.search.semantic`, corpus
   row **30**).
-- **`any of (…)` / `all of (…)`** are flat-list sugar for same-op OR / AND; items
-  may themselves be `"exact"` or `near "stemmed"` phrases. Mixed logic uses infix
-  `and`/`or` + required parens.
-- **A search value runs until the next field-clause.** `title contains a or b and
+- **A parenthesized group holds a boolean of terms** (`contains (a or (b and c))`);
+  items may themselves be `"exact"` or `near "stemmed"` phrases. The `any of`/`all of`
+  list keywords were removed (§3.2).
+- **A search value runs until the next field-clause.** `title contains (a or b) and
   year >= 2020` is `(title contains (a or b)) and year >= 2020` — the `or` is the
-  contains-value's, the `and` joins clauses. This is deterministic, not a precedence
+  contains-group's, the `and` joins clauses. This is deterministic, not a precedence
   choice: a `year >= …` clause can't live *inside* a `contains`, so the value
-  boundary is forced (there's only one valid parse). A genuinely mixed and/or
-  *between clauses* still errors (§3.4).
+  boundary is forced. A genuinely mixed and/or *between clauses* still errors (§3.4).
 
 ### 3.7 Proximity and wildcards — the edge matrix
 
@@ -391,7 +415,7 @@ works where work is not in collection col_abc123                   (negation via
 
 A **Collection** is a named, predefined or user-saved set of entities, addressed by a
 `col_<base58>` id (`^col_[A-Za-z0-9]{1,48}$`). Membership is its own operator — distinct
-from `is` / `is any of` — because the intent ("is a member of this named set") and its
+from `is` / `is (…)` — because the intent ("is a member of this named set") and its
 value space (a Collection picker) differ from value equality; this keeps the operator→value
 model clean for the editor and downstream tooling.
 

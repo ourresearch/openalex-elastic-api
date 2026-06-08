@@ -43,6 +43,15 @@ def canonicalize_oqo(oqo: OQO) -> OQO:
             # Flatten if we get a single-child result that should be unwrapped
             if isinstance(canonical_f, list):
                 canonical_filters.extend(canonical_f)
+            # filter_rows is itself an implicit AND, so a top-level AND branch is
+            # hoisted into separate rows. This keeps the two ways of spelling the
+            # same thing convergent: `x is not (a or b)` (parsed as a negated OR,
+            # De Morgan'd to an AND branch here) and `x is (not a and not b)`
+            # (parsed as a top-level AND that parse() already flattens) both
+            # canonicalize to the same multi-row form.
+            elif isinstance(canonical_f, BranchFilter) and canonical_f.join == "and" \
+                    and not canonical_f.is_negated:
+                canonical_filters.extend(canonical_f.filters)
             else:
                 canonical_filters.append(canonical_f)
 

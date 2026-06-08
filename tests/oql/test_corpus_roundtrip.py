@@ -130,20 +130,28 @@ def test_renderer_resolves_display_names_for_id_and_country_columns():
 
 
 def test_search_model_space_quotes_near():
-    """Lock the v2 search model: space=AND, quotes=exact, near=stemmed phrase."""
+    """Lock the v2 search model under the #363 parens-bag grammar: a single bare
+    term is fine; 2+ terms must be parenthesized; inside parens space=AND,
+    quotes=exact, near=stemmed phrase."""
     from tests.oql.oql_v2 import parse as p, OQLError
     rows = lambda oql: p(oql).to_dict()["filter_rows"]
 
-    # SPACE = stemmed AND (two .search leaves, words may be apart)
-    fr = rows("works where title contains climate change")
-    assert [(f["column_id"], f["value"]) for f in fr] == \
-        [("display_name.search", "climate"), ("display_name.search", "change")]
+    # SPACE inside a group = stemmed AND (two .search leaves, words may be apart);
+    # a top-level AND flattens into separate filter_rows
+    fr = rows("works where title contains (climate change)")
+    assert sorted((f["column_id"], f["value"]) for f in fr) == \
+        [("display_name.search", "change"), ("display_name.search", "climate")]
 
-    # QUOTES = exact adjacent phrase (.search.exact)
+    # 2+ BARE terms (no parens) are a loud error — the footgun killer (D1)
+    with pytest.raises(OQLError) as e:
+        p("works where title contains climate change")
+    assert e.value.code == "OQL_UNDELIMITED_TERM_LIST"
+
+    # QUOTES = exact adjacent phrase (.search.exact) — one atom, bare is fine
     fr = rows('works where title contains "climate change"')
     assert fr == [{"column_id": "display_name.search.exact", "value": '"climate change"', "operator": "contains"}]
 
-    # NEAR = stemmed adjacent phrase (.search, quoted value)
+    # NEAR = stemmed adjacent phrase (.search, quoted value) — one atom, bare ok
     fr = rows('works where title contains near "whopper junior"')
     assert fr == [{"column_id": "display_name.search", "value": '"whopper junior"', "operator": "contains"}]
 
@@ -151,24 +159,20 @@ def test_search_model_space_quotes_near():
     assert rows('works where title contains "cat"')[0]["column_id"] == "display_name.search.exact"
     assert rows("works where title contains cat")[0]["column_id"] == "display_name.search"
 
-    # a space is an AND -> mixing it with an explicit `or` needs parens (no
-    # silent order-of-operations). Both the implicit and explicit mix error.
-    for bad in ("works where title contains climate change or warming",
-                "works where title contains a and b or c"):
-        with pytest.raises(OQLError) as e:
-            p(bad)
-        assert e.value.code == "OQL_MIXED_BOOL_NEEDS_PARENS"
+    # inside a group, mixing a space (AND) with an explicit `or` needs nested
+    # parens (no silent order-of-operations)
+    with pytest.raises(OQLError) as e:
+        p("works where title contains (climate change or warming)")
+    assert e.value.code == "OQL_MIXED_BOOL_NEEDS_PARENS"
     # the disambiguated forms are fine
-    p("works where title contains climate (change or warming)")   # ok
-    p("works where title contains (climate change) or warming")   # ok
+    p("works where title contains (climate (change or warming))")   # ok
+    p("works where title contains ((climate change) or warming)")   # ok
 
-    # `exactly` is gone — it's just a search word now, not a modifier
-    fr = rows("works where title contains exactly foo")
-    assert len(fr) == 2  # `exactly` AND `foo`, both stemmed terms
-
-    # `not` binds to the single next operand (tightest): `not a and b` = (not a) and b
-    fr = rows("works where title contains not a and b")
-    assert len(fr) == 2
+    # a bare `not` at top level must be parenthesized; inside a group `not` binds
+    # to the single next operand (tightest): `(not a and b)` = (not a) and b
+    with pytest.raises(OQLError):
+        p("works where title contains not a")
+    fr = rows("works where title contains (not a and b)")  # top-level AND flattens
     by_val = {f["value"]: f.get("is_negated", False) for f in fr}
     assert by_val == {"a": True, "b": False}  # only `a` is negated
 
@@ -249,6 +253,7 @@ def test_every_row_has_valid_facets():
         # shipped nested execution, so it is now `has-oxurl`.
         78: "oql-only",            # zd#8101 OR across stemmed/exact match-modes
         87: "oql-only",            # cross-field OR (title vs. abstract); #363
+        91: "oql-only",            # nested AND inside an OR search group; #363
     }
     assert non_has_oxurl == expected, (
         f"oxurl_status classification drifted: "

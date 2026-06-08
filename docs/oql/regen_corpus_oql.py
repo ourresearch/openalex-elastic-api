@@ -194,7 +194,12 @@ def rewrite_block(block: list, row: dict, resolver) -> list:
             else:
                 val = yaml.safe_load(line.split("oql:", 1)[1])
                 consumed = 1
-            out.extend(emit_oql_field(canonical_oql(val, resolver)))
+            # `oql` is derived from the authored `oqo` oracle (canonical form),
+            # not re-parsed from the previous `oql` — so the oracle is the single
+            # source of truth and a pure surface-syntax migration (e.g. the #363
+            # parens-bag spec) needs no hand-edits to the stored oql strings.
+            out.extend(emit_oql_field(
+                render(OQO.from_dict(oqo_dict), resolver=resolver)))
             i += consumed
             continue
 

@@ -145,7 +145,7 @@ class TestOQLRenderer:
         assert " and " in result
 
     def test_or_branch_filter(self):
-        """A same-column OR factors into a canonical `is any of (...)` clause."""
+        """A same-column OR factors into a canonical `is (a or b)` group (#363)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -159,7 +159,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "works where type is any of (article, book)"
+        assert result == "works where type is (article or book)"
 
     def test_sort_with_display_name(self):
         """Test sort uses display name."""

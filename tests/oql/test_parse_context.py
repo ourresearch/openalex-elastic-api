@@ -51,13 +51,12 @@ TABLE = [
     ("works where SDG is ", None, C.VALUE, {"autocomplete_entity": "sdgs"}),
     ("works where year > ", None, C.VALUE, {"value_kind": "num"}),
     ("works where type is ", None, C.VALUE, {"value_kind": "enum"}),
-    # multi-word operator: `is not` / `is any of` keep us in VALUE
+    # multi-word operator: `is not` keeps us in VALUE
     ("works where institution is not ", None, C.VALUE, {"value_kind": "id"}),
-    ("works where institution is any of (", None, C.VALUE, {"in_list": True}),
-    ("works where type is any of (article, ", None, C.VALUE, {"in_list": True,
-                                                              "value_kind": "enum"}),
-    # mid multi-word operator (`is any` without `of`) -> OPERATOR (offer completion)
-    ("works where institution is any ", None, C.OPERATOR, {}),
+    # parens-bag value groups (#363): inside `is (…)` the cursor is a VALUE slot
+    ("works where institution is (", None, C.VALUE, {"in_list": True}),
+    ("works where type is (article or ", None, C.VALUE, {"in_list": True,
+                                                         "value_kind": "enum"}),
     # after a complete clause -> connective
     ("works where year > 2000 ", None, C.CONNECTIVE, {}),
     ("works where institution is I27837315 ", None, C.CONNECTIVE, {}),
@@ -65,13 +64,12 @@ TABLE = [
     ("works where it's ", None, C.VALUE, {"value_kind": "bool"}),
     # connective then new field
     ("works where year > 2000 and ti", None, C.FIELD, {"prefix": "ti"}),
-    # '(' inside a search expression continues the SEARCH (the parser reads
-    # `title contains foo and (…)` as `title contains (foo AND …)`, since `(` after
-    # `and` is not a field-start) -> a search term is expected, NOT a new field.
-    # The retired walker wrongly said FIELD here (oxjob #363, decision 15): suggesting
-    # a field would lead the user into an invalid query. The editor now agrees with
-    # the parser by construction.
-    ("works where title contains foo and (", None, C.VALUE,
+    # Under the parens-bag grammar (#363) `title contains foo` is a complete
+    # single-term clause (a bare 2+ term list is illegal), so `and (` opens a new
+    # *clause* group -> the cursor expects a FIELD, not another search term.
+    ("works where title contains foo and (", None, C.FIELD, {}),
+    # a search-term group continues the SEARCH: inside `contains (` a term slot
+    ("works where title contains (foo or ", None, C.VALUE,
      {"value_kind": "search", "field": "title"}),
     # directives
     ("works sort by ", None, C.FIELD, {}),
@@ -143,7 +141,7 @@ _VALID_CATEGORIES = {C.ENTITY, C.FIELD, C.OPERATOR, C.VALUE, C.CONNECTIVE,
                      C.DIRECTIVE, C.END, C.NONE}
 
 _FUZZ_QUERIES = [
-    "works where type is any of (article, review)",
+    "works where type is (article or review)",
     "works where institution is in collection col_abc123",
     "works where abstract is similar to \"machine learning\"",
     'works where title contains "smart phone" within 3 words',

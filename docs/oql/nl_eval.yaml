@@ -571,3 +571,16 @@ cases:
   nl:
     - {text: "deep learning papers but not surveys", difficulty: easy}
     - {text: "papers about deep learning, excluding anything that mentions survey", difficulty: hard}
+
+# --- parens-bag rows (#363): NL for the new corpus ok rows ---
+- ref: 92  # country is (us and uk)  — multi-valued AND (D7)
+  nl:
+    - {text: "papers with both a US and a UK author", difficulty: easy}
+    - {text: "works co-authored across the United States and the United Kingdom", difficulty: hard}
+    - {text: "research affiliated with America and Britain at the same time", difficulty: hard}
+
+- ref: 90  # publisher is P4310320990 [Elsevier BV]
+  nl:
+    - {text: "works published by Elsevier", difficulty: easy}
+    - {text: "anything from the publisher Elsevier", difficulty: easy}
+    - {text: "papers put out by elsevier bv", difficulty: hard}

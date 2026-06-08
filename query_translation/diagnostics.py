@@ -134,7 +134,7 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "check the field name against the properties registry"),
         _spec("OQL_MISSING_OPERATOR", ERROR, PARSE,
               "an operator is expected after the field",
-              "add an operator, e.g. is / is any of / contains / >="),
+              "add an operator, e.g. is / contains / >="),
         _spec("OQL_BAD_OPERATOR_FOR_FIELD", ERROR, PARSE,
               "the operator does not fit the field's kind",
               'use an operator that matches the field (e.g. "contains" for search, '
@@ -155,9 +155,18 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_BAD_COLLECTION_REF", ERROR, PARSE,
               '"is in collection" needs a collection id (col_…)',
               "e.g. work is in collection col_abc123"),
-        _spec("OQL_EXPECTED_LIST", ERROR, PARSE,
-              'a parenthesized list is expected after "any of"',
-              "e.g. is any of (a, b, c)"),
+        _spec("OQL_UNDELIMITED_TERM_LIST", ERROR, PARSE,
+              "two or more bare terms/values follow an operator without "
+              "parentheses (a reserved word could be silently swallowed)",
+              "wrap the terms in parentheses, e.g. contains (a or b), "
+              "or quote a phrase, e.g. contains \"a b\""),
+        _spec("OQL_LIST_KEYWORD_REMOVED", ERROR, PARSE,
+              '"any of"/"all of"/"is in" value-list keywords were removed; '
+              "lists are written with parentheses",
+              "write it with parentheses, e.g. is (a or b) / contains (a or b)"),
+        _spec("OQL_COMMA_IN_GROUP", ERROR, PARSE,
+              "a comma separates items in a (…) group (commas were removed)",
+              "separate items with 'or'/'and', e.g. (a or b)"),
         _spec("OQL_SEMANTIC_NEEDS_TEXT", ERROR, PARSE,
               '"is similar to" needs a quoted text passage',
               'e.g. abstract is similar to "..."'),

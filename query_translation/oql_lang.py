@@ -11,7 +11,9 @@ Design anchors (see docs/oql-spec.md for prose, oxjob #330 EXPLORE.md for the wh
 - Mixed AND/OR at one grouping level is a loud error (parens required).
 - No implicit adjacency: two operands with no connective is an error.
 - `[...]` is an ignored annotation; the ID is authoritative.
-- `(...)` does double duty: boolean grouping AND value lists (`is any of (...)`).
+- `(...)` does double duty: boolean grouping of clauses AND a boolean group of
+  search terms / values (`title contains (a or b)`, `country is (us or uk)`). A
+  list of 2+ bare terms/values must be parenthesized; a single one may be bare.
 - Only `"` delimits strings; there are no escape sequences.
 - Quotes = phrase with stemming ON; `exactly` = non-stemmed; `within N words` =
   whole-phrase proximity; `is similar to` = semantic. Wildcards `* ?` fire only
@@ -639,29 +641,6 @@ class _Parser:
                     return
             self.next()
 
-    def _sync_list_element(self):
-        """Recovery within a value list: advance to the next element boundary
-        (a comma) or the closing paren so the next ``is any of (...)`` element can be
-        parsed after a bad one."""
-        depth = 0
-        while True:
-            t = self.peek()
-            if t is None:
-                return
-            if t.kind == "LP":
-                depth += 1
-                self.next()
-                continue
-            if t.kind == "RP":
-                if depth == 0:
-                    return
-                depth -= 1
-                self.next()
-                continue
-            if depth == 0 and t.kind == "COMMA":
-                return
-            self.next()
-
     def _parse_entity(self) -> str:
         # Greedy longest match against ENTITY_TYPES (handles "source types").
         self._want(CTX_ENTITY)
@@ -773,6 +752,11 @@ class _Parser:
     def _expect_rp(self):
         self._skip_annot()
         t = self.peek()
+        if t is not None and t.kind == "COMMA":
+            raise oql_error("OQL_COMMA_IN_GROUP",
+                           "items in a (…) group are separated by 'or'/'and', "
+                           "not commas",
+                           "replace the comma with 'or' (or 'and')", t.pos)
         if t is None or t.kind != "RP":
             raise oql_error("OQL_UNBALANCED_PARENS", "missing a closing parenthesis",
                            "add a )", t.pos if t else None)
@@ -796,7 +780,7 @@ class _Parser:
                 raise oql_error("OQL_BAD_OPERATOR_FOR_FIELD",
                                f'search field "{field}" needs "contains" (not "{op}")',
                                'use: <field> contains <terms>')
-            tree = self._parse_search_expr(fld.column)
+            tree = self._parse_search_value(fld.column)
             if op == "ncontains":
                 tree = _negate(tree)
             return tree
@@ -921,72 +905,82 @@ class _Parser:
                                'e.g. work is in collection col_abc123')
             return LeafFilter(fld.column, v, "in collection",
                               is_negated=(op == "nincoll"))
-        # set: is any of (...) / is not any of (...)
+        # the removed value-list openers: `is any of (...)` / `is in (...)` /
+        # `is not any of (...)` / `is not in (...)`. Lists are now parens-boolean
+        # (`is (a or b)`); give a targeted migration error.
         if op in ("in", "nin"):
-            vals = self._parse_value_list(fld)
-            if op == "in":
-                leaves = [LeafFilter(fld.column, v, "is") for v in vals]
-                if len(leaves) == 1:
-                    return leaves[0]
-                return BranchFilter(join="or", filters=leaves)
-            else:
-                leaves = [LeafFilter(fld.column, v, "is", is_negated=True) for v in vals]
-                if len(leaves) == 1:
-                    return leaves[0]
-                return BranchFilter(join="and", filters=leaves)
-        # comparison
+            raise oql_error("OQL_LIST_KEYWORD_REMOVED",
+                           '"is any of (…)" / "is in (…)" were removed; '
+                           "write the list with parentheses",
+                           f'e.g. {field} is (a or b)')
+        # comparison — always a single bare scalar (D5)
         if op in (">", ">=", "<", "<="):
             v = self._parse_scalar(fld)
             return LeafFilter(fld.column, v, op)
-        # is / is not (incl. unknown/null)
+        # is / is not
         negated = (op == "isnot")
+        # a parenthesized boolean group of values: `country is (us or uk)`,
+        # `country is not (us or uk)` (the base operator negates the whole group)
+        t = self.peek()
+        if t is not None and t.kind == "LP":
+            self.next()
+            grp = self._parse_bool_expr(lambda: self._parse_value_operand(fld))
+            self._expect_rp()
+            return _negate(grp) if negated else grp
+        # unknown / null
         if self.word_is("unknown", "null"):
             self.next()
             return LeafFilter(fld.column, None, "is", is_negated=negated)
+        # a single bare value; 2+ bare values must be parenthesized (D1)
         v = self._parse_scalar(fld)
+        self._skip_annot()
+        if self._continues_value():
+            t2 = self.peek()
+            raise oql_error("OQL_UNDELIMITED_TERM_LIST",
+                           f'"{field}" got more than one value with no parentheses',
+                           f'wrap the values, e.g. {field} is (a or b)',
+                           t2.pos if t2 else None)
         return LeafFilter(fld.column, v, "is", is_negated=negated)
 
-    def _parse_value_list(self, fld: Field) -> list:
-        # `is any of ` with the cursor before the list is still a value slot.
-        self._want(CTX_VALUE, fld=fld, in_list=True)
-        self._skip_annot()
+    def _parse_value_operand(self, fld: Field) -> FilterType:
+        """One operand inside an `is (...)` value group: a `not`-prefixed operand,
+        a nested `(...)` group, or one scalar value (-> an `is` leaf)."""
         t = self.peek()
-        if not t or t.kind != "LP":
-            raise oql_error("OQL_EXPECTED_LIST",
-                           'expected a parenthesized list after "any of"',
-                           'e.g. is any of (a, b, c)', t.pos if t else None)
-        self.next()
-        vals = []
-        self._in_list = True
-        while True:
-            if self._recover_mode:
-                si = self.i
-                try:
-                    vals.append(self._parse_scalar(fld))
-                except OQLError as e:
-                    # recover at the list-element boundary: record + skip to the next
-                    # comma / closing paren so the remaining elements still parse.
-                    self._diagnostics.append(e)
-                    self._sync_list_element()
-                    t0 = self.peek()
-                    if self.i == si and t0 is not None and t0.kind not in ("COMMA", "RP"):
-                        self.next()  # guarantee forward progress
-            else:
-                vals.append(self._parse_scalar(fld))
-            self._skip_annot()
-            t = self.peek()
-            if t and t.kind == "COMMA":
-                self.next()
-                # tolerate a trailing comma (the canonical formatter emits one
-                # in every exploded list; #376 Phase 2): `(a, b,)` == `(a, b)`.
-                nt = self.peek()
-                if nt and nt.kind == "RP":
-                    break
-                continue
-            break
-        self._in_list = False
-        self._expect_rp()
-        return vals
+        if t is not None and t.kind == "WORD" and t.val.lower() == "not":
+            self.next()
+            return _negate(self._parse_value_operand(fld))
+        if t is not None and t.kind == "LP":
+            self.next()
+            e = self._parse_bool_expr(lambda: self._parse_value_operand(fld))
+            self._expect_rp()
+            return e
+        if t is not None and t.kind == "COMMA":
+            raise oql_error("OQL_COMMA_IN_GROUP",
+                           "items in a (…) group are separated by 'or'/'and', "
+                           "not commas",
+                           "replace the comma with 'or' (or 'and')", t.pos)
+        v = self._parse_scalar(fld)
+        return LeafFilter(fld.column, v, "is")
+
+    def _continues_value(self) -> bool:
+        """At the cursor, just after a single bare term/value: does another bare
+        operand (or a same-level connective leading to one) follow? If so the user
+        wrote an undelimited 2+ list (D1) and must parenthesize it. A connective
+        that begins a NEW field clause, a directive, a closing paren / `;` / end
+        are all fine (the value is complete)."""
+        t = self.peek()
+        if t is None or t.kind in ("RP", "SEMI", "COMMA"):
+            return False
+        if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample"):
+            return False
+        if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
+            # `... and year is 2020` (new clause) is fine; `... or bar` is not.
+            return not self._looks_like_new_clause(1)
+        # an adjacent token that starts a new field clause is handled upstream as
+        # implicit adjacency; anything else is a second bare term/value.
+        if self._looks_like_new_clause(0):
+            return False
+        return True
 
     def _parse_scalar(self, fld: Field):
         # an empty value slot at the cursor (scalar or list element)
@@ -1041,60 +1035,121 @@ class _Parser:
         self.next()
         return LeafFilter(fld.column + ".search.semantic", t.val, "contains")
 
-    def _parse_search_expr(self, base: str) -> FilterType:
-        # A search expression is explicit-connective-separated *term-runs*. A
-        # term-run is one or more space-adjacent atoms = implicit AND (the
-        # everyday `climate change` = climate AND change). Implicit AND counts as
-        # AND for the mixed-rule: mixing a space-run with an explicit `or` at one
-        # level is a loud OQL_MIXED_BOOL_NEEDS_PARENS — we never silently pick an
-        # order of operations. `climate change or warming` errors; the user must
-        # say which they mean: `climate (change or warming)` or `(climate change) or warming`.
-        unit, n = self._parse_term_run(base)
-        units = [unit]
-        implicit_and = n > 1
-        conns: List[str] = []
-        while True:
-            self._skip_annot()
-            t = self.peek()
-            if t is None or t.kind in ("RP", "SEMI", "COMMA"):
-                break
-            if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
-                if self._starts_new_clause(1):
-                    break
-                conns.append(t.val.lower())
-                self.next()
-                unit, n = self._parse_term_run(base)
-                units.append(unit)
-                implicit_and = implicit_and or n > 1
-                continue
-            break
-        effective = set(conns) | ({"and"} if implicit_and else set())
-        if "and" in effective and "or" in effective:
-            raise oql_error(
-                "OQL_MIXED_BOOL_NEEDS_PARENS",
-                "mixed and/or at one level is ambiguous — add parentheses "
-                "(a space between words is an AND)",
-                'group explicitly, e.g. "a (b or c)" or "(a b) or c"', self.toks[0].pos)
-        if not conns:
-            return units[0]
-        return BranchFilter(join=conns[0], filters=units)
+    def _parse_search_value(self, base: str) -> FilterType:
+        """Top-level value after `contains`: a single bare atom, or a `(...)`
+        boolean group. 2+ bare atoms (`title contains foo bar`, `... foo or bar`)
+        are a loud OQL_UNDELIMITED_TERM_LIST (D1) — that's the rule that kills the
+        silent-keyword-truncation footgun, since a reserved word can only float
+        when there are 2+ unparenthesized terms."""
+        self._skip_annot()
+        self._want(CTX_VALUE, fld=self._cur_fld, kind="search")
+        t = self.peek()
+        if t is not None and t.kind == "LP":
+            self.next()
+            e = self._parse_bool_expr(lambda: self._parse_search_operand(base))
+            self._expect_rp()
+            return e
+        if t is not None and t.kind == "WORD" and t.val.lower() == "not":
+            raise oql_error("OQL_UNDELIMITED_TERM_LIST",
+                           '"not" must be inside a parenthesized term group',
+                           f"wrap it in parentheses, e.g. contains (not foo)", t.pos)
+        if (t is not None and t.kind == "WORD" and t.val.lower() in ("any", "all")
+                and self.word_is("of", k=1)):
+            raise oql_error("OQL_LIST_KEYWORD_REMOVED",
+                           f'"{t.val.lower()} of (…)" was removed; '
+                           "write the list with parentheses",
+                           "e.g. contains (a or b)", t.pos)
+        leaf = self._parse_search_atom(base)
+        self._skip_annot()
+        if self._continues_value():
+            t2 = self.peek()
+            raise oql_error("OQL_UNDELIMITED_TERM_LIST",
+                           "two or more search terms with no parentheses "
+                           "(a reserved word could be silently swallowed)",
+                           'wrap the terms, e.g. contains (a or b), or quote a '
+                           'phrase, e.g. contains "a b"', t2.pos if t2 else None)
+        return leaf
 
-    def _parse_term_run(self, base: str) -> Tuple[FilterType, int]:
-        """One or more space-adjacent search atoms = implicit AND. Returns
-        (filter, n_atoms) so the caller can apply the mixed-and/or rule."""
-        atoms = [self._parse_search_operand(base)]
+    def _parse_bool_expr(self, parse_operand) -> FilterType:
+        """A boolean group body inside `(...)`: explicit-connective-separated
+        *runs* of space-adjacent operands (implicit AND). Mixing a space-run or
+        an explicit `and` with an explicit `or` at one level is a loud
+        OQL_MIXED_BOOL_NEEDS_PARENS — we never silently pick precedence.
+        `parse_operand` reads one operand (search term or value, per the caller).
+        Shared by the search side (`contains (...)`) and the value side
+        (`is (...)`) so they can't drift."""
+        outer = self._in_list
+        self._in_list = True
+        try:
+            unit, n = self._parse_bool_run(parse_operand)
+            units = [unit]
+            implicit_and = n > 1
+            conns: List[str] = []
+            while True:
+                self._skip_annot()
+                t = self.peek()
+                if t is None or t.kind in ("RP", "SEMI", "COMMA"):
+                    break
+                if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
+                    # inside a (...) group every connective is a group connective —
+                    # no `_starts_new_clause` check (there are no clauses in a group,
+                    # and a value like the language code `it` must not be mistaken
+                    # for the `it's …` boolean-phrase clause-start).
+                    conns.append(t.val.lower())
+                    self.next()
+                    unit, n = self._parse_bool_run(parse_operand)
+                    units.append(unit)
+                    implicit_and = implicit_and or n > 1
+                    continue
+                break
+            effective = set(conns) | ({"and"} if implicit_and else set())
+            if "and" in effective and "or" in effective:
+                raise oql_error(
+                    "OQL_MIXED_BOOL_NEEDS_PARENS",
+                    "mixed and/or at one level is ambiguous — add parentheses "
+                    "(a space between words is an AND)",
+                    'group explicitly, e.g. "a (b or c)" or "(a b) or c"',
+                    self.toks[0].pos)
+            if not conns:
+                return units[0]
+            return BranchFilter(join=conns[0], filters=units)
+        finally:
+            self._in_list = outer
+
+    def _group_operand(self, parse_operand) -> FilterType:
+        """Read one group operand. In recover mode (``parse_collecting``) a bad
+        operand is recorded and we synchronize to the next group boundary (the
+        next connective / ``)`` / ``;`` / end) so every bad item in a group is
+        collected, not just the first. Strict mode is a plain ``parse_operand()``."""
+        if not self._recover_mode:
+            return parse_operand()
+        si = self.i
+        try:
+            return parse_operand()
+        except OQLError as e:
+            self._diagnostics.append(e)
+            self._synchronize()
+            if self.i == si:
+                t = self.peek()
+                if t is not None and t.kind not in ("RP", "SEMI", "COMMA") and not (
+                        t.kind == "WORD" and t.val.lower() in _CONNECTIVES):
+                    self.next()  # guarantee forward progress
+            return self._recovery_placeholder()
+
+    def _parse_bool_run(self, parse_operand) -> Tuple[FilterType, int]:
+        """One or more space-adjacent operands = implicit AND. Returns
+        (filter, n_operands) so the caller can apply the mixed-and/or rule."""
+        atoms = [self._group_operand(parse_operand)]
         while True:
             self._skip_annot()
             t = self.peek()
             if t is None or t.kind in ("RP", "SEMI", "COMMA"):
                 break
             if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
-                break  # explicit connective -> handled by _parse_search_expr
+                break  # explicit connective -> handled by _parse_bool_expr
             if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample"):
                 break
-            if self._starts_new_clause(0):
-                break  # a new field clause begins (e.g. `year >= 2020`)
-            atoms.append(self._parse_search_operand(base))  # implicit AND
+            atoms.append(self._group_operand(parse_operand))  # implicit AND
         if len(atoms) == 1:
             return atoms[0], 1
         return BranchFilter(join="and", filters=atoms), len(atoms)
@@ -1128,7 +1183,38 @@ class _Parser:
         finally:
             self.i = save
 
+    def _looks_like_new_clause(self, k: int) -> bool:
+        """Like `_starts_new_clause`, but does NOT require the field to be a known
+        alias — any word (or `it's …`) followed within a few tokens by an operator
+        looks like a new clause. Used by the arity guard (`_continues_value`) so a
+        misspelled/unknown next field (`year is 2020 and bogus is 5`) is treated as
+        a new (bad) clause to report, not as a second undelimited value."""
+        save = self.i
+        self.i += k
+        self._skip_annot()
+        try:
+            t = self.peek()
+            # a `(` opens a clause-group; `it's …` opens a boolean clause
+            if t and t.kind == "LP":
+                return True
+            if t and t.kind == "WORD" and t.val.lower() in ("it's", "its", "it"):
+                return True
+            for j in range(0, 4):
+                tt = self.peek(j)
+                if not tt or tt.kind != "WORD":
+                    break
+                after = self.peek(j + 1)
+                if after and (after.kind == "OP" or
+                              (after.kind == "WORD" and after.val.lower() in
+                               ("is", "contains", "does", "doesn't", "doesnt"))):
+                    return True
+            return False
+        finally:
+            self.i = save
+
     def _parse_search_operand(self, base: str) -> FilterType:
+        """One operand inside a `contains (...)` group: a `not`-prefixed operand,
+        a nested `(...)` group, or one search atom."""
         self._skip_annot()
         # an empty search-term slot at the cursor (`title contains |`)
         self._want(CTX_VALUE, fld=self._cur_fld, kind="search")
@@ -1140,37 +1226,15 @@ class _Parser:
             return _negate(self._parse_search_operand(base))
         if t.kind == "LP":
             self.next()
-            e = self._parse_search_expr(base)
+            e = self._parse_bool_expr(lambda: self._parse_search_operand(base))
             self._expect_rp()
             return e
-        # any of (...) / all of (...)
         if (t.kind == "WORD" and t.val.lower() in ("any", "all")
                 and self.word_is("of", k=1)):
-            join = "or" if t.val.lower() == "any" else "and"
-            self.i += 2
-            tt = self.peek()
-            if not tt or tt.kind != "LP":
-                raise oql_error("OQL_EXPECTED_LIST",
-                               f'expected a list after "{t.val.lower()} of"',
-                               'e.g. any of (a, b, c)', tt.pos if tt else None)
-            self.next()
-            leaves = []
-            while True:
-                leaves.append(self._parse_search_atom(base))
-                self._skip_annot()
-                nt = self.peek()
-                if nt and nt.kind == "COMMA":
-                    self.next()
-                    # tolerate a trailing comma (canonical formatter, #376 Ph2)
-                    nt2 = self.peek()
-                    if nt2 and nt2.kind == "RP":
-                        break
-                    continue
-                break
-            self._expect_rp()
-            if len(leaves) == 1:
-                return leaves[0]
-            return BranchFilter(join=join, filters=leaves)
+            raise oql_error("OQL_LIST_KEYWORD_REMOVED",
+                           f'"{t.val.lower()} of (…)" was removed; '
+                           "write the list with parentheses",
+                           "e.g. contains (a or b)", t.pos)
         return self._parse_search_atom(base)
 
     def _parse_search_atom(self, base: str) -> LeafFilter:
@@ -1557,48 +1621,75 @@ def _value_with_name(fld, value, column_id, resolver) -> str:
     return rendered
 
 
-def _same_field_search_set(f: BranchFilter):
-    """If every child is a plain search leaf on the same *base* field & polarity,
-    return (name_column, [(value, column_id), ...]); else None. Enables
-    `field contains any of (...)`. Grouping by base field (not full column_id)
-    lets a mixed stemmed/exact list — `contains any of (obese, "body image")`,
-    `.search` + `.search.exact` — factor into one clause; each value keeps its
-    own column so `_render_term` renders its mode surface (bare vs quoted).
-    Semantically identical to the OR/AND of the leaves, so round-trip holds."""
+def _uniform_search_base(f: FilterType):
+    """If every leaf anywhere under `f` is a plain (non-semantic) search leaf on
+    the same *base* field, return a representative column_id; else None. The whole
+    boolean subtree then factors into one `field contains (...)` clause whose
+    parens hold the boolean of bare terms (`title contains (a or (b and c))`).
+    Grouping by base field (not full column_id) lets a mixed stemmed/exact group
+    — `.search` + `.search.exact` — factor; each leaf keeps its own column so
+    `_render_term` renders its mode surface (bare vs quoted)."""
     bases = set()
-    items = []
-    name_col = None
-    for c in f.filters:
-        if not (isinstance(c, LeafFilter) and _is_search_leaf(c) and not c.is_negated):
-            return None
-        name, mode = _oql_field(c.column_id)
-        if mode == "semantic":  # semantic leaves don't fold into `contains any of`
-            return None
-        bases.add(name)  # the human field name is the per-base identity
-        if name_col is None:
-            name_col = c.column_id
-        items.append((c.value, c.column_id))
-    if len(bases) != 1:  # one base field => factorable into a single clause
+    rep = [None]
+
+    def walk(node) -> bool:
+        if isinstance(node, LeafFilter):
+            if not _is_search_leaf(node):
+                return False
+            name, mode = _oql_field(node.column_id)
+            if mode == "semantic":
+                return False
+            bases.add(name)
+            if rep[0] is None:
+                rep[0] = node.column_id
+            return True
+        return all(walk(c) for c in node.filters)
+
+    if not walk(f) or len(bases) != 1:
         return None
-    return name_col, items
+    return rep[0]
 
 
-def _same_field_eq_set(f: BranchFilter, negated: bool):
+def _uniform_eq_column(f: FilterType):
+    """If every leaf anywhere under `f` is an `is` value leaf (any polarity) on the
+    same column, return that column_id; else None. The subtree factors into one
+    `field is (...)` clause. Comparisons, null (`is unknown`) and `in collection`
+    leaves are excluded — they have no bare-value surface inside the parens."""
     cols = set()
-    vals = []
-    want_join = "and" if negated else "or"
-    if f.join != want_join:
+
+    def walk(node) -> bool:
+        if isinstance(node, LeafFilter):
+            if not (node.operator == "is" and node.value is not None
+                    and not _is_search_leaf(node)):
+                return False
+            cols.add(node.column_id)
+            return True
+        return all(walk(c) for c in node.filters)
+
+    if not walk(f) or len(cols) != 1:
         return None
-    for c in f.filters:
-        if not (isinstance(c, LeafFilter) and c.operator == "is"
-                and c.is_negated == negated and not _is_search_leaf(c)
-                and c.value is not None):
-            return None
-        cols.add(c.column_id)
-        vals.append(c.value)
-    if len(cols) != 1:
-        return None
-    return cols.pop(), vals
+    return cols.pop()
+
+
+def _factored_segments(f: FilterType, render_leaf):
+    """Segments for a factored boolean group's INNER text (no outer parens): a
+    boolean of bare atoms with explicit ` or `/` and ` connectives; any child
+    sub-group is wrapped in its own parens (the canonicalizer flattens same-join
+    nesting, so a child branch always has the opposite join and needs them).
+    `render_leaf(leaf) -> [Segment]` renders one bare atom."""
+    if isinstance(f, LeafFilter):
+        prefix = [_seg("text", "not ")] if f.is_negated else []
+        return prefix + render_leaf(f)
+    segs = []
+    for i, c in enumerate(f.filters):
+        if i:
+            segs.append(_seg("text", f" {f.join} "))
+        inner = _factored_segments(c, render_leaf)
+        if isinstance(c, BranchFilter):
+            segs = segs + [_seg("text", "(")] + inner + [_seg("text", ")")]
+        else:
+            segs = segs + inner
+    return segs
 
 
 # ---------------------------------------------------------------------------
@@ -1707,41 +1798,33 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
         inner = _filter_node(BranchFilter(f.join, f.filters), top=False, resolver=resolver)
         return GroupNode(join=f.join, children=[inner], prefix="not (", suffix=")",
                          joiner="", meta=GroupMeta(implicit=False))
-    # factor same-field search OR/AND into `any of/all of` -> one value-list clause
-    sset = _same_field_search_set(f)
-    if sset:
-        col, items = sset
-        name, _ = _oql_field(col)
-        kw = "any of" if f.join == "or" else "all of"
-        segs = [_seg("column", name, column_id=col),
-                _seg("operator", f" contains {kw} "), _seg("text", "(")]
-        for i, (v, vcol) in enumerate(items):
-            if i:
-                segs.append(_seg("text", ", "))
-            segs.append(_seg("value", _render_term(v, vcol), value=v))
-        segs.append(_seg("text", ")"))
+    # factor a single-base-field search subtree -> `field contains (a or b)`
+    scol = _uniform_search_base(f)
+    if scol is not None:
+        name, _ = _oql_field(scol)
+        inner = _factored_segments(
+            f, lambda lf: [_seg("value", _render_term(lf.value, lf.column_id),
+                                value=lf.value)])
+        segs = ([_seg("column", name, column_id=scol),
+                 _seg("operator", " contains "), _seg("text", "(")]
+                + inner + [_seg("text", ")")])
         return ClauseNode(segments=segs, clause_kind="text", meta=ClauseMeta(
-            column_id=col, operator="contains", value=None,
+            column_id=scol, operator="contains", value=None,
             column_display_name=name))
-    # factor same-field equality sets -> one value-list clause
-    for neg in (False, True):
-        eqset = _same_field_eq_set(f, neg)
-        if eqset:
-            col, vals = eqset
-            fld = _BY_COLUMN.get(col)
-            name = fld.oql if fld else col
-            kw = "is not any of" if neg else "is any of"
-            segs = [_seg("column", name, column_id=col),
-                    _seg("operator", f" {kw} "), _seg("text", "(")]
-            for i, v in enumerate(vals):
-                if i:
-                    segs.append(_seg("text", ", "))
-                segs.extend(_value_segments(fld, v, col, resolver)[0])
-            segs.append(_seg("text", ")"))
-            kind = "entity" if (fld and fld.kind == "id") else "other"
-            return ClauseNode(segments=segs, clause_kind=kind, meta=ClauseMeta(
-                column_id=col, operator="is", value=None,
-                column_display_name=name))
+    # factor a single-column equality subtree -> `field is (a or b)`
+    ecol = _uniform_eq_column(f)
+    if ecol is not None:
+        fld = _BY_COLUMN.get(ecol)
+        name = fld.oql if fld else ecol
+        inner = _factored_segments(
+            f, lambda lf: _value_segments(fld, lf.value, lf.column_id, resolver)[0])
+        segs = ([_seg("column", name, column_id=ecol),
+                 _seg("operator", " is "), _seg("text", "(")]
+                + inner + [_seg("text", ")")])
+        kind = "entity" if (fld and fld.kind == "id") else "other"
+        return ClauseNode(segments=segs, clause_kind=kind, meta=ClauseMeta(
+            column_id=ecol, operator="is", value=None,
+            column_display_name=name))
     children = [_filter_node(c, top=False, resolver=resolver) for c in f.filters]
     joiner = f" {f.join} "
     prefix, suffix = ("", "") if top else ("(", ")")
@@ -1836,46 +1919,61 @@ def _leading_conn(group: GroupNode) -> str:
 
 
 def _split_list_clause(clause: ClauseNode):
-    """If `clause` is a value-list clause (`… is any of (a, b, c)` /
-    `… contains any of (…)`), return `(head, items, close)` where `head` ends
-    with `"("`, `items` is the list of flat item strings, and `close == ")"`;
-    else None. Splits on the engine's own structural segments (the literal
-    `"("`, `", "`, `")"` text segments), so a `", "` inside a resolved
-    `[display name]` (an `id` segment) is never mistaken for a separator."""
+    """If `clause` is a factored group clause (`… contains (a or b or …)` /
+    `… is (a or b or …)`), return `(head, items, conn, close)` where `head` ends
+    with `"("`, `items` is the list of top-level item strings, `conn` is the
+    group's connective (`"or"`/`"and"`), and `close == ")"`; else None. Splits on
+    the engine's own structural segments (the literal `"("`, `" or "`/`" and "`,
+    `")"` text segments) at paren-depth 0 only, so a connective inside a nested
+    sub-group `(b and c)` is never mistaken for a top-level separator."""
     segs = clause.segments
     open_idx = next((i for i, s in enumerate(segs)
                      if s.kind == "text" and s.text == "("), None)
     if open_idx is None or not (segs[-1].kind == "text" and segs[-1].text == ")"):
         return None
     head = "".join(s.text for s in segs[:open_idx + 1])
-    items, cur = [], []
+    items, cur, conn, depth = [], [], None, 0
     for s in segs[open_idx + 1:-1]:
-        if s.kind == "text" and s.text == ", ":
+        if s.kind == "text" and s.text == "(":
+            depth += 1
+            cur.append(s.text)
+        elif s.kind == "text" and s.text == ")":
+            depth -= 1
+            cur.append(s.text)
+        elif depth == 0 and s.kind == "text" and s.text in (" or ", " and "):
             items.append("".join(cur))
             cur = []
+            conn = s.text.strip()
         else:
             cur.append(s.text)
     items.append("".join(cur))
-    return head, items, ")"
+    if conn is None or len(items) < 2:
+        return None  # a single bare atom / unbreakable clause
+    return head, items, conn, ")"
 
 
-def _fmt_list(head: str, items, indent: int, width: int) -> str:
-    """Lay out an exploded value list. `indent` is the clause's own indent
-    (where the closing `)` sits); items sit at `indent + _INDENT`. Every item
-    carries a trailing comma (idempotence anchor + clean diffs; the parser
-    tolerates it). <=8 items -> one per line; >8 -> fill/pack to `width`."""
+def _fmt_list(head: str, items, conn: str, indent: int, width: int) -> str:
+    """Lay out an exploded factored group. `indent` is the clause's own indent
+    (where the closing `)` sits); items sit at `indent + _INDENT`. The connective
+    trails every item but the last (idempotence anchor + clean diffs; the parser
+    is whitespace-blind). <=8 items -> one per line; >8 -> fill/pack to `width`."""
     pad = " " * (indent + _INDENT)
     out = [head]
-    if len(items) <= 8:
-        out.extend(f"{pad}{it}," for it in items)
+    n = len(items)
+
+    def piece(i, it):
+        return it if i == n - 1 else f"{it} {conn}"
+
+    if n <= 8:
+        out.extend(f"{pad}{piece(i, it)}" for i, it in enumerate(items))
     else:
         line, empty = pad, True
-        for it in items:
-            piece = f"{it},"
-            if not empty and len(line) + 1 + len(piece) > width:
+        for i, it in enumerate(items):
+            p = piece(i, it)
+            if not empty and len(line) + 1 + len(p) > width:
                 out.append(line)
                 line, empty = pad, True
-            line = f"{pad}{piece}" if empty else f"{line} {piece}"
+            line = f"{pad}{p}" if empty else f"{line} {p}"
             empty = False
         out.append(line)
     out.append(f"{' ' * indent})")
@@ -1889,8 +1987,8 @@ def _fmt_clause(clause: ClauseNode, indent: int, col: int, width: int) -> str:
     parts = _split_list_clause(clause)
     if parts is None:
         return flat   # an unbreakable clause (e.g. one long search term)
-    head, items, _close = parts
-    return _fmt_list(head, items, indent, width)
+    head, items, conn, _close = parts
+    return _fmt_list(head, items, conn, indent, width)
 
 
 def _fmt_group(group: GroupNode, indent: int, col: int, width: int) -> str:

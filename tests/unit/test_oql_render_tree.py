@@ -79,7 +79,7 @@ class TestStringifyInvariant:
         assert " and " in oql
     
     def test_or_group_filter(self):
-        """A same-column OR factors into a canonical `is any of (...)` clause."""
+        """A same-column OR factors into a canonical `is (a or b)` group (#363)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -95,7 +95,7 @@ class TestStringifyInvariant:
         oql, tree = render_oqo_to_oql_and_tree(oqo)
 
         assert stringify(tree) == oql
-        assert "type is any of (article, book)" in oql
+        assert "type is (article or book)" in oql
     
     def test_sort_directive(self):
         """Test sort directive."""
@@ -283,11 +283,11 @@ class TestCanonicalization:
         )
         
         canonical = canonicalize_oqo(oqo)
-        
-        # Should flatten to a single AND group with 3 children
-        branch = canonical.filter_rows[0]
-        assert isinstance(branch, BranchFilter)
-        assert len(branch.filters) == 3
+
+        # A top-level AND (filter_rows is itself an implicit AND) is hoisted into
+        # separate rows (#363), and the nested AND flattens too -> 3 leaf rows.
+        assert len(canonical.filter_rows) == 3
+        assert all(isinstance(f, LeafFilter) for f in canonical.filter_rows)
 
 
 class TestTreeStructure:

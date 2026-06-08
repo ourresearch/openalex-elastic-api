@@ -61,8 +61,10 @@ KIND_OPERATORS: Dict[str, List[str]] = {
     "search": ["contains", "does not contain", "near", "is similar to"],
     "bool":   [],  # surfaced via the "it's ..." phrasings instead
     "num":    ["is", "is not", ">", ">=", "<", "<=", "is unknown"],
-    "id":     ["is", "is not", "is any of", "is not any of", "is in", "is unknown"],
-    "enum":   ["is", "is not", "is any of", "is not any of", "is in", "is unknown"],
+    # lists are written with parentheses now (#363): `is (a or b)` — the `any of`/
+    # `is in` list keywords were removed, so they're no longer suggested.
+    "id":     ["is", "is not", "is unknown"],
+    "enum":   ["is", "is not", "is unknown"],
     "string": ["is", "is not", "is unknown"],
 }
 
