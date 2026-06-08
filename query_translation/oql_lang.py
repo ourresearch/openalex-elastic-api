@@ -292,6 +292,22 @@ _f("PMCID", "ids.pmcid", "string", aliases=["ids.pmcid"])
 _f("estimated APC paid", "apc_paid.value_usd", "num",
    aliases=["apc_paid.value_usd"], is_float=True)
 
+# More Front-B-only columns (registry display_names already clean — no
+# core/display_names.py change, no PROPERTIES_VERSION bump).
+# ROR id of an affiliated institution (literal string, no name resolution — the
+# ROR *is* the identifier the user types). Engine param authorships.institutions.ror.
+_f("ROR ID", "authorships.institutions.ror", "string",
+   aliases=["authorships.institutions.ror"])
+# Work-relationship id filters, mirroring cited_by/cites: each references a WORK, so
+# they name-resolve via the `works` namespace (see oql_renderer._RESOLVE_NAMESPACE).
+# referenced_works = this work's reference list; related_to = OpenAlex "related works".
+_f("references", "referenced_works", "id", aliases=["referenced_works"])
+_f("related to", "related_to", "id", aliases=["related_to"])
+# "raw-but-good" distinct-count metrics (kind num, integer counts; display_names
+# are auto-humanized but already read cleanly, so Front-B with the existing word).
+_f("authors count", "authors_count", "num", aliases=["authors_count"])
+_f("locations count", "locations_count", "num", aliases=["locations_count"])
+
 # Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
 _BY_COLUMN = {}
 for _spellings, _fld in _FIELDS:

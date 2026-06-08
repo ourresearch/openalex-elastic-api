@@ -72,6 +72,9 @@ _RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
     # case 7). cited_by = the work's references; cites = works citing it.
     "cited_by": "works",
     "cites": "works",
+    # oxjob #402 — the other two work-relationship id filters resolve the same way.
+    "referenced_works": "works",
+    "related_to": "works",
     "ids.openalex": None,
     # oxjob #402 friendly-name audit — corresponding-author/-institution ids
     # resolve via the same namespaces as `author` / `institution`.
