@@ -8,7 +8,7 @@ import pytest
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, SortBy
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 from query_translation.oql_renderer import render_oqo_to_oql
-from query_translation.oql_parser import parse_oql_to_oqo, OQLParser, OQLParseError
+from query_translation.oql_parser import parse_oql_to_oqo, OQLParseError
 
 
 class TestOQLRenderer:
