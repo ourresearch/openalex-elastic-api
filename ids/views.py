@@ -12,6 +12,7 @@ from concepts.schemas import ConceptsSchema
 from continents.schemas import ContinentsSchema
 from countries.schemas import CountriesSchema
 from domains.schemas import DomainsSchema
+from oa_statuses.schemas import OaStatusesSchema
 from fields.schemas import FieldsSchema
 from funders.schemas import FundersSchema
 from ids.ui_format import format_as_ui, is_ui_format
@@ -816,6 +817,8 @@ def get_by_openalex_external_id(index, schema, id):
     elif index.startswith("work-types"):
         entity_name = "work-types"
         endpoint_name = "types"
+    elif index.startswith("oa-statuses"):
+        entity_name = endpoint_name = "oa-statuses"
     else:
         entity_name = endpoint_name = index.split("-")[0]
 
@@ -879,6 +882,12 @@ def institution_types_id_get(id):
 @blueprint.route("/entities/languages/<path:id>")
 def languages_id_get(id):
     return get_by_openalex_external_id(settings.LANGUAGES_INDEX, LanguagesSchema, id)
+
+
+@blueprint.route("/oa-statuses/<path:id>")
+@blueprint.route("/entities/oa-statuses/<path:id>")
+def oa_statuses_id_get(id):
+    return get_by_openalex_external_id(settings.OA_STATUSES_INDEX, OaStatusesSchema, id)
 
 
 @blueprint.route("/types/<path:id>")

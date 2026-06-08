@@ -1,135 +1,79 @@
-from flask import Blueprint, jsonify, request, abort
+from flask import Blueprint, jsonify, request
 
 from combined_config import all_entities_config
-from core.exceptions import APIQueryParamsError
+from core.export import export_group_by, is_group_by_export
+from core.filters_view import shared_filter_view
+from core.histogram import shared_histogram_view
+from core.schemas import FiltersWrapperSchema, HistogramWrapperSchema
+from core.shared_view import shared_view
+from core.utils import (
+    get_flattened_fields,
+    get_valid_fields,
+    process_only_fields,
+)
+from oa_statuses.fields import fields_dict
+from oa_statuses.schemas import OaStatusesSchema, MessageSchema
+from settings import OA_STATUSES_INDEX
 
 blueprint = Blueprint("oa_statuses", __name__)
-
-# Static OA status data - these are not stored in Elasticsearch
-OA_STATUSES = [
-    {
-        "id": "https://openalex.org/oa-statuses/closed",
-        "display_name": "closed",
-        "description": "Not open access; the work is not freely available to read.",
-        "works_count": None,
-        "cited_by_count": None,
-        "works_api_url": "https://api.openalex.org/works?filter=open_access.oa_status:closed",
-        "updated_date": None,
-        "created_date": None,
-    },
-    {
-        "id": "https://openalex.org/oa-statuses/green",
-        "display_name": "green",
-        "description": "In a toll-access journal but archived in a repository like ArXiv; may be a preprint, with any license or none.",
-        "works_count": None,
-        "cited_by_count": None,
-        "works_api_url": "https://api.openalex.org/works?filter=open_access.oa_status:green",
-        "updated_date": None,
-        "created_date": None,
-    },
-    {
-        "id": "https://openalex.org/oa-statuses/bronze",
-        "display_name": "bronze",
-        "description": "Free to read on the publisher's site but without an open license; access can be removed at any time.",
-        "works_count": None,
-        "cited_by_count": None,
-        "works_api_url": "https://api.openalex.org/works?filter=open_access.oa_status:bronze",
-        "updated_date": None,
-        "created_date": None,
-    },
-    {
-        "id": "https://openalex.org/oa-statuses/hybrid",
-        "display_name": "hybrid",
-        "description": "Free on the publisher's site with an open license, but in a subscription journal; typically published via an APC.",
-        "works_count": None,
-        "cited_by_count": None,
-        "works_api_url": "https://api.openalex.org/works?filter=open_access.oa_status:hybrid",
-        "updated_date": None,
-        "created_date": None,
-    },
-    {
-        "id": "https://openalex.org/oa-statuses/gold",
-        "display_name": "gold",
-        "description": "Free with an open license in a fully Open Access journal where all articles are open access.",
-        "works_count": None,
-        "cited_by_count": None,
-        "works_api_url": "https://api.openalex.org/works?filter=open_access.oa_status:gold",
-        "updated_date": None,
-        "created_date": None,
-    },
-]
-
-# Index by short ID for quick lookup
-OA_STATUSES_BY_ID = {s["display_name"]: s for s in OA_STATUSES}
-
-
-def _check_unsupported_params():
-    """Check for filter/group_by params and raise error if present.
-    Note: sort, page, per_page are silently ignored (static list of 5 items).
-    """
-    if request.args.get("filter"):
-        raise APIQueryParamsError("Filtering is not supported for the oa-statuses endpoint.")
-    if request.args.get("group_by") or request.args.get("group-by"):
-        raise APIQueryParamsError("Grouping is not supported for the oa-statuses endpoint.")
-    if request.args.get("search"):
-        raise APIQueryParamsError("Search is not supported for the oa-statuses endpoint.")
 
 
 @blueprint.route("/oa-statuses")
 @blueprint.route("/entities/oa-statuses")
-def oa_statuses_list():
-    """List all OA statuses."""
-    _check_unsupported_params()
-    
-    result = {
-        "meta": {
-            "count": len(OA_STATUSES),
-            "db_response_time_ms": 0,
-            "page": 1,
-            "per_page": len(OA_STATUSES),
-            "groups_count": None,
-        },
-        "results": OA_STATUSES,
-        "group_by": [],
-    }
-    return jsonify(result)
-
-
-@blueprint.route("/oa-statuses/<path:oa_status_id>")
-@blueprint.route("/entities/oa-statuses/<path:oa_status_id>")
-def oa_status_single(oa_status_id):
-    """Get a single OA status by ID."""
-    # Handle both full URL and short ID formats
-    # e.g., "gold", "oa-statuses/gold", or "https://openalex.org/oa-statuses/gold"
-    short_id = oa_status_id.lower()
-    if "/" in short_id:
-        short_id = short_id.split("/")[-1]
-    
-    if short_id not in OA_STATUSES_BY_ID:
-        return jsonify({"error": "Not found", "message": f"OA status '{oa_status_id}' not found."}), 404
-    
-    return jsonify(OA_STATUSES_BY_ID[short_id])
+def oa_statuses():
+    index_name = OA_STATUSES_INDEX
+    default_sort = ["-works_count", "id"]
+    only_fields = process_only_fields(request, OaStatusesSchema)
+    result = shared_view(request, fields_dict, index_name, default_sort)
+    # export option
+    if is_group_by_export(request):
+        return export_group_by(result, request)
+    message_schema = MessageSchema(only=only_fields)
+    return message_schema.dump(result)
 
 
 @blueprint.route("/oa-statuses/filters/<path:params>")
 def oa_statuses_filters(params):
-    """Filters endpoint - not supported for OA statuses."""
-    raise APIQueryParamsError("Filtering is not supported for the oa-statuses endpoint.")
+    index_name = OA_STATUSES_INDEX
+    results = shared_filter_view(request, params, fields_dict, index_name)
+    filters_schema = FiltersWrapperSchema()
+    return filters_schema.dump(results)
 
 
 @blueprint.route("/oa-statuses/histogram/<string:param>")
-def oa_statuses_histogram(param):
-    """Histogram endpoint - not supported for OA statuses."""
-    raise APIQueryParamsError("Histograms are not supported for the oa-statuses endpoint.")
+def oa_statuses_histograms(param):
+    index_name = OA_STATUSES_INDEX
+    result = shared_histogram_view(request, param, fields_dict, index_name)
+    histogram_schema = HistogramWrapperSchema()
+    return histogram_schema.dump(result)
 
 
 @blueprint.route("/oa-statuses/valid_fields")
 def oa_statuses_valid_fields():
-    """Return valid fields for OA statuses."""
-    return jsonify(["id", "display_name", "description", "works_api_url"])
+    valid_fields = get_valid_fields(fields_dict)
+    return jsonify(valid_fields)
+
+
+@blueprint.route("/oa-statuses/flattened_schema")
+def oa_statuses_flattened_schema():
+    flattened_schema = get_flattened_fields(OaStatusesSchema())
+    return jsonify(flattened_schema)
+
+
+@blueprint.route("/oa-statuses/filters_docstrings")
+def oa_statuses_filters_doctrings():
+    ret = {}
+    for param, f in fields_dict.items():
+        ret[param] = {
+            "key": f.param,
+            "entityType": "oa-statuses",
+            "docstring": f.docstring,
+            "documentationLink": f.documentation_link,
+            "alternateNames": f.alternate_names,
+        }
+    return jsonify(ret)
 
 
 @blueprint.route("/oa-statuses/config")
 def oa_statuses_config():
-    """Return the entity config for OA statuses."""
-    return jsonify(all_entities_config.get("oa-statuses", {}))
+    return jsonify(all_entities_config["oa-statuses"])

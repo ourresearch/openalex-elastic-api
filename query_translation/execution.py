@@ -182,6 +182,12 @@ def _resolve_entity(entity_type: str, connection: str):
         from settings import LICENSES_INDEX
 
         return fields_dict, LICENSES_INDEX, ["-works_count", "id"], MessageSchema
+    if et == "oa-statuses":
+        from oa_statuses.fields import fields_dict
+        from oa_statuses.schemas import MessageSchema
+        from settings import OA_STATUSES_INDEX
+
+        return fields_dict, OA_STATUSES_INDEX, ["-works_count", "id"], MessageSchema
     if et == "source-types":
         from source_types.fields import fields_dict
         from source_types.schemas import MessageSchema

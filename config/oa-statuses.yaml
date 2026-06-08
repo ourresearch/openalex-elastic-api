@@ -79,3 +79,5 @@ values:
     display_name: hybrid
   - id: oa-statuses/gold
     display_name: gold
+  - id: oa-statuses/diamond
+    display_name: diamond
