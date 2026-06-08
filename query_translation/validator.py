@@ -26,6 +26,7 @@ from core.properties import (
     get_entity_properties,
     get_selectable_fields,
 )
+from query_translation.oql_renderer import is_vocab_member, vocab_name_to_code
 from query_translation.oqo import (
     OQO,
     LeafFilter,
@@ -67,6 +68,26 @@ class ValidationResult:
 
 # OQO get_rows values that name the same property-catalog entity under a different label.
 ENTITY_ALIASES = {"types": "work-types"}
+
+# Closed enumerated value vocabularies: a property whose `entity_type` is one of
+# these resolves to a finite code set we can enumerate offline, so a value that
+# isn't a literal member is a hard `invalid_value` error (charter: OQL is readable
+# but strict — name->code / fuzzy matching is the NL parser's job, not raw OQL).
+# The membership set is the renderer's `config/<vocab>.yaml` table (single source
+# of truth — validation and name-rendering share it). Maps the Property
+# `entity_type` to the renderer's config namespace: identity except work-types,
+# whose config namespace is the legacy "types". (oxjob #363; scoped 2026-06-07.)
+# Open ID entities (authors/works/institutions/…) are NOT here — millions of
+# members, validated by ID-shape instead (Tier 2). license / source-type /
+# institution-type deferred per the scoping note.
+CLOSED_VOCAB_NAMESPACE = {
+    "countries": "countries",
+    "continents": "continents",
+    "languages": "languages",
+    "sdgs": "sdgs",
+    "work-types": "types",
+    "oa-statuses": "oa-statuses",
+}
 
 VALID_SORT_ORDERS = {"asc", "desc"}
 
@@ -494,8 +515,44 @@ class OQOValidator:
                 ),
                 location=f"{location}.value",
             ))
+        # (d) value is a literal member of the column's closed vocabulary.
+        #     Only fires when the type already matched (a non-string value on an
+        #     enum column is already reported above) and the value isn't null/in
+        #     collection (resolved elsewhere). Strict membership — no name->code.
+        elif f.operator == "is" and f.value is not None:
+            errors.extend(self._validate_value_domain(f, entry, location))
 
         return errors
+
+    def _validate_value_domain(
+        self, f: LeafFilter, entry: Property, location: str
+    ) -> List[ValidationError]:
+        """Closed-vocab membership check. A column whose `entity_type` names a
+        finite code vocabulary (countries / languages / sdgs / work-types /
+        oa-statuses / continents) must carry a literal member — reject names and
+        nonsense (`country is Canada`, `country is 42`). The membership set is the
+        renderer's config table, so a value validates iff it can also be rendered
+        with a display name. (oxjob #363 value-domain validation.)"""
+        namespace = CLOSED_VOCAB_NAMESPACE.get(entry.entity_type)
+        if namespace is None:
+            return []
+        if is_vocab_member(namespace, f.value):
+            return []
+        # Build a "did you mean" when the user typed a display name (the common
+        # footgun, e.g. `country is Canada` -> code `ca`); else a generic hint.
+        suggestion = vocab_name_to_code(namespace, f.value) if isinstance(f.value, str) else None
+        if suggestion:
+            hint = f" Did you mean '{suggestion}'?"
+        else:
+            hint = ""
+        return [ValidationError(
+            type="invalid_value",
+            message=(
+                f"Value {f.value!r} is not a valid {entry.entity_type} code "
+                f"for column '{f.column_id}'.{hint}"
+            ),
+            location=f"{location}.value",
+        )]
 
     def _validate_branch_filter(
         self, f: BranchFilter, columns: Dict[str, Property], location: str

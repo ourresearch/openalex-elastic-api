@@ -147,6 +147,51 @@ def _builtin_name(entity_type: Optional[str], short_id: str) -> Optional[str]:
     return None
 
 
+def _normalize_code(value: Any) -> Optional[str]:
+    """Reduce an OQO value to the casefolded short code the config tables key on
+    (strip any `…/` URL/path prefix, lowercase). None for non-strings."""
+    if not isinstance(value, str):
+        return None
+    short = value.split("/", 1)[1] if "/" in value else value
+    return short.lower()
+
+
+def is_closed_config_vocab(namespace: Optional[str]) -> bool:
+    """True if `namespace` is a closed code-vocabulary backed by a `config/*.yaml`
+    `values` list (countries, languages, sdgs, types, oa-statuses, …). The
+    single source of truth for closed-vocab membership — the validator's
+    value-domain check keys off the SAME tables this renderer resolves names
+    from, so a value validates iff it can also be rendered with a name."""
+    return namespace in _CONFIG_YAML_BY_NS
+
+
+def is_vocab_member(namespace: Optional[str], value: Any) -> bool:
+    """True if `value` is a member of the closed config vocab `namespace`.
+    Normalizes exactly like `_builtin_name` (URL-prefix strip + casefold), so
+    membership and name-resolution can never disagree. Callers should gate on
+    `is_closed_config_vocab(namespace)` first — a non-vocab namespace returns
+    False here (its table is None), which is not the same as "not a member"."""
+    table = _config_table(namespace)
+    if table is None:
+        return False
+    code = _normalize_code(value)
+    return code is not None and code in table
+
+
+def vocab_name_to_code(namespace: Optional[str], name: str) -> Optional[str]:
+    """Reverse lookup: a display name -> its code (for "did you mean" fix-its,
+    e.g. `country is Canada` -> suggest `ca`). Case-insensitive; None if no
+    name matches. Built lazily from the same config table."""
+    table = _config_table(namespace)
+    if table is None or not isinstance(name, str):
+        return None
+    want = name.strip().lower()
+    for code, display in table.items():
+        if display.lower() == want:
+            return code
+    return None
+
+
 def make_engine_resolver(
     entity_resolver: Optional[Callable[[str], Optional[str]]] = None
 ) -> Callable[[str, str], Optional[str]]:

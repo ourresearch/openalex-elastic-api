@@ -506,6 +506,38 @@ covering the corpus. Field validity ("is this column valid on this entity? what
 value type? which operators?") is a registry question; OQL's grammar is
 column-agnostic, exactly as the OQO dataclass is (oqo-spec §7).
 
+### 6.1 Value-domain validation (strict membership)
+
+OQL is **readable in form but strict in validation**: a column whose value is drawn
+from a *closed* vocabulary must carry a literal member of that vocabulary. Validation
+is not lenient on these — name-based or fuzzy matching is the **NL parser's** job
+(#344), never raw OQL. So `country is Canada` (the value is the name, not the code)
+and `country is 42` are **errors** (`invalid_value`), not silently-matches-nothing
+queries. They are NOT auto-resolved to `ca`; the validator offers a "did you mean
+'ca'?" fix-it but the query is still rejected. (oxjob #363.)
+
+The closed vocabularies (keyed by the property's `entity_type`, validated against the
+same `config/<vocab>.yaml` tables the renderer resolves display names from — a value
+validates **iff** it can also be rendered with a name):
+
+| `entity_type` | canonical value form | example valid / invalid |
+|---|---|---|
+| `countries`   | ISO 2-letter, uppercased | `us`, `gb` / `uk`, `Canada`, `42` |
+| `languages`   | ISO 2-letter code        | `en` / `english` |
+| `sdgs`        | numeric id `1`–`17`      | `3` / `99` |
+| `work-types`  | type slug                | `article`, `review` / `boguskind` |
+| `oa-statuses` | status slug              | `gold`, `green` / `sparkly` |
+| `continents`  | Wikidata Q-id            | `q15` |
+
+> `gb` is the ISO code for the United Kingdom; `uk` is **not** a valid code and is
+> rejected (the NL phrasings "UK"/"Britain"/"United Kingdom" all resolve to `gb`).
+
+Membership descends into value groups, so each leaf of `country is (us or canada)`
+is checked independently. **Open** ID entities (authors / works / institutions /
+sources / … — millions of members) are not membership-checked here; they get an
+ID-shape check instead (prefix + form, e.g. `I\d+`). Free-text `*.search` / `phrase`
+values and raw strings are never membership-checked.
+
 ## 7. The corpus (normative)
 
 [`docs/oql/corpus.yaml`](./oql/corpus.yaml) is the normative set of `(OQL, OQO)`
