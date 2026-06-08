@@ -308,6 +308,36 @@ _f("related to", "related_to", "id", aliases=["related_to"])
 _f("authors count", "authors_count", "num", aliases=["authors_count"])
 _f("locations count", "locations_count", "num", aliases=["locations_count"])
 
+# --- oxjob #402 booleans (content / identifier / index flags) ---
+# Booleans are GATE-EXEMPT (the registry-consistency gate skips bool fields on all
+# three checks), so they need no core/display_names.py edit and no PROPERTIES_VERSION
+# bump — just a natural OQL phrasing that round-trips via bool_true/bool_false. The
+# OA/location-mirror booleans (primary_location.*/best_oa_location.*/locations.*/
+# is_oa/has_oa_*/has_content.pdf) are deliberately NOT here — they belong to the
+# resolved location/OA matrix batch. The corresponding-author / global-south mirror
+# bools are deferred (naming/ownership call). Phrasings prefer the registry word
+# where it's already curated (e.g. "indexed by PubMed", "in extended index").
+# The bool-clause parser strips a leading "it[']s / it has / a / an / the / from"
+# and then matches the remainder (or "has " + remainder) against _ALIAS, requiring
+# kind=="bool". So each bool_true's post-strip remainder must be a registered bool
+# alias, and must NOT reuse a key already owned by a non-bool field — `abstract`
+# (search), `references` (id), `pmid`/`pmcid` (string ids) are taken, so we register
+# the "has …" form instead of the bare noun for those.
+_f("has an abstract", "has_abstract", "bool", aliases=["has_abstract", "has abstract"],
+   bool_true="it has an abstract", bool_false="it doesn't have an abstract")
+_f("has references", "has_references", "bool", aliases=["has_references"],
+   bool_true="it has references", bool_false="it doesn't have references")
+_f("indexed by PubMed", "has_pmid", "bool", aliases=["has_pmid", "has pmid"],
+   bool_true="it's indexed by PubMed", bool_false="it's not indexed by PubMed")
+_f("has a PMCID", "has_pmcid", "bool", aliases=["has_pmcid", "has pmcid"],
+   bool_true="it has a PMCID", bool_false="it doesn't have a PMCID")
+_f("indexed by MAG only", "mag_only", "bool", aliases=["mag_only"],
+   bool_true="it's indexed by MAG only", bool_false="it's not indexed by MAG only")
+_f("in extended index", "is_xpac", "bool", aliases=["is_xpac", "in the extended index"],
+   bool_true="it's in the extended index", bool_false="it's not in the extended index")
+_f("paratext", "is_paratext", "bool", aliases=["is_paratext"],
+   bool_true="it's paratext", bool_false="it's not paratext")
+
 # Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
 _BY_COLUMN = {}
 for _spellings, _fld in _FIELDS:
