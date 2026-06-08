@@ -147,7 +147,7 @@ _f("citation percentile by subfield", "citation_normalized_percentile.value", "n
    aliases=["citation_normalized_percentile.value"], is_float=True)
 
 # --- booleans ---
-_f("open access", "open_access.is_oa", "bool", aliases=["open_access.is_oa"],
+_f("open access", "open_access.is_oa", "bool", aliases=["open_access.is_oa", "is_oa"],
    bool_true="it's open access", bool_false="it's not open access")
 _f("from global south", "institutions.is_global_south", "bool",
    aliases=["institutions.is_global_south"],
@@ -220,7 +220,7 @@ _f("type", "type", "enum", aliases=[])
 # Render word "open access status" = the registry display_name (#381 Phase 5); the
 # greedy field matcher prefers it over the 2-word "open access" bool when "status"
 # follows. Old "OA status" → parse alias.
-_f("open access status", "open_access.oa_status", "enum", aliases=["OA status", "open_access.oa_status", "oa status"])
+_f("open access status", "open_access.oa_status", "enum", aliases=["OA status", "open_access.oa_status", "oa status", "oa_status"])
 # Country codes: ISO uppercase canonical + resolve a [display name] (Germany, not de).
 _f("country", "authorships.countries", "enum", aliases=["authorships.countries"],
    casing="upper", resolves_name=True)
@@ -337,6 +337,34 @@ _f("in extended index", "is_xpac", "bool", aliases=["is_xpac", "in the extended 
    bool_true="it's in the extended index", bool_false="it's not in the extended index")
 _f("paratext", "is_paratext", "bool", aliases=["is_paratext"],
    bool_true="it's paratext", bool_false="it's not paratext")
+
+# --- oxjob #402 Tier-1 open-access first-class columns ---
+# These are real-world OA questions, NOT mechanical location/source mirror variants,
+# so they keep clean first-class names (per the resolved "OA filterspace is THREE
+# tiers" decision in PLAN.md), not the "best OA …" / "any location …" scope prefixes.
+# All are gate-exempt (bools) or already carry a clean registry display_name, so this
+# is Front-B only — no core/display_names.py edit, no PROPERTIES_VERSION bump.
+# Folds: the raw `is_oa` / `oa_status` columns are the SAME question as the canonical
+# open_access.* fields (the OX API treats `is_oa` on /works as shorthand for
+# open_access.is_oa), so they join those fields as aliases (added above) rather than
+# minting parallel labels — which also drops them off the #363 raw fallback.
+# Strings with already-clean display_names:
+_f("best open version", "best_open_version", "string",
+   aliases=["best_open_version", "best_oa_location.version"])  # folds best_oa_location.version
+_f("indexed in", "indexed_in", "string", aliases=["indexed_in"])
+# OA-version / content bools (gate-exempt — natural phrasing, round-trips via the
+# bool_true remainder). "open access accepted/published" = the work's best OA copy is
+# an accepted / published version.
+_f("linked to a PDF", "has_content.pdf", "bool", aliases=["has_content.pdf"],
+   bool_true="it's linked to a PDF", bool_false="it's not linked to a PDF")
+_f("open access accepted", "best_oa_location.is_accepted", "bool",
+   aliases=["best_oa_location.is_accepted"],
+   bool_true="it's open access accepted", bool_false="it's not open access accepted")
+_f("open access published", "best_oa_location.is_published", "bool",
+   aliases=["best_oa_location.is_published"],
+   bool_true="it's open access published", bool_false="it's not open access published")
+_f("has full text", "has_fulltext", "bool", aliases=["has_fulltext"],
+   bool_true="it has full text", bool_false="it doesn't have full text")
 
 # Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
 _BY_COLUMN = {}
