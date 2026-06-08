@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "e92b4fc9d8a0d962cd155f06c002702dccefa0c9dcfbe6249a6e44bb8f007c3d",
+    "fingerprint": "2ee208bd2bada90283ed9d833c6d7cb3d0c1bca71cbfa3520ee1711b44d5638b",
     "property_count": 837,
-    "version": "1.7.0"
+    "version": "1.8.0"
   },
   "properties": {
     "authors": {
@@ -24,7 +24,7 @@
         ],
         "aliases": [],
         "display_name": "affiliations institution country code",
-        "entity_type": null,
+        "entity_type": "countries",
         "name": "affiliations.institution.country_code",
         "operators": [
           "eq",
@@ -371,7 +371,7 @@
         ],
         "aliases": [],
         "display_name": "last known institutions continent",
-        "entity_type": null,
+        "entity_type": "continents",
         "name": "last_known_institutions.continent",
         "operators": [
           "eq",
@@ -387,7 +387,7 @@
         ],
         "aliases": [],
         "display_name": "institution country",
-        "entity_type": null,
+        "entity_type": "countries",
         "name": "last_known_institutions.country_code",
         "operators": [
           "eq",
@@ -465,7 +465,7 @@
         ],
         "aliases": [],
         "display_name": "institution type",
-        "entity_type": null,
+        "entity_type": "institution-types",
         "name": "last_known_institutions.type",
         "operators": [
           "eq",
@@ -3892,7 +3892,7 @@
         ],
         "aliases": [],
         "display_name": "continent",
-        "entity_type": null,
+        "entity_type": "continents",
         "name": "continent",
         "operators": [
           "eq",
@@ -3909,7 +3909,7 @@
         ],
         "aliases": [],
         "display_name": "country",
-        "entity_type": null,
+        "entity_type": "countries",
         "name": "country_code",
         "operators": [
           "eq",
@@ -4481,7 +4481,7 @@
         ],
         "aliases": [],
         "display_name": "institution type",
-        "entity_type": null,
+        "entity_type": "institution-types",
         "name": "type",
         "operators": [
           "eq",
@@ -6761,7 +6761,7 @@
         ],
         "aliases": [],
         "display_name": "continent",
-        "entity_type": null,
+        "entity_type": "continents",
         "name": "continent",
         "operators": [
           "eq",
@@ -6789,7 +6789,7 @@
         ],
         "aliases": [],
         "display_name": "country",
-        "entity_type": null,
+        "entity_type": "countries",
         "name": "country_code",
         "operators": [
           "eq",
@@ -7520,7 +7520,7 @@
         ],
         "aliases": [],
         "display_name": "source type",
-        "entity_type": null,
+        "entity_type": "source-types",
         "name": "type",
         "operators": [
           "eq",
@@ -8768,7 +8768,7 @@
         ],
         "aliases": [],
         "display_name": "country",
-        "entity_type": null,
+        "entity_type": "countries",
         "name": "authorships.countries",
         "operators": [
           "eq",
@@ -8784,7 +8784,7 @@
         ],
         "aliases": [],
         "display_name": "continent",
-        "entity_type": null,
+        "entity_type": "continents",
         "name": "authorships.institutions.continent",
         "operators": [
           "eq",
@@ -8800,7 +8800,7 @@
         ],
         "aliases": [],
         "display_name": "authorships institutions country code",
-        "entity_type": null,
+        "entity_type": "countries",
         "name": "authorships.institutions.country_code",
         "operators": [
           "eq",
@@ -8878,7 +8878,7 @@
         ],
         "aliases": [],
         "display_name": "institution type",
-        "entity_type": null,
+        "entity_type": "institution-types",
         "name": "authorships.institutions.type",
         "operators": [
           "eq",
@@ -8999,7 +8999,7 @@
         ],
         "aliases": [],
         "display_name": "awards",
-        "entity_type": null,
+        "entity_type": "awards",
         "name": "awards.id",
         "operators": [
           "eq",
@@ -9084,7 +9084,7 @@
         ],
         "aliases": [],
         "display_name": "license",
-        "entity_type": null,
+        "entity_type": "licenses",
         "name": "best_oa_location.license",
         "operators": [
           "eq",
@@ -9224,7 +9224,7 @@
         ],
         "aliases": [],
         "display_name": "best oa location source type",
-        "entity_type": null,
+        "entity_type": "source-types",
         "name": "best_oa_location.source.type",
         "operators": [
           "eq",
@@ -10304,7 +10304,7 @@
         ],
         "aliases": [],
         "display_name": "institution assertions country code",
-        "entity_type": null,
+        "entity_type": "countries",
         "name": "institution_assertions.country_code",
         "operators": [
           "eq",
@@ -10368,7 +10368,7 @@
         ],
         "aliases": [],
         "display_name": "institution assertions type",
-        "entity_type": null,
+        "entity_type": "institution-types",
         "name": "institution_assertions.type",
         "operators": [
           "eq",
@@ -10395,7 +10395,7 @@
         ],
         "aliases": [],
         "display_name": "institutions continent",
-        "entity_type": null,
+        "entity_type": "continents",
         "name": "institutions.continent",
         "operators": [
           "eq",
@@ -10411,7 +10411,7 @@
         ],
         "aliases": [],
         "display_name": "institutions country code",
-        "entity_type": null,
+        "entity_type": "countries",
         "name": "institutions.country_code",
         "operators": [
           "eq",
@@ -10473,7 +10473,7 @@
         ],
         "aliases": [],
         "display_name": "institutions type",
-        "entity_type": null,
+        "entity_type": "institution-types",
         "name": "institutions.type",
         "operators": [
           "eq",
@@ -10648,7 +10648,7 @@
         ],
         "aliases": [],
         "display_name": "language",
-        "entity_type": null,
+        "entity_type": "languages",
         "name": "language",
         "operators": [
           "eq",
@@ -10733,7 +10733,7 @@
         ],
         "aliases": [],
         "display_name": "license",
-        "entity_type": null,
+        "entity_type": "licenses",
         "name": "locations.license",
         "operators": [
           "eq",
@@ -10933,7 +10933,7 @@
         ],
         "aliases": [],
         "display_name": "locations source type",
-        "entity_type": null,
+        "entity_type": "source-types",
         "name": "locations.source.type",
         "operators": [
           "eq",
@@ -11024,7 +11024,7 @@
         ],
         "aliases": [],
         "display_name": "oa status",
-        "entity_type": null,
+        "entity_type": "oa-statuses",
         "name": "oa_status",
         "operators": [
           "eq",
@@ -11081,7 +11081,7 @@
           "OA status"
         ],
         "display_name": "open access status",
-        "entity_type": null,
+        "entity_type": "oa-statuses",
         "name": "open_access.oa_status",
         "operators": [
           "eq",
@@ -11230,7 +11230,7 @@
         ],
         "aliases": [],
         "display_name": "primary location license",
-        "entity_type": null,
+        "entity_type": "licenses",
         "name": "primary_location.license",
         "operators": [
           "eq",
@@ -11430,7 +11430,7 @@
         ],
         "aliases": [],
         "display_name": "source type",
-        "entity_type": null,
+        "entity_type": "source-types",
         "name": "primary_location.source.type",
         "operators": [
           "eq",
@@ -11473,7 +11473,7 @@
         ],
         "aliases": [],
         "display_name": "domain",
-        "entity_type": null,
+        "entity_type": "domains",
         "name": "primary_topic.domain.id",
         "operators": [
           "eq",
@@ -11489,7 +11489,7 @@
         ],
         "aliases": [],
         "display_name": "field",
-        "entity_type": null,
+        "entity_type": "fields",
         "name": "primary_topic.field.id",
         "operators": [
           "eq",
@@ -11521,7 +11521,7 @@
         ],
         "aliases": [],
         "display_name": "subfield",
-        "entity_type": null,
+        "entity_type": "subfields",
         "name": "primary_topic.subfield.id",
         "operators": [
           "eq",
@@ -11906,7 +11906,7 @@
         ],
         "aliases": [],
         "display_name": "topics domain id",
-        "entity_type": null,
+        "entity_type": "domains",
         "name": "topics.domain.id",
         "operators": [
           "eq",
@@ -11922,7 +11922,7 @@
         ],
         "aliases": [],
         "display_name": "topics field id",
-        "entity_type": null,
+        "entity_type": "fields",
         "name": "topics.field.id",
         "operators": [
           "eq",
@@ -11954,7 +11954,7 @@
         ],
         "aliases": [],
         "display_name": "topics subfield id",
-        "entity_type": null,
+        "entity_type": "subfields",
         "name": "topics.subfield.id",
         "operators": [
           "eq",
@@ -11988,7 +11988,7 @@
         ],
         "aliases": [],
         "display_name": "type",
-        "entity_type": null,
+        "entity_type": "work-types",
         "name": "type",
         "operators": [
           "eq",

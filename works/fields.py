@@ -883,6 +883,11 @@ fields = [
     TermField(param="topics.subfield.id", custom_es_field="topics.subfield.id"),
     TermField(
         param="type",
+        # #394: collectible as a `work-types` collection. The bare `type` param
+        # is polysemous across endpoints (source-type on /sources,
+        # institution-type on /institutions), so entity_type is set directly
+        # here, not via the global ENTITY_ID_PARAM_TYPES dict.
+        entity_type="work-types",
         docstring=DOCSTRINGS["type"],
         documentation_link=DOCUMENTATION_LINKS["type"],
         alternate_names=ALTERNATE_NAMES.get("work.type", None),

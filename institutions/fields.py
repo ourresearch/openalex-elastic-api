@@ -138,6 +138,10 @@ fields = [
     ),
     TermField(
         param="type",
+        # #394: collectible as an `institution-types` collection. Bare `type` is
+        # polysemous across endpoints, so entity_type is set directly here
+        # rather than via the global ENTITY_ID_PARAM_TYPES dict.
+        entity_type="institution-types",
         docstring=DOCSTRINGS["type"],
         documentation_link=DOCUMENTATION_LINKS["type"],
         alternate_names=ALTERNATE_NAMES.get("institution.type", None),

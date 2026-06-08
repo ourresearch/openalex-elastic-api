@@ -49,7 +49,12 @@ from core.fields import Property
 # 1.6.0 (#381 Phase 5): sustainable_development_goals.id label "sustainable development
 # goal" → "SDG" (canonical acronym everywhere — registry/GUI/OQL; long forms kept as
 # aliases). Jason-approved 2026-06-07. Label edit = MINOR.
-PROPERTIES_VERSION = "1.7.0"
+# 1.8.0 (#394): every registry entity is collectible (minus locations) — ~30 filter
+# properties (countries/continents/languages/licenses/oa-statuses/source-types/
+# institution-types/work-types/domains/fields/subfields/awards params, + bare `type` on
+# works/sources/institutions) gained `entity_type`. Purely additive (property_count and
+# entity_count unchanged). Jason-approved 2026-06-08. = MINOR.
+PROPERTIES_VERSION = "1.8.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

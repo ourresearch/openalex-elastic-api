@@ -154,6 +154,10 @@ fields = [
     TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),
     TermField(
         param="type",
+        # #394: collectible as a `source-types` collection. Bare `type` is
+        # polysemous across endpoints, so entity_type is set directly here
+        # rather than via the global ENTITY_ID_PARAM_TYPES dict.
+        entity_type="source-types",
         docstring=DOCSTRINGS["type"],
         documentation_link=DOCUMENTATION_LINKS["type"],
         alternate_names=ALTERNATE_NAMES.get("source.type", None),

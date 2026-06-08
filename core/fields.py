@@ -69,6 +69,57 @@ ENTITY_ID_PARAM_TYPES = {
     "sustainable_development_goals.id": "sdgs",
     # keywords
     "keywords.id": "keywords",
+    # --- #394: every registry entity is collectible (minus `locations`) ---
+    # Only params that mean ONE entity type on EVERY endpoint go here. The bare
+    # `type` param is polysemous (work-type on /works, source-type on /sources,
+    # institution-type on /institutions), so it is annotated directly on each
+    # Field instance instead — never add `type` to this dict.
+    # countries (always a 2-letter country code, whatever the endpoint)
+    "authorships.countries": "countries",
+    "affiliations.institution.country_code": "countries",
+    "authorships.institutions.country_code": "countries",
+    "institutions.country_code": "countries",
+    "institution_assertions.country_code": "countries",
+    "institution_awarded.country_code": "countries",
+    "last_known_institutions.country_code": "countries",
+    "country_code": "countries",
+    # continents
+    "authorships.institutions.continent": "continents",
+    "institutions.continent": "continents",
+    "institution_awarded.continent": "continents",
+    "last_known_institutions.continent": "continents",
+    "continent": "continents",
+    # languages
+    "language": "languages",
+    # licenses
+    "best_oa_location.license": "licenses",
+    "locations.license": "licenses",
+    "primary_location.license": "licenses",
+    "license": "licenses",
+    # oa-statuses
+    "oa_status": "oa-statuses",
+    "open_access.oa_status": "oa-statuses",
+    # source-types (dotted forms are unambiguous; the bare `type` is set per-Field)
+    "best_oa_location.source.type": "source-types",
+    "locations.source.type": "source-types",
+    "primary_location.source.type": "source-types",
+    # institution-types (dotted forms unambiguous; bare `type` set per-Field)
+    "authorships.institutions.type": "institution-types",
+    "institutions.type": "institution-types",
+    "institution_assertions.type": "institution-types",
+    "last_known_institutions.type": "institution-types",
+    # domains / fields / subfields
+    "domain.id": "domains",
+    "primary_topic.domain.id": "domains",
+    "topics.domain.id": "domains",
+    "field.id": "fields",
+    "primary_topic.field.id": "fields",
+    "topics.field.id": "fields",
+    "subfield.id": "subfields",
+    "primary_topic.subfield.id": "subfields",
+    "topics.subfield.id": "subfields",
+    # awards (native G-prefixed IDs)
+    "awards.id": "awards",
 }
 
 
