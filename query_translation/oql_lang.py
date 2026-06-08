@@ -104,7 +104,11 @@ def _canon_value_case(value, fld: "Field"):
 
 
 # --- search fields (column is the *base*; .search suffix added per mode) ---
-_f("title", "display_name", "search", aliases=["display_name.search", "display_name"])
+# `title.search` is a GUI/docs alias for display_name.search (facetConfigs.js: "Alias for
+# display_name.search to support URLs like /works?filter=title.search:ai"); the elastic-api
+# honors it as a filter, so OQL must resolve it too or a shared "Title"-scope URL errors in
+# the editor with `unknown field "title.search"` (oxjob #397).
+_f("title", "display_name", "search", aliases=["display_name.search", "display_name", "title.search"])
 # Render word "title/abstract" is the registry's canonical display_name (#381 Phase 5);
 # the old "title & abstract" spelling stays a parse alias for back-compat.
 _f("title/abstract", "title_and_abstract", "search",

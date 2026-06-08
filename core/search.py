@@ -240,9 +240,9 @@ def validate_wildcards(search_terms):
             continue
         raise APIQueryParamsError(
             f'Wildcards (* or ?) do not work inside a quoted phrase: "{phrase}". '
-            "For a single word, run the wildcard on the no-stem exact field "
-            "unquoted (e.g. the .search.exact filter); for a multi-word phrase use "
-            'an adjacency phrase ("smart* phone") or proximity ("smart phone*"~3).'
+            "For a single word, remove the quotes and use exact (no-stem) search; "
+            'for a multi-word phrase use an adjacency phrase ("smart* phone") or '
+            'proximity ("smart phone*"~3).'
         )
 
     # Outside quotes, check each whitespace-delimited token.

@@ -189,3 +189,20 @@ def test_case3_3_search_columns_excluded():
     # raw .search.exact key is NOT accepted as an input alias.
     with pytest.raises(OQLError):
         parse('works where abstract.search.exact contains "x"')
+
+
+# --------------------------------------------------------------------------- #
+# #397 — every GUI scope-alias `*.search` param resolves in OQL (cross-surface
+# coherence: a shared "Title"/"Title & abstract"/etc. URL must validate in the
+# editor, not error `unknown field "<param>.search"`).
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("param,column", [
+    ("title.search", "display_name.search.exact"),              # #397 — the alias this job adds
+    ("display_name.search", "display_name.search.exact"),
+    ("title_and_abstract.search", "title_and_abstract.search.exact"),  # fixed upstream (#363)
+    ("default.search", "fulltext.search.exact"),                # deprecated -> fulltext (#374)
+    ("fulltext.search", "fulltext.search.exact"),
+])
+def test_397_gui_scope_search_aliases_resolve(param, column):
+    assert _leaves(f'works where {param} contains "x"') == [
+        {"column_id": column, "value": "x", "operator": "contains"}]
