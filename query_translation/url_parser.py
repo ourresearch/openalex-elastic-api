@@ -280,6 +280,20 @@ def parse_single_filter(
             return list(parsed.filters)
         return parsed
 
+    # Quoted non-search values: a single enclosing pair of double-quotes means
+    # "the spaces inside are literal, not AND operators" — strip it before any
+    # further parsing, mirroring the live engine (core/filter.py `is_quoted`).
+    # The pipe-OR split below still applies, so `"a|b c|d"` is OR of [a, "b c", d]
+    # with the multi-word value kept whole. Search fields keep their quotes
+    # (exact-phrase semantics, handled in the .search path above). (#363)
+    if (
+        len(value) >= 2
+        and value.startswith('"')
+        and value.endswith('"')
+        and "search" not in field
+    ):
+        value = value[1:-1]
+
     # Handle OR (pipe) in values
     if "|" in value:
         return parse_or_values(field, value)

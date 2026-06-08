@@ -42,13 +42,14 @@ class TestStringifyInvariant:
         assert "it's open access" in oql
     
     def test_single_comparison_filter(self):
-        """Test comparison filter (year >= 2020)."""
+        """A single-ended bound stays an inequality: `year >= 2020` (oxjob #363 —
+        only a CLOSED range renders as the dash form `year is 2019-2023`)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[LeafFilter(column_id="publication_year", value=2020, operator=">=")]
         )
         oql, tree = render_oqo_to_oql_and_tree(oqo)
-        
+
         assert stringify(tree) == oql
         assert "year >= 2020" in oql
     
@@ -346,7 +347,7 @@ class TestTreeStructure:
             filter_rows=[LeafFilter(column_id="publication_year", value=2020, operator=">=")]
         )
         _, tree = render_oqo_to_oql_and_tree(oqo)
-        
+
         clause = tree.where
         assert clause.meta.column_id == "publication_year"
         assert clause.meta.operator == ">="

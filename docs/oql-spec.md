@@ -192,6 +192,32 @@ works where country is (us and uk)                                         (row 
   The position disambiguates (a group right after `is`/`contains` is a value/term
   group; one where a clause is expected is a clause group).
 
+### 3.2.1 Numeric ranges (#363)
+
+A numeric field (`year`, `citation count`, `FWCI`) takes either a single number or a
+**range** written with a hyphen, mirroring the OpenAlex URL range form:
+
+```
+works where year is 2019-2023        (>= 2019 AND <= 2023 — closed range)   (row 97)
+works where FWCI is 1.5-3.0          (>= 1.5 AND <= 3.0 — floats allowed)    (row 99)
+works where year >= 2019             (single-ended bound — stays an inequality)
+```
+
+- Only a **closed range** (both ends given) renders as the dash form. It is sugar for
+  the two-bound implicit-AND `year >= 2019 and year <= 2023`; it parses to two bound
+  leaves and (because `filter_rows` is an implicit AND) is indistinguishable from
+  writing the two clauses.
+- **A single-ended bound stays an inequality.** The open-range spellings `year is
+  2019-` (>= 2019) and `year is -2023` (<= 2023) are **accepted on input** (a leading
+  hyphen is always open-upper, never a negative — no numeric field takes negatives),
+  but they **canonicalize back to the inequality form** `year >= 2019` / `year <=
+  2023`. Only a two-ended range is written with a dash.
+- **Strict bounds collapse on integer fields:** `year > 42 and year < 100` canonicalizes
+  to the inclusive `year is 43-99` (a whole-number interval has an exact inclusive
+  spelling). This applies only when a column carries **both** a lower and an upper
+  bound; a lone `citation count > 100` keeps its strict inequality. Float fields (FWCI)
+  have no clean ±1, so a strict float pair stays as two inequalities.
+
 ### 3.3 Delimiters and the no-escaping result
 
 | Delimiter | Meaning |

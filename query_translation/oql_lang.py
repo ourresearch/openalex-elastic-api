@@ -73,19 +73,23 @@ class Field:
     bool_false: str = "" # human phrasing for value=false  (bool kind)
     casing: str = ""     # '' | 'lower' | 'upper'
     resolves_name: bool = False
+    is_float: bool = False  # num kind: True = decimals allowed (fwci); False = integer
+                            # (year, count). Integer fields collapse a strict bound
+                            # PAIR to an inclusive range via ±1 (`>42 and <100` -> 43-99).
 
 
 _FIELDS: List[Tuple[List[str], Field]] = []  # (alias-spellings, Field)
 
 
 def _f(oql, column, kind, aliases=(), bool_true="", bool_false="",
-       casing=None, resolves_name=None):
+       casing=None, resolves_name=None, is_float=False):
     if casing is None:
         casing = "lower" if kind == "enum" else ""
     if resolves_name is None:
         resolves_name = (kind == "id")
     fld = Field(column=column, kind=kind, oql=oql, bool_true=bool_true,
-                bool_false=bool_false, casing=casing, resolves_name=resolves_name)
+                bool_false=bool_false, casing=casing, resolves_name=resolves_name,
+                is_float=is_float)
     spellings = [oql] + list(aliases)
     _FIELDS.append(([s.lower() for s in spellings], fld))
     return fld
@@ -131,7 +135,7 @@ _f("year", "publication_year", "num", aliases=["publication_year"])
 # Render word "citation count" = the registry display_name (#381 v1.5.0): the COUNT,
 # kept distinct from the cited_by/cites relationship filters. Old "citations" → alias.
 _f("citation count", "cited_by_count", "num", aliases=["citations", "cited_by_count", "cited by count"])
-_f("FWCI", "fwci", "num", aliases=["fwci"])
+_f("FWCI", "fwci", "num", aliases=["fwci"], is_float=True)
 
 # --- booleans ---
 _f("open access", "open_access.is_oa", "bool", aliases=["open_access.is_oa"],
@@ -191,6 +195,12 @@ _f("country code", "country_code", "enum", aliases=["country_code"],
 _f("author country", "last_known_institutions.country_code", "enum",
    aliases=["last_known_institutions.country_code"], casing="upper", resolves_name=True)
 _f("language", "language", "enum", aliases=[])
+# The source's type (journal / conference / repository / ebook platform / book series /
+# metadata / other). Render word = the engine registry display_name `source type`
+# (`core/display_names.py`). Slug enum; multi-word values like "ebook platform" are
+# valid atoms. Distinct from `type` (the WORK's type, column `type`). (oxjob #363)
+_f("source type", "primary_location.source.type", "enum",
+   aliases=["primary_location.source.type", "source.type"])
 
 # --- literal strings ---
 _f("DOI", "doi", "string", aliases=["doi"])
@@ -219,6 +229,15 @@ def canon_value_for_column(value, column_id):
     Unknown columns and `col_…` set refs pass through untouched."""
     fld = _BY_COLUMN.get(column_id)
     return _canon_value_case(value, fld) if fld else value
+
+
+def is_integer_column(column_id) -> bool:
+    """True for a numeric column whose values are whole numbers (year,
+    cited_by_count) — distinct from a float num column (fwci). Used by the OQO
+    canonicalizer to collapse a strict integer bound PAIR to an inclusive range
+    (`>42 and <100` -> `>=43 and <=99` -> 43-99). (oxjob #363)"""
+    fld = _BY_COLUMN.get(column_id)
+    return bool(fld and fld.kind == "num" and not fld.is_float)
 
 
 # alias-string -> Field, and the max alias word-length for greedy matching
@@ -296,6 +315,51 @@ def lex(s: str) -> List[Tok]:
         toks.append(Tok("WORD", s[i:j], i))
         i = j
     return toks
+
+
+# ---------------------------------------------------------------------------
+# Numeric values + ranges (oxjob #363). A num field's value is either a single
+# number or a bounded/open range written with a hyphen, mirroring the OpenAlex
+# URL range form:
+#     2019-2023   -> >= 2019  AND  <= 2023   (closed range)
+#     2019-       -> >= 2019                  (open lower)
+#     -2023       ->            <= 2023       (open upper)
+# A leading hyphen is always the open-upper form (never a negative number): no
+# num field (year / count / fwci) takes negatives, so the reading is unambiguous.
+_NUM_RE = re.compile(r"\d+(?:\.\d+)?$")
+_RANGE_RE = re.compile(r"^(?P<lo>\d+(?:\.\d+)?)?-(?P<hi>\d+(?:\.\d+)?)?$")
+
+
+def _coerce_number(val: str, fld: "Field", pos):
+    """Parse a single numeric atom to int (or float for is_float fields)."""
+    try:
+        return int(val)
+    except ValueError:
+        if fld.is_float:
+            try:
+                return float(val)
+            except ValueError:
+                pass
+    raise oql_error("OQL_BAD_NUMBER",
+                   f'"{val}" is not a number for "{fld.oql}"', "", pos)
+
+
+def _parse_num_range(val: str, fld: "Field", pos):
+    """If `val` is a hyphen range for a num field, return a list of bound
+    LeafFilters (>= lo, <= hi); else None. Raises OQL_BAD_NUMBER on a malformed
+    side (e.g. `2019-abc`)."""
+    m = _RANGE_RE.match(val)
+    if not m:
+        return None
+    lo, hi = m.group("lo"), m.group("hi")
+    if lo is None and hi is None:
+        return None  # a bare "-" is not a range
+    leaves = []
+    if lo is not None:
+        leaves.append(LeafFilter(fld.column, _coerce_number(lo, fld, pos), ">="))
+    if hi is not None:
+        leaves.append(LeafFilter(fld.column, _coerce_number(hi, fld, pos), "<="))
+    return leaves
 
 
 # ---------------------------------------------------------------------------
@@ -931,6 +995,20 @@ class _Parser:
         if self.word_is("unknown", "null"):
             self.next()
             return LeafFilter(fld.column, None, "is", is_negated=negated)
+        # a numeric range value: `year is 2019-2023` / `2019-` / `-2023` -> bound
+        # leaves (>= lo AND <= hi). A closed range is an implicit AND that flattens
+        # into the top-level filter_rows, so it round-trips to the same OQO the URL
+        # parser builds from `publication_year:2019-2023`. (oxjob #363)
+        if fld.kind == "num":
+            t = self.peek()
+            if t is not None and t.kind == "WORD" and "-" in t.val:
+                bounds = _parse_num_range(t.val, fld, t.pos)
+                if bounds is not None:
+                    self.next()
+                    self._skip_annot()
+                    rng = (bounds[0] if len(bounds) == 1
+                           else BranchFilter(join="and", filters=bounds))
+                    return _negate(rng) if negated else rng
         # a single bare value; 2+ bare values must be parenthesized (D1)
         v = self._parse_scalar(fld)
         self._skip_annot()
@@ -1010,11 +1088,7 @@ class _Parser:
         self._skip_annot()  # drop a trailing [display name] annotation
         # type coercion per kind
         if fld.kind == "num":
-            try:
-                return int(val)
-            except ValueError:
-                raise oql_error("OQL_BAD_NUMBER",
-                               f'"{val}" is not a number for "{fld.oql}"', "", t.pos)
+            return _coerce_number(val, fld, t.pos)
         if fld.kind == "bool":
             low = val.lower()
             if low in ("true", "yes"):
@@ -1589,11 +1663,27 @@ def _render_search_leaf(f: LeafFilter) -> str:
     return f"{name} {verb} {_render_term(f.value, f.column_id)}"
 
 
+def _value_needs_quote(value: str) -> bool:
+    """A bare value atom is one token: it must be quoted if it contains whitespace
+    (else `ebook platform` re-parses as the adjacency-AND of two atoms) or collides
+    with a grammar keyword / delimiter. (oxjob #363 — first hit by multi-word
+    source-type slugs like `ebook platform`, `book series`.)"""
+    if not value:
+        return False
+    return (any(c.isspace() for c in value)
+            or value.lower() in _CONNECTIVES
+            or value.lower() in ("not", "is", "contains", "where", "sort", "group",
+                                 "sample", "unknown", "null")
+            or any(c in value for c in "()[],;\""))
+
+
 def _render_value(fld, value) -> str:
     if value is None:
         return "unknown"
     if isinstance(value, bool):
         return "true" if value else "false"
+    if isinstance(value, str) and not value.startswith("col_") and _value_needs_quote(value):
+        return f'"{value}"'
     return str(value)
 
 
@@ -1832,6 +1922,74 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
                      joiner=joiner, meta=GroupMeta(implicit=False))
 
 
+def _fmt_num(v):
+    """Render a numeric bound: ints bare (2019), floats verbatim (1.5)."""
+    return str(v)
+
+
+def _range_clause_node(column_id, lo, hi) -> ClauseNode:
+    """A merged numeric range clause: `col is lo-hi` / `lo-` / `-hi`."""
+    fld = _BY_COLUMN.get(column_id)
+    name = fld.oql if fld else column_id
+    text = f"{'' if lo is None else _fmt_num(lo)}-{'' if hi is None else _fmt_num(hi)}"
+    segs = [_seg("column", name, column_id=column_id),
+            _seg("operator", " is "),
+            _seg("value", text, value=text)]
+    return ClauseNode(segments=segs, clause_kind="comparison", meta=ClauseMeta(
+        column_id=column_id, operator="is", value=text, column_display_name=name))
+
+
+def _merge_num_range_rows(filter_rows):
+    """Collapse a same-column inclusive numeric bound PAIR among the (implicit-AND)
+    top-level filter_rows into a single closed-range render-item `a-b` (oxjob #363).
+
+    Only a closed range collapses — a column with exactly one `>=a` and one `<=b`
+    and no other bound. A SINGLE-ended bound stays an inequality: a lone `>=2020`
+    renders `year >= 2020`, not `year is 2020-` (the `2020-` / `-2023` open forms
+    are still ACCEPTED on input — see `_parse_num_range` — but are not canonical).
+    Strict `>`/`<` (lone, or float pairs the canonicalizer left strict), negated
+    bounds, and multi-bound columns are likewise left as inequalities.
+    Returns a list whose items are either an original FilterType or a
+    ("range", column_id, lo, hi) tuple, in first-occurrence order."""
+    def is_bound(f):
+        return (isinstance(f, LeafFilter) and not f.is_negated
+                and f.operator in (">", ">=", "<", "<=") and f.value is not None
+                and (_BY_COLUMN.get(f.column_id) or Field("", "", "")).kind == "num")
+    # gather per-column bound indices
+    lowers, uppers = {}, {}  # col -> list[(idx, op, value)]
+    for i, f in enumerate(filter_rows):
+        if not is_bound(f):
+            continue
+        (lowers if f.operator in (">", ">=") else uppers).setdefault(f.column_id, []).append(
+            (i, f.operator, f.value))
+    collapse = {}   # first-idx -> ("range", col, lo, hi)
+    consumed = set()
+    cols = set(lowers) | set(uppers)
+    for col in cols:
+        los, his = lowers.get(col, []), uppers.get(col, [])
+        inc_lo = [b for b in los if b[1] == ">="]
+        inc_hi = [b for b in his if b[1] == "<="]
+        if len(inc_lo) == 1 and len(inc_hi) == 1 and len(los) == 1 and len(his) == 1:
+            anchor = min(inc_lo[0][0], inc_hi[0][0])
+            collapse[anchor] = ("range", col, inc_lo[0][2], inc_hi[0][2])
+            consumed.update({inc_lo[0][0], inc_hi[0][0]})
+    items = []
+    for i, f in enumerate(filter_rows):
+        if i in collapse:
+            items.append(collapse[i])
+        elif i in consumed:
+            continue
+        else:
+            items.append(f)
+    return items
+
+
+def _row_node(item, top, resolver):
+    if isinstance(item, tuple) and item and item[0] == "range":
+        return _range_clause_node(item[1], item[2], item[3])
+    return _filter_node(item, top=top, resolver=resolver)
+
+
 def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
     """OQO -> canonical `oql_render` tree. `render()` stringifies this; the two
     never drift (Invariant A by construction)."""
@@ -1840,11 +1998,11 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
     where = None
     if oqo.filter_rows:
         where_keyword = " where "
-        if len(oqo.filter_rows) == 1:
-            where = _filter_node(oqo.filter_rows[0], top=True, resolver=resolver)
+        rows = _merge_num_range_rows(oqo.filter_rows)
+        if len(rows) == 1:
+            where = _row_node(rows[0], top=True, resolver=resolver)
         else:
-            children = [_filter_node(f, top=False, resolver=resolver)
-                        for f in oqo.filter_rows]
+            children = [_row_node(f, top=False, resolver=resolver) for f in rows]
             where = GroupNode(join="and", children=children, prefix="", suffix="",
                               joiner=" and ", meta=GroupMeta(implicit=True))
 

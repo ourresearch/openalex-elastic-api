@@ -584,3 +584,22 @@ cases:
     - {text: "works published by Elsevier", difficulty: easy}
     - {text: "anything from the publisher Elsevier", difficulty: easy}
     - {text: "papers put out by elsevier bv", difficulty: hard}
+
+# --- numeric ranges + source type (#363) ---
+- ref: 97  # year is 2019-2023  (closed range)
+  nl:
+    - {text: "papers from 2019 to 2023", difficulty: easy}
+    - {text: "works published between 2019 and 2023", difficulty: easy}
+    - {text: "anything that came out in the years 2019 through 2023", difficulty: hard}
+
+- ref: 100  # year is 43-99  (strict integer pair collapses to inclusive)
+  nl:
+    - {text: "works from the years 43 to 99", difficulty: easy}
+    - {text: "papers published after year 42 and before year 100", difficulty: hard}
+    - {text: "anything dated between 43 and 99 inclusive", difficulty: hard}
+
+- ref: 101  # source type is (journal or conference or "ebook platform" or "book series")
+  nl:
+    - {text: "works in journals, conferences, ebook platforms, or book series", difficulty: easy}
+    - {text: "papers whose source is a journal, conference, ebook platform, or book series", difficulty: hard}
+    - {text: "anything published in a journal or conference or ebook platform or book series", difficulty: hard}
