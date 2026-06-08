@@ -170,6 +170,20 @@ def test_case3_3_genuinely_unknown_field_still_errors():
 
 
 @_needs_registry
+@pytest.mark.parametrize("col", [
+    "best_oa_location.raw_type",        # internal raw field
+    "has_embeddings",                   # internal boolean
+    "institution_assertions.id",        # not GUI-faceted / documented
+    "cited_by_percentile_year.max",     # internal percentile field
+])
+def test_case3_3_internal_columns_excluded(col):
+    # scope = GUI/docs parity (Jason): a real registry column that is NEITHER
+    # GUI-faceted NOR documented is NOT accepted as a raw input alias.
+    with pytest.raises(OQLError):
+        parse(f"works where {col} is x")
+
+
+@_needs_registry
 def test_case3_3_search_columns_excluded():
     # search columns are mode-encoded (use the curated fields + quoting); their
     # raw .search.exact key is NOT accepted as an input alias.

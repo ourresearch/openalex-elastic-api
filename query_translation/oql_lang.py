@@ -419,21 +419,26 @@ def match_field(toks: List[Tok], i: int) -> Optional[Tuple[str, "Field", int]]:
 # --- Raw registry column_id fallback (oxjob #363) -------------------------
 # OQL's curated `_FIELDS` give every common filter a friendly name; the raw
 # oxurl column_id of a *curated* field already parses (it's listed as an alias).
-# The gap was the long tail of registry columns with NO curated surface (e.g.
+# The gap was the long tail of columns with NO curated surface (e.g.
 # `apc_paid.value_usd`, `biblio.volume`, `ids.pmid`): submitting their raw key —
 # which an oxurl-fluent user, or a round-tripped render of an unsurfaced column,
-# naturally does — 400'd "unknown field". So accept EVERY works-registry
-# column_id as an input alias, synthesizing a Field from the registry's operator
-# metadata. The render stays canonical (an uncurated column renders its raw id,
-# which round-trips through this same fallback). Built lazily + defensively so
-# `oql_lang` stays importable in lightweight contexts without the engine
-# properties registry.
+# naturally does — 400'd "unknown field". So accept those raw column_ids as input
+# aliases, synthesizing a Field from the registry's operator metadata. The render
+# stays canonical (an uncurated column renders its raw id, which round-trips
+# through this same fallback).
+#
+# Scope = GUI/docs parity, NOT the full registry (Jason, 2026-06-08): only columns
+# that are GUI-faceted or documented (`INPUT_ALIAS_COLUMNS`) — accepting the whole
+# 207-column registry would surface internal / half-baked / redundant fields that
+# only confuse people. Built lazily + defensively so `oql_lang` stays importable
+# in lightweight contexts without the engine properties registry.
 _REGISTRY_FALLBACK_CACHE: Optional[Dict[str, "Field"]] = None
 
 
 def _build_registry_fallback() -> Dict[str, "Field"]:
     try:
         from core.properties import get_entity_properties
+        from query_translation.input_alias_columns import INPUT_ALIAS_COLUMNS
         cols = get_entity_properties("works")
     except Exception:
         return {}
@@ -442,6 +447,8 @@ def _build_registry_fallback() -> Dict[str, "Field"]:
         key = cid.lower()
         if key in _ALIAS:
             continue                     # already curated (or its raw id is an alias)
+        if cid not in INPUT_ALIAS_COLUMNS:
+            continue                     # not GUI-faceted / documented -> don't surface it
         ops = tuple(getattr(prop, "operators", []) or [])
         if "search" in ops or "collection" in ops:
             # search columns are mode-encoded (.search/.search.exact) — expressed
