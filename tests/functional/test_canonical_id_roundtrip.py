@@ -108,6 +108,46 @@ def test_domain_family_formatted_value(param, short, canonical, kind):
     assert _formatted(param, canonical) == full
 
 
+# --- Negation (#275 follow-up): a negated canonical URL must build the same query
+# as the negated short form, and must actually be a negation (bool.must_not). The
+# old behavior mangled the value so `!canonical` excluded nothing (matched all). ---
+ALL_NEG_CASES = ROUNDTRIP_CASES + [
+    (p, s, c, e) for (p, s, c, e) in PREFIXED_NUMERIC_CASES
+] + [
+    (
+        "authorships.institutions.country_code",
+        "US",
+        "https://openalex.org/countries/US",
+        "US",
+    ),
+    (
+        "authorships.institutions.type",
+        "funder",
+        "https://openalex.org/institution-types/funder",
+        "funder",
+    ),
+]
+
+
+@pytest.mark.parametrize("param,short,canonical,_x", ALL_NEG_CASES)
+def test_negated_canonical_matches_negated_short(param, short, canonical, _x):
+    assert _query_dict(param, "!" + canonical) == _query_dict(param, "!" + short)
+
+
+@pytest.mark.parametrize("param,short,canonical,_x", ALL_NEG_CASES)
+def test_negated_is_actually_a_negation(param, short, canonical, _x):
+    d = _query_dict(param, "!" + canonical)
+    assert "must_not" in d.get("bool", {}), d
+
+
+def test_negation_marker_preserved_by_normalizer():
+    f = TermField(param="primary_topic.domain.id")
+    assert f._normalize_term_value("!https://openalex.org/domains/2") == "!2"
+    assert f._normalize_term_value("https://openalex.org/domains/2") == "2"
+    # !null is a sentinel, never normalized
+    assert f._normalize_term_value("!null") == "!null"
+
+
 # Regression guard: the forms that already worked must keep working unchanged.
 def test_existing_sdg_forms_unchanged():
     indexed = "https://metadata.un.org/sdg/4"

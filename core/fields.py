@@ -882,6 +882,70 @@ class TermField(Field):
             return f"https://metadata.un.org/sdg/{number}"
         return value
 
+    def _normalize_term_value(self, value):
+        """Normalize a filter value to its ES-indexed form for `build_query`.
+
+        For the params whose canonical id URL must be reduced — SDG (→ the indexed
+        ``metadata.un.org`` URL), language / type / source-type / country (→ bare
+        code), domain / field / subfield (→ bare number; the query builder re-wraps
+        to the full URL), keywords / license (→ bare slug) — strip the leading
+        ``https://openalex.org/`` + entity prefix a user copies off an entity page,
+        so it round-trips as a filter value (#275). Params not listed are returned
+        unchanged.
+
+        A leading ``!`` negation marker is preserved (``!null`` is left intact), so
+        the negated path round-trips too without each negation branch re-normalizing.
+        This is the single source of value normalization for build_query's positive
+        AND negated paths; the OR path uses the parallel switch in
+        `_get_formatted_value` (which targets the full-URL form ES indexes for the
+        terms query, so it can't simply share this one).
+        """
+        if value == "!null":
+            return value
+        neg = ""
+        if value.startswith("!"):
+            neg, value = "!", value[1:]
+        if self.param == "sustainable_development_goals.id":
+            value = self._normalize_sdg_value(value)
+        elif self.param == "language":
+            value = self._strip_openalex_prefix(value, "languages/")
+        elif (
+            self.param == "type"
+            or self.param == "last_known_institution.type"
+            or self.param == "authorships.institutions.type"
+        ):
+            value = self._strip_openalex_prefix(
+                value,
+                "work-types/",
+                "institution-types/",
+                "source-types/",
+                "types/",
+            )
+        elif (
+            self.param == "primary_location.source.type"
+            or self.param == "locations.source.type"
+        ):
+            value = self._strip_openalex_prefix(value, "source-types/").replace(
+                "%20", " "
+            )
+        elif "country_code" in self.param or "countries" in self.param:
+            value = self._strip_openalex_prefix(value, "countries/")
+        elif "domain" in self.param:
+            value = self._strip_openalex_prefix(value, "domains/")
+        elif "field" in self.param and "subfield" not in self.param:
+            value = self._strip_openalex_prefix(value, "fields/")
+        elif "subfield" in self.param:
+            value = self._strip_openalex_prefix(value, "subfields/")
+        elif self.param == "keywords.id":
+            value = self._strip_openalex_prefix(value, "keywords/")
+        elif (
+            self.param
+            and self.param.endswith("license_id")
+            or self.param.endswith("license")
+        ):
+            value = self._strip_openalex_prefix(value, "licenses/")
+        return neg + value
+
     def _get_formatted_value(self):
         """
         Get the formatted value for a single term, handling all the special cases.
@@ -1027,60 +1091,17 @@ class TermField(Field):
             "ror",
             "wikidata_id",
         ]
-        # Strip a leading https://openalex.org/ + entity prefix so the canonical id a
-        # user copies off an entity page round-trips (#275). Shares the exact stripping
-        # logic with _get_formatted_value via _strip_openalex_prefix (anti-drift).
-        if self.param == "sustainable_development_goals.id":
-            self.value = self._normalize_sdg_value(self.value)
-        elif self.param == "language":
-            self.value = self._strip_openalex_prefix(self.value, "languages/")
-        elif self.param == "type" or self.param == "last_known_institution.type":
-            self.value = self._strip_openalex_prefix(
-                self.value,
-                "work-types/",
-                "institution-types/",
-                "source-types/",
-                "types/",
-            )
-        elif (
-            self.param == "primary_location.source.type"
-            or self.param == "locations.source.type"
-        ):
-            self.value = self._strip_openalex_prefix(self.value, "source-types/").replace(
-                "%20", " "
-            )
-        elif "country_code" in self.param or "countries" in self.param:
-            self.value = self._strip_openalex_prefix(self.value, "countries/")
-        elif "domain" in self.param:
-            self.value = self._strip_openalex_prefix(self.value, "domains/")
-        elif "field" in self.param and "subfield" not in self.param:
-            self.value = self._strip_openalex_prefix(self.value, "fields/")
-        elif "subfield" in self.param:
-            self.value = self._strip_openalex_prefix(self.value, "subfields/")
-        elif self.param == "keywords.id":
-            self.value = self.value.replace("https://openalex.org/", "").replace(
-                "keywords/", ""
-            )
-        elif (
-            self.param
-            and self.param.endswith("license_id")
-            or self.param.endswith("license")
-        ):
-            self.value = self.value.replace("https://openalex.org/", "").replace(
-                "licenses/", ""
-            )
-        elif self.param in (
+        # Normalize the value to its ES-indexed form up front — strips the canonical
+        # https://openalex.org/<kind>/ prefix a user copies off an entity page (#275),
+        # for the positive AND negated (!) paths alike (the marker is preserved). One
+        # source of truth so the paths can't drift — the bug class that broke
+        # SDG/language/type/country/domain/field/subfield round-trips to begin with.
+        self.value = self._normalize_term_value(self.value)
+        if self.param in (
             "authorships.institutions.country_code",
             "authorships.institutions.ror",
             "authorships.institutions.type",
         ):
-            if self.param == "authorships.institutions.country_code":
-                self.value = self._strip_openalex_prefix(self.value, "countries/")
-            elif self.param == "authorships.institutions.type":
-                self.value = self._strip_openalex_prefix(
-                    self.value, "institution-types/"
-                )
-
             field_name = self.es_field().replace("__", ".")
             if self.value == "null":
                 q = ~Q("exists", field=field_name)
