@@ -61,6 +61,7 @@ _RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
     "funders.id": "funders",
     "primary_location.source.publisher_lineage": "publishers",
     "primary_topic.field.id": "fields",
+    "primary_topic.subfield.id": "subfields",
     "domain.id": "domains",
     "sustainable_development_goals.id": "sdgs",
     "authorships.countries": "countries",

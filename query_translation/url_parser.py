@@ -7,7 +7,7 @@ Handles the traditional query parameter syntax:
 
 import re
 from typing import Dict, List, Optional, Tuple, Any
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP
 
 # A Collection membership ref: `col_<base58>` (mirrors core/fields.py
 # CollectionField.COLLECTION_ID_RE, `!` stripped before matching). A value of this
@@ -264,6 +264,12 @@ def parse_single_filter(
     For `.search`-suffix columns the default operator is `contains` (free-text
     matching); for all other columns it's `is` (exact equality).
     """
+    # Coerce curly/smart double-quotes to ASCII and collapse a run of 2+
+    # double-quotes to a single delimiter (`"""universiteit maastricht"""` ->
+    # `"universiteit maastricht"`), so the OQO carries a clean canonical value
+    # (renders cleanly + the rendered OQL re-parses). Mirrors the OQL lexer's
+    # position-preserving collapse. (oxjob #363)
+    value = re.sub('"{2,}', '"', value.translate(CURLY_DQUOTE_MAP))
     # Lucene-style boolean inside a .search value (AND/OR/NOT keywords,
     # optionally with parens) lifts to a BranchFilter tree of contains-leaves.
     # See _parse_search_boolean for grammar. A top-level AND-branch is

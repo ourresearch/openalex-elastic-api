@@ -26,7 +26,8 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 # Load the OQO data model without triggering the Flask-heavy package __init__.
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy  # noqa: E402
+from query_translation.oqo import (  # noqa: E402
+    OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP)
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +172,10 @@ _f("last known institution", "last_known_institutions.id", "id",
    aliases=["last_known_institutions.id"])
 _f("domain", "domain.id", "id", aliases=["domain.id"])
 _f("field", "primary_topic.field.id", "id", aliases=["primary_topic.field.id"])
+# subfield of the work's primary topic (topic hierarchy: domain > field > subfield > topic).
+# Was missing while its siblings field/domain/topic were registered (oxjob #363 discovery run #2);
+# render word = registry display_name "subfield"; name-resolved via the native subfields namespace.
+_f("subfield", "primary_topic.subfield.id", "id", aliases=["primary_topic.subfield.id"])
 _f("openalex id", "ids.openalex", "id", aliases=["ids.openalex"])
 
 # --- collection (same-type membership) ---
@@ -270,6 +275,10 @@ _WORD_BREAK = set(' \t\n"[](),;')
 
 
 def lex(s: str) -> List[Tok]:
+    # Coerce curly/smart double-quotes to ASCII (1:1, length-preserving so token
+    # positions stay exact). Multi-quote runs (`"""x"""`) are collapsed
+    # position-preservingly in the STRING branch below. (oxjob #363)
+    s = s.translate(CURLY_DQUOTE_MAP)
     toks: List[Tok] = []
     i, n = 0, len(s)
     while i < n:
@@ -278,13 +287,24 @@ def lex(s: str) -> List[Tok]:
             i += 1
             continue
         if c == '"':
+            # Collapse a run of 2+ opening/closing quotes to a single delimiter,
+            # so `"""universiteit maastricht"""` lexes as ONE string (the literal
+            # the user meant) rather than three. Positions reference the ORIGINAL
+            # offsets (no rewrite), so diagnostics stay accurate. (oxjob #363)
+            start = i
+            while i + 1 < n and s[i + 1] == '"':
+                i += 1                       # skip extra opening quotes
             j = s.find('"', i + 1)
             if j == -1:
                 raise oql_error("OQL_UNTERMINATED_STRING",
-                               f'unterminated string starting at position {i}',
-                               'add a closing double-quote (")', i)
-            toks.append(Tok("STRING", s[i + 1:j], i))
-            i = j + 1
+                               f'unterminated string starting at position {start}',
+                               'add a closing double-quote (")', start)
+            content = s[i + 1:j]
+            i = j
+            while i + 1 < n and s[i + 1] == '"':
+                i += 1                       # skip extra closing quotes
+            toks.append(Tok("STRING", content, start))
+            i += 1
             continue
         if c == '[':
             j = s.find(']', i + 1)
@@ -394,6 +414,53 @@ def match_field(toks: List[Tok], i: int) -> Optional[Tuple[str, "Field", int]]:
         return None
     spelling = " ".join(toks[i + k].val for k in range(best_len))
     return spelling, best, best_len
+
+
+# --- Raw registry column_id fallback (oxjob #363) -------------------------
+# OQL's curated `_FIELDS` give every common filter a friendly name; the raw
+# oxurl column_id of a *curated* field already parses (it's listed as an alias).
+# The gap was the long tail of registry columns with NO curated surface (e.g.
+# `apc_paid.value_usd`, `biblio.volume`, `ids.pmid`): submitting their raw key —
+# which an oxurl-fluent user, or a round-tripped render of an unsurfaced column,
+# naturally does — 400'd "unknown field". So accept EVERY works-registry
+# column_id as an input alias, synthesizing a Field from the registry's operator
+# metadata. The render stays canonical (an uncurated column renders its raw id,
+# which round-trips through this same fallback). Built lazily + defensively so
+# `oql_lang` stays importable in lightweight contexts without the engine
+# properties registry.
+_REGISTRY_FALLBACK_CACHE: Optional[Dict[str, "Field"]] = None
+
+
+def _build_registry_fallback() -> Dict[str, "Field"]:
+    try:
+        from core.properties import get_entity_properties
+        cols = get_entity_properties("works")
+    except Exception:
+        return {}
+    out: Dict[str, Field] = {}
+    for cid, prop in cols.items():
+        key = cid.lower()
+        if key in _ALIAS:
+            continue                     # already curated (or its raw id is an alias)
+        ops = tuple(getattr(prop, "operators", []) or [])
+        if "search" in ops or "collection" in ops:
+            # search columns are mode-encoded (.search/.search.exact) — expressed
+            # via the curated friendly fields + quoting, not a raw-id leaf; the
+            # `collection` column is curated. Skip both.
+            continue
+        kind = "num" if "range" in ops else "string"   # 'range' => comparisons/ranges; else verbatim value
+        out[key] = Field(column=cid, kind=kind, oql=cid, casing="",
+                         resolves_name=False, is_float=(kind == "num"))
+    return out
+
+
+def _registry_fallback_field(word: str) -> Optional["Field"]:
+    """The synthetic Field for a raw registry column_id (case-insensitive), or
+    None if `word` isn't a known works column (or the registry is unavailable)."""
+    global _REGISTRY_FALLBACK_CACHE
+    if _REGISTRY_FALLBACK_CACHE is None:
+        _REGISTRY_FALLBACK_CACHE = _build_registry_fallback()
+    return _REGISTRY_FALLBACK_CACHE.get(word.lower())
 
 
 def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool, bool]]:
@@ -861,6 +928,16 @@ class _Parser:
         # greedy longest alias match (up to 4 words) — shared with the editor walker
         m = match_field(self.toks, self.i)
         if m is None:
+            # Fallback: a single WORD that is a raw works-registry column_id is
+            # always accepted as an input alias (oxjob #363), even with no curated
+            # friendly name. Synthesized from the registry; renders back to the
+            # raw id. Skipped in ctx_mode so the editor still offers completions.
+            t0 = self.peek()
+            if not self._ctx_mode and t0 is not None and t0.kind == "WORD":
+                raw = _registry_fallback_field(t0.val)
+                if raw is not None:
+                    self.i += 1
+                    return t0.val, raw
             if self._ctx_mode:
                 # an unknown / still-being-typed word where a field is expected is
                 # the FIELD slot (the editor offers field completions there)
@@ -2195,10 +2272,17 @@ def format_oql(tree: OQLRenderTree, width: int = FORMAT_WIDTH) -> str:
     flat = stringify(tree)
     if len(flat) <= width:
         return flat
-    lines = [tree.entity.text]
+    lines = []
     if tree.where is not None:
-        body = _fmt_expr(tree.where, _INDENT, len("where "), width)
-        lines.append(f"where {body}")
+        # Keep the entity head on the same line as `where` (and the first
+        # clause): `works where institution is …`, with continuation operands
+        # wrapping below at `_INDENT`. The prefix's width seeds the column so the
+        # first clause still wraps correctly when it alone overflows.
+        prefix = f"{tree.entity.text}{tree.where_keyword}"   # e.g. "works where "
+        body = _fmt_expr(tree.where, _INDENT, len(prefix), width)
+        lines.append(f"{prefix}{body}")
+    else:
+        lines.append(tree.entity.text)
     lines.extend(_stringify_directive(d) for d in tree.directives)
     return "\n".join(lines)
 

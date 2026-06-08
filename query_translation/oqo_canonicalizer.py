@@ -22,7 +22,7 @@ registry) — there is no entity-id prefix normalization. See docs/oql-spec.md.
 import json
 from typing import List, Union, Any
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, SortBy
-from query_translation.oql_lang import canon_value_for_column, is_integer_column
+from query_translation.oql_lang import canon_value_for_column, is_integer_column, _is_search_leaf
 
 
 def canonicalize_oqo(oqo: OQO) -> OQO:
@@ -67,12 +67,14 @@ def canonicalize_oqo(oqo: OQO) -> OQO:
     # Top-level filter_rows are an implicit AND -> commutative -> sort for stability
     canonical_filters.sort(key=_sort_key)
 
+    canonical_sort_by = _drop_redundant_default_sort(canonical_filters, oqo.sort_by)
+
     return OQO(
         get_rows=oqo.get_rows.lower(),  # Normalize entity type to lowercase
         filter_rows=canonical_filters,
         # sort_by order is meaningful (tiebreaker priority: primary, secondary,
         # …) -> preserved, NOT sorted (unlike the commutative filter_rows above).
-        sort_by=[SortBy(s.column_id, s.direction) for s in oqo.sort_by],
+        sort_by=canonical_sort_by,
         sample=oqo.sample,
         group_by=list(oqo.group_by),  # group_by order is meaningful (dim order) -> preserved
         # Logistics layer (#318) passes through unchanged: `select` order is
@@ -85,6 +87,39 @@ def canonicalize_oqo(oqo: OQO) -> OQO:
         page=oqo.page,
         cursor=oqo.cursor,
     )
+
+
+def _any_search_leaf(filters: List[FilterType]) -> bool:
+    """True if any leaf anywhere under `filters` is a search (`.search`) leaf —
+    the condition under which the engine treats the query as a search query and
+    defaults its sort to relevance. Mirrors `core.search.check_is_search_query`
+    (whose search keys all contain `.search`)."""
+    for f in filters:
+        if isinstance(f, LeafFilter):
+            if _is_search_leaf(f):
+                return True
+        elif isinstance(f, BranchFilter) and _any_search_leaf(f.filters):
+            return True
+    return False
+
+
+def _drop_redundant_default_sort(filter_rows: List[FilterType], sort_by) -> List[SortBy]:
+    """Drop an explicit sort that merely restates the query's implicit default.
+
+    A search-bearing works query already defaults to `relevance_score desc`
+    (`core/shared_view.apply_sorting`; relevance is only even *valid* with a
+    search clause), so a lone `sort by relevance_score desc` is redundant noise —
+    omit it from the canonical form so the OQL render reads cleanly and a
+    relevance-sorted search round-trips to the no-sort canonical OQO. Any extra
+    tiebreaker keys, a non-relevance primary, `asc`, or a non-search query keep
+    the sort verbatim. (oxjob #363)
+    """
+    if (len(sort_by) == 1
+            and sort_by[0].column_id == "relevance_score"
+            and sort_by[0].direction == "desc"
+            and _any_search_leaf(filter_rows)):
+        return []
+    return [SortBy(s.column_id, s.direction) for s in sort_by]
 
 
 def push_negation(f: FilterType, negate: bool) -> FilterType:

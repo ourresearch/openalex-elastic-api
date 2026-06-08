@@ -68,11 +68,11 @@ GOLDENS = {
     "works where it's open access and type is article":
         "works where it's open access and type is article",
 
-    # (b) medium query explodes into a leading-`and` chain
+    # (b) medium query explodes into a leading-`and` chain. The entity head
+    # stays on the `where` line (oxjob #363); continuation operands wrap below.
     "works where it's open access and publication_year >= 2020 and type is "
     "article and has_doi is true and language is en":
-        "works\n"
-        "where it has a DOI\n"
+        "works where it has a DOI\n"
         "  and language is en\n"
         "  and it's open access\n"
         "  and year >= 2020\n"
@@ -81,16 +81,14 @@ GOLDENS = {
     # (c) a nested boolean that fits stays inline inside the exploded parent
     "works where (institution is I27837315 or type is article) and "
     "publication_year >= 2020 and language is en":
-        "works\n"
-        "where language is en\n"
+        "works where language is en\n"
         "  and year >= 2020\n"
         "  and (institution is I27837315 or type is article)",
 
     # (d) a search group <=8 items -> one per line, trailing connective
     'works where title contains ("randomized controlled trial" or '
     '"systematic review" or "meta analysis" or "clinical practice guideline")':
-        "works\n"
-        "where title contains (\n"
+        "works where title contains (\n"
         '    "clinical practice guideline" or\n'
         '    "meta analysis" or\n'
         '    "randomized controlled trial" or\n'
@@ -100,28 +98,30 @@ GOLDENS = {
     # (e) a value group >8 items -> fill/pack to width, trailing connective
     "works where language is (en or zh or es or fr or de or ja or pt or ru or ko "
     "or it or ar or nl or pl or tr or sv or cs or fa or uk or vi or da)":
-        "works\n"
-        "where language is (\n"
+        "works where language is (\n"
         "    ar or cs or da or de or en or es or fa or fr or it or ja or ko or nl or\n"
         "    pl or pt or ru or sv or tr or uk or vi or zh\n"
         "  )",
 
     # (f) directives on their own lines at col 0. Input keeps the legacy `;`
     # separators to prove the parser still accepts them (back-compat); the
-    # canonical output drops them (oxjob #377).
+    # canonical output drops them (oxjob #377). With the entity head now sharing
+    # the `where` line (oxjob #363), the body's first line is `works where …`,
+    # so the and-chain wraps (it no longer fits within width inline).
     "works where it's open access and publication_year >= 2020 and type is "
     "article and language is en ; group by publication_year ; sort by "
     "cited_by_count desc":
-        "works\n"
-        "where language is en and it's open access and year >= 2020 and type is article\n"
+        "works where language is en\n"
+        "  and it's open access\n"
+        "  and year >= 2020\n"
+        "  and type is article\n"
         "group by year\n"
         "sort by citation count desc",
 
     # (g) a nested boolean group that is too wide -> the group explodes
     "works where publication_year >= 2020 and (institution is I27837315 or "
     "funder is F4320332161 or source is S137773608 or author is A5023888391)":
-        "works\n"
-        "where year >= 2020\n"
+        "works where year >= 2020\n"
         "  and (\n"
         "    author is A5023888391\n"
         "    or institution is I27837315\n"

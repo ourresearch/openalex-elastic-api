@@ -103,8 +103,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:!I33213144,authorships.institutions.lineage:!I97018004'
   status: ok
   oql: |-
-    works
-    where institution is not I33213144 [Harvard]
+    works where institution is not I33213144 [Harvard]
       and institution is not I97018004 [Stanford]
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I33213144, is_negated: true},
@@ -172,8 +171,9 @@ rows:
   oxurl: 'https://openalex.org/works?filter=display_name.search:apple,display_name.search:banana,display_name.search:cherry'
   status: ok
   oql: |-
-    works
-    where title contains apple and title contains banana and title contains cherry
+    works where title contains apple
+      and title contains banana
+      and title contains cherry
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: apple, operator: contains},
         {column_id: display_name.search, value: banana, operator: contains},
@@ -189,8 +189,9 @@ rows:
   oxurl: 'https://openalex.org/works?filter=display_name.search:apple,display_name.search:banana,display_name.search:cherry'
   status: ok
   oql: |-
-    works
-    where title contains apple and title contains banana and title contains cherry
+    works where title contains apple
+      and title contains banana
+      and title contains cherry
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: apple, operator: contains},
         {column_id: display_name.search, value: banana, operator: contains},
@@ -499,9 +500,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?search.semantic=graph%20neural%20networks%20for%20molecular%20property%20prediction'
   status: ok
-  oql: |-
-    works
-    where abstract is similar to "graph neural networks for molecular property prediction"
+  oql: 'works where abstract is similar to "graph neural networks for molecular property prediction"'
   oqo: {get_rows: works, filter_rows: [{column_id: abstract.search.semantic,
         value: graph neural networks for molecular property prediction, operator: contains}]}
   note: Semantic (search.semantic, 2-phase vector search).
@@ -564,8 +563,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=publication_year:2020-,authorships.institutions.lineage:I136199984|I33213144'
   status: ok
   oql: |-
-    works
-    where year >= 2020
+    works where year >= 2020
       and institution is (I136199984 [Harvard] or I33213144 [Harvard])
   oqo: {get_rows: works, filter_rows: [
         {join: or, filters: [
@@ -582,8 +580,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I130438778&sort=cited_by_count:desc'
   status: ok
   oql: |-
-    works
-    where institution is I130438778 [Memorial University of Newfoundland]
+    works where institution is I130438778 [Memorial University of Newfoundland]
     sort by citation count desc
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I130438778}],
         sort_by: [{column_id: cited_by_count, direction: desc}]}
@@ -597,8 +594,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I201448701,funders.id:F4320332161,open_access.is_oa:false'
   status: ok
   oql: |-
-    works
-    where institution is I201448701 [UW]
+    works where institution is I201448701 [UW]
       and funder is F4320332161 [NIH]
       and it's not open access
   oqo: {get_rows: works, filter_rows: [
@@ -697,8 +693,7 @@ rows:
   oxurl: 'https://openalex.org/authors?filter=last_known_institutions.id:I114027177,topics.id:T10895'
   status: ok
   oql: |-
-    authors
-    where last known institution is I114027177 [UNC]
+    authors where last known institution is I114027177 [UNC]
       and topics is T10895 [climate change]
   oqo: {get_rows: authors, filter_rows: [
         {column_id: last_known_institutions.id, value: I114027177},
@@ -783,8 +778,8 @@ rows:
   oxurl: 'https://openalex.org/works?filter=cited_by_count:>100,title_and_abstract.search:%22coral%20bleaching%22&group_by=primary_location.source.id'
   status: ok
   oql: |-
-    works
-    where citation count > 100 and title/abstract contains near "coral bleaching"
+    works where citation count > 100
+      and title/abstract contains near "coral bleaching"
     group by source
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: '"coral bleaching"', operator: contains},
@@ -842,8 +837,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:agile,title_and_abstract.search:%22cycle%20time%22|%22lead%20time%22,title_and_abstract.search:%22demand%20chain%22|%22supply%20chain%22|%22value%20chain%22'
   status: ok
   oql: |-
-    works
-    where title/abstract contains agile
+    works where title/abstract contains agile
       and title/abstract contains (near "cycle time" or near "lead time")
       and title/abstract contains (
         near "demand chain" or
@@ -935,8 +929,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=language:en,publication_year:2015-2024,title_and_abstract.search:ASD|%22autism%20spectrum%20disorder%22|autism,title_and_abstract.search:intervention|therapy|treatment,type:article|review'
   status: ok
   oql: |-
-    works
-    where language is en
+    works where language is en
       and year is 2015-2024
       and title/abstract contains (ASD or near "autism spectrum disorder" or autism)
       and title/abstract contains (intervention or therapy or treatment)
@@ -980,8 +973,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=publication_year:2018-2023,title_and_abstract.search:CRISPR,title_and_abstract.search:%22genome%20editing%22&sort=cited_by_count:desc&sample=500'
   status: ok
   oql: |-
-    works
-    where year is 2018-2023
+    works where year is 2018-2023
       and title/abstract contains CRISPR
       and title/abstract contains near "genome editing"
     sort by citation count desc
@@ -1088,8 +1080,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:!pediatric,title_and_abstract.search:covid'
   status: ok
   oql: |-
-    works
-    where title/abstract does not contain pediatric
+    works where title/abstract does not contain pediatric
       and title/abstract contains covid
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: covid, operator: contains},
@@ -1106,8 +1097,8 @@ rows:
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:computing,title_and_abstract.search:quantum&group_by=authorships.countries'
   status: ok
   oql: |-
-    works
-    where title/abstract contains computing and title/abstract contains quantum
+    works where title/abstract contains computing
+      and title/abstract contains quantum
     group by country
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: quantum, operator: contains},
@@ -1125,8 +1116,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:CRISPR,title_and_abstract.search:Cas9&group_by=authorships.author.id'
   status: ok
   oql: |-
-    works
-    where title/abstract contains CRISPR and title/abstract contains Cas9
+    works where title/abstract contains CRISPR and title/abstract contains Cas9
     group by author
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: CRISPR, operator: contains},
@@ -1197,8 +1187,7 @@ rows:
     (title / title & abstract x2 / anywhere). 114 leaves. No explicit oqo oracle
     — the harness asserts OQO->OQL->OQO identity through the whole tree.
   oql: |-
-    works
-    where title contains (
+    works where title contains (
         Boy or Girl or Minors or Prepubescent or adolescent or boys or child's or
         children or girls or juvenile or preadolescent or preteen or pubertal or
         pubescent or schoolboy or schoolchild or schoolgirl or teen or tweenage or
@@ -1561,8 +1550,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=primary_location.source.type:book%20series|conference|ebook%20platform|journal'
   status: ok
   oql: |-
-    works
-    where source type is (
+    works where source type is (
         "book series" or
         conference or
         "ebook platform" or
@@ -1574,3 +1562,27 @@ rows:
         {column_id: primary_location.source.type, value: 'ebook platform'},
         {column_id: primary_location.source.type, value: 'book series'}]}]}
   note: 'The source''s type (render word = engine display_name `source type`). A multi-word slug like `ebook platform` is one atom, so it must be QUOTED inside the value group (else it re-parses as adjacency-AND). The URL wraps the whole `|`-list in quotes ("spaces are literal, not AND"); the parser strips the enclosing quotes before the pipe-split, mirroring the engine (oxjob #363).'
+
+- id: 102
+  category: "filter, sort & sample"
+  provenance:
+    type: "analytics question"
+    label: "Jason's random-search walkthrough — primary_topic.subfield.id had no OQL surface while its siblings topic/field/domain were registered"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=primary_topic.subfield.id:2712,type:article'
+  status: ok
+  oql: 'works where subfield is 2712 and type is article'
+  oqo: {get_rows: works, filter_rows: [{column_id: primary_topic.subfield.id, value: '2712'}, {column_id: type, value: article}]}
+  note: 'The subfield of a work''s primary topic (topic hierarchy domain > field > subfield > topic). Render word = registry display_name "subfield"; the value resolves a `[display name]` via the native subfields namespace. Was an "unknown field" before oxjob #363 (only field/domain/topic were registered).'
+
+- id: 103
+  category: "filter, sort & sample"
+  provenance:
+    type: "analytics question"
+    label: "Raw oxurl column ids are always accepted as OQL input aliases (oxjob #363); ids.pmid has no curated friendly name"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=ids.pmid:12345678'
+  status: ok
+  oql: 'works where ids.pmid is 12345678'
+  oqo: {get_rows: works, filter_rows: [{column_id: ids.pmid, value: '12345678'}]}
+  note: 'Any works-registry column_id is accepted as an OQL input alias even with no curated friendly name — valuable for oxurl-fluent users, language-independence, and testing. The raw key is NOT canonical (it renders back as the raw id, round-tripping). Synthesized from the registry operator metadata. (oxjob #363; search columns are the one excluded family — expressed via the curated fields + quoting.)'

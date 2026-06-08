@@ -8,6 +8,14 @@ All translations go through OQO as the intermediate format.
 from dataclasses import dataclass, field, asdict
 from typing import List, Optional, Union, Literal, Any, Dict
 
+# Smart/curly DOUBLE-quote characters coerced to a plain ASCII double-quote
+# wherever a string delimiter is expected — left/right double quotation marks +
+# the double low-9 / high-reversed-9 forms. (oxjob #363; the single curly quotes
+# 2018/2019 are NOT included — they're apostrophes in real text, never string
+# delimiters.) Single source of truth for both surfaces that coerce quotes: the
+# OQL lexer (position-preserving) and the URL value parser.
+CURLY_DQUOTE_MAP = {ord(c): '"' for c in "“”„‟"}
+
 
 @dataclass
 class LeafFilter:
