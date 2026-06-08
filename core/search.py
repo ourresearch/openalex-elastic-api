@@ -321,10 +321,15 @@ class SearchOpenAlex:
         self.tertiary_field = tertiary_field
         self.is_author_name_query = is_author_name_query
         self.is_semantic_query = is_semantic_query
-        # When True, the Boolean/phrase/wildcard branch of primary_secondary_match_query
-        # emits ONE query_string over a `fields` list instead of two OR'd query_strings,
-        # so each Boolean operand can match in *either* field (cross-field). Used only by
-        # title_and_abstract.search so its name finally matches its behavior (oxjob #191.7).
+        # When True, BOTH the Boolean/phrase/wildcard branch AND the plain (non-boolean)
+        # multi-word branch of primary_secondary[_tertiary]_match_query go cross-field:
+        # the Boolean branch emits ONE query_string over a `fields` list, and the plain
+        # branch emits a `cross_fields` multi_match (analyzed, so special-char literals
+        # like `c++` are safe). Each search word then need only appear *somewhere* across
+        # the fan-out fields, so `a b` == `a AND b` == two-filter. Started as the boolean
+        # title_and_abstract.search fix (#191.7); extended to the plain path + the 3-field
+        # default.search/fulltext.search columns (#399). Set only on works fan-out search
+        # builders; the entity searches that share these functions never set it.
         self.combine_fields = combine_fields
 
     def build_query(self, skip_citation_boost=False):
@@ -592,7 +597,7 @@ class SearchOpenAlex:
                 allow_leading_wildcard=False,
             )
         else:
-            return (
+            same_field = (
                 Q(
                     "match",
                     **{
@@ -627,6 +632,23 @@ class SearchOpenAlex:
                     },
                 )
             )
+            if self.combine_fields:
+                # Plain (non-boolean) multi-word cross-field: ADD a clause that lets each
+                # word appear *somewhere* across primary∪secondary (not both in one
+                # field). `cross_fields`+`operator=and` analyzes the input (so special-char
+                # literals like `c++` are safe — unlike query_string, which the plain path
+                # must not use). It's OR'd ON TOP of the same-field clauses, so same-field
+                # docs keep their ranking and cross-field-only matches join the tail; recall
+                # then == boolean == two-filter (oxjob #399). same_field ⊆ cross_fields, so
+                # the union's recall is exactly the cross-field count.
+                same_field = same_field | Q(
+                    "multi_match",
+                    query=self.search_terms,
+                    fields=[self.primary_field, f"{self.secondary_field}^0.1"],
+                    type="cross_fields",
+                    operator="and",
+                )
+            return same_field
 
     def primary_secondary_tertiary_match_query(self):
         """Searches primary, secondary, tertiary fields."""
@@ -639,6 +661,25 @@ class SearchOpenAlex:
 
         if self.is_boolean_search() or self.has_phrase() or self.has_wildcard():
             self.clean_search_terms()
+            if self.combine_fields:
+                # One query_string over all three fields: ES expands each Boolean
+                # operand (term or phrase) into a disjunction across the fields, so a
+                # Boolean whose halves split across title↔abstract↔fulltext still
+                # matches (cross-field). Mirrors #191.7's 2-field boolean fix and the
+                # plain-path cross_fields shape below so `a b` == `a AND b` ==
+                # two-filter on default.search/fulltext.search (oxjob #399). Per-field
+                # `^` boosts keep the original secondary/tertiary weights.
+                return Q(
+                    "query_string",
+                    query=self.search_terms,
+                    fields=[
+                        self.primary_field,
+                        f"{self.secondary_field}^0.5",
+                        f"{self.tertiary_field}^{tertiary_match_boost}",
+                    ],
+                    default_operator="AND",
+                    allow_leading_wildcard=False,
+                )
             return (
                 Q(
                     "query_string",
@@ -665,7 +706,7 @@ class SearchOpenAlex:
                 )
             )
         else:
-            return (
+            same_field = (
                 Q(
                     "match",
                     **{
@@ -719,6 +760,26 @@ class SearchOpenAlex:
                     },
                 )
             )
+            if self.combine_fields:
+                # Plain (non-boolean) multi-word cross-field across all three fields: ADD
+                # a clause letting each word appear *somewhere* in title∪abstract∪fulltext.
+                # `cross_fields`+`operator=and` (analyzed, special-char-safe) is OR'd ON TOP
+                # of the same-field clauses, so same-field docs keep their ranking and
+                # cross-field-only matches join the tail; recall == boolean == two-filter
+                # (oxjob #399). same_field ⊆ cross_fields, so the union's recall is exactly
+                # the cross-field count.
+                same_field = same_field | Q(
+                    "multi_match",
+                    query=self.search_terms,
+                    fields=[
+                        f"{self.primary_field}^1.5",
+                        f"{self.secondary_field}^0.3",
+                        f"{self.tertiary_field}^{tertiary_match_boost}",
+                    ],
+                    type="cross_fields",
+                    operator="and",
+                )
+            return same_field
 
     def author_name_query(self):
         """Search display_name and display_name.folded in order to ignore diacritics."""
@@ -905,6 +966,7 @@ def full_search_query(index_name, search_terms, skip_citation_boost=False):
             search_terms=search_terms,
             secondary_field="abstract",
             tertiary_field="fulltext",
+            combine_fields=True,  # cross-field: a b == a AND b == two-filter (#399)
         )
     elif index_name.lower().startswith("funder-search"):
         # Support wildcards, proximity search, and span queries for funder-search
@@ -979,6 +1041,7 @@ def full_search_query_exact(search_terms, skip_citation_boost=False):
         primary_field="display_name.no_stem",
         secondary_field="abstract.no_stem",
         tertiary_field="fulltext.no_stem",
+        combine_fields=True,  # cross-field: a b == a AND b == two-filter (#399)
     )
     return search_oa.build_query(skip_citation_boost=skip_citation_boost)
 
@@ -1004,6 +1067,9 @@ def scoped_search_query(search_terms, scope, search_type, skip_citation_boost=Fa
             search_terms=search_terms,
             primary_field=primary,
             secondary_field=secondary,
+            # Cross-field so search.title_and_abstract= agrees with the
+            # title_and_abstract.search filter (#191.7 boolean + #399 plain).
+            combine_fields=True,
         )
     else:
         raise ValueError(f"Unknown search scope: {scope}")
