@@ -533,10 +533,40 @@ validates **iff** it can also be rendered with a name):
 > rejected (the NL phrasings "UK"/"Britain"/"United Kingdom" all resolve to `gb`).
 
 Membership descends into value groups, so each leaf of `country is (us or canada)`
-is checked independently. **Open** ID entities (authors / works / institutions /
-sources / … — millions of members) are not membership-checked here; they get an
-ID-shape check instead (prefix + form, e.g. `I\d+`). Free-text `*.search` / `phrase`
-values and raw strings are never membership-checked.
+is checked independently. Free-text `*.search` / `phrase` values and raw strings are
+never membership-checked.
+
+### 6.2 ID-shape validation (open ID entities)
+
+The **open** ID entities — authors, works, institutions, sources, publishers,
+funders, topics, concepts, awards — have millions of members, so they can't be
+enumerated. Instead, an `openalex_id`-typed value is checked for the right
+**ID prefix/shape** for the column's `entity_type`. This catches the common slip of
+a correctly-shaped ID of the *wrong* type: `institution is W5` is an `invalid_value`
+error — `W5` is a Works ID, and `institution` expects an Institutions ID (`I…`). A
+non-ID value on an ID column (`institution is Canada`) is likewise rejected.
+
+The shape is **declared once**, in each entity's `idRegex` in
+`config/<entity>.yaml` (the same files the renderer reads for closed-vocab names),
+surfaced as a typed registry in `core/entities.py` — the server-side sibling of the
+properties registry, the thing a `Property.entity_type` resolves against. There is
+no hand-maintained prefix table: the native-entity set and their prefixes are
+derived from those `idRegex`. The OpenAlex URL/path forms a value may legitimately
+take (`I5`, `institutions/I5`, `https://openalex.org/I5`) all validate; only the
+entity letter is enforced.
+
+| `entity_type` | prefix | `entity_type` | prefix |
+|---|---|---|---|
+| `works` | `W` | `funders` | `F` |
+| `authors` | `A` | `topics` | `T` |
+| `institutions` | `I` | `concepts` | `C` |
+| `sources` | `S` | `awards` | `G` |
+| `publishers` | `P` | | |
+
+> `is in collection col_…` uses a distinct operator (not `is`), so a `col_…` value
+> on an ID column is **not** shape-checked. Slug-id entities (`keywords`) and
+> numeric-id entities (`fields` / `subfields` / `domains`) have no letter prefix and
+> are not shape-checked here.
 
 ## 7. The corpus (normative)
 

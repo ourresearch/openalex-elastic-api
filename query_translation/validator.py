@@ -20,6 +20,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from core.entities import entity_for_id_prefix, get_entity_type
 from core.fields import Property
 from core.properties import (
     ENTITY_PROPERTIES,
@@ -78,8 +79,9 @@ ENTITY_ALIASES = {"types": "work-types"}
 # `entity_type` to the renderer's config namespace: identity except work-types,
 # whose config namespace is the legacy "types". (oxjob #363; scoped 2026-06-07.)
 # Open ID entities (authors/works/institutions/…) are NOT here — millions of
-# members, validated by ID-shape instead (Tier 2). license / source-type /
-# institution-type deferred per the scoping note.
+# members, so they're validated by ID-shape/prefix instead (Tier 2, below, keyed
+# off the entity registry's `idRegex`). license / source-type / institution-type
+# deferred per the scoping note.
 CLOSED_VOCAB_NAMESPACE = {
     "countries": "countries",
     "continents": "continents",
@@ -527,28 +529,71 @@ class OQOValidator:
     def _validate_value_domain(
         self, f: LeafFilter, entry: Property, location: str
     ) -> List[ValidationError]:
-        """Closed-vocab membership check. A column whose `entity_type` names a
-        finite code vocabulary (countries / languages / sdgs / work-types /
-        oa-statuses / continents) must carry a literal member — reject names and
-        nonsense (`country is Canada`, `country is 42`). The membership set is the
-        renderer's config table, so a value validates iff it can also be rendered
-        with a display name. (oxjob #363 value-domain validation.)"""
+        """Value-domain validation, dispatched on the column's `entity_type`.
+        Two tiers, both reusing a single declarative source so a value validates
+        iff it could also be *produced* (rendered / parsed) by the same tables —
+        no parallel allow-lists here (oxjob #363):
+
+          Tier 1 — closed enumerated vocabs (countries / languages / sdgs /
+            work-types / oa-statuses / continents): strict membership against the
+            renderer's `config/<vocab>.yaml` `values` table. Rejects names and
+            nonsense (`country is Canada`, `country is 42`).
+          Tier 2 — open OpenAlex-ID entities (institutions / authors / sources /
+            …): ID prefix/shape against the entity registry's `idRegex`. Rejects a
+            right-shaped ID of the wrong type (`institution is W5` — a Works ID).
+        """
         namespace = CLOSED_VOCAB_NAMESPACE.get(entry.entity_type)
-        if namespace is None:
-            return []
+        if namespace is not None:
+            return self._validate_closed_vocab(f, entry, location, namespace)
+        if entry.type == "openalex_id":
+            return self._validate_openalex_id_shape(f, entry, location)
+        return []
+
+    def _validate_closed_vocab(
+        self, f: LeafFilter, entry: Property, location: str, namespace: str
+    ) -> List[ValidationError]:
+        """Tier 1 — strict membership in a finite config-backed code vocab."""
         if is_vocab_member(namespace, f.value):
             return []
         # Build a "did you mean" when the user typed a display name (the common
         # footgun, e.g. `country is Canada` -> code `ca`); else a generic hint.
         suggestion = vocab_name_to_code(namespace, f.value) if isinstance(f.value, str) else None
-        if suggestion:
-            hint = f" Did you mean '{suggestion}'?"
-        else:
-            hint = ""
+        hint = f" Did you mean '{suggestion}'?" if suggestion else ""
         return [ValidationError(
             type="invalid_value",
             message=(
                 f"Value {f.value!r} is not a valid {entry.entity_type} code "
+                f"for column '{f.column_id}'.{hint}"
+            ),
+            location=f"{location}.value",
+        )]
+
+    def _validate_openalex_id_shape(
+        self, f: LeafFilter, entry: Property, location: str
+    ) -> List[ValidationError]:
+        """Tier 2 — an `openalex_id`-typed value must carry the entity's ID
+        prefix/shape. The shape is the entity registry's `idRegex` (declared in
+        `config/<entity>.yaml`), so this never hand-maintains a prefix list. A
+        column whose entity isn't a native-ID entity (unknown, or a slug/numeric
+        id) has no shape to check and passes through."""
+        ent = get_entity_type(entry.entity_type)
+        if ent is None or not ent.is_native_id or ent.id_shape_ok(f.value):
+            return []
+        # Name the wrong type when the value is itself a valid OpenAlex ID of
+        # another kind (the common slip, `institution is W5`) for a precise fix-it.
+        hint = f" {entry.entity_type} IDs start with '{ent.id_prefix}' (e.g. {ent.id_prefix}12345)."
+        if isinstance(f.value, str):
+            m = re.match(r"\s*(?:https?://openalex\.org/)?([A-Za-z])\d+\s*\Z", f.value)
+            other = entity_for_id_prefix(m.group(1)) if m else None
+            if other and other != entry.entity_type:
+                hint = (
+                    f" {f.value!r} is an OpenAlex {other} ID; "
+                    f"{entry.entity_type} IDs start with '{ent.id_prefix}'."
+                )
+        return [ValidationError(
+            type="invalid_value",
+            message=(
+                f"Value {f.value!r} is not a valid {entry.entity_type} ID "
                 f"for column '{f.column_id}'.{hint}"
             ),
             location=f"{location}.value",

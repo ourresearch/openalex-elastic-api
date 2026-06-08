@@ -1,0 +1,15 @@
+id: concepts
+icon: mdi-lightbulb-outline
+name: concepts
+nameSingular: concept
+displayName: concepts
+displayNameSingular: concept
+descr: Abstract ideas works are about (deprecated; superseded by topics)
+eg: Artificial intelligence
+color: teal
+hasAutocomplete: true
+isNative: true
+# Native C-prefixed OpenAlex IDs. idRegex is consumed by core/entities.py for OQL
+# value-domain validation (Tier 2) — not dead config. (oxjob #363)
+idRegex: (?i)(?:concepts\/)?(?:https:\/\/openalex\.org\/)?(c\d+)
+values:
