@@ -247,6 +247,26 @@ _f("ORCID", "authorships.author.orcid", "string", aliases=["authorships.author.o
 _f("ISSN", "primary_location.source.issn", "string",
    aliases=["issn", "primary_location.source.issn", "source.issn"])
 
+# --- oxjob #402 friendly-name audit (long-tail GUI/docs columns) ---
+# Front-B-only batch: every render word below already equals the column's registry
+# `display_name` (no core/display_names.py change, no PROPERTIES_VERSION bump). The
+# raw column_id stays a structural alias so the #363 input-alias fallback drops it.
+
+# distinct-count metrics (kind num; registry display_names already clean).
+_f("reference count", "referenced_works_count", "num", aliases=["referenced_works_count"])
+_f("institutions count", "institutions_distinct_count", "num", aliases=["institutions_distinct_count"])
+_f("countries count", "countries_distinct_count", "num", aliases=["countries_distinct_count"])
+
+# DOI prefix match (engine param doi_starts_with; literal string, no resolution).
+_f("DOI prefix", "doi_starts_with", "string", aliases=["doi_starts_with"])
+
+# Corresponding-author / -institution entity-id filters (name-resolved via the
+# authors / institutions namespaces, like `author` / `institution`).
+_f("corresponding author", "corresponding_author_ids", "id",
+   aliases=["corresponding_author_ids"])
+_f("corresponding institution", "corresponding_institution_ids", "id",
+   aliases=["corresponding_institution_ids"])
+
 # Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
 _BY_COLUMN = {}
 for _spellings, _fld in _FIELDS:

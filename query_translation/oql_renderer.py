@@ -73,6 +73,10 @@ _RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
     "cited_by": "works",
     "cites": "works",
     "ids.openalex": None,
+    # oxjob #402 friendly-name audit — corresponding-author/-institution ids
+    # resolve via the same namespaces as `author` / `institution`.
+    "corresponding_author_ids": "authors",
+    "corresponding_institution_ids": "institutions",
 }
 
 # Built-in code/id -> display-name tables for the non-native entity types that
