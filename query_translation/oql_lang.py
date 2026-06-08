@@ -281,6 +281,17 @@ _f("MAG ID", "ids.mag", "string", aliases=["ids.mag"])
 _f("PMID", "ids.pmid", "string", aliases=["ids.pmid"])
 _f("PMCID", "ids.pmcid", "string", aliases=["ids.pmcid"])
 
+# APC (article processing charge). Only the USD estimated-paid column is curated —
+# its registry display_name is already clean ("estimated APC paid", and it's the one
+# faceted in the GUI), so this is Front-B only (no display_name change, no version
+# bump). It's a currency amount (USD, may be fractional) → num/is_float. The other 7
+# apc columns (apc_list.{value,value_usd,currency,provenance}, apc_paid.{value,
+# currency,provenance}) are deliberately LEFT OUT OF SCOPE per Jason (2026-06-08):
+# native-currency duplicates + provenance/currency metadata aren't worth an OQL
+# surface; they stay on the #363 raw-key input-alias fallback as documented residue.
+_f("estimated APC paid", "apc_paid.value_usd", "num",
+   aliases=["apc_paid.value_usd"], is_float=True)
+
 # Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
 _BY_COLUMN = {}
 for _spellings, _fld in _FIELDS:
