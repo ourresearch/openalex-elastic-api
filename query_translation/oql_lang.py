@@ -267,6 +267,20 @@ _f("corresponding author", "corresponding_author_ids", "id",
 _f("corresponding institution", "corresponding_institution_ids", "id",
    aliases=["corresponding_institution_ids"])
 
+# Bibliographic coordinates (kind string — volumes/issues/pages are free-text
+# labels, e.g. "42", "S1", "iv"). PROPERTIES_VERSION 1.9.0 curated the registry
+# display_names from the raw "biblio volume"/… humanized ids.
+_f("volume", "biblio.volume", "string", aliases=["biblio.volume"])
+_f("issue", "biblio.issue", "string", aliases=["biblio.issue"])
+_f("first page", "biblio.first_page", "string", aliases=["biblio.first_page"])
+_f("last page", "biblio.last_page", "string", aliases=["biblio.last_page"])
+
+# Legacy / external work ids (kind string — literal, no name resolution).
+# Registry display_names curated in 1.9.0 from raw "ids mag"/"ids pmid"/"ids pmcid".
+_f("MAG ID", "ids.mag", "string", aliases=["ids.mag"])
+_f("PMID", "ids.pmid", "string", aliases=["ids.pmid"])
+_f("PMCID", "ids.pmcid", "string", aliases=["ids.pmcid"])
+
 # Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
 _BY_COLUMN = {}
 for _spellings, _fld in _FIELDS:

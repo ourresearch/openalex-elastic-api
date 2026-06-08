@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "2ee208bd2bada90283ed9d833c6d7cb3d0c1bca71cbfa3520ee1711b44d5638b",
+    "fingerprint": "3b6d8df96eb56ead0a81f5b4a897017d9dd3edeb480277a76474c02821fcb3bc",
     "property_count": 837,
-    "version": "1.8.0"
+    "version": "1.9.0"
   },
   "properties": {
     "authors": {
@@ -9282,7 +9282,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "biblio first page",
+        "display_name": "first page",
         "entity_type": null,
         "name": "biblio.first_page",
         "operators": [
@@ -9298,7 +9298,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "biblio issue",
+        "display_name": "issue",
         "entity_type": null,
         "name": "biblio.issue",
         "operators": [
@@ -9314,7 +9314,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "biblio last page",
+        "display_name": "last page",
         "entity_type": null,
         "name": "biblio.last_page",
         "operators": [
@@ -9330,7 +9330,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "biblio volume",
+        "display_name": "volume",
         "entity_type": null,
         "name": "biblio.volume",
         "operators": [
@@ -10195,7 +10195,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "ids mag",
+        "display_name": "MAG ID",
         "entity_type": null,
         "name": "ids.mag",
         "operators": [
@@ -10227,7 +10227,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "ids pmcid",
+        "display_name": "PMCID",
         "entity_type": null,
         "name": "ids.pmcid",
         "operators": [
@@ -10243,7 +10243,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "ids pmid",
+        "display_name": "PMID",
         "entity_type": null,
         "name": "ids.pmid",
         "operators": [

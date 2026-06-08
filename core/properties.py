@@ -54,7 +54,12 @@ from core.fields import Property
 # institution-types/work-types/domains/fields/subfields/awards params, + bare `type` on
 # works/sources/institutions) gained `entity_type`. Purely additive (property_count and
 # entity_count unchanged). Jason-approved 2026-06-08. = MINOR.
-PROPERTIES_VERSION = "1.8.0"
+# 1.9.0 (#402 friendly-name audit): curated display_names for long-tail works columns that
+# previously rendered the raw humanized column id — batch: biblio.{volume,issue,first_page,
+# last_page} → volume/issue/first page/last page; ids.{mag,pmid,pmcid} → MAG ID/PMID/PMCID.
+# Net-new curated labels on raw columns (no already-shipped label changed). Jason-approved
+# (blanket MINOR for this job) 2026-06-08. = MINOR.
+PROPERTIES_VERSION = "1.9.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
