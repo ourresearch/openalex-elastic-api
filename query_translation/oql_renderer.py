@@ -67,64 +67,79 @@ _RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
     "authorships.countries": "countries",
     "country_code": "countries",
     "last_known_institutions.country_code": "countries",
+    "language": "languages",
+    # Citation-relationship filters reference a WORK; resolve its title (oxjob #363
+    # case 7). cited_by = the work's references; cites = works citing it.
+    "cited_by": "works",
+    "cites": "works",
     "ids.openalex": None,
 }
 
-# Built-in code -> display-name tables for non-native entity types (the
-# `entity_resolver` returns None for these; ES doesn't index them).
-LANGUAGES = {
-    "en": "English", "zh": "Chinese", "es": "Spanish", "fr": "French",
-    "de": "German", "ja": "Japanese", "pt": "Portuguese", "ru": "Russian",
-    "ko": "Korean", "it": "Italian", "ar": "Arabic", "nl": "Dutch",
-    "pl": "Polish", "tr": "Turkish", "id": "Indonesian", "cs": "Czech",
-    "sv": "Swedish", "fa": "Persian", "uk": "Ukrainian", "vi": "Vietnamese",
-}
+# Built-in code/id -> display-name tables for the non-native entity types that
+# ES doesn't resolve by `get_display_name` (the `entity_resolver` returns None):
+#   - fields / subfields / domains: numeric path-style IDs (`fields/27`) that
+#     `normalize_openalex_id` can't route (it only matches single-letter-prefixed
+#     IDs), so they NEVER resolved via ES — the cause of `field is 27` rendering
+#     with no `[Medicine]` annotation (oxjob #363 case 5).
+#   - languages / countries / continents / sdgs / types / oa-statuses: closed
+#     code vocabularies ES doesn't index for name lookup.
+# All of these have a complete `values` list in the repo `config/*.yaml`, so we
+# read the display names straight from there — full coverage, no ES, no network.
+import os
+try:
+    import yaml as _yaml
+except Exception:  # pragma: no cover - yaml is a prod dep, but stay defensive
+    _yaml = None
 
-COUNTRIES = {
-    "us": "United States", "gb": "United Kingdom", "cn": "China",
-    "de": "Germany", "fr": "France", "jp": "Japan", "ca": "Canada",
-    "au": "Australia", "in": "India", "br": "Brazil", "it": "Italy",
-    "es": "Spain", "kr": "South Korea", "nl": "Netherlands", "ru": "Russia",
-    "ch": "Switzerland", "se": "Sweden", "pl": "Poland", "be": "Belgium",
-    "at": "Austria", "dk": "Denmark", "no": "Norway", "fi": "Finland",
-    "mx": "Mexico", "sg": "Singapore", "ie": "Ireland", "nz": "New Zealand",
-    "pt": "Portugal", "za": "South Africa", "il": "Israel",
+_CONFIG_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config"
+)
+# resolver namespace -> config/<file>.yaml
+_CONFIG_YAML_BY_NS: Dict[str, str] = {
+    "fields": "fields.yaml",
+    "subfields": "subfields.yaml",
+    "domains": "domains.yaml",
+    "languages": "languages.yaml",
+    "countries": "countries.yaml",
+    "continents": "continents.yaml",
+    "sdgs": "sdgs.yaml",
+    "types": "work-types.yaml",
+    "oa-statuses": "oa-statuses.yaml",
 }
+# namespace -> {short_id.lower(): display_name}, loaded lazily + cached.
+_CONFIG_TABLES: Dict[str, Dict[str, str]] = {}
 
-CONTINENTS = {
-    "q15": "Africa", "q18": "South America", "q46": "Europe",
-    "q48": "Asia", "q49": "North America", "q55643": "Oceania",
-    "q51": "Antarctica", "africa": "Africa", "south america": "South America",
-    "europe": "Europe", "asia": "Asia", "north america": "North America",
-    "oceania": "Oceania", "antarctica": "Antarctica",
-}
 
-SDGS = {
-    "1": "No Poverty", "2": "Zero Hunger", "3": "Good Health and Well-being",
-    "4": "Quality Education", "5": "Gender Equality",
-    "6": "Clean Water and Sanitation", "7": "Affordable and Clean Energy",
-    "8": "Decent Work and Economic Growth", "9": "Industry, Innovation and Infrastructure",
-    "10": "Reduced Inequalities", "11": "Sustainable Cities and Communities",
-    "12": "Responsible Consumption and Production", "13": "Climate Action",
-    "14": "Life Below Water", "15": "Life on Land",
-    "16": "Peace, Justice, and Strong Institutions", "17": "Partnerships for the Goals",
-}
+def _config_table(entity_type: Optional[str]) -> Optional[Dict[str, str]]:
+    """Load (once) the `config/<entity_type>.yaml` `values` list into a
+    {short_id.lower(): display_name} table. Returns None for namespaces with no
+    config file (native ES entities, or `works`). Defensive: any load failure
+    yields an empty table rather than raising into a render."""
+    if entity_type not in _CONFIG_YAML_BY_NS:
+        return None
+    if entity_type not in _CONFIG_TABLES:
+        table: Dict[str, str] = {}
+        path = os.path.join(_CONFIG_DIR, _CONFIG_YAML_BY_NS[entity_type])
+        try:
+            if _yaml is not None:
+                with open(path) as fh:
+                    for row in (_yaml.safe_load(fh) or {}).get("values", []):
+                        rid = str(row.get("id", ""))
+                        short = rid.split("/", 1)[1] if "/" in rid else rid
+                        name = row.get("display_name")
+                        if short and name:
+                            table[short.lower()] = name
+        except Exception:  # pragma: no cover - missing/corrupt config
+            table = {}
+        _CONFIG_TABLES[entity_type] = table
+    return _CONFIG_TABLES[entity_type]
 
 
 def _builtin_name(entity_type: Optional[str], short_id: str) -> Optional[str]:
-    """Resolve well-known non-native entity codes to display names."""
-    if entity_type == "types":
-        return short_id.replace("-", " ").title()
-    if entity_type == "oa-statuses":
-        return short_id.title()
-    if entity_type == "languages":
-        return LANGUAGES.get(short_id.lower())
-    if entity_type == "countries":
-        return COUNTRIES.get(short_id.lower())
-    if entity_type == "continents":
-        return CONTINENTS.get(short_id.lower())
-    if entity_type == "sdgs":
-        return SDGS.get(short_id)
+    """Resolve a non-native entity code/id to its display name from config yaml."""
+    table = _config_table(entity_type)
+    if table is not None:
+        return table.get(short_id.lower())
     return None
 
 

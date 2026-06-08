@@ -82,7 +82,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "works where SDG is 2 [Zero Hunger]"
+        assert result == "works where SDG is 2 [Zero hunger]"
 
     def test_entity_value_type(self):
         """Enum slugs (type) render bare — no name annotation (canonical)."""
@@ -226,7 +226,7 @@ class TestOQLRenderer:
         result = render_oqo_to_oql(oqo)
 
         assert "it's open access" in result
-        assert "SDG is 2 [Zero Hunger]" in result
+        assert "SDG is 2 [Zero hunger]" in result
         assert "country is ca [Canada]" in result
         assert "it's from the global south" in result
         assert "year >= 2020" in result

@@ -643,12 +643,15 @@ def _parse_search_boolean(field: str, value: str) -> FilterType:
             return inner
         if kind == "PHRASE":
             consume()
-            # Strip surrounding double-quotes for the leaf value if it's a
-            # plain quoted phrase (no proximity suffix); proximity stays literal.
-            v = text
-            if v.startswith('"') and v.endswith('"') and "~" not in v:
-                v = v[1:-1]
-            return LeafFilter(column_id=field, value=v, operator="contains")
+            # Keep the surrounding double-quotes on the leaf value: a `.search`
+            # phrase value carries its quotes as the IR convention (the same shape
+            # the standalone `parse_single_filter` path produces — it does NOT strip
+            # quotes for search fields). Stripping them here made a multi-word phrase
+            # inside an OR/AND group render BARE (`(reduced order model or surrogate
+            # model)`), which is invalid, un-reparseable OQL (a space is an implicit
+            # AND, so it mixes AND/OR at one level). The renderer relies on the quotes
+            # to print the value as a phrase. (oxjob #363 case 8a)
+            return LeafFilter(column_id=field, value=text, operator="contains")
         # Unexpected token (shouldn't happen for well-formed input)
         consume()
         return LeafFilter(column_id=field, value=text, operator="contains")

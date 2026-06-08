@@ -25,9 +25,15 @@ from query_translation.url_renderer import URLRenderError, render_oqo_to_url
 
 
 # Entity types that exist in Elasticsearch and can be looked up for display names.
+# Entity types `get_display_name` can resolve via ES by OpenAlex ID. These all
+# have single-letter-prefixed IDs (I…, A…, S…, W…) that `normalize_openalex_id`
+# routes to an index. `works` is here so the cited_by/cites filters resolve a
+# work's title (oxjob #363 case 7). fields/subfields/domains are intentionally
+# NOT here: their IDs are numeric path-style (`fields/27`) which `get_display_name`
+# can't route — they resolve from config/*.yaml in the renderer's _builtin_name.
 NATIVE_ENTITY_TYPES = {
     "institutions", "authors", "sources", "publishers", "funders", "topics",
-    "subfields", "fields", "domains", "keywords", "concepts",
+    "keywords", "concepts", "works",
 }
 
 # The order components appear in a rendered oxurl (mirrors the API's param order).

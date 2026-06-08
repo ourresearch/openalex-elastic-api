@@ -457,17 +457,18 @@ class TestEntityResolution:
         )
         oql, _ = render_oqo_to_oql_and_tree(oqo)
 
-        assert "SDG is 4 [Quality Education]" in oql
+        assert "SDG is 4 [Quality education]" in oql  # name from config/sdgs.yaml (#363)
 
-    def test_language_not_name_resolved(self):
-        """Language is a canonical enum slug — rendered bare, no name annotation."""
+    def test_language_name_resolved(self):
+        """Language resolves a [display name] from config/languages.yaml — it's a
+        closed code vocabulary, not a 'super obvious' enum (oxjob #363 case 5)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[LeafFilter(column_id="language", value="en")]
         )
         oql, _ = render_oqo_to_oql_and_tree(oqo)
 
-        assert oql == "works where language is en"
+        assert oql == "works where language is en [English]"
 
     def test_type_rendered_bare(self):
         """Work type is a canonical enum slug — rendered bare, no name annotation."""

@@ -141,6 +141,10 @@ _f("year", "publication_year", "num", aliases=["publication_year"])
 # kept distinct from the cited_by/cites relationship filters. Old "citations" → alias.
 _f("citation count", "cited_by_count", "num", aliases=["citations", "cited_by_count", "cited by count"])
 _f("FWCI", "fwci", "num", aliases=["fwci"], is_float=True)
+# The work's citation count normalized by subfield + year, as a percentile (0-100).
+# Render word = registry display_name "citation percentile by subfield" (#363 case 4).
+_f("citation percentile by subfield", "citation_normalized_percentile.value", "num",
+   aliases=["citation_normalized_percentile.value"], is_float=True)
 
 # --- booleans ---
 _f("open access", "open_access.is_oa", "bool", aliases=["open_access.is_oa"],
@@ -154,6 +158,22 @@ _f("has a DOI", "has_doi", "bool", aliases=["has_doi"],
    bool_true="it has a DOI", bool_false="it doesn't have a DOI")
 _f("has an ORCID", "has_orcid", "bool", aliases=["has_orcid"],
    bool_true="it has an ORCID", bool_false="it doesn't have an ORCID")
+# Full text available in some open repository (engine open_access.any_repository_has_fulltext).
+# Booleans render via their phrasing (gate-exempt from the registry display_name). (#363 case 6)
+# The bool clause parser maps the phrase AFTER the "it's"/"it has" prefix back to
+# a field via its aliases, so the post-prefix phrasing is registered as an alias
+# (so the rendered bool_true round-trips). Booleans are gate-exempt, so the extra
+# spellings are free.
+_f("has repository fulltext", "open_access.any_repository_has_fulltext", "bool",
+   aliases=["open_access.any_repository_has_fulltext", "fulltext in a repository"],
+   bool_true="it has fulltext in a repository", bool_false="it doesn't have fulltext in a repository")
+# Citation-percentile band flags (subfield+year normalized). (#363 case 4 siblings)
+_f("in top 1% by citations", "citation_normalized_percentile.is_in_top_1_percent", "bool",
+   aliases=["citation_normalized_percentile.is_in_top_1_percent", "in the top 1% by citations"],
+   bool_true="it's in the top 1% by citations", bool_false="it's not in the top 1% by citations")
+_f("in top 10% by citations", "citation_normalized_percentile.is_in_top_10_percent", "bool",
+   aliases=["citation_normalized_percentile.is_in_top_10_percent", "in the top 10% by citations"],
+   bool_true="it's in the top 10% by citations", bool_false="it's not in the top 10% by citations")
 
 # --- ids (entity references) ---
 _f("institution", "authorships.institutions.lineage", "id",
@@ -181,6 +201,11 @@ _f("field", "primary_topic.field.id", "id", aliases=["primary_topic.field.id"])
 # render word = registry display_name "subfield"; name-resolved via the native subfields namespace.
 _f("subfield", "primary_topic.subfield.id", "id", aliases=["primary_topic.subfield.id"])
 _f("openalex id", "ids.openalex", "id", aliases=["ids.openalex"])
+# Citation relationships to a specific work (W-id; resolves the work's title).
+# Render words = registry display_names "cited by" / "cites" (#363 case 7).
+# cited_by:W = works in W's reference list ("cited by" W); cites:W = works citing W.
+_f("cited by", "cited_by", "id", aliases=["cited_by"])
+_f("cites", "cites", "id", aliases=["cites"])
 
 # --- collection (same-type membership) ---
 # The same-type `collection:` filter: "this row's entity is a member of Collection
@@ -203,7 +228,9 @@ _f("country code", "country_code", "enum", aliases=["country_code"],
    casing="upper", resolves_name=True)
 _f("author country", "last_known_institutions.country_code", "enum",
    aliases=["last_known_institutions.country_code"], casing="upper", resolves_name=True)
-_f("language", "language", "enum", aliases=[])
+# Languages resolve a [display name] (English, not en) from config/languages.yaml,
+# like countries — a closed code vocabulary, not a "super obvious" enum. (oxjob #363 case 5)
+_f("language", "language", "enum", aliases=[], resolves_name=True)
 # The source's type (journal / conference / repository / ebook platform / book series /
 # metadata / other). Render word = the engine registry display_name `source type`
 # (`core/display_names.py`). Slug enum; multi-word values like "ebook platform" are
@@ -1787,15 +1814,30 @@ def _call_resolver(resolver, value, column_id):
         return resolver(value)
 
 
+# Max length of a `[display name]` annotation before it's truncated with an
+# ellipsis. Uniform across every resolved name (work titles are the worst case,
+# but long institution/source names get clipped too). (oxjob #363 case 7)
+_NAME_ANNOTATION_MAX = 50
+
+
+def _truncate_name(name: str) -> str:
+    """Clip a display-name annotation to a uniform length with an ellipsis."""
+    name = " ".join(name.split())  # collapse internal whitespace/newlines
+    if len(name) > _NAME_ANNOTATION_MAX:
+        return name[: _NAME_ANNOTATION_MAX - 1].rstrip() + "…"
+    return name
+
+
 def _value_with_name(fld, value, column_id, resolver) -> str:
     """Render a value, appending ` [display name]` when the column resolves names
-    and a resolver is supplied (institutions, authors, …, country codes)."""
+    and a resolver is supplied (institutions, authors, …, country codes). The name
+    is truncated to a uniform length with an ellipsis."""
     rendered = _render_value(fld, value)
     if (resolver and fld and fld.resolves_name and isinstance(value, str)
             and not value.startswith("col_")):
         name = _call_resolver(resolver, value, column_id)
         if name:
-            return f"{rendered} [{name}]"
+            return f"{rendered} [{_truncate_name(name)}]"
     return rendered
 
 
@@ -1901,9 +1943,10 @@ def _value_segments(fld, value, column_id, resolver):
             and not value.startswith("col_")):
         name = _call_resolver(resolver, value, column_id)
         if name:
+            shown = _truncate_name(name)  # uniform clip — must match _value_with_name
             segs.append(_seg("text", " "))
-            segs.append(_seg("id", f"[{name}]", entity_display_name=name,
-                             entity_display_id=f"[{name}]"))
+            segs.append(_seg("id", f"[{shown}]", entity_display_name=shown,
+                             entity_display_id=f"[{shown}]"))
             entity = EntityValue(id=value, short_id=value, display_name=name)
     return segs, entity
 
