@@ -175,13 +175,13 @@ _f("institution name", "institutions.display_name", "search",
 # engine param still exists for raw URLs; OQL just doesn't surface it.
 
 # --- numeric ---
-_f("year", "publication_year", "num", aliases=["publication_year"])
+_f("year", "publication_year", "num")
 # Render word "citation count" = the registry display_name (#381 v1.5.0): the COUNT,
 # kept distinct from the cited_by/cites relationship filters. Old "citations" → alias.
 # Friendly input aliases ("citations", "cited by count") live in the properties
 # registry (core/display_names.py), not here — the registry-alias fallback parses
 # them; _FIELDS keeps only the canonical word + the raw column-id alias. (#406 1c)
-_f("citation count", "cited_by_count", "num", aliases=["cited_by_count"])
+_f("citation count", "cited_by_count", "num")
 _f("FWCI", "fwci", "num", aliases=["fwci"], is_float=True)
 # The work's citation count normalized by subfield + year, as a percentile (0-100).
 # Render word = registry display_name "citation percentile by subfield" (#363 case 4).
@@ -202,11 +202,11 @@ _f("citation percentile by subfield", "citation_normalized_percentile.value", "n
 # (free keys get HTTP 200 {"error":"Plan upgrade required"}); the engine enforces
 # this at query time — OQL just surfaces the fields. Never put a free-tier
 # created/updated example in user-facing links; `date` (publication) is free.
-_f("date", "publication_date", "date", aliases=["publication_date"],
+_f("date", "publication_date", "date",
    date_from_col="from_publication_date", date_to_col="to_publication_date")
-_f("created date", "created_date", "date", aliases=["created_date"],
+_f("created date", "created_date", "date",
    date_from_col="from_created_date", date_to_col="to_created_date")
-_f("updated date", "updated_date", "date", aliases=["updated_date"],
+_f("updated date", "updated_date", "date",
    date_from_col="from_updated_date", date_to_col="to_updated_date")
 # Bound columns: parse the raw from_*/to_* key (so it leaves the #363 fallback and
 # a GUI-shared `from_created_date=…` URL round-trips), RENDER via the axis word.
@@ -218,16 +218,15 @@ _f("from_updated_date", "from_updated_date", "date", date_axis="updated date", d
 _f("to_updated_date", "to_updated_date", "date", date_axis="updated date", date_bound="<=")
 
 # --- booleans ---
-_f("open access", "open_access.is_oa", "bool", aliases=["open_access.is_oa", "is_oa"],
+_f("open access", "open_access.is_oa", "bool",
    bool_true="it's open access", bool_false="it's not open access")
 _f("from global south", "institutions.is_global_south", "bool",
-   aliases=["institutions.is_global_south"],
    bool_true="it's from the global south", bool_false="it's not from the global south")
-_f("retracted", "is_retracted", "bool", aliases=["is_retracted"],
+_f("retracted", "is_retracted", "bool",
    bool_true="it's retracted", bool_false="it's not retracted")
-_f("has a DOI", "has_doi", "bool", aliases=["has_doi"],
+_f("has a DOI", "has_doi", "bool",
    bool_true="it has a DOI", bool_false="it doesn't have a DOI")
-_f("has an ORCID", "has_orcid", "bool", aliases=["has_orcid"],
+_f("has an ORCID", "has_orcid", "bool",
    bool_true="it has an ORCID", bool_false="it doesn't have an ORCID")
 # Full text available in some open repository (engine open_access.any_repository_has_fulltext).
 # Booleans render via their phrasing (gate-exempt from the registry display_name). (#363 case 6)
@@ -236,7 +235,7 @@ _f("has an ORCID", "has_orcid", "bool", aliases=["has_orcid"],
 # (so the rendered bool_true round-trips). Booleans are gate-exempt, so the extra
 # spellings are free.
 _f("has repository fulltext", "open_access.any_repository_has_fulltext", "bool",
-   aliases=["open_access.any_repository_has_fulltext", "fulltext in a repository"],
+   aliases=["fulltext in a repository"],
    bool_true="it has fulltext in a repository", bool_false="it doesn't have fulltext in a repository")
 # Citation-percentile band flags (subfield+year normalized). (#363 case 4 siblings)
 _f("in top 1% by citations", "citation_normalized_percentile.is_in_top_1_percent", "bool",
@@ -247,39 +246,37 @@ _f("in top 10% by citations", "citation_normalized_percentile.is_in_top_10_perce
    bool_true="it's in the top 10% by citations", bool_false="it's not in the top 10% by citations")
 
 # --- ids (entity references) ---
-_f("institution", "authorships.institutions.lineage", "id",
-   aliases=["authorships.institutions.lineage"])
-_f("author", "authorships.author.id", "id", aliases=["authorships.author.id"])
-_f("source", "primary_location.source.id", "id", aliases=["primary_location.source.id"])
-_f("topic", "primary_topic.id", "id", aliases=["primary_topic.id"])
-_f("topics", "topics.id", "id", aliases=["topics.id"])
-_f("funder", "funders.id", "id", aliases=["funders.id", "grants.funder"])
+_f("institution", "authorships.institutions.lineage", "id")
+_f("author", "authorships.author.id", "id")
+_f("source", "primary_location.source.id", "id")
+_f("topic", "primary_topic.id", "id")
+_f("topics", "topics.id", "id")
+_f("funder", "funders.id", "id")
 # Publisher of the work's primary source (engine param primary_location.source.publisher_lineage,
 # a P-id; lineage so a parent publisher matches its imprints). Mirrors `funder`: an entity-id
 # reference, name-resolved via the publishers namespace. (oxjob #363 discovery loop run #1)
 _f("publisher", "primary_location.source.publisher_lineage", "id",
-   aliases=["primary_location.source.publisher_lineage", "primary_location.source.host_organization_lineage"])
+   aliases=["primary_location.source.host_organization_lineage"])
 # Render word "SDG" = the registry display_name (#381 Phase 5: acronym made canonical
 # everywhere). Long forms stay parse aliases.
 # "sustainable development goal(s)" input aliases live in the registry (#406 1c).
 _f("SDG", "sustainable_development_goals.id", "id",
-   aliases=["sustainable_development_goals.id", "sdg"])
-_f("last known institution", "last_known_institutions.id", "id",
-   aliases=["last_known_institutions.id"])
+   aliases=["sdg"])
+_f("last known institution", "last_known_institutions.id", "id")
 # `primary_topic.domain.id` is the canonical works column the GUI facets as "domain"
 # (entityToSelect domains); `domain.id` is the OQL-only shorthand. Fold the GUI param in
 # as an alias so it parses to / renders "domain" and drops off the #363 fallback. (#402)
-_f("domain", "domain.id", "id", aliases=["domain.id", "primary_topic.domain.id"])
-_f("field", "primary_topic.field.id", "id", aliases=["primary_topic.field.id"])
+_f("domain", "domain.id", "id")
+_f("field", "primary_topic.field.id", "id")
 # subfield of the work's primary topic (topic hierarchy: domain > field > subfield > topic).
 # Was missing while its siblings field/domain/topic were registered (oxjob #363 discovery run #2);
 # render word = registry display_name "subfield"; name-resolved via the native subfields namespace.
-_f("subfield", "primary_topic.subfield.id", "id", aliases=["primary_topic.subfield.id"])
-_f("openalex id", "ids.openalex", "id", aliases=["ids.openalex"])
+_f("subfield", "primary_topic.subfield.id", "id")
+_f("openalex id", "ids.openalex", "id")
 # Citation relationships to a specific work (W-id; resolves the work's title).
 # Render words = registry display_names "cited by" / "cites" (#363 case 7).
 # cited_by:W = works in W's reference list ("cited by" W); cites:W = works citing W.
-_f("cited by", "cited_by", "id", aliases=["cited_by"])
+_f("cited by", "cited_by", "id")
 _f("cites", "cites", "id", aliases=["cites"])
 
 # --- collection (same-type membership) ---
@@ -291,38 +288,36 @@ _f("cites", "cites", "id", aliases=["cites"])
 _f("work", "collection", "collection", aliases=["works"], resolves_name=False)
 
 # --- enums (slug values) ---
-_f("type", "type", "enum", aliases=[])
+_f("type", "type", "enum")
 # Render word "open access status" = the registry display_name (#381 Phase 5); the
 # greedy field matcher prefers it over the 2-word "open access" bool when "status"
 # follows. Old "OA status" → parse alias.
 # "OA status" input alias lives in the registry (#406 1c).
-_f("open access status", "open_access.oa_status", "enum", aliases=["open_access.oa_status", "oa_status"])
+_f("open access status", "open_access.oa_status", "enum", aliases=["oa_status"])
 # Country codes: ISO uppercase canonical + resolve a [display name] (Germany, not de).
-_f("country", "authorships.countries", "enum", aliases=["authorships.countries"],
+_f("country", "authorships.countries", "enum",
    casing="upper", resolves_name=True)
-_f("country code", "country_code", "enum", aliases=["country_code"],
+_f("country code", "country_code", "enum",
    casing="upper", resolves_name=True)
-_f("author country", "last_known_institutions.country_code", "enum",
-   aliases=["last_known_institutions.country_code"], casing="upper", resolves_name=True)
+_f("author country", "last_known_institutions.country_code", "enum", casing="upper", resolves_name=True)
 # Languages resolve a [display name] (English, not en) from config/languages.yaml,
 # like countries — a closed code vocabulary, not a "super obvious" enum. (oxjob #363 case 5)
-_f("language", "language", "enum", aliases=[], resolves_name=True)
+_f("language", "language", "enum", resolves_name=True)
 # The source's type (journal / conference / repository / ebook platform / book series /
 # metadata / other). Render word = the engine registry display_name `source type`
 # (`core/display_names.py`). Slug enum; multi-word values like "ebook platform" are
 # valid atoms. Distinct from `type` (the WORK's type, column `type`). (oxjob #363)
-_f("source type", "primary_location.source.type", "enum",
-   aliases=["primary_location.source.type", "source.type"])
+_f("source type", "primary_location.source.type", "enum")
 
 # --- literal strings ---
 _f("DOI", "doi", "string", aliases=["doi"])
 # "author orcid" input alias lives in the registry (#406 1c).
-_f("ORCID", "authorships.author.orcid", "string", aliases=["authorships.author.orcid"])
+_f("ORCID", "authorships.author.orcid", "string")
 # The work's journal, by ISSN (engine param primary_location.source.issn; accepts ISSN-L or
 # any of a source's ISSNs). Literal string like DOI/ORCID — no name resolution. WoS `IS=`,
 # Scopus `ISSN()`. (oxjob #363 discovery loop run #1)
 _f("ISSN", "primary_location.source.issn", "string",
-   aliases=["issn", "primary_location.source.issn", "source.issn"])
+   aliases=["issn"])
 
 # --- oxjob #402 friendly-name audit (long-tail GUI/docs columns) ---
 # Front-B-only batch: every render word below already equals the column's registry
@@ -330,33 +325,31 @@ _f("ISSN", "primary_location.source.issn", "string",
 # raw column_id stays a structural alias so the #363 input-alias fallback drops it.
 
 # distinct-count metrics (kind num; registry display_names already clean).
-_f("reference count", "referenced_works_count", "num", aliases=["referenced_works_count"])
-_f("institutions count", "institutions_distinct_count", "num", aliases=["institutions_distinct_count"])
-_f("countries count", "countries_distinct_count", "num", aliases=["countries_distinct_count"])
+_f("reference count", "referenced_works_count", "num")
+_f("institutions count", "institutions_distinct_count", "num")
+_f("countries count", "countries_distinct_count", "num")
 
 # DOI prefix match (engine param doi_starts_with; literal string, no resolution).
-_f("DOI prefix", "doi_starts_with", "string", aliases=["doi_starts_with"])
+_f("DOI prefix", "doi_starts_with", "string")
 
 # Corresponding-author / -institution entity-id filters (name-resolved via the
 # authors / institutions namespaces, like `author` / `institution`).
-_f("corresponding author", "corresponding_author_ids", "id",
-   aliases=["corresponding_author_ids"])
-_f("corresponding institution", "corresponding_institution_ids", "id",
-   aliases=["corresponding_institution_ids"])
+_f("corresponding author", "corresponding_author_ids", "id")
+_f("corresponding institution", "corresponding_institution_ids", "id")
 
 # Bibliographic coordinates (kind string — volumes/issues/pages are free-text
 # labels, e.g. "42", "S1", "iv"). PROPERTIES_VERSION 1.9.0 curated the registry
 # display_names from the raw "biblio volume"/… humanized ids.
-_f("volume", "biblio.volume", "string", aliases=["biblio.volume"])
-_f("issue", "biblio.issue", "string", aliases=["biblio.issue"])
-_f("first page", "biblio.first_page", "string", aliases=["biblio.first_page"])
-_f("last page", "biblio.last_page", "string", aliases=["biblio.last_page"])
+_f("volume", "biblio.volume", "string")
+_f("issue", "biblio.issue", "string")
+_f("first page", "biblio.first_page", "string")
+_f("last page", "biblio.last_page", "string")
 
 # Legacy / external work ids (kind string — literal, no name resolution).
 # Registry display_names curated in 1.9.0 from raw "ids mag"/"ids pmid"/"ids pmcid".
-_f("MAG ID", "ids.mag", "string", aliases=["ids.mag"])
-_f("PMID", "ids.pmid", "string", aliases=["ids.pmid"])
-_f("PMCID", "ids.pmcid", "string", aliases=["ids.pmcid"])
+_f("MAG ID", "ids.mag", "string")
+_f("PMID", "ids.pmid", "string")
+_f("PMCID", "ids.pmcid", "string")
 
 # APC (article processing charge). Only the USD estimated-paid column is curated —
 # its registry display_name is already clean ("estimated APC paid", and it's the one
@@ -366,24 +359,22 @@ _f("PMCID", "ids.pmcid", "string", aliases=["ids.pmcid"])
 # currency,provenance}) are deliberately LEFT OUT OF SCOPE per Jason (2026-06-08):
 # native-currency duplicates + provenance/currency metadata aren't worth an OQL
 # surface; they stay on the #363 raw-key input-alias fallback as documented residue.
-_f("estimated APC paid", "apc_paid.value_usd", "num",
-   aliases=["apc_paid.value_usd"], is_float=True)
+_f("estimated APC paid", "apc_paid.value_usd", "num", is_float=True)
 
 # More Front-B-only columns (registry display_names already clean — no
 # core/display_names.py change, no PROPERTIES_VERSION bump).
 # ROR id of an affiliated institution (literal string, no name resolution — the
 # ROR *is* the identifier the user types). Engine param authorships.institutions.ror.
-_f("ROR ID", "authorships.institutions.ror", "string",
-   aliases=["authorships.institutions.ror"])
+_f("ROR ID", "authorships.institutions.ror", "string")
 # Work-relationship id filters, mirroring cited_by/cites: each references a WORK, so
 # they name-resolve via the `works` namespace (see oql_renderer._RESOLVE_NAMESPACE).
 # referenced_works = this work's reference list; related_to = OpenAlex "related works".
-_f("references", "referenced_works", "id", aliases=["referenced_works"])
-_f("related to", "related_to", "id", aliases=["related_to"])
+_f("references", "referenced_works", "id")
+_f("related to", "related_to", "id")
 # "raw-but-good" distinct-count metrics (kind num, integer counts; display_names
 # are auto-humanized but already read cleanly, so Front-B with the existing word).
-_f("authors count", "authors_count", "num", aliases=["authors_count"])
-_f("locations count", "locations_count", "num", aliases=["locations_count"])
+_f("authors count", "authors_count", "num")
+_f("locations count", "locations_count", "num")
 
 # --- oxjob #402 booleans (content / identifier / index flags) ---
 # Booleans are GATE-EXEMPT (the registry-consistency gate skips bool fields on all
@@ -400,19 +391,19 @@ _f("locations count", "locations_count", "num", aliases=["locations_count"])
 # alias, and must NOT reuse a key already owned by a non-bool field — `abstract`
 # (search), `references` (id), `pmid`/`pmcid` (string ids) are taken, so we register
 # the "has …" form instead of the bare noun for those.
-_f("has an abstract", "has_abstract", "bool", aliases=["has_abstract", "has abstract"],
+_f("has an abstract", "has_abstract", "bool", aliases=["has abstract"],
    bool_true="it has an abstract", bool_false="it doesn't have an abstract")
-_f("has references", "has_references", "bool", aliases=["has_references"],
+_f("has references", "has_references", "bool",
    bool_true="it has references", bool_false="it doesn't have references")
-_f("indexed by PubMed", "has_pmid", "bool", aliases=["has_pmid", "has pmid"],
+_f("indexed by PubMed", "has_pmid", "bool", aliases=["has pmid"],
    bool_true="it's indexed by PubMed", bool_false="it's not indexed by PubMed")
-_f("has a PMCID", "has_pmcid", "bool", aliases=["has_pmcid", "has pmcid"],
+_f("has a PMCID", "has_pmcid", "bool", aliases=["has pmcid"],
    bool_true="it has a PMCID", bool_false="it doesn't have a PMCID")
-_f("indexed by MAG only", "mag_only", "bool", aliases=["mag_only"],
+_f("indexed by MAG only", "mag_only", "bool",
    bool_true="it's indexed by MAG only", bool_false="it's not indexed by MAG only")
-_f("in extended index", "is_xpac", "bool", aliases=["is_xpac", "in the extended index"],
+_f("in extended index", "is_xpac", "bool", aliases=["in the extended index"],
    bool_true="it's in the extended index", bool_false="it's not in the extended index")
-_f("paratext", "is_paratext", "bool", aliases=["is_paratext"],
+_f("paratext", "is_paratext", "bool",
    bool_true="it's paratext", bool_false="it's not paratext")
 
 # --- oxjob #402 Tier-1 open-access first-class columns ---
@@ -427,20 +418,18 @@ _f("paratext", "is_paratext", "bool", aliases=["is_paratext"],
 # minting parallel labels — which also drops them off the #363 raw fallback.
 # Strings with already-clean display_names:
 _f("best open version", "best_open_version", "string",
-   aliases=["best_open_version", "best_oa_location.version"])  # folds best_oa_location.version
-_f("indexed in", "indexed_in", "string", aliases=["indexed_in"])
+   aliases=["best_oa_location.version"])  # folds best_oa_location.version
+_f("indexed in", "indexed_in", "string")
 # OA-version / content bools (gate-exempt — natural phrasing, round-trips via the
 # bool_true remainder). "open access accepted/published" = the work's best OA copy is
 # an accepted / published version.
-_f("linked to a PDF", "has_content.pdf", "bool", aliases=["has_content.pdf"],
+_f("linked to a PDF", "has_content.pdf", "bool",
    bool_true="it's linked to a PDF", bool_false="it's not linked to a PDF")
 _f("open access accepted", "best_oa_location.is_accepted", "bool",
-   aliases=["best_oa_location.is_accepted"],
    bool_true="it's open access accepted", bool_false="it's not open access accepted")
 _f("open access published", "best_oa_location.is_published", "bool",
-   aliases=["best_oa_location.is_published"],
    bool_true="it's open access published", bool_false="it's not open access published")
-_f("has full text", "has_fulltext", "bool", aliases=["has_fulltext"],
+_f("has full text", "has_fulltext", "bool",
    bool_true="it has full text", bool_false="it doesn't have full text")
 
 # --- oxjob #402 Tier-2 location/source mirror BOOLEANS ---
@@ -456,38 +445,37 @@ _f("has full text", "has_fulltext", "bool", aliases=["has_fulltext"],
 # (render -> parse -> same column) for every line below. The three DOAJ / two CWTS-core
 # variants get distinct cores so the scope twins don't collide on one _ALIAS key.
 _f("primary is OA", "primary_location.is_oa", "bool",
-   aliases=["primary_location.is_oa", "open access in its primary location"],
+   aliases=["open access in its primary location"],
    bool_true="it's open access in its primary location",
    bool_false="it's not open access in its primary location")
 _f("primary is published", "primary_location.is_published", "bool",
-   aliases=["primary_location.is_published", "published in its primary location"],
+   aliases=["published in its primary location"],
    bool_true="it's published in its primary location",
    bool_false="it's not published in its primary location")
 _f("primary is accepted", "primary_location.is_accepted", "bool",
-   aliases=["primary_location.is_accepted", "accepted in its primary location"],
+   aliases=["accepted in its primary location"],
    bool_true="it's accepted in its primary location",
    bool_false="it's not accepted in its primary location")
 _f("primary source has ISSN", "primary_location.source.has_issn", "bool",
-   aliases=["primary_location.source.has_issn", "in a primary source with an ISSN"],
+   aliases=["in a primary source with an ISSN"],
    bool_true="it's in a primary source with an ISSN",
    bool_false="it's not in a primary source with an ISSN")
 # primary source flags whose registry display_names are already curated/clean — keep verbatim
 # (matrix bold). Clause cores are grammatical "in a/an …"; the render word stays the canonical
 # matrix word for group-by.
 _f("CWTS core source", "primary_location.source.is_core", "bool",
-   aliases=["primary_location.source.is_core", "in a CWTS core source"],
+   aliases=["in a CWTS core source"],
    bool_true="it's in a CWTS core source",
    bool_false="it's not in a CWTS core source")
 _f("indexed by DOAJ", "primary_location.source.is_in_doaj", "bool",
-   aliases=["primary_location.source.is_in_doaj"],
    bool_true="it's indexed by DOAJ",
    bool_false="it's not indexed by DOAJ")
 _f("in OA source", "primary_location.source.is_oa", "bool",
-   aliases=["primary_location.source.is_oa", "in an OA source"],
+   aliases=["in an OA source"],
    bool_true="it's in an OA source",
    bool_false="it's not in an OA source")
 _f("best OA source indexed by DOAJ", "best_oa_location.source.is_in_doaj", "bool",
-   aliases=["best_oa_location.source.is_in_doaj", "indexed by DOAJ in its best OA source"],
+   aliases=["indexed by DOAJ in its best OA source"],
    bool_true="it's indexed by DOAJ in its best OA source",
    bool_false="it's not indexed by DOAJ in its best OA source")
 # --- non-works entity booleans (oxjob #406 1c) ---
@@ -502,38 +490,37 @@ _f("best OA source indexed by DOAJ", "best_oa_location.source.is_in_doaj", "bool
 # it needs NO entry here: the bool clause parser entity-resolves the existing word to
 # the bare `is_core` column on sources (_entity_resolve_field).
 _f("fully open access", "is_oa", "bool",
-   aliases=["is_oa", "fully open access"],
+   aliases=["fully open access"],
    bool_true="it's fully open access",
    bool_false="it's not fully open access")
 _f("in DOAJ", "is_in_doaj", "bool",
-   aliases=["is_in_doaj", "in DOAJ"],
+   aliases=["in DOAJ"],
    bool_true="it's in DOAJ",
    bool_false="it's not in DOAJ")
 _f("any location is OA", "locations.is_oa", "bool",
-   aliases=["locations.is_oa", "open access in any location"],
+   aliases=["open access in any location"],
    bool_true="it's open access in any location",
    bool_false="it's not open access in any location")
 _f("any location is published", "locations.is_published", "bool",
-   aliases=["locations.is_published", "published in any location"],
+   aliases=["published in any location"],
    bool_true="it's published in any location",
    bool_false="it's not published in any location")
 _f("any location is accepted", "locations.is_accepted", "bool",
-   aliases=["locations.is_accepted", "accepted in any location"],
+   aliases=["accepted in any location"],
    bool_true="it's accepted in any location",
    bool_false="it's not accepted in any location")
 _f("any location CWTS core source", "locations.source.is_core", "bool",
-   aliases=["locations.source.is_core", "in a CWTS core source in any location"],
+   aliases=["in a CWTS core source in any location"],
    bool_true="it's in a CWTS core source in any location",
    bool_false="it's not in a CWTS core source in any location")
 _f("any location source indexed by DOAJ", "locations.source.is_in_doaj", "bool",
-   aliases=["locations.source.is_in_doaj", "indexed by DOAJ in any location"],
+   aliases=["indexed by DOAJ in any location"],
    bool_true="it's indexed by DOAJ in any location",
    bool_false="it's not indexed by DOAJ in any location")
 # Tier-1 OA-version promote (the or-free sibling of has_oa_accepted_or_published_version,
 # which stays on the fallback pending an or-free label — finding #3). "has X" template: the
 # parser reconstructs "has " + remainder == the field word, so no extra clause-core alias.
 _f("has OA submitted version", "has_oa_submitted_version", "bool",
-   aliases=["has_oa_submitted_version"],
    bool_true="it has an OA submitted version",
    bool_false="it doesn't have an OA submitted version")
 
@@ -548,45 +535,39 @@ _f("has OA submitted version", "has_oa_submitted_version", "bool",
 # publisher-vs-institution-vs-ambiguous-host-org disambiguation is a judgment call grouped
 # with batch 7. id cols name-resolve via the `sources` namespace (oql_renderer).
 # ISSN / version / license: literal strings (no name resolution), like primary's ISSN.
-_f("best OA license", "best_oa_location.license", "string", aliases=["best_oa_location.license"])
-_f("any location license", "locations.license", "string", aliases=["locations.license"])
-_f("license", "primary_location.license", "string", aliases=["primary_location.license"])
-_f("best OA source ISSN", "best_oa_location.source.issn", "string",
-   aliases=["best_oa_location.source.issn"])
-_f("any location source ISSN", "locations.source.issn", "string",
-   aliases=["locations.source.issn"])
-_f("primary version", "primary_location.version", "string", aliases=["primary_location.version"])
-_f("any location version", "locations.version", "string", aliases=["locations.version"])
+_f("best OA license", "best_oa_location.license", "string")
+_f("any location license", "locations.license", "string")
+_f("license", "primary_location.license", "string")
+_f("best OA source ISSN", "best_oa_location.source.issn", "string")
+_f("any location source ISSN", "locations.source.issn", "string")
+_f("primary version", "primary_location.version", "string")
+_f("any location version", "locations.version", "string")
 # source type: slug enum (mirrors primary's "source type").
-_f("best OA source type", "best_oa_location.source.type", "enum",
-   aliases=["best_oa_location.source.type"])
-_f("any location source type", "locations.source.type", "enum",
-   aliases=["locations.source.type"])
+_f("best OA source type", "best_oa_location.source.type", "enum")
+_f("any location source type", "locations.source.type", "enum")
 # source id: entity-id reference, name-resolved via the sources namespace (mirrors primary's
 # "source"). _RESOLVE_NAMESPACE entries added in oql_renderer.py.
-_f("best OA source", "best_oa_location.source.id", "id", aliases=["best_oa_location.source.id"])
-_f("any location source", "locations.source.id", "id", aliases=["locations.source.id"])
+_f("best OA source", "best_oa_location.source.id", "id")
+_f("any location source", "locations.source.id", "id")
 
 # --- oxjob #402 batch 7 (GUI-faceted long-tail; scoped to what the current GUI supports
 # per Jason 2026-06-09 — anything not GUI-faceted or with ambiguous naming is left out of OQL
 # and stays on the #363 raw fallback). All Front-B (registry display_names already clean).
 # institution type: the affiliated institution's type (education / healthcare / company / …);
 # slug enum, mirrors source type. GUI displayName "institution type".
-_f("institution type", "authorships.institutions.type", "enum",
-   aliases=["authorships.institutions.type"])
+_f("institution type", "authorships.institutions.type", "enum")
 # awards: grant/award entity-id, name-resolved via the awards namespace. GUI displayName
 # "awards" (entityToSelect awards). _RESOLVE_NAMESPACE entry in oql_renderer.py.
-_f("awards", "awards.id", "id", aliases=["awards.id"])
+_f("awards", "awards.id", "id")
 # continent of an affiliated institution. GUI facet "Continent" (entityToSelect continents);
 # values are `continents/Q15`-style ids that resolve to a name (Africa, Europe, …) via the
 # continents namespace — id kind, like `domain`. (#402 batch 7, Jason-approved 2026-06-09)
-_f("continent", "authorships.institutions.continent", "id",
-   aliases=["authorships.institutions.continent"])
+_f("continent", "authorships.institutions.continent", "id")
 # keyword: the curated-keyword ENTITY filter (GUI facet "keyword", entityToSelect keywords),
 # name-resolved via the keywords namespace — like topic/domain. This claims the word "keyword"
 # (OQL no longer registers keyword.search; see the search section). Registry display_name for
 # keywords.id is already "keyword" → Front-B. (Jason 2026-06-09, #402)
-_f("keyword", "keywords.id", "id", aliases=["keywords.id"])
+_f("keyword", "keywords.id", "id")
 
 # Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
 _BY_COLUMN = {}

@@ -159,8 +159,14 @@ def test_case3_3_raw_numeric_column_supports_comparison():
 
 @_needs_registry
 def test_case3_3_raw_key_round_trips():
+    # A raw registry column id is accepted as input and round-trips to the same OQO.
+    # `ids.pmid` has since gained a curated friendly word ("PMID", #381/#402), so the
+    # render NORMALIZES the raw spelling to that word (and "PMID" re-parses to ids.pmid).
+    # oxjob #406 dropped the redundant raw-id `_FIELDS` alias — the registry fallback
+    # now parses the raw key — which is what un-masked this previously-skipped test
+    # (its `_HAS_REGISTRY` probe keyed on ids.pmid, which used to sit in `_ALIAS`).
     out = _render("works where ids.pmid is 12345678")
-    assert out == "works where ids.pmid is 12345678"
+    assert out == "works where PMID is 12345678"
     assert _leaves(out) == [{"column_id": "ids.pmid", "value": "12345678"}]
 
 
