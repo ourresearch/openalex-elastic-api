@@ -310,12 +310,25 @@ def parse_context(q: str, pos: Optional[int] = None) -> Dict[str, Any]:
 
     # (C) classify via the production parser (single source of grammar truth)
     raw = _classify_via_engine(prior)
-    ctx = _shape(raw)
-    ctx["prefix"] = prefix
-    ctx["replace_range"] = replace
-    # widen the replace range backwards across a partially-typed multi-word field
-    if ctx["category"] == FIELD and prefix:
-        _extend_multiword_prefix(prior, ctx, replace)
+    # Multiword-VALUE widening (#357 iter-3 bug 1): if the cursor word is the tail of a
+    # partially-typed multi-word value (`institution is university of fl`, `country is
+    # united ki`), strict classification of the full prefix mis-reads the first value
+    # word as a *complete* value and reports the cursor as a connective/none slot. Re-run
+    # the parser against just `field <operator>` so we get the VALUE context back, then
+    # widen the prefix + replace_range across the value words already typed.
+    widened = _widen_multiword_value(prior, prefix) if prefix else None
+    if widened is not None:
+        ctx, val_start = widened
+        ctx["prefix"] = " ".join(t.val for t in prior[val_start:]) + " " + prefix
+        replace["start"] = prior[val_start].pos
+        ctx["replace_range"] = replace
+    else:
+        ctx = _shape(raw)
+        ctx["prefix"] = prefix
+        ctx["replace_range"] = replace
+        # widen the replace range backwards across a partially-typed multi-word field
+        if ctx["category"] == FIELD and prefix:
+            _extend_multiword_prefix(prior, ctx, replace)
     # resolve the sibling clause's token-index spans into char offsets (#357)
     if ctx.get("sibling"):
         _resolve_sibling_ranges(prior, ctx["sibling"])
@@ -340,6 +353,49 @@ def _resolve_sibling_ranges(prior: List[Tok], sib: Dict[str, Any]) -> None:
     if vstart_i is not None and s_i <= vstart_i < e_i:
         sib["value_range"] = {"start": prior[vstart_i].pos,
                               "end": _tok_end(prior[e_i - 1])}
+
+
+def _value_run_start(prior: List[Tok]) -> Optional[int]:
+    """If `prior` ends with a partially-typed multi-token value (the words *after* a
+    complete operator), return the index in `prior` where that value run begins; else
+    None (oxjob #357 iter-3 bug 1).
+
+    Found by locating the rightmost *complete* operator whose tokens-to-end form an
+    unbroken run of value words (plain WORDs, no connective / paren). This reuses
+    `match_operator` (shared grammar truth) rather than a hand-kept keyword stop-set, so
+    the value/operator boundary can't drift from the parser — important because operator
+    tails like `of`/`in` (`is any of`, `is in`) are also legal value words
+    (`university of florida`). Single-token values — where the operator is the last
+    `prior` token and the value's first word is the cursor word — return None; the normal
+    path already classifies those correctly."""
+    for i in range(len(prior) - 1, -1, -1):
+        m = _match_operator(prior, i)
+        if not m:
+            continue
+        _op, n, complete, _opens = m
+        if not complete:
+            continue
+        val_start = i + n
+        if val_start >= len(prior):
+            return None  # operator is the last token; the value's 1st word IS the cursor
+        run = prior[val_start:]
+        if all(t.kind == "WORD" and t.val.lower() not in _CONNECTIVES for t in run):
+            return val_start
+        return None
+    return None
+
+
+def _widen_multiword_value(prior: List[Tok], prefix: str):
+    """If the cursor word continues a multi-word value, reclassify against `field
+    <operator>` (the value run stripped off) so the parser reports the VALUE context.
+    Returns `(shaped_ctx, value_run_start_index)` or None (oxjob #357 iter-3 bug 1)."""
+    val_start = _value_run_start(prior)
+    if val_start is None:
+        return None
+    raw = _classify_via_engine(prior[:val_start])
+    if raw.get("category") != VALUE:
+        return None
+    return _shape(raw), val_start
 
 
 def _extend_multiword_prefix(prior: List[Tok], ctx: Dict[str, Any],

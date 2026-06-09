@@ -120,6 +120,50 @@ def test_multiword_field_prefix_extends():
     assert "last known inst" in r["prefix"]
 
 
+# --- multiword VALUE widening (oxjob #357 iter-3 bug 1) -----------------------
+# A value being typed across several words (`university of florida`, `united
+# kingdom`) must classify as VALUE with the WHOLE typed value as the prefix +
+# replace_range — not just the last word — so the entity/enum search sees it all.
+def test_multiword_id_value_prefix_extends():
+    q = "works where institution is university of fl"
+    r = ctx(q)
+    assert r["category"] == C.VALUE
+    assert r["value_kind"] == "id"
+    assert r["autocomplete_entity"] == "institutions"
+    assert r["prefix"] == "university of fl"
+    # replace_range spans from the first value word to the cursor
+    assert r["replace_range"]["start"] == q.index("university")
+    assert r["replace_range"]["end"] == len(q)
+
+
+def test_multiword_enum_value_prefix_extends():
+    q = "works where country is united ki"
+    r = ctx(q)
+    assert r["category"] == C.VALUE
+    assert r["value_kind"] == "enum"
+    assert r["prefix"] == "united ki"
+    assert r["replace_range"]["start"] == q.index("united")
+
+
+def test_single_word_value_unaffected_by_widening():
+    # the existing single-token value path must be untouched (no over-widening)
+    r = ctx("works where institution is har")
+    assert r["category"] == C.VALUE
+    assert r["prefix"] == "har"
+    assert r["replace_range"] == {"start": 27, "end": 30}
+
+
+def test_multiword_value_widening_with_resolved_prior_clause():
+    # a prior clause already resolved to an id (`Ixxxx [Name]`) doesn't block the
+    # widening of a later multiword value at the cursor (the realistic editor flow)
+    q = ("works where institution is I27837315 [University of Michigan] "
+         "and country is united k")
+    r = ctx(q)
+    assert r["category"] == C.VALUE
+    assert r["value_kind"] == "enum"
+    assert r["prefix"] == "united k"
+
+
 def test_pos_out_of_range_is_clamped():
     assert cat("works where ", 9999) == C.FIELD
     assert cat("works", -5) == C.ENTITY
