@@ -178,7 +178,10 @@ _f("institution name", "institutions.display_name", "search",
 _f("year", "publication_year", "num", aliases=["publication_year"])
 # Render word "citation count" = the registry display_name (#381 v1.5.0): the COUNT,
 # kept distinct from the cited_by/cites relationship filters. Old "citations" → alias.
-_f("citation count", "cited_by_count", "num", aliases=["citations", "cited_by_count", "cited by count"])
+# Friendly input aliases ("citations", "cited by count") live in the properties
+# registry (core/display_names.py), not here — the registry-alias fallback parses
+# them; _FIELDS keeps only the canonical word + the raw column-id alias. (#406 1c)
+_f("citation count", "cited_by_count", "num", aliases=["cited_by_count"])
 _f("FWCI", "fwci", "num", aliases=["fwci"], is_float=True)
 # The work's citation count normalized by subfield + year, as a percentile (0-100).
 # Render word = registry display_name "citation percentile by subfield" (#363 case 4).
@@ -258,8 +261,9 @@ _f("publisher", "primary_location.source.publisher_lineage", "id",
    aliases=["primary_location.source.publisher_lineage", "primary_location.source.host_organization_lineage"])
 # Render word "SDG" = the registry display_name (#381 Phase 5: acronym made canonical
 # everywhere). Long forms stay parse aliases.
+# "sustainable development goal(s)" input aliases live in the registry (#406 1c).
 _f("SDG", "sustainable_development_goals.id", "id",
-   aliases=["sustainable_development_goals.id", "sustainable development goal", "sustainable development goals", "sdg"])
+   aliases=["sustainable_development_goals.id", "sdg"])
 _f("last known institution", "last_known_institutions.id", "id",
    aliases=["last_known_institutions.id"])
 # `primary_topic.domain.id` is the canonical works column the GUI facets as "domain"
@@ -291,7 +295,8 @@ _f("type", "type", "enum", aliases=[])
 # Render word "open access status" = the registry display_name (#381 Phase 5); the
 # greedy field matcher prefers it over the 2-word "open access" bool when "status"
 # follows. Old "OA status" → parse alias.
-_f("open access status", "open_access.oa_status", "enum", aliases=["OA status", "open_access.oa_status", "oa status", "oa_status"])
+# "OA status" input alias lives in the registry (#406 1c).
+_f("open access status", "open_access.oa_status", "enum", aliases=["open_access.oa_status", "oa_status"])
 # Country codes: ISO uppercase canonical + resolve a [display name] (Germany, not de).
 _f("country", "authorships.countries", "enum", aliases=["authorships.countries"],
    casing="upper", resolves_name=True)
@@ -311,7 +316,8 @@ _f("source type", "primary_location.source.type", "enum",
 
 # --- literal strings ---
 _f("DOI", "doi", "string", aliases=["doi"])
-_f("ORCID", "authorships.author.orcid", "string", aliases=["authorships.author.orcid", "author orcid"])
+# "author orcid" input alias lives in the registry (#406 1c).
+_f("ORCID", "authorships.author.orcid", "string", aliases=["authorships.author.orcid"])
 # The work's journal, by ISSN (engine param primary_location.source.issn; accepts ISSN-L or
 # any of a source's ISSNs). Literal string like DOI/ORCID — no name resolution. WoS `IS=`,
 # Scopus `ISSN()`. (oxjob #363 discovery loop run #1)
@@ -967,36 +973,53 @@ _ENTITY_FALLBACK_CACHE: Dict[str, Dict[str, "Field"]] = {}
 def _build_entity_fallback(entity: str) -> Dict[str, "Field"]:
     try:
         from core.properties import get_entity_properties
-        from query_translation.input_alias_columns import GUI_FACETED_COLUMNS_BY_ENTITY
+        from query_translation.input_alias_columns import (
+            GUI_FACETED_COLUMNS_BY_ENTITY, INPUT_ALIAS_COLUMNS)
         props = get_entity_properties(entity) or {}
     except Exception:
         return {}
-    allow = GUI_FACETED_COLUMNS_BY_ENTITY.get(entity, frozenset())
+    # works uses its existing GUI/docs allowlist; the non-works entities use the
+    # per-entity GUI-faceted snapshot. On WORKS this fallback exists ONLY to let the
+    # registry own a curated column's input aliases — so a friendly alias can be
+    # DROPPED from `_FIELDS` (it lives in `core/display_names.py`) and still parse
+    # (oxjob #406 1c cleanup). It deliberately does NOT surface uncurated works
+    # columns (those keep the raw column-id path + raw render) — see the works guard.
+    is_works = entity == "works"
+    allow = INPUT_ALIAS_COLUMNS if is_works else GUI_FACETED_COLUMNS_BY_ENTITY.get(entity, frozenset())
     out: Dict[str, Field] = {}
-    for cid, prop in props.items():
-        if cid not in allow:
+    for cid in allow:
+        prop = props.get(cid)
+        if prop is None:
             continue
-        ptype = getattr(prop, "type", None)
         ops = set(getattr(prop, "operators", []) or [])
-        if ptype == "boolean":
-            continue                  # surfaced via _FIELDS _f(...) phrasing, not here
         if "search" in ops or "collection" in ops:
             continue
-        dn = getattr(prop, "display_name", None)
-        if not dn:
-            continue
-        if getattr(prop, "entity_type", None):
-            kind = "id"               # name-resolved reference (institutions, topics, …)
-        elif ptype == "number" or "range" in ops:
-            kind = "num"
+        # Reuse the curated Field when one exists — full fidelity (kind, casing,
+        # resolves_name, and for booleans the sentence phrasing), so a removed alias
+        # re-resolves to EXACTLY the curated behavior.
+        curated = _BY_COLUMN.get(cid)
+        if curated is not None and curated.kind not in ("search", "collection"):
+            fld = curated
+        elif is_works:
+            continue                  # works: don't surface uncurated columns here
         else:
-            kind = "string"           # verbatim id/string (issn_l, ror, country_code)
-        fld = Field(
-            column=cid, kind=kind, oql=dn, casing="",
-            resolves_name=(kind == "id"),
-            is_float=(kind == "num" and "mean_citedness" in cid))
+            ptype = getattr(prop, "type", None)
+            if ptype == "boolean":
+                continue              # uncurated bool needs phrasing -> not surfaced here
+            dn0 = getattr(prop, "display_name", None)
+            if not dn0:
+                continue
+            if getattr(prop, "entity_type", None):
+                kind = "id"           # name-resolved reference (institutions, topics, …)
+            elif ptype == "number" or "range" in ops:
+                kind = "num"
+            else:
+                kind = "string"       # verbatim id/string (issn_l, ror, country_code)
+            fld = Field(column=cid, kind=kind, oql=dn0, casing="",
+                        resolves_name=(kind == "id"),
+                        is_float=(kind == "num" and "mean_citedness" in cid))
         # parse by display_name, registry aliases, and the raw column_id
-        for key in [dn] + list(getattr(prop, "aliases", []) or []) + [cid]:
+        for key in [getattr(prop, "display_name", "")] + list(getattr(prop, "aliases", []) or []) + [cid]:
             if key:
                 out.setdefault(key.lower(), fld)
     return out
@@ -1011,9 +1034,10 @@ def _entity_fallback(entity: str) -> Dict[str, "Field"]:
 def match_entity_fallback(toks: List[Tok], i: int, entity: Optional[str]
                           ) -> Optional[Tuple[str, "Field", int]]:
     """Greedy longest GUI-faceted-registry match (up to 4 words) at ``toks[i]`` for
-    a NON-works `entity`. Returns ``(spelling, Field, n_tokens)`` or ``None``. The
-    works fallback stays the existing `_registry_fallback_field` path (unchanged)."""
-    if not entity or entity == "works":
+    `entity`. Returns ``(spelling, Field, n_tokens)`` or ``None``. On works the index
+    holds ONLY curated columns' registry aliases (so a dropped `_FIELDS` alias still
+    parses); uncurated works columns stay on the `_registry_fallback_field` path."""
+    if not entity:
         return None
     index = _entity_fallback(entity)
     if not index:
