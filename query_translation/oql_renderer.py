@@ -84,6 +84,8 @@ _RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
     # sources namespace, like primary_location.source.id ("source").
     "best_oa_location.source.id": "sources",
     "locations.source.id": "sources",
+    # oxjob #402 batch 7 — grant/award entity ids resolve via the awards namespace.
+    "awards.id": "awards",
 }
 
 # Built-in code/id -> display-name tables for the non-native entity types that

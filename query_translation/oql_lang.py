@@ -194,7 +194,10 @@ _f("SDG", "sustainable_development_goals.id", "id",
    aliases=["sustainable_development_goals.id", "sustainable development goal", "sustainable development goals", "sdg"])
 _f("last known institution", "last_known_institutions.id", "id",
    aliases=["last_known_institutions.id"])
-_f("domain", "domain.id", "id", aliases=["domain.id"])
+# `primary_topic.domain.id` is the canonical works column the GUI facets as "domain"
+# (entityToSelect domains); `domain.id` is the OQL-only shorthand. Fold the GUI param in
+# as an alias so it parses to / renders "domain" and drops off the #363 fallback. (#402)
+_f("domain", "domain.id", "id", aliases=["domain.id", "primary_topic.domain.id"])
 _f("field", "primary_topic.field.id", "id", aliases=["primary_topic.field.id"])
 # subfield of the work's primary topic (topic hierarchy: domain > field > subfield > topic).
 # Was missing while its siblings field/domain/topic were registered (oxjob #363 discovery run #2);
@@ -470,6 +473,17 @@ _f("any location source type", "locations.source.type", "enum",
 # "source"). _RESOLVE_NAMESPACE entries added in oql_renderer.py.
 _f("best OA source", "best_oa_location.source.id", "id", aliases=["best_oa_location.source.id"])
 _f("any location source", "locations.source.id", "id", aliases=["locations.source.id"])
+
+# --- oxjob #402 batch 7 (GUI-faceted long-tail; scoped to what the current GUI supports
+# per Jason 2026-06-09 — anything not GUI-faceted or with ambiguous naming is left out of OQL
+# and stays on the #363 raw fallback). All Front-B (registry display_names already clean).
+# institution type: the affiliated institution's type (education / healthcare / company / …);
+# slug enum, mirrors source type. GUI displayName "institution type".
+_f("institution type", "authorships.institutions.type", "enum",
+   aliases=["authorships.institutions.type"])
+# awards: grant/award entity-id, name-resolved via the awards namespace. GUI displayName
+# "awards" (entityToSelect awards). _RESOLVE_NAMESPACE entry in oql_renderer.py.
+_f("awards", "awards.id", "id", aliases=["awards.id"])
 
 # Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
 _BY_COLUMN = {}
