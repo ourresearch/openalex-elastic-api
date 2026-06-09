@@ -8,14 +8,29 @@ closed-vocab display names; the server twin of openalex-gui's
 Properties describe *columns*; this describes the entity *types* those columns
 point at — different cardinality, so it lives next door rather than folded in.
 
-Today it surfaces each entity's ID *shape*, which is the single declarative
-source for OQL value-domain validation **Tier 2**: an ``openalex_id``-typed
-filter value must carry the right entity prefix, so ``institution is W5`` (a
-Works ID on an Institutions filter) is a hard ``invalid_value`` error. The shape
-comes straight from each yaml's ``idRegex`` — the native-entity set and their
-prefixes are *derived* from that declaration, never hand-listed here, so there is
-no parallel table to drift. Room to grow (display_name / icon / native flag / an
-``/entities`` endpoint mirroring ``/properties``) as needs arise. (oxjob #363.)
+It surfaces each entity's ID *shape*, which is the single declarative source for
+OQL value-domain validation **Tier 2**: an ``openalex_id``-typed filter value
+must carry the right entity prefix, so ``institution is W5`` (a Works ID on an
+Institutions filter) is a hard ``invalid_value`` error. The shape comes straight
+from each yaml's ``idRegex`` — the native-entity set and their prefixes are
+*derived* from that declaration, never hand-listed here, so there is no parallel
+table to drift.
+
+It also carries each entity's curated, entity-level facts — display name(s),
+description, closed-vocab ``values``, the authored ``isNative`` flag, and
+``alternate_names`` — projected from the same yaml. This is THE entity registry
+(oxjob #405): other readers (the ``/entities`` data route, the future ``/meta``
+catalog) resolve entity identity here instead of each keeping a copy of the
+config dict. Property *structure* stays derived next door in
+``core/properties.py`` (``fields.py`` → ``/properties``); only entity-level
+*curation* lives here.
+
+Note two distinct "native" notions that legitimately diverge: :pyattr:`is_native_id`
+is *derived* from a single-letter ``idRegex`` prefix and drives the Tier-2 shape
+check (so ``continents``, whose ids are ``Q``-prefixed, counts as native-shaped);
+:pyattr:`is_native` is the *authored* ``isNative`` flag (the GUI's "big native
+entity" sense, where ``continents`` is a closed vocab → ``False``). Keep them
+separate — #363's Tier-2 logic depends on the derived one. (oxjobs #363, #405.)
 """
 
 from __future__ import annotations
@@ -24,7 +39,7 @@ import glob
 import os
 import re
 from dataclasses import dataclass
-from typing import Dict, Optional, Pattern
+from typing import Dict, List, Optional, Pattern, Tuple
 
 try:
     import yaml as _yaml
@@ -46,12 +61,23 @@ _NATIVE_PREFIX_RE = re.compile(r"\(\s*([A-Za-z])\\d\+\s*\)")
 
 @dataclass(frozen=True)
 class EntityType:
-    """One OpenAlex entity type, projected from ``config/<name>.yaml``."""
+    """One OpenAlex entity type, projected from ``config/<name>.yaml``.
+
+    ``name`` plus the ``id_*``/``_shape`` triple are the OQL Tier-2 essentials;
+    the remaining fields are the curated entity-level facts (#405) the ``/meta``
+    catalog and ``/entities`` route read instead of the raw config dict."""
 
     name: str
-    id_regex: Optional[str] = None      # raw ``idRegex`` string ("" / None if absent)
-    id_prefix: Optional[str] = None     # uppercase native prefix (I, A, W, …) or None
-    _shape: Optional[Pattern] = None    # compiled anchored matcher (native only)
+    id_regex: Optional[str] = None       # raw ``idRegex`` string ("" / None if absent)
+    id_prefix: Optional[str] = None      # uppercase native prefix (I, A, W, …) or None
+    _shape: Optional[Pattern] = None     # compiled anchored matcher (native only)
+    # Curated entity-level facts (authored in the yaml; #405) ------------------
+    display_name: Optional[str] = None           # plural, e.g. "Open Access statuses"
+    display_name_singular: Optional[str] = None  # singular, e.g. "Open Access status"
+    description: Optional[str] = None            # ``descrFull`` else ``descr``
+    values: Optional[List[dict]] = None          # closed-vocab [{id, display_name}]; None if open
+    is_native: Optional[bool] = None             # authored ``isNative`` (curated GUI flag)
+    alternate_names: Tuple[str, ...] = ()        # extra parse/display aliases (#381 pattern)
 
     @property
     def is_native_id(self) -> bool:
@@ -105,8 +131,24 @@ def _build() -> Dict[str, EntityType]:
             if m:
                 prefix = m.group(1).upper()
                 shape = _compile_shape(id_regex)
+        # Curated facts: ``values`` is only a closed-vocab list when non-empty
+        # (native entities carry a null/empty ``values`` — keep that as None);
+        # ``description`` prefers the long form, mirroring the ``/entities`` route.
+        values = doc.get("values")
+        if not isinstance(values, list) or not values:
+            values = None
+        alt = doc.get("alternate_names") or ()
         out[name] = EntityType(
-            name=name, id_regex=id_regex, id_prefix=prefix, _shape=shape
+            name=name,
+            id_regex=id_regex,
+            id_prefix=prefix,
+            _shape=shape,
+            display_name=doc.get("displayName"),
+            display_name_singular=doc.get("displayNameSingular"),
+            description=doc.get("descrFull") or doc.get("descr"),
+            values=values,
+            is_native=doc.get("isNative"),
+            alternate_names=tuple(alt),
         )
     return out
 
