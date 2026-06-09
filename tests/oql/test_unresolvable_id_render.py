@@ -82,6 +82,23 @@ def test_multi_value_each_annotated():
     assert out.count("[no entity found]") == 2
 
 
+@pytest.mark.parametrize("entity,column", [
+    ("authors", "affiliations.institution.id"),
+    ("locations", "source_id"),
+    ("locations", "publisher"),
+    ("awards", "funder.id"),
+])
+def test_wired_homonym_id_columns_are_name_resolvable(entity, column):
+    # #418 follow-up: these entity-homonym ID columns carried resolves_name=True
+    # but had no _RESOLVE_NAMESPACE entry, so they rendered bare in prod (the gate
+    # kept them bare). Now wired to their entity namespace → a miss legitimately
+    # annotates [no entity found] (and a hit would show the name).
+    from query_translation.oql_lang import _column_resolves_name
+    assert _column_resolves_name(column)
+    oqo = OQO(get_rows=entity, filter_rows=[LeafFilter(column, "I999", "is")])
+    assert oql_lang.render_tree(oqo, resolver=_MISS)[0].endswith("[no entity found]")
+
+
 def test_value_segments_concatenate_to_value_with_name():
     # The documented contract: _value_segments must concatenate to exactly what
     # _value_with_name returns (here, the miss branch).

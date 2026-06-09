@@ -101,6 +101,14 @@ _RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
     "host_organization": "publishers",
     # keyword entity ids resolve to a name via the keywords namespace (#402, GUI parity).
     "keywords.id": "keywords",
+    # Entity-homonym ID columns on sub-entities that carried resolves_name=True in the
+    # renderer but had no namespace here — so they rendered bare in prod (and #418's
+    # gate kept them bare). Wire them to their entity namespace so they name-resolve
+    # like their primary-column siblings (oxjob #418 follow-up / #363):
+    "affiliations.institution.id": "institutions",  # institution id on `authors`
+    "source_id": "sources",                          # source id on `locations`
+    "publisher": "publishers",                       # publisher id on `locations`
+    "funder.id": "funders",                          # funder id on `awards`
 }
 
 # Built-in code/id -> display-name tables for the non-native entity types that
