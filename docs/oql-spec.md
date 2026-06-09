@@ -308,6 +308,20 @@ operator, `contains`; the *mode* is split across the **column** (stemmed vs exac
 vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); the
 **boolean** structure is the filter tree.
 
+> **Cross-surface note — quotes mean something different in the GUI search box.**
+> In OQL, **quotes = exact** (a quoted value routes to `.search.exact`, no stemming).
+> The openalex.org **search box** instead treats quotes as a **stemmed adjacency
+> phrase**: a quoted query stays on the stemmed `.search` field (stemming is a
+> separate explicit "Disable stemming" toggle, plus an unquoted wildcard auto-routes
+> to exact). So the same `"climate models"` is an *exact* phrase typed into OQL but a
+> *stemmed* phrase typed into the search box. Both surfaces are internally consistent
+> and consistent with the engine; they simply chose different defaults for the quote
+> character. The translator bridges them faithfully: a search-box (stemmed,
+> quoted) URL — `title_and_abstract.search:"climate models"` — renders to OQL as
+> **`near "climate models"`** (stemmed adjacency), *not* `"climate models"` (which
+> would be exact and return a different result set). This is intentional, not a
+> translator bug. (oxjob #363, decided 2026-06-09: keep both, document the gap.)
+
 | Axis | OQL surface | OQO encoding |
 |---|---|---|
 | field scope | the field name (`title`, `title/abstract`, `abstract`, `full text`, `raw affiliation`, `byline`) | column prefix (`display_name.search`, `title_and_abstract.search`, `fulltext.search`, …) |
