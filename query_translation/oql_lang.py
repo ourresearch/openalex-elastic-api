@@ -441,6 +441,36 @@ _f("has OA submitted version", "has_oa_submitted_version", "bool",
    bool_true="it has an OA submitted version",
    bool_false="it doesn't have an OA submitted version")
 
+# --- oxjob #402 Tier-2 location/source mirror STRING / ENUM / ID cols ---
+# The mirror set's non-boolean half. These had raw auto-humanized display_names, so this is a
+# Front-A batch: core/display_names.py curated to the matrix scope words + PROPERTIES_VERSION
+# 1.9.0 -> 1.10.0 (MINOR, blanket-approved), THEN registered here (render word == new
+# display_name, enforced by the registry-consistency gate). Scope words mirror the bool block:
+# primary unmarked / "best OA …" / "any location …". `primary_location.license` now owns bare
+# "license" (resolving the live best_oa/locations duplicate). The host_organization /
+# publisher_lineage / host_institution_lineage family is deliberately deferred — its
+# publisher-vs-institution-vs-ambiguous-host-org disambiguation is a judgment call grouped
+# with batch 7. id cols name-resolve via the `sources` namespace (oql_renderer).
+# ISSN / version / license: literal strings (no name resolution), like primary's ISSN.
+_f("best OA license", "best_oa_location.license", "string", aliases=["best_oa_location.license"])
+_f("any location license", "locations.license", "string", aliases=["locations.license"])
+_f("license", "primary_location.license", "string", aliases=["primary_location.license"])
+_f("best OA source ISSN", "best_oa_location.source.issn", "string",
+   aliases=["best_oa_location.source.issn"])
+_f("any location source ISSN", "locations.source.issn", "string",
+   aliases=["locations.source.issn"])
+_f("primary version", "primary_location.version", "string", aliases=["primary_location.version"])
+_f("any location version", "locations.version", "string", aliases=["locations.version"])
+# source type: slug enum (mirrors primary's "source type").
+_f("best OA source type", "best_oa_location.source.type", "enum",
+   aliases=["best_oa_location.source.type"])
+_f("any location source type", "locations.source.type", "enum",
+   aliases=["locations.source.type"])
+# source id: entity-id reference, name-resolved via the sources namespace (mirrors primary's
+# "source"). _RESOLVE_NAMESPACE entries added in oql_renderer.py.
+_f("best OA source", "best_oa_location.source.id", "id", aliases=["best_oa_location.source.id"])
+_f("any location source", "locations.source.id", "id", aliases=["locations.source.id"])
+
 # Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
 _BY_COLUMN = {}
 for _spellings, _fld in _FIELDS:

@@ -59,7 +59,13 @@ from core.fields import Property
 # last_page} → volume/issue/first page/last page; ids.{mag,pmid,pmcid} → MAG ID/PMID/PMCID.
 # Net-new curated labels on raw columns (no already-shipped label changed). Jason-approved
 # (blanket MINOR for this job) 2026-06-08. = MINOR.
-PROPERTIES_VERSION = "1.9.0"
+# 1.10.0 (#402 friendly-name audit): batch 6 location/OA mirror string/id cols — curated
+# display_names for the best_oa_location.* / locations.* / primary_location.* source id/issn/
+# type, license, and version mirrors (matrix scope words: primary unmarked / "best OA …" /
+# "any location …"). Resolves the live best_oa_location.license vs locations.license duplicate
+# "license" (primary now owns bare "license"). Net-new labels (no already-shipped label
+# changed). Jason-approved (blanket MINOR for this job). = MINOR.
+PROPERTIES_VERSION = "1.10.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

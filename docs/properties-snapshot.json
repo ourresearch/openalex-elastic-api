@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "3b6d8df96eb56ead0a81f5b4a897017d9dd3edeb480277a76474c02821fcb3bc",
+    "fingerprint": "b9df75e86cb89fa3034e70cccbb568d7fa82b3cd3634f707adf3111ef3df60e1",
     "property_count": 837,
-    "version": "1.9.0"
+    "version": "1.10.0"
   },
   "properties": {
     "authors": {
@@ -9083,7 +9083,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "license",
+        "display_name": "best OA license",
         "entity_type": "licenses",
         "name": "best_oa_location.license",
         "operators": [
@@ -9163,7 +9163,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "best oa location source id",
+        "display_name": "best OA source",
         "entity_type": "sources",
         "name": "best_oa_location.source.id",
         "operators": [
@@ -9207,7 +9207,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "best oa location source issn",
+        "display_name": "best OA source ISSN",
         "entity_type": null,
         "name": "best_oa_location.source.issn",
         "operators": [
@@ -9223,7 +9223,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "best oa location source type",
+        "display_name": "best OA source type",
         "entity_type": "source-types",
         "name": "best_oa_location.source.type",
         "operators": [
@@ -10732,7 +10732,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "license",
+        "display_name": "any location license",
         "entity_type": "licenses",
         "name": "locations.license",
         "operators": [
@@ -10900,7 +10900,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "locations source issn",
+        "display_name": "any location source ISSN",
         "entity_type": null,
         "name": "locations.source.issn",
         "operators": [
@@ -10932,7 +10932,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "locations source type",
+        "display_name": "any location source type",
         "entity_type": "source-types",
         "name": "locations.source.type",
         "operators": [
@@ -10948,7 +10948,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "locations version",
+        "display_name": "any location version",
         "entity_type": null,
         "name": "locations.version",
         "operators": [
@@ -11229,7 +11229,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "primary location license",
+        "display_name": "license",
         "entity_type": "licenses",
         "name": "primary_location.license",
         "operators": [
@@ -11445,7 +11445,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "primary location version",
+        "display_name": "primary version",
         "entity_type": null,
         "name": "primary_location.version",
         "operators": [

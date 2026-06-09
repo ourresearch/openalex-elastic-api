@@ -80,6 +80,10 @@ _RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
     # resolve via the same namespaces as `author` / `institution`.
     "corresponding_author_ids": "authors",
     "corresponding_institution_ids": "institutions",
+    # oxjob #402 batch 6 — best_oa_location / locations source-id mirrors resolve via the
+    # sources namespace, like primary_location.source.id ("source").
+    "best_oa_location.source.id": "sources",
+    "locations.source.id": "sources",
 }
 
 # Built-in code/id -> display-name tables for the non-native entity types that
