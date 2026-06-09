@@ -813,7 +813,7 @@
       "key": "ids.openalex",
       "entityToFilter": "works",
       "entityToSelect": "works",
-      "displayName": "openalex id",
+      "displayName": "OpenAlex ID",
       "displayNameVerbatim": false,
       "type": "selectEntity",
       "actions": [
@@ -1617,20 +1617,6 @@
       "isId": false,
       "hasExport": false
     },
-    "ids.openalex": {
-      "key": "ids.openalex",
-      "entityToFilter": "authors",
-      "entityToSelect": "authors",
-      "displayName": "author",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "column"
-      ],
-      "actionsPopular": [],
-      "isId": true,
-      "hasExport": true
-    },
     "collection": {
       "key": "collection",
       "entityToFilter": "authors",
@@ -1813,6 +1799,20 @@
       "actionsPopular": [],
       "isId": false,
       "hasExport": false
+    },
+    "ids.openalex": {
+      "key": "ids.openalex",
+      "entityToFilter": "authors",
+      "entityToSelect": "authors",
+      "displayName": "OpenAlex ID",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": [],
+      "isId": true,
+      "hasExport": true
     },
     "ids.orcid": {
       "key": "ids.orcid",
@@ -2134,6 +2134,20 @@
       "isId": false,
       "hasExport": false
     },
+    "ids.openalex": {
+      "key": "ids.openalex",
+      "entityToFilter": "sources",
+      "entityToSelect": "sources",
+      "displayName": "OpenAlex ID",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": true,
+      "hasExport": true
+    },
     "publisher": {
       "key": "publisher",
       "entityToFilter": "sources",
@@ -2146,20 +2160,6 @@
       ],
       "actionsPopular": [],
       "isId": false,
-      "hasExport": true
-    },
-    "ids.openalex": {
-      "key": "ids.openalex",
-      "entityToFilter": "sources",
-      "entityToSelect": "sources",
-      "displayName": "Source",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "column"
-      ],
-      "actionsPopular": null,
-      "isId": true,
       "hasExport": true
     },
     "type": {
@@ -2377,6 +2377,20 @@
       "isId": false,
       "hasExport": false
     },
+    "ids.openalex": {
+      "key": "ids.openalex",
+      "entityToFilter": "publishers",
+      "entityToSelect": "publishers",
+      "displayName": "OpenAlex ID",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": true,
+      "hasExport": true
+    },
     "parent_publisher": {
       "key": "parent_publisher",
       "entityToFilter": "publishers",
@@ -2388,20 +2402,6 @@
       "actionsPopular": null,
       "isId": false,
       "hasExport": false
-    },
-    "ids.openalex": {
-      "key": "ids.openalex",
-      "entityToFilter": "publishers",
-      "entityToSelect": "publishers",
-      "displayName": "Publisher",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "column"
-      ],
-      "actionsPopular": null,
-      "isId": true,
-      "hasExport": true
     },
     "collection": {
       "key": "collection",
@@ -2577,20 +2577,6 @@
       "isId": true,
       "hasExport": false
     },
-    "ids.openalex": {
-      "key": "ids.openalex",
-      "entityToFilter": "funders",
-      "entityToSelect": "funders",
-      "displayName": "Funder",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "column"
-      ],
-      "actionsPopular": null,
-      "isId": true,
-      "hasExport": true
-    },
     "collection": {
       "key": "collection",
       "entityToFilter": "funders",
@@ -2709,6 +2695,20 @@
       "actionsPopular": null,
       "isId": false,
       "hasExport": false
+    },
+    "ids.openalex": {
+      "key": "ids.openalex",
+      "entityToFilter": "funders",
+      "entityToSelect": "funders",
+      "displayName": "OpenAlex ID",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": true,
+      "hasExport": true
     },
     "ids.ror": {
       "key": "ids.ror",
@@ -2908,20 +2908,6 @@
       "isId": false,
       "hasExport": false
     },
-    "ids.openalex": {
-      "key": "ids.openalex",
-      "entityToFilter": "institutions",
-      "entityToSelect": "institutions",
-      "displayName": "Institution",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "column"
-      ],
-      "actionsPopular": null,
-      "isId": true,
-      "hasExport": true
-    },
     "type": {
       "key": "type",
       "entityToFilter": "institutions",
@@ -3013,6 +2999,20 @@
       "isId": false,
       "hasExport": false
     },
+    "ids.openalex": {
+      "key": "ids.openalex",
+      "entityToFilter": "institutions",
+      "entityToSelect": "institutions",
+      "displayName": "OpenAlex ID",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": true,
+      "hasExport": true
+    },
     "parent_institutions": {
       "key": "parent_institutions",
       "entityToFilter": "institutions",
@@ -3101,20 +3101,6 @@
       "isId": false,
       "hasExport": false
     },
-    "ids.openalex": {
-      "key": "ids.openalex",
-      "entityToFilter": "concepts",
-      "entityToSelect": "concepts",
-      "displayName": "Concept",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "column"
-      ],
-      "actionsPopular": null,
-      "isId": true,
-      "hasExport": true
-    },
     "collection": {
       "key": "collection",
       "entityToFilter": "concepts",
@@ -3186,6 +3172,20 @@
       "actionsPopular": null,
       "isId": false,
       "hasExport": false
+    },
+    "ids.openalex": {
+      "key": "ids.openalex",
+      "entityToFilter": "concepts",
+      "entityToSelect": "concepts",
+      "displayName": "OpenAlex ID",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": true,
+      "hasExport": true
     },
     "works_count": {
       "key": "works_count",
@@ -3367,6 +3367,20 @@
       "isId": false,
       "hasExport": false
     },
+    "ids.openalex": {
+      "key": "ids.openalex",
+      "entityToFilter": "topics",
+      "entityToSelect": "topics",
+      "displayName": "OpenAlex ID",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": true,
+      "hasExport": true
+    },
     "subfield.id": {
       "key": "subfield.id",
       "entityToFilter": "topics",
@@ -3393,20 +3407,6 @@
       "actionsPopular": null,
       "isId": false,
       "hasExport": false
-    },
-    "ids.openalex": {
-      "key": "ids.openalex",
-      "entityToFilter": "topics",
-      "entityToSelect": "topics",
-      "displayName": "Topic",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "column"
-      ],
-      "actionsPopular": null,
-      "isId": true,
-      "hasExport": true
     },
     "collection": {
       "key": "collection",

@@ -72,7 +72,13 @@ from core.fields import Property
 # wrongly resolve to its id. Added "subfield" as a parse alias on topics `subfield.id`
 # (display_name stays "parent subfield"). display_name tweak + alias add. Jason-approved
 # 2026-06-09. = MINOR.
-PROPERTIES_VERSION = "1.11.0"
+# 1.12.0 (#406 follow-up): capitalize the `ids.openalex` display_name "openalex id" →
+# "OpenAlex ID" across all 8 entities that carry it (works + the 7 from 1.11.0), so the
+# label is properly cased AND consistent with the gui facet. The 1.11.0 lowercase form
+# tripped the #381 label-consistency gate (gui still showed the old singular labels);
+# this reconciles BOTH sides to "OpenAlex ID" (gui facetConfigs.js + client_registry.json
+# regenerated in the same ship). display_name tweak only. Jason-approved 2026-06-09. = MINOR.
+PROPERTIES_VERSION = "1.12.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

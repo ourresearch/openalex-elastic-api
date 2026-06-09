@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "3858d70e295926bc58bba40bb1b7b44b6143784f9446e5c9d97b312db254c93e",
+    "fingerprint": "a612add5b90ebbbf2e1cd245492d0847543f2a023934d4fda1f2b0960f30ca06",
     "property_count": 837,
-    "version": "1.11.0"
+    "version": "1.12.0"
   },
   "properties": {
     "authors": {
@@ -343,7 +343,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "openalex id",
+        "display_name": "OpenAlex ID",
         "entity_type": "authors",
         "name": "ids.openalex",
         "operators": [
@@ -1840,7 +1840,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "openalex id",
+        "display_name": "OpenAlex ID",
         "entity_type": null,
         "name": "ids.openalex",
         "operators": [
@@ -3353,7 +3353,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "openalex id",
+        "display_name": "OpenAlex ID",
         "entity_type": null,
         "name": "ids.openalex",
         "operators": [
@@ -4105,7 +4105,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "openalex id",
+        "display_name": "OpenAlex ID",
         "entity_type": "institutions",
         "name": "ids.openalex",
         "operators": [
@@ -5890,7 +5890,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "openalex id",
+        "display_name": "OpenAlex ID",
         "entity_type": null,
         "name": "ids.openalex",
         "operators": [
@@ -7041,7 +7041,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "openalex id",
+        "display_name": "OpenAlex ID",
         "entity_type": "sources",
         "name": "ids.openalex",
         "operators": [
@@ -8124,7 +8124,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "openalex id",
+        "display_name": "OpenAlex ID",
         "entity_type": null,
         "name": "ids.openalex",
         "operators": [
@@ -10213,7 +10213,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "openalex id",
+        "display_name": "OpenAlex ID",
         "entity_type": "works",
         "name": "ids.openalex",
         "operators": [
