@@ -1693,3 +1693,63 @@ rows:
   oql: 'works where created date >= 2024-01-01'
   oqo: {get_rows: works, filter_rows: [{column_id: from_created_date, value: '2024-01-01'}]}
   note: "The created/updated axes parse exactly like publication `date` (render words 'created date'/'updated date' = registry display_names). NOTE: created/updated are Premium/Institutional/Partner only — free/personal/anon keys get HTTP 200 {\"error\":\"Plan upgrade required\"} at query time (sort=created_date is gated too). OQL surfaces the field; the engine enforces the plan gate. Do NOT use this axis in free-tier example links — `date` (publication) is the free axis."
+
+- id: 113
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL multi-entity (#406): `domain` on works resolves the works column primary_topic.domain.id (was invalid_column / unparseable-from-URL footgun)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=primary_topic.domain.id:3'
+  status: ok
+  oql: 'works where domain is 3'
+  oqo: {get_rows: works, filter_rows: [{column_id: primary_topic.domain.id, value: '3'}]}
+  note: "#406 Part A: the friendly word resolves to the column that exists ON THE QUERIED ENTITY. On works `domain` is primary_topic.domain.id (the GUI domain param); on topics it's the bare domain.id (row 44). Both round-trip."
+
+- id: 114
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL multi-entity (#406): `field` on topics resolves the bare field.id (was invalid_column — the works-shaped primary_topic.field.id)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/topics?filter=field.id:27'
+  status: ok
+  oql: 'topics where field is 27'
+  oqo: {get_rows: topics, filter_rows: [{column_id: field.id, value: '27'}]}
+  note: "#406 Part A: symmetric to row 113 — `field`/`subfield` are correct on works as primary_topic.* but on topics resolve to the bare field.id / subfield.id."
+
+- id: 115
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL multi-entity (#406): `subfield` on topics resolves the bare subfield.id (parse alias added; display_name stays 'parent subfield')"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/topics?filter=subfield.id:2712'
+  status: ok
+  oql: 'topics where subfield is 2712'
+  oqo: {get_rows: topics, filter_rows: [{column_id: subfield.id, value: '2712'}]}
+  note: "#406 Part A: topics `subfield.id` registry display_name is 'parent subfield'; the friendly word 'subfield' is added as a parse alias so the topic-hierarchy word resolves on topics too."
+
+- id: 116
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL multi-entity (#406): `orcid` on authors resolves the authors column `orcid` (was invalid_column — the works authorships.author.orcid)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/authors?filter=orcid:0000-0002-1825-0097'
+  status: ok
+  oql: 'authors where ORCID is 0000-0002-1825-0097'
+  oqo: {get_rows: authors, filter_rows: [{column_id: orcid, value: '0000-0002-1825-0097'}]}
+  note: "#406 Part B: a vendor-ID homonym — the curated word ORCID maps to works' authorships.author.orcid, but on authors the column is bare `orcid`. Entity-aware resolution (registry display_name 'ORCID') picks the entity-correct column. Literal string, no name resolution."
+
+- id: 117
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL multi-entity (#406): `issn` on sources resolves the sources column `issn` (was invalid_column — the works primary_location.source.issn)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/sources?filter=issn:2041-1723'
+  status: ok
+  oql: 'sources where ISSN is 2041-1723'
+  oqo: {get_rows: sources, filter_rows: [{column_id: issn, value: '2041-1723'}]}
+  note: "#406 Part B: ISSN homonym — works primary_location.source.issn vs sources' bare `issn` (registry display_name 'ISSN'). Literal string."

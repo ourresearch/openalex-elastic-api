@@ -646,3 +646,33 @@ cases:
     - {text: "works published after January 1, 2020", difficulty: easy}
     - {text: "papers with a publication date strictly after 2020-01-01", difficulty: easy}
     - {text: "anything dated later than the first of January 2020", difficulty: hard}
+
+- ref: 113  # works where domain is 3 (Physical Sciences) — #406 multi-entity
+  nl:
+    - {text: "works in the Physical Sciences domain", difficulty: easy}
+    - {text: "papers whose primary topic domain is 3", difficulty: easy}
+    - {text: "research in domain 3", difficulty: hard}
+
+- ref: 114  # topics where field is 27 (Medicine) — #406 multi-entity
+  nl:
+    - {text: "topics in the Medicine field", difficulty: easy}
+    - {text: "topics whose field is 27", difficulty: easy}
+    - {text: "which topics belong to field 27", difficulty: hard}
+
+- ref: 115  # topics where subfield is 2712 — #406 multi-entity
+  nl:
+    - {text: "topics in subfield 2712", difficulty: easy}
+    - {text: "topics whose parent subfield is 2712", difficulty: easy}
+    - {text: "list topics under subfield 2712", difficulty: hard}
+
+- ref: 116  # authors where ORCID is 0000-0002-1825-0097 — #406 multi-entity
+  nl:
+    - {text: "the author with ORCID 0000-0002-1825-0097", difficulty: easy}
+    - {text: "authors whose ORCID is 0000-0002-1825-0097", difficulty: easy}
+    - {text: "find the researcher identified by orcid 0000-0002-1825-0097", difficulty: hard}
+
+- ref: 117  # sources where ISSN is 2041-1723 — #406 multi-entity
+  nl:
+    - {text: "the source with ISSN 2041-1723", difficulty: easy}
+    - {text: "journals whose ISSN is 2041-1723", difficulty: easy}
+    - {text: "which source has issn 2041-1723", difficulty: hard}

@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "b9df75e86cb89fa3034e70cccbb568d7fa82b3cd3634f707adf3111ef3df60e1",
+    "fingerprint": "3858d70e295926bc58bba40bb1b7b44b6143784f9446e5c9d97b312db254c93e",
     "property_count": 837,
-    "version": "1.10.0"
+    "version": "1.11.0"
   },
   "properties": {
     "authors": {
@@ -343,7 +343,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "author",
+        "display_name": "openalex id",
         "entity_type": "authors",
         "name": "ids.openalex",
         "operators": [
@@ -1840,7 +1840,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "concept",
+        "display_name": "openalex id",
         "entity_type": null,
         "name": "ids.openalex",
         "operators": [
@@ -3353,7 +3353,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "funder",
+        "display_name": "openalex id",
         "entity_type": null,
         "name": "ids.openalex",
         "operators": [
@@ -4105,7 +4105,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "institution",
+        "display_name": "openalex id",
         "entity_type": "institutions",
         "name": "ids.openalex",
         "operators": [
@@ -5890,7 +5890,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "publisher",
+        "display_name": "openalex id",
         "entity_type": null,
         "name": "ids.openalex",
         "operators": [
@@ -7041,7 +7041,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "source",
+        "display_name": "openalex id",
         "entity_type": "sources",
         "name": "ids.openalex",
         "operators": [
@@ -8124,7 +8124,7 @@
           "filter"
         ],
         "aliases": [],
-        "display_name": "topic",
+        "display_name": "openalex id",
         "entity_type": null,
         "name": "ids.openalex",
         "operators": [
@@ -8212,7 +8212,9 @@
         "actions": [
           "filter"
         ],
-        "aliases": [],
+        "aliases": [
+          "subfield"
+        ],
         "display_name": "parent subfield",
         "entity_type": null,
         "name": "subfield.id",

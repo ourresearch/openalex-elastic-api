@@ -22,8 +22,8 @@ Design anchors (see docs/oql-spec.md for prose, oxjob #330 EXPLORE.md for the wh
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
-from typing import List, Optional, Tuple, Union
+from dataclasses import dataclass, replace
+from typing import Dict, List, Optional, Tuple, Union
 
 # Load the OQO data model without triggering the Flask-heavy package __init__.
 from query_translation.oqo import (  # noqa: E402
@@ -118,6 +118,30 @@ def _canon_value_case(value, fld: "Field"):
         return value
     return value.lower() if fld.casing == "lower" else value.upper()
 
+
+# ===========================================================================
+# ⚠️  GUARDRAIL (oxjob #406) — `_FIELDS` is NOT the place for names or aliases.
+#
+# The properties registry (`core/properties.py` ENTITY_PROPERTIES, with labels +
+# input spellings curated in `core/display_names.py`) is the SOURCE OF TRUTH for
+# what a field is *called* (its `display_name`) and what alternate spellings parse
+# into it (its `aliases`). That registry is consumed OUTSIDE OQL (the GUI, the
+# `/properties` catalog, docs), which is exactly why it's the right place to fix.
+#
+# `_FIELDS` exists ONLY for OQL's parse/render *mechanics* that the engine registry
+# doesn't model: the `kind` (search/id/enum/num/string), value `casing`,
+# `resolves_name`, the `.search` mode encoding, and the boolean sentence templates
+# (`bool_true`/`bool_false`). The *column a word resolves to per entity* is derived
+# from the registry at parse time (`_entity_resolve_field`) and render time
+# (`_augment_by_column_for_homonyms`) — NOT hand-mapped here.
+#
+# So before adding a `_f(...)`: if you're reaching for it to give a field a nicer
+# NAME, or to add an input ALIAS, or to surface a field on a NON-works entity —
+# STOP. That's a `core/display_names.py` change (it improves the shared registry
+# for everyone, not just OQL). Adding it here instead silently forks the source of
+# truth and re-introduces the entity-blindness #406 removed. `_FIELDS` is a
+# tempting low-effort shortcut; resist it.
+# ===========================================================================
 
 # --- search fields (column is the *base*; .search suffix added per mode) ---
 # `title.search` is a GUI/docs alias for display_name.search (facetConfigs.js: "Alias for
@@ -549,6 +573,10 @@ for _spellings, _fld in _FIELDS:
 _BY_COLUMN.setdefault("default", _BY_COLUMN["fulltext"])
 
 
+# (Render-side entity-awareness — `_augment_by_column_for_homonyms()` — is defined
+#  and invoked AFTER `_entity_resolve_field`, below, since it reuses it.)
+
+
 def canon_value_for_column(value, column_id):
     """Apply a column's canonical value-casing by `column_id` (e.g. country codes
     -> upper, enum slugs -> lower). Public bridge so the OQO canonicalizer matches
@@ -807,6 +835,99 @@ def _registry_fallback_field(word: str) -> Optional["Field"]:
     if _REGISTRY_FALLBACK_CACHE is None:
         _REGISTRY_FALLBACK_CACHE = _build_registry_fallback()
     return _REGISTRY_FALLBACK_CACHE.get(word.lower())
+
+
+# --- entity-aware word -> column resolution (oxjob #406) -------------------
+# OQL's `_FIELDS` registry maps a friendly word to ONE, works-default column, but
+# the same word names a DIFFERENT column on a different entity: `domain` is
+# `primary_topic.domain.id` on works but bare `domain.id` on topics; `ORCID` is
+# `authorships.author.orcid` on works but `orcid` on authors; etc. The parser
+# already knows the queried entity (`self._entity`), and the properties registry
+# (`core/properties.py ENTITY_PROPERTIES`) is the entity-scoped source of truth
+# for which column a name resolves to ON THAT ENTITY — keyed by each property's
+# `display_name`/`aliases` (the gate `test_oql_render_word_equals_registry_
+# display_name` keeps the OQL word == the works display_name, so the same friendly
+# word indexes the entity-correct column on every entity). So: after the curated
+# `match_field` gives us a Field's OQL render/parse *mechanics* (kind, casing,
+# resolves_name), we re-point its *column* at the entity-correct one. Drift-proof:
+# no hand-kept per-field override table — the registry's own display_names drive it.
+_ENTITY_WORD_INDEX_CACHE: Dict[str, Dict[str, str]] = {}
+
+
+def _entity_word_index(entity: str) -> Dict[str, str]:
+    """{display_name/alias (lower) -> column_id} for one entity, from the registry.
+    Empty dict if the entity/registry is unavailable (keeps oql_lang importable in
+    lightweight contexts without the engine properties registry)."""
+    if entity in _ENTITY_WORD_INDEX_CACHE:
+        return _ENTITY_WORD_INDEX_CACHE[entity]
+    try:
+        from core.properties import get_entity_properties
+        props = get_entity_properties(entity) or {}
+    except Exception:
+        props = {}
+    idx: Dict[str, str] = {}
+    for cid, prop in props.items():
+        names = [getattr(prop, "display_name", "")] + list(getattr(prop, "aliases", []) or [])
+        for name in names:
+            if name:
+                idx.setdefault(name.lower(), cid)
+    _ENTITY_WORD_INDEX_CACHE[entity] = idx
+    return idx
+
+
+def _entity_resolve_field(fld: "Field", entity: Optional[str]) -> "Field":
+    """Re-point a curated Field's column at the column that actually exists on
+    `entity` for the same friendly word, leaving every other (render/parse)
+    attribute untouched. A no-op when the curated column already exists on the
+    entity (the works common case → byte-identical strict behavior), or when there
+    is no entity, no registry, or no entity-correct column (→ the curated column
+    flows through and the validator gates it as `invalid_column`). Booleans are
+    resolved via their phrasing through a different path and are left alone here."""
+    if not entity or fld.kind in ("search", "collection", "bool"):
+        return fld
+    try:
+        from core.properties import get_entity_properties
+        props = get_entity_properties(entity) or {}
+    except Exception:
+        return fld
+    if not props or fld.column in props:
+        return fld
+    col = _entity_word_index(entity).get(fld.oql.lower())
+    if col and col != fld.column:
+        return replace(fld, column=col)
+    return fld
+
+
+def _augment_by_column_for_homonyms() -> None:
+    """Entity-aware RENDER side of #406. The curated reverse map (`_BY_COLUMN`) is
+    keyed only on each curated Field's works-default column, so an entity-correct
+    homonym column renders RAW and won't round-trip — e.g. works
+    `primary_topic.domain.id` (the GUI `domain` param) has no key, `orcid` on authors
+    and `issn` on sources have none. For every curated Field × every entity, compute
+    the column its word entity-resolves to (the parse side, run in reverse) and map
+    THAT column back to the SAME curated Field. Using the curated Field (not a
+    registry-synthesized one) guarantees the render word is one that parses back to
+    this exact column — so the round-trip holds by construction, and columns with no
+    parseable word yet (e.g. `works_count`, pending the Part B fallback) are left to
+    render raw. `setdefault` keeps the curated/works key on any collision, so strict
+    works render stays byte-identical (this only fills MISSING keys)."""
+    try:
+        from core.properties import ENTITY_PROPERTIES
+        entities = list(ENTITY_PROPERTIES.keys())
+    except Exception:
+        return
+    # works first so its homonym columns win any cross-entity collision.
+    order = ["works"] + [e for e in entities if e != "works"]
+    for ent in order:
+        for _spellings, fld in _FIELDS:
+            if fld.kind in ("search", "collection", "bool"):
+                continue
+            resolved = _entity_resolve_field(fld, ent)
+            if resolved.column != fld.column:
+                _BY_COLUMN.setdefault(resolved.column, fld)
+
+
+_augment_by_column_for_homonyms()
 
 
 def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool, bool]]:
@@ -1294,6 +1415,7 @@ class _Parser:
                            f'unknown field "{t.val if t else ""}"',
                            None, t.pos if t else None)
         spelling, fld, n = m
+        fld = _entity_resolve_field(fld, self._entity)   # entity-correct the column (#406)
         self.i += n
         return spelling, fld
 

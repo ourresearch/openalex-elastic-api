@@ -65,7 +65,14 @@ from core.fields import Property
 # "any location …"). Resolves the live best_oa_location.license vs locations.license duplicate
 # "license" (primary now owns bare "license"). Net-new labels (no already-shipped label
 # changed). Jason-approved (blanket MINOR for this job). = MINOR.
-PROPERTIES_VERSION = "1.10.0"
+# 1.11.0 (#406 OQL multi-entity): corrected the `ids.openalex` display_name on the six
+# non-works entities (authors/sources/institutions/topics/publishers/funders) + concepts
+# from the singular entity name ("author"/"source"/…) → "openalex id" (matching works + the
+# GUI id facet); the entity-name labels were inaccurate and made the entity's own name
+# wrongly resolve to its id. Added "subfield" as a parse alias on topics `subfield.id`
+# (display_name stays "parent subfield"). display_name tweak + alias add. Jason-approved
+# 2026-06-09. = MINOR.
+PROPERTIES_VERSION = "1.11.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

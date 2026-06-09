@@ -62,7 +62,12 @@ _RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
     "primary_location.source.publisher_lineage": "publishers",
     "primary_topic.field.id": "fields",
     "primary_topic.subfield.id": "subfields",
+    "primary_topic.domain.id": "domains",
     "domain.id": "domains",
+    # Bare topic-hierarchy columns on the `topics` entity (the entity-correct
+    # homonyms of works' `primary_topic.*` — oxjob #406). `domain.id` already above.
+    "field.id": "fields",
+    "subfield.id": "subfields",
     "sustainable_development_goals.id": "sdgs",
     "authorships.countries": "countries",
     "country_code": "countries",
@@ -88,6 +93,12 @@ _RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
     "awards.id": "awards",
     # continent ids (continents/Q15) resolve to a name via the continents namespace.
     "authorships.institutions.continent": "continents",
+    # bare `continent` column on sources/institutions/publishers/funders — the
+    # entity-correct homonym of works' authorships.institutions.continent (#406).
+    "continent": "continents",
+    # `publisher` on sources resolves to the source's host_organization (a P-id),
+    # name-resolved via the publishers namespace, like primary_location...publisher_lineage (#406).
+    "host_organization": "publishers",
     # keyword entity ids resolve to a name via the keywords namespace (#402, GUI parity).
     "keywords.id": "keywords",
 }
