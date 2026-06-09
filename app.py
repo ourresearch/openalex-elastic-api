@@ -5,7 +5,6 @@ import time
 import sentry_sdk
 from elasticsearch_dsl import connections
 from flask import Flask, jsonify, request
-from flask_jwt_extended import JWTManager
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 import awards
@@ -28,7 +27,6 @@ import licenses
 import locations
 import meta
 import oa_statuses
-import oql
 import publishers
 import query_translation
 import query_translation.editor_views  # #357 OQL editor support (separate blueprint)
@@ -46,20 +44,12 @@ import topics
 import works
 import work_types
 from core.exceptions import APIError
-from extensions import cache, db
+from extensions import cache
 
 
 def create_app(config_object="settings"):
     app = Flask(__name__)
     app.config.from_object(config_object)
-
-    # JWT used by Analytics endpoints
-    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
-    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False
-    app.config['JWT_REFRESH_TOKEN_EXPIRES'] = False
-    app.config['JWT_VERIFY_SUB'] = False
-    app.config['JWT_TOKEN_LOCATION'] = ('headers', 'query_string')
-    jwt = JWTManager(app)
 
     register_blueprints(app)
     register_extensions(app)
@@ -114,7 +104,6 @@ def register_blueprints(app):
     app.register_blueprint(locations.views.blueprint)
     app.register_blueprint(meta.views.blueprint)
     app.register_blueprint(oa_statuses.views.blueprint)
-    app.register_blueprint(oql.views.blueprint)
     app.register_blueprint(publishers.views.blueprint)
     app.register_blueprint(query_translation.views.blueprint)
     app.register_blueprint(query_translation.editor_views.blueprint)  # #357 OQL editor support
@@ -134,7 +123,6 @@ def register_blueprints(app):
 
 
 def register_extensions(app):
-    db.init_app(app)
     sentry_sdk.init(dsn=os.environ.get("SENTRY_DSN"), integrations=[FlaskIntegration()])
     connections.create_connection('default', hosts=[settings.ES_URL_WALDEN], timeout=15)
     connections.create_connection('walden', hosts=[settings.ES_URL_WALDEN], timeout=15)

@@ -1,4 +1,3 @@
-import json
 import random
 
 from elasticsearch_dsl import Q, Search
@@ -15,7 +14,6 @@ from domains.schemas import DomainsSchema
 from oa_statuses.schemas import OaStatusesSchema
 from fields.schemas import FieldsSchema
 from funders.schemas import FundersSchema
-from ids.ui_format import format_as_ui, is_ui_format
 from ids.utils import (
     is_author_openalex_id,
     is_award_openalex_id,
@@ -145,19 +143,6 @@ def works_id_get(id):
     works_schema = WorksSchema(
         context={"display_relevance": False, "single_record": True}, only=only_fields
     )
-    if is_ui_format():
-        json_output = json.dumps(dict(works_schema.dump(response[0])))
-        ui_format = format_as_ui("works", json_output)
-        return jsonify(
-            {
-                "meta": {
-                    "count": 1,
-                    "page": 1,
-                    "per_page": 1,
-                },
-                "props": ui_format,
-            }
-        )
     return works_schema.dump(response[0])
 
 
@@ -282,19 +267,6 @@ def authors_id_get(id):
     authors_schema = AuthorsSchema(
         context={"display_relevance": False}, only=only_fields
     )
-    if is_ui_format():
-        json_output = json.dumps(dict(authors_schema.dump(response[0])))
-        ui_format = format_as_ui("authors", json_output)
-        return jsonify(
-            {
-                "meta": {
-                    "count": 1,
-                    "page": 1,
-                    "per_page": 1,
-                },
-                "props": ui_format,
-            }
-        )
     return authors_schema.dump(response[0])
 
 
@@ -370,19 +342,6 @@ def institutions_id_get(id):
     institutions_schema = InstitutionsSchema(
         context={"display_relevance": False}, only=only_fields
     )
-    if is_ui_format():
-        json_output = json.dumps(dict(institutions_schema.dump(response[0])))
-        ui_format = format_as_ui("institutions", json_output)
-        return jsonify(
-            {
-                "meta": {
-                    "count": 1,
-                    "page": 1,
-                    "per_page": 1,
-                },
-                "props": ui_format,
-            }
-        )
     return institutions_schema.dump(response[0])
 
 
@@ -439,19 +398,6 @@ def concepts_id_get(id):
     concepts_schema = ConceptsSchema(
         context={"display_relevance": False}, only=only_fields
     )
-    if is_ui_format():
-        json_output = json.dumps(dict(concepts_schema.dump(response[0])))
-        ui_format = format_as_ui("concepts", json_output)
-        return jsonify(
-            {
-                "meta": {
-                    "count": 1,
-                    "page": 1,
-                    "per_page": 1,
-                },
-                "props": ui_format,
-            }
-        )
     return concepts_schema.dump(response[0])
 
 
@@ -525,19 +471,6 @@ def funders_id_get(id):
     funders_schema = FundersSchema(
         context={"display_relevance": False}, only=only_fields
     )
-    if is_ui_format():
-        json_output = json.dumps(dict(funders_schema.dump(response[0])))
-        ui_format = format_as_ui("funders", json_output)
-        return jsonify(
-            {
-                "meta": {
-                    "count": 1,
-                    "page": 1,
-                    "per_page": 1,
-                },
-                "props": ui_format,
-            }
-        )
     return funders_schema.dump(response[0])
 
 
@@ -584,19 +517,6 @@ def publishers_id_get(id):
     publishers_schema = PublishersSchema(
         context={"display_relevance": False}, only=only_fields
     )
-    if is_ui_format():
-        json_output = json.dumps(dict(publishers_schema.dump(response[0])))
-        ui_format = format_as_ui("publishers", json_output)
-        return jsonify(
-            {
-                "meta": {
-                    "count": 1,
-                    "page": 1,
-                    "per_page": 1,
-                },
-                "props": ui_format,
-            }
-        )
     return publishers_schema.dump(response[0])
 
 
@@ -696,19 +616,6 @@ def sources_id_get(id):
     sources_schema = SourcesSchema(
         context={"display_relevance": False}, only=only_fields
     )
-    if is_ui_format():
-        json_output = json.dumps(dict(sources_schema.dump(response[0])))
-        ui_format = format_as_ui("sources", json_output)
-        return jsonify(
-            {
-                "meta": {
-                    "count": 1,
-                    "page": 1,
-                    "per_page": 1,
-                },
-                "props": ui_format,
-            }
-        )
     return sources_schema.dump(response[0])
 
 
@@ -750,19 +657,6 @@ def topics_id_get(id):
     if not response:
         abort(404)
     topics_schema = TopicsSchema(context={"display_relevance": False}, only=only_fields)
-    if is_ui_format():
-        json_output = json.dumps(dict(topics_schema.dump(response[0])))
-        ui_format = format_as_ui("topics", json_output)
-        return jsonify(
-            {
-                "meta": {
-                    "count": 1,
-                    "page": 1,
-                    "per_page": 1,
-                },
-                "props": ui_format,
-            }
-        )
     return topics_schema.dump(response[0])
 
 
@@ -788,19 +682,6 @@ def awards_id_get(id):
     if not response:
         abort(404)
     awards_schema = AwardsSchema(context={"display_relevance": False}, only=only_fields)
-    if is_ui_format():
-        json_output = json.dumps(dict(awards_schema.dump(response[0])))
-        ui_format = format_as_ui("awards", json_output)
-        return jsonify(
-            {
-                "meta": {
-                    "count": 1,
-                    "page": 1,
-                    "per_page": 1,
-                },
-                "props": ui_format,
-            }
-        )
     return awards_schema.dump(response[0])
 
 
@@ -832,19 +713,6 @@ def get_by_openalex_external_id(index, schema, id):
         abort(404, description=f"No {endpoint_name} found matching the ID.")
 
     schema_instance = schema(context={"display_relevance": False}, only=only_fields)
-    if is_ui_format():
-        json_output = json.dumps(dict(schema_instance.dump(response[0])))
-        ui_format = format_as_ui(entity_name, json_output)
-        return jsonify(
-            {
-                "meta": {
-                    "count": 1,
-                    "page": 1,
-                    "per_page": 1,
-                },
-                "props": ui_format,
-            }
-        )
     return schema_instance.dump(response[0])
 
 
@@ -945,19 +813,6 @@ def keywords_id_get(id):
         abort(404)
         
     keywords_schema = KeywordsSchema(context={"display_relevance": False}, only=only_fields)
-    if is_ui_format():
-        json_output = json.dumps(dict(keywords_schema.dump(response[0])))
-        ui_format = format_as_ui("keywords", json_output)
-        return jsonify(
-            {
-                "meta": {
-                    "count": 1,
-                    "page": 1,
-                    "per_page": 1,
-                },
-                "props": ui_format,
-            }
-        )
     return keywords_schema.dump(response[0])
 
 
