@@ -1,160 +1,22 @@
 id: continents
-icon: mdi-earth
-name: continents
-nameSingular: continent
 displayName: continents
 displayNameSingular: continent
 descr: Continents
-eg: Africa
-placeholder: Search continents
-filterName: continent
-filterKey: authorships.institutions.continent
-descrFull: These are the continents of the world. Each continent has a unique OpenAlex
-  ID.
-hasAutocomplete: false
+descrFull: These are the continents of the world. Each continent has a unique OpenAlex ID.
 isNative: false
 idRegex: (?i)(?:https:\/\/openalex\.org\/continents\/|continents\/)(q\d+)
-showOnEntityPage:
-  - id
-  - display_name
-  - display_name_alternatives
-  - countries
-showOnTablePage:
-  - display_name
-  - id
-  - count(works)
-sortByDefault: count(works)
-sortDirDefault: desc
-columns:
-  id:
-    id: id
-    subjectEntity: continents
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    entityId: continents
-    objectEntity:
-    isId: true
-    displayName: Continent ID
-    type: string
-    redshiftDisplayColumn: wikidata_id
-    redshiftFilterColumn: wikidata_id
-    actions:
-      - column
-    actionsPopular:
-    icon: mdi-shape-outline
-    descr: Unique identifier for the continent
-  display_name:
-    id: display_name
-    subjectEntity: continents
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    entityId: continents
-    objectEntity:
-    displayName: Continent name
-    type: string
-    redshiftDisplayColumn: display_name
-    redshiftFilterColumn: display_name
-    actions:
-      - column
-    actionsPopular: []
-    icon: mdi-shape-outline
-    descr: The name of the continent
-  countries:
-    id: countries
-    isList: true
-    subjectEntity: continents
-    defaultOperator: contains
-    entityId: continents
-    objectEntity: countries
-    displayName: countries
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
-    type: array
-    actions: []
-    actionsPopular: []
-    icon: mdi-shape-outline
-    descr: Countries in the continent
-    isSearchColumn: false
-  display_name_alternatives:
-    id: display_name_alternatives
-    isList: true
-    subjectEntity: continents
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    entityId: continents
-    objectEntity:
-    displayName: alternate names
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
-    type: array
-    actions: [ ]
-    actionsPopular: [ ]
-    icon: mdi-town-hall
-    descr: Alternate names of the continent
-  count(works):
-    id: count(works)
-    subjectEntity: continents
-    operators:
-      - is
-      - is not
-      - is greater than
-      - is less than
-    defaultOperator: is
-    entityId: works
-    objectEntity:
-    displayName: works count
-    type: number
-    redshiftDisplayColumn: count(works)
-    redshiftFilterColumn: count(works)
-    actions:
-      - sort
-      - column
-    actionsPopular:
-      - sort
-      - column
-    icon: mdi-book-open-variant
-    descr: The number of works from an author located in the continent
-  sum(citations):
-    id: sum(citations)
-    subjectEntity: authors
-    operators:
-      - is
-      - is not
-      - is greater than
-      - is less than
-    defaultOperator: is
-    entityId: works
-    objectEntity:
-    displayName: citations sum
-    type: number
-    redshiftDisplayColumn: sum(citations)
-    redshiftFilterColumn: sum(citations)
-    actions:
-      - sort
-      - column
-    actionsPopular:
-      - sort
-      - column
-    icon: mdi-book-open-variant
-    descr: Number of times authors from this continent have been cited
 values:
-  - id: continents/Q15
-    display_name: Africa
-  - id: continents/Q18
-    display_name: South America
-  - id: continents/Q46
-    display_name: Europe
-  - id: continents/Q48
-    display_name: Asia
-  - id: continents/Q49
-    display_name: North America
-  - id: continents/Q51
-    display_name: Antarctica
-  - id: continents/Q55643
-    display_name: Oceania
+- id: continents/Q15
+  display_name: Africa
+- id: continents/Q18
+  display_name: South America
+- id: continents/Q46
+  display_name: Europe
+- id: continents/Q48
+  display_name: Asia
+- id: continents/Q49
+  display_name: North America
+- id: continents/Q51
+  display_name: Antarctica
+- id: continents/Q55643
+  display_name: Oceania

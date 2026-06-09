@@ -1,200 +1,48 @@
 id: work-types
-icon: mdi-shape-outline
-name: work types
-nameSingular: work type
 displayName: work types
 displayNameSingular: work type
 descr: Work type
-eg: article
-placeholder: Search work types
-filterName: work type
-filterKey: work type
 descrFull: The type of work, such as an article, book, or dataset.
-hasAutocomplete: false
 isNative: false
 idRegex: (?:https:\/\/openalex\.org\/types\/|types\/)([a-zA-Z\-]+)
-showOnEntityPage:
-  - id
-  - display_name
-  - description
-  - crossref_types
-showOnTablePage:
-  - id
-  - count(works)
-sortByDefault: count(works)
-sortDirDefault: desc
-columns:
-  id:
-    id: id
-    subjectEntity: work-types
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    defaultOperator: is
-    entityId: work-types
-    objectEntity:
-    displayName: work type
-    isId: true
-    type: string
-    redshiftDisplayColumn: work_type_id
-    redshiftFilterColumn: work_type_id
-    actions:
-      - filter
-      - column
-    icon: mdi-tag-outline
-    descr: The unique identifier for the work type in OpenAlex.
-  display_name:
-    id: display_name
-    isColumnMandatory: true
-    subjectEntity: work-types
-    operators:
-      - contains
-      - does not contain
-    defaultOperator: contains
-    objectEntity:
-    displayName: work type name
-    type: string
-    redshiftDisplayColumn: display_name
-    redshiftFilterColumn: display_name
-    actions: []
-    category: other
-    icon: mdi-account-outline
-    descr: The name of the work type.
-  description:
-    id: description
-    subjectEntity: work-types
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    entityId: work-types
-    objectEntity:
-    displayName: description
-    type: string
-    redshiftDisplayColumn: description
-    redshiftFilterColumn:
-    actions:
-      - column
-    icon: mdi-shape-outline
-    descr: A description of the work type.
-  crossref_types:
-    id: crossref_types
-    isList: true
-    subjectEntity: work-types
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    entityId: work-types
-    objectEntity:
-    displayName: alternate names (Crossref)
-    type: array
-    redshiftDisplayColumn:
-    redshiftFilterColumn:
-    actions: []
-    icon: mdi-shape-outline
-    descr: Alternate names for the work type from Crossref.
-  count(works):
-    id: count(works)
-    subjectEntity: topics
-    operators:
-      - is
-      - is not
-      - is greater than
-      - is less than
-    defaultOperator: is
-    entityId: works
-    objectEntity:
-    displayName: works count
-    type: number
-    redshiftDisplayColumn: count(works)
-    redshiftFilterColumn: count(works)
-    icon: mdi-tag-outline
-    descr: The number of works of this type
-  sum(citations):
-    id: sum(citations)
-    subjectEntity: topics
-    operators:
-      - is
-      - is not
-      - is greater than
-      - is less than
-    defaultOperator: is
-    objectEntity:
-    displayName: citation sum
-    type: number
-    redshiftDisplayColumn: sum(citations)
-    redshiftFilterColumn: sum(citations)
-    actions:
-      - sort
-      - column
-    actionsPopular:
-      - sort
-      - column
-    icon: mdi-book-open-variant
-    descr: The sum of works cited that are of this type
-  mean(fwci):
-    id: mean(fwci)
-    subjectEntity: work-types
-    operators:
-      - is
-      - is not
-      - is greater than
-      - is less than
-    defaultOperator: is
-    objectEntity:
-    displayName: mean FWCI
-    type: number
-    redshiftDisplayColumn: mean_fwci
-    redshiftFilterColumn: mean_fwci
-    actions:
-      - sort
-      - column
-    actionsPopular:
-      - sort
-      - column
-    icon: mdi-book-open-variant
-    descr: The mean FWCI of works of this type
-
 values:
-  - id: types/article
-    display_name: article
-  - id: types/book-chapter
-    display_name: book-chapter
-  - id: types/dataset
-    display_name: dataset
-  - id: types/preprint
-    display_name: preprint
-  - id: types/dissertation
-    display_name: dissertation
-  - id: types/book
-    display_name: book
-  - id: types/review
-    display_name: review
-  - id: types/paratext
-    display_name: paratext
-  - id: types/libguides
-    display_name: libguides
-  - id: types/letter
-    display_name: letter
-  - id: types/other
-    display_name: other
-  - id: types/reference-entry
-    display_name: reference-entry
-  - id: types/report
-    display_name: report
-  - id: types/editorial
-    display_name: editorial
-  - id: types/peer-review
-    display_name: peer-review
-  - id: types/erratum
-    display_name: erratum
-  - id: types/standard
-    display_name: standard
-  - id: types/grant
-    display_name: grant
-  - id: types/supplementary-materials
-    display_name: supplementary-materials
-  - id: types/retraction
-    display_name: retraction
+- id: types/article
+  display_name: article
+- id: types/book-chapter
+  display_name: book-chapter
+- id: types/dataset
+  display_name: dataset
+- id: types/preprint
+  display_name: preprint
+- id: types/dissertation
+  display_name: dissertation
+- id: types/book
+  display_name: book
+- id: types/review
+  display_name: review
+- id: types/paratext
+  display_name: paratext
+- id: types/libguides
+  display_name: libguides
+- id: types/letter
+  display_name: letter
+- id: types/other
+  display_name: other
+- id: types/reference-entry
+  display_name: reference-entry
+- id: types/report
+  display_name: report
+- id: types/editorial
+  display_name: editorial
+- id: types/peer-review
+  display_name: peer-review
+- id: types/erratum
+  display_name: erratum
+- id: types/standard
+  display_name: standard
+- id: types/grant
+  display_name: grant
+- id: types/supplementary-materials
+  display_name: supplementary-materials
+- id: types/retraction
+  display_name: retraction

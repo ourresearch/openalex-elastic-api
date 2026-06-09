@@ -1,129 +1,24 @@
 id: institution-types
-icon: mdi-shape-outline
-name: institution-types
-nameSingular: institution type
 displayName: institution types
 displayNameSingular: institution type
 descr: institution type
-eg: company
-placeholder: Search institution types
-filterName: institution type
-filterKey: authorships.institutions.type
 descrFull: The type of institution as seen in ROR
-hasAutocomplete: false
 isNative: false
-idRegex: 
-  (?:https:\/\/openalex\.org\/institution-types\/|institution-types\/)([a-zA-Z\-]+)
-showOnEntityPage:
-  - id
-  - display_name
-showOnTablePage:
-  - display_name
-  - count(works)
-sortByDefault: count(works)
-sortDirDefault: desc
-columns:
-  id:
-    id: id
-    subjectEntity: institution-types
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    entityId: institution-types
-    objectEntity:
-    displayName: Institution ID
-    isId: true
-    type: string
-    redshiftDisplayColumn: institution_type_id
-    redshiftFilterColumn: institution_type_id
-    actions:
-      - filter
-      - column
-    icon: mdi-tag-outline
-    descr: The unique identifier for the institution type
-  display_name:
-    id: display_name
-    isColumnMandatory: true
-    subjectEntity: institution-types
-    operators:
-      - is
-      - is not
-    defaultOperator: is
-    objectEntity:
-    displayName: institution type
-    type: string
-    redshiftDisplayColumn: display_name
-    redshiftFilterColumn:
-    actions:
-      - sort
-      - column
-    actionsPopular:
-      - sort
-      - column
-    category: other
-    icon: mdi-account-outline
-    descr: The name of the institution type
-  count(works):
-    id: count(works)
-    subjectEntity: institution-types
-    operators:
-      - is
-      - is not
-      - is greater than
-      - is less than
-    defaultOperator: is
-    entityId: works
-    objectEntity:
-    displayName: works count
-    type: number
-    redshiftDisplayColumn: count(works)
-    redshiftFilterColumn: count(works)
-    actions:
-      - sort
-      - column
-    actionsPopular:
-      - sort
-      - column
-    icon: mdi-book-open-variant
-    descr: The number of works created by this institution type
-  sum(citations):
-    id: sum(citations)
-    subjectEntity: institution-types
-    operators:
-      - is
-      - is not
-      - is greater than
-      - is less than
-    defaultOperator: is
-    entityId: works
-    objectEntity:
-    displayName: citations sum
-    type: number
-    redshiftDisplayColumn: sum(citations)
-    redshiftFilterColumn: sum(citations)
-    actions:
-      - sort
-      - column
-    actionsPopular:
-      - sort
-      - column
-    icon: mdi-book-open-variant
-    descr: Number of times works by this institution type have been cited
+idRegex: (?:https:\/\/openalex\.org\/institution-types\/|institution-types\/)([a-zA-Z\-]+)
 values:
-  - id: institution-types/education
-    display_name: education
-  - id: institution-types/healthcare
-    display_name: healthcare
-  - id: institution-types/facility
-    display_name: facility
-  - id: institution-types/government
-    display_name: government
-  - id: institution-types/company
-    display_name: company
-  - id: institution-types/nonprofit
-    display_name: nonprofit
-  - id: institution-types/other
-    display_name: other
-  - id: institution-types/archive
-    display_name: archive
+- id: institution-types/education
+  display_name: education
+- id: institution-types/healthcare
+  display_name: healthcare
+- id: institution-types/facility
+  display_name: facility
+- id: institution-types/government
+  display_name: government
+- id: institution-types/company
+  display_name: company
+- id: institution-types/nonprofit
+  display_name: nonprofit
+- id: institution-types/other
+  display_name: other
+- id: institution-types/archive
+  display_name: archive

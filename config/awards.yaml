@@ -1,15 +1,7 @@
 id: awards
-icon: mdi-trophy-outline
-name: awards
-nameSingular: award
 displayName: awards
 displayNameSingular: award
 descr: Research grants/awards that fund works
-eg: NSF grant 1762506
-color: brown
-hasAutocomplete: false
 isNative: true
-# Native G-prefixed OpenAlex IDs. idRegex is consumed by core/entities.py for OQL
-# value-domain validation (Tier 2) — not dead config. (oxjob #363)
 idRegex: (?i)(?:awards\/)?(?:https:\/\/openalex\.org\/)?(g\d+)
-values:
+values: null
