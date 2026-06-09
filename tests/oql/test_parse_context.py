@@ -202,6 +202,16 @@ def test_post_connective_is_value_is_field_not_none():
         assert any(s["kind"] == "field" for s in c["suggestions"])
 
 
+def test_connective_menu_offers_directives_too():
+    # "menu 1" of the two-level design: after a complete clause, offer and/or AND the
+    # trailing directives (sort by / group by / sample) — but never re-offer `where`.
+    c = ctx("works where year > 2000 ")
+    assert c["category"] == C.CONNECTIVE
+    vals = {s["value"] for s in c["suggestions"]}
+    assert {"and", "or", "sort by", "group by", "sample"} <= vals
+    assert "where" not in vals
+
+
 def test_post_connective_carries_enum_sibling_with_ranges():
     q = "works where type is article or "
     c = ctx(q)

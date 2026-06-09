@@ -238,9 +238,16 @@ def _shape(raw: Dict[str, Any]) -> Dict[str, Any]:
         return {"category": VALUE, "value_kind": kind, "field": raw.get("field"),
                 "operators": [], "autocomplete_entity": None, "suggestions": []}
     if cat == CONNECTIVE:
+        # The cursor sits after a complete clause. The grammar accepts a connective
+        # (continue the where-expr) OR a trailing directive (sort/group/sample) OR
+        # end. Offer all of them so the editor's "menu 1" is the full two-level
+        # design's first level (oxjob #357): and / or / sort by / group by / sample.
+        # (`where` is NOT re-offered — we're already inside the where-expression.)
         return {"category": CONNECTIVE,
                 "suggestions": [{"value": "and", "kind": "connective"},
-                                {"value": "or", "kind": "connective"}]}
+                                {"value": "or", "kind": "connective"}]
+                               + [{"value": w, "kind": "directive"}
+                                  for w in ("sort by", "group by", "sample")]}
     if cat in (DIRECTIVE, END):
         return {"category": cat, "suggestions": _directive_suggestions()}
     # NONE / unclassifiable
