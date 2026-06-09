@@ -700,3 +700,21 @@ cases:
     - {text: "sources with an APC under 2000", difficulty: easy}
     - {text: "journals whose article processing charge is less than 2000", difficulty: easy}
     - {text: "cheap-to-publish journals charging below 2000 dollars", difficulty: hard}
+
+- ref: 123  # sources where it's fully open access — #406 1c bool
+  nl:
+    - {text: "fully open access journals", difficulty: easy}
+    - {text: "sources that are fully open access", difficulty: easy}
+    - {text: "which journals are completely OA", difficulty: hard}
+
+- ref: 124  # sources where it's in DOAJ — #406 1c bool
+  nl:
+    - {text: "journals in DOAJ", difficulty: easy}
+    - {text: "sources that are indexed in DOAJ", difficulty: easy}
+    - {text: "which journals are listed in the directory of open access journals", difficulty: hard}
+
+- ref: 125  # sources where it's a CWTS core source — #406 1c bool
+  nl:
+    - {text: "CWTS core sources", difficulty: easy}
+    - {text: "sources that are in the CWTS core collection", difficulty: easy}
+    - {text: "which journals count as CWTS core", difficulty: hard}

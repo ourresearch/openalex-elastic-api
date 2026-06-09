@@ -1813,3 +1813,39 @@ rows:
   oql: 'works where title/abstract contains (near "3xTg-AD" or near "in vivo")'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: '"3xTg-AD"', operator: contains}, {column_id: title_and_abstract.search, value: '"in vivo"', operator: contains}]}]}
   note: "Walkthrough batch 3 (W3.3): on the STEMMED .search column a quoted token the analyzer splits into >1 subtoken (hyphen/slash, e.g. '3xTg-AD', 'APP/PS1') is adjacent-subtokens (phrase), NOT the bare AND form — measured live `\"3xTg-AD\"` 2027 vs `3xTg-AD` 2354. So the encoder keeps quotes for multi-subtoken stemmed tokens; atomic tokens (5xFAD) and exact-column wildcards ('foo*bar') stay bare. Rendered as `near \"…\"` (stemmed adjacent phrase)."
+
+- id: 123
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL multi-entity (#406 1c): sources is_oa boolean — 'fully open access' (display_name); GUI-faceted source bool"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/sources?filter=is_oa:true'
+  status: ok
+  oql: 'sources where it''s fully open access'
+  oqo: {get_rows: sources, filter_rows: [{column_id: is_oa, value: true}]}
+  note: "#406 Part B boolean: render word 'fully open access' == engine display_name; phrasing is the curated OQL sentence (the one legit _FIELDS exception). is_oa exists on works too (filters the work's OA flag)."
+
+- id: 124
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL multi-entity (#406 1c): sources is_in_doaj boolean — 'in DOAJ' (sources-only column)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/sources?filter=is_in_doaj:true'
+  status: ok
+  oql: 'sources where it''s in DOAJ'
+  oqo: {get_rows: sources, filter_rows: [{column_id: is_in_doaj, value: true}]}
+  note: "#406 Part B boolean: sources-only column → invalid_column on works (which uses primary_location.source.is_in_doaj, 'indexed by DOAJ')."
+
+- id: 125
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL multi-entity (#406 1c): sources is_core boolean — HOMONYM of works primary_location.source.is_core, entity-resolved in the bool clause"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/sources?filter=is_core:true'
+  status: ok
+  oql: 'sources where it''s in a CWTS core source'
+  oqo: {get_rows: sources, filter_rows: [{column_id: is_core, value: true}]}
+  note: "#406 Part B boolean HOMONYM: the word 'CWTS core source' maps to works' primary_location.source.is_core; the bool clause parser entity-resolves it to the bare `is_core` column on sources (no second _f, which would have hijacked the works word). Renders the shared phrasing 'it's in a CWTS core source'."
