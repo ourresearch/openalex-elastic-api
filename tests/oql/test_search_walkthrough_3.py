@@ -56,13 +56,15 @@ def test_case4_citation_percentile_curated():
         {"column_id": "citation_normalized_percentile.value", "value": 99}]
 
 
-def test_case4_raw_column_still_parses():
-    assert _leaves("works where citation_normalized_percentile.value is 99") == [
-        {"column_id": "citation_normalized_percentile.value", "value": 99}]
+# (oxjob #406 burned the raw-id "bridge" for this curated-but-not-GUI-faceted
+# column — the clean OQL spec surfaces the friendly word only. The old
+# `test_case4_raw_column_still_parses` asserted that burned bridge and was removed;
+# a future `supported_by: oql` registry annotation will re-cover the raw id —
+# tracked in the spin-out job `registry-supported-by-annotation`.)
 
 
 def test_case4_render_word_round_trips():
-    out = _render("works where citation_normalized_percentile.value is 99")
+    out = _render("works where citation percentile by subfield is 99")
     assert "citation percentile by subfield is 99" in out
     assert _roundtrips(out)
 

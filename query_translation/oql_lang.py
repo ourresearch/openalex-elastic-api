@@ -186,7 +186,7 @@ _f("FWCI", "fwci", "num", aliases=["fwci"], is_float=True)
 # The work's citation count normalized by subfield + year, as a percentile (0-100).
 # Render word = registry display_name "citation percentile by subfield" (#363 case 4).
 _f("citation percentile by subfield", "citation_normalized_percentile.value", "num",
-   aliases=["citation_normalized_percentile.value"], is_float=True)
+   is_float=True)
 
 # --- dates (oxjob #407) ---
 # ONE friendly axis field per date; the OPERATOR routes to one of three real ES
@@ -239,10 +239,10 @@ _f("has repository fulltext", "open_access.any_repository_has_fulltext", "bool",
    bool_true="it has fulltext in a repository", bool_false="it doesn't have fulltext in a repository")
 # Citation-percentile band flags (subfield+year normalized). (#363 case 4 siblings)
 _f("in top 1% by citations", "citation_normalized_percentile.is_in_top_1_percent", "bool",
-   aliases=["citation_normalized_percentile.is_in_top_1_percent", "in the top 1% by citations"],
+   aliases=["in the top 1% by citations"],
    bool_true="it's in the top 1% by citations", bool_false="it's not in the top 1% by citations")
 _f("in top 10% by citations", "citation_normalized_percentile.is_in_top_10_percent", "bool",
-   aliases=["citation_normalized_percentile.is_in_top_10_percent", "in the top 10% by citations"],
+   aliases=["in the top 10% by citations"],
    bool_true="it's in the top 10% by citations", bool_false="it's not in the top 10% by citations")
 
 # --- ids (entity references) ---
@@ -255,8 +255,7 @@ _f("funder", "funders.id", "id")
 # Publisher of the work's primary source (engine param primary_location.source.publisher_lineage,
 # a P-id; lineage so a parent publisher matches its imprints). Mirrors `funder`: an entity-id
 # reference, name-resolved via the publishers namespace. (oxjob #363 discovery loop run #1)
-_f("publisher", "primary_location.source.publisher_lineage", "id",
-   aliases=["primary_location.source.host_organization_lineage"])
+_f("publisher", "primary_location.source.publisher_lineage", "id")
 # Render word "SDG" = the registry display_name (#381 Phase 5: acronym made canonical
 # everywhere). Long forms stay parse aliases.
 # "sustainable development goal(s)" input aliases live in the registry (#406 1c).
@@ -417,8 +416,7 @@ _f("paratext", "is_paratext", "bool",
 # open_access.is_oa), so they join those fields as aliases (added above) rather than
 # minting parallel labels — which also drops them off the #363 raw fallback.
 # Strings with already-clean display_names:
-_f("best open version", "best_open_version", "string",
-   aliases=["best_oa_location.version"])  # folds best_oa_location.version
+_f("best open version", "best_open_version", "string")
 _f("indexed in", "indexed_in", "string")
 # OA-version / content bools (gate-exempt — natural phrasing, round-trips via the
 # bool_true remainder). "open access accepted/published" = the work's best OA copy is
