@@ -26,6 +26,7 @@ import keywords
 import languages
 import licenses
 import locations
+import meta
 import oa_statuses
 import oql
 import publishers
@@ -111,6 +112,7 @@ def register_blueprints(app):
     app.register_blueprint(languages.views.blueprint)
     app.register_blueprint(licenses.views.blueprint)
     app.register_blueprint(locations.views.blueprint)
+    app.register_blueprint(meta.views.blueprint)
     app.register_blueprint(oa_statuses.views.blueprint)
     app.register_blueprint(oql.views.blueprint)
     app.register_blueprint(publishers.views.blueprint)

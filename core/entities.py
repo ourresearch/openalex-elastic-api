@@ -171,6 +171,14 @@ def get_entity_type(name: Optional[str]) -> Optional[EntityType]:
     return _registry().get(name)
 
 
+def all_entity_types() -> Dict[str, EntityType]:
+    """Every entity type in the registry, keyed by ``id`` (== entity_type),
+    sorted by key. THE source the ``/meta`` catalog and the ``/entities`` data
+    route iterate — neither keeps its own entity list. A shallow copy, so callers
+    can't mutate the cached registry."""
+    return dict(sorted(_registry().items()))
+
+
 def entity_for_id_prefix(prefix: Optional[str]) -> Optional[str]:
     """Reverse lookup: the entity_type whose native ID prefix is ``prefix``
     (case-insensitive). Used to name the *wrong* type in a Tier-2 fix-it —
