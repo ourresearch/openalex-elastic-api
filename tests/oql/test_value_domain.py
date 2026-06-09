@@ -107,13 +107,53 @@ def test_invalid_value_diagnostic_registered():
     assert spec.default_fixit  # carries an actionable hint for the editor
 
 
-# --- the map is the design's vetted Tier-1 set (guard against silent drift) --
+# --- the map is the design's vetted Tier-1 (+1.5) set (guard against drift) ---
 def test_closed_vocab_namespace_set():
     assert set(CLOSED_VOCAB_NAMESPACE) == {
         "countries", "continents", "languages", "sdgs", "work-types", "oa-statuses",
+        # Tier-1.5 topic-hierarchy vocabs (oxjob #363):
+        "domains", "fields", "subfields",
     }
     # work-types' config namespace is the legacy "types"
     assert CLOSED_VOCAB_NAMESPACE["work-types"] == "types"
+    # the three Tier-1.5 vocabs are identity-mapped (namespace == entity_type)
+    for ns in ("domains", "fields", "subfields"):
+        assert CLOSED_VOCAB_NAMESPACE[ns] == ns
+
+
+# =============================================================================
+# Tier 1.5 — topic-hierarchy code vocabs (fields / subfields / domains).
+#
+# Same shape as Tier 1: small fully-enumerable closed sets backed by
+# config/*.yaml. `field is 99999` (out-of-range) and `field is medicine` (a
+# NAME) must be hard `invalid_value`, not silently valid. (oxjob #363.)
+# =============================================================================
+
+# --- valid members pass (friendly surface word + raw column) -----------------
+@pytest.mark.parametrize("oql", [
+    "works where field is 27",                    # primary_topic.field.id (Medicine)
+    "works where subfield is 2712",               # primary_topic.subfield.id
+    "works where topics.domain.id is 2",          # a domains-typed column (Social Sciences)
+])
+def test_tier15_valid_members_pass(oql):
+    assert _invalid_value_errors(oql) == [], oql
+
+
+# --- out-of-range ids and names are rejected ---------------------------------
+@pytest.mark.parametrize("oql", [
+    "works where field is 99999",                 # out-of-range field id
+    "works where subfield is 99999",              # out-of-range subfield id
+    "works where topics.domain.id is 99999",      # out-of-range domain id
+])
+def test_tier15_out_of_range_rejected(oql):
+    errs = _invalid_value_errors(oql)
+    assert len(errs) == 1, f"{oql} -> {errs}"
+
+
+# --- a display name suggests its code (the footgun, did-you-mean) ------------
+def test_tier15_field_name_suggests_code():
+    [msg] = _invalid_value_errors("works where field is medicine")
+    assert "Did you mean '27'?" in msg
 
 
 # =============================================================================

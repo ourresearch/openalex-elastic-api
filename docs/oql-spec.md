@@ -528,6 +528,14 @@ validates **iff** it can also be rendered with a name):
 | `work-types`  | type slug                | `article`, `review` / `boguskind` |
 | `oa-statuses` | status slug              | `gold`, `green` / `sparkly` |
 | `continents`  | Wikidata Q-id            | `q15` |
+| `domains`     | numeric id (4 total)     | `2` / `99999`, `social sciences` |
+| `fields`      | numeric id (26 total)    | `27` / `99999`, `medicine` |
+| `subfields`   | numeric id (252 total)   | `2712` / `99999` |
+
+> The topic-hierarchy vocabs (`domains` / `fields` / `subfields`) are small,
+> fully-enumerable closed sets, so they validate the same way: `field is 99999`
+> (out-of-range) and `field is medicine` (a name) are rejected, with a "did you
+> mean '27'?" fix-it for the name. (Tier 1.5, oxjob #363.)
 
 > `gb` is the ISO code for the United Kingdom; `uk` is **not** a valid code and is
 > rejected (the NL phrasings "UK"/"Britain"/"United Kingdom" all resolve to `gb`).

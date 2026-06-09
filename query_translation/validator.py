@@ -89,6 +89,14 @@ CLOSED_VOCAB_NAMESPACE = {
     "sdgs": "sdgs",
     "work-types": "types",
     "oa-statuses": "oa-statuses",
+    # Tier-1.5: the topic-hierarchy code vocabs — small, fully-enumerable closed
+    # sets (domains 4, fields 26, subfields 252; complete in `config/*.yaml` and
+    # matching the live API). Identity-mapped (namespace == entity_type ==
+    # renderer config namespace). Protects any column carrying these entity_types
+    # (e.g. `primary_topic.field.id`, `topics.domain.id`). (oxjob #363, 2026-06-08.)
+    "domains": "domains",
+    "fields": "fields",
+    "subfields": "subfields",
 }
 
 VALID_SORT_ORDERS = {"asc", "desc"}
