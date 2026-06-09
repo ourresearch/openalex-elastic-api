@@ -202,6 +202,17 @@ def is_vocab_member(namespace: Optional[str], value: Any) -> bool:
     return code is not None and code in table
 
 
+def config_vocab_items(namespace: Optional[str]):
+    """Public: the full closed-vocab membership of `namespace` as a sorted list of
+    ``(short_id, display_name)`` tuples — the editor's enum-value autocomplete source
+    (#357). Empty list for a non-vocab namespace. Sorted by display name for a stable,
+    human-friendly dropdown order."""
+    table = _config_table(namespace)
+    if not table:
+        return []
+    return sorted(table.items(), key=lambda kv: kv[1].lower())
+
+
 def vocab_name_to_code(namespace: Optional[str], name: str) -> Optional[str]:
     """Reverse lookup: a display name -> its code (for "did you mean" fix-its,
     e.g. `country is Canada` -> suggest `ca`). Case-insensitive; None if no

@@ -169,6 +169,7 @@ def _value_context(category, fld: Field, in_list=False) -> Dict[str, Any]:
         "category": category,
         "value_kind": fld.kind,
         "field": fld.oql,
+        "column": fld.column,  # lets the route map enum columns -> config vocab (#357)
         "operators": KIND_OPERATORS.get(fld.kind, []),
         "in_list": in_list,
         "autocomplete_entity": None,

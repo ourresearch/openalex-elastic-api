@@ -22,9 +22,45 @@ from query_translation.oql_context import parse_context as _parse_context
 from query_translation.oql_lang import (
     parse as _engine_parse, parse_collecting as _engine_parse_collecting,
 )
+from query_translation.oql_renderer import config_vocab_items
 from query_translation.validator import validate_oqo
 
 blueprint = Blueprint("oql_editor", __name__)
+
+# enum-value autocomplete (#357): OQL field column -> the closed-vocab config namespace
+# whose values populate the dropdown. Only columns backed by a `config/*.yaml` values
+# list are here (countries/languages/types/oa-statuses); source-type / institution-type
+# have no closed config vocab yet, so they keep the bare "unknown" suggestion.
+_ENUM_COLUMN_NAMESPACE = {
+    "type": "types",
+    "open_access.oa_status": "oa-statuses",
+    "language": "languages",
+    "authorships.countries": "countries",
+    "country_code": "countries",
+    "last_known_institutions.country_code": "countries",
+}
+
+
+def _enrich_enum_suggestions(result):
+    """If the cursor is at an enum value slot whose column has a closed config vocab,
+    prepend the actual slug values (with display-name detail) to the suggestion list,
+    so `type is ▮` offers article/dataset/… instead of only "unknown". Mutates and
+    returns `result` (pure dict; safe to call on every /parse-context response)."""
+    ctx = result.get("context") or {}
+    if ctx.get("value_kind") != "enum":
+        return result
+    namespace = _ENUM_COLUMN_NAMESPACE.get(ctx.get("column"))
+    if not namespace:
+        return result
+    slugs = [
+        # detail only when the display name adds information beyond the slug
+        {"value": sid, "kind": "enum-slug",
+         **({"detail": name} if name.lower() != sid.lower() else {})}
+        for sid, name in config_vocab_items(namespace)
+    ]
+    if slugs:
+        ctx["suggestions"] = slugs + (ctx.get("suggestions") or [])
+    return result
 
 
 @blueprint.route("/parse-context", methods=["GET"])
@@ -49,7 +85,7 @@ def parse_context_route():
             pos = int(pos_arg)
         except (TypeError, ValueError):
             pos = None
-    return jsonify(_parse_context(q, pos)), 200
+    return jsonify(_enrich_enum_suggestions(_parse_context(q, pos))), 200
 
 
 @blueprint.route("/validate", methods=["GET"])
