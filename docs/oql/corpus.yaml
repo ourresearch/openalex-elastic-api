@@ -635,7 +635,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/authors?filter=has_orcid:true,last_known_institutions.country_code:BR'
   status: ok
-  oql: 'authors where it has an ORCID and author country is BR'
+  oql: 'authors where it has an ORCID and author country is BR [Brazil]'
   oqo: {get_rows: authors, filter_rows: [
         {column_id: last_known_institutions.country_code, value: BR},
         {column_id: has_orcid, value: true}]}
@@ -670,7 +670,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/institutions?filter=country_code:FR'
   status: ok
-  oql: 'institutions where country code is FR'
+  oql: 'institutions where country code is FR [France]'
   oqo: {get_rows: institutions, filter_rows: [{column_id: country_code, value: FR}]}
 
 - id: 44
@@ -681,7 +681,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/topics?filter=domain.id:3'
   status: ok
-  oql: 'topics where domain is 3'
+  oql: 'topics where domain is 3 [Physical Sciences]'
   oqo: {get_rows: topics, filter_rows: [{column_id: domain.id, value: '3'}]}
 
 - id: 45
@@ -750,7 +750,9 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.countries:col_eu27,authorships.countries:US&group_by=primary_topic.id'
   status: ok
-  oql: 'works where country is in collection col_eu27 and country is US group by topic'
+  oql: |-
+    works where country is in collection col_eu27 and country is US [United States]
+    group by topic
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.countries, value: col_eu27, operator: in collection},
         {column_id: authorships.countries, value: US}],
@@ -929,7 +931,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=language:en,publication_year:2015-2024,title_and_abstract.search:ASD|%22autism%20spectrum%20disorder%22|autism,title_and_abstract.search:intervention|therapy|treatment,type:article|review'
   status: ok
   oql: |-
-    works where language is en
+    works where language is en [English]
       and year is 2015-2024
       and title/abstract contains (ASD or near "autism spectrum disorder" or autism)
       and title/abstract contains (intervention or therapy or treatment)
@@ -1067,7 +1069,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=language:es'
   status: ok
-  oql: 'works where language is es'
+  oql: 'works where language is es [Spanish]'
   oqo: {get_rows: works, filter_rows: [{column_id: language, value: es}]}
 
 - id: 71
@@ -1434,7 +1436,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.countries:GB,authorships.countries:US'
   status: ok
-  oql: 'works where country is GB and country is US'
+  oql: 'works where country is GB [United Kingdom] and country is US [United States]'
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.countries, value: US},
         {column_id: authorships.countries, value: GB}]}
@@ -1558,7 +1560,9 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=primary_topic.subfield.id:2712,type:article'
   status: ok
-  oql: 'works where subfield is 2712 and type is article'
+  oql: |-
+    works where subfield is 2712 [Endocrinology, Diabetes and Metabolism]
+      and type is article
   oqo: {get_rows: works, filter_rows: [{column_id: primary_topic.subfield.id, value: '2712'}, {column_id: type, value: article}]}
   note: 'The subfield of a work''s primary topic (topic hierarchy domain > field > subfield > topic). Render word = registry display_name "subfield"; the value resolves a `[display name]` via the native subfields namespace. Was an "unknown field" before oxjob #363 (only field/domain/topic were registered).'
 
@@ -1594,7 +1598,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=language:en'
   status: ok
-  oql: 'works where language is en'
+  oql: 'works where language is en [English]'
   oqo: {get_rows: works, filter_rows: [{column_id: language, value: en}]}
   note: "Language is a closed code vocabulary (not a 'super obvious' enum like work-type), so it resolves a [display name] (English, not en) from config/languages.yaml. fields/subfields/domains resolve the same way — their numeric path-style IDs (fields/27) can't be routed by get_display_name, so they never resolved via ES before. (oxjob #363 case 5)"
 
@@ -1618,7 +1622,9 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=cited_by:w1984893742,type:article'
   status: ok
-  oql: 'works where cited by is w1984893742 and type is article'
+  oql: |-
+    works where cited by is w1984893742 [Uncertainty and Pension Systems Reforms]
+      and type is article
   oqo: {get_rows: works, filter_rows: [{column_id: cited_by, value: w1984893742}, {column_id: type, value: article}]}
   note: "cited_by:W = the works in W's reference list ('cited by' W); cites:W = works citing W. Render words = registry display_names 'cited by' / 'cites'. The W-id value resolves the referenced work's title, truncated with an ellipsis at a uniform length (works added to NATIVE_ENTITY_TYPES). (oxjob #363 case 7)"
 
@@ -1631,7 +1637,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=authorships.author.id:a5018352470,fulltext.search:simulation,publication_year:2015-2025,type:article,fulltext.search:%22data%20assimilation%22|%22state%20estimation%22|real-time,fulltext.search:%22reduced%20order%20model%22|%22surrogate%20model%22,primary_topic.field.id:15|16|17|19|21|22|23|25|26|31&sort=publication_year:desc'
   status: ok
   oql: |-
-    works where author is a5018352470
+    works where author is a5018352470 [Kenji Takizawa]
       and full text contains simulation
       and year is 2015-2025
       and type is article
@@ -1641,7 +1647,12 @@ rows:
         real-time
       )
       and full text contains (near "reduced order model" or near "surrogate model")
-      and field is (15 or 16 or 17 or 19 or 21 or 22 or 23 or 25 or 26 or 31)
+      and field is (
+        15 [Chemical Engineering] or 16 [Chemistry] or 17 [Computer Science] or
+        19 [Earth and Planetary Sciences] or 21 [Energy] or 22 [Engineering] or
+        23 [Environmental Science] or 25 [Materials Science] or 26 [Mathematics] or
+        31 [Physics and Astronomy]
+      )
     sort by year desc
   oqo: {get_rows: works, sort_by: [{column_id: publication_year, direction: desc}], filter_rows: [{column_id: authorships.author.id, value: a5018352470}, {column_id: fulltext.search, operator: contains, value: simulation}, {column_id: publication_year, operator: '>=', value: 2015}, {column_id: publication_year, operator: <=, value: 2025}, {column_id: type, value: article}, {join: or, filters: [{column_id: fulltext.search, operator: contains, value: '"data assimilation"'}, {column_id: fulltext.search, operator: contains, value: '"state estimation"'}, {column_id: fulltext.search, operator: contains, value: real-time}]}, {join: or, filters: [{column_id: fulltext.search, operator: contains, value: '"reduced order model"'}, {column_id: fulltext.search, operator: contains, value: '"surrogate model"'}]}, {join: or, filters: [{column_id: primary_topic.field.id, value: '15'}, {column_id: primary_topic.field.id, value: '16'}, {column_id: primary_topic.field.id, value: '17'}, {column_id: primary_topic.field.id, value: '19'}, {column_id: primary_topic.field.id, value: '21'}, {column_id: primary_topic.field.id, value: '22'}, {column_id: primary_topic.field.id, value: '23'}, {column_id: primary_topic.field.id, value: '25'}, {column_id: primary_topic.field.id, value: '26'}, {column_id: primary_topic.field.id, value: '31'}]}]}
   note: "A real multi-block systematic-review search. Each quoted phrase ('reduced order model') is one atom and MUST keep its quotes inside the OR-group, else it renders bare ('reduced order model') and re-parses as an ambiguous mix of implicit-AND (space) and explicit-or. The URL parser's boolean-group handler used to strip phrase quotes (case 8a fix). Bare multi-word atoms mixed with 'or' are a hard ambiguity error — OQL never guesses precedence (case 8b). (oxjob #363)"
@@ -1702,7 +1713,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=primary_topic.domain.id:3'
   status: ok
-  oql: 'works where domain is 3'
+  oql: 'works where domain is 3 [Physical Sciences]'
   oqo: {get_rows: works, filter_rows: [{column_id: primary_topic.domain.id, value: '3'}]}
   note: "#406 Part A: the friendly word resolves to the column that exists ON THE QUERIED ENTITY. On works `domain` is primary_topic.domain.id (the GUI domain param); on topics it's the bare domain.id (row 44). Both round-trip."
 
@@ -1714,7 +1725,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/topics?filter=field.id:27'
   status: ok
-  oql: 'topics where field is 27'
+  oql: 'topics where field is 27 [Medicine]'
   oqo: {get_rows: topics, filter_rows: [{column_id: field.id, value: '27'}]}
   note: "#406 Part A: symmetric to row 113 — `field`/`subfield` are correct on works as primary_topic.* but on topics resolve to the bare field.id / subfield.id."
 
@@ -1726,7 +1737,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/topics?filter=subfield.id:2712'
   status: ok
-  oql: 'topics where subfield is 2712'
+  oql: 'topics where subfield is 2712 [Endocrinology, Diabetes and Metabolism]'
   oqo: {get_rows: topics, filter_rows: [{column_id: subfield.id, value: '2712'}]}
   note: "#406 Part A: topics `subfield.id` registry display_name is 'parent subfield'; the friendly word 'subfield' is added as a parse alias so the topic-hierarchy word resolves on topics too."
 

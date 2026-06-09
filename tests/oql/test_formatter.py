@@ -20,6 +20,7 @@ import yaml
 
 from tests.oql.oql_v2 import parse, render, OQLError
 from query_translation.oql_lang import format_oql, FORMAT_WIDTH
+from query_translation.oql_renderer import make_engine_resolver
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 
 CORPUS = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
@@ -33,16 +34,25 @@ def _fmt(oql: str) -> str:
 
 # The committed corpus keeps its curated `[display name]` annotations (it's a
 # human-facing surface — the #345 playground renders `row.oql` verbatim). The
-# pure test env has no Elasticsearch, so names are supplied by a resolver
-# harvested from the corpus's own annotations — the same map
-# docs/oql/regen_corpus_oql.py uses, so the no-drift check is stable. (Country /
-# SDG / language codes were authored bare — already readable, e.g. `country is US`.)
+# pure test env has no Elasticsearch, so names come from a PRODUCTION-EQUIVALENT
+# resolver — opaque-ID names harvested from the corpus's own annotations (+ the
+# supplemental real names) wrapped by make_engine_resolver, which adds the
+# config/*.yaml builtin tables for closed vocabs (country / language / field /
+# subfield / domain / sdg). Mirrors docs/oql/regen_corpus_oql.py exactly (KEEP IN
+# SYNC), so the corpus annotates as production renders + the no-drift check holds.
 _ANNOT_RE = re.compile(r"([A-Z]\d{4,})\s+\[([^\]]+)\]")
+_SUPPLEMENTAL_NAMES = {
+    "A5022654839": "Terry Law",
+    "W1984893742": "Uncertainty and Pension Systems Reforms",
+    "A5018352470": "Kenji Takizawa",
+}
 with open(CORPUS) as _fh:
-    _NAMES: dict = {}
+    _NAMES: dict = dict(_SUPPLEMENTAL_NAMES)
     for _id, _name in _ANNOT_RE.findall(_fh.read()):
         _NAMES.setdefault(_id, _name)
-_RESOLVER = lambda value, column_id=None: _NAMES.get(value)
+_RESOLVER = make_engine_resolver(
+    lambda key: _NAMES.get(key.rsplit("/", 1)[-1].upper())
+)
 
 
 def _fmt_named(oql: str) -> str:

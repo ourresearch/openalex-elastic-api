@@ -2514,6 +2514,23 @@ def _call_resolver(resolver, value, column_id):
 # but long institution/source names get clipped too). (oxjob #363 case 7)
 _NAME_ANNOTATION_MAX = 50
 
+# Annotation for a shape-valid entity ID the resolver couldn't find (oxjob #418).
+# Lowercase/neutral so it never reads as an entity literally named that, and never
+# implies the query is invalid. Like `[display name]`, it's discarded on re-parse.
+_NO_ENTITY_ANNOTATION = "[no entity found]"
+
+
+def _column_resolves_name(column_id) -> bool:
+    """True if this column is name-resolvable in production — i.e. the engine
+    resolver (`oql_renderer._RESOLVE_NAMESPACE`) maps it to a real namespace.
+    A `None`/absent mapping means the column never shows a name (entity self-ids
+    like `ids.openalex`, bare work ids), so a resolver miss there is "no name for
+    this kind of column", NOT "entity not found" — those stay bare (oxjob #418).
+    Lazy import: `oql_renderer` imports this module at load, so a top-level import
+    would deadlock the package init cycle."""
+    from query_translation.oql_renderer import _RESOLVE_NAMESPACE  # lazy (cycle)
+    return _RESOLVE_NAMESPACE.get(column_id) is not None
+
 
 def _truncate_name(name: str) -> str:
     """Clip a display-name annotation to a uniform length with an ellipsis."""
@@ -2533,6 +2550,16 @@ def _value_with_name(fld, value, column_id, resolver) -> str:
         name = _call_resolver(resolver, value, column_id)
         if name:
             return f"{rendered} [{_truncate_name(name)}]"
+        # Resolver was consulted but found nothing → a shape-valid ID that doesn't
+        # exist (deleted / merged-not-followed / typo). Mark it so a reader can't
+        # confuse it with the resolverless case (no resolver → bare ID, nothing
+        # was looked up). The ID stays valid + queryable; this is display-only,
+        # and the `[...]` annotation is discarded on re-parse. (oxjob #418)
+        # Only for columns production actually name-resolves — a miss on a
+        # self-id / non-resolvable column means "no name for this kind", not
+        # "entity not found", so those stay bare.
+        if _column_resolves_name(column_id):
+            return f"{rendered} {_NO_ENTITY_ANNOTATION}"
     return rendered
 
 
@@ -2643,6 +2670,12 @@ def _value_segments(fld, value, column_id, resolver):
             segs.append(_seg("id", f"[{shown}]", entity_display_name=shown,
                              entity_display_id=f"[{shown}]"))
             entity = EntityValue(id=value, short_id=value, display_name=name)
+        elif _column_resolves_name(column_id):
+            # Resolver consulted, no match — mark the unresolvable ID (oxjob #418).
+            # Gated + mirrors _value_with_name so it concatenates to exactly its
+            # string (only for production-name-resolvable columns; see there).
+            segs.append(_seg("text", " "))
+            segs.append(_seg("id", _NO_ENTITY_ANNOTATION))
     return segs, entity
 
 

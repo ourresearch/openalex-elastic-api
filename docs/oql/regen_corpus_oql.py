@@ -45,14 +45,28 @@ import yaml
 from tests.oql.oql_v2 import parse, render
 from query_translation.oqo import OQO
 from query_translation.oqo_canonicalizer import canonicalize_oqo
+from query_translation.oql_renderer import make_engine_resolver
 from query_translation.url_renderer import render_oqo_to_url, URLRenderError
 
 CORPUS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "corpus.yaml")
 
 # OpenAlex entity IDs are an uppercase letter + digits (I…/A…/F…/S…/T…/…); every
-# `[name]` annotation in the corpus decorates one of these. (Country/SDG/lang
-# codes were authored bare, so they stay bare — readable already: `country is US`.)
+# opaque-ID `[name]` annotation in the corpus decorates one of these — we harvest
+# them to resolve those IDs offline (no ES). Closed-vocab codes (country / SDG /
+# language / field / subfield / domain) are NOT harvested here: they resolve via
+# the `config/*.yaml` builtin tables in make_engine_resolver, exactly as in
+# production, so the corpus renders them name-annotated the same way (oxjob #418).
 _ANNOT_RE = re.compile(r"([A-Z]\d{4,})\s+\[([^\]]+)\]")
+
+# Real display names for opaque IDs the corpus authored BARE (no `[name]` to
+# harvest) and the offline test env can't resolve via ES. Fetched from the live
+# API 2026-06-09 so the offline render matches production. Keyed uppercase; the
+# resolver upper-cases the lookup (the corpus stores some IDs lowercase). (#418)
+_SUPPLEMENTAL_NAMES = {
+    "A5022654839": "Terry Law",
+    "W1984893742": "Uncertainty and Pension Systems Reforms",
+    "A5018352470": "Kenji Takizawa",
+}
 
 # oxurl component order — the readable order users/the GUI emit. `search.semantic`
 # rides as its own top-level param (vector search has no `filter=` form, #363), so
@@ -80,7 +94,15 @@ def harvest_names(text: str) -> dict:
 
 
 def make_resolver(names: dict):
-    return lambda value, column_id=None: names.get(value)
+    """Production-equivalent name resolver for the corpus: harvested opaque-ID
+    names (+ supplemental real names) wrapped by make_engine_resolver, which adds
+    the config/*.yaml builtin tables for the closed vocabs. So the corpus's `oql`
+    annotates exactly as production renders it (oxjob #418). Opaque-ID lookups are
+    case-insensitive (the corpus stores some IDs lowercase)."""
+    combined = {**names, **_SUPPLEMENTAL_NAMES}
+    return make_engine_resolver(
+        lambda key: combined.get(key.rsplit("/", 1)[-1].upper())
+    )
 
 
 def canonical_oql(oql: str, resolver) -> str:
