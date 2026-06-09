@@ -130,19 +130,22 @@ def test_renderer_resolves_display_names_for_id_and_country_columns():
 
 
 def test_search_model_space_quotes_near():
-    """Lock the v2 search model under the #363 parens-bag grammar: a single bare
-    term is fine; 2+ terms must be parenthesized; inside parens space=AND,
+    """Lock the v2 search model under the #363 grammar after the D2 reversal
+    (oxjob #363, discovery run #3): a maximal run of bare words inside a group is
+    ONE stemmed adjacency-boosted node (NOT per-word AND); explicit and/or/not
+    build the tree; 2+ bare terms at top level still must be parenthesized;
     quotes=exact, near=stemmed phrase."""
     from tests.oql.oql_v2 import parse as p, OQLError
     rows = lambda oql: p(oql).to_dict()["filter_rows"]
 
-    # SPACE inside a group = stemmed AND (two .search leaves, words may be apart);
-    # a top-level AND flattens into separate filter_rows
+    # SPACE inside a group = ONE stemmed node (#1, D2 reversal). The engine
+    # adjacency-boosts the whole run, so it is a single value, not climate AND
+    # change (which would silently drop the match_phrase boost).
     fr = rows("works where title contains (climate change)")
-    assert sorted((f["column_id"], f["value"]) for f in fr) == \
-        [("display_name.search", "change"), ("display_name.search", "climate")]
+    assert fr == [{"column_id": "display_name.search", "value": "climate change", "operator": "contains"}]
 
-    # 2+ BARE terms (no parens) are a loud error — the footgun killer (D1)
+    # 2+ BARE terms (no parens) are a loud error — the footgun killer (D1) still
+    # holds at the TOP level (the canonical render always parenthesizes).
     with pytest.raises(OQLError) as e:
         p("works where title contains climate change")
     assert e.value.code == "OQL_UNDELIMITED_TERM_LIST"
@@ -155,14 +158,23 @@ def test_search_model_space_quotes_near():
     fr = rows('works where title contains near "whopper junior"')
     assert fr == [{"column_id": "display_name.search", "value": '"whopper junior"', "operator": "contains"}]
 
+    # an embedded QUOTED token is an escape — a literal stemmed word folded into
+    # the run, so a reserved word can live inside a stemmed value (#2)
+    fr = rows('works where title contains (climate change "and" warming)')
+    assert fr == [{"column_id": "display_name.search", "value": "climate change and warming", "operator": "contains"}]
+
     # single quoted word = exact; bare word = stemmed
     assert rows('works where title contains "cat"')[0]["column_id"] == "display_name.search.exact"
     assert rows("works where title contains cat")[0]["column_id"] == "display_name.search"
 
-    # inside a group, mixing a space (AND) with an explicit `or` needs nested
-    # parens (no silent order-of-operations)
+    # a bare run + explicit `or` = two nodes, NO mixed-bool error (the run is one
+    # node, so there is no space-AND to mix with the or). (#1, D2 reversal)
+    fr = rows("works where title contains (climate change or warming)")
+    assert len(fr) == 1 and fr[0]["join"] == "or"
+    assert sorted(f["value"] for f in fr[0]["filters"]) == ["climate change", "warming"]
+    # explicit and+or at one level is still a loud mixed-bool error
     with pytest.raises(OQLError) as e:
-        p("works where title contains (climate change or warming)")
+        p("works where title contains (climate and change or warming)")
     assert e.value.code == "OQL_MIXED_BOOL_NEEDS_PARENS"
     # the disambiguated forms are fine
     p("works where title contains (climate (change or warming))")   # ok

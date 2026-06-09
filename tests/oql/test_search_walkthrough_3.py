@@ -173,10 +173,16 @@ def test_case8a_standalone_phrase_unchanged():
 # --------------------------------------------------------------------------- #
 # Case 8b — bare multi-word + or is a hard ambiguity error (no precedence guess)
 # --------------------------------------------------------------------------- #
-def test_case8b_bare_multiword_or_is_ambiguous():
-    with pytest.raises(OQLError) as exc:
-        parse("works where full text contains (reduced order model or surrogate model)")
-    assert "ambiguous" in str(exc.value).lower()
+def test_case8b_bare_multiword_or_is_two_phrase_nodes():
+    # Post D2-reversal (#1, oxjob #363 discovery run #3): each bare run is ONE
+    # stemmed node, so `(reduced order model or surrogate model)` is an
+    # unambiguous OR of two phrase-nodes — NOT the old mixed-bool error (there is
+    # no space-AND to mix with the `or` anymore).
+    fr = parse("works where full text contains "
+               "(reduced order model or surrogate model)").to_dict()["filter_rows"]
+    assert len(fr) == 1 and fr[0]["join"] == "or"
+    assert sorted(f["value"] for f in fr[0]["filters"]) == \
+        ["reduced order model", "surrogate model"]
 
 
 # --------------------------------------------------------------------------- #

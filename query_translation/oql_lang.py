@@ -615,6 +615,32 @@ ENTITY_TYPES = {
 
 _CONNECTIVES = {"and", "or"}
 
+# Words that TERMINATE a multi-word search run (#1, oxjob #363) — a connective,
+# `not`, or a search/directive keyword the grammar reads after the run. When one
+# of these appears as a LITERAL word inside a stemmed search value it must be
+# quoted on render (`… "and" …`) so it folds back as an escaped literal rather
+# than re-parsing as structure. Kept in lockstep with `_Parser._is_run_break_word`.
+_SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "near", "within", "sort", "group",
+                                       "sample"}
+
+# Characters dropped from a STEMMED search value on render (#3, oxjob #363): the
+# ES stemmed-search analyzer strips this punctuation anyway (so dropping it is
+# result-preserving), and left in place it would break a re-parse — `?`/`*` read
+# as bare wildcards (OQL_WILDCARD_NEEDS_EXACT), `|`/`()[]` etc. as structure.
+# Genuine wildcards live on the `.search.exact` column and are NOT routed here.
+_STEMMED_DROP_CHARS_RE = re.compile(r'[?*|()\[\],;"]')
+
+
+def _render_stemmed_search_value(value: str) -> str:
+    """Render the inner form of a stemmed `.search` value for OQL (#1 single
+    node): drop characters that wouldn't survive a stemmed re-parse (#3) and
+    quote any embedded reserved word so it reads as a literal, not a connective
+    (#2). Returns the space-joined token form WITHOUT the outer parentheses."""
+    cleaned = _STEMMED_DROP_CHARS_RE.sub(" ", value or "")
+    toks = cleaned.split()
+    return " ".join(f'"{t}"' if t.lower() in _SEARCH_RUN_RESERVED else t
+                    for t in toks)
+
 
 # ---------------------------------------------------------------------------
 # Lexer
@@ -2086,9 +2112,18 @@ class _Parser:
                            f'"{t.val.lower()} of (…)" was removed; '
                            "write the list with parentheses",
                            "e.g. contains (a or b)", t.pos)
-        return self._parse_search_atom(base)
+        return self._parse_search_atom(base, in_group=True)
 
-    def _parse_search_atom(self, base: str) -> LeafFilter:
+    def _is_run_break_word(self, val: str) -> bool:
+        """A bare word that TERMINATES a multi-word search run (#1) rather than
+        folding into its stemmed value: a boolean connective, `not`, or a
+        search/directive keyword the grammar handles after the run (`near`,
+        `within`, `sort`, `group`, `sample`)."""
+        low = val.lower()
+        return (low in _CONNECTIVES or low == "not"
+                or low in ("near", "within", "sort", "group", "sample"))
+
+    def _parse_search_atom(self, base: str, in_group: bool = False) -> LeafFilter:
         # Stemming is ON by default; quotes turn it OFF (exact). `near "phrase"`
         # is the bridge: an adjacent phrase that STAYS stemmed (recall).
         #   bare term        -> stemmed          (.search)
@@ -2113,9 +2148,35 @@ class _Parser:
             # rejected just after (OQL_WILDCARD_IN_QUOTES, e.g. "bar*").
             phrase = True
         else:
-            text = t.val
+            # #1 (D2 reversal, oxjob #363): inside a `contains (...)` group a
+            # maximal run of space-adjacent bare words is ONE stemmed value node
+            # (the engine adjacency-boosts the whole run), NOT per-word AND leaves.
+            # An embedded *quoted* token is an escape — a literal word that stays
+            # stemmed — so a reserved word can live inside a stemmed value:
+            # `road traffic safety "and" Ghana` -> one node "road traffic safety
+            # and Ghana". Explicit and/or/not (read by _parse_bool_expr) still
+            # build the boolean tree between such nodes. At the top level (no
+            # parens) we do NOT merge — the D1 arity rule still requires 2+ terms
+            # to be parenthesized (the canonical render always parenthesizes).
+            _validate_wildcards(t.val, t.pos)
+            words = [t.val]
             self.next()
-            _validate_wildcards(text, t.pos)
+            if in_group:
+                while True:
+                    nt = self.peek()
+                    if nt is None:
+                        break
+                    if nt.kind == "WORD" and not self._is_run_break_word(nt.val):
+                        _validate_wildcards(nt.val, nt.pos)
+                        words.append(nt.val)
+                        self.next()
+                        continue
+                    if nt.kind == "STRING":  # quoted escape -> literal stemmed word(s)
+                        words.append(nt.val)
+                        self.next()
+                        continue
+                    break
+            text = " ".join(words)
             phrase = False
         # quoted => exact (.exact column) unless `near` keeps it stemmed
         stemmed = (not phrase) or stemmed_phrase
@@ -2452,16 +2513,17 @@ def _render_term(value: str, column: str) -> str:
         return f"near {body}" if stemmed else body
     if value.startswith('"') and value.endswith('"') and len(value) >= 2:  # multi-word phrase
         return f"near {value}" if stemmed else value
-    # A multi-token UNQUOTED value (e.g. a URL's `default.search:a b`, an
-    # un-phrased stemmed search) must be parenthesized: bare `a b` is two
-    # adjacency atoms with no delimiter -> OQL_UNDELIMITED_TERM_LIST on re-parse.
-    # `(a b)` round-trips to the cross-field AND the engine now runs for plain
-    # multi-word search (#399). Exact (non-stemmed) multi-word is a phrase, so the
-    # single-token branch below already quotes it. (oxjob #363, from #399)
-    if stemmed and any(c.isspace() for c in value.strip()):
-        return f"({value.strip()})"
-    # single word: stemmed => bare; exact => quoted
-    return value if stemmed else f'"{value}"'
+    if not stemmed:
+        # exact single word/token => quoted (`.search.exact` carries exactness)
+        return f'"{value}"'
+    # A stemmed value is ONE node (#1 single node, D2 reversal): emit its inner
+    # token form, dropping un-reparseable special chars (#3) and quoting embedded
+    # reserved words (#2). A multi-token value must be parenthesized (arity rule);
+    # `(a b)` re-parses to this same single stemmed node. (oxjob #363)
+    inner = _render_stemmed_search_value(value)
+    if " " in inner:
+        return f"({inner})"
+    return inner
 
 
 def _render_search_leaf(f: LeafFilter) -> str:

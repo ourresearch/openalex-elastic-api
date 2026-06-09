@@ -179,6 +179,17 @@ works where country is (us and uk)                                         (row 
   OR-branch of equality leaves; `country is (us and uk)` means works with **both** a
   US and a UK authorship (corpus row 92 — D7; for a single-valued field it is the
   empty set, which is coherent, not a footgun).
+- **Search values are the exception (D2 reversal, #363):** for a `contains ( … )`
+  search group, a **maximal run of bare connective-free words is ONE value node**
+  (stemmed, adjacency-boosted), not a distributed AND of per-word leaves —
+  `title/abstract contains (mental health)` is a single
+  `{title_and_abstract.search: "mental health"}` leaf. The engine adjacency-boosts
+  the whole run (`match_phrase`), so splitting it would silently change ranking;
+  recall is unaffected (cross-field AND, #399). Explicit `and`/`or`/`not` still build
+  the tree *between* such nodes (`(mental health or anxiety)` = two nodes OR'd). See
+  §3.6 and corpus rows 126–127. *(This reverses the earlier "space inside a group =
+  AND" rule for **search** values; it still holds for **enum/value** groups like
+  `country is (us and uk)` above.)*
 - `is not ( … )` negates the whole group: `is not (a or b)` = `NOT(a OR b)` =
   `(NOT a) AND (NOT b)` by De Morgan — canonical NNF carries the negation on the
   leaves and (since `filter_rows` is itself an implicit AND) renders as the explicit
@@ -261,14 +272,20 @@ works where title contains FOO and (bar or baz)            (row 10)  ✓ (any ca
   WoS/Scopus muscle memory, and it is where the field is already heading (Scopus
   mid-migration; Dimensions enforces; Lucene/Sourcegraph advise full
   parenthesization). Canonical output fully parenthesizes mixed logic.
-- **Adjacency (space) = AND between *search terms* inside a `( … )` group** (§3.6):
-  `title contains (climate change)` = climate AND change. At the top level a 2+ term
-  list must be parenthesized (`title contains climate change` → `OQL_UNDELIMITED_TERM_LIST`,
-  §3.6 row 17), and inside a group a space mixed with an explicit `or` still needs
-  nested parens (`(climate change or warming)` → `OQL_MIXED_BOOL_NEEDS_PARENS`).
-  Between *whole clauses* at the top level a connective is still required
-  (`year >= 2020 and it's open access`); two full clauses jammed together with no
-  `and` is `OQL_IMPLICIT_ADJACENCY`.
+- **Adjacency (space) between *search words* = ONE value node, NOT AND** (§3.6, D2
+  reversal #363): `title contains (climate change)` is a single stemmed
+  adjacency-boosted node, not climate AND change. At the top level a 2+ word value
+  must still be parenthesized (`title contains climate change` →
+  `OQL_UNDELIMITED_TERM_LIST`, §3.6 row 17; the canonical render always
+  parenthesizes). Explicit `and`/`or`/`not` build the tree *between* nodes, so
+  `(climate change or warming)` = `node("climate change") OR node("warming")` (no
+  mixed-bool error — there is no space-AND to mix with the `or`). A mixed-bool error
+  now only fires on **explicit** `and` + `or` at one level
+  (`(climate and change or warming)` → `OQL_MIXED_BOOL_NEEDS_PARENS`). Between *whole
+  clauses* at the top level a connective is still required (`year >= 2020 and it's
+  open access`); two full clauses jammed together with no `and` is
+  `OQL_IMPLICIT_ADJACENCY`. *(Adjacency-as-AND still holds for enum/value groups —
+  §3.2 `country is (us and uk)`.)*
 
 ### 3.5 Negation — one mechanism
 
@@ -295,10 +312,15 @@ parens-rule guards against doesn't exist here. To negate a group, parenthesize:
 ### 3.6 Search — the governing law
 
 > **Stemming is ON by default; quotes are the only thing that turns it off.**
-> A **space** between words is **AND** (the Google/PubMed convention — verified to
-> match OpenAlex's own engine). **Quotes = an exact, adjacent phrase** (no
-> stemming) — single word or many. **`near "…"`** is the bridge: an adjacent
-> phrase that *stays* stemmed (recall). Outside quotes = structure; inside quotes =
+> A **run of bare words is ONE stemmed value node** (`(machine learning)` is one
+> adjacency-boosted search, not `machine` AND `learning` — D2 reversal, #363); the
+> engine matches each word across the field set (cross-field recall, #399) and
+> ranks adjacency higher (`match_phrase` boost). **Explicit `and`/`or`/`not` build
+> the boolean tree between such nodes.** **Quotes = an exact, adjacent phrase** (no
+> stemming) — single word or many. **`near "…"`** is the bridge: an adjacent phrase
+> that *stays* stemmed (recall). A **quoted word embedded in a bare run** is an
+> *escape* — a literal stemmed word — so a reserved word can sit inside a value
+> (`road traffic safety "and" Ghana`). Outside quotes = structure; inside quotes =
 > literal text (even `or` is just a word there).
 
 This is the mainstream model (Google, Bing, PubMed, Web of Science, Elasticsearch
@@ -331,13 +353,13 @@ vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); 
 | adjacency (phrase) | `" … "` | quotes in the value |
 | proximity | `within N words` | `"phrase"~N` in the value |
 | wildcard | bare `*` / `?` | `*` / `?` in the value |
-| boolean | space (=AND) / infix `and`/`or`/`not` inside `( … )` | the BranchFilter tree |
+| boolean | infix `and`/`or`/`not` inside `( … )` (a bare-word run is ONE node, not AND) | the BranchFilter tree |
 
 The gauntlet pins the consequences (all are corpus rows):
 
 | row | OQL (`title contains …`) | Result |
 |---|---|---|
-| 11 | `(climate change)` | **space inside a group = stemmed AND**; words may be apart (recall). The default. |
+| 11 | `(climate change)` | **a bare-word run = ONE stemmed adjacency-boosted node** (D2 reversal, #363; corpus row 126), NOT climate AND change. The everyday default. Use explicit `and` for two separate nodes (row 11 oqo). |
 | 12 | `"climate change"` | **quotes = exact adjacent phrase**, no stemming (`.search.exact`) |
 | 13 | `near "whopper junior"` | **`near` = stemmed adjacent phrase** → matches "whoppers junior" |
 | 14 | `"cat"` | quoting a **single** word = exact (no plurals) — quotes always mean exact |
@@ -350,15 +372,18 @@ The gauntlet pins the consequences (all are corpus rows):
 
 Key rules these encode:
 
-- **A single bare term is fine; 2+ bare terms must be parenthesized** (the arity
-  rule, §3.2). `title contains cancer` ✓; `title contains climate change` →
+- **A single bare term is fine; a 2+ word value must be parenthesized at top level**
+  (the arity rule, §3.2). `title contains cancer` ✓; `title contains climate change` →
   `OQL_UNDELIMITED_TERM_LIST` (row 17) — this is the rule that kills the silent
-  keyword-truncation footgun. **Inside a `( … )` group**, a space = AND, and there is
-  **no silent order of operations**: mixing a space-run with an explicit `or` at one
-  level is `OQL_MIXED_BOOL_NEEDS_PARENS`. `(climate change or warming)` errors; you
-  say which you mean — `(climate (change or warming))` (row 18) or
-  `((climate change) or warming)`. (Pure runs — all-space, all-`and`, all-`or` —
-  need no inner parens.)
+  keyword-truncation footgun. **Inside a `( … )` group** a bare-word run is ONE node
+  (D2 reversal, #363), so `(climate change or warming)` = `node("climate change") OR
+  node("warming")` — no mixed-bool error. **No silent order of operations** still
+  holds for **explicit** connectives: mixing an explicit `and` with an explicit `or`
+  at one level is `OQL_MIXED_BOOL_NEEDS_PARENS` (`(climate and change or warming)`
+  errors); say which you mean — `(climate (change or warming))` (row 18) or
+  `((climate change) or warming)`. (Pure runs — all-`and` or all-`or` — need no inner
+  parens.) A literal reserved word inside a value is quoted as an escape
+  (`("road traffic" "and" ghana)` style — §3.6 governing law).
 - **Quotes = exact, single word or phrase.** `"cat"` excludes "cats"; `"climate
   change"` is the adjacent, unstemmed phrase. This is the mainstream "quotes = exact
   match" people already expect.
