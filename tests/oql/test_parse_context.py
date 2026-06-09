@@ -168,6 +168,51 @@ def test_post_connective_id_sibling_carries_autocomplete_entity():
         assert sib["value_range"]  # for the auto-paren rewrite
 
 
+def test_post_connective_multiword_id_value_widens():
+    # typing a multi-word 2nd institution name after `and`/`or` (past the first word)
+    # must classify as the after_connective FIELD+id-sibling context with the WHOLE
+    # name as the prefix — not degrade to NONE (#357 iter-3 multi-value).
+    q = ("works where institution is I27837315 [University of Michigan] "
+         "and university of fl")
+    r = ctx(q)
+    assert r["category"] == C.FIELD
+    assert r["after_connective"] == "and"
+    assert r["sibling"]["value_kind"] == "id"
+    assert r["sibling"]["autocomplete_entity"] == "institutions"
+    assert r["prefix"] == "university of fl"
+    assert r["replace_range"]["start"] == q.index("university of fl")
+
+
+def test_post_connective_multiword_enum_value_widens():
+    r = ctx("works where type is article or social sci")
+    assert r["category"] == C.FIELD and r["after_connective"] == "or"
+    assert r["sibling"]["value_kind"] == "enum"
+    assert r["prefix"] == "social sci"
+
+
+def test_post_connective_new_clause_not_swallowed_as_value():
+    # a real new clause after the connective (its own field+operator) must classify as
+    # that clause's VALUE — NOT get swallowed into one giant value prefix for the 1st.
+    r = ctx("works where institution is I27837315 [University of Michigan] "
+            "and last known institution is har")
+    assert r["category"] == C.VALUE
+    assert r.get("after_connective") is None  # inside the 2nd clause's value, not after `and`
+    # it's the SECOND clause's own institution value (last known institution), not a
+    # widened mega-prefix for the first clause
+    assert r["value_kind"] == "id"
+    assert r["field"] == "last known institution"
+    assert r["prefix"] == "har"
+
+
+def test_post_connective_partial_multiword_field_stays_field():
+    # a partial multi-word FIELD after the connective keeps the field interpretation
+    # (its prefix widens as a field), not swallowed as a value run.
+    r = ctx("works where institution is I27837315 [University of Michigan] "
+            "and last known inst")
+    assert r["category"] == C.FIELD
+    assert r["prefix"] == "last known inst"
+
+
 def test_post_connective_enum_sibling_has_no_autocomplete_entity():
     # enum siblings resolve from static config vocab, not a live /autocomplete route
     r = ctx("works where type is article or ")

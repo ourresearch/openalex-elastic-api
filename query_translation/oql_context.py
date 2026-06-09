@@ -325,7 +325,16 @@ def parse_context(q: str, pos: Optional[int] = None) -> Dict[str, Any]:
     # word as a *complete* value and reports the cursor as a connective/none slot. Re-run
     # the parser against just `field <operator>` so we get the VALUE context back, then
     # widen the prefix + replace_range across the value words already typed.
-    widened = _widen_multiword_value(prior, prefix) if prefix else None
+    widened = None
+    if prefix:
+        widened = _widen_multiword_value(prior, prefix)
+        # Post-connective value widening only when the normal parse is UNUSABLE (NONE):
+        # if the trailing text classifies as a partial field (`… and last known inst`)
+        # or a real new clause (`… and last known institution is har`), that wins — only
+        # genuinely un-fieldlike trailing words (a bare multi-word entity/enum name) are
+        # treated as 'another value' (oxjob #357 iter-3).
+        if widened is None and raw.get("category") == NONE:
+            widened = _widen_post_connective_value(prior, prefix)
     if widened is not None:
         ctx, val_start = widened
         ctx["prefix"] = " ".join(t.val for t in prior[val_start:]) + " " + prefix
@@ -405,6 +414,41 @@ def _widen_multiword_value(prior: List[Tok], prefix: str):
     if raw.get("category") != VALUE:
         return None
     return _shape(raw), val_start
+
+
+def _widen_post_connective_value(prior: List[Tok], prefix: str):
+    """If `prior` ends with `<connective> <words…>` where the trailing words are a
+    partially-typed multi-word value for the *preceding* id/enum clause — the editor's
+    'add another value' flow typed past the first word (`institution is <id> and
+    university of fl`) — reclassify against the text up to and including the connective
+    (which yields the after_connective FIELD context + the sibling) so the caller widens
+    the prefix across the trailing words. Returns `(shaped_ctx, value_run_start_index)`
+    or None.
+
+    Without this the parser reads `university of` as a broken *new field* clause and
+    degrades to NONE, so a multi-word second value never autocompletes. Restricted to
+    id/enum siblings (the 'another value' sectioned-menu cases); other value kinds fall
+    through (oxjob #357 iter-3 — multi-value id filters)."""
+    n = 0
+    for t in reversed(prior):
+        if t.kind == "WORD" and t.val.lower() not in _CONNECTIVES:
+            n += 1
+        else:
+            break
+    if n == 0 or n >= len(prior):
+        return None
+    conn = prior[len(prior) - n - 1]
+    if not (conn.kind == "WORD" and conn.val.lower() in _CONNECTIVES):
+        return None
+    val_start = len(prior) - n
+    raw = _classify_via_engine(prior[:val_start])  # tokens end at the connective
+    if raw.get("category") != FIELD or not raw.get("after_connective"):
+        return None
+    ctx = _shape(raw)
+    sib = ctx.get("sibling")
+    if not (sib and sib.get("value_kind") in ("id", "enum")):
+        return None
+    return ctx, val_start
 
 
 def _extend_multiword_prefix(prior: List[Tok], ctx: Dict[str, Any],
