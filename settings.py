@@ -61,7 +61,7 @@ CITATION_PIVOT = int(os.environ.get("CITATION_PIVOT", "100"))
 CITATION_MAX_BOOST = float(os.environ.get("CITATION_MAX_BOOST", "0.5"))
 CITATION_KNN_FLOOR = float(os.environ.get("CITATION_KNN_FLOOR", "0.5"))
 GROUPBY_VALUES_INDEX = "groupby_values"
-RAW_AFFILIATION_STRINGS_INDEX = "raw-affiliation-strings-v2"
+RAW_AFFILIATION_STRINGS_INDEX = "raw-affiliation-strings-v3"
 
 DO_NOT_GROUP_BY = [
     "biblio.first_page",
