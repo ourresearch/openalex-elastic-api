@@ -366,6 +366,81 @@ _f("open access published", "best_oa_location.is_published", "bool",
 _f("has full text", "has_fulltext", "bool", aliases=["has_fulltext"],
    bool_true="it has full text", bool_false="it doesn't have full text")
 
+# --- oxjob #402 Tier-2 location/source mirror BOOLEANS ---
+# The mechanical mirror set's boolean half (the resolved location/OA matrix in PLAN.md).
+# Bools are GATE-EXEMPT, so each takes its matrix scope-word render label directly with NO
+# core/display_names.py edit and NO PROPERTIES_VERSION bump. Scope words: primary_location
+# unmarked ("primary …"), best_oa_location "best OA …", locations "any location …".
+# The matrix render word (fld.oql, e.g. "primary is OA") is the group-by / column label, but
+# the parser's bool clause is rigid `it's [not] <phrase>` — a noun-led "primary is OA" reads
+# badly there ("it's primary is OA"). So each bool also carries a GRAMMATICAL clause core as
+# an alias (article-free so it survives the parser's leading a/an/the strip and works after
+# both "it's" and "it's not"), and bool_true/bool_false use that core. Round-trips verified
+# (render -> parse -> same column) for every line below. The three DOAJ / two CWTS-core
+# variants get distinct cores so the scope twins don't collide on one _ALIAS key.
+_f("primary is OA", "primary_location.is_oa", "bool",
+   aliases=["primary_location.is_oa", "open access in its primary location"],
+   bool_true="it's open access in its primary location",
+   bool_false="it's not open access in its primary location")
+_f("primary is published", "primary_location.is_published", "bool",
+   aliases=["primary_location.is_published", "published in its primary location"],
+   bool_true="it's published in its primary location",
+   bool_false="it's not published in its primary location")
+_f("primary is accepted", "primary_location.is_accepted", "bool",
+   aliases=["primary_location.is_accepted", "accepted in its primary location"],
+   bool_true="it's accepted in its primary location",
+   bool_false="it's not accepted in its primary location")
+_f("primary source has ISSN", "primary_location.source.has_issn", "bool",
+   aliases=["primary_location.source.has_issn", "in a primary source with an ISSN"],
+   bool_true="it's in a primary source with an ISSN",
+   bool_false="it's not in a primary source with an ISSN")
+# primary source flags whose registry display_names are already curated/clean — keep verbatim
+# (matrix bold). Clause cores are grammatical "in a/an …"; the render word stays the canonical
+# matrix word for group-by.
+_f("CWTS core source", "primary_location.source.is_core", "bool",
+   aliases=["primary_location.source.is_core", "in a CWTS core source"],
+   bool_true="it's in a CWTS core source",
+   bool_false="it's not in a CWTS core source")
+_f("indexed by DOAJ", "primary_location.source.is_in_doaj", "bool",
+   aliases=["primary_location.source.is_in_doaj"],
+   bool_true="it's indexed by DOAJ",
+   bool_false="it's not indexed by DOAJ")
+_f("in OA source", "primary_location.source.is_oa", "bool",
+   aliases=["primary_location.source.is_oa", "in an OA source"],
+   bool_true="it's in an OA source",
+   bool_false="it's not in an OA source")
+_f("best OA source indexed by DOAJ", "best_oa_location.source.is_in_doaj", "bool",
+   aliases=["best_oa_location.source.is_in_doaj", "indexed by DOAJ in its best OA source"],
+   bool_true="it's indexed by DOAJ in its best OA source",
+   bool_false="it's not indexed by DOAJ in its best OA source")
+_f("any location is OA", "locations.is_oa", "bool",
+   aliases=["locations.is_oa", "open access in any location"],
+   bool_true="it's open access in any location",
+   bool_false="it's not open access in any location")
+_f("any location is published", "locations.is_published", "bool",
+   aliases=["locations.is_published", "published in any location"],
+   bool_true="it's published in any location",
+   bool_false="it's not published in any location")
+_f("any location is accepted", "locations.is_accepted", "bool",
+   aliases=["locations.is_accepted", "accepted in any location"],
+   bool_true="it's accepted in any location",
+   bool_false="it's not accepted in any location")
+_f("any location CWTS core source", "locations.source.is_core", "bool",
+   aliases=["locations.source.is_core", "in a CWTS core source in any location"],
+   bool_true="it's in a CWTS core source in any location",
+   bool_false="it's not in a CWTS core source in any location")
+_f("any location source indexed by DOAJ", "locations.source.is_in_doaj", "bool",
+   aliases=["locations.source.is_in_doaj", "indexed by DOAJ in any location"],
+   bool_true="it's indexed by DOAJ in any location",
+   bool_false="it's not indexed by DOAJ in any location")
+# Tier-1 OA-version promote (the or-free sibling of has_oa_accepted_or_published_version,
+# which stays on the fallback pending an or-free label — finding #3). "has X" template: the
+# parser reconstructs "has " + remainder == the field word, so no extra clause-core alias.
+_f("has OA submitted version", "has_oa_submitted_version", "bool",
+   aliases=["has_oa_submitted_version"],
+   bool_true="it has an OA submitted version",
+   bool_false="it doesn't have an OA submitted version")
+
 # Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
 _BY_COLUMN = {}
 for _spellings, _fld in _FIELDS:
