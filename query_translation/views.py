@@ -42,7 +42,7 @@ from query_translation.oqo_to_es import (
 from query_translation.oql_parser import OQLParseError, parse_oql_to_oqo
 from query_translation.oql_renderer import render_oqo_to_oql
 from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
-from query_translation.url_parser import parse_url_to_oqo
+from query_translation.url_parser import fold_scoped_search_params, parse_url_to_oqo
 from query_translation.url_renderer import (
     URLRenderError, can_render_to_url, render_oqo_to_url, )
 from query_translation.x_query import (
@@ -201,20 +201,11 @@ def _parse_oxurl_value(value: str):
     for k, v in urllib.parse.parse_qsl(qs, keep_blank_values=True):
         params[k] = v
 
-    # Fold scoped search params (search.title_and_abstract=…) into filter clauses.
-    extra_filters = []
-    for k, v in list(params.items()):
-        if k.startswith("search.") and v:
-            field = k[len("search."):]
-            extra_filters.append(f"{field}.search:{v}")
-    if extra_filters:
-        base = params.get("filter")
-        # Join with a bare comma (NOT ", ") — the filter-clause splitter does not
-        # trim, and the engine itself rejects a space-prefixed column
-        # (`filter=type:article, language:en` → " language is not a valid field"),
-        # so a ", " join would corrupt the folded column id to " <field>.search"
-        # (oxjob #363 case W3.1, scoped `search.title_and_abstract=`).
-        params["filter"] = ",".join(([base] if base else []) + extra_filters)
+    # Fold scoped search params (search.title_and_abstract[.exact]=…) into filter
+    # clauses. Pure helper in url_parser so the offline tests/oql gate covers it.
+    folded_filter = fold_scoped_search_params(params)
+    if folded_filter is not None:
+        params["filter"] = folded_filter
 
     input_data = {
         "filter": params.get("filter"), "sort": params.get("sort"), "search": params.get("search"), "group_by": params.get("group_by"), "select": params.get("select"), "sample": params.get("sample"), "seed": params.get("seed"), "per_page": params.get("per_page") or params.get("per-page"), "page": params.get("page"), "cursor": params.get("cursor"), }

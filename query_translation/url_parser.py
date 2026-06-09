@@ -17,6 +17,43 @@ from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, Gro
 _COLLECTION_ID_RE = re.compile(r"^col_[A-Za-z0-9]{1,48}$")
 
 
+def fold_scoped_search_params(params: Dict[str, str]) -> Optional[str]:
+    """Fold `search.<field>=` scoped-search params into filter clauses.
+
+    Returns the new value for `params['filter']` — the existing filter string
+    with each scoped-search param appended as a `<field>.search` clause — or
+    `None` when there are no scoped-search params (leave `filter` untouched).
+    Pure (no app context), so it's covered by the offline `tests/oql` gate.
+
+    `search.<field>=<v>` becomes `<field>.search:<v>`. `search.<field>.exact=<v>`
+    is the engine's exact-phrase scoped search: pull the trailing `.exact` off
+    BEFORE appending `.search` and re-attach it in canonical order →
+    `<field>.search.exact`, which the normalizer (see `_parse_filter_groups`)
+    rewrites to a `<field>.search` column with a quoted (exact-phrase) value.
+    Naively appending `.search` to `<field>.exact` builds `<field>.exact.search`
+    — an order the normalizer never strips, so the registry rejects it as
+    invalid_column (oxjob #422). Applies to every scoped field, not just
+    `title_and_abstract`.
+    """
+    extra_filters = []
+    for k, v in list(params.items()):
+        if k.startswith("search.") and v:
+            field = k[len("search."):]
+            if field.endswith(".exact"):
+                field = field[: -len(".exact")]
+                extra_filters.append(f"{field}.search.exact:{v}")
+            else:
+                extra_filters.append(f"{field}.search:{v}")
+    if not extra_filters:
+        return None
+    base = params.get("filter")
+    # Join with a bare comma (NOT ", ") — the filter-clause splitter does not
+    # trim, and the engine itself rejects a space-prefixed column, so a ", "
+    # join would corrupt the folded column id to " <field>.search" (oxjob #363
+    # case W3.1, scoped `search.title_and_abstract=`).
+    return ",".join(([base] if base else []) + extra_filters)
+
+
 def parse_url_to_oqo(
     entity_type: str,
     filter_string: Optional[str] = None,
