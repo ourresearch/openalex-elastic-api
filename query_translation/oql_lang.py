@@ -484,6 +484,25 @@ _f("best OA source indexed by DOAJ", "best_oa_location.source.is_in_doaj", "bool
    aliases=["best_oa_location.source.is_in_doaj", "indexed by DOAJ in its best OA source"],
    bool_true="it's indexed by DOAJ in its best OA source",
    bool_false="it's not indexed by DOAJ in its best OA source")
+# --- non-works entity booleans (oxjob #406 1c) ---
+# GUI-faceted source booleans. These are the ONE legitimate exception to the
+# `_FIELDS` guardrail above: a bool's OQL render is a curated sentence
+# (`bool_true`/`bool_false`) the properties registry doesn't model, so it MUST live
+# here — the render word IS the engine display_name, but the phrasing is OQL's.
+# `is_oa` exists on works too (display_name "is oa"), so "fully open access" filters
+# both works.is_oa and sources.is_oa (sensible: the entity is fully OA); `is_in_doaj`
+# is sources-only, so it validates only there. The third source bool — `is_core`
+# ("CWTS core source") — is a HOMONYM of works' primary_location.source.is_core, so
+# it needs NO entry here: the bool clause parser entity-resolves the existing word to
+# the bare `is_core` column on sources (_entity_resolve_field).
+_f("fully open access", "is_oa", "bool",
+   aliases=["is_oa", "fully open access"],
+   bool_true="it's fully open access",
+   bool_false="it's not fully open access")
+_f("in DOAJ", "is_in_doaj", "bool",
+   aliases=["is_in_doaj", "in DOAJ"],
+   bool_true="it's in DOAJ",
+   bool_false="it's not in DOAJ")
 _f("any location is OA", "locations.is_oa", "bool",
    aliases=["locations.is_oa", "open access in any location"],
    bool_true="it's open access in any location",
@@ -881,9 +900,11 @@ def _entity_resolve_field(fld: "Field", entity: Optional[str]) -> "Field":
     attribute untouched. A no-op when the curated column already exists on the
     entity (the works common case → byte-identical strict behavior), or when there
     is no entity, no registry, or no entity-correct column (→ the curated column
-    flows through and the validator gates it as `invalid_column`). Booleans are
-    resolved via their phrasing through a different path and are left alone here."""
-    if not entity or fld.kind in ("search", "collection", "bool"):
+    flows through and the validator gates it as `invalid_column`). Booleans ARE
+    resolved here too (a bool homonym like `CWTS core source` → works
+    `primary_location.source.is_core` vs sources bare `is_core`); the bool clause
+    parser calls this after matching the phrasing (oxjob #406 1c)."""
+    if not entity or fld.kind in ("search", "collection"):
         return fld
     try:
         from core.properties import get_entity_properties
@@ -920,7 +941,7 @@ def _augment_by_column_for_homonyms() -> None:
     order = ["works"] + [e for e in entities if e != "works"]
     for ent in order:
         for _spellings, fld in _FIELDS:
-            if fld.kind in ("search", "collection", "bool"):
+            if fld.kind in ("search", "collection"):
                 continue
             resolved = _entity_resolve_field(fld, ent)
             if resolved.column != fld.column:
@@ -1643,6 +1664,7 @@ class _Parser:
             raise oql_error("OQL_UNKNOWN_BOOLEAN",
                            f'unknown boolean property "{phrase}"',
                            'e.g. "it\'s open access", "it has a DOI"')
+        fld = _entity_resolve_field(fld, self._entity)   # bool homonym (#406 1c)
         return LeafFilter(column_id=fld.column, value=(False if negate else True), operator="is")
 
     def _parse_value_clause(self, field: str, fld: Field, op: str) -> FilterType:
@@ -2128,9 +2150,22 @@ class _Parser:
             for word in text.split():
                 _validate_wildcards(word, t.pos)
             _validate_wildcard_budget(text.split(), t.pos)
-        # encode value: multi-word phrase keeps its quotes; a single word is bare
-        # (the column suffix carries exact-vs-stemmed).
-        if phrase and len(text.split()) > 1:
+        # encode value: a quoted phrase keeps its quotes; a bare single word is bare
+        # (the column suffix carries exact-vs-stemmed). EXCEPTION: a quoted single
+        # "word" that the analyzer splits into >1 subtoken (a hyphen/slash token like
+        # "3xTg-AD" or "APP/PS1") is NOT equivalent to the bare form — on a stemmed
+        # .search column quoted = adjacent subtokens (phrase), bare = subtokens AND'd,
+        # which return different result sets (measured live: `"3xTg-AD"` 2027 vs
+        # `3xTg-AD` 2354; `"APP/PS1"` 6440 vs 8056). So keep the quotes whenever
+        # dropping them would change tokenization; a truly atomic single token (cat)
+        # still renders bare so the common case stays unquoted. (oxjob #363 case W3.3)
+        # The single-token subtoken exception is STEMMED-only: on `.search.exact`
+        # the column suffix already carries exactness (and wildcard patterns like
+        # "foo*bar" live there — `*`/`?` are metachars, not delimiters), so an exact
+        # single token stays bare. On the stemmed `.search` column a quoted
+        # hyphen/slash token diverges from bare, so keep its quotes.
+        if phrase and (len(text.split()) > 1
+                       or (stemmed and len(re.findall(r"\w+", text)) > 1)):
             value = f'"{text}"'
         else:
             value = text
@@ -2165,14 +2200,13 @@ class _Parser:
         # (oxjob #406 1b). LONGEST-match over the curated alias (same precedence as
         # `_parse_field`): a multi-word label beats a curated word that is only its
         # first token. Ties go to the curated alias.
-        am = None
-        for k in range(3, 0, -1):
-            parts = [self.peek(j).val for j in range(k) if self.peek(j) and self.peek(j).kind == "WORD"]
-            if len(parts) == k:
-                key = " ".join(parts).lower()
-                if key in _ALIAS:
-                    am = (key, _ALIAS[key].column, k)
-                    break
+        # Use the SHARED greedy matcher (up to 4 words) — same source of truth as
+        # the filter path `_parse_field`. A hand-rolled 3-word loop here drifted:
+        # it couldn't match a 4-word curated alias like `citation percentile by
+        # subfield`, so that sort key parsed in `where` but raised OQL_TRAILING_TOKENS
+        # in `sort by` (oxjob #363 case W3.2, charter decision 13).
+        m = match_field(self.toks, self.i)
+        am = (m[0], m[1].column, m[2]) if m is not None else None
         em = match_entity_fallback(self.toks, self.i, self._entity)
         if em is not None and (am is None or em[2] > am[2]):
             spelling, efld, en = em

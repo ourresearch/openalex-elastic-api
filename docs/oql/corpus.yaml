@@ -1801,3 +1801,15 @@ rows:
   oql: 'sources where article processing charge < 2000'
   oqo: {get_rows: sources, filter_rows: [{column_id: apc_usd, value: 2000, operator: '<'}]}
   note: "#406 Part B: multi-word friendly word ('article processing charge' = display_name) parses greedily and round-trips. sources-only column → renders friendly."
+
+- id: 122
+  category: "search semantics"
+  provenance:
+    type: "analytics question"
+    label: "Jason's walkthrough batch 3 — a quoted multi-subtoken token ('3xTg-AD') inside a stemmed t/a OR-group must keep its quotes (hyphen/slash phrase != bare on .search)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:%223xTg-AD%22|%22in%20vivo%22'
+  status: ok
+  oql: 'works where title/abstract contains (near "3xTg-AD" or near "in vivo")'
+  oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: '"3xTg-AD"', operator: contains}, {column_id: title_and_abstract.search, value: '"in vivo"', operator: contains}]}]}
+  note: "Walkthrough batch 3 (W3.3): on the STEMMED .search column a quoted token the analyzer splits into >1 subtoken (hyphen/slash, e.g. '3xTg-AD', 'APP/PS1') is adjacent-subtokens (phrase), NOT the bare AND form — measured live `\"3xTg-AD\"` 2027 vs `3xTg-AD` 2354. So the encoder keeps quotes for multi-subtoken stemmed tokens; atomic tokens (5xFAD) and exact-column wildcards ('foo*bar') stay bare. Rendered as `near \"…\"` (stemmed adjacent phrase)."

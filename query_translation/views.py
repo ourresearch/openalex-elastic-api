@@ -209,7 +209,12 @@ def _parse_oxurl_value(value: str):
             extra_filters.append(f"{field}.search:{v}")
     if extra_filters:
         base = params.get("filter")
-        params["filter"] = ", ".join(([base] if base else []) + extra_filters)
+        # Join with a bare comma (NOT ", ") — the filter-clause splitter does not
+        # trim, and the engine itself rejects a space-prefixed column
+        # (`filter=type:article, language:en` → " language is not a valid field"),
+        # so a ", " join would corrupt the folded column id to " <field>.search"
+        # (oxjob #363 case W3.1, scoped `search.title_and_abstract=`).
+        params["filter"] = ",".join(([base] if base else []) + extra_filters)
 
     input_data = {
         "filter": params.get("filter"), "sort": params.get("sort"), "search": params.get("search"), "group_by": params.get("group_by"), "select": params.get("select"), "sample": params.get("sample"), "seed": params.get("seed"), "per_page": params.get("per_page") or params.get("per-page"), "page": params.get("page"), "cursor": params.get("cursor"), }
