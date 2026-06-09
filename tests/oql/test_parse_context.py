@@ -188,6 +188,52 @@ def test_context_mode_does_not_perturb_strict_parse():
     assert len(oqo.filter_rows) == 2
 
 
+# --- post-connective sectioned-menu context (oxjob #357) ------------------------
+# After `<value> or ▮` / `<value> and ▮` the cursor is a FIELD slot (a new clause may
+# start) AND it carries the "sibling" clause so the editor can offer "add another value
+# to this filter" (auto-paren rewrite). Before the fix this returned NONE for `is`-value
+# clauses (the value-arity guard fired on the dangling connective).
+def test_post_connective_is_value_is_field_not_none():
+    for conn in ("or", "and"):
+        c = ctx(f"works where type is article {conn} ")
+        assert c["category"] == C.FIELD, f"{conn}: {c['category']}"
+        assert c["after_connective"] == conn
+        # still offers the normal field list for the "new filter" section
+        assert any(s["kind"] == "field" for s in c["suggestions"])
+
+
+def test_post_connective_carries_enum_sibling_with_ranges():
+    q = "works where type is article or "
+    c = ctx(q)
+    sib = c["sibling"]
+    assert sib["field"] == "type" and sib["value_kind"] == "enum"
+    assert sib["column"] == "type"
+    # clause_range spans "type is article"; value_range spans just "article"
+    assert q[sib["clause_range"]["start"]:sib["clause_range"]["end"]] == "type is article"
+    assert q[sib["value_range"]["start"]:sib["value_range"]["end"]] == "article"
+
+
+def test_post_connective_paren_sibling_value_range_covers_list():
+    q = "works where type is (article or book) or "
+    sib = ctx(q)["sibling"]
+    assert q[sib["value_range"]["start"]:sib["value_range"]["end"]] == "(article or book)"
+
+
+def test_post_connective_no_sibling_for_bool_clause():
+    # `it's open access` has no enum value list to extend -> FIELD, but no sibling.
+    c = ctx("works where it's open access or ")
+    assert c["category"] == C.FIELD
+    assert c["after_connective"] == "or"
+    assert "sibling" not in c
+
+
+def test_post_connective_typing_field_prefix_still_field():
+    # once the user types a field name after the connective it's plain field-completion
+    c = ctx("works where type is article or insti")
+    assert c["category"] == C.FIELD
+    assert c["prefix"] == "insti"
+
+
 def test_collection_value_slot_is_recognized():
     # `is in collection ` lands in a value slot (the col_ id) — the editor must not
     # blank here just because it's the newest operator.

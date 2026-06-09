@@ -41,25 +41,39 @@ _ENUM_COLUMN_NAMESPACE = {
 }
 
 
-def _enrich_enum_suggestions(result):
-    """If the cursor is at an enum value slot whose column has a closed config vocab,
-    prepend the actual slug values (with display-name detail) to the suggestion list,
-    so `type is ▮` offers article/dataset/… instead of only "unknown". Mutates and
-    returns `result` (pure dict; safe to call on every /parse-context response)."""
-    ctx = result.get("context") or {}
-    if ctx.get("value_kind") != "enum":
-        return result
-    namespace = _ENUM_COLUMN_NAMESPACE.get(ctx.get("column"))
+def _enum_slugs(column):
+    """The closed-vocab slug suggestions for an OQL field column, or [] if the column
+    has no `config/*.yaml` values list. Each entry carries a display-name `detail`
+    only when it adds information beyond the slug (countries/languages), so the editor
+    can match by name and insert the code."""
+    namespace = _ENUM_COLUMN_NAMESPACE.get(column)
     if not namespace:
-        return result
-    slugs = [
-        # detail only when the display name adds information beyond the slug
+        return []
+    return [
         {"value": sid, "kind": "enum-slug",
          **({"detail": name} if name.lower() != sid.lower() else {})}
         for sid, name in config_vocab_items(namespace)
     ]
-    if slugs:
-        ctx["suggestions"] = slugs + (ctx.get("suggestions") or [])
+
+
+def _enrich_enum_suggestions(result):
+    """Attach closed-vocab enum slugs in two places (mutates + returns `result`; pure,
+    safe on every /parse-context response):
+
+    1. **Value slot** — `type is ▮` offers article/dataset/… instead of only "unknown".
+    2. **Sectioned-menu sibling** (#357) — after `type is article or ▮`, the post-
+       connective FIELD context's `sibling` gets `sibling.values` so the editor's
+       "add another <field> value" section can list them for the auto-paren rewrite."""
+    ctx = result.get("context") or {}
+    if ctx.get("value_kind") == "enum":
+        slugs = _enum_slugs(ctx.get("column"))
+        if slugs:
+            ctx["suggestions"] = slugs + (ctx.get("suggestions") or [])
+    sib = ctx.get("sibling")
+    if sib and sib.get("value_kind") == "enum":
+        sib_slugs = _enum_slugs(sib.get("column"))
+        if sib_slugs:
+            sib["values"] = sib_slugs
     return result
 
 

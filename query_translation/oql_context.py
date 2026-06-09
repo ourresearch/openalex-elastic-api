@@ -197,6 +197,26 @@ def _shape(raw: Dict[str, Any]) -> Dict[str, Any]:
         out = {"category": FIELD, "suggestions": _field_suggestions()}
         if raw.get("directive"):
             out["directive"] = raw["directive"]
+        # Post-connective FIELD slot (cursor right after `... or`/`and`): carry the
+        # sibling clause so the editor's sectioned menu can offer "add another value
+        # to this filter" (auto-paren rewrite) alongside "start a new filter" (#357).
+        # Char ranges (sibling.clause_range / value_range) are filled in by
+        # parse_context, which has the token list; here we just thread the connective
+        # + the sibling field's identity. Only for a bare `field op value` sibling.
+        if raw.get("after_connective"):
+            out["after_connective"] = raw["after_connective"]
+            sfld = raw.get("sibling_fld")
+            if raw.get("sibling_simple") and sfld is not None \
+                    and raw.get("sibling_value_start") is not None:
+                out["sibling"] = {
+                    "field": sfld.oql,
+                    "column": sfld.column,
+                    "value_kind": sfld.kind,
+                    # token indices (into the prefix token list) — converted to char
+                    # offsets by parse_context; dropped from the final reply.
+                    "_clause_span": raw.get("sibling_clause_span"),
+                    "_value_start_i": raw.get("sibling_value_start"),
+                }
         return out
     if cat == OPERATOR:
         fld = raw.get("fld")
@@ -289,8 +309,30 @@ def parse_context(q: str, pos: Optional[int] = None) -> Dict[str, Any]:
     # widen the replace range backwards across a partially-typed multi-word field
     if ctx["category"] == FIELD and prefix:
         _extend_multiword_prefix(prior, ctx, replace)
+    # resolve the sibling clause's token-index spans into char offsets (#357)
+    if ctx.get("sibling"):
+        _resolve_sibling_ranges(prior, ctx["sibling"])
     return {"entity": raw.get("entity"), "context": ctx,
             "diagnostic": _diag(diagnostic) if diagnostic else None}
+
+
+def _resolve_sibling_ranges(prior: List[Tok], sib: Dict[str, Any]) -> None:
+    """Convert the sibling clause's token-index spans (recorded by the parser) into
+    char offsets the editor can splice on — `clause_range` (the whole `field op
+    value`) and `value_range` (just the existing value/list). Used by the sectioned
+    menu's "add another value" auto-paren rewrite (oxjob #357). The leading-underscore
+    index keys are internal; they're dropped here so the reply carries only offsets."""
+    span = sib.pop("_clause_span", None)
+    vstart_i = sib.pop("_value_start_i", None)
+    if not span:
+        return
+    s_i, e_i = span
+    if not (0 <= s_i < e_i <= len(prior)):
+        return
+    sib["clause_range"] = {"start": prior[s_i].pos, "end": _tok_end(prior[e_i - 1])}
+    if vstart_i is not None and s_i <= vstart_i < e_i:
+        sib["value_range"] = {"start": prior[vstart_i].pos,
+                              "end": _tok_end(prior[e_i - 1])}
 
 
 def _extend_multiword_prefix(prior: List[Tok], ctx: Dict[str, Any],

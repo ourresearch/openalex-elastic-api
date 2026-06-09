@@ -1186,6 +1186,14 @@ class _Parser:
         self._cur_fld = None      # field of the clause currently being parsed
         self._in_list = False     # are we inside a parenthesized value list?
         self._directive = None    # "sort" / "group" when inside a directive
+        # --- editor sectioned-menu bookkeeping (oxjob #357, ctx-mode only) ---
+        # Spans of the most-recent TOP-LEVEL operand, recorded as token indices so the
+        # post-connective FIELD context can describe the "sibling" clause (the one the
+        # cursor sits after) for the editor's "add another value" auto-paren rewrite.
+        # Pure bookkeeping — assigned on every parse but only READ in context mode.
+        self._last_operand_span = None    # (start_tok_i, end_tok_i) of the last operand
+        self._last_operand_simple = False  # was it a bare `field op value` clause?
+        self._last_value_start_i = None   # token index where that clause's value began
         # --- dual-mode (editor-recover) state (oxjob #363, decision 15) ---
         # `_recover_mode` is the second, INDEPENDENT dual mode (never on at the same
         # time as `_ctx_mode`). False for all production parsing, so the recover
@@ -1357,6 +1365,18 @@ class _Parser:
                 self.next()  # guarantee forward progress -> no infinite loop
             return self._recovery_placeholder()
 
+    def _operand_tracked(self) -> FilterType:
+        """`_operand()` wrapped to record the operand's token span + whether it was a
+        bare `field op value` clause (vs a `(...)` group / `not …`) — bookkeeping the
+        post-connective sectioned-menu context reads (oxjob #357). Reset-then-parse so
+        a non-simple operand can't leave a stale `_last_value_start_i` behind."""
+        start_i = self.i
+        self._last_operand_simple = False
+        self._last_value_start_i = None
+        out = self._operand()
+        self._last_operand_span = (start_i, self.i)
+        return out
+
     def _synchronize(self):
         """Recovery: advance to the next safe boundary so clause parsing can resume
         after an error — a top-level connective (and/or), a directive keyword
@@ -1425,7 +1445,7 @@ class _Parser:
 
     # -- boolean expression with single-connective-per-level enforcement --
     def _parse_expr(self, top=False) -> FilterType:
-        operands = [self._operand()]
+        operands = [self._operand_tracked()]
         conns: List[str] = []
         while True:
             self._skip_annot()
@@ -1439,13 +1459,26 @@ class _Parser:
                 # NOT at a connective position means "a NOT b" with no AND/OR.
                 if self._recover_mode:
                     self._diagnostics.append(self._adjacency_err(t))
-                    operands.append(self._operand())  # recover: treat as implicit AND
+                    operands.append(self._operand_tracked())  # recover: implicit AND
                     continue
                 self._adjacency_error(t)
             if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
-                conns.append(t.val.lower())
+                conn = t.val.lower()
+                conns.append(conn)
+                # Snapshot the sibling clause (the operand the cursor sits after)
+                # BEFORE we consume the connective + parse the next operand, so the
+                # post-connective FIELD context can describe it for the editor's
+                # "add another value" auto-paren rewrite (oxjob #357).
+                sib_span, sib_simple = self._last_operand_span, self._last_operand_simple
+                sib_fld, sib_val_start = self._cur_fld, self._last_value_start_i
                 self.next()
-                operands.append(self._operand())
+                # cursor right after the connective (empty slot) -> sectioned-menu
+                # FIELD context carrying the sibling clause (no-op unless ctx_mode +
+                # out of tokens; strict path untouched).
+                self._want(CTX_FIELD, after_connective=conn, sibling_fld=sib_fld,
+                           sibling_simple=sib_simple, sibling_clause_span=sib_span,
+                           sibling_value_start=sib_val_start)
+                operands.append(self._operand_tracked())
                 continue
             # directive keywords end the where-expression
             if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample"):
@@ -1453,7 +1486,7 @@ class _Parser:
             # anything else with no connective = implicit adjacency
             if self._recover_mode:
                 self._diagnostics.append(self._adjacency_err(t))
-                operands.append(self._operand())  # recover: treat as implicit AND
+                operands.append(self._operand_tracked())  # recover: implicit AND
                 continue
             self._adjacency_error(t)
         if not conns:
@@ -1496,11 +1529,13 @@ class _Parser:
         if t.kind == "WORD" and t.val.lower() == "not":
             self.next()
             inner = self._parse_operand()
+            self._last_operand_simple = False  # negated -> not a plain clause (#357)
             return _negate(inner)
         if t.kind == "LP":
             self.next()
             e = self._parse_expr()
             self._expect_rp()
+            self._last_operand_simple = False  # a (...) group -> not a plain clause (#357)
             return e
         return self._parse_clause()
 
@@ -1520,6 +1555,11 @@ class _Parser:
     # -- clauses --
     def _parse_clause(self) -> FilterType:
         self._skip_annot()
+        # A bare `field op value` clause is the one shape the sectioned menu can
+        # "add another value" to via an auto-paren rewrite (oxjob #357). Bool/search
+        # clauses also pass here but leave `_last_value_start_i` None, so the editor
+        # gates them out (no enum value list to extend).
+        self._last_operand_simple = True
         # boolean human form: it's / its / it
         if self.word_is("it's", "its", "it"):
             return self._parse_boolean_clause()
@@ -1673,6 +1713,10 @@ class _Parser:
         return LeafFilter(column_id=fld.column, value=(False if negate else True), operator="is")
 
     def _parse_value_clause(self, field: str, fld: Field, op: str) -> FilterType:
+        # Record where this clause's value begins (token index) so the post-connective
+        # sectioned menu can frame the existing value(s) for the auto-paren rewrite
+        # (oxjob #357). Bookkeeping only — read in context mode.
+        self._last_value_start_i = self.i
         # (no _skip_annot here — _parse_scalar must SEE a lone annotation so it
         # can raise OQL_MISSING_ENTITY_ID for "institution is [Harvard]".)
         # collection membership: is [not] in collection col_… (oxjob #363)
@@ -1777,6 +1821,14 @@ class _Parser:
         if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample"):
             return False
         if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
+            # Editor context: a connective with NOTHING after it (cursor sits right
+            # after `... or`/`and`) is ambiguous between an undelimited value list
+            # and the start of a new clause. Don't fail-fast — treat the value as
+            # complete so `_parse_expr` consumes the connective and the next operand
+            # records the (post-connective) FIELD context for the sectioned menu
+            # (oxjob #357). Strict parsing is untouched (guarded on `_ctx_mode`).
+            if self._ctx_mode and self.peek(1) is None:
+                return False
             # `... and year is 2020` (new clause) is fine; `... or bar` is not.
             return not self._looks_like_new_clause(1)
         # an adjacent token that starts a new field clause is handled upstream as
