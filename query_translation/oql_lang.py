@@ -1884,6 +1884,14 @@ def _render_term(value: str, column: str) -> str:
         return f"near {body}" if stemmed else body
     if value.startswith('"') and value.endswith('"') and len(value) >= 2:  # multi-word phrase
         return f"near {value}" if stemmed else value
+    # A multi-token UNQUOTED value (e.g. a URL's `default.search:a b`, an
+    # un-phrased stemmed search) must be parenthesized: bare `a b` is two
+    # adjacency atoms with no delimiter -> OQL_UNDELIMITED_TERM_LIST on re-parse.
+    # `(a b)` round-trips to the cross-field AND the engine now runs for plain
+    # multi-word search (#399). Exact (non-stemmed) multi-word is a phrase, so the
+    # single-token branch below already quotes it. (oxjob #363, from #399)
+    if stemmed and any(c.isspace() for c in value.strip()):
+        return f"({value.strip()})"
     # single word: stemmed => bare; exact => quoted
     return value if stemmed else f'"{value}"'
 

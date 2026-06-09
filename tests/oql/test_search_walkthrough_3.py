@@ -175,3 +175,29 @@ def test_case8b_bare_multiword_or_is_ambiguous():
     with pytest.raises(OQLError) as exc:
         parse("works where full text contains (reduced order model or surrogate model)")
     assert "ambiguous" in str(exc.value).lower()
+
+
+# --------------------------------------------------------------------------- #
+# #399 follow-up — a plain multi-word search VALUE renders parenthesized.
+# A bare `default.search:a b` URL (one leaf, multi-word value) used to render
+# `... contains a b` (no delimiter) -> OQL_UNDELIMITED_TERM_LIST on re-parse.
+# Post-#399 the engine runs plain multi-word as cross-field AND, which is exactly
+# `contains (a b)`, so the renderer must parenthesize. (oxjob #363)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("filter_string", [
+    "default.search:cenizas volcánicas",
+    "title.search:foo bar baz",
+    "abstract.search:machine learning models",
+])
+def test_multiword_search_value_renders_parenthesized_and_reparses(filter_string):
+    out = render_tree(canonicalize_oqo(parse_url_to_oqo("works", filter_string=filter_string)))[0]
+    # parenthesized, not a bare undelimited term list
+    assert " contains (" in out, out
+    parse(out)  # the headline guarantee: the rendered OQL re-parses
+
+
+def test_singleword_search_value_stays_bare():
+    # a single stemmed term must NOT gain parens (regression guard on the fix)
+    out = render_tree(canonicalize_oqo(parse_url_to_oqo("works", filter_string="title.search:single")))[0]
+    assert "contains single" in out and "(" not in out, out
+    parse(out)
