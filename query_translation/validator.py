@@ -16,6 +16,7 @@ Negation is the `is_negated` polarity bit, not an operator; the OQO->ES translat
 applies it uniformly via `~q`, so it is NOT constrained here.
 """
 
+import difflib
 import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
@@ -218,6 +219,52 @@ def _has_search_clause(filter_rows: List["FilterType"]) -> bool:
             if isinstance(f.column_id, str) and f.column_id.endswith(".search"):
                 return True
     return False
+
+
+_SUGGEST_CUTOFF = 0.8  # min edit-distance ratio; below this, suggest nothing
+                       # (a spurious suggestion is worse than none — oxjob #423).
+
+
+def _suggest_columns(
+    bad_id: Any, column_ids: List[str], max_suggestions: int = 2
+) -> List[str]:
+    """Closest registered column id(s) to a missed `bad_id`, for an
+    `invalid_column` "did you mean" hint (oxjob #423). Pure; offline-testable.
+
+    Two tiers, segment-aware first so the common translator/typo footguns are
+    legible:
+      Tier 1 — same dot-segments in a different order (e.g.
+        `<f>.exact.search` -> `<f>.search.exact`). A pure permutation: instantly
+        reveals "wrong order / shape", not "field doesn't exist".
+      Tier 2 — plain edit-distance near-misses (typos: `pubilcation_year` ->
+        `publication_year`) at ratio >= _SUGGEST_CUTOFF.
+    Tier-1 hits rank ahead of tier-2; results are deduped and capped. Returns []
+    when nothing is close (e.g. a clearly-bogus `zzzzz`)."""
+    if not isinstance(bad_id, str) or not bad_id:
+        return []
+    bad_segs = bad_id.split(".")
+    ranked: List[str] = []
+
+    # Tier 1: permutations of the same segment multiset (different order).
+    if len(bad_segs) > 1:
+        permutations = [
+            c for c in column_ids
+            if c != bad_id and sorted(c.split(".")) == sorted(bad_segs)
+        ]
+        permutations.sort(
+            key=lambda c: difflib.SequenceMatcher(None, bad_id, c).ratio(),
+            reverse=True,
+        )
+        ranked.extend(permutations)
+
+    # Tier 2: edit-distance near-misses.
+    for c in difflib.get_close_matches(
+        bad_id, column_ids, n=max_suggestions, cutoff=_SUGGEST_CUTOFF
+    ):
+        if c not in ranked:
+            ranked.append(c)
+
+    return ranked[:max_suggestions]
 
 
 class OQOValidator:
@@ -493,9 +540,18 @@ class OQOValidator:
             ):
                 entry = columns.get("semantic.search")
         if entry is None:
+            # "Did you mean" near-miss(es), mirroring the value-level suggestion
+            # at _validate_closed_vocab. Makes the three causes of invalid_column
+            # self-diagnosing — a wrong segment order (`<f>.exact.search`), a
+            # plain typo, or a genuinely-unregistered field (no suggestion).
+            suggestions = _suggest_columns(f.column_id, list(columns.keys()))
+            hint = ""
+            if suggestions:
+                names = " or ".join(f"'{s}'" for s in suggestions)
+                hint = f" Did you mean {names}?"
             errors.append(ValidationError(
                 type="invalid_column",
-                message=f"'{f.column_id}' is not a valid column",
+                message=f"'{f.column_id}' is not a valid column.{hint}",
                 location=f"{location}.column_id",
             ))
             # Can't check operator-fit / value-type without the column's type.
