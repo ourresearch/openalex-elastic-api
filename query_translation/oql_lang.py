@@ -128,12 +128,11 @@ _f("byline", "raw_author_name", "search",
    aliases=["raw_author_name.search", "raw author name"])
 _f("institution name", "institutions.display_name", "search",
    aliases=["institutions.display_name.search"])
-# Free-text search within a work's curated keywords only (engine param keyword.search →
-# keywords.display_name). Distinct from `topic` (an entity id): keywords are short curated
-# phrases searched as text. Engine recall is narrow (matches single curated tokens; common
-# multi-word terms return 0), but `?filter=keyword.search:…` is a real working oxurl, so
-# OQL must be able to represent it. (oxjob #363 discovery loop run #1)
-_f("keyword", "keyword", "search", aliases=["keyword.search"])
+# NOTE: OQL deliberately does NOT support keyword free-text search (`keyword.search`).
+# The GUI has no keyword text-search facet — its "keyword" is purely the `keywords.id`
+# ENTITY picker — so for GUI parity the word "keyword" is the entity filter (registered in
+# the ids section below), not a search. (Jason 2026-06-09, #402.) The `keyword.search`
+# engine param still exists for raw URLs; OQL just doesn't surface it.
 
 # --- numeric ---
 _f("year", "publication_year", "num", aliases=["publication_year"])
@@ -489,6 +488,11 @@ _f("awards", "awards.id", "id", aliases=["awards.id"])
 # continents namespace — id kind, like `domain`. (#402 batch 7, Jason-approved 2026-06-09)
 _f("continent", "authorships.institutions.continent", "id",
    aliases=["authorships.institutions.continent"])
+# keyword: the curated-keyword ENTITY filter (GUI facet "keyword", entityToSelect keywords),
+# name-resolved via the keywords namespace — like topic/domain. This claims the word "keyword"
+# (OQL no longer registers keyword.search; see the search section). Registry display_name for
+# keywords.id is already "keyword" → Front-B. (Jason 2026-06-09, #402)
+_f("keyword", "keywords.id", "id", aliases=["keywords.id"])
 
 # Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
 _BY_COLUMN = {}

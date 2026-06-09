@@ -88,6 +88,8 @@ _RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
     "awards.id": "awards",
     # continent ids (continents/Q15) resolve to a name via the continents namespace.
     "authorships.institutions.continent": "continents",
+    # keyword entity ids resolve to a name via the keywords namespace (#402, GUI parity).
+    "keywords.id": "keywords",
 }
 
 # Built-in code/id -> display-name tables for the non-native entity types that

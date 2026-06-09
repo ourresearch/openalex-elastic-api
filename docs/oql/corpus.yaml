@@ -1379,19 +1379,6 @@ rows:
 # H. Source/keyword/publisher filters — engine capabilities OQL was missing
 #    (oxjob #363 discovery loop run #1; each maps to a real WoS field tag).
 # ---------------------------------------------------------------------------
-- id: 88
-  category: "librarian & SR queries"
-  provenance:
-    type: "vendor docs"
-    label: "Clarivate Web of Science field tag KP= (Keywords Plus); engine param keyword.search"
-    url: "https://support.clarivate.com/ScientificandAcademicResearch/s/article/Web-of-Science-Core-Collection-List-of-field-tags-in-output"
-  oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=keyword.search:Cas9'
-  status: ok
-  oql: 'works where keyword contains Cas9'
-  oqo: {get_rows: works, filter_rows: [{column_id: keyword.search, value: Cas9, operator: contains}]}
-  note: 'Free-text search within a work''s curated keywords (keyword.search → keywords.display_name). Distinct from `topic` (an entity id). Engine recall is narrow (single curated tokens), but the filter is a real working oxurl, so OQL represents it. WoS KP=, Scopus KEY().'
-
 - id: 89
   category: "librarian & SR queries"
   provenance:
