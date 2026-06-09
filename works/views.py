@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 
 from combined_config import all_entities_config
+from core.entities import get_entity_type
 from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.semantic import semantic_search
@@ -216,14 +217,16 @@ def entities():
     ]
 
     for entity_type in entity_types:
-        if entity_type in all_entities_config:
-            config = all_entities_config[entity_type]
-
-            # Extract the relevant information
+        # Entity identity (id / display name / description) comes from THE entity
+        # registry (core.entities, fed by config/*.yaml), not a second read of the
+        # raw config dict — one source of truth (oxjob #405). The curated display
+        # order above stays here; it's a presentation concern, not registry data.
+        ent = get_entity_type(entity_type)
+        if ent is not None:
             entity_info = {
-                "id": config.get("id", entity_type),
-                "display_name": config.get("displayName", entity_type),
-                "description": config.get("descrFull", config.get("descr", "")),
+                "id": ent.name,
+                "display_name": ent.display_name or entity_type,
+                "description": ent.description or "",
             }
 
             # Map entity_type to the key used in es_counts
@@ -232,11 +235,12 @@ def entities():
             if entity_type == "sdgs":
                 es_key = "sustainable_development_goals"
 
-            # Get count from Elasticsearch if available, otherwise from config values
+            # Get count from Elasticsearch if available, otherwise from the
+            # closed-vocabulary `values` length.
             if es_key in es_counts:
                 entity_info["count"] = es_counts[es_key]
-            elif "values" in config and isinstance(config["values"], list):
-                entity_info["count"] = len(config["values"])
+            elif ent.values is not None:
+                entity_info["count"] = len(ent.values)
             else:
                 entity_info["count"] = None
 
