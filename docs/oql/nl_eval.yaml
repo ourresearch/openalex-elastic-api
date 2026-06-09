@@ -676,3 +676,27 @@ cases:
     - {text: "the source with ISSN 2041-1723", difficulty: easy}
     - {text: "journals whose ISSN is 2041-1723", difficulty: easy}
     - {text: "which source has issn 2041-1723", difficulty: hard}
+
+- ref: 118  # sources where ISSN-L is 2041-1723 — #406 Part B fallback
+  nl:
+    - {text: "the source with ISSN-L 2041-1723", difficulty: easy}
+    - {text: "sources whose ISSN-L is 2041-1723", difficulty: easy}
+    - {text: "which journal has linking ISSN 2041-1723", difficulty: hard}
+
+- ref: 119  # authors where h-index > 49 — #406 Part B fallback
+  nl:
+    - {text: "authors with an h-index above 49", difficulty: easy}
+    - {text: "researchers whose h-index is greater than 49", difficulty: easy}
+    - {text: "highly cited authors with h index over 49", difficulty: hard}
+
+- ref: 120  # funders where works_count > 1000 — #406 Part B fallback (raw render)
+  nl:
+    - {text: "funders with more than 1000 works", difficulty: easy}
+    - {text: "funders whose works count exceeds 1000", difficulty: easy}
+    - {text: "large funders that have funded over a thousand works", difficulty: hard}
+
+- ref: 121  # sources where article processing charge < 2000 — #406 Part B fallback
+  nl:
+    - {text: "sources with an APC under 2000", difficulty: easy}
+    - {text: "journals whose article processing charge is less than 2000", difficulty: easy}
+    - {text: "cheap-to-publish journals charging below 2000 dollars", difficulty: hard}

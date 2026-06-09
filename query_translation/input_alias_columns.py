@@ -70,3 +70,52 @@ INPUT_ALIAS_COLUMNS = frozenset({
     'topics.domain.id', 'topics.field.id', 'topics.id', 'topics.subfield.id', 'type',
     'type_crossref', 'updated_date',
 })
+
+
+# ---------------------------------------------------------------------------
+# Non-works GUI-faceted allowlist (oxjob #406, increment 1b).
+#
+# The works allowlist above let a raw works column_id parse. #406 extends the
+# same "GUI-parity" gate to the NON-works entities: a non-works column gains an
+# OQL surface (via the entity-aware registry fallback in `oql_lang`) ONLY if the
+# openalex-gui facet picker exposes it for that entity (`src/facetConfigs.js`,
+# the facet's `entityToFilter`). This is Jason's GUI-parity lens (2026-06-09):
+# engine-supported ⊋ GUI-faceted — we surface the GUI subset, not the full ~58
+# engine-supported non-works filters (which include internal/half-baked columns).
+#
+# SNAPSHOT — regenerate when facetConfigs.js changes. Built as:
+#   facetConfigs.js {key: entityToFilter==<ent>} ∩ live registry,
+#   minus search/collection columns and the entity's own `ids.openalex`
+#   (self-reference → use `openalex id`). Booleans are LISTED here but the
+#   fallback skips them (their OQL render needs a curated `bool_true`/`bool_false`
+#   sentence, so they're surfaced via `_FIELDS` _f(...) entries, not this fallback).
+# Source of truth = facetConfigs.js; this is a generated mirror.
+GUI_FACETED_COLUMNS_BY_ENTITY = {
+    'authors': frozenset({
+        'affiliations.institution.id', 'affiliations.institution.type', 'has_orcid',
+        'last_known_institutions.country_code', 'last_known_institutions.id',
+        'last_known_institutions.type', 'summary_stats.2yr_mean_citedness',
+        'summary_stats.h_index', 'summary_stats.i10_index',
+    }),
+    'sources': frozenset({
+        'apc_usd', 'country_code', 'first_publication_year', 'is_core', 'is_in_doaj',
+        'is_oa', 'issn', 'issn_l', 'summary_stats.2yr_mean_citedness',
+        'summary_stats.h_index', 'summary_stats.i10_index', 'topics.id', 'type',
+    }),
+    'institutions': frozenset({
+        'country_code', 'lineage', 'summary_stats.2yr_mean_citedness',
+        'summary_stats.h_index', 'summary_stats.i10_index', 'type', 'x_concepts.id',
+    }),
+    'funders': frozenset({
+        'awards_count', 'cited_by_count', 'country_code', 'ids.crossref', 'ids.doi',
+        'ids.ror', 'ids.wikidata', 'is_global_south', 'summary_stats.2yr_mean_citedness',
+        'summary_stats.h_index', 'summary_stats.i10_index', 'works_count',
+    }),
+    'publishers': frozenset({
+        'country_codes', 'hierarchy_level', 'ids.ror', 'ids.wikidata', 'parent_publisher',
+        'summary_stats.2yr_mean_citedness', 'summary_stats.h_index', 'summary_stats.i10_index',
+    }),
+    'topics': frozenset({
+        'domain.id', 'field.id', 'subfield.id',
+    }),
+}

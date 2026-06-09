@@ -930,6 +930,137 @@ def _augment_by_column_for_homonyms() -> None:
 _augment_by_column_for_homonyms()
 
 
+# --- entity-aware GUI-faceted registry fallback (oxjob #406, increment 1b) ---
+# Part B coverage: a NON-works column with no curated `_FIELDS` surface and no
+# homonym (e.g. `issn_l`/"ISSN-L" on sources, `works_count`/"works count" on
+# authors, `summary_stats.h_index`/"h-index") gains an OQL surface here. Scope =
+# the GUI-faceted subset per entity (`input_alias_columns.GUI_FACETED_COLUMNS_BY_
+# ENTITY`, Jason's GUI-parity lens), synthesized from the registry's own metadata
+# so the friendly word == the engine `display_name`. Parsed by display_name, alias,
+# OR raw column_id (oxurl-fluent users), greedily (multi-word labels like "works
+# count"). Booleans are EXCLUDED — their OQL render needs a curated sentence
+# template, so they're surfaced via `_FIELDS` _f(...) entries, not here.
+_ENTITY_FALLBACK_CACHE: Dict[str, Dict[str, "Field"]] = {}
+
+
+def _build_entity_fallback(entity: str) -> Dict[str, "Field"]:
+    try:
+        from core.properties import get_entity_properties
+        from query_translation.input_alias_columns import GUI_FACETED_COLUMNS_BY_ENTITY
+        props = get_entity_properties(entity) or {}
+    except Exception:
+        return {}
+    allow = GUI_FACETED_COLUMNS_BY_ENTITY.get(entity, frozenset())
+    out: Dict[str, Field] = {}
+    for cid, prop in props.items():
+        if cid not in allow:
+            continue
+        ptype = getattr(prop, "type", None)
+        ops = set(getattr(prop, "operators", []) or [])
+        if ptype == "boolean":
+            continue                  # surfaced via _FIELDS _f(...) phrasing, not here
+        if "search" in ops or "collection" in ops:
+            continue
+        dn = getattr(prop, "display_name", None)
+        if not dn:
+            continue
+        if getattr(prop, "entity_type", None):
+            kind = "id"               # name-resolved reference (institutions, topics, …)
+        elif ptype == "number" or "range" in ops:
+            kind = "num"
+        else:
+            kind = "string"           # verbatim id/string (issn_l, ror, country_code)
+        fld = Field(
+            column=cid, kind=kind, oql=dn, casing="",
+            resolves_name=(kind == "id"),
+            is_float=(kind == "num" and "mean_citedness" in cid))
+        # parse by display_name, registry aliases, and the raw column_id
+        for key in [dn] + list(getattr(prop, "aliases", []) or []) + [cid]:
+            if key:
+                out.setdefault(key.lower(), fld)
+    return out
+
+
+def _entity_fallback(entity: str) -> Dict[str, "Field"]:
+    if entity not in _ENTITY_FALLBACK_CACHE:
+        _ENTITY_FALLBACK_CACHE[entity] = _build_entity_fallback(entity)
+    return _ENTITY_FALLBACK_CACHE[entity]
+
+
+def match_entity_fallback(toks: List[Tok], i: int, entity: Optional[str]
+                          ) -> Optional[Tuple[str, "Field", int]]:
+    """Greedy longest GUI-faceted-registry match (up to 4 words) at ``toks[i]`` for
+    a NON-works `entity`. Returns ``(spelling, Field, n_tokens)`` or ``None``. The
+    works fallback stays the existing `_registry_fallback_field` path (unchanged)."""
+    if not entity or entity == "works":
+        return None
+    index = _entity_fallback(entity)
+    if not index:
+        return None
+    best: Optional[Field] = None
+    best_len = 0
+    parts: List[str] = []
+    for k in range(0, 4):
+        t = toks[i + k] if i + k < len(toks) else None
+        if not t or t.kind != "WORD":
+            break
+        parts.append(t.val)
+        key = " ".join(parts).lower()
+        if key in index:
+            best = index[key]
+            best_len = k + 1
+    if best is None:
+        return None
+    spelling = " ".join(toks[i + k].val for k in range(best_len))
+    return spelling, best, best_len
+
+
+def _augment_by_column_for_entity_fallback() -> None:
+    """RENDER side of the Part B fallback: map each GUI-faceted non-works column to
+    its synthesized Field so it renders the friendly `display_name` (and round-trips
+    — both the filter path `_parse_field` and the sort path `_parse_sort_field`
+    accept these words). `setdefault` keeps any curated/works key.
+
+    SAFETY GATE: `_BY_COLUMN` is a GLOBAL (entity-blind) reverse map, but parsing a
+    Part-B word is entity-SCOPED. So we only render a column's friendly word if that
+    word parses back on EVERY entity that has the column — i.e. the column is
+    GUI-faceted on all of them. Counter-example: `works_count` exists on
+    authors/sources/institutions/funders/publishers but is GUI-faceted ONLY on
+    funders; rendering an authors OQO's `works_count` as "works count" would not
+    re-parse on authors (it's not surfaced there). Such columns render RAW (their
+    column_id), which always round-trips (the raw id parses via the fallback's
+    column_id key and the sort path's raw-token path)."""
+    try:
+        from core.properties import ENTITY_PROPERTIES
+        from query_translation.input_alias_columns import GUI_FACETED_COLUMNS_BY_ENTITY
+        entities = list(ENTITY_PROPERTIES.keys())
+    except Exception:
+        return
+
+    def _faceted_everywhere(cid: str) -> bool:
+        # Only entities in fallback SCOPE (those with a GUI-faceted allowlist) can
+        # parse a Part-B word, so only they constrain whether the friendly render
+        # round-trips. An in-scope entity that HAS the column but doesn't facet it
+        # (e.g. authors has `works_count` but doesn't surface it) forces raw render.
+        for e in GUI_FACETED_COLUMNS_BY_ENTITY:
+            props = ENTITY_PROPERTIES.get(e) or {}
+            if cid in props and cid not in GUI_FACETED_COLUMNS_BY_ENTITY[e]:
+                return False
+        return True
+
+    for ent in entities:
+        if ent == "works":
+            continue
+        for cid, fld in _entity_fallback(ent).items():
+            # only the canonical column_id key (fld.column) seeds the reverse map,
+            # and only when the friendly word is safe to render on every entity.
+            if cid == fld.column and _faceted_everywhere(cid):
+                _BY_COLUMN.setdefault(cid, fld)
+
+
+_augment_by_column_for_entity_fallback()
+
+
 def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool, bool]]:
     """Greedy operator match at ``toks[i]``.
 
@@ -1394,8 +1525,20 @@ class _Parser:
         self._want(CTX_FIELD)
         # greedy longest alias match (up to 4 words) — shared with the editor walker
         m = match_field(self.toks, self.i)
+        # Non-works GUI-faceted registry field (oxjob #406 1b): a non-works column's
+        # display_name / alias / raw id (e.g. `issn-l` on sources, `works count` on
+        # funders). LONGEST-match wins over the curated matcher — a multi-word label
+        # ("works count") must beat a curated word that is merely its first token
+        # ("works", the collection alias); on a tie the curated match is preferred.
+        # Skipped in ctx_mode so the editor still offers curated completions.
+        if not self._ctx_mode:
+            em = match_entity_fallback(self.toks, self.i, self._entity)
+            if em is not None and (m is None or em[2] > m[2]):
+                spelling, efld, en = em
+                self.i += en
+                return spelling, efld
         if m is None:
-            # Fallback: a single WORD that is a raw works-registry column_id is
+            # Fallback B: a single WORD that is a raw works-registry column_id is
             # always accepted as an input alias (oxjob #363), even with no curated
             # friendly name. Synthesized from the registry; renders back to the
             # raw id. Skipped in ctx_mode so the editor still offers completions.
@@ -2017,14 +2160,27 @@ class _Parser:
         t = self.peek()
         if not t or t.kind != "WORD":
             raise oql_error("OQL_BAD_SORT", "expected a field to sort by", "")
-        # try field alias
+        # A non-works GUI-faceted registry field can also be a sort key, so a
+        # friendly-rendered sort (`funders sort by works count desc`) round-trips
+        # (oxjob #406 1b). LONGEST-match over the curated alias (same precedence as
+        # `_parse_field`): a multi-word label beats a curated word that is only its
+        # first token. Ties go to the curated alias.
+        am = None
         for k in range(3, 0, -1):
             parts = [self.peek(j).val for j in range(k) if self.peek(j) and self.peek(j).kind == "WORD"]
             if len(parts) == k:
                 key = " ".join(parts).lower()
                 if key in _ALIAS:
-                    self.i += k
-                    return key, _ALIAS[key].column
+                    am = (key, _ALIAS[key].column, k)
+                    break
+        em = match_entity_fallback(self.toks, self.i, self._entity)
+        if em is not None and (am is None or em[2] > am[2]):
+            spelling, efld, en = em
+            self.i += en
+            return spelling, efld.column
+        if am is not None:
+            self.i += am[2]
+            return am[0], am[1]
         self.next()
         return t.val, t.val  # synthetic / technical (relevance_score, count, ...)
 

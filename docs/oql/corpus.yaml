@@ -1753,3 +1753,51 @@ rows:
   oql: 'sources where ISSN is 2041-1723'
   oqo: {get_rows: sources, filter_rows: [{column_id: issn, value: '2041-1723'}]}
   note: "#406 Part B: ISSN homonym — works primary_location.source.issn vs sources' bare `issn` (registry display_name 'ISSN'). Literal string."
+
+- id: 118
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL multi-entity (#406 1b): non-works GUI-faceted registry field — sources ISSN-L (no curated _FIELDS surface; parses by display_name/raw id)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/sources?filter=issn_l:2041-1723'
+  status: ok
+  oql: 'sources where ISSN-L is 2041-1723'
+  oqo: {get_rows: sources, filter_rows: [{column_id: issn_l, value: '2041-1723'}]}
+  note: "#406 Part B: the entity-aware GUI-faceted registry fallback gives non-works columns an OQL surface. Friendly word == engine display_name 'ISSN-L'. Literal string."
+
+- id: 119
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL multi-entity (#406 1b): authors h-index (summary_stats.h_index) — numeric GUI-faceted registry field"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/authors?filter=summary_stats.h_index:>49'
+  status: ok
+  oql: 'authors where h-index > 49'
+  oqo: {get_rows: authors, filter_rows: [{column_id: summary_stats.h_index, value: 49, operator: '>'}]}
+  note: "#406 Part B: numeric registry field; render word == display_name 'h-index'. summary_stats.h_index is GUI-faceted on every entity that has it, so it renders friendly."
+
+- id: 120
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL multi-entity (#406 1b): funders works_count — GUI-faceted only on funders though the column exists on 5 entities, so it renders RAW (safety gate)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/funders?filter=works_count:>1000'
+  status: ok
+  oql: 'funders where works_count > 1000'
+  oqo: {get_rows: funders, filter_rows: [{column_id: works_count, value: 1000, operator: '>'}]}
+  note: "#406 Part B safety gate: `works_count` exists on authors/sources/institutions/funders/publishers but is GUI-faceted only on funders. Parsing 'works count' is funders-scoped, but the GLOBAL render map can't tell which entity, so it renders the RAW column_id (round-trips on every entity) rather than a friendly word that would break re-parse on authors etc."
+
+- id: 121
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL multi-entity (#406 1b): sources article processing charge (apc_usd) — multi-word display_name registry field"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/sources?filter=apc_usd:<2000'
+  status: ok
+  oql: 'sources where article processing charge < 2000'
+  oqo: {get_rows: sources, filter_rows: [{column_id: apc_usd, value: 2000, operator: '<'}]}
+  note: "#406 Part B: multi-word friendly word ('article processing charge' = display_name) parses greedily and round-trips. sources-only column → renders friendly."
