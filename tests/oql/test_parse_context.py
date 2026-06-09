@@ -153,6 +153,29 @@ def test_single_word_value_unaffected_by_widening():
     assert r["replace_range"] == {"start": 27, "end": 30}
 
 
+def test_post_connective_id_sibling_carries_autocomplete_entity():
+    # after `institution is <id> and/or ▮` the sibling must carry autocomplete_entity
+    # so the editor's "Another <field> value" section can do a live entity lookup
+    # (multi-value id filters — #357 iter-3).
+    for conn in ("and", "or"):
+        r = ctx(f"works where institution is I27837315 [University of Michigan] {conn} ")
+        assert r["category"] == C.FIELD
+        assert r["after_connective"] == conn
+        sib = r["sibling"]
+        assert sib["field"] == "institution"
+        assert sib["value_kind"] == "id"
+        assert sib["autocomplete_entity"] == "institutions"
+        assert sib["value_range"]  # for the auto-paren rewrite
+
+
+def test_post_connective_enum_sibling_has_no_autocomplete_entity():
+    # enum siblings resolve from static config vocab, not a live /autocomplete route
+    r = ctx("works where type is article or ")
+    sib = r["sibling"]
+    assert sib["value_kind"] == "enum"
+    assert sib.get("autocomplete_entity") is None
+
+
 def test_multiword_value_widening_with_resolved_prior_clause():
     # a prior clause already resolved to an id (`Ixxxx [Name]`) doesn't block the
     # widening of a later multiword value at the cursor (the realistic editor flow)

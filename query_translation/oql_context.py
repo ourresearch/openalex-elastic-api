@@ -208,7 +208,7 @@ def _shape(raw: Dict[str, Any]) -> Dict[str, Any]:
             sfld = raw.get("sibling_fld")
             if raw.get("sibling_simple") and sfld is not None \
                     and raw.get("sibling_value_start") is not None:
-                out["sibling"] = {
+                sib = {
                     "field": sfld.oql,
                     "column": sfld.column,
                     "value_kind": sfld.kind,
@@ -217,6 +217,15 @@ def _shape(raw: Dict[str, Any]) -> Dict[str, Any]:
                     "_clause_span": raw.get("sibling_clause_span"),
                     "_value_start_i": raw.get("sibling_value_start"),
                 }
+                # id sibling -> the entity whose /autocomplete/{entity} resolves "add
+                # another value" (institutions, authors, …). Lets the editor offer a
+                # live entity lookup in the sectioned menu, not just static enum vocab
+                # (#357 iter-3 — multi-value id filters). Enum siblings get their config
+                # vocab attached by the route's _enrich_enum_suggestions instead.
+                if sfld.kind == "id":
+                    sib["autocomplete_entity"] = \
+                        _COLUMN_AUTOCOMPLETE_ENTITY.get(sfld.column)
+                out["sibling"] = sib
         return out
     if cat == OPERATOR:
         fld = raw.get("fld")
