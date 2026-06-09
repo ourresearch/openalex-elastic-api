@@ -628,3 +628,21 @@ cases:
     - {text: "articles in the reference list of work W1984893742", difficulty: easy}
     - {text: "articles cited by W1984893742", difficulty: easy}
     - {text: "papers that W1984893742 cites, limited to articles", difficulty: hard}
+
+- ref: 109  # date is 2020-05-17 (exact publication day)
+  nl:
+    - {text: "works published on May 17, 2020", difficulty: easy}
+    - {text: "papers with a publication date of 2020-05-17", difficulty: easy}
+    - {text: "anything that came out on 17 May 2020", difficulty: hard}
+
+- ref: 110  # date >= 2020-01-01 and date <= 2020-12-31 (closed range)
+  nl:
+    - {text: "works published between January 1 and December 31, 2020", difficulty: easy}
+    - {text: "papers with a publication date from 2020-01-01 to 2020-12-31", difficulty: easy}
+    - {text: "stuff published anywhere in the 2020 calendar year by date", difficulty: hard}
+
+- ref: 111  # date > 2020-01-01 (strict lower bound)
+  nl:
+    - {text: "works published after January 1, 2020", difficulty: easy}
+    - {text: "papers with a publication date strictly after 2020-01-01", difficulty: easy}
+    - {text: "anything dated later than the first of January 2020", difficulty: hard}

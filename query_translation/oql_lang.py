@@ -77,20 +77,36 @@ class Field:
     is_float: bool = False  # num kind: True = decimals allowed (fwci); False = integer
                             # (year, count). Integer fields collapse a strict bound
                             # PAIR to an inclusive range via ±1 (`>42 and <100` -> 43-99).
+    # date kind (oxjob #407). A date AXIS field (publication_date / created_date /
+    # updated_date) routes its OPERATOR to one of three real ES `DateField` params:
+    #   `is YYYY-MM-DD` -> the base column   (exact day; ES term)
+    #   `>= d`          -> date_from_col      (inclusive lower; ES gte)
+    #   `<= d`          -> date_to_col        (inclusive upper; ES lte)
+    #   strict `>`/`<`  -> the base column   (ES gt/lt)
+    # The inclusive bounds MUST go to from_*/to_* — the base param has no gte/lte
+    # form at ES (see EXPLORE.md). A date BOUND column (from_*/to_*) carries
+    # date_axis (the axis render word, e.g. "date") + date_bound (">="/"<="); it has
+    # no standalone render word and renders as `<date_axis> >=|<= <value>`.
+    date_from_col: str = ""  # axis field: column for the inclusive lower bound (>=)
+    date_to_col: str = ""    # axis field: column for the inclusive upper bound (<=)
+    date_axis: str = ""      # bound column: axis word to render with
+    date_bound: str = ""     # bound column: ">=" or "<="
 
 
 _FIELDS: List[Tuple[List[str], Field]] = []  # (alias-spellings, Field)
 
 
 def _f(oql, column, kind, aliases=(), bool_true="", bool_false="",
-       casing=None, resolves_name=None, is_float=False):
+       casing=None, resolves_name=None, is_float=False,
+       date_from_col="", date_to_col="", date_axis="", date_bound=""):
     if casing is None:
         casing = "lower" if kind == "enum" else ""
     if resolves_name is None:
         resolves_name = (kind == "id")
     fld = Field(column=column, kind=kind, oql=oql, bool_true=bool_true,
                 bool_false=bool_false, casing=casing, resolves_name=resolves_name,
-                is_float=is_float)
+                is_float=is_float, date_from_col=date_from_col, date_to_col=date_to_col,
+                date_axis=date_axis, date_bound=date_bound)
     spellings = [oql] + list(aliases)
     _FIELDS.append(([s.lower() for s in spellings], fld))
     return fld
@@ -144,6 +160,35 @@ _f("FWCI", "fwci", "num", aliases=["fwci"], is_float=True)
 # Render word = registry display_name "citation percentile by subfield" (#363 case 4).
 _f("citation percentile by subfield", "citation_normalized_percentile.value", "num",
    aliases=["citation_normalized_percentile.value"], is_float=True)
+
+# --- dates (oxjob #407) ---
+# ONE friendly axis field per date; the OPERATOR routes to one of three real ES
+# `DateField` params. Render words are the registry display_names ("date" /
+# "created date" / "updated date") so the consistency gate stays green with no
+# /properties change. Literals are full ISO `YYYY-MM-DD` only (Jason 2026-06-09;
+# bare years live at `year is 2020`). Inclusive bounds (`>=`/`<=`) route to the
+# from_*/to_* params (the base column has only exact-day + strict >/< at ES — see
+# EXPLORE.md). The bound columns are registered too (drops them off the #363 raw
+# fallback) and render via the axis word: `date >= 2020-01-01`.
+#
+# Plan-gating: the created/updated axes are Premium/Institutional/Partner only
+# (free keys get HTTP 200 {"error":"Plan upgrade required"}); the engine enforces
+# this at query time — OQL just surfaces the fields. Never put a free-tier
+# created/updated example in user-facing links; `date` (publication) is free.
+_f("date", "publication_date", "date", aliases=["publication_date"],
+   date_from_col="from_publication_date", date_to_col="to_publication_date")
+_f("created date", "created_date", "date", aliases=["created_date"],
+   date_from_col="from_created_date", date_to_col="to_created_date")
+_f("updated date", "updated_date", "date", aliases=["updated_date"],
+   date_from_col="from_updated_date", date_to_col="to_updated_date")
+# Bound columns: parse the raw from_*/to_* key (so it leaves the #363 fallback and
+# a GUI-shared `from_created_date=…` URL round-trips), RENDER via the axis word.
+_f("from_publication_date", "from_publication_date", "date", date_axis="date", date_bound=">=")
+_f("to_publication_date", "to_publication_date", "date", date_axis="date", date_bound="<=")
+_f("from_created_date", "from_created_date", "date", date_axis="created date", date_bound=">=")
+_f("to_created_date", "to_created_date", "date", date_axis="created date", date_bound="<=")
+_f("from_updated_date", "from_updated_date", "date", date_axis="updated date", date_bound=">=")
+_f("to_updated_date", "to_updated_date", "date", date_axis="updated date", date_bound="<=")
 
 # --- booleans ---
 _f("open access", "open_access.is_oa", "bool", aliases=["open_access.is_oa", "is_oa"],
@@ -626,6 +671,22 @@ def lex(s: str) -> List[Tok]:
 # num field (year / count / fwci) takes negatives, so the reading is unambiguous.
 _NUM_RE = re.compile(r"\d+(?:\.\d+)?$")
 _RANGE_RE = re.compile(r"^(?P<lo>\d+(?:\.\d+)?)?-(?P<hi>\d+(?:\.\d+)?)?$")
+
+
+# Full ISO date literal `YYYY-MM-DD` (oxjob #407). Tokenizes as a single WORD ('-'
+# and digits are not word-break chars), exactly like the num value `2019-2023`.
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _coerce_date(val: str, fld: "Field", pos):
+    """Validate a full-ISO date literal for a date field; returns the string
+    verbatim (dates aren't entities or numbers). Bare `2020` / `2020-03` are
+    rejected (Jason 2026-06-09 — full ISO only; bare years live at `year`)."""
+    if not _DATE_RE.match(val):
+        raise oql_error("OQL_BAD_DATE",
+                       f'"{val}" is not a date (YYYY-MM-DD) for "{fld.oql}"',
+                       "e.g. date is 2020-05-17", pos)
+    return val
 
 
 def _coerce_number(val: str, fld: "Field", pos):
@@ -1342,6 +1403,16 @@ class _Parser:
         # comparison — always a single bare scalar (D5)
         if op in (">", ">=", "<", "<="):
             v = self._parse_scalar(fld)
+            # date axis fields route inclusive bounds to the from_*/to_* params
+            # (the only inclusive form at ES); strict >/< stay on the base column.
+            # (oxjob #407 — see the `date` kind notes in the Field dataclass.)
+            if fld.kind == "date":
+                if op == ">=" and fld.date_from_col:
+                    return LeafFilter(fld.date_from_col, v, "is")
+                if op == "<=" and fld.date_to_col:
+                    return LeafFilter(fld.date_to_col, v, "is")
+                # strict >/< (or a bound column given a comparison) -> base column
+                return LeafFilter(fld.column, v, op)
             return LeafFilter(fld.column, v, op)
         # is / is not
         negated = (op == "isnot")
@@ -1449,6 +1520,8 @@ class _Parser:
                            f'expected a value for "{fld.oql}", got "{t.val}"', "", t.pos)
         self._skip_annot()  # drop a trailing [display name] annotation
         # type coercion per kind
+        if fld.kind == "date":
+            return _coerce_date(val, fld, t.pos)
         if fld.kind == "num":
             return _coerce_number(val, fld, t.pos)
         if fld.kind == "bool":
@@ -2225,6 +2298,16 @@ def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
 
     fld = _BY_COLUMN.get(f.column_id)
     name = fld.oql if fld else f.column_id
+    # date bound columns (from_*/to_*) render via the axis word + comparison op
+    # (oxjob #407). The leaf carries op="is" on the bound column; we print
+    # `<axis> >= <date>` / `<axis> <= <date>` (the inverse of the parse routing).
+    if fld and fld.kind == "date" and fld.date_bound and f.value is not None:
+        segs = [_seg("column", fld.date_axis, column_id=f.column_id),
+                _seg("operator", f" {fld.date_bound} "),
+                _seg("value", _render_value(fld, f.value), value=f.value)]
+        return ClauseNode(segments=segs, clause_kind="comparison", meta=ClauseMeta(
+            column_id=f.column_id, operator=fld.date_bound, value=f.value,
+            column_display_name=fld.date_axis))
     # boolean human phrasing (a negated bool flips the value)
     if fld and fld.kind == "bool" and isinstance(f.value, bool):
         effective = f.value != f.is_negated  # XOR

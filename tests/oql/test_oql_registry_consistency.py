@@ -45,6 +45,21 @@ OQL_ONLY_COLUMNS = {
     "collection",                         # "work[s]" — the same-type membership SUBJECT, not a property
 }
 
+# Date BOUND columns (oxjob #407): the inclusive lower/upper params behind the
+# `date`/`created date`/`updated date` AXIS fields. They have NO standalone OQL
+# render word — a leaf on `from_publication_date` renders as `date >= <d>`,
+# `to_publication_date` as `date <= <d>` (operator-routed). So, like booleans'
+# phrasing surface, their `oql` spelling is parse-only and there is no own
+# display_name to agree with; they are exempt from the render-word/alias gates
+# (their round-trip is covered by `test_date_kind_round_trips` below). The AXIS
+# fields (publication_date/created_date/updated_date) are NOT exempt — their
+# render word IS the registry display_name ("date"/"created date"/"updated date").
+OQL_DATE_BOUND_COLUMNS = {
+    "from_publication_date", "to_publication_date",
+    "from_created_date", "to_created_date",
+    "from_updated_date", "to_updated_date",
+}
+
 
 def _registry_prop(field):
     """The works registry property name for an OQL Field, or None if OQL-only.
@@ -61,7 +76,9 @@ def _human_aliases(spellings):
 
 
 _MAPPED = [(sp, f) for sp, f in _FIELDS
-           if f.column not in OQL_ONLY_COLUMNS and _registry_prop(f) is not None]
+           if f.column not in OQL_ONLY_COLUMNS
+           and f.column not in OQL_DATE_BOUND_COLUMNS
+           and _registry_prop(f) is not None]
 
 
 def _ids(items):
@@ -120,10 +137,77 @@ def test_oql_render_word_round_trips(spellings, field):
         oql = f"works group by {word}"
     elif field.kind == "string":
         oql = f'works where {word} is "x"'
+    elif field.kind == "date":  # axis fields only (bound cols are gate-exempt)
+        oql = f"works where {word} is 2020-05-17"
     else:
         pytest.skip(f"unhandled kind {field.kind}")
     out = render(parse(oql))
     assert word in out, f"render word {word!r} did not survive round-trip: {out!r}"
+
+
+def _leaf_tuple(row):
+    """(column_id, operator, value) for a filter row (dict or LeafFilter)."""
+    if isinstance(row, dict):
+        return row.get("column_id"), row.get("operator"), row.get("value")
+    return row.column_id, row.operator, row.value
+
+
+@pytest.mark.parametrize("oql,want_leaf,want_render", [
+    # exact day -> base column (ES term)
+    ("works where date is 2020-05-17",
+     ("publication_date", "is", "2020-05-17"), "works where date is 2020-05-17"),
+    # inclusive bounds route to from_*/to_* (the ONLY inclusive form at ES: gte/lte)
+    ("works where date >= 2020-01-01",
+     ("from_publication_date", "is", "2020-01-01"), "works where date >= 2020-01-01"),
+    ("works where date <= 2020-12-31",
+     ("to_publication_date", "is", "2020-12-31"), "works where date <= 2020-12-31"),
+    # strict comparisons stay on the base column (ES gt/lt)
+    ("works where date > 2020-01-01",
+     ("publication_date", ">", "2020-01-01"), "works where date > 2020-01-01"),
+    # the other two axes
+    ("works where created date >= 2024-01-01",
+     ("from_created_date", "is", "2024-01-01"), "works where created date >= 2024-01-01"),
+    ("works where updated date <= 2025-06-01",
+     ("to_updated_date", "is", "2025-06-01"), "works where updated date <= 2025-06-01"),
+    # raw from_*/to_* key still parses (drops it off the #363 fallback; renders via axis)
+    ("works where from_publication_date is 2020-01-01",
+     ("from_publication_date", "is", "2020-01-01"), "works where date >= 2020-01-01"),
+])
+def test_date_kind_routing_and_render(oql, want_leaf, want_render):
+    """oxjob #407: the `date` kind routes its operator to the right ES param and
+    renders back canonically. Inclusive `>=`/`<=` -> from_*/to_* (gte/lte), exact
+    `is` + strict `>`/`<` -> the base column (term/gt/lt)."""
+    oqo = parse(oql)
+    assert _leaf_tuple(oqo.filter_rows[0]) == want_leaf
+    out = render(oqo)
+    assert out == want_render
+    # render output must itself round-trip to the same OQO (no parse/render drift)
+    assert _leaf_tuple(parse(out).filter_rows[0]) == want_leaf
+
+
+def test_date_kind_round_trips():
+    """oxjob #407: a closed date range round-trips to a stable string and the SAME
+    two-leaf OQO (bounds stay two clauses — never collapse to a `lo-hi` dash, which
+    would collide with ISO dates)."""
+    oql = "works where date >= 2019-01-01 and date <= 2023-12-31"
+    oqo = parse(oql)
+    leaves = [_leaf_tuple(r) for r in oqo.filter_rows]
+    assert leaves == [("from_publication_date", "is", "2019-01-01"),
+                      ("to_publication_date", "is", "2023-12-31")]
+    out = render(oqo)
+    assert out == oql
+    assert render(parse(out)) == out
+
+
+@pytest.mark.parametrize("bad", ["2020", "2020-03", "2020-3-1", "May 2020", "20200517"])
+def test_date_kind_rejects_non_iso_literals(bad):
+    """oxjob #407 (Jason 2026-06-09): literals are full ISO `YYYY-MM-DD` only — bare
+    years/months are rejected (bare years live at `year is 2020`)."""
+    import pytest as _pt
+    from query_translation.diagnostics import OQLError
+    with _pt.raises(OQLError) as ei:
+        parse(f"works where date is {bad}")
+    assert ei.value.code == "OQL_BAD_DATE"
 
 
 def test_default_search_does_not_narrow():

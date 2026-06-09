@@ -1645,3 +1645,51 @@ rows:
     sort by year desc
   oqo: {get_rows: works, sort_by: [{column_id: publication_year, direction: desc}], filter_rows: [{column_id: authorships.author.id, value: a5018352470}, {column_id: fulltext.search, operator: contains, value: simulation}, {column_id: publication_year, operator: '>=', value: 2015}, {column_id: publication_year, operator: <=, value: 2025}, {column_id: type, value: article}, {join: or, filters: [{column_id: fulltext.search, operator: contains, value: '"data assimilation"'}, {column_id: fulltext.search, operator: contains, value: '"state estimation"'}, {column_id: fulltext.search, operator: contains, value: real-time}]}, {join: or, filters: [{column_id: fulltext.search, operator: contains, value: '"reduced order model"'}, {column_id: fulltext.search, operator: contains, value: '"surrogate model"'}]}, {join: or, filters: [{column_id: primary_topic.field.id, value: '15'}, {column_id: primary_topic.field.id, value: '16'}, {column_id: primary_topic.field.id, value: '17'}, {column_id: primary_topic.field.id, value: '19'}, {column_id: primary_topic.field.id, value: '21'}, {column_id: primary_topic.field.id, value: '22'}, {column_id: primary_topic.field.id, value: '23'}, {column_id: primary_topic.field.id, value: '25'}, {column_id: primary_topic.field.id, value: '26'}, {column_id: primary_topic.field.id, value: '31'}]}]}
   note: "A real multi-block systematic-review search. Each quoted phrase ('reduced order model') is one atom and MUST keep its quotes inside the OR-group, else it renders bare ('reduced order model') and re-parses as an ambiguous mix of implicit-AND (space) and explicit-or. The URL parser's boolean-group handler used to strip phrase quotes (case 8a fix). Bare multi-word atoms mixed with 'or' are a hard ambiguity error — OQL never guesses precedence (case 8b). (oxjob #363)"
+
+- id: 109
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL date kind (#407): exact-day filter on the publication date — render word is the registry display_name 'date'"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=publication_date:2020-05-17'
+  status: ok
+  oql: 'works where date is 2020-05-17'
+  oqo: {get_rows: works, filter_rows: [{column_id: publication_date, value: '2020-05-17'}]}
+  note: "The `date` kind (oxjob #407). `date is YYYY-MM-DD` is an exact-day match on the base `publication_date` param (ES term). Literals are full ISO only — bare `2020` is rejected (it lives at `year is 2020`, the publication_year num field). Render word 'date' = the registry display_name."
+
+- id: 110
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL date kind (#407): closed inclusive date range via >=/<= — routes to the from_/to_ params (the only inclusive form at ES)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=from_publication_date:2020-01-01,to_publication_date:2020-12-31'
+  status: ok
+  oql: 'works where date >= 2020-01-01 and date <= 2020-12-31'
+  oqo: {get_rows: works, filter_rows: [{column_id: from_publication_date, value: '2020-01-01'}, {column_id: to_publication_date, value: '2020-12-31'}]}
+  note: "Inclusive date bounds (Jason 2026-06-09: range form = comparison operators, not a dash range — the dash collides with ISO dates). `>=` routes to `from_publication_date` (ES gte), `<=` to `to_publication_date` (ES lte) — the ONLY inclusive forms at ES; the base param has only exact-day + strict >/<. The two bound leaves stay two clauses (never collapse to a `lo-hi` dash) and round-trip to the same OQO the URL `from_publication_date:…,to_publication_date:…` builds."
+
+- id: 111
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL date kind (#407): strict comparison stays on the base column (ES gt/lt)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=publication_date:>2020-01-01'
+  status: ok
+  oql: 'works where date > 2020-01-01'
+  oqo: {get_rows: works, filter_rows: [{column_id: publication_date, value: '2020-01-01', operator: '>'}]}
+  note: "Strict `>`/`<` map to the base `publication_date` param (ES gt/lt), distinct from the inclusive `>=`/`<=` which route to from_/to_ (gte/lte). Mirrors the classic URL `publication_date:>2020-01-01`."
+
+- id: 112
+  category: "filter, sort & sample"
+  provenance:
+    type: "spec design"
+    label: "OQL date kind (#407): the created-date axis (Premium/Institutional/Partner only) — same surface, gated at query time"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=from_created_date:2024-01-01'
+  status: ok
+  oql: 'works where created date >= 2024-01-01'
+  oqo: {get_rows: works, filter_rows: [{column_id: from_created_date, value: '2024-01-01'}]}
+  note: "The created/updated axes parse exactly like publication `date` (render words 'created date'/'updated date' = registry display_names). NOTE: created/updated are Premium/Institutional/Partner only — free/personal/anon keys get HTTP 200 {\"error\":\"Plan upgrade required\"} at query time (sort=created_date is gated too). OQL surfaces the field; the engine enforces the plan gate. Do NOT use this axis in free-tier example links — `date` (publication) is the free axis."
