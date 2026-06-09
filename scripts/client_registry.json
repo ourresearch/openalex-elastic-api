@@ -29,6 +29,20 @@
       "isId": false,
       "hasExport": false
     },
+    "locations.license": {
+      "key": "locations.license",
+      "entityToFilter": "works",
+      "entityToSelect": "licenses",
+      "displayName": "any location license",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "edit"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
     "locations.source.id": {
       "key": "locations.source.id",
       "entityToFilter": "works",
@@ -105,6 +119,22 @@
         "edit"
       ],
       "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "best_oa_location.license": {
+      "key": "best_oa_location.license",
+      "entityToFilter": "works",
+      "entityToSelect": "licenses",
+      "displayName": "best OA license",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "column",
+        "group_by"
+      ],
+      "actionsPopular": null,
       "isId": false,
       "hasExport": false
     },
@@ -693,36 +723,6 @@
       ],
       "isId": false,
       "hasExport": true
-    },
-    "locations.license": {
-      "key": "locations.license",
-      "entityToFilter": "works",
-      "entityToSelect": "licenses",
-      "displayName": "license",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "edit"
-      ],
-      "actionsPopular": null,
-      "isId": false,
-      "hasExport": false
-    },
-    "best_oa_location.license": {
-      "key": "best_oa_location.license",
-      "entityToFilter": "works",
-      "entityToSelect": "licenses",
-      "displayName": "license",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "filter",
-        "column",
-        "group_by"
-      ],
-      "actionsPopular": null,
-      "isId": false,
-      "hasExport": false
     },
     "has_content.pdf": {
       "key": "has_content.pdf",
