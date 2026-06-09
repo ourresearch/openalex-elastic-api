@@ -484,6 +484,11 @@ _f("institution type", "authorships.institutions.type", "enum",
 # awards: grant/award entity-id, name-resolved via the awards namespace. GUI displayName
 # "awards" (entityToSelect awards). _RESOLVE_NAMESPACE entry in oql_renderer.py.
 _f("awards", "awards.id", "id", aliases=["awards.id"])
+# continent of an affiliated institution. GUI facet "Continent" (entityToSelect continents);
+# values are `continents/Q15`-style ids that resolve to a name (Africa, Europe, …) via the
+# continents namespace — id kind, like `domain`. (#402 batch 7, Jason-approved 2026-06-09)
+_f("continent", "authorships.institutions.continent", "id",
+   aliases=["authorships.institutions.continent"])
 
 # Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
 _BY_COLUMN = {}

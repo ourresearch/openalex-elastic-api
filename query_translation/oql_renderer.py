@@ -86,6 +86,8 @@ _RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
     "locations.source.id": "sources",
     # oxjob #402 batch 7 — grant/award entity ids resolve via the awards namespace.
     "awards.id": "awards",
+    # continent ids (continents/Q15) resolve to a name via the continents namespace.
+    "authorships.institutions.continent": "continents",
 }
 
 # Built-in code/id -> display-name tables for the non-native entity types that
