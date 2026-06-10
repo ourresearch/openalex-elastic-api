@@ -1884,3 +1884,63 @@ rows:
   oql: 'works where title/abstract contains (road traffic safety "and" Ghana)'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: 'road traffic safety and Ghana', operator: contains}]}
   note: "#2 (#363 discovery run #3): a literal reserved word (and/or/not) inside a stemmed value is quoted on render so it folds back as an escaped literal rather than re-parsing as a connective. A quoted token EMBEDDED in a bare run stays stemmed (escape); a STANDALONE quoted phrase is still exact. The whole run remains ONE node."
+
+- id: 128
+  category: "librarian & SR queries"
+  provenance:
+    type: "zendesk ticket"
+    label: "OpenAlex zd#8101 — Claire (Vaping & Health SR): subject-heading/MeSH concept → OpenAlex keyword membership"
+    url: "https://openalex.zendesk.com/agent/tickets/8101"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=keywords.id:!keywords/animal-model,keywords.id:keywords/electronic-cigarette,language:en,publication_year:2003-2025,type:types/article'
+  status: ok
+  oql: |-
+    works where keyword is not keywords/animal-model [no entity found]
+      and keyword is keywords/electronic-cigarette [no entity found]
+      and language is en [English]
+      and year is 2003-2025
+      and type is types/article
+  oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true}, {column_id: keywords.id, value: keywords/electronic-cigarette}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: types/article}]}
+  note: |-
+    zd#8101 "Vaping & Health Living Map" (Claire Stansfield, UCL EPPI-Centre),
+    OpenAlex Custom-filter line 9, run May 2025, 3433 hits. Round-trip verified
+    (URL→OQO→OQL→OQO identity, 2026-06-10). A clean ok row AND a worked example of
+    the subject-heading-explosion → OpenAlex-keyword mapping: her one keyword
+    membership is the abbreviation of full source-DB controlled-vocabulary blocks.
+    ORIGIN QUERIES (verbatim, the gold-standard intent she abbreviated from):
+      EMBASE (OVID):  1  exp electronic cigarette/   2  exp Vaping/
+      PubMed:         Electronic Nicotine Delivery Systems[MeSH] OR Vaping[MESH]
+      animal exclusion `keywords.id:!keywords/animal-model` abbreviates
+        EMBASE line 23: (exp animal/ or exp invertebrate/ or nonhuman/ or animal
+        experiment/ or animal model/ or exp plant/ or exp fungus/) not (exp human/
+        or human tissue/ or human experiment/)
+    Full origin strategies (EMBASE/ASSIA/PubMed) archived in
+    oxjobs working/oql-bulletproof/evidence/zd8101_vaping_and_health.txt
+
+- id: 129
+  category: "librarian & SR queries"
+  provenance:
+    type: "zendesk ticket"
+    label: "OpenAlex zd#8101 — Claire (Vaping & Health SR): title-field OR of term variants (display_name.search)"
+    url: "https://openalex.zendesk.com/agent/tickets/8101"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=keywords.id:!keywords/animal-model,language:en,publication_year:2003-2025,type:types/article,display_name.search:vape|vaper|vapers|vapes|vaping'
+  status: ok
+  oql: |-
+    works where keyword is not keywords/animal-model [no entity found]
+      and language is en [English]
+      and year is 2003-2025
+      and type is types/article
+      and title contains (vape or vaper or vapers or vapes or vaping)
+  oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: types/article}, {join: or, filters: [{column_id: display_name.search, value: vape, operator: contains}, {column_id: display_name.search, value: vaper, operator: contains}, {column_id: display_name.search, value: vapers, operator: contains}, {column_id: display_name.search, value: vapes, operator: contains}, {column_id: display_name.search, value: vaping, operator: contains}]}]}
+  note: |-
+    zd#8101 "Vaping & Health Living Map" (Claire), OpenAlex Custom-filter line 7,
+    run May 2025, 3342 hits. Round-trip verified (identity, 2026-06-10). The
+    title-scoped (display_name.search) slice — OpenAlex `display_name.search` ==
+    the source DBs' title field (`.ti` / `[ti]` / `TI(...)`).
+    ORIGIN QUERIES (verbatim, title field only):
+      EMBASE (OVID):  18  (vape or vapes or vaper or vapers or vaping).ti,kf,ot.
+      PubMed:         vape[ti] or vapes[ti] or vaper[ti] or vapers[ti] or vaping[ti]
+      ASSIA (ProQuest): TI(vape OR vapes OR vaper OR vapers OR vaping)
+    Full origin strategies archived in
+    oxjobs working/oql-bulletproof/evidence/zd8101_vaping_and_health.txt
