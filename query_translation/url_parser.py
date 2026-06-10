@@ -341,6 +341,18 @@ def parse_single_filter(
     if "|" in value:
         return parse_or_values(field, value)
 
+    # Within-field NOT (`!`) in a `.search` value: the compact OpenAlex form
+    # `term!"phrase"` = term AND NOT (exact) phrase. Live-verified on prod:
+    # `title_and_abstract.search:teacher!"academic teacher"` == `teacher`
+    # minus exact `"academic teacher"`. The parser used to keep the whole string
+    # as one opaque `contains` value, so the OQO carried no negation and the
+    # renderer dropped the `!` → a NOT silently became an AND (oxjob #431,
+    # zd#8101). Decompose into a positive clause + negated clause(s) on the same
+    # field; the renderer spells the negation `does not contain`. A LEADING `!`
+    # is value-level negation (handled below), not within-field NOT.
+    if field.endswith(".search") and _has_within_field_not(value):
+        return parse_search_within_field_not(field, value)
+
     default_op = _default_operator_for(field)
 
     # Handle null
@@ -416,6 +428,13 @@ def parse_or_values(field: str, value: str) -> FilterType:
                 operator=default_op,
                 is_negated=True,
             ))
+        elif field.endswith(".search") and _has_within_field_not(part):
+            # An OR member that itself carries within-field NOT (`a|b!c`) becomes
+            # an AND of [positive, negated…] within this OR branch (`|` is the
+            # outermost operator). (oxjob #431)
+            sub = parse_search_within_field_not(field, part)
+            filters.append(sub[0] if len(sub) == 1
+                           else BranchFilter(join="and", filters=sub))
         else:
             filters.append(LeafFilter(
                 column_id=field,
@@ -424,6 +443,72 @@ def parse_or_values(field: str, value: str) -> FilterType:
             ))
 
     return BranchFilter(join="or", filters=filters)
+
+
+def _split_unquoted(value: str, delim: str) -> List[str]:
+    """Split `value` on `delim`, ignoring delimiters inside double-quoted runs
+    (so the `!` in `"hello!world"` is literal phrase text, not a separator)."""
+    parts: List[str] = []
+    current = ""
+    in_quotes = False
+    for ch in value:
+        if ch == '"':
+            in_quotes = not in_quotes
+            current += ch
+        elif ch == delim and not in_quotes:
+            parts.append(current)
+            current = ""
+        else:
+            current += ch
+    parts.append(current)
+    return parts
+
+
+def _has_within_field_not(value: str) -> bool:
+    """True iff `value` carries a within-field NOT (`!`): an unquoted `!` that is
+    neither the leading character (a leading `!` is value-level negation, handled
+    separately) nor a trailing one with no operand after it (`hello!` stays an
+    opaque value, unchanged). Requires a non-empty positive run AND at least one
+    non-empty negated run."""
+    segs = _split_unquoted(value, "!")
+    if len(segs) < 2 or segs[0].strip() == "":
+        return False
+    return any(seg.strip() != "" for seg in segs[1:])
+
+
+def _search_not_leaf(field: str, operand: str, is_negated: bool) -> LeafFilter:
+    """Build one `.search` leaf for a within-field-NOT operand. A quoted operand
+    is an exact phrase → route to the `.search.exact` column (matching the live
+    API, where the subtracted set size equals the exact-phrase count); a bare
+    operand stays on the stemmed `.search` column. Operator is always `contains`
+    (note `.search.exact` does not end in `.search`, so the default-operator
+    helper would wrongly pick `is` — set it explicitly)."""
+    operand = operand.strip()
+    if len(operand) >= 2 and operand.startswith('"') and operand.endswith('"'):
+        return LeafFilter(column_id=field + ".exact", value=operand,
+                          operator="contains", is_negated=is_negated)
+    return LeafFilter(column_id=field, value=operand,
+                      operator="contains", is_negated=is_negated)
+
+
+def parse_search_within_field_not(field: str, value: str) -> List[LeafFilter]:
+    """Decompose a `.search` value's within-field NOT (`!`) into clauses.
+
+    `teacher!"academic teacher"` → [contains teacher,
+    does-not-contain exact "academic teacher"]. The leading run is the positive
+    term/run; each subsequent `!run` is a negated clause on the SAME field
+    (multiple `!`s chain: `a!b!c` = a AND NOT b AND NOT c). Quoted run → exact
+    (`.search.exact`), bare run → stemmed (`.search`). Mirrors how the parser
+    already splits `|` into OR branches; the renderer + grammar need no change —
+    OQL already expresses this via `does not contain`. (oxjob #431, zd#8101.)
+    """
+    segs = _split_unquoted(value, "!")
+    leaves: List[LeafFilter] = []
+    for idx, seg in enumerate(segs):
+        if seg.strip() == "":
+            continue
+        leaves.append(_search_not_leaf(field, seg, is_negated=idx > 0))
+    return leaves
 
 
 def _should_range_parse(entity_type: Optional[str], field: str) -> bool:

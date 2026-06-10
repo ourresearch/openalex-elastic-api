@@ -1944,3 +1944,56 @@ rows:
       ASSIA (ProQuest): TI(vape OR vapes OR vaper OR vapers OR vaping)
     Full origin strategies archived in
     oxjobs working/oql-bulletproof/evidence/zd8101_vaping_and_health.txt
+
+- id: 130
+  category: "librarian & SR queries"
+  provenance:
+    type: "zendesk ticket"
+    label: "OpenAlex zd#8101 — Claire (UCL EPPI-Centre): within-field NOT (`!`) excludes an exact phrase"
+    url: "https://openalex.zendesk.com/agent/tickets/8101"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:teacher,title_and_abstract.search.exact:!%22academic%20teacher%22'
+  status: ok
+  oql: |-
+    works where title/abstract contains teacher
+      and title/abstract does not contain "academic teacher"
+  oqo: {get_rows: works, filter_rows: [
+        {column_id: title_and_abstract.search, value: teacher, operator: contains},
+        {column_id: title_and_abstract.search.exact, value: '"academic teacher"', operator: contains, is_negated: true}]}
+  note: |-
+    zd#8101 (Claire Stansfield): the compact OpenAlex within-`.search` NOT operator
+    `term!"phrase"` = term AND NOT the EXACT phrase. Classic URL
+    `title_and_abstract.search:teacher!"academic teacher"` is live-verified: `teacher`
+    2,315,754 − exact "academic teacher" 2,378 = 2,313,376. The OXURL→OQO parser used
+    to keep the whole string as one opaque contains value, dropping the `!` so the NOT
+    silently became an AND (252,100). Quoted operand → exact (`.search.exact`); bare →
+    stemmed (`.search`). oxjob #431 (parser-only fix); the OQL renderer/grammar already
+    expressed within-field NOT via `does not contain`, and OQO→ES execution is verified
+    to honor the negation (count identity A == teacher − exact-phrase, works-v33).
+    KNOWN url_renderer GAP (follow-up): the stored `oxurl` is the expanded
+    `…search.exact:!"academic teacher"` form, which the classic API REJECTS (no
+    standalone `!` on a `.search` filter). The classic-executable form is the compact
+    `…search:teacher!"academic teacher"`. Same pre-existing class as row 71's
+    `…search:!pediatric`; left has-oxurl by that precedent until the renderer renders
+    the compact form.
+
+- id: 131
+  category: "librarian & SR queries"
+  provenance:
+    type: "zendesk ticket"
+    label: "OpenAlex zd#8101 — Claire: geographic within-field NOT (`England!\"New England\"`)"
+    url: "https://openalex.zendesk.com/agent/tickets/8101"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:England,title_and_abstract.search.exact:!%22New%20England%22'
+  status: ok
+  oql: |-
+    works where title/abstract contains England
+      and title/abstract does not contain "New England"
+  oqo: {get_rows: works, filter_rows: [
+        {column_id: title_and_abstract.search, value: England, operator: contains},
+        {column_id: title_and_abstract.search.exact, value: '"New England"', operator: contains, is_negated: true}]}
+  note: |-
+    zd#8101 geographic-name idiom: `England!"New England"` (also `Wales!"New South
+    Wales"`, `British!"British Columbia"`) — exclude a place whose exact name contains
+    the search term, translating WoS/PsycInfo NOT clauses. Within-field NOT with
+    exact-phrase exclusion. oxjob #431.
