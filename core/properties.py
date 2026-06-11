@@ -32,6 +32,7 @@ from dataclasses import replace
 
 from core.display_names import resolve_display_name
 from core.fields import Property
+from core.property_categories import resolve_category
 
 # Human-curated semver of the published /properties contract (#331 Decision C).
 # MINOR/MAJOR only — no PATCH lane (the fingerprint already records that the
@@ -78,7 +79,13 @@ from core.fields import Property
 # tripped the #381 label-consistency gate (gui still showed the old singular labels);
 # this reconciles BOTH sides to "OpenAlex ID" (gui facetConfigs.js + client_registry.json
 # regenerated in the same ship). display_name tweak only. Jason-approved 2026-06-09. = MINOR.
-PROPERTIES_VERSION = "1.12.0"
+# 1.13.0 (#441): added a nullable `category` to every property — a best-effort organizational
+# grouping mirroring the GUI's facetConfigs categories (the 11 + one addition, "dates").
+# Purely descriptive (no query-behavior effect), resolved by the builder from
+# core/property_categories.py; nullable where no clear bucket (no enforcement gate). Net-new
+# attribute on every property → whole snapshot re-renders, but no previously-valid query
+# breaks. Jason-approved 2026-06-10. = MINOR.
+PROPERTIES_VERSION = "1.13.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -122,6 +129,9 @@ def _build_entity_properties(entity_type, module_name):
     input `aliases`, resolved from `core.display_names` here — this is the layer
     that knows the owning `entity_type` (the same `param` can carry a different
     label per entity), which the entity-agnostic `Field.to_property()` cannot.
+    The nullable `category` (#441) — a best-effort organizational grouping mirroring
+    the GUI's facetConfigs categories — is resolved the same way (entity-aware,
+    builder-layered, off the engine `Field`).
     """
     mod = importlib.import_module(module_name)
     fields_dict = getattr(mod, "fields_dict", None)
@@ -130,8 +140,12 @@ def _build_entity_properties(entity_type, module_name):
     out = {}
     for param, field in fields_dict.items():
         display_name, aliases = resolve_display_name(entity_type, param)
+        category = resolve_category(entity_type, param)
         out[param] = replace(
-            field.to_property(), display_name=display_name, aliases=aliases
+            field.to_property(),
+            display_name=display_name,
+            aliases=aliases,
+            category=category,
         )
     return out
 
@@ -205,6 +219,7 @@ def _merged_properties(entity_type):
             merged[name] = Property(
                 name=name, type=None, operators=[], actions=["select"],
                 display_name=display_name, aliases=aliases,
+                category=resolve_category(entity_type, name),
             )
         elif "select" not in existing.actions:
             merged[name] = replace(existing, actions=existing.actions + ["select"])

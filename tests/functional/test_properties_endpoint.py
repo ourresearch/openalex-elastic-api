@@ -83,11 +83,11 @@ def test_registry_unknown_entity_alias_is_404(client):
 def test_public_payload_omits_server_internal_keys(client):
     body = client.get("/properties?entity=works").get_json()
     sample = next(iter(body["properties"]["works"].values()))
-    # display_name + aliases are public as of v1.3.0 (#381); alias/custom_es_field
-    # remain server-internal and must never leak.
+    # display_name + aliases are public as of v1.3.0 (#381); category as of v1.13.0
+    # (#441); alias/custom_es_field remain server-internal and must never leak.
     assert set(sample.keys()) == {
         "name", "type", "operators", "actions", "entity_type",
-        "display_name", "aliases",
+        "display_name", "aliases", "category",
     }
     assert "custom_es_field" not in sample
     assert "alias" not in sample
@@ -109,6 +109,35 @@ def test_select_only_field_is_a_property_with_select_action(client):
         # select-only ⇒ not filterable: no value type, no operators.
         assert prop["type"] is None
         assert prop["operators"] == []
+
+
+# --- #441 category (organizational grouping) ---------------------------------
+# A nullable, best-effort grouping mirroring the GUI facetConfigs categories. No
+# query-behavior effect, no enforcement gate — so we assert a few representative
+# assignments AND that null is a valid, present outcome (the long tail).
+
+def test_category_known_assignments(client):
+    works = client.get("/properties/works").get_json()["properties"]["works"]
+    expected = {
+        "cited_by_count": "citation",       # citation metric
+        "doi": "ids",                       # identifier
+        "open_access.oa_status": "open access",
+        "publication_year": "dates",        # the #441 registry addition
+        "publication_date": "dates",
+        "authorships.author.id": "author",
+        "primary_topic.id": "aboutness",
+    }
+    for name, category in expected.items():
+        assert works[name]["category"] == category, f"{name} -> {works[name]['category']!r}"
+
+
+def test_category_is_present_and_nullable(client):
+    works = client.get("/properties/works").get_json()["properties"]["works"]
+    # Every property carries the key (part of the public payload as of v1.13.0)…
+    assert all("category" in p for p in works.values())
+    # …and null is a legitimate, intentional value for the uncategorized long tail
+    # (select-only `abstract_inverted_index` has no facet peer and no clear bucket).
+    assert works["abstract_inverted_index"]["category"] is None
 
 
 def test_filterable_and_selectable_field_unions_actions(client):

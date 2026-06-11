@@ -178,13 +178,17 @@ class Property:
     entity_type: Optional[str] = None
     display_name: Optional[str] = None
     aliases: List[str] = field(default_factory=list)
+    category: Optional[str] = None
 
     def serialize(self) -> dict:
         """The canonical PUBLIC JSON-ready dict. `operators`/`actions`/`aliases` are
         sorted so repeated renders are byte-identical (fingerprint-stable).
         Server-internal `alias`/`custom_es_field` are intentionally omitted — see the
         class docstring. `display_name`/`aliases` (#381) are part of the public
-        contract as of v1.3.0."""
+        contract as of v1.3.0. `category` (#441) — a nullable, best-effort
+        organizational grouping (mirrors the GUI's facetConfigs categories);
+        purely descriptive, no query-behavior effect, resolved by the properties
+        builder from `core.property_categories`. Added v1.13.0 (additive)."""
         return {
             "name": self.name,
             "type": self.type,
@@ -193,6 +197,7 @@ class Property:
             "entity_type": self.entity_type,
             "display_name": self.display_name,
             "aliases": sorted(self.aliases),
+            "category": self.category,
         }
 
 

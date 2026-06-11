@@ -14,7 +14,9 @@ two committed JSON snapshots, never on the live catalog.
 The bump rule (docs/PROPERTIES_VERSIONING.md):
     MINOR  — purely additive: add an entity / property / operator / action /
              alias; add or tweak a display_name (#381 — labels are display
-             metadata, not query semantics).
+             metadata, not query semantics); ANY change to a property's `category`
+             (#441 — a nullable, ungated organizational grouping; add / change /
+             remove are all MINOR, none can break a query).
     MAJOR  — anything that could invalidate a previously-valid query: remove an
              entity/property/operator/action/alias, rename a property (= remove + add,
              so the removal side already forces MAJOR), change a property's
@@ -122,6 +124,15 @@ def classify_change(old, new):
                 minor.append(f"alias added: {e}.{name}: {added}")
             for removed in sorted(oal - nal):
                 major.append(f"alias removed: {e}.{name}: {removed}")
+            # category (#441) is a nullable, best-effort ORGANIZATIONAL grouping with
+            # no query-behavior effect and NO enforcement gate (it may be null by
+            # design, and consumers must already handle null). So every category
+            # transition — add, change, or remove (value -> null) — is MINOR: none can
+            # invalidate a previously-valid query. (Contrast display_name, whose
+            # removal is MAJOR because it drops a contract field clients read.)
+            oc, nc = o.get("category"), n.get("category")
+            if oc != nc:
+                minor.append(f"category changed: {e}.{name}: {oc!r} -> {nc!r}")
 
     if major:
         return "major", major + minor
