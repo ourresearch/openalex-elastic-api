@@ -114,25 +114,34 @@ def test_committed_snapshot_matches_live_render():
 
 
 def test_rendered_catalog_is_filter_union_select():
-    """The rendered catalog is the union of filter-columns and selectable
-    result-fields, discriminated by `actions` (#318 / Decision D). The render
-    must NOT mutate `ENTITY_PROPERTIES` (the validator's filter-column source) —
-    every selectable name appears in the render, every filter name appears in
-    the render, and a both-name carries `select` unioned into its filter actions.
+    """The rendered catalog is the union of (filter-columns MINUS demoted alias
+    spellings) and selectable result-fields, discriminated by `actions`
+    (#318 / Decision D; #446 alias demotion). The render must NOT mutate
+    `ENTITY_PROPERTIES` (the validator's filter-column source) — every selectable
+    name appears in the render, every NON-alias filter name appears in the render,
+    and a both-name carries `select` unioned into its filter actions.
     """
     works = render_properties(entity="works")["properties"]["works"]
     filter_names = set(ENTITY_PROPERTIES["works"])
+    # #446: alias columns (alternate_of set) stay in ENTITY_PROPERTIES (validator
+    # resolves them) but are demoted from the PUBLIC render — they survive only as
+    # `alternate_keys` on their canonical property.
+    alias_names = {
+        name for name, prop in ENTITY_PROPERTIES["works"].items() if prop.alternate_of
+    }
+    assert alias_names, "expected some demoted alias columns on works (#446)"
     select_names = get_selectable_fields("works")
 
-    # render = filter ∪ select (no name lost from either namespace)
-    assert filter_names <= set(works)
+    # render = (filter MINUS demoted aliases) ∪ select
+    assert (filter_names - alias_names) <= set(works)
+    assert not (alias_names & set(works)), "demoted aliases must not be in the render"
     assert select_names <= set(works)
 
     # selectable names carry the `select` action
     for name in select_names:
         assert "select" in works[name]["actions"], name
-    # a filter-only name does NOT gain `select`
-    filter_only = filter_names - select_names
+    # a filter-only name does NOT gain `select` (skip demoted aliases — not rendered)
+    filter_only = filter_names - select_names - alias_names
     assert filter_only, "expected some filter-only columns on works"
     for name in filter_only:
         assert "select" not in works[name]["actions"], name

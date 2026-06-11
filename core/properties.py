@@ -85,7 +85,16 @@ from core.property_categories import resolve_category
 # core/property_categories.py; nullable where no clear bucket (no enforcement gate). Net-new
 # attribute on every property → whole snapshot re-renders, but no previously-valid query
 # breaks. Jason-approved 2026-06-10. = MINOR.
-PROPERTIES_VERSION = "1.13.0"
+# 2.0.0 (#446 identity realignment): ~20 duplicate alias spellings on works were DEMOTED from
+# the top-level catalog (e.g. is_oa, institution.id/institutions.id, cites, journal,
+# title.search[.exact]) — they fold into their ONE canonical property's new public
+# `alternate_keys` list. The aliases stay fully accepted by the filter API / OQO validator /
+# OQL parse (demoted, NOT deprecated — `fields_dict` is still 1:1), but removing them as
+# top-level `/properties` entries is a MAJOR contract change (a client enumerating the catalog
+# no longer sees the alias key). The new additive `alternate_keys` field rides along (MINOR on
+# its own, subsumed by the MAJOR). Jason signed off the works curated merge list 2026-06-11
+# (oxjobs #446); the version-class (MAJOR) was pre-approved in principle 2026-06-11 (#428 session).
+PROPERTIES_VERSION = "2.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -146,6 +155,41 @@ def _build_entity_properties(entity_type, module_name):
             display_name=display_name,
             aliases=aliases,
             category=category,
+        )
+    return _fold_alternate_keys(out, entity_type)
+
+
+def _fold_alternate_keys(out, entity_type):
+    """Identity realignment (#446): invert each alias's `alternate_of` so the
+    CANONICAL property carries the alias `param`s under `alternate_keys`.
+
+    Aliases are LEFT IN `out` (and so in `ENTITY_PROPERTIES`) on purpose — the
+    filter API, OQO validator, OQL technical-column parse, and `get_property` all
+    resolve a column by membership in this dict, so demoting an alias here would
+    stop it resolving (it must keep working — it's demoted, not deprecated). The
+    PUBLIC `/properties` render (`_merged_properties`) is where alias entries are
+    finally dropped from the top-level catalog. This pass only annotates the
+    canonical side; it changes nothing about how aliases resolve.
+
+    A misconfigured `alternate_of` (canonical `param` absent from this entity) is
+    left as-is and logged — fail loud rather than silently swallow the alias.
+    """
+    alt_map = {}  # canonical param -> [alias params]
+    for param, prop in out.items():
+        if prop.alternate_of:
+            alt_map.setdefault(prop.alternate_of, []).append(param)
+    for canonical, alias_params in alt_map.items():
+        target = out.get(canonical)
+        if target is None:
+            print(
+                f"WARNING [properties]: {entity_type}: alternate_of points at "
+                f"'{canonical}', not a property of this entity "
+                f"(aliases: {sorted(alias_params)}); leaving aliases as-is."
+            )
+            continue
+        out[canonical] = replace(
+            target,
+            alternate_keys=sorted(set(target.alternate_keys) | set(alias_params)),
         )
     return out
 
@@ -211,7 +255,15 @@ def _merged_properties(entity_type):
     `get_selectable_fields`. Both the validator and this render draw from the same
     two sources, so the public catalog can't drift from what the server accepts.
     """
-    merged = dict(ENTITY_PROPERTIES.get(entity_type, {}))  # name -> Property (filter)
+    # Identity realignment (#446): drop alias columns (`alternate_of` set) from the
+    # PUBLIC catalog — they survive only as `alternate_keys` on their canonical
+    # property. They REMAIN in `ENTITY_PROPERTIES` (so filter/validator/OQL parse
+    # keep resolving them); the demotion is render-surface only.
+    merged = {
+        name: prop
+        for name, prop in ENTITY_PROPERTIES.get(entity_type, {}).items()
+        if not prop.alternate_of
+    }
     for name in get_selectable_fields(entity_type) or set():
         existing = merged.get(name)
         if existing is None:

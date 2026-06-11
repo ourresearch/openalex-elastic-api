@@ -217,6 +217,7 @@ fields = [
     BooleanField(
         param="is_corresponding",
         custom_es_field="authorships.is_corresponding",
+        alternate_of="authorships.is_corresponding",
         docstring=DOCSTRINGS["is_corresponding"],
         documentation_link=DOCUMENTATION_LINKS["is_corresponding"],
         alternate_names=ALTERNATE_NAMES.get("is_corresponding", None),
@@ -224,6 +225,7 @@ fields = [
     BooleanField(
         param="is_oa",
         alias="open_access.is_oa",
+        alternate_of="open_access.is_oa",
         docstring=DOCSTRINGS["is_oa"],
         documentation_link=DOCUMENTATION_LINKS["is_oa"],
         alternate_names=ALTERNATE_NAMES.get("is_oa", None),
@@ -380,6 +382,7 @@ fields = [
     OpenAlexIDField(
         param="author.id",
         alias="authorships.author.id",
+        alternate_of="authorships.author.id",
         docstring=DOCSTRINGS["author"],
         documentation_link=DOCUMENTATION_LINKS["author"],
         alternate_names=ALTERNATE_NAMES.get("author", None),
@@ -435,11 +438,14 @@ fields = [
     OpenAlexIDField(
         param="cites",
         alias="referenced_works",
+        alternate_of="referenced_works",
         docstring=DOCSTRINGS["cites"],
         documentation_link=DOCUMENTATION_LINKS["cites"],
         alternate_names=ALTERNATE_NAMES.get("cites", None),
     ),
-    OpenAlexIDField(param="concept.id", alias="concepts.id"),
+    OpenAlexIDField(
+        param="concept.id", alias="concepts.id", alternate_of="concepts.id"
+    ),
     OpenAlexIDField(
         param="concepts.id",
         docstring="Concepts are abstract ideas that the work is about",
@@ -457,9 +463,21 @@ fields = [
     ),
     OpenAlexIDField(param="institution_assertions.id"),
     OpenAlexIDField(param="institution_assertions.lineage"),
-    OpenAlexIDField(param="institution.id", alias="authorships_full.institutions.id"),
-    OpenAlexIDField(param="institutions.id", alias="authorships_full.institutions.id"),
-    OpenAlexIDField(param="journal", custom_es_field="primary_location.source.id"),
+    OpenAlexIDField(
+        param="institution.id",
+        alias="authorships_full.institutions.id",
+        alternate_of="authorships.institutions.id",
+    ),
+    OpenAlexIDField(
+        param="institutions.id",
+        alias="authorships_full.institutions.id",
+        alternate_of="authorships.institutions.id",
+    ),
+    OpenAlexIDField(
+        param="journal",
+        custom_es_field="primary_location.source.id",
+        alternate_of="primary_location.source.id",
+    ),
     OpenAlexIDField(
         param="locations.source.id",
         docstring=DOCSTRINGS["source"],
@@ -497,7 +515,9 @@ fields = [
     ),
     OpenAlexIDField(param="primary_topic.id"),
     OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
-    OpenAlexIDField(param="openalex_id", alias="ids.openalex"),
+    OpenAlexIDField(
+        param="openalex_id", alias="ids.openalex", alternate_of="ids.openalex"
+    ),
     OpenAlexIDField(
         param="repository",
         custom_es_field="locations.source.id",
@@ -654,12 +674,14 @@ fields = [
         param="title.search",
         index="works",
         custom_es_field="display_name",
+        alternate_of="display_name.search",
         docstring="Free text search within the work's title only",
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
     SearchField(
         param="title.search.exact",
         custom_es_field="display_name.no_stem",
+        alternate_of="display_name.search.exact",
         docstring="Free text search within the work's title only, without stemming",
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
@@ -686,7 +708,11 @@ fields = [
         param="authorships.affiliations.institution_ids",
         custom_es_field="authorships.affiliations.institution_ids.keyword",
     ),
-    TermField(param="author.orcid", alias="authorships.author.orcid"),
+    TermField(
+        param="author.orcid",
+        alias="authorships.author.orcid",
+        alternate_of="authorships.author.orcid",
+    ),
     TermField(
         param="authorships.author.orcid",
         docstring="The work's authors, by ORCID",
@@ -776,6 +802,7 @@ fields = [
     TermField(
         param="institutions.country_code",
         alias="authorships_full.institutions.country_code",
+        alternate_of="authorships.institutions.country_code",
         docstring=DOCSTRINGS["country"],
         documentation_link=DOCUMENTATION_LINKS["country"],
         alternate_names=ALTERNATE_NAMES.get("country", None),
@@ -787,8 +814,16 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["continent"],
         alternate_names=ALTERNATE_NAMES.get("continent", None),
     ),
-    TermField(param="institutions.ror", alias="authorships_full.institutions.ror"),
-    TermField(param="institutions.type", alias="authorships_full.institutions.type"),
+    TermField(
+        param="institutions.ror",
+        alias="authorships_full.institutions.ror",
+        alternate_of="authorships.institutions.ror",
+    ),
+    TermField(
+        param="institutions.type",
+        alias="authorships_full.institutions.type",
+        alternate_of="authorships.institutions.type",
+    ),
     TermField(param="keywords.id", custom_es_field="keywords.id"),
     TermField(
         param="awards.funder_award_id",
@@ -828,15 +863,19 @@ fields = [
     TermField(param="locations.source.type"),
     TermField(param="locations.raw_type"),
     TermField(param="locations.version"),
-    TermField(param="mag", custom_es_field="ids.mag"),
-    TermField(param="oa_status", alias="open_access.oa_status"),
+    TermField(param="mag", custom_es_field="ids.mag", alternate_of="ids.mag"),
+    TermField(
+        param="oa_status",
+        alias="open_access.oa_status",
+        alternate_of="open_access.oa_status",
+    ),
     TermField(
         param="open_access.oa_status",
         docstring="""The work's Open Access (OA) status, such as "gold," "green," or "hybrid".""",
         documentation_link="https://developers.openalex.org/api-reference/works",
     ),
-    TermField(param="pmid", custom_es_field="ids.pmid"),
-    TermField(param="pmcid", custom_es_field="ids.pmcid"),
+    TermField(param="pmid", custom_es_field="ids.pmid", alternate_of="ids.pmid"),
+    TermField(param="pmcid", custom_es_field="ids.pmcid", alternate_of="ids.pmcid"),
     TermField(
         param="primary_location.landing_page_url",
         custom_es_field="primary_location.landing_page_url",
@@ -893,7 +932,11 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("work.type", None),
     ),
     TermField(param="type_crossref"),
-    TermField(param="version", custom_es_field="locations.version"),
+    TermField(
+        param="version",
+        custom_es_field="locations.version",
+        alternate_of="locations.version",
+    ),
     CollectionField(entity_type="works"),
 ]
 

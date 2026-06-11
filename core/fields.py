@@ -179,16 +179,36 @@ class Property:
     display_name: Optional[str] = None
     aliases: List[str] = field(default_factory=list)
     category: Optional[str] = None
+    # Identity realignment (#446). Two SEPARATE, inverse concepts:
+    #   * alternate_of — set on an ALIAS property: the canonical `param` this
+    #     property is just an alternate machine-key spelling of (e.g. `is_oa`
+    #     →`open_access.is_oa`). Server-internal: the alias stays a live,
+    #     resolvable column in `ENTITY_PROPERTIES` (filter API / validator / OQL
+    #     parse keep accepting it), but the PUBLIC `/properties` render drops it as
+    #     a top-level entry. NOT serialized (after the public fold no surviving
+    #     entry carries it). Distinct from `alias`/`custom_es_field`, which are an
+    #     ES storage remap, not a public-key identity link.
+    #   * alternate_keys — the INVERSE, set on the CANONICAL property by the
+    #     catalog builder (`core.properties._fold_alternate_keys`): the list of
+    #     alias `param`s that fold into it. PUBLIC (serialized) so API users can
+    #     see every accepted spelling of an identity.
+    # Both are also distinct from `aliases` (#381): `aliases` are human OQL input
+    # words ("country"); `alternate_keys` are machine key spellings ("institution.id").
+    alternate_of: Optional[str] = None
+    alternate_keys: List[str] = field(default_factory=list)
 
     def serialize(self) -> dict:
-        """The canonical PUBLIC JSON-ready dict. `operators`/`actions`/`aliases` are
-        sorted so repeated renders are byte-identical (fingerprint-stable).
-        Server-internal `alias`/`custom_es_field` are intentionally omitted — see the
-        class docstring. `display_name`/`aliases` (#381) are part of the public
-        contract as of v1.3.0. `category` (#441) — a nullable, best-effort
-        organizational grouping (mirrors the GUI's facetConfigs categories);
-        purely descriptive, no query-behavior effect, resolved by the properties
-        builder from `core.property_categories`. Added v1.13.0 (additive)."""
+        """The canonical PUBLIC JSON-ready dict. `operators`/`actions`/`aliases`/
+        `alternate_keys` are sorted so repeated renders are byte-identical
+        (fingerprint-stable). Server-internal `alias`/`custom_es_field`/`alternate_of`
+        are intentionally omitted — see the class docstring. `display_name`/`aliases`
+        (#381) are part of the public contract as of v1.3.0. `category` (#441) — a
+        nullable, best-effort organizational grouping (mirrors the GUI's facetConfigs
+        categories); purely descriptive, no query-behavior effect, resolved by the
+        properties builder from `core.property_categories`. Added v1.13.0 (additive).
+        `alternate_keys` (#446) — the alias machine-key spellings folded into this
+        canonical property; added v2.0.0 (the same ship demotes those aliases from
+        the top-level catalog, a MAJOR removal)."""
         return {
             "name": self.name,
             "type": self.type,
@@ -198,6 +218,7 @@ class Property:
             "display_name": self.display_name,
             "aliases": sorted(self.aliases),
             "category": self.category,
+            "alternate_keys": sorted(self.alternate_keys),
         }
 
 
@@ -227,6 +248,7 @@ class Field(ABC):
         documentation_link="",
         alternate_names=None,
         entity_type=None,
+        alternate_of=None,
     ):
         self.param = param
         self.alias = alias
@@ -239,6 +261,13 @@ class Field(ABC):
         self.alternate_names = (
             alternate_names  # optional list of strings, useful for search
         )
+        # Identity realignment (#446): the canonical `param` this field is just an
+        # alternate machine-key spelling of (e.g. `is_oa` → `open_access.is_oa`).
+        # The field stays a live, resolvable column everywhere (filter API /
+        # validator / OQL parse — `fields_dict` is still 1:1); only the PUBLIC
+        # `/properties` catalog demotes it from a top-level entry, folding it into
+        # the canonical property's `alternate_keys`. None ⇒ this IS a canonical key.
+        self.alternate_of = alternate_of
         # Cross-type collection filter (#266): when set, allows
         # `<param>:col_xxx` to resolve a collection of this entity type and
         # apply it as a terms clause. None means the field does not support
@@ -298,6 +327,7 @@ class Field(ABC):
             alias=self.alias,
             custom_es_field=self.custom_es_field,
             entity_type=self.entity_type,
+            alternate_of=self.alternate_of,
         )
 
 

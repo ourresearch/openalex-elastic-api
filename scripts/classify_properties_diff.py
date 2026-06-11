@@ -124,6 +124,17 @@ def classify_change(old, new):
                 minor.append(f"alias added: {e}.{name}: {added}")
             for removed in sorted(oal - nal):
                 major.append(f"alias removed: {e}.{name}: {removed}")
+            # alternate_keys (#446) are accepted machine-key spellings of an identity
+            # (same contract weight as aliases): folding one in is additive (MINOR);
+            # dropping one stops the API accepting a spelling a client may send (MAJOR).
+            oak, nak = (
+                set(o.get("alternate_keys") or []),
+                set(n.get("alternate_keys") or []),
+            )
+            for added in sorted(nak - oak):
+                minor.append(f"alternate_key added: {e}.{name}: {added}")
+            for removed in sorted(oak - nak):
+                major.append(f"alternate_key removed: {e}.{name}: {removed}")
             # category (#441) is a nullable, best-effort ORGANIZATIONAL grouping with
             # no query-behavior effect and NO enforcement gate (it may be null by
             # design, and consumers must already handle null). So every category

@@ -84,13 +84,15 @@ def test_public_payload_omits_server_internal_keys(client):
     body = client.get("/properties?entity=works").get_json()
     sample = next(iter(body["properties"]["works"].values()))
     # display_name + aliases are public as of v1.3.0 (#381); category as of v1.13.0
-    # (#441); alias/custom_es_field remain server-internal and must never leak.
+    # (#441); alternate_keys as of v2.0.0 (#446). alias/custom_es_field/alternate_of
+    # remain server-internal and must never leak.
     assert set(sample.keys()) == {
         "name", "type", "operators", "actions", "entity_type",
-        "display_name", "aliases", "category",
+        "display_name", "aliases", "category", "alternate_keys",
     }
     assert "custom_es_field" not in sample
     assert "alias" not in sample
+    assert "alternate_of" not in sample
 
 
 # --- #318 select unification (ACCEPTANCE Test 5, select half) ----------------
