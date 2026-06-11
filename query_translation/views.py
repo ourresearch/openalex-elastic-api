@@ -239,10 +239,17 @@ def translate_oxurl(value: str):
 
 @blueprint.route("/query/oql/<path:value>", methods=["GET"])
 def translate_oql(value: str):
-    """Translate an OQL string to all formats (no execution / no ES)."""
-    oql = _full_query_value(value)
+    """Translate an OQL string to all formats (no execution / no ES).
+
+    Unlike the oxurl route, the value here is ONLY the path segment — an OQL
+    string has no `?`, so the request's own query params (`?mailto=…`,
+    `?api_key=…`) must never be folded back in. Folding them made the parser
+    read the querystring as OQL tokens ("two conditions with no AND/OR between
+    them near '?mailto=…'") for any caller sending standard meta params (#428).
+    Callers must URL-encode the OQL (the GUI does).
+    """
     try:
-        oqo = parse_oql_to_oqo(oql)
+        oqo = parse_oql_to_oqo(value)
     except Exception as e:  # OQLParseError and friends → 400
         return _error_response(f"Failed to parse OQL: {e}", "parse_error", status=400)
     return _translate_response(oqo, None)
@@ -250,8 +257,12 @@ def translate_oql(value: str):
 
 @blueprint.route("/query/oqo/<path:value>", methods=["GET"])
 def translate_oqo(value: str):
-    """Translate an OQO (URL-encoded or raw JSON) to all formats (no execution / no ES)."""
-    oqo, err = parse_oqo_input(None, _full_query_value(value))
+    """Translate an OQO (URL-encoded or raw JSON) to all formats (no execution / no ES).
+
+    Same contract as /query/oql: the value is only the path segment; request
+    query params (`?mailto=…`) are never part of the OQO JSON (#428).
+    """
+    oqo, err = parse_oqo_input(None, value)
     return _translate_response(oqo, err)
 
 

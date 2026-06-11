@@ -108,6 +108,30 @@ class TestTranslateRoundTrips:
         assert viaoqo.get_json()["oqo"] == base["oqo"]
 
 
+class TestTranslateMetaParams:
+    """Request query params (?mailto=…) are meta, never part of the value (#428).
+
+    The oxurl route folds the querystring back into the value (an oxurl's own
+    params arrive that way); oql/oqo must NOT — folding made the parser read
+    `?mailto=ui%40openalex.org` as OQL tokens.
+    """
+
+    def test_oql_ignores_request_query_params(self, client):
+        res = client.get(
+            "/query/oql/" + urllib.parse.quote("works where type is article", safe="")
+            + "?mailto=ui@openalex.org"
+        )
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["validation"]["valid"] is True
+
+    def test_oqo_ignores_request_query_params(self, client):
+        oqo_json = json.dumps({"get_rows": "works"})
+        res = client.get(
+            "/query/oqo/" + urllib.parse.quote(oqo_json, safe="") + "?mailto=ui@openalex.org"
+        )
+        assert res.status_code == 200, res.get_json()
+
+
 class TestTranslateErrors:
     def test_malformed_oqo_returns_400_not_500(self, client):
         res = client.get("/query/oqo/" + urllib.parse.quote("{not json", safe=""))
