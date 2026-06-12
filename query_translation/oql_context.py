@@ -396,13 +396,13 @@ def _value_run_start(prior: List[Tok]) -> Optional[int]:
     None (oxjob #357 iter-3 bug 1).
 
     Found by locating the rightmost *complete* operator whose tokens-to-end form an
-    unbroken run of value words (plain WORDs, no connective / paren). This reuses
-    `match_operator` (shared grammar truth) rather than a hand-kept keyword stop-set, so
-    the value/operator boundary can't drift from the parser — important because operator
-    tails like `of`/`in` (`is any of`, `is in`) are also legal value words
-    (`university of florida`). Single-token values — where the operator is the last
-    `prior` token and the value's first word is the cursor word — return None; the normal
-    path already classifies those correctly."""
+    unbroken run of value words (plain WORDs, no connective / paren / directive
+    boundary). This reuses `match_operator` (shared grammar truth) rather than a
+    hand-kept keyword stop-set, so the value/operator boundary can't drift from the
+    parser — important because operator tails like `of`/`in` (`is any of`, `is in`)
+    are also legal value words (`university of florida`). Single-token values — where
+    the operator is the last `prior` token and the value's first word is the cursor
+    word — return None; the normal path already classifies those correctly."""
     for i in range(len(prior) - 1, -1, -1):
         m = _match_operator(prior, i)
         if not m:
@@ -414,10 +414,31 @@ def _value_run_start(prior: List[Tok]) -> Optional[int]:
         if val_start >= len(prior):
             return None  # operator is the last token; the value's 1st word IS the cursor
         run = prior[val_start:]
-        if all(t.kind == "WORD" and t.val.lower() not in _CONNECTIVES for t in run):
+        if all(t.kind == "WORD" and t.val.lower() not in _CONNECTIVES for t in run) \
+                and not any(_is_directive_boundary(run, j) for j in range(len(run))):
             return val_start
         return None
     return None
+
+
+def _is_directive_boundary(run: List[Tok], j: int) -> bool:
+    """True if run[j] starts a trailing directive (`sort by` / `group by` /
+    `sample <N>` / `where`) rather than continuing a multi-word value. Without this
+    a doc like `type is article sort by citation count de▮sc` widens the whole tail
+    into one giant 'value' and the cursor never reaches the direction slot
+    (oxjob #357 iter-5)."""
+    t = run[j]
+    if t.kind != "WORD":
+        return False
+    w = t.val.lower()
+    if w == "where":
+        return True
+    nxt = run[j + 1] if j + 1 < len(run) else None
+    if w in ("sort", "group"):
+        return nxt is not None and nxt.kind == "WORD" and nxt.val.lower() == "by"
+    if w == "sample":
+        return nxt is not None and nxt.kind == "WORD" and nxt.val.isdigit()
+    return False
 
 
 def _widen_multiword_value(prior: List[Tok], prefix: str):

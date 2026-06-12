@@ -489,3 +489,21 @@ def test_string_click_still_suppressed():
     q = 'works where title contains "climate change"'
     pos = q.index("climate") + 3
     assert cat(q, pos) == C.NONE
+
+
+def test_direction_click_after_enum_value_clause():
+    # regression (#357 iter-5): with an enum clause before the sort, the multiword-
+    # value widener used to swallow `article sort by citation count` as one value
+    # run, so the cursor in `desc` never reached the direction slot.
+    q = "works where type is article sort by citation count desc"
+    pos = q.index("desc") + 2
+    c = ctx(q, pos)
+    assert c["category"] == "direction"
+    assert [s["value"] for s in c["suggestions"]] == ["asc", "desc"]
+
+
+def test_multiword_value_widening_still_works():
+    # the directive-boundary stop must not break the original iter-3 widening
+    c = ctx("works where institution is university of fl")
+    assert c["category"] == C.VALUE
+    assert c["prefix"] == "university of fl"
