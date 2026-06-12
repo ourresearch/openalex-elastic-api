@@ -2649,13 +2649,14 @@ def _render_term(value: str, column: str) -> str:
     # Binary proximity `"A"~N~"B"` -> `"A" within N words of "B"` (oxjob #355 Goal B).
     # Check before the single-phrase form below (whose regex won't match a value that
     # ends in a quote, but keep binary first for clarity). Binary is exact-only.
+    _units = lambda n: "word" if n == "1" else "words"  # noqa: E731 (grammar: 'word'|'words')
     binp = re.match(r'^"([^"]*)"~(\d+)~"([^"]*)"$', value or "")
     if binp:
-        return (f'"{binp.group(1)}" within {binp.group(2)} words '
+        return (f'"{binp.group(1)}" within {binp.group(2)} {_units(binp.group(2))} '
                 f'of "{binp.group(3)}"')
     prox = re.match(r'^"(.+)"~(\d+)$', value or "")
     if prox:
-        body = f'"{prox.group(1)}" within {prox.group(2)} words'
+        body = f'"{prox.group(1)}" within {prox.group(2)} {_units(prox.group(2))}'
         return f"near {body}" if stemmed else body
     if value.startswith('"') and value.endswith('"') and len(value) >= 2:  # multi-word phrase
         return f"near {value}" if stemmed else value
