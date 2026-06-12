@@ -18,6 +18,7 @@ import urllib.parse
 from typing import Callable, Optional
 
 from core.utils import get_display_name as _get_display_name
+from query_translation import oql_lang
 from query_translation.oqo import OQO
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 from query_translation.oql_renderer import render_oqo_to_oql
@@ -102,14 +103,20 @@ def build_x_query(
     injected onto the serialized `meta` and kept out of `/properties` + the docs.
 
     `entity_resolver` resolves entity IDs to display names so `x_query.oql` reads
-    `institution is I136199984 [Harvard]` instead of a bare ID. It performs ES
-    lookups (cached), so the explicit OQL/OQO execute path passes
-    `safe_get_display_name`, but the hot per-entity SERP path
-    (`core/shared_view.py`) passes None to avoid per-request ES lookups — its
-    `oql` renders with bare IDs, which is fine because nothing consumes the
-    legacy-path `oql` for display (chips come from `url`; the "too complex"
-    OQL card only appears when `url is None`, which never happens for a query
-    that arrived as a URL).
+    `institution is I136199984 [Harvard]` instead of a bare ID. Both executed-query
+    callers — the `/?oql=` execute path (`query_translation/execution.py`) and the
+    per-entity SERP path (`core/shared_view.py`) — pass None (OQLO charter
+    decision 14, #378 S3): canonical OQL = bare IDs, pure string work, no lookups.
+    That's fine because nothing consumes the executed-path `oql` for display
+    (chips come from `url`; the "too complex" OQL card only appears when
+    `url is None`, which never happens for a query that arrived as a URL).
+
+    With no entity_resolver the engine renderer must get `resolver=None` — fully
+    bare, not even the local `config/*.yaml` builtin names. Wrapping a None
+    entity_resolver in `make_engine_resolver` (the pre-fix behavior) hands the
+    engine a truthy-but-empty resolver, and the engine can't tell "nothing was
+    looked up" from "looked up and missed" — so every resolvable entity ID a user
+    executed got a false `[no entity found]` annotation (oxjob #363 / #418).
     """
     canonical = canonicalize_oqo(oqo)
 
@@ -122,8 +129,15 @@ def build_x_query(
         # client treats null as an "advanced query" it can't render as chips.
         pass
 
+    if entity_resolver is not None:
+        oql_form = render_oqo_to_oql(canonical, entity_resolver=entity_resolver)
+    else:
+        # Executed-query path (decision 14): bare-ID canonical OQL, no resolver
+        # object at all — see the docstring for why wrapping None is a bug.
+        oql_form = oql_lang.render(canonical, resolver=None)
+
     return {
-        "oql": render_oqo_to_oql(canonical, entity_resolver=entity_resolver),
+        "oql": oql_form,
         "oqo": canonical.to_dict(),
         "url": url_form,
     }

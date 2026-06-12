@@ -69,6 +69,43 @@ def test_build_x_query_no_resolver_renders_bare_ids():
     assert "[" not in xq["oql"]  # no `[Harvard]`-style display-name annotation
 
 
+def test_build_x_query_no_resolver_never_stamps_no_entity_found():
+    """oxjob #363: `authorships.institutions.lineage` (what `institution is`
+    canonically maps to) IS name-resolvable, so the engine's #418 miss-annotation
+    gate applies to it — unlike the `.id` column above, which dodges the gate.
+    A resolverless build must render it bare, never `[no entity found]` (Harvard
+    exists; nothing was looked up). This was live-broken on both executed-query
+    paths (`/?oql=` execute + per-entity SERP) until the resolver=None fix."""
+    oqo = parse_url_to_oqo(
+        entity_type="works",
+        filter_string="authorships.institutions.lineage:I136199984",
+    )
+    xq = build_x_query(oqo)
+    assert xq["oql"] == "works where institution is I136199984"
+    assert "[no entity found]" not in xq["oql"]
+
+
+def test_build_x_query_no_resolver_skips_builtin_name_tables():
+    """Decision 14: executed-path canonical OQL is fully bare — not even the
+    local config/*.yaml builtin names (`country is US [United States]`)."""
+    oqo = parse_url_to_oqo(entity_type="works", filter_string="authorships.countries:US")
+    xq = build_x_query(oqo)
+    assert xq["oql"] == "works where country is US"
+
+
+def test_build_x_query_with_resolver_annotates_hits_and_misses():
+    """A supplied entity_resolver keeps the display-service behavior: hits get
+    `[name]`, genuine misses on a resolvable column get `[no entity found]`."""
+    names = {"institutions/I136199984": "Harvard University"}
+    oqo = parse_url_to_oqo(
+        entity_type="works",
+        filter_string="authorships.institutions.lineage:I136199984|I9999999999",
+    )
+    xq = build_x_query(oqo, entity_resolver=names.get)
+    assert "[Harvard University]" in xq["oql"]
+    assert "[no entity found]" in xq["oql"]
+
+
 # --------------------------------------------------------------------------- #
 # attach_x_query  (core.shared_view)
 # --------------------------------------------------------------------------- #
