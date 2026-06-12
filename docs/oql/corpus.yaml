@@ -2749,40 +2749,42 @@ rows:
   oxurl: null
   status: ok
   note: >-
-    PubMed [Mesh]+[tiab]: MeSH controlled-vocabulary terms have no OpenAlex
-    equivalent, so each concept is mapped to a free-text title/abstract search
-    (a recall-oriented degradation, noted). (source DB: PubMed).
+    PubMed [Mesh]+[tiab] block. Per the 'represent the concept, not the words'
+    rule, MeSH controlled-vocabulary terms map to OpenAlex keyword-ENTITY
+    membership where one resolves cleanly ("Central Venous Catheters"[Mesh] ->
+    keyword is keywords/central-venous-catheter; "Anticoagulants"[Mesh] ->
+    keywords/anticoagulant), OR'd with the [tiab] free-text terms in the same
+    block (concept OR text -- the real PubMed pattern). MeSH terms with no
+    clean OpenAlex keyword (Thrombocytopenia, Blood Coagulation Disorders)
+    fall back to free-text. oql-only: ORs an entity-membership filter with a
+    title/abstract search.
   oql: |-
-    works where title/abstract contains (
-        CVC or
-        "central line" or
-        "central venous catheter"
+    works where (
+        keyword is keywords/anticoagulant [no entity found]
+        or title/abstract contains INR
+        or title/abstract contains aPTT
+        or title/abstract contains coagulopathy
+        or title/abstract contains thrombocytopenia
+        or title/abstract contains "blood coagulation disorders"
+        or title/abstract contains "coagulation disorder"
       )
-      and title/abstract contains (
-        INR or
-        aPTT or
-        coagulopathy or
-        thrombocytopenia or
-        "coagulation disorder"
+      and (
+        keyword is keywords/central-venous-catheter [no entity found]
+        or title/abstract contains CVC
+        or title/abstract contains "central line"
+        or title/abstract contains "central venous catheter"
       )
-  oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: CVC,
-    operator: contains}, {column_id: title_and_abstract.search.exact, value: '"central line"',
-    operator: contains}, {column_id: title_and_abstract.search.exact, value: '"central venous
-    catheter"', operator: contains}]}, {join: or, filters: [{column_id: title_and_abstract.search,
-    value: INR, operator: contains}, {column_id: title_and_abstract.search, value: aPTT,
-    operator: contains}, {column_id: title_and_abstract.search, value: coagulopathy, operator: contains},
-    {column_id: title_and_abstract.search, value: thrombocytopenia, operator: contains}, {
-    column_id: title_and_abstract.search.exact, value: '"coagulation disorder"', operator: contains}]}]}
+  oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: keywords.id, value: keywords/anticoagulant},
+    {column_id: title_and_abstract.search, value: INR, operator: contains}, {column_id: title_and_abstract.search,
+    value: aPTT, operator: contains}, {column_id: title_and_abstract.search, value: coagulopathy,
+    operator: contains}, {column_id: title_and_abstract.search, value: thrombocytopenia,
+    operator: contains}, {column_id: title_and_abstract.search.exact, value: '"blood coagulation
+    disorders"', operator: contains}, {column_id: title_and_abstract.search.exact, value: '"coagulation
+    disorder"', operator: contains}]}, {join: or, filters: [{column_id: keywords.id, value: keywords/central-venous-catheter},
+    {column_id: title_and_abstract.search, value: CVC, operator: contains}, {column_id: title_and_abstract.search.exact,
+    value: '"central line"', operator: contains}, {column_id: title_and_abstract.search.exact,
+    value: '"central venous catheter"', operator: contains}]}]}
 
-
-# ---------------------------------------------------------------------------
-# J. zd#8101 — Dr Claire Stansfield (UCL EPPI-Centre): the rest of the real SR
-#    search strategies she attached (Vaping & Health, Educational accountability).
-#    Companions to rows 78 (her adolescent-body-image SR) + 128/129 (her vape
-#    title/keyword lines). Verbatim source-DB originals in oxjob #432 evidence/.
-#    oqo materialized from oql (row-78 pattern). `+` in her URLs = a literal space
-#    (co-occurrence) -> parenthesized AND; within-field `!` -> (term and not phrase).
-# ---------------------------------------------------------------------------
 - id: 161
   category: "librarian & SR queries"
   provenance:
