@@ -402,6 +402,150 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
 }
 
 
+# Thread B (#446, 2026-06-12): full friendly-name audit — curate the remaining
+# `humanize()` path-dump fallbacks on filter/search props (ACC #5). Kept as a
+# separate block (merged below) so the audit is reviewable in one place. Only
+# genuinely-ugly labels are curated; clear auto-names (counts, dates, plain
+# has_<word>/is_<word>, gui-facet labels) are intentionally left to humanize().
+# Conventions: location matrix-scope (primary unmarked / "(any location)" /
+# "best OA …", per #1.10); acronyms upper-cased; awards.* → "award …" (Jason
+# 2026-06-12). A few entries (e.g. authorships.institutions.lineage) intentionally
+# REPLACE a prior label (the bare "institution" mis-sat on .lineage; it now names
+# the .id, the institution-filter survivor of the #446 dedup).
+_THREAD_B_OVERRIDES: Dict[str, Dict[str, dict]] = {
+    'works': {
+        # APC
+        'apc_list.value': {"display_name": 'APC list price'},
+        'apc_list.value_usd': {"display_name": 'APC list price (USD)'},
+        'apc_list.currency': {"display_name": 'APC list currency'},
+        'apc_list.provenance': {"display_name": 'APC list provenance'},
+        'apc_paid.value': {"display_name": 'APC paid'},
+        'apc_paid.currency': {"display_name": 'APC paid currency'},
+        'apc_paid.provenance': {"display_name": 'APC paid provenance'},
+        # authorships / institution (incl. #446 merge-survivors)
+        # The gui's "institution" facet is the lineage filter (institution + parents);
+        # keep it. The #446 dedup survivor `.id` is the exact-match filter — label it
+        # distinctly instead of leaving the "authorships institutions id" path-dump.
+        'authorships.institutions.id': {"display_name": 'institution (exact)'},
+        'authorships.institutions.country_code': {"display_name": 'institution country'},
+        'authorships.institutions.is_global_south': {"display_name": 'institution is in Global South'},
+        'authorships.affiliations.institution_ids': {"display_name": 'affiliation institution'},
+        'authorships.is_corresponding': {"display_name": 'is corresponding author'},
+        'authorships.raw_orcid': {"display_name": 'raw ORCID'},
+        # asserted institutions
+        'institution_assertions.id': {"display_name": 'asserted institution'},
+        'institution_assertions.country_code': {"display_name": 'asserted institution country'},
+        'institution_assertions.lineage': {"display_name": 'asserted institution lineage'},
+        'institution_assertions.ror': {"display_name": 'asserted institution ROR'},
+        'institution_assertions.type': {"display_name": 'asserted institution type'},
+        # awards (grants)
+        'awards.funder_id': {"display_name": 'award funder'},
+        'awards.funder_display_name': {"display_name": 'award funder name'},
+        'awards.funder_award_id': {"display_name": 'award ID'},
+        'awards.doi': {"display_name": 'award DOI'},
+        # location matrix-scope (primary unmarked / "(any location)" / "best OA …")
+        'primary_location.is_oa': {"display_name": 'is open access'},
+        'locations.is_oa': {"display_name": 'open access (any location)'},
+        'best_oa_location.is_oa': {"display_name": 'best OA location is open access'},
+        'primary_location.is_accepted': {"display_name": 'is accepted version'},
+        'locations.is_accepted': {"display_name": 'accepted version (any location)'},
+        'primary_location.is_published': {"display_name": 'is published version'},
+        'locations.is_published': {"display_name": 'published version (any location)'},
+        'primary_location.landing_page_url': {"display_name": 'landing page URL'},
+        'locations.landing_page_url': {"display_name": 'landing page URL (any location)'},
+        'best_oa_location.landing_page_url': {"display_name": 'best OA landing page URL'},
+        'primary_location.raw_type': {"display_name": 'location type (raw)'},
+        'locations.raw_type': {"display_name": 'location type, raw (any location)'},
+        'best_oa_location.raw_type': {"display_name": 'best OA location type (raw)'},
+        'primary_location.source.has_issn': {"display_name": 'source has ISSN'},
+        'locations.source.has_issn': {"display_name": 'source has ISSN (any location)'},
+        'primary_location.source.host_organization': {"display_name": 'host organization'},
+        'locations.source.host_organization': {"display_name": 'host organization (any location)'},
+        'best_oa_location.source.host_organization': {"display_name": 'best OA host organization'},
+        'primary_location.source.host_organization_lineage': {"display_name": 'host organization lineage'},
+        'locations.source.host_organization_lineage': {"display_name": 'host organization lineage (any location)'},
+        'best_oa_location.source.host_organization_lineage': {"display_name": 'best OA host organization lineage'},
+        'locations.source.is_in_doaj': {"display_name": 'source in DOAJ (any location)'},
+        'best_oa_location.source.is_in_doaj': {"display_name": 'best OA source in DOAJ'},
+        'locations.source.is_oa': {"display_name": 'source is OA (any location)'},
+        'best_oa_location.source.is_oa': {"display_name": 'best OA source is OA'},
+        'locations.source.is_core': {"display_name": 'source is core (any location)'},
+        'best_oa_location.version': {"display_name": 'best OA version'},
+        # citation / SDG / misc
+        'citation_normalized_percentile.is_in_top_1_percent': {"display_name": 'in top 1% (field-normalized)'},
+        'citation_normalized_percentile.is_in_top_10_percent': {"display_name": 'in top 10% (field-normalized)'},
+        'cited_by_percentile_year.max': {"display_name": 'citation percentile (max)'},
+        'sustainable_development_goals.score': {"display_name": 'SDG score'},
+        'concepts.wikidata': {"display_name": 'concept Wikidata ID'},
+        'topics.domain.id': {"display_name": 'domain'},
+        'topics.field.id': {"display_name": 'field'},
+        'topics.subfield.id': {"display_name": 'subfield'},
+        'type_crossref': {"display_name": 'Crossref type'},
+        'has_pmcid': {"display_name": 'has PMCID'},
+    },
+    'authors': {
+        'affiliations.institution.country_code': {"display_name": 'affiliation institution country'},
+        'affiliations.institution.lineage': {"display_name": 'affiliation institution lineage'},
+        'affiliations.institution.ror': {"display_name": 'affiliation institution ROR'},
+        'last_known_institutions.continent': {"display_name": 'last institution continent'},
+        'last_known_institutions.is_global_south': {"display_name": 'last institution is in Global South'},
+        'last_known_institutions.lineage': {"display_name": 'last institution lineage'},
+        'last_known_institutions.ror': {"display_name": 'last institution ROR'},
+        'parsed_longest_name.first': {"display_name": 'first name'},
+        'parsed_longest_name.middle': {"display_name": 'middle name'},
+        'parsed_longest_name.last': {"display_name": 'last name'},
+        'parsed_longest_name.suffix': {"display_name": 'name suffix'},
+        'topic_share.id': {"display_name": 'topic share'},
+        'topics.id': {"display_name": 'topic'},
+        'x_concepts.id': {"display_name": 'concept (legacy)'},
+    },
+    'institutions': {
+        'repositories.host_organization': {"display_name": 'repository host organization'},
+        'repositories.host_organization_lineage': {"display_name": 'repository host organization lineage'},
+        'repositories.id': {"display_name": 'repository'},
+        'roles.id': {"display_name": 'role'},
+        'topic_share.id': {"display_name": 'topic share'},
+        'topics.id': {"display_name": 'topic'},
+    },
+    'sources': {
+        'apc_prices.price': {"display_name": 'APC price'},
+        'apc_prices.currency': {"display_name": 'APC currency'},
+        'host_organization.id': {"display_name": 'host organization'},
+        'host_organization_lineage': {"display_name": 'host organization lineage'},
+        'ids.mag': {"display_name": 'MAG ID'},
+        'topic_share.id': {"display_name": 'topic share'},
+        'x_concepts.id': {"display_name": 'concept (legacy)'},
+    },
+    'concepts': {
+        'ancestors.id': {"display_name": 'ancestor concept'},
+        'summary_stats.2yr_mean_citedness': {"display_name": '2-year mean citedness'},
+        'summary_stats.h_index': {"display_name": 'h-index'},
+        'summary_stats.i10_index': {"display_name": 'i10 index'},
+        'wikidata_id': {"display_name": 'Wikidata ID'},
+    },
+    'publishers': {
+        'roles.id': {"display_name": 'role'},
+    },
+    'funders': {
+        'roles.id': {"display_name": 'role'},
+    },
+    'domains': {
+        'fields.id': {"display_name": 'field'},
+    },
+    'fields': {
+        'subfields.id': {"display_name": 'subfield'},
+    },
+    'subfields': {
+        'topics.id': {"display_name": 'topic'},
+    },
+}
+
+# Merge the audit block in (it WINS over any prior entry — intentional for the few
+# relabels like authorships.institutions.lineage).
+for _ent, _ov in _THREAD_B_OVERRIDES.items():
+    DISPLAY_NAME_OVERRIDES.setdefault(_ent, {}).update(_ov)
+
+
 # Global, entity-agnostic overrides keyed by ``param`` only. For properties whose
 # canonical label is the SAME across every entity that carries them, this avoids
 # repeating the same entry under 20+ entity keys. A per-entity override in

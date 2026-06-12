@@ -146,7 +146,15 @@ CAP_COLUMN = "column"
 # accepted e.g. `group by doi`, which the live API rejects). API-actual parity locked by
 # tests/functional/test_capability_parity.py. Jason-approved 2026-06-12 (#450 session,
 # clean-MAJOR call). = MAJOR.
-PROPERTIES_VERSION = "4.0.0"
+# 4.1.0 (#446 thread B, friendly-name audit): curated display_name labels for ~95 filter/search
+# properties that previously rendered a raw humanize() path-dump (e.g. authorships.institutions.id
+# "authorships institutions id" -> "institution"; the location matrix-scope family; APC / asserted-
+# institution / award / name-part families; acronym upper-casing). display_name edits only — no
+# query behaviour, no operator/action/alternate_key change; clear auto-names (counts, dates, plain
+# has_/is_ booleans, gui-facet labels) intentionally left as-is. No gui sync needed (none of the
+# relabeled params are gui facets; #381 label-consistency gate stays green). Jason-approved
+# 2026-06-12 (#446 session). = MINOR.
+PROPERTIES_VERSION = "4.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

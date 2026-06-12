@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "a82b0a385fa8413bfc42fe63dce1bb4d81e69c8751c2c738d51ce7dbbfc1ec3b",
+    "fingerprint": "786b6f82558f9e2f420800c47b59711709aa3b6f3df1e12618f6bc5a8756b481",
     "property_count": 784,
-    "version": "4.0.0"
+    "version": "4.1.0"
   },
   "properties": {
     "authors": {
@@ -33,7 +33,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "geo",
-        "display_name": "affiliations institution country code",
+        "display_name": "affiliation institution country",
         "entity_type": "countries",
         "name": "affiliations.institution.country_code",
         "operators": [
@@ -77,7 +77,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "affiliations institution lineage",
+        "display_name": "affiliation institution lineage",
         "entity_type": "institutions",
         "name": "affiliations.institution.lineage",
         "operators": [
@@ -99,7 +99,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
-        "display_name": "affiliations institution ror",
+        "display_name": "affiliation institution ROR",
         "entity_type": null,
         "name": "affiliations.institution.ror",
         "operators": [
@@ -455,7 +455,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "geo",
-        "display_name": "last known institutions continent",
+        "display_name": "last institution continent",
         "entity_type": "continents",
         "name": "last_known_institutions.continent",
         "operators": [
@@ -521,7 +521,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "last known institutions is global south",
+        "display_name": "last institution is in Global South",
         "entity_type": null,
         "name": "last_known_institutions.is_global_south",
         "operators": [
@@ -541,7 +541,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "last known institutions lineage",
+        "display_name": "last institution lineage",
         "entity_type": "institutions",
         "name": "last_known_institutions.lineage",
         "operators": [
@@ -563,7 +563,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
-        "display_name": "last known institutions ror",
+        "display_name": "last institution ROR",
         "entity_type": null,
         "name": "last_known_institutions.ror",
         "operators": [
@@ -630,7 +630,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "parsed longest name first",
+        "display_name": "first name",
         "entity_type": null,
         "name": "parsed_longest_name.first",
         "operators": [
@@ -652,7 +652,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "parsed longest name last",
+        "display_name": "last name",
         "entity_type": null,
         "name": "parsed_longest_name.last",
         "operators": [
@@ -674,7 +674,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "parsed longest name middle",
+        "display_name": "middle name",
         "entity_type": null,
         "name": "parsed_longest_name.middle",
         "operators": [
@@ -696,7 +696,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "parsed longest name suffix",
+        "display_name": "name suffix",
         "entity_type": null,
         "name": "parsed_longest_name.suffix",
         "operators": [
@@ -909,7 +909,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "topic share id",
+        "display_name": "topic share",
         "entity_type": null,
         "name": "topic_share.id",
         "operators": [
@@ -946,7 +946,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "topics id",
+        "display_name": "topic",
         "entity_type": "topics",
         "name": "topics.id",
         "operators": [
@@ -1040,7 +1040,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "x concepts id",
+        "display_name": "concept (legacy)",
         "entity_type": null,
         "name": "x_concepts.id",
         "operators": [
@@ -2155,7 +2155,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "ancestors id",
+        "display_name": "ancestor concept",
         "entity_type": null,
         "name": "ancestors.id",
         "operators": [
@@ -2549,7 +2549,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "citation",
-        "display_name": "summary stats 2yr mean citedness",
+        "display_name": "2-year mean citedness",
         "entity_type": null,
         "name": "summary_stats.2yr_mean_citedness",
         "operators": [
@@ -2572,7 +2572,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "citation",
-        "display_name": "summary stats h index",
+        "display_name": "h-index",
         "entity_type": null,
         "name": "summary_stats.h_index",
         "operators": [
@@ -2595,7 +2595,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "citation",
-        "display_name": "summary stats i10 index",
+        "display_name": "i10 index",
         "entity_type": null,
         "name": "summary_stats.i10_index",
         "operators": [
@@ -2648,7 +2648,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "wikidata id",
+        "display_name": "Wikidata ID",
         "entity_type": null,
         "name": "wikidata_id",
         "operators": [
@@ -3478,7 +3478,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "fields id",
+        "display_name": "field",
         "entity_type": null,
         "name": "fields.id",
         "operators": [
@@ -3949,7 +3949,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "subfields id",
+        "display_name": "subfield",
         "entity_type": null,
         "name": "subfields.id",
         "operators": [
@@ -4554,7 +4554,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "roles id",
+        "display_name": "role",
         "entity_type": null,
         "name": "roles.id",
         "operators": [
@@ -5449,7 +5449,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "repositories host organization",
+        "display_name": "repository host organization",
         "entity_type": null,
         "name": "repositories.host_organization",
         "operators": [
@@ -5471,7 +5471,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "repositories host organization lineage",
+        "display_name": "repository host organization lineage",
         "entity_type": null,
         "name": "repositories.host_organization_lineage",
         "operators": [
@@ -5493,7 +5493,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "repositories id",
+        "display_name": "repository",
         "entity_type": null,
         "name": "repositories.id",
         "operators": [
@@ -5530,7 +5530,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "roles id",
+        "display_name": "role",
         "entity_type": null,
         "name": "roles.id",
         "operators": [
@@ -5697,7 +5697,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "topic share id",
+        "display_name": "topic share",
         "entity_type": null,
         "name": "topic_share.id",
         "operators": [
@@ -5734,7 +5734,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "topics id",
+        "display_name": "topic",
         "entity_type": "topics",
         "name": "topics.id",
         "operators": [
@@ -7828,7 +7828,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "roles id",
+        "display_name": "role",
         "entity_type": null,
         "name": "roles.id",
         "operators": [
@@ -8585,7 +8585,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "apc prices currency",
+        "display_name": "APC currency",
         "entity_type": null,
         "name": "apc_prices.currency",
         "operators": [
@@ -8606,7 +8606,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "apc prices price",
+        "display_name": "APC price",
         "entity_type": null,
         "name": "apc_prices.price",
         "operators": [
@@ -8962,7 +8962,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "host organization id",
+        "display_name": "host organization",
         "entity_type": null,
         "name": "host_organization.id",
         "operators": [
@@ -9051,7 +9051,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
-        "display_name": "ids mag",
+        "display_name": "MAG ID",
         "entity_type": null,
         "name": "ids.mag",
         "operators": [
@@ -9619,7 +9619,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "topic share id",
+        "display_name": "topic share",
         "entity_type": null,
         "name": "topic_share.id",
         "operators": [
@@ -9773,7 +9773,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "x concepts id",
+        "display_name": "concept (legacy)",
         "entity_type": null,
         "name": "x_concepts.id",
         "operators": [
@@ -10120,7 +10120,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "topics id",
+        "display_name": "topic",
         "entity_type": null,
         "name": "topics.id",
         "operators": [
@@ -10993,7 +10993,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "apc list currency",
+        "display_name": "APC list currency",
         "entity_type": null,
         "name": "apc_list.currency",
         "operators": [
@@ -11015,7 +11015,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "apc list provenance",
+        "display_name": "APC list provenance",
         "entity_type": null,
         "name": "apc_list.provenance",
         "operators": [
@@ -11037,7 +11037,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "apc list value",
+        "display_name": "APC list price",
         "entity_type": null,
         "name": "apc_list.value",
         "operators": [
@@ -11060,7 +11060,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "apc list value usd",
+        "display_name": "APC list price (USD)",
         "entity_type": null,
         "name": "apc_list.value_usd",
         "operators": [
@@ -11098,7 +11098,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "apc paid currency",
+        "display_name": "APC paid currency",
         "entity_type": null,
         "name": "apc_paid.currency",
         "operators": [
@@ -11120,7 +11120,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "apc paid provenance",
+        "display_name": "APC paid provenance",
         "entity_type": null,
         "name": "apc_paid.provenance",
         "operators": [
@@ -11142,7 +11142,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "apc paid value",
+        "display_name": "APC paid",
         "entity_type": null,
         "name": "apc_paid.value",
         "operators": [
@@ -11226,7 +11226,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "authorships affiliations institution ids",
+        "display_name": "affiliation institution",
         "entity_type": null,
         "name": "authorships.affiliations.institution_ids",
         "operators": [
@@ -11346,7 +11346,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "geo",
-        "display_name": "authorships institutions country code",
+        "display_name": "institution country",
         "entity_type": "countries",
         "name": "authorships.institutions.country_code",
         "operators": [
@@ -11371,7 +11371,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "authorships institutions id",
+        "display_name": "institution (exact)",
         "entity_type": "institutions",
         "name": "authorships.institutions.id",
         "operators": [
@@ -11395,7 +11395,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "authorships institutions is global south",
+        "display_name": "institution is in Global South",
         "entity_type": null,
         "name": "authorships.institutions.is_global_south",
         "operators": [
@@ -11487,7 +11487,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "authorships is corresponding",
+        "display_name": "is corresponding author",
         "entity_type": null,
         "name": "authorships.is_corresponding",
         "operators": [
@@ -11507,7 +11507,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "authorships raw orcid",
+        "display_name": "raw ORCID",
         "entity_type": null,
         "name": "authorships.raw_orcid",
         "operators": [
@@ -11544,7 +11544,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
-        "display_name": "awards doi",
+        "display_name": "award DOI",
         "entity_type": null,
         "name": "awards.doi",
         "operators": [
@@ -11566,7 +11566,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "awards funder award id",
+        "display_name": "award ID",
         "entity_type": null,
         "name": "awards.funder_award_id",
         "operators": [
@@ -11588,7 +11588,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "awards funder display name",
+        "display_name": "award funder name",
         "entity_type": null,
         "name": "awards.funder_display_name",
         "operators": [
@@ -11610,7 +11610,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "awards funder id",
+        "display_name": "award funder",
         "entity_type": "funders",
         "name": "awards.funder_id",
         "operators": [
@@ -11689,7 +11689,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "best oa location is oa",
+        "display_name": "best OA location is open access",
         "entity_type": null,
         "name": "best_oa_location.is_oa",
         "operators": [
@@ -11729,7 +11729,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "best oa location landing page url",
+        "display_name": "best OA landing page URL",
         "entity_type": null,
         "name": "best_oa_location.landing_page_url",
         "operators": [
@@ -11775,7 +11775,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "best oa location raw type",
+        "display_name": "best OA location type (raw)",
         "entity_type": null,
         "name": "best_oa_location.raw_type",
         "operators": [
@@ -11797,7 +11797,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "best oa location source host organization",
+        "display_name": "best OA host organization",
         "entity_type": null,
         "name": "best_oa_location.source.host_organization",
         "operators": [
@@ -11819,7 +11819,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "best oa location source host organization lineage",
+        "display_name": "best OA host organization lineage",
         "entity_type": "publishers",
         "name": "best_oa_location.source.host_organization_lineage",
         "operators": [
@@ -11863,7 +11863,7 @@
         "bool_false": "it's not indexed by DOAJ in its best OA source",
         "bool_true": "it's indexed by DOAJ in its best OA source",
         "category": null,
-        "display_name": "best oa location source is in doaj",
+        "display_name": "best OA source in DOAJ",
         "entity_type": null,
         "name": "best_oa_location.source.is_in_doaj",
         "operators": [
@@ -11883,7 +11883,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "best oa location source is oa",
+        "display_name": "best OA source is OA",
         "entity_type": null,
         "name": "best_oa_location.source.is_oa",
         "operators": [
@@ -11947,7 +11947,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "best oa location version",
+        "display_name": "best OA version",
         "entity_type": null,
         "name": "best_oa_location.version",
         "operators": [
@@ -12107,7 +12107,7 @@
         "bool_false": "it's not in the top 10% by citations",
         "bool_true": "it's in the top 10% by citations",
         "category": null,
-        "display_name": "citation normalized percentile is in top 10 percent",
+        "display_name": "in top 10% (field-normalized)",
         "entity_type": null,
         "name": "citation_normalized_percentile.is_in_top_10_percent",
         "operators": [
@@ -12127,7 +12127,7 @@
         "bool_false": "it's not in the top 1% by citations",
         "bool_true": "it's in the top 1% by citations",
         "category": null,
-        "display_name": "citation normalized percentile is in top 1 percent",
+        "display_name": "in top 1% (field-normalized)",
         "entity_type": null,
         "name": "citation_normalized_percentile.is_in_top_1_percent",
         "operators": [
@@ -12247,7 +12247,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "cited by percentile year max",
+        "display_name": "citation percentile (max)",
         "entity_type": null,
         "name": "cited_by_percentile_year.max",
         "operators": [
@@ -12347,7 +12347,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
-        "display_name": "concepts wikidata",
+        "display_name": "concept Wikidata ID",
         "entity_type": null,
         "name": "concepts.wikidata",
         "operators": [
@@ -13098,7 +13098,7 @@
         "bool_false": "it doesn't have a PMCID",
         "bool_true": "it has a PMCID",
         "category": "ids",
-        "display_name": "has pmcid",
+        "display_name": "has PMCID",
         "entity_type": null,
         "name": "has_pmcid",
         "operators": [
@@ -13340,7 +13340,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "geo",
-        "display_name": "institution assertions country code",
+        "display_name": "asserted institution country",
         "entity_type": "countries",
         "name": "institution_assertions.country_code",
         "operators": [
@@ -13362,7 +13362,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "institution assertions id",
+        "display_name": "asserted institution",
         "entity_type": "institutions",
         "name": "institution_assertions.id",
         "operators": [
@@ -13384,7 +13384,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "institution assertions lineage",
+        "display_name": "asserted institution lineage",
         "entity_type": "institutions",
         "name": "institution_assertions.lineage",
         "operators": [
@@ -13406,7 +13406,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
-        "display_name": "institution assertions ror",
+        "display_name": "asserted institution ROR",
         "entity_type": null,
         "name": "institution_assertions.ror",
         "operators": [
@@ -13428,7 +13428,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "institution assertions type",
+        "display_name": "asserted institution type",
         "entity_type": "institution-types",
         "name": "institution_assertions.type",
         "operators": [
@@ -13659,7 +13659,7 @@
         "bool_false": "it's not accepted in any location",
         "bool_true": "it's accepted in any location",
         "category": null,
-        "display_name": "locations is accepted",
+        "display_name": "accepted version (any location)",
         "entity_type": null,
         "name": "locations.is_accepted",
         "operators": [
@@ -13679,7 +13679,7 @@
         "bool_false": "it's not open access in any location",
         "bool_true": "it's open access in any location",
         "category": null,
-        "display_name": "locations is oa",
+        "display_name": "open access (any location)",
         "entity_type": null,
         "name": "locations.is_oa",
         "operators": [
@@ -13699,7 +13699,7 @@
         "bool_false": "it's not published in any location",
         "bool_true": "it's published in any location",
         "category": null,
-        "display_name": "locations is published",
+        "display_name": "published version (any location)",
         "entity_type": null,
         "name": "locations.is_published",
         "operators": [
@@ -13719,7 +13719,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "locations landing page url",
+        "display_name": "landing page URL (any location)",
         "entity_type": null,
         "name": "locations.landing_page_url",
         "operators": [
@@ -13765,7 +13765,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "locations raw type",
+        "display_name": "location type, raw (any location)",
         "entity_type": null,
         "name": "locations.raw_type",
         "operators": [
@@ -13787,7 +13787,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "locations source has issn",
+        "display_name": "source has ISSN (any location)",
         "entity_type": null,
         "name": "locations.source.has_issn",
         "operators": [
@@ -13807,7 +13807,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "locations source host organization",
+        "display_name": "host organization (any location)",
         "entity_type": null,
         "name": "locations.source.host_organization",
         "operators": [
@@ -13832,7 +13832,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "locations source host organization lineage",
+        "display_name": "host organization lineage (any location)",
         "entity_type": "publishers",
         "name": "locations.source.host_organization_lineage",
         "operators": [
@@ -13876,7 +13876,7 @@
         "bool_false": "it's not in a CWTS core source in any location",
         "bool_true": "it's in a CWTS core source in any location",
         "category": null,
-        "display_name": "locations source is core",
+        "display_name": "source is core (any location)",
         "entity_type": null,
         "name": "locations.source.is_core",
         "operators": [
@@ -13896,7 +13896,7 @@
         "bool_false": "it's not indexed by DOAJ in any location",
         "bool_true": "it's indexed by DOAJ in any location",
         "category": null,
-        "display_name": "locations source is in doaj",
+        "display_name": "source in DOAJ (any location)",
         "entity_type": null,
         "name": "locations.source.is_in_doaj",
         "operators": [
@@ -13916,7 +13916,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "locations source is oa",
+        "display_name": "source is OA (any location)",
         "entity_type": null,
         "name": "locations.source.is_oa",
         "operators": [
@@ -14161,7 +14161,7 @@
         "bool_false": "it's not accepted in its primary location",
         "bool_true": "it's accepted in its primary location",
         "category": null,
-        "display_name": "primary location is accepted",
+        "display_name": "is accepted version",
         "entity_type": null,
         "name": "primary_location.is_accepted",
         "operators": [
@@ -14181,7 +14181,7 @@
         "bool_false": "it's not open access in its primary location",
         "bool_true": "it's open access in its primary location",
         "category": null,
-        "display_name": "primary location is oa",
+        "display_name": "is open access",
         "entity_type": null,
         "name": "primary_location.is_oa",
         "operators": [
@@ -14201,7 +14201,7 @@
         "bool_false": "it's not published in its primary location",
         "bool_true": "it's published in its primary location",
         "category": null,
-        "display_name": "primary location is published",
+        "display_name": "is published version",
         "entity_type": null,
         "name": "primary_location.is_published",
         "operators": [
@@ -14221,7 +14221,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "primary location landing page url",
+        "display_name": "landing page URL",
         "entity_type": null,
         "name": "primary_location.landing_page_url",
         "operators": [
@@ -14267,7 +14267,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "primary location raw type",
+        "display_name": "location type (raw)",
         "entity_type": null,
         "name": "primary_location.raw_type",
         "operators": [
@@ -14289,7 +14289,7 @@
         "bool_false": "it's not in a primary source with an ISSN",
         "bool_true": "it's in a primary source with an ISSN",
         "category": null,
-        "display_name": "primary location source has issn",
+        "display_name": "source has ISSN",
         "entity_type": null,
         "name": "primary_location.source.has_issn",
         "operators": [
@@ -14309,7 +14309,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "primary location source host organization",
+        "display_name": "host organization",
         "entity_type": null,
         "name": "primary_location.source.host_organization",
         "operators": [
@@ -14334,7 +14334,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "primary location source host organization lineage",
+        "display_name": "host organization lineage",
         "entity_type": "publishers",
         "name": "primary_location.source.host_organization_lineage",
         "operators": [
@@ -14911,7 +14911,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "sustainable development goals score",
+        "display_name": "SDG score",
         "entity_type": null,
         "name": "sustainable_development_goals.score",
         "operators": [
@@ -15063,7 +15063,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "topics domain id",
+        "display_name": "domain",
         "entity_type": "domains",
         "name": "topics.domain.id",
         "operators": [
@@ -15085,7 +15085,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "topics field id",
+        "display_name": "field",
         "entity_type": "fields",
         "name": "topics.field.id",
         "operators": [
@@ -15129,7 +15129,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "topics subfield id",
+        "display_name": "subfield",
         "entity_type": "subfields",
         "name": "topics.subfield.id",
         "operators": [
@@ -15197,7 +15197,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "type crossref",
+        "display_name": "Crossref type",
         "entity_type": null,
         "name": "type_crossref",
         "operators": [
