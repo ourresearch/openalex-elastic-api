@@ -52,6 +52,7 @@ fields = [
         docstring=DOCSTRINGS["openalex"],
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
+        alternate_of="ids.openalex",
     ),
     OpenAlexIDField(
         param="openalex_id",
@@ -59,6 +60,7 @@ fields = [
         docstring=DOCSTRINGS["openalex"],
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
+        alternate_of="ids.openalex",
     ),
     OpenAlexIDField(param="roles.id"),
     RangeField(param="summary_stats.2yr_mean_citedness"),
@@ -86,11 +88,14 @@ fields = [
         custom_es_field="ids.wikidata.lower",
         unique_id="wikidata_entity",
     ),
-    TermField(param="ror", custom_es_field="ids.ror.lower"),
+    TermField(
+        param="ror", custom_es_field="ids.ror.lower", alternate_of="ids.ror"
+    ),
     TermField(
         param="wikidata",
         custom_es_field="ids.wikidata.lower",
         unique_id="wikidata_entity",
+        alternate_of="ids.wikidata",
     ),
     TermField(param="ids.crossref", custom_es_field="ids.crossref"),
     TermField(param="ids.doi", custom_es_field="ids.doi.keyword"),

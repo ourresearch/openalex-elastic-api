@@ -39,16 +39,27 @@ from query_translation.validator import validate_oqo
 # Accept-counts captured from the validator BEFORE #450 (the loose membership rules):
 # (sortable, groupable, columnar) per entity. sort==group because both were a bare
 # `column_id in ENTITY_PROPERTIES` check; column == |get_selectable_fields|.
+#
+# Updated for #446 all-entity identity realignment (sort/group counts only): demoting
+# duplicate alias spellings to `alternate_keys` removes them from the public catalog
+# (`_merged_properties`, which this test iterates), so fewer columns are counted. The
+# aliases STILL validate when queried directly (they remain in ENTITY_PROPERTIES — the
+# sibling test_capability_catalog_matches_legacy_sources and test_alternate_keys assert
+# this); the count simply reflects the smaller public surface. `columnar` is unchanged
+# because the demoted spellings were never selectable result fields (a bare `id` keeps
+# its `select` capability — only its filter/sort/group role folds into ids.openalex).
+# sort/group deltas = exactly the demoted filter spellings per entity (works −10,
+# authors/sources/institutions/funders/publishers −4, concepts −2, topics −1).
 PARITY_BASELINE = {
-    "works": (187, 187, 58),
-    "authors": (42, 42, 21),
-    "sources": (47, 47, 43),
-    "institutions": (33, 33, 31),
-    "funders": (26, 26, 18),
-    "publishers": (24, 24, 20),
-    "topics": (16, 16, 15),
+    "works": (177, 177, 58),
+    "authors": (38, 38, 21),
+    "sources": (43, 43, 43),
+    "institutions": (29, 29, 31),
+    "funders": (22, 22, 18),
+    "publishers": (20, 20, 20),
+    "topics": (15, 15, 15),
     "keywords": (9, 9, 8),
-    "concepts": (18, 18, 19),
+    "concepts": (16, 16, 19),
 }
 
 ENTITIES = list(PARITY_BASELINE)

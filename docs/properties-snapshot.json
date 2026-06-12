@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "87fefde010ba08832cd00210ecad9213c82e32c1d8a79bfb06524b12c7839a66",
-    "property_count": 817,
-    "version": "2.1.0"
+    "fingerprint": "d3f2cc0dffa76b59495504e44ecc81bfcff7c8f952e78da6b0fc07c06389c8c0",
+    "property_count": 784,
+    "version": "3.0.0"
   },
   "properties": {
     "authors": {
@@ -183,46 +183,6 @@
         ],
         "type": "collection"
       },
-      "concept.id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "concept id",
-        "entity_type": "concepts",
-        "name": "concept.id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
-      "concepts.id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "concepts id",
-        "entity_type": "concepts",
-        "name": "concepts.id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
       "counts_by_year": {
         "actions": [
           "select"
@@ -396,7 +356,6 @@
       },
       "id": {
         "actions": [
-          "filter",
           "select"
         ],
         "aliases": [],
@@ -405,15 +364,10 @@
         "bool_true": null,
         "category": "ids",
         "display_name": "id",
-        "entity_type": "authors",
+        "entity_type": null,
         "name": "id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
+        "operators": [],
+        "type": null
       },
       "ids": {
         "actions": [
@@ -435,7 +389,11 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "id",
+          "openalex",
+          "openalex_id"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
@@ -602,46 +560,6 @@
           "or"
         ],
         "type": "string"
-      },
-      "openalex": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex",
-        "entity_type": "authors",
-        "name": "openalex",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
-      "openalex_id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex id",
-        "entity_type": "authors",
-        "name": "openalex_id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
       },
       "orcid": {
         "actions": [
@@ -1052,7 +970,10 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "concept.id",
+          "concepts.id"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": null,
@@ -2344,7 +2265,10 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "openalex",
+          "openalex_id"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
@@ -2425,46 +2349,6 @@
           "range"
         ],
         "type": "number"
-      },
-      "openalex": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex",
-        "entity_type": null,
-        "name": "openalex",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
-      "openalex_id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex id",
-        "entity_type": null,
-        "name": "openalex_id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
       },
       "related_concepts": {
         "actions": [
@@ -4301,7 +4185,10 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "openalex",
+          "openalex_id"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
@@ -4321,7 +4208,9 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "ror"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
@@ -4341,7 +4230,9 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "wikidata"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
@@ -4404,46 +4295,6 @@
         ],
         "type": "boolean"
       },
-      "openalex": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex",
-        "entity_type": null,
-        "name": "openalex",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
-      "openalex_id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex id",
-        "entity_type": null,
-        "name": "openalex_id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
       "relevance_score": {
         "actions": [
           "select"
@@ -4493,26 +4344,6 @@
           "or"
         ],
         "type": "openalex_id"
-      },
-      "ror": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "ids",
-        "display_name": "ror",
-        "entity_type": null,
-        "name": "ror",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "string"
       },
       "summary_stats": {
         "actions": [
@@ -4606,26 +4437,6 @@
         "name": "updated_date",
         "operators": [],
         "type": null
-      },
-      "wikidata": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "wikidata",
-        "entity_type": null,
-        "name": "wikidata",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "string"
       },
       "works_count": {
         "actions": [
@@ -4942,46 +4753,6 @@
         ],
         "type": "collection"
       },
-      "concept.id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "concept id",
-        "entity_type": "concepts",
-        "name": "concept.id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
-      "concepts.id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "concepts id",
-        "entity_type": "concepts",
-        "name": "concepts.id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
       "continent": {
         "actions": [
           "filter"
@@ -5226,7 +4997,6 @@
       },
       "id": {
         "actions": [
-          "filter",
           "select"
         ],
         "aliases": [],
@@ -5235,15 +5005,10 @@
         "bool_true": null,
         "category": "ids",
         "display_name": "id",
-        "entity_type": "institutions",
+        "entity_type": null,
         "name": "id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
+        "operators": [],
+        "type": null
       },
       "ids": {
         "actions": [
@@ -5265,7 +5030,11 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "id",
+          "openalex",
+          "openalex_id"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
@@ -5375,46 +5144,6 @@
         "display_name": "lineage",
         "entity_type": null,
         "name": "lineage",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
-      "openalex": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex",
-        "entity_type": "institutions",
-        "name": "openalex",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
-      "openalex_id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex id",
-        "entity_type": "institutions",
-        "name": "openalex_id",
         "operators": [
           "eq",
           "not",
@@ -5846,7 +5575,10 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "concept.id",
+          "concepts.id"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "other",
@@ -7550,7 +7282,10 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "openalex",
+          "openalex_id"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
@@ -7570,7 +7305,9 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "ror"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
@@ -7590,7 +7327,9 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "wikidata"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
@@ -7648,46 +7387,6 @@
         "display_name": "lineage",
         "entity_type": null,
         "name": "lineage",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
-      "openalex": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex",
-        "entity_type": null,
-        "name": "openalex",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
-      "openalex_id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex id",
-        "entity_type": null,
-        "name": "openalex_id",
         "operators": [
           "eq",
           "not",
@@ -7766,26 +7465,6 @@
           "or"
         ],
         "type": "openalex_id"
-      },
-      "ror": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "ids",
-        "display_name": "ror",
-        "entity_type": null,
-        "name": "ror",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "string"
       },
       "sources_api_url": {
         "actions": [
@@ -7894,26 +7573,6 @@
         "name": "updated_date",
         "operators": [],
         "type": null
-      },
-      "wikidata": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "wikidata",
-        "entity_type": null,
-        "name": "wikidata",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "string"
       },
       "works_count": {
         "actions": [
@@ -8619,46 +8278,6 @@
         ],
         "type": "collection"
       },
-      "concept.id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "concept id",
-        "entity_type": "concepts",
-        "name": "concept.id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
-      "concepts.id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "concepts id",
-        "entity_type": "concepts",
-        "name": "concepts.id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
       "continent": {
         "actions": [
           "filter"
@@ -9025,7 +8644,10 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "openalex",
+          "openalex_id"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
@@ -9369,46 +8991,6 @@
         "operators": [],
         "type": null
       },
-      "openalex": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex",
-        "entity_type": "sources",
-        "name": "openalex",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
-      "openalex_id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex id",
-        "entity_type": "sources",
-        "name": "openalex_id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
       "relevance_score": {
         "actions": [
           "select"
@@ -9718,7 +9300,10 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "concept.id",
+          "concepts.id"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": null,
@@ -10373,7 +9958,6 @@
       },
       "id": {
         "actions": [
-          "filter",
           "select"
         ],
         "aliases": [],
@@ -10384,13 +9968,8 @@
         "display_name": "id",
         "entity_type": null,
         "name": "id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
+        "operators": [],
+        "type": null
       },
       "ids": {
         "actions": [
@@ -10412,7 +9991,10 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "id",
+          "openalex"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "ids",
@@ -10458,26 +10040,6 @@
           "search"
         ],
         "type": "search"
-      },
-      "openalex": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex",
-        "entity_type": null,
-        "name": "openalex",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
       },
       "relevance_score": {
         "actions": [
@@ -11221,7 +10783,9 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "institutions.continent"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "geo",
@@ -11286,7 +10850,9 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "institutions.is_global_south"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": null,
@@ -11612,33 +11178,15 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "best_oa_location.license_id"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "open access",
         "display_name": "best OA license",
         "entity_type": "licenses",
         "name": "best_oa_location.license",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "string"
-      },
-      "best_oa_location.license_id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "best oa location license id",
-        "entity_type": null,
-        "name": "best_oa_location.license_id",
         "operators": [
           "eq",
           "not",
@@ -13013,6 +12561,7 @@
         ],
         "aliases": [],
         "alternate_keys": [
+          "openalex",
           "openalex_id"
         ],
         "bool_false": null,
@@ -13223,44 +12772,6 @@
         "name": "institutions",
         "operators": [],
         "type": null
-      },
-      "institutions.continent": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "geo",
-        "display_name": "institutions continent",
-        "entity_type": "continents",
-        "name": "institutions.continent",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "string"
-      },
-      "institutions.is_global_south": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": "it's not from the global south",
-        "bool_true": "it's from the global south",
-        "category": "geo",
-        "display_name": "from global south",
-        "entity_type": null,
-        "name": "institutions.is_global_south",
-        "operators": [
-          "eq",
-          "null"
-        ],
-        "type": "boolean"
       },
       "institutions_distinct_count": {
         "actions": [
@@ -13523,33 +13034,15 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "locations.license_id"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": null,
         "display_name": "any location license",
         "entity_type": "licenses",
         "name": "locations.license",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "string"
-      },
-      "locations.license_id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "locations license id",
-        "entity_type": null,
-        "name": "locations.license_id",
         "operators": [
           "eq",
           "not",
@@ -13596,26 +13089,6 @@
         ],
         "type": "boolean"
       },
-      "locations.source.host_institution_lineage": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "locations source host institution lineage",
-        "entity_type": "institutions",
-        "name": "locations.source.host_institution_lineage",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
       "locations.source.host_organization": {
         "actions": [
           "filter"
@@ -13641,7 +13114,10 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "locations.source.host_institution_lineage",
+          "locations.source.publisher_lineage"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": null,
@@ -13749,26 +13225,6 @@
           "or"
         ],
         "type": "string"
-      },
-      "locations.source.publisher_lineage": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "locations source publisher lineage",
-        "entity_type": "publishers",
-        "name": "locations.source.publisher_lineage",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
       },
       "locations.source.type": {
         "actions": [
@@ -13944,26 +13400,6 @@
         ],
         "type": "string"
       },
-      "openalex": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "openalex",
-        "entity_type": "works",
-        "name": "openalex",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
       "primary_location": {
         "actions": [
           "select"
@@ -14058,33 +13494,15 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "primary_location.license_id"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": null,
         "display_name": "license",
         "entity_type": "licenses",
         "name": "primary_location.license",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "string"
-      },
-      "primary_location.license_id": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "primary location license id",
-        "entity_type": null,
-        "name": "primary_location.license_id",
         "operators": [
           "eq",
           "not",
@@ -14131,26 +13549,6 @@
         ],
         "type": "boolean"
       },
-      "primary_location.source.host_institution_lineage": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "primary location source host institution lineage",
-        "entity_type": "institutions",
-        "name": "primary_location.source.host_institution_lineage",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
-      },
       "primary_location.source.host_organization": {
         "actions": [
           "filter"
@@ -14176,7 +13574,10 @@
           "filter"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "primary_location.source.host_institution_lineage",
+          "primary_location.source.publisher_lineage"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": null,
@@ -14286,26 +13687,6 @@
           "or"
         ],
         "type": "string"
-      },
-      "primary_location.source.publisher_lineage": {
-        "actions": [
-          "filter"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "source",
-        "display_name": "publisher",
-        "entity_type": "publishers",
-        "name": "primary_location.source.publisher_lineage",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "type": "openalex_id"
       },
       "primary_location.source.type": {
         "actions": [

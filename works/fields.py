@@ -213,6 +213,7 @@ fields = [
         docstring=DOCSTRINGS["is_global_south"],
         documentation_link=DOCUMENTATION_LINKS["is_global_south"],
         alternate_names=ALTERNATE_NAMES.get("is_global_south", None),
+        alternate_of="authorships.institutions.is_global_south",
     ),
     BooleanField(
         param="is_corresponding",
@@ -487,16 +488,19 @@ fields = [
     OpenAlexIDField(
         param="locations.source.host_institution_lineage",
         custom_es_field="locations.source.host_organization_lineage",
+        alternate_of="locations.source.host_organization_lineage",
     ),
     OpenAlexIDField(param="locations.source.host_organization"),
     OpenAlexIDField(param="locations.source.host_organization_lineage"),
     OpenAlexIDField(
         param="locations.source.publisher_lineage",
         custom_es_field="locations.source.host_organization_lineage",
+        alternate_of="locations.source.host_organization_lineage",
     ),
     OpenAlexIDField(
         param="primary_location.source.host_institution_lineage",
         custom_es_field="primary_location.source.host_organization_lineage",
+        alternate_of="primary_location.source.host_organization_lineage",
     ),
     OpenAlexIDField(
         param="primary_location.source.id",
@@ -512,9 +516,14 @@ fields = [
         docstring=DOCSTRINGS["publisher"],
         documentation_link=DOCUMENTATION_LINKS["publisher"],
         alternate_names=ALTERNATE_NAMES.get("publisher", None),
+        alternate_of="primary_location.source.host_organization_lineage",
     ),
     OpenAlexIDField(param="primary_topic.id"),
-    OpenAlexIDField(param="openalex", custom_es_field="ids.openalex.lower"),
+    OpenAlexIDField(
+        param="openalex",
+        custom_es_field="ids.openalex.lower",
+        alternate_of="ids.openalex",
+    ),
     OpenAlexIDField(
         param="openalex_id", alias="ids.openalex", alternate_of="ids.openalex"
     ),
@@ -760,6 +769,7 @@ fields = [
     TermField(
         param="best_oa_location.license_id",
         custom_es_field="best_oa_location.license_id.keyword",
+        alternate_of="best_oa_location.license",
     ),
     TermField(
         param="best_oa_location.license",
@@ -813,6 +823,7 @@ fields = [
         docstring=DOCSTRINGS["continent"],
         documentation_link=DOCUMENTATION_LINKS["continent"],
         alternate_names=ALTERNATE_NAMES.get("continent", None),
+        alternate_of="authorships.institutions.continent",
     ),
     TermField(
         param="institutions.ror",
@@ -858,7 +869,9 @@ fields = [
         custom_es_field="locations.license_id.keyword",
     ),
     TermField(
-        param="locations.license_id", custom_es_field="locations.license_id.keyword"
+        param="locations.license_id",
+        custom_es_field="locations.license_id.keyword",
+        alternate_of="locations.license",
     ),
     TermField(param="locations.source.type"),
     TermField(param="locations.raw_type"),
@@ -890,6 +903,7 @@ fields = [
     TermField(
         param="primary_location.license_id",
         custom_es_field="primary_location.license_id.keyword",
+        alternate_of="primary_location.license",
     ),
     TermField(
         param="primary_location.source.issn",

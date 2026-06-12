@@ -42,6 +42,7 @@ fields = [
         docstring=DOCSTRINGS["openalex"],
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
+        alternate_of="ids.openalex",
     ),
     OpenAlexIDField(
         param="openalex_id",
@@ -50,6 +51,7 @@ fields = [
         docstring=DOCSTRINGS["openalex"],
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
+        alternate_of="ids.openalex",
     ),
     OpenAlexIDField(
         param="parent_publisher", custom_es_field="parent_publisher.id.keyword"
@@ -79,11 +81,14 @@ fields = [
         custom_es_field="ids.wikidata.lower",
         unique_id="wikidata_entity",
     ),
-    TermField(param="ror", custom_es_field="ids.ror.lower"),
+    TermField(
+        param="ror", custom_es_field="ids.ror.lower", alternate_of="ids.ror"
+    ),
     TermField(
         param="wikidata",
         custom_es_field="ids.wikidata.lower",
         unique_id="wikidata_entity",
+        alternate_of="ids.wikidata",
     ),
     CollectionField(entity_type="publishers"),
 ]

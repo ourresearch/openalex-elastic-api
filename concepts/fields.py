@@ -45,6 +45,7 @@ fields = [
         docstring=DOCSTRINGS["openalex"],
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
+        alternate_of="ids.openalex",
     ),
     OpenAlexIDField(
         param="openalex_id",
@@ -52,6 +53,7 @@ fields = [
         docstring=DOCSTRINGS["openalex"],
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
+        alternate_of="ids.openalex",
     ),
     RangeField(param="summary_stats.2yr_mean_citedness"),
     RangeField(param="cited_by_count"),

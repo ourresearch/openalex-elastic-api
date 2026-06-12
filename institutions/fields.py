@@ -52,6 +52,7 @@ fields = [
         docstring=DOCSTRINGS["concept"],
         documentation_link=DOCUMENTATION_LINKS["concept"],
         alternate_names=ALTERNATE_NAMES.get("concept", None),
+        alternate_of="x_concepts.id",
     ),
     OpenAlexIDField(
         param="concepts.id",
@@ -59,10 +60,12 @@ fields = [
         docstring=DOCSTRINGS["concept"],
         documentation_link=DOCUMENTATION_LINKS["concept"],
         alternate_names=ALTERNATE_NAMES.get("concept", None),
+        alternate_of="x_concepts.id",
     ),
     OpenAlexIDField(
         param="id",
         custom_es_field="ids.openalex",
+        alternate_of="ids.openalex",
     ),
     OpenAlexIDField(
         param="ids.openalex",
@@ -77,6 +80,7 @@ fields = [
         docstring=DOCSTRINGS["openalex"],
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
+        alternate_of="ids.openalex",
     ),
     OpenAlexIDField(
         param="openalex_id",
@@ -84,6 +88,7 @@ fields = [
         docstring=DOCSTRINGS["openalex"],
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
+        alternate_of="ids.openalex",
     ),
     OpenAlexIDField(param="roles.id"),
     OpenAlexIDField(param="lineage", custom_es_field="lineage"),

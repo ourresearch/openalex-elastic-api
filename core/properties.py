@@ -102,7 +102,23 @@ from core.property_categories import resolve_category
 # properties and on booleans with no curated OQL sentence. Net-new attribute on every property
 # → whole snapshot re-renders, but no previously-valid query breaks. Jason-approved 2026-06-12
 # (#428 session). = MINOR.
-PROPERTIES_VERSION = "2.1.0"
+# 3.0.0 (#446 identity realignment, all-entity extension): the SAME demotion as 2.0.0, now applied
+# to the other 7 entities that carried duplicate alias spellings (authors/institutions/sources/
+# publishers/funders/topics/concepts) PLUS the works leftovers. Demoted to `alternate_keys`:
+# OpenAlex-ID spellings (id/openalex/openalex_id → ids.openalex everywhere — aggressive, one
+# identity even across the ids.openalex / ids.openalex.lower analyzer split; a bare `id` keeps its
+# non-filter `select` role and stays in the catalog, only its filter role folds in), ROR/Wikidata
+# short forms (ror→ids.ror, wikidata→ids.wikidata), x_concepts id spellings (concept.id/concepts.id
+# → x_concepts.id), works institution short forms (institutions.continent/.is_global_south → the
+# authorships.institutions.* canonicals, parallel to the already-done country_code/ror/type), works
+# license_id → .license (×3 location scopes), and the works source-lineage spellings
+# (host_institution_lineage + publisher_lineage → host_organization_lineage; `repository` stays a
+# distinct property — own documented semantics). Same MAJOR rationale as 2.0.0 (alias keys vanish
+# from the top-level catalog; still fully accepted by filter API / OQO validator / OQL parse).
+# Public catalog drops: works 220→210; ~26 demotions across the other 7 entities. Jason signed off
+# the curated merge decisions 2026-06-12 (oxjobs #446: aggressive ID unification; .license canonical;
+# merge BOTH lineage spellings). = MAJOR.
+PROPERTIES_VERSION = "3.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
