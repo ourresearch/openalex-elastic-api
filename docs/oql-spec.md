@@ -97,8 +97,11 @@ Implemented in [`query_translation/oql_lang.py`](../query_translation/oql_lang.p
   the current line, its operands one level deeper, and `)` back at the group's
   indent.
 - **Value/term groups** (`is ( … )`, `contains ( … )`): inline if they fit; else
-  **≤ 8 items → one per line**, **> 8 items → fill/pack** to the width (this is what
-  tames row 78's synonym blocks).
+  **> 8 items that all fit the width → fill/pack** (this is what tames row 78's
+  synonym blocks); otherwise **one item per line**, and an item that is itself an
+  over-width parenthesized sub-group **explodes recursively** (a §3.2.2-merged
+  clause nests whole OR-blocks inside an AND; each block gets the same treatment,
+  its closing paren carrying the trailing connective).
 - **The connective trails every item but the last** of an **exploded** group (the
   idempotence anchor + clean diffs); the parser is whitespace-blind, so the multi-line
   form re-parses to the identical OQO.
@@ -193,8 +196,8 @@ works where country is (us and uk)                                         (row 
   `country is (us and uk)` above.)*
 - `is not ( … )` negates the whole group: `is not (a or b)` = `NOT(a OR b)` =
   `(NOT a) AND (NOT b)` by De Morgan — canonical NNF carries the negation on the
-  leaves and (since `filter_rows` is itself an implicit AND) renders as the explicit
-  two-clause form `x is not a and x is not b` (corpus row **4**).
+  leaves, and the canonical render keeps the group together with the `not`s inside:
+  `x is (not a and not b)` (corpus row **4**; see §3.2.2).
 - **Removed:** the `any of` / `all of` / `is in` list keywords and comma-separated
   lists (`OQL_LIST_KEYWORD_REMOVED` / `OQL_COMMA_IN_GROUP`). `(a or b)` / `(a and b)`
   are strictly more expressive (they nest; flat keyword lists can't) and lose no
@@ -229,6 +232,48 @@ works where year >= 2019             (single-ended bound — stays an inequality
   spelling). This applies only when a column carries **both** a lower and an upper
   bound; a lone `citation count > 100` keeps its strict inequality. Float fields (FWCI)
   have no clean ±1, so a strict float pair stays as two inequalities.
+
+### 3.2.2 Canonical render merges same-field structure (decision 20, #432/#363)
+
+Published systematic reviews are **search-term trees** — "this term and that term,
+but not that term" — written to be plugged whole into one text search; they are not
+filter-triple trees. Canonical OQL therefore renders all the boolean structure that
+belongs to **one field** as **one clause**, the tree inside the value group:
+
+```
+works where title contains ((vape or vaping) and (health or harm))
+works where title contains (not dog and cat)
+works where country is (not FR and US)
+works where institution is (not I33213144 [Harvard] and not I97018004 [Stanford])   (row 4)
+```
+
+- **The rule:** among the children of one boolean node — including the implicit
+  top-level AND of the filter rows — the items sharing one **(field,
+  base-operator)** pair merge into a single `field op ( tree )` clause, the boolean
+  structure preserved inside the parens. A merged negated leaf renders as
+  `not <atom>`; a **standalone** negated leaf keeps the predicate form
+  (`title does not contain dog`, `country is not FR`).
+- **All filter kinds**, not just search: `country is (not FR and US)` is canonical
+  exactly like its `contains` twin. Search groups merge by **base field** (a
+  stemmed `.search` leaf and an exact `.search.exact` leaf share one group — that
+  mix is the row-78 expressiveness win); `is` groups merge by column.
+- **The principled boundary:** comparison operators live on the leaf (`>=`, `<`),
+  so mixed-comparator pairs never merge — they keep the range collapse of §3.2.1
+  (`year >= 2020 and year < 2024` → `year is 2020-2023`). Null (`is unknown`),
+  collection membership, semantic search, and bool/date columns keep their own
+  surfaces and never merge. Cross-field structure necessarily stays multi-clause.
+- **OQO is untouched.** Canonical OQO remains maximally distributed (NNF,
+  leaf-level `is_negated`, top-level AND = `filter_rows`); the parser still
+  distributes the field over every atom (§3.2). This rule is **render-direction
+  only** — it makes OQO→OQL emit the same forms OQL→OQO already accepts, so the
+  round-trip identity (§1) is preserved by construction.
+- **Ordering inside the merged group** is the canonicalizer's existing
+  deterministic order (negated leaves first, then by value) — identical to a
+  native group's order, so merged and hand-written groups read the same.
+- Decided in **#432** (the SR branch/leaf "One Right Way"), charter decision 20,
+  grounded in the #434 survey of 732 real published SR search strings (the
+  dominant real-world shape is a flat AND of OR-groups over one field — which the
+  old canonical shattered into per-group clauses).
 
 ### 3.3 Delimiters and the no-escaping result
 
@@ -307,8 +352,10 @@ rather than parens-forced, for a reason: "unary NOT is tightest" is **universal 
 unambiguous** (Lucene, PubMed, WoS, every programming language agree), whereas
 AND-vs-OR ordering is *not* standardized across systems — so the footgun the
 parens-rule guards against doesn't exist here. To negate a group, parenthesize:
-`not (a or b)`. Canonical output always renders the scope explicitly (e.g.
-`does not contain a and contains b`), so the binding is never hidden on round-trip.
+`not (a or b)`. Canonical output always renders the scope explicitly — a merged
+same-field group carries each `not` directly on its atom (`contains (not a and b)`,
+§3.2.2), and a standalone negated leaf uses the predicate form
+(`does not contain a`) — so the binding is never hidden on round-trip.
 
 ### 3.6 Search — the governing law
 

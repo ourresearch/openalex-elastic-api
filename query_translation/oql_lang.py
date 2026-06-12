@@ -2994,7 +2994,10 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
         return ClauseNode(segments=segs, clause_kind=kind, meta=ClauseMeta(
             column_id=ecol, operator="is", value=None,
             column_display_name=name))
-    children = [_filter_node(c, top=False, resolver=resolver) for c in f.filters]
+    items = _merge_same_field_items(list(f.filters), f.join)  # decision 20
+    children = [_filter_node(c, top=False, resolver=resolver) for c in items]
+    if len(children) == 1:
+        return children[0]
     joiner = f" {f.join} "
     prefix, suffix = ("", "") if top else ("(", ")")
     return GroupNode(join=f.join, children=children, prefix=prefix, suffix=suffix,
@@ -3063,6 +3066,89 @@ def _merge_num_range_rows(filter_rows):
     return items
 
 
+def _merge_key(item):
+    """Decision-20 grouping key: items (children of one boolean node) that share
+    a key merge into ONE factored clause — `field op (tree)` — instead of
+    rendering as separate clauses. A key is the (surface, identity) pair behind
+    the two factor paths: ("search", base field name) for plain search leaves /
+    uniform search subtrees (base-name grouping lets stemmed + exact mix, as in
+    a native group), or ("eq", column_id) for `is` value leaves / uniform-eq
+    subtrees. None = never merges: comparisons (per-leaf operator — the range
+    collapse owns those), null / collection / semantic leaves, bool & date
+    columns (bools render as human phrases, date `is` rides the axis surface),
+    and negated branches (canonical OQO is NNF, so none should exist)."""
+    if isinstance(item, BranchFilter):
+        if item.is_negated:
+            return None
+        scol = _uniform_search_base(item)
+        if scol is not None:
+            return ("search", _oql_field(scol)[0])
+        ecol = _uniform_eq_column(item)
+        if ecol is not None and _eq_mergeable(ecol):
+            return ("eq", ecol)
+        return None
+    if not isinstance(item, LeafFilter):
+        return None  # range tuples from _merge_num_range_rows
+    if _is_search_leaf(item):
+        name, mode = _oql_field(item.column_id)
+        if mode == "semantic":
+            return None
+        return ("search", name)
+    if (item.operator == "is" and item.value is not None
+            and _eq_mergeable(item.column_id)):
+        return ("eq", item.column_id)
+    return None
+
+
+def _eq_mergeable(column_id) -> bool:
+    fld = _BY_COLUMN.get(column_id)
+    return not (fld and fld.kind in ("date", "bool"))
+
+
+def _merge_same_field_items(items, join):
+    """Charter decision 20 (the SR branch/leaf "One Right Way", #432): among the
+    children of one boolean node — including the implicit top-level AND of
+    `filter_rows` — the items sharing a `_merge_key` merge into ONE synthetic
+    uniform branch, which the factor paths render as a single `field op (tree)`
+    clause with the boolean structure (and any leaf `not`s) inside the value
+    group. So `title contains (A) and title contains (B)` re-merges to
+    `title contains ((A) and (B))`, and `cat ∧ ¬dog` on one field renders
+    `title contains (not dog and cat)` instead of two clauses. Order is
+    preserved (the canonicalizer's deterministic sort — negated-first, then
+    value — already puts same-key items adjacent and makes the render
+    idempotent); a singleton key keeps its current render, so a standalone
+    negated leaf stays in predicate form (`title does not contain dog`).
+    Same-join members are flattened into the synthetic branch (the canonical
+    flat form; also keeps re-parse → re-render byte-stable)."""
+    groups = {}
+    for i, item in enumerate(items):
+        key = _merge_key(item)
+        if key is not None:
+            groups.setdefault(key, []).append(i)
+    merged_at, consumed = {}, set()
+    for key, idxs in groups.items():
+        if len(idxs) < 2:
+            continue
+        members = []
+        for i in idxs:
+            m = items[i]
+            if isinstance(m, BranchFilter) and m.join == join and not m.is_negated:
+                members.extend(m.filters)
+            else:
+                members.append(m)
+        merged_at[idxs[0]] = BranchFilter(join, members)
+        consumed.update(idxs[1:])
+    if not merged_at:
+        return items
+    out = []
+    for i, item in enumerate(items):
+        if i in merged_at:
+            out.append(merged_at[i])
+        elif i not in consumed:
+            out.append(item)
+    return out
+
+
 def _row_node(item, top, resolver):
     if isinstance(item, tuple) and item and item[0] == "range":
         return _range_clause_node(item[1], item[2], item[3])
@@ -3078,6 +3164,7 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
     if oqo.filter_rows:
         where_keyword = " where "
         rows = _merge_num_range_rows(oqo.filter_rows)
+        rows = _merge_same_field_items(rows, "and")  # decision 20
         if len(rows) == 1:
             where = _row_node(rows[0], top=True, resolver=resolver)
         else:
@@ -3203,11 +3290,81 @@ def _split_list_clause(clause: ClauseNode):
     return head, items, conn, ")"
 
 
+def _split_group_text(text: str):
+    """Split a paren-stripped group body into (top-level item strings,
+    connective), or None if it isn't a splittable boolean. The string-level
+    twin of `_split_list_clause`, used to recursively explode an over-width
+    *item* (decision 20 merged clauses nest whole OR-blocks inside an AND).
+    Connectives are matched only at paren depth 0, outside double quotes
+    (quoted phrases / quoted-word escapes can contain literal `and`/`or`) and
+    outside `[…]` display-name annotations (which can too)."""
+    items, cur = [], []
+    conn = None
+    depth = bracket = 0
+    in_q = False
+    i, n = 0, len(text)
+    while i < n:
+        ch = text[i]
+        if in_q:
+            cur.append(ch)
+            in_q = ch != '"'
+            i += 1
+            continue
+        if ch == '"':
+            in_q = True
+        elif bracket == 0:
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+            elif ch == "[":
+                bracket += 1
+            elif depth == 0 and ch == " ":
+                for word in (" or ", " and "):
+                    if text.startswith(word, i):
+                        items.append("".join(cur))
+                        cur = []
+                        conn = word.strip()
+                        i += len(word)
+                        break
+                else:
+                    cur.append(ch)
+                    i += 1
+                continue
+        elif ch == "]":
+            bracket -= 1
+        cur.append(ch)
+        i += 1
+    items.append("".join(cur))
+    if conn is None or len(items) < 2 or in_q or depth or bracket:
+        return None
+    return items, conn
+
+
+def _fmt_group_item(it: str, indent: int, width: int, trailing: str) -> str:
+    """Lay out one exploded-group item at `indent`, with the parent's trailing
+    connective (`" and"` / `" or"` / empty) attached to its last line. An item
+    that fits stays on one line; an over-width parenthesized sub-group explodes
+    recursively (its closing paren carries the trailing connective)."""
+    pad = " " * indent
+    if len(pad) + len(it) + len(trailing) <= width:
+        return f"{pad}{it}{trailing}"
+    if it.startswith("(") and it.endswith(")"):
+        parts = _split_group_text(it[1:-1])
+        if parts is not None:
+            sub_items, sub_conn = parts
+            body = _fmt_list(f"{pad}(", sub_items, sub_conn, indent, width)
+            return f"{body}{trailing}"
+    return f"{pad}{it}{trailing}"   # unbreakable (e.g. one long term)
+
+
 def _fmt_list(head: str, items, conn: str, indent: int, width: int) -> str:
     """Lay out an exploded factored group. `indent` is the clause's own indent
     (where the closing `)` sits); items sit at `indent + _INDENT`. The connective
     trails every item but the last (idempotence anchor + clean diffs; the parser
-    is whitespace-blind). <=8 items -> one per line; >8 -> fill/pack to `width`."""
+    is whitespace-blind). >8 items that all fit -> fill/pack to `width`;
+    otherwise one per line, recursively exploding any over-width sub-group item
+    (decision 20 merged clauses nest whole OR-blocks inside an AND)."""
     pad = " " * (indent + _INDENT)
     out = [head]
     n = len(items)
@@ -3215,9 +3372,8 @@ def _fmt_list(head: str, items, conn: str, indent: int, width: int) -> str:
     def piece(i, it):
         return it if i == n - 1 else f"{it} {conn}"
 
-    if n <= 8:
-        out.extend(f"{pad}{piece(i, it)}" for i, it in enumerate(items))
-    else:
+    all_fit = all(len(pad) + len(it) + len(conn) + 1 <= width for it in items)
+    if n > 8 and all_fit:
         line, empty = pad, True
         for i, it in enumerate(items):
             p = piece(i, it)
@@ -3227,6 +3383,11 @@ def _fmt_list(head: str, items, conn: str, indent: int, width: int) -> str:
             line = f"{pad}{p}" if empty else f"{line} {p}"
             empty = False
         out.append(line)
+    else:
+        trail = f" {conn}"
+        out.extend(_fmt_group_item(it, indent + _INDENT, width,
+                                   "" if i == n - 1 else trail)
+                   for i, it in enumerate(items))
     out.append(f"{' ' * indent})")
     return "\n".join(out)
 
