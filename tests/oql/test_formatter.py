@@ -61,6 +61,30 @@ _RESOLVER = make_engine_resolver(
 )
 
 
+def test_supplemental_names_in_sync_with_regen():
+    """`_SUPPLEMENTAL_NAMES` is duplicated here and in
+    docs/oql/regen_corpus_oql.py (the pure test env can't cleanly share it). If
+    they drift, the corpus regenerates with names this gate renders differently
+    -> a confusing per-row `test_corpus_oql_is_canonical` failure. This guard
+    turns that into one loud, localized failure that names the exact diff.
+    (Caught the missing keyword names that bit 2026-06-12.)"""
+    import sys
+    sys.path.insert(0, os.path.dirname(CORPUS))  # docs/oql/
+    from regen_corpus_oql import _SUPPLEMENTAL_NAMES as _REGEN_NAMES
+    only_here = set(_SUPPLEMENTAL_NAMES) - set(_REGEN_NAMES)
+    only_regen = set(_REGEN_NAMES) - set(_SUPPLEMENTAL_NAMES)
+    val_diffs = {k: (_SUPPLEMENTAL_NAMES[k], _REGEN_NAMES[k])
+                 for k in set(_SUPPLEMENTAL_NAMES) & set(_REGEN_NAMES)
+                 if _SUPPLEMENTAL_NAMES[k] != _REGEN_NAMES[k]}
+    assert _SUPPLEMENTAL_NAMES == _REGEN_NAMES, (
+        "_SUPPLEMENTAL_NAMES drifted between tests/oql/test_formatter.py and "
+        "docs/oql/regen_corpus_oql.py — keep them identical:\n"
+        f"  only in test_formatter:    {only_here}\n"
+        f"  only in regen_corpus_oql:  {only_regen}\n"
+        f"  value mismatches:          {val_diffs}"
+    )
+
+
 def _fmt_named(oql: str) -> str:
     """Canonical OQL with the corpus's harvested display-name resolver, so the
     `[name]` annotations are reproduced (used for the no-drift corpus check)."""
