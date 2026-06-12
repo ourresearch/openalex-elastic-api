@@ -40,6 +40,13 @@ from core.properties import build_properties  # noqa: E402
 SERVER = build_properties()
 
 # Actions that assert a server capability (vs display-only edit/column).
+# `column` is DELIBERATELY not here (#450): the GUI's `column` action means "can
+# be a SERP table column", rendered by CLIENT-SIDE extraction of nested paths
+# (e.g. `open_access.is_oa`) from full result objects — NOT the server `column`
+# capability (the top-level `?select=` vocabulary). Measured 2026-06-12: 36/125
+# GUI column facets are not server-selectable, all legitimately. Reconciling the
+# two `column` vocabularies belongs to the facetConfigs-generation endgame
+# (OQLO charter decision 19), not this gate.
 SERVER_BACKED_ACTIONS = {"filter", "group_by", "sort"}
 
 # Client entity label -> server catalog entity key, where they differ.

@@ -43,7 +43,7 @@ from query_translation.validator import validate_oqo
 CORPUS_PATH = Path(
     os.environ.get(
         "OQO_EXAMPLES_PATH",
-        os.path.expanduser("~/Documents/oxjobs/done/oqo-spec/work/EXAMPLES.md"),
+        os.path.expanduser("~/Documents/oxjobs/archived/oqo-spec/work/EXAMPLES.md"),
     )
 )
 
