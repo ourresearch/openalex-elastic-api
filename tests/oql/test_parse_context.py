@@ -419,3 +419,73 @@ def test_editor_recognizes_is_in_collection_operator():
     flen2 = C._match_field(toks2, 0)[2]
     op2 = C._match_operator(toks2, flen2)
     assert op2 is not None and op2[0] == "nincoll" and op2[2]
+
+
+# --- iter-5: click-anywhere gaps (oxjob #357) ----------------------------------
+_SORT_Q = "works where institution is I27837315 [UM] sort by citation count desc"
+
+
+def test_direction_click_offers_asc_desc():
+    # cursor inside `desc` -> the slot IS the asc/desc choice
+    pos = _SORT_Q.index("desc") + 2
+    c = ctx(_SORT_Q, pos)
+    assert c["category"] == "direction"
+    assert [s["value"] for s in c["suggestions"]] == ["asc", "desc"]
+    assert all(s["kind"] == "direction" for s in c["suggestions"])
+    assert c["replace_range"] == {"start": _SORT_Q.index("desc"),
+                                  "end": _SORT_Q.index("desc") + 4}
+
+
+def test_open_slot_after_sort_column_offers_direction_too():
+    q = "works sort by year "
+    c = ctx(q)
+    vals = [s["value"] for s in c["suggestions"]]
+    assert vals[:2] == ["asc", "desc"]          # direction first
+    assert "group by" in vals                    # the END directives still offered
+
+
+def test_direction_not_offered_after_group_by():
+    q = "works group by type "
+    c = ctx(q)
+    vals = [s["value"] for s in c["suggestions"]]
+    assert "asc" not in vals and "desc" not in vals
+
+
+def test_direction_not_offered_when_direction_already_present():
+    q = "works sort by year desc "
+    c = ctx(q)
+    vals = [s["value"] for s in c["suggestions"]]
+    assert "asc" not in vals and "desc" not in vals
+
+
+def test_direction_multi_sort_second_segment():
+    # after a comma the new segment gets its own direction slot
+    q = "works sort by year desc, citation count "
+    c = ctx(q)
+    vals = [s["value"] for s in c["suggestions"]]
+    assert vals[:2] == ["asc", "desc"]
+
+
+def test_annotation_click_reanchors_to_the_value():
+    # cursor inside `[UM]` -> the id-value context of the preceding token
+    q = "works where institution is I27837315 [UM] sort by year"
+    pos = q.index("[UM]") + 2
+    c = ctx(q, pos)
+    assert c["category"] == C.VALUE
+    assert c["value_kind"] == "id"
+    assert c["autocomplete_entity"] == "institutions"
+    assert c["prefix"] == "I27837315"
+    assert c["replace_range"] == {"start": q.index("I27837315"),
+                                  "end": q.index("I27837315") + len("I27837315")}
+
+
+def test_annotation_click_with_no_preceding_word_stays_suppressed():
+    q = 'works where title contains "x" [note]'
+    pos = q.index("[note]") + 2  # preceding token is a STRING, not a WORD
+    assert cat(q, pos) == C.NONE
+
+
+def test_string_click_still_suppressed():
+    q = 'works where title contains "climate change"'
+    pos = q.index("climate") + 3
+    assert cat(q, pos) == C.NONE
