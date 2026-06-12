@@ -226,7 +226,7 @@ def test_every_row_has_valid_facets():
     }
     provenance_types = {
         "spec design", "analytics question", "librarian guide",
-        "vendor docs", "zendesk ticket",
+        "vendor docs", "zendesk ticket", "systematic review",
     }
     bad = []
     for r in ROWS:
@@ -266,6 +266,14 @@ def test_every_row_has_valid_facets():
         78: "oql-only",            # zd#8101 OR across stemmed/exact match-modes
         87: "oql-only",            # cross-field OR (title vs. abstract); #363
         91: "oql-only",            # nested AND inside an OR search group; #363
+        # Real mined SR strategies (#434 -> #363). oql-only because the OR-group
+        # mixes quoted phrases (no-stem .search.exact) with bare words (stemmed
+        # .search), or nests an AND inside an OR, or ORs across fields — none of
+        # which classic URL `filter=` syntax can express. The expressiveness win.
+        142: "oql-only", 145: "oql-only", 147: "oql-only", 148: "oql-only",
+        151: "oql-only", 152: "oql-only", 153: "oql-only", 154: "oql-only",
+        155: "oql-only", 156: "oql-only", 157: "oql-only", 159: "oql-only",
+        160: "oql-only",
     }
     assert non_has_oxurl == expected, (
         f"oxurl_status classification drifted: "
