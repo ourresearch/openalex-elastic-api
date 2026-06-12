@@ -84,11 +84,13 @@ def test_public_payload_omits_server_internal_keys(client):
     body = client.get("/properties?entity=works").get_json()
     sample = next(iter(body["properties"]["works"].values()))
     # display_name + aliases are public as of v1.3.0 (#381); category as of v1.13.0
-    # (#441); alternate_keys as of v2.0.0 (#446). alias/custom_es_field/alternate_of
-    # remain server-internal and must never leak.
+    # (#441); alternate_keys as of v2.0.0 (#446); bool_true/bool_false as of v2.1.0
+    # (#428). alias/custom_es_field/alternate_of remain server-internal and must
+    # never leak.
     assert set(sample.keys()) == {
         "name", "type", "operators", "actions", "entity_type",
         "display_name", "aliases", "category", "alternate_keys",
+        "bool_true", "bool_false",
     }
     assert "custom_es_field" not in sample
     assert "alias" not in sample
@@ -140,6 +142,49 @@ def test_category_is_present_and_nullable(client):
     # …and null is a legitimate, intentional value for the uncategorized long tail
     # (select-only `abstract_inverted_index` has no facet peer and no clear bucket).
     assert works["abstract_inverted_index"]["category"] is None
+
+
+# --- #428 bool_true/bool_false (boolean sentence phrasings) -------------------
+# Nullable, descriptive sentences single-sourced from OQL's curated _FIELDS
+# (query_translation/oql_lang.py) and copied onto boolean properties at the
+# catalog render layer, so no-code clients can show "it's open access" instead
+# of a raw true/false toggle.
+
+def test_bool_phrasing_known_assignments(client):
+    works = client.get("/properties/works").get_json()["properties"]["works"]
+    expected = {
+        "open_access.is_oa": ("it's open access", "it's not open access"),
+        "has_doi": ("it has a DOI", "it doesn't have a DOI"),
+        "is_retracted": ("it's retracted", "it's not retracted"),
+    }
+    for name, (bt, bf) in expected.items():
+        assert works[name]["bool_true"] == bt, f"{name} -> {works[name]['bool_true']!r}"
+        assert works[name]["bool_false"] == bf, f"{name} -> {works[name]['bool_false']!r}"
+
+
+def test_bool_phrasing_is_entity_aware(client):
+    # sources `is_oa` is a DIFFERENT predicate than works open_access.is_oa and
+    # has its own curated sentence ("fully open access"); the exact-column pass
+    # must beat works' word-resolved phrasing.
+    sources = client.get("/properties/sources").get_json()["properties"]["sources"]
+    assert sources["is_oa"]["bool_true"] == "it's fully open access"
+    assert sources["is_oa"]["bool_false"] == "it's not fully open access"
+
+
+def test_bool_phrasing_null_on_non_boolean_and_uncurated(client):
+    works = client.get("/properties/works").get_json()["properties"]["works"]
+    # Every property carries both keys (public payload as of v2.1.0)…
+    assert all("bool_true" in p and "bool_false" in p for p in works.values())
+    # …non-boolean properties are null…
+    assert works["publication_year"]["bool_true"] is None
+    assert works["publication_year"]["bool_false"] is None
+    # …and so is a boolean with no curated OQL sentence yet.
+    uncurated = [
+        name for name, p in works.items()
+        if p["type"] == "boolean" and p["bool_true"] is None
+    ]
+    for name in uncurated:
+        assert works[name]["bool_false"] is None, name
 
 
 def test_filterable_and_selectable_field_unions_actions(client):

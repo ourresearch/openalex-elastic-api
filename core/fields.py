@@ -196,6 +196,17 @@ class Property:
     # words ("country"); `alternate_keys` are machine key spellings ("institution.id").
     alternate_of: Optional[str] = None
     alternate_keys: List[str] = field(default_factory=list)
+    # Boolean sentence phrasing (#428). The curated human sentence for a boolean
+    # property's two values — e.g. open_access.is_oa: "it's open access" /
+    # "it's not open access"; has_doi: "it has a DOI" / "it doesn't have a DOI".
+    # These phrasings are OQL's render/parse surface for booleans and live in
+    # `query_translation/oql_lang.py` (`_f(..., bool_true=, bool_false=)`); the
+    # catalog render layer (`core.properties._merged_properties`) copies them on
+    # so no-code clients (the GUI builder) can show the same sentence instead of
+    # a raw true/false toggle. Null on non-boolean properties and on booleans
+    # without a curated OQL sentence yet.
+    bool_true: Optional[str] = None
+    bool_false: Optional[str] = None
 
     def serialize(self) -> dict:
         """The canonical PUBLIC JSON-ready dict. `operators`/`actions`/`aliases`/
@@ -208,7 +219,9 @@ class Property:
         properties builder from `core.property_categories`. Added v1.13.0 (additive).
         `alternate_keys` (#446) — the alias machine-key spellings folded into this
         canonical property; added v2.0.0 (the same ship demotes those aliases from
-        the top-level catalog, a MAJOR removal)."""
+        the top-level catalog, a MAJOR removal). `bool_true`/`bool_false` (#428) —
+        the curated boolean sentence phrasings (nullable, descriptive only, no
+        query-behavior effect); added v2.1.0 (additive)."""
         return {
             "name": self.name,
             "type": self.type,
@@ -219,6 +232,8 @@ class Property:
             "aliases": sorted(self.aliases),
             "category": self.category,
             "alternate_keys": sorted(self.alternate_keys),
+            "bool_true": self.bool_true,
+            "bool_false": self.bool_false,
         }
 
 

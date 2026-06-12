@@ -26,6 +26,7 @@ the rendered payload and therefore the `meta.fingerprint`.
 | Add or tweak a property's `display_name` (#381 — a label is display metadata, not query semantics) | **MINOR** |
 | Add an `alias` (#381 — an extra accepted input spelling) | **MINOR** |
 | ANY change to a `category` — add / change / remove (#441 — a nullable, ungated organizational grouping; no query-behavior effect, so nothing it does can break a query) | **MINOR** |
+| ANY change to `bool_true`/`bool_false` — add / change / remove (#428 — nullable, descriptive boolean sentence phrasings, e.g. "it's open access"; no query-behavior effect; consumers fall back to raw true/false when null) | **MINOR** |
 | Remove any of the above; rename a property/param; change a property's `type`; change an `entity_type` cross-link; drop an operator/action | **MAJOR** (breaks existing queries) |
 | Remove a `display_name` or an `alias` (#381 — dropping an alias can invalidate a query a client was sending) | **MAJOR** |
 

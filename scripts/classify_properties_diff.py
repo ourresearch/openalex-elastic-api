@@ -144,6 +144,15 @@ def classify_change(old, new):
             oc, nc = o.get("category"), n.get("category")
             if oc != nc:
                 minor.append(f"category changed: {e}.{name}: {oc!r} -> {nc!r}")
+            # bool_true/bool_false (#428) are nullable, descriptive boolean sentence
+            # phrasings ("it's open access") with no query-behavior effect — same
+            # contract weight as category, so every transition (add / change /
+            # remove) is MINOR; consumers must already handle null (they fall back
+            # to a raw true/false rendering).
+            for key in ("bool_true", "bool_false"):
+                ob, nb = o.get(key), n.get(key)
+                if ob != nb:
+                    minor.append(f"{key} changed: {e}.{name}: {ob!r} -> {nb!r}")
 
     if major:
         return "major", major + minor

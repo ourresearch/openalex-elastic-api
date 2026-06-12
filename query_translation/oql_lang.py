@@ -962,6 +962,41 @@ def _augment_by_column_for_homonyms() -> None:
 _augment_by_column_for_homonyms()
 
 
+# --- boolean sentence phrasings for the /properties catalog (oxjob #428) -----
+# The curated bool_true/bool_false sentences ("it's open access" / "it doesn't
+# have a DOI") are OQL render/parse mechanics, so they live on `_FIELDS` per the
+# #406 guardrail — but no-code clients (the GUI builder) need them too, or they
+# can only show a raw true/false toggle. This is the public bridge the catalog
+# render layer (`core.properties._merged_properties`) reads; phrasing stays
+# single-sourced here. Keyed by the entity-resolved column. Two passes: a Field
+# whose RAW column is already one of the entity's columns owns its phrasing
+# (e.g. sources `is_oa` -> "it's fully open access" beats works' word-resolved
+# "it's open access"); word-resolution fills the rest. setdefault keeps pass-1.
+_BOOL_PHRASING_CACHE: Dict[str, Dict[str, Tuple[str, str]]] = {}
+
+
+def entity_bool_phrasings(entity: str) -> Dict[str, Tuple[str, str]]:
+    """{column_id: (bool_true, bool_false)} for one entity's curated booleans."""
+    if entity in _BOOL_PHRASING_CACHE:
+        return _BOOL_PHRASING_CACHE[entity]
+    bools = [fld for _spellings, fld in _FIELDS
+             if fld.kind == "bool" and (fld.bool_true or fld.bool_false)]
+    try:
+        from core.properties import get_entity_properties
+        props = get_entity_properties(entity) or {}
+    except Exception:
+        props = {}
+    out: Dict[str, Tuple[str, str]] = {}
+    for fld in bools:
+        if fld.column in props:
+            out.setdefault(fld.column, (fld.bool_true, fld.bool_false))
+    for fld in bools:
+        resolved = _entity_resolve_field(fld, entity)
+        out.setdefault(resolved.column, (fld.bool_true, fld.bool_false))
+    _BOOL_PHRASING_CACHE[entity] = out
+    return out
+
+
 # --- entity-aware GUI-faceted registry fallback (oxjob #406, increment 1b) ---
 # Part B coverage: a NON-works column with no curated `_FIELDS` surface and no
 # homonym (e.g. `issn_l`/"ISSN-L" on sources, `works_count`/"works count" on

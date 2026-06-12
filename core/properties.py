@@ -94,7 +94,15 @@ from core.property_categories import resolve_category
 # no longer sees the alias key). The new additive `alternate_keys` field rides along (MINOR on
 # its own, subsumed by the MAJOR). Jason signed off the works curated merge list 2026-06-11
 # (oxjobs #446); the version-class (MAJOR) was pre-approved in principle 2026-06-11 (#428 session).
-PROPERTIES_VERSION = "2.0.0"
+# 2.1.0 (#428): added nullable `bool_true`/`bool_false` to every property — the curated boolean
+# sentence phrasings ("it's open access" / "it doesn't have a DOI") that OQL renders/parses,
+# single-sourced from query_translation/oql_lang.py and copied onto boolean properties at the
+# catalog render layer so no-code clients (the GUI builder) can show the sentence instead of a
+# raw true/false toggle. Purely descriptive (no query-behavior effect); null on non-boolean
+# properties and on booleans with no curated OQL sentence. Net-new attribute on every property
+# → whole snapshot re-renders, but no previously-valid query breaks. Jason-approved 2026-06-12
+# (#428 session). = MINOR.
+PROPERTIES_VERSION = "2.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -275,7 +283,29 @@ def _merged_properties(entity_type):
             )
         elif "select" not in existing.actions:
             merged[name] = replace(existing, actions=existing.actions + ["select"])
+    # Boolean sentence phrasings (#428): copy OQL's curated bool_true/bool_false
+    # sentences onto boolean properties. Layered HERE (render surface, lazy) and
+    # not in `_build_entity_properties` because `ENTITY_PROPERTIES` builds at
+    # module import, and importing `query_translation.oql_lang` mid-build would
+    # silently break its own module-level `_augment_by_column_for_homonyms()`
+    # (it imports back into this module; the try/except would swallow the
+    # partial-init failure and drop entity-aware rendering).
+    for name, (bt, bf) in _bool_phrasings(entity_type).items():
+        prop = merged.get(name)
+        if prop is not None and prop.type == "boolean":
+            merged[name] = replace(prop, bool_true=bt or None, bool_false=bf or None)
     return merged
+
+
+def _bool_phrasings(entity_type):
+    """{column_id: (bool_true, bool_false)} for one entity, from OQL's curated
+    boolean sentence templates (single-sourced in oql_lang's `_FIELDS`). Lazy
+    import — see the call site in `_merged_properties` for why."""
+    try:
+        from query_translation.oql_lang import entity_bool_phrasings
+    except Exception:
+        return {}
+    return entity_bool_phrasings(entity_type)
 
 
 def _canonical_catalog():
