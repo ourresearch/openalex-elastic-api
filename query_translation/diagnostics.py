@@ -117,7 +117,7 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_TRAILING_TOKENS", ERROR, PARSE,
               "unexpected text after the query's clauses",
               "queries are: <entity> [where <conditions>] [sort by ...] "
-              "[group by ...] [sample N]"),
+              "[group by ...] [sample N] [return col1, col2]"),
         # -- boolean structure ----------------------------------------------------
         _spec("OQL_IMPLICIT_ADJACENCY", ERROR, PARSE,
               "two conditions sit side by side with no AND/OR between them",
@@ -208,6 +208,9 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_BAD_SAMPLE", ERROR, PARSE,
               '"sample" is missing a positive integer',
               "give a count, e.g. sample 100"),
+        _spec("OQL_BAD_RETURN", ERROR, PARSE,
+              '"return" is missing a column name',
+              "name a column to return, e.g. return id, title"),
         # -- generic catch-all (editor only; non-OQLError engine failures) --------
         _spec("OQL_PARSE_ERROR", ERROR, PARSE,
               "an unexpected parser failure",

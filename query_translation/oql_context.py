@@ -53,7 +53,7 @@ NONE = CTX_NONE
 
 # Directive words that bound a partially-typed multi-word field alias when widening
 # the replace-range backwards.
-_DIRECTIVE_WORDS = {"where", "sort", "group", "sample"}
+_DIRECTIVE_WORDS = {"where", "sort", "group", "sample", "return"}
 
 # Sort-direction words (canonical first — the suggestion list offers asc/desc only).
 _DIRECTIONS = ("asc", "desc", "ascending", "descending")
@@ -187,7 +187,7 @@ def _value_context(category, fld: Field, in_list=False) -> Dict[str, Any]:
 
 def _directive_suggestions() -> List[Dict[str, str]]:
     return [{"value": w, "kind": "directive"}
-            for w in ("where", "sort by", "group by", "sample")]
+            for w in ("where", "sort by", "group by", "sample", "return")]
 
 
 def _shape(raw: Dict[str, Any]) -> Dict[str, Any]:
@@ -253,13 +253,15 @@ def _shape(raw: Dict[str, Any]) -> Dict[str, Any]:
         # The cursor sits after a complete clause. The grammar accepts a connective
         # (continue the where-expr) OR a trailing directive (sort/group/sample) OR
         # end. Offer all of them so the editor's "menu 1" is the full two-level
-        # design's first level (oxjob #357): and / or / sort by / group by / sample.
+        # design's first level (oxjob #357): and / or / sort by / group by /
+        # sample / return.
         # (`where` is NOT re-offered — we're already inside the where-expression.)
         return {"category": CONNECTIVE,
                 "suggestions": [{"value": "and", "kind": "connective"},
                                 {"value": "or", "kind": "connective"}]
                                + [{"value": w, "kind": "directive"}
-                                  for w in ("sort by", "group by", "sample")]}
+                                  for w in ("sort by", "group by", "sample",
+                                            "return")]}
     if cat in (DIRECTIVE, END):
         return {"category": cat, "suggestions": _directive_suggestions()}
     # NONE / unclassifiable
@@ -423,15 +425,15 @@ def _value_run_start(prior: List[Tok]) -> Optional[int]:
 
 def _is_directive_boundary(run: List[Tok], j: int) -> bool:
     """True if run[j] starts a trailing directive (`sort by` / `group by` /
-    `sample <N>` / `where`) rather than continuing a multi-word value. Without this
-    a doc like `type is article sort by citation count de▮sc` widens the whole tail
-    into one giant 'value' and the cursor never reaches the direction slot
-    (oxjob #357 iter-5)."""
+    `sample <N>` / `return` / `where`) rather than continuing a multi-word value.
+    Without this a doc like `type is article sort by citation count de▮sc` widens
+    the whole tail into one giant 'value' and the cursor never reaches the
+    direction slot (oxjob #357 iter-5)."""
     t = run[j]
     if t.kind != "WORD":
         return False
     w = t.val.lower()
-    if w == "where":
+    if w in ("where", "return"):
         return True
     nxt = run[j + 1] if j + 1 < len(run) else None
     if w in ("sort", "group"):
@@ -501,7 +503,8 @@ def _direction_allowed(prior: List[Tok]) -> bool:
         if w == "sort" and i + 1 < len(prior) and prior[i + 1].kind == "WORD" \
                 and prior[i + 1].val.lower() == "by":
             last_sort = i
-        elif w in ("group", "sample", "where") and last_sort is not None and i > last_sort:
+        elif w in ("group", "sample", "where", "return") and last_sort is not None \
+                and i > last_sort:
             last_sort = None  # a later directive ended the sort tail
     if last_sort is None:
         return False

@@ -179,9 +179,11 @@ class OQO:
     sample: Optional[int] = None
     group_by: List[GroupBy] = field(default_factory=list)
     # --- logistics layer (#318) ------------------------------------------
-    # `select` is a list of *result-schema* field names (the columns each row
-    # carries), e.g. ["id", "display_name", "cited_by_count"]; absent ⇒ full
-    # object. Order is meaningful (display order) and preserved.
+    # `select` is a list of registry column_ids carrying the `column`
+    # capability (#450), e.g. ["id", "display_name", "cited_by_count"];
+    # absent ⇒ full object. Order is meaningful (display order) and preserved.
+    # These ids are string-identical to the MessageSchema result-field names
+    # (the pre-#450 vocabulary), so older OQO dicts keep working unchanged.
     select: List[str] = field(default_factory=list)
     # `seed` makes a `sample` reproducible; only meaningful alongside `sample`.
     seed: Optional[Union[str, int]] = None
@@ -248,6 +250,10 @@ class OQO:
             sort_by=sort_by,
             sample=data.get("sample"),
             group_by=group_by,
+            # `select` values are now validated against the registry `column`
+            # capability (#450) instead of the old MessageSchema namespace;
+            # the vocabularies are string-identical, so pre-#450 dicts parse
+            # and validate exactly as before.
             select=list(data.get("select") or []),
             seed=data.get("seed"),
             per_page=data.get("per_page"),

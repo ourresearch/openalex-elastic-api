@@ -24,9 +24,13 @@ from typing import Any, Dict, List, Optional
 from core.entities import entity_for_id_prefix, get_entity_type
 from core.fields import Property
 from core.properties import (
+    CAP_COLUMN,
+    CAP_GROUP_BY,
+    CAP_SORT,
     ENTITY_PROPERTIES,
+    get_entity_capabilities,
+    get_entity_columns,
     get_entity_properties,
-    get_selectable_fields,
 )
 from query_translation.oql_renderer import is_vocab_member, vocab_name_to_code
 from query_translation.oqo import (
@@ -285,6 +289,10 @@ class OQOValidator:
             return ValidationResult(valid=False, errors=errors, warnings=warnings)
 
         columns = get_entity_properties(entity)
+        # The unified per-property capability catalog (#450) — one source the
+        # filter/sort/group_by/column gates all read from. `columns` (the rich
+        # Property objects) is still used where type/operator detail is needed.
+        capabilities = get_entity_capabilities(entity) or {}
 
         for i, f in enumerate(oqo.filter_rows):
             errors.extend(self._validate_filter(f, columns, f"filter_rows[{i}]"))
@@ -296,7 +304,8 @@ class OQOValidator:
         has_search = _has_search_clause(oqo.filter_rows)
         for i, key in enumerate(oqo.sort_by):
             errors.extend(self._validate_sort_key(
-                key, i, columns, has_search, bool(oqo.group_by), oqo.get_rows,
+                key, i, columns, capabilities, has_search, bool(oqo.group_by),
+                oqo.get_rows,
             ))
 
         if oqo.sample is not None:
@@ -317,7 +326,7 @@ class OQOValidator:
                     message="group_by dimension must have a non-empty string column_id",
                     location=f"group_by[{i}].column_id",
                 ))
-            elif column_id not in columns:
+            elif CAP_GROUP_BY not in capabilities.get(column_id, frozenset()):
                 errors.append(ValidationError(
                     type="invalid_column",
                     message=(
@@ -329,11 +338,12 @@ class OQOValidator:
 
         # --- logistics layer (#318) ------------------------------------------
 
-        # select: each entry must be a selectable result-field on the entity.
-        # Selectable fields are the entity's result-schema fields (NOT the filter
-        # property catalog above) — see core.properties.get_selectable_fields.
+        # select: each entry must be a `column`-capable property on the entity.
+        # Column capability (#450) is the result-schema projection surfaced through
+        # the same capability catalog the sort/group_by gates use — see
+        # core.properties.get_entity_columns / get_entity_capabilities.
         if oqo.select:
-            selectable = get_selectable_fields(entity)
+            selectable = get_entity_columns(entity)
             for i, col in enumerate(oqo.select):
                 if not isinstance(col, str) or not col:
                     errors.append(ValidationError(
@@ -398,6 +408,7 @@ class OQOValidator:
         key: SortBy,
         index: int,
         columns: Dict[str, Property],
+        capabilities: Dict[str, frozenset],
         has_search: bool,
         has_group_by: bool,
         get_rows: str,
@@ -479,7 +490,9 @@ class OQOValidator:
         elif has_group_by and key.column_id in GROUP_BY_SORT_KEYS:
             # Bucket-ordering sort key (count/key) — valid because group_by is set.
             pass
-        elif key.column_id and key.column_id not in columns:
+        elif key.column_id and CAP_SORT not in capabilities.get(
+            key.column_id, frozenset()
+        ):
             errors.append(ValidationError(
                 type="invalid_column",
                 message=(

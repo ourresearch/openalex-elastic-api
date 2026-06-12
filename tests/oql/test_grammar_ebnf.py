@@ -138,6 +138,7 @@ def test_parser_structural_keywords_are_declared_by_the_ebnf():
         "contains", "does", "doesn't", "doesnt", "contain", "similar", "to",
         "near", "within", "words", "word", "group", "by", "sort", "asc", "desc",
         "sample", "seed", "it's", "its", "it", "has", "have", "all",
+        "return",
     }
     recognized = _parser_recognized_words()
     # Only assert over the structural words the parser truly knows (guards against

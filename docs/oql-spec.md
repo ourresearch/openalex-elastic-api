@@ -55,7 +55,7 @@ This invariant is the spec's runnable contract — see §9.
 ## 2. Statement shape
 
 ```
-<entity> [ where <conditions> ] [ group by <dims> ] [ sort by <keys> ] [ sample <n> [ seed <s> ] ]
+<entity> [ where <conditions> ] [ group by <dims> ] [ sort by <keys> ] [ sample <n> [ seed <s> ] ] [ return <cols> ]
 ```
 
 - The entity type names the rows returned (`works`, `authors`, `institutions`,
@@ -63,11 +63,12 @@ This invariant is the spec's runnable contract — see §9.
   lowercase canonically; any case accepted on input. (corpus rows **33**, **39**, **42–44**)
 - `where` introduces the conditions. With no conditions, the bare entity is a valid
   query: `works` (corpus row **33**).
-- Directives (`group by`, `sort by`, `sample`) follow, each introduced by its own
-  keyword — no separating punctuation (oxjob #377). A leading `;` is still accepted
-  on **input** for back-compat, but the canonical form never emits one.
+- Directives (`group by`, `sort by`, `sample`, `return`) follow, each introduced by
+  its own keyword — no separating punctuation (oxjob #377). A leading `;` is still
+  accepted on **input** for back-compat, but the canonical form never emits one.
 
-OQL covers exactly **OQO Stage A (filter / sort / sample) + Stage B (group_by)**.
+OQL covers exactly **OQO Stage A (filter / sort / sample) + Stage B (group_by)**,
+plus the logistics-layer column projection (`return` → `OQO.select`, oxjob #450).
 There is deliberately **no Stage-C / HAVING syntax** (§10).
 
 ### 2.1 Canonical formatting (output layout)
@@ -90,7 +91,7 @@ Implemented in [`query_translation/oql_lang.py`](../query_translation/oql_lang.p
   its children to break.
 - **Top level.** A statement that fits stays on one line. Otherwise the entity
   head, the `where` body, and **each directive** go on their own line(s); the
-  directives (`group by …`, `sort by …`, `sample …`) sit at column 0.
+  directives (`group by …`, `sort by …`, `sample …`, `return …`) sit at column 0.
 - **Leading connectives.** When a boolean explodes, `and` / `or` **begin** each
   continuation line (one operand per line). A parenthesized group puts `(` on
   the current line, its operands one level deeper, and `)` back at the group's
@@ -504,6 +505,7 @@ model clean for the editor and downstream tooling.
 authors sort by works_count desc                           (row 39)
 works where year >= 1976 group by topic, year              (row 48)  (multi-dim: spec-level; live API single-dim → #297)
 works where … sort by citation count desc sample 500            (row 63)
+works where year >= 2020 return id, title, citation count       (row 132)
 ```
 
 - **`group by <dim>[, <dim>]*`** → `group_by` list (order = dimension order).
@@ -511,6 +513,16 @@ works where … sort by citation count desc sample 500            (row 63)
   priority). Accept `ascending`/`descending`; default `asc`. Synthetic keys
   (`relevance_score`, `count`, `key`) are allowed.
 - **`sample <n> [seed <s>]`** → `sample` (+ optional reproducibility `seed`).
+- **`return <col>[, <col>]*`** → `select` list (order = display order; oxjob #450,
+  corpus rows **132–135**). Columns resolve over the **column namespace** — the
+  registry's `column` capability (= the `?select=`-able result fields), which is
+  mostly disjoint from the filter namespace (`return open_access` /
+  `return authorships` name result columns with no filter surface, row **133**) —
+  by friendly display name or raw id. Input order among directives is free; the
+  canonical render emits `return` **last** and omits it when `select` is empty
+  (absent ⇒ full object). A friendly name is rendered only when it parses back to
+  the same column; otherwise the raw id renders (round-trip-safe by construction,
+  row **134**).
 
 ## 5. Diagnostics (codes + fix-its)
 
@@ -532,7 +544,7 @@ NL) share codes and only localize prose. Every `✗` corpus row asserts its code
 | `OQL_UNKNOWN_FIELD` / `OQL_UNKNOWN_ENTITY` / `OQL_UNKNOWN_BOOLEAN` | not in the registry | check the properties registry |
 | `OQL_MISSING_OPERATOR` / `OQL_MISSING_VALUE` / `OQL_BAD_NUMBER` | malformed clause | — |
 | `OQL_UNBALANCED_PARENS` | missing `)` | add `)` |
-| `OQL_BAD_SORT` / `OQL_BAD_SAMPLE` / `OQL_BAD_PROXIMITY` / `OQL_PROXIMITY_NEEDS_PHRASE` / `OQL_SEMANTIC_NEEDS_TEXT` / `OQL_TRAILING_TOKENS` | malformed directive/clause | — |
+| `OQL_BAD_SORT` / `OQL_BAD_SAMPLE` / `OQL_BAD_RETURN` / `OQL_BAD_PROXIMITY` / `OQL_PROXIMITY_NEEDS_PHRASE` / `OQL_SEMANTIC_NEEDS_TEXT` / `OQL_TRAILING_TOKENS` | malformed directive/clause | — |
 
 (The reference implementation `tests/oql/oql_v2.py` is the authoritative code list.)
 

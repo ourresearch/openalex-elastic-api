@@ -301,7 +301,39 @@ class GroupByDirective:
         }
 
 
-DirectiveNode = Union[SortDirective, SampleDirective, GroupByDirective]
+@dataclass
+class ReturnMeta:
+    """Metadata for the return directive (#450). List preserves column order
+    (OQO.select order is meaningful — it is the display order)."""
+    columns: List[Dict[str, Any]]  # [{column_id, column_display_name?}, ...]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"columns": list(self.columns)}
+
+
+@dataclass
+class ReturnDirective:
+    """return directive — the OQL surface of OQO.select (#450). Renders
+    `return col1, col2`."""
+    prefix: str
+    segments: List[Segment]
+    meta: ReturnMeta
+
+    @property
+    def type(self) -> str:
+        return "return"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "return",
+            "prefix": self.prefix,
+            "segments": [s.to_dict() for s in self.segments],
+            "meta": self.meta.to_dict()
+        }
+
+
+DirectiveNode = Union[SortDirective, SampleDirective, GroupByDirective,
+                      ReturnDirective]
 
 
 @dataclass

@@ -621,7 +621,7 @@ _CONNECTIVES = {"and", "or"}
 # quoted on render (`… "and" …`) so it folds back as an escaped literal rather
 # than re-parsing as structure. Kept in lockstep with `_Parser._is_run_break_word`.
 _SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "near", "within", "sort", "group",
-                                       "sample"}
+                                       "sample", "return"}
 
 # Characters dropped from a STEMMED search value on render (#3, oxjob #363): the
 # ES stemmed-search analyzer strips this punctuation anyway (so dropping it is
@@ -903,6 +903,64 @@ def _entity_word_index(entity: str) -> Dict[str, str]:
                 idx.setdefault(name.lower(), cid)
     _ENTITY_WORD_INDEX_CACHE[entity] = idx
     return idx
+
+
+# --- column-namespace resolution for the `return` clause (oxjob #450) -------
+# `return` names RESULT COLUMNS (the `column` capability — `?select=`-able result
+# fields), a mostly-disjoint namespace from the filter columns `_parse_field`
+# resolves (works: 58 columns vs 207 filter predicates, 25 overlap). So `return`
+# gets its own word index over `get_entity_column_catalog` — the same public
+# display_name/alias annotations the /properties catalog carries. RAW column
+# names are seeded FIRST and never shadowed, so a raw id always resolves to
+# itself; a display_name/alias that collides across columns (e.g. sources
+# "country" naming both `country` and `country_code`) resolves to its
+# first-seeded owner, and the RENDER map below only uses a friendly word whose
+# parse maps back to the same column — round-trip safe by construction.
+_COLUMN_MAPS_CACHE: Dict[str, Tuple[Dict[str, str], Dict[str, str], int]] = {}
+
+
+def _entity_column_maps(entity: Optional[str]) -> Tuple[Dict[str, str], Dict[str, str], int]:
+    """(word_index, render_map, max_words) for one entity's column namespace.
+    word_index: {word (lower) -> column name}; render_map: {column name ->
+    canonical render word (friendly when round-trip-safe, else the raw name)};
+    max_words: longest word_index key in words (greedy-match bound). Empty maps
+    when the entity/registry/result-schema is unavailable (keeps oql_lang
+    importable in lightweight contexts)."""
+    if not entity:
+        return {}, {}, 1
+    if entity in _COLUMN_MAPS_CACHE:
+        return _COLUMN_MAPS_CACHE[entity]
+    try:
+        from core.properties import get_entity_column_catalog
+        catalog = get_entity_column_catalog(entity)
+    except Exception:
+        catalog = {}
+    idx: Dict[str, str] = {}
+    for name in sorted(catalog):
+        idx.setdefault(name.lower(), name)
+    max_words = 1
+    for name in sorted(catalog):
+        prop = catalog[name]
+        names = [getattr(prop, "display_name", "")] + list(getattr(prop, "aliases", []) or [])
+        for nm in names:
+            if not nm:
+                continue
+            idx.setdefault(nm.lower(), name)
+            max_words = max(max_words, len(nm.split()))
+    render: Dict[str, str] = {}
+    for name in sorted(catalog):
+        friendly = getattr(catalog[name], "display_name", "") or ""
+        render[name] = friendly if idx.get(friendly.lower()) == name else name
+    _COLUMN_MAPS_CACHE[entity] = (idx, render, max_words)
+    return idx, render, max_words
+
+
+def _column_render_word(entity: str, column_id: str) -> str:
+    """Canonical `return` render word for a column: its friendly display_name when
+    that word parses back to this exact column, else the raw column name (which
+    always round-trips through the raw-name seeding above)."""
+    _, render, _ = _entity_column_maps(entity)
+    return render.get(column_id, column_id)
 
 
 def _entity_resolve_field(fld: "Field", entity: Optional[str]) -> "Field":
@@ -1307,6 +1365,7 @@ class _Parser:
         filters: List[FilterType] = []
         sort_by: List[SortBy] = []
         group_by: List[GroupBy] = []
+        select: List[str] = []
         sample = None
         seed = None
         self._skip_annot()
@@ -1341,6 +1400,9 @@ class _Parser:
             elif t.kind == "WORD" and t.val.lower() == "sample":
                 self.next()
                 sample, seed = self._parse_sample()
+            elif t.kind == "WORD" and t.val.lower() == "return":
+                self.next()
+                select = self._parse_return()
             else:
                 if self._ctx_mode:
                     # trailing junk after a complete query: offer directives / end
@@ -1349,9 +1411,9 @@ class _Parser:
                 raise oql_error("OQL_TRAILING_TOKENS",
                                f'unexpected text near "{t.val}" (position {t.pos})',
                                'queries are: <entity> [where <conditions>] [sort by ...] '
-                               '[group by ...] [sample N]', t.pos)
+                               '[group by ...] [sample N] [return col1, col2]', t.pos)
         return OQO(get_rows=entity, filter_rows=filters, sort_by=sort_by,
-                   group_by=group_by, sample=sample, seed=seed)
+                   group_by=group_by, sample=sample, seed=seed, select=select)
 
     # -- editor-context entry (dual mode; oxjob #363, decision 15) --
     def parse_for_context(self) -> dict:
@@ -1466,7 +1528,7 @@ class _Parser:
                     return
                 if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
                     return
-                if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample"):
+                if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample", "return"):
                     return
                 # A new field clause begins here (e.g. `... year is abc title is x`):
                 # stop so the connective loop reports the missing AND/OR rather than
@@ -1540,7 +1602,8 @@ class _Parser:
                 operands.append(self._operand_tracked())
                 continue
             # directive keywords end the where-expression
-            if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample"):
+            if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample",
+                                                      "return"):
                 break
             # anything else with no connective = implicit adjacency
             if self._recover_mode:
@@ -1743,7 +1806,7 @@ class _Parser:
         while True:
             t = self.peek()
             if not t or t.kind != "WORD" or t.val.lower() in _CONNECTIVES \
-               or t.val.lower() in ("sort", "group", "sample"):
+               or t.val.lower() in ("sort", "group", "sample", "return"):
                 break
             parts.append(t.val)
             self.next()
@@ -1877,7 +1940,7 @@ class _Parser:
         t = self.peek()
         if t is None or t.kind in ("RP", "SEMI", "COMMA"):
             return False
-        if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample"):
+        if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample", "return"):
             return False
         if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
             # Editor context: a connective with NOTHING after it (cursor sits right
@@ -2059,7 +2122,7 @@ class _Parser:
                 break
             if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
                 break  # explicit connective -> handled by _parse_bool_expr
-            if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample"):
+            if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample", "return"):
                 break
             atoms.append(self._group_operand(parse_operand))  # implicit AND
         if len(atoms) == 1:
@@ -2153,10 +2216,10 @@ class _Parser:
         """A bare word that TERMINATES a multi-word search run (#1) rather than
         folding into its stemmed value: a boolean connective, `not`, or a
         search/directive keyword the grammar handles after the run (`near`,
-        `within`, `sort`, `group`, `sample`)."""
+        `within`, `sort`, `group`, `sample`, `return`)."""
         low = val.lower()
         return (low in _CONNECTIVES or low == "not"
-                or low in ("near", "within", "sort", "group", "sample"))
+                or low in ("near", "within", "sort", "group", "sample", "return"))
 
     def _parse_search_atom(self, base: str, in_group: bool = False) -> LeafFilter:
         # Stemming is ON by default; quotes turn it OFF (exact). `near "phrase"`
@@ -2381,6 +2444,54 @@ class _Parser:
             break
         return dims
 
+    def _parse_return(self) -> List[str]:
+        # return col1, col2, … — the OQL surface of `OQO.select` (oxjob #450).
+        # Resolves over the COLUMN namespace (`_entity_column_maps`), NOT the
+        # filter namespace `_parse_field` reads: the two are mostly disjoint
+        # (`return open_access` / `return authorships` name result columns that
+        # are not filter predicates). Order is meaningful and preserved.
+        cols = []
+        while True:
+            cols.append(self._parse_return_field())
+            self._skip_annot()
+            t = self.peek()
+            if t and t.kind == "COMMA":
+                self.next(); continue
+            break
+        return cols
+
+    def _parse_return_field(self) -> str:
+        self._want(CTX_FIELD, directive="return")
+        t = self.peek()
+        if not t or t.kind != "WORD":
+            raise oql_error("OQL_BAD_RETURN", "expected a column to return",
+                           "e.g. return id, title, cited by count",
+                           t.pos if t else None)
+        # Greedy longest match over the column namespace: raw column name,
+        # display_name, or alias (mirrors match_field's longest-wins rule).
+        idx, _render, max_words = _entity_column_maps(self._entity)
+        best = None
+        best_len = 0
+        parts: List[str] = []
+        for k in range(0, max(max_words, 1)):
+            tk = self.peek(k)
+            if not tk or tk.kind != "WORD":
+                break
+            parts.append(tk.val)
+            key = " ".join(parts).lower()
+            if key in idx:
+                best = idx[key]
+                best_len = k + 1
+        if best is not None:
+            self.i += best_len
+            return best
+        # Unknown word: consume one token and pass it through verbatim — the
+        # validator gates `select` against the column capability and reports a
+        # structured invalid-column error (mirrors `_parse_sort_field`'s
+        # accept-bare-word behavior).
+        self.next()
+        return t.val
+
     def _parse_sample(self):
         self._want(CTX_VALUE, kind="num", field="sample")
         t = self.peek()
@@ -2580,7 +2691,7 @@ def _value_needs_quote(value: str) -> bool:
     return (any(c.isspace() for c in value)
             or value.lower() in _CONNECTIVES
             or value.lower() in ("not", "is", "contains", "where", "sort", "group",
-                                 "sample", "unknown", "null")
+                                 "sample", "return", "unknown", "null")
             or any(c in value for c in "()[],;\""))
 
 
@@ -2743,7 +2854,8 @@ def _factored_segments(f: FilterType, render_leaf):
 from query_translation.oql_render_tree import (  # noqa: E402
     OQLRenderTree, EntityHead, GroupNode, ClauseNode, Segment, SegmentMeta,
     ClauseMeta, GroupMeta, EntityValue, SortDirective, SampleDirective,
-    GroupByDirective, GroupByMeta, SortMeta, SampleMeta, ExprNode, stringify,
+    GroupByDirective, GroupByMeta, SortMeta, SampleMeta, ReturnDirective,
+    ReturnMeta, ExprNode, stringify,
 )
 
 
@@ -3010,6 +3122,20 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
             segs.append(_seg("value", str(oqo.seed), value=oqo.seed))
         directives.append(SampleDirective(
             prefix="sample ", segments=segs, meta=SampleMeta(n=oqo.sample)))
+    if oqo.select:
+        # `return` renders LAST: it's the query's output projection, read after
+        # the row semantics (filter/group/sort/sample). Omitted when empty
+        # (absent select ⇒ full object). (oxjob #450)
+        segs = []
+        cols = []
+        for i, c in enumerate(oqo.select):
+            nm = _column_render_word(oqo.get_rows, c)
+            if i:
+                segs.append(_seg("text", ", "))
+            segs.append(_seg("column", nm, column_id=c))
+            cols.append({"column_id": c, "column_display_name": nm})
+        directives.append(ReturnDirective(
+            prefix="return ", segments=segs, meta=ReturnMeta(columns=cols)))
 
     return OQLRenderTree(version="1.0", entity=head, where_keyword=where_keyword,
                          where=where, directives=directives)

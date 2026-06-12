@@ -99,12 +99,13 @@ def build_schema() -> dict:
             "select": {
                 "type": "array",
                 "description": (
-                    "Column projection (#318): the result-schema field names "
-                    "each returned row should carry, e.g. ['id','display_name',"
-                    "'cited_by_count']. Order is meaningful (display order). "
-                    "Absent/empty ⇒ the full object. Valid fields are the "
-                    "entity's result-schema fields (the same set the URL "
-                    "`?select=` accepts), NOT the filter-column registry."
+                    "Column projection (#318): the columns each returned row "
+                    "should carry, e.g. ['id','display_name','cited_by_count']. "
+                    "Order is meaningful (display order). Absent/empty ⇒ the "
+                    "full object. Valid values are the entity's column-capable "
+                    "properties (the registry `column` capability, #450 — the "
+                    "same set the URL `?select=` accepts), NOT its filter "
+                    "predicates. OQL surface: the `return col1, col2` clause."
                 ),
                 "items": {"type": "string"},
                 "default": [],

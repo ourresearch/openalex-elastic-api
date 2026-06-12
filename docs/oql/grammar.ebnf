@@ -8,9 +8,11 @@ query        ::= entity ( 'where' conditions )? directive*
 
 entity       ::= word
 
-directive    ::= groupBy | sortBy | sample | ';'
+directive    ::= groupBy | sortBy | sample | returnCols | ';'
 
 groupBy      ::= 'group' 'by' word ( ',' word )*
+
+returnCols   ::= 'return' field ( ',' field )*
 
 sortBy       ::= 'sort' 'by' sortKey ( ',' sortKey )*
 

@@ -226,6 +226,75 @@ def get_property(entity_type, property_name):
 
 
 # ---------------------------------------------------------------------------
+# Unified per-property capabilities (#450)
+#
+# ONE catalog answering "which clauses may target property X on entity Y?" across
+# all four affordances: filter / sort / group_by / column. Before #450 these were
+# gated against THREE different sources — filter+sort+group_by via ENTITY_PROPERTIES
+# membership, but `column`/`select` against a SEPARATE namespace (the marshmallow
+# MessageSchema result-schema, `get_selectable_fields`). That split is the drift the
+# OQL `return` work surfaced: a property's `column` capability lived nowhere near its
+# filter/sort/group_by ones. `get_entity_capabilities` unions them so the validator,
+# OQL, and (later) the public /properties contract all gate off the SAME capability
+# set per property. Behavior-preserving by construction — locked by
+# tests/functional/test_capability_parity.py:
+#   * filter / search  — exactly the Field's declared actions
+#   * sort, group_by   — every ENTITY_PROPERTIES column (the prior universal
+#                        membership rule the validator already applied)
+#   * column           — every get_selectable_fields() result-schema field name
+# Column-only result fields (open_access, authorships, id, …) are column-capable but
+# carry NO filter/sort/group_by — they are not ENTITY_PROPERTIES columns. Conversely
+# filter-only predicates (has_doi, is_retracted, *.search) are sort/group_by-able but
+# not column-capable (not returnable result fields).
+# ---------------------------------------------------------------------------
+
+CAP_FILTER = "filter"
+CAP_SORT = "sort"
+CAP_GROUP_BY = "group_by"
+CAP_COLUMN = "column"
+
+
+def get_entity_capabilities(entity_type):
+    """{property_name: frozenset(capabilities)} for an entity, or None if the entity
+    is unknown (no filter registry AND no result schema). The single source of truth
+    the OQO validator gates filter/sort/group_by/column on (#450)."""
+    base = ENTITY_PROPERTIES.get(entity_type)
+    selectable = get_selectable_fields(entity_type)
+    if base is None and selectable is None:
+        return None
+    caps = {}
+    for name, prop in (base or {}).items():
+        affordances = set(prop.actions)   # filter / search, as declared on the Field
+        affordances.add(CAP_SORT)         # every registry column is sortable …
+        affordances.add(CAP_GROUP_BY)     # … and groupable (prior membership rule)
+        caps[name] = affordances
+    for name in (selectable or set()):
+        caps.setdefault(name, set()).add(CAP_COLUMN)
+    return {name: frozenset(affordances) for name, affordances in caps.items()}
+
+
+def get_entity_columns(entity_type):
+    """The column-capable (returnable / `?select=`-able) property names for an entity
+    — what an OQL `return` clause may name. `None` when the column set can't be
+    determined (no result schema), so callers skip column validation rather than
+    reject everything — preserving the pre-#450 `get_selectable_fields is None` skip."""
+    selectable = get_selectable_fields(entity_type)
+    return None if selectable is None else set(selectable)
+
+
+def get_entity_column_catalog(entity_type):
+    """{column_name: Property} for the entity's column-capable properties, with
+    the display_name/aliases the public catalog carries — the friendly-name
+    source the OQL `return` clause resolves and renders against (#450). Empty
+    dict when the column set can't be determined."""
+    columns = get_entity_columns(entity_type)
+    if not columns:
+        return {}
+    merged = _merged_properties(entity_type)
+    return {name: merged[name] for name in columns if name in merged}
+
+
+# ---------------------------------------------------------------------------
 # Canonical render + content fingerprint (#331 Phase 2)
 #
 # The catalog is the runtime source of truth; the rendered payload below is its
