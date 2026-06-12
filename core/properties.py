@@ -33,6 +33,15 @@ from dataclasses import replace
 from core.display_names import resolve_display_name
 from core.fields import Property
 from core.property_categories import resolve_category
+from core.validate import group_by_rejection
+
+# The action/capability vocabulary (#450): which clauses may target a property.
+# Defined ahead of the boot-time catalog build, which bakes the derived
+# `sort`/`group_by` onto every property via `_derive_actions`.
+CAP_FILTER = "filter"
+CAP_SORT = "sort"
+CAP_GROUP_BY = "group_by"
+CAP_COLUMN = "column"
 
 # Human-curated semver of the published /properties contract (#331 Decision C).
 # MINOR/MAJOR only — no PATCH lane (the fingerprint already records that the
@@ -118,7 +127,26 @@ from core.property_categories import resolve_category
 # Public catalog drops: works 220→210; ~26 demotions across the other 7 entities. Jason signed off
 # the curated merge decisions 2026-06-12 (oxjobs #446: aggressive ID unification; .license canonical;
 # merge BOTH lineage spellings). = MAJOR.
-PROPERTIES_VERSION = "3.0.0"
+# 4.0.0 (#450 capability surfacing): per-property `actions` is now the FULL capability
+# contract {filter, search, sort, group_by, column}, derived API-actual and published —
+# one registry, every consumer (OQLO charter decision 19):
+#   * RENAMED the `select` action -> `column` (MAJOR; no deprecation alias — pre-launch, no
+#     users). Naming map: capability = `column`, OQL keyword = `return`, WIRE unchanged
+#     (`?select=` / OQO.select).
+#   * ADDED `sort` to every filter-capable property. core/sort.py resolves any registry
+#     field, but sorting a search column or the `collection` transport 500s in ES
+#     (live-probed 2026-06-12) — capability follows the `filter` action, the set that
+#     genuinely sorts.
+#   * ADDED `group_by` to the filter-capable properties the live single-dim rule accepts,
+#     derived from core/validate.py `group_by_rejection` — the SAME function the request
+#     path enforces, so catalog and enforcement cannot drift (no dates, no search fields,
+#     numerics only via GROUP_BY_RANGE_FIELD_EXCEPTIONS, minus DO_NOT_GROUP_BY /
+#     referenced_works).
+# The OQO validator tightened to the same sets (pre-launch; the loose membership rule had
+# accepted e.g. `group by doi`, which the live API rejects). API-actual parity locked by
+# tests/functional/test_capability_parity.py. Jason-approved 2026-06-12 (#450 session,
+# clean-MAJOR call). = MAJOR.
+PROPERTIES_VERSION = "4.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -176,11 +204,39 @@ def _build_entity_properties(entity_type, module_name):
         category = resolve_category(entity_type, param)
         out[param] = replace(
             field.to_property(),
+            actions=_derive_actions(field),
             display_name=display_name,
             aliases=aliases,
             category=category,
         )
     return _fold_alternate_keys(out, entity_type)
+
+
+def _derive_actions(field):
+    """One field's full action set: the Field's declared affordances
+    (filter / search; [] = synthetic transport) plus the DERIVED `sort` and
+    `group_by` capabilities (#450), each taken from the real engine rule so the
+    catalog can't drift from what the server executes:
+
+      * sort — every filter-capable column. API-actual: `core/sort.py` resolves
+        any registry field, but a sort on a search column or the `collection`
+        transport 500s in ES (live-probed 2026-06-12) — so capability follows
+        the `filter` action, the set that genuinely sorts.
+      * group_by — filter-capable columns the live single-dim rule accepts
+        (`core.validate.group_by_rejection`: no dates, no search fields,
+        numerics only via GROUP_BY_RANGE_FIELD_EXCEPTIONS, minus
+        DO_NOT_GROUP_BY / referenced_works).
+
+    The `column` capability is NOT derived here — it comes from the result
+    schema (`get_selectable_fields`) and is unioned in by `_merged_properties`
+    / `get_entity_capabilities`, since column-only result fields have no engine
+    `Field` at all."""
+    actions = list(field.actions)
+    if CAP_FILTER in actions:
+        actions.append(CAP_SORT)
+        if group_by_rejection(field) is None:
+            actions.append(CAP_GROUP_BY)
+    return actions
 
 
 def _fold_alternate_keys(out, entity_type):
@@ -246,44 +302,34 @@ def get_property(entity_type, property_name):
 #
 # ONE catalog answering "which clauses may target property X on entity Y?" across
 # all four affordances: filter / sort / group_by / column. Before #450 these were
-# gated against THREE different sources — filter+sort+group_by via ENTITY_PROPERTIES
-# membership, but `column`/`select` against a SEPARATE namespace (the marshmallow
-# MessageSchema result-schema, `get_selectable_fields`). That split is the drift the
-# OQL `return` work surfaced: a property's `column` capability lived nowhere near its
-# filter/sort/group_by ones. `get_entity_capabilities` unions them so the validator,
-# OQL, and (later) the public /properties contract all gate off the SAME capability
-# set per property. Behavior-preserving by construction — locked by
-# tests/functional/test_capability_parity.py:
-#   * filter / search  — exactly the Field's declared actions
-#   * sort, group_by   — every ENTITY_PROPERTIES column (the prior universal
-#                        membership rule the validator already applied)
-#   * column           — every get_selectable_fields() result-schema field name
+# gated against THREE different sources — filter via ENTITY_PROPERTIES, sort and
+# group_by as loose membership rules coded in the validator, and `column`/`select`
+# against a SEPARATE namespace (the marshmallow MessageSchema result-schema,
+# `get_selectable_fields`). Now `sort`/`group_by` are BAKED onto each Property at
+# boot (`_derive_actions`, from the real engine rules) and `column` is unioned in
+# from the result schema — the validator, OQL, and the public /properties contract
+# all gate off the SAME per-property action set. API-actual parity is locked by
+# tests/functional/test_capability_parity.py.
 # Column-only result fields (open_access, authorships, id, …) are column-capable but
 # carry NO filter/sort/group_by — they are not ENTITY_PROPERTIES columns. Conversely
-# filter-only predicates (has_doi, is_retracted, *.search) are sort/group_by-able but
-# not column-capable (not returnable result fields).
+# filter-only predicates (has_doi, *.search) can be sortable/groupable but not
+# column-capable (not returnable result fields).
 # ---------------------------------------------------------------------------
-
-CAP_FILTER = "filter"
-CAP_SORT = "sort"
-CAP_GROUP_BY = "group_by"
-CAP_COLUMN = "column"
 
 
 def get_entity_capabilities(entity_type):
     """{property_name: frozenset(capabilities)} for an entity, or None if the entity
     is unknown (no filter registry AND no result schema). The single source of truth
-    the OQO validator gates filter/sort/group_by/column on (#450)."""
+    the OQO validator gates filter/sort/group_by/column on (#450). Reads each
+    Property's baked actions (`_derive_actions`) — including alias columns (#446),
+    which keep the same capabilities as their canonical so a raw-URL-accepted alias
+    sort/group key never rejects — and unions the `column` capability from the
+    result schema."""
     base = ENTITY_PROPERTIES.get(entity_type)
     selectable = get_selectable_fields(entity_type)
     if base is None and selectable is None:
         return None
-    caps = {}
-    for name, prop in (base or {}).items():
-        affordances = set(prop.actions)   # filter / search, as declared on the Field
-        affordances.add(CAP_SORT)         # every registry column is sortable …
-        affordances.add(CAP_GROUP_BY)     # … and groupable (prior membership rule)
-        caps[name] = affordances
+    caps = {name: set(prop.actions) for name, prop in (base or {}).items()}
     for name in (selectable or set()):
         caps.setdefault(name, set()).add(CAP_COLUMN)
     return {name: frozenset(affordances) for name, affordances in caps.items()}
@@ -331,22 +377,21 @@ def _merged_properties(entity_type):
     Two source namespaces are reconciled here:
       * filter columns — keyed by `param` (e.g. `open_access.is_oa`,
         `publication_year`), each already a `Property` in `ENTITY_PROPERTIES`
-        with `actions=["filter"]` (some also `"search"`);
+        carrying its baked actions (filter/search + derived sort/group_by, #450);
       * selectable fields — keyed by result-schema field name (e.g.
         `open_access`, `publication_year`, `abstract_inverted_index`), the exact
         set `?select=` validates against (`get_selectable_fields`).
     A property exists if it is filterable OR selectable. When a name is BOTH
-    (e.g. `publication_year`), `"select"` is unioned into the existing actions.
-    A select-only field (e.g. `open_access`, `abstract_inverted_index`) becomes a
-    new `Property` with `actions=["select"]` and no filter `type`/`operators` —
-    it is selectable but not filterable, and the `actions` discriminator keeps the
-    two never conflated.
+    (e.g. `publication_year`), `"column"` is unioned into the existing actions.
+    A column-only field (e.g. `open_access`, `abstract_inverted_index`) becomes a
+    new `Property` with `actions=["column"]` and no filter `type`/`operators` —
+    it is returnable but not filterable, and the `actions` discriminator keeps the
+    two never conflated. (The action was published as `"select"` until v3.0.0 —
+    renamed to `column` to match the capability vocabulary; the WIRE param stays
+    `?select=`.)
 
-    This union is PUBLIC/render surface only. `ENTITY_PROPERTIES` (and therefore
-    `get_entity_properties`/`get_property`) stays the filter-column projection the
-    validator keys filter/sort/group_by checks off; `select` is validated against
-    `get_selectable_fields`. Both the validator and this render draw from the same
-    two sources, so the public catalog can't drift from what the server accepts.
+    The validator's capability catalog (`get_entity_capabilities`) performs this
+    same union, so the public catalog and what the server accepts can't drift.
     """
     # Identity realignment (#446): drop alias columns (`alternate_of` set) from the
     # PUBLIC catalog — they survive only as `alternate_keys` on their canonical
@@ -362,12 +407,12 @@ def _merged_properties(entity_type):
         if existing is None:
             display_name, aliases = resolve_display_name(entity_type, name)
             merged[name] = Property(
-                name=name, type=None, operators=[], actions=["select"],
+                name=name, type=None, operators=[], actions=[CAP_COLUMN],
                 display_name=display_name, aliases=aliases,
                 category=resolve_category(entity_type, name),
             )
-        elif "select" not in existing.actions:
-            merged[name] = replace(existing, actions=existing.actions + ["select"])
+        elif CAP_COLUMN not in existing.actions:
+            merged[name] = replace(existing, actions=existing.actions + [CAP_COLUMN])
     # Boolean sentence phrasings (#428): copy OQL's curated bool_true/bool_false
     # sentences onto boolean properties. Layered HERE (render surface, lazy) and
     # not in `_build_entity_properties` because `ENTITY_PROPERTIES` builds at

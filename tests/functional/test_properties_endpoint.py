@@ -105,11 +105,12 @@ def test_public_payload_omits_server_internal_keys(client):
 #   - `publication_year` is the clean both-filterable-and-selectable case.
 
 def test_select_only_field_is_a_property_with_select_action(client):
+    # action renamed `select` -> `column` in v4.0.0 (#450)
     works = client.get("/properties/works").get_json()["properties"]["works"]
     for name in ("abstract_inverted_index", "open_access"):
-        assert name in works, f"{name} should appear as a (select-only) property"
+        assert name in works, f"{name} should appear as a (column-only) property"
         prop = works[name]
-        assert prop["actions"] == ["select"]
+        assert prop["actions"] == ["column"]
         # select-only ⇒ not filterable: no value type, no operators.
         assert prop["type"] is None
         assert prop["operators"] == []
@@ -191,11 +192,11 @@ def test_filterable_and_selectable_field_unions_actions(client):
     works = client.get("/properties/works").get_json()["properties"]["works"]
     py = works["publication_year"]
     assert "filter" in py["actions"]
-    assert "select" in py["actions"]
+    assert "column" in py["actions"]
 
 
 def test_filter_only_column_has_no_select_action(client):
     # `open_access.is_oa` is filter-only; the selectable object is the parent
     # `open_access`. The two must not be conflated.
     works = client.get("/properties/works").get_json()["properties"]["works"]
-    assert "select" not in works["open_access.is_oa"]["actions"]
+    assert "column" not in works["open_access.is_oa"]["actions"]

@@ -224,14 +224,17 @@ def validate_export_format(export_format):
         raise APIQueryParamsError(f"Valid formats are {', '.join(valid_formats)}")
 
 
-def validate_group_by(field, params):
-    range_field_exceptions = [
-        "apc_usd",
-        "apc_list.value",
-        "apc_list.value_usd",
-        "apc_paid.value",
-        "apc_paid.value_usd",
-        "authors_count",
+# Numeric (RangeField) columns that ARE groupable, by exception — every other
+# RangeField is rejected by `group_by_rejection` below. Module-level so the
+# properties catalog can derive the `group_by` capability from the same list
+# the request-time validator enforces (#450 — one source of truth).
+GROUP_BY_RANGE_FIELD_EXCEPTIONS = [
+    "apc_usd",
+    "apc_list.value",
+    "apc_list.value_usd",
+    "apc_paid.value",
+    "apc_paid.value_usd",
+    "authors_count",
         "cited_by_count",
         "cited_by_percentile_year.min",
         "cited_by_percentile_year.max",
@@ -262,22 +265,36 @@ def validate_group_by(field, params):
         "topics.field.id",
         "works_count",
     ]
+
+
+def group_by_rejection(field):
+    """The request-independent reason this field can NEVER be a group_by
+    dimension (the exact error message `validate_group_by` raises), or None when
+    the field is groupable. Split out (#450) so the properties catalog derives
+    each property's `group_by` capability from the SAME rule the request-time
+    validator enforces — the two cannot drift. Request-dependent rules (the
+    cursor × boolean interaction) stay in `validate_group_by`."""
     if (
         type(field).__name__ == "DateField"
         or type(field).__name__ == "DateTimeField"
         or (
             type(field).__name__ == "RangeField"
-            and field.param not in range_field_exceptions
+            and field.param not in GROUP_BY_RANGE_FIELD_EXCEPTIONS
         )
         or type(field).__name__ == "SearchField"
     ):
-        raise APIQueryParamsError("Cannot group by date, number, or search fields.")
-    elif field.param == "referenced_works":
-        raise APIQueryParamsError(
-            "Group by referenced_works is not supported at this time."
-        )
-    elif field.param in settings.DO_NOT_GROUP_BY:
-        raise APIQueryParamsError(f"Cannot group by {field.param}.")
+        return "Cannot group by date, number, or search fields."
+    if field.param == "referenced_works":
+        return "Group by referenced_works is not supported at this time."
+    if field.param in settings.DO_NOT_GROUP_BY:
+        return f"Cannot group by {field.param}."
+    return None
+
+
+def validate_group_by(field, params):
+    rejection = group_by_rejection(field)
+    if rejection:
+        raise APIQueryParamsError(rejection)
     elif (
         field.param in settings.BOOLEAN_TEXT_FIELDS
         or field.param in settings.EXTERNAL_ID_FIELDS

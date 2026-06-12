@@ -1,15 +1,15 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "d3f2cc0dffa76b59495504e44ecc81bfcff7c8f952e78da6b0fc07c06389c8c0",
+    "fingerprint": "a82b0a385fa8413bfc42fe63dce1bb4d81e69c8751c2c738d51ce7dbbfc1ec3b",
     "property_count": 784,
-    "version": "3.0.0"
+    "version": "4.0.0"
   },
   "properties": {
     "authors": {
       "affiliations": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -24,7 +24,9 @@
       },
       "affiliations.institution.country_code": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -44,7 +46,9 @@
       },
       "affiliations.institution.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -64,7 +68,9 @@
       },
       "affiliations.institution.lineage": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -84,7 +90,9 @@
       },
       "affiliations.institution.ror": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -104,7 +112,9 @@
       },
       "affiliations.institution.type": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -124,8 +134,10 @@
       },
       "block_key": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -145,8 +157,10 @@
       },
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -185,7 +199,7 @@
       },
       "counts_by_year": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -200,7 +214,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -232,8 +246,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -270,7 +285,7 @@
       },
       "display_name_alternatives": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -285,7 +300,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -304,7 +320,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -323,7 +340,7 @@
       },
       "full_name": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -338,7 +355,9 @@
       },
       "has_orcid": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -356,7 +375,7 @@
       },
       "id": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -371,7 +390,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -386,7 +405,9 @@
       },
       "ids.openalex": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -410,7 +431,7 @@
       },
       "last_known_institutions": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -425,7 +446,9 @@
       },
       "last_known_institutions.continent": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -445,7 +468,9 @@
       },
       "last_known_institutions.country_code": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -465,7 +490,9 @@
       },
       "last_known_institutions.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -485,7 +512,9 @@
       },
       "last_known_institutions.is_global_south": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -503,7 +532,9 @@
       },
       "last_known_institutions.lineage": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -523,7 +554,9 @@
       },
       "last_known_institutions.ror": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -543,7 +576,9 @@
       },
       "last_known_institutions.type": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -563,8 +598,10 @@
       },
       "orcid": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -584,7 +621,9 @@
       },
       "parsed_longest_name.first": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -604,7 +643,9 @@
       },
       "parsed_longest_name.last": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -624,7 +665,9 @@
       },
       "parsed_longest_name.middle": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -644,7 +687,9 @@
       },
       "parsed_longest_name.suffix": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -664,7 +709,7 @@
       },
       "raw_author_names": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -679,7 +724,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -694,7 +739,9 @@
       },
       "scopus": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -714,7 +761,7 @@
       },
       "summary_stats": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -729,7 +776,9 @@
       },
       "summary_stats.2yr_mean_citedness": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -750,7 +799,9 @@
       },
       "summary_stats.h_index": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -771,7 +822,9 @@
       },
       "summary_stats.i10_index": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -792,7 +845,8 @@
       },
       "to_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -811,7 +865,8 @@
       },
       "to_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -830,7 +885,7 @@
       },
       "topic_share": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -845,7 +900,9 @@
       },
       "topic_share.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -865,7 +922,7 @@
       },
       "topics": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -880,7 +937,9 @@
       },
       "topics.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -900,7 +959,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -915,7 +974,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -930,8 +989,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -952,7 +1013,7 @@
       },
       "x_concepts": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -967,7 +1028,9 @@
       },
       "x_concepts.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -992,8 +1055,9 @@
     "awards": {
       "amount": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1014,7 +1078,7 @@
       },
       "co_lead_investigator": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1029,7 +1093,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1044,8 +1108,10 @@
       },
       "currency": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1082,7 +1148,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1114,7 +1180,7 @@
       },
       "display_name": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1146,8 +1212,9 @@
       },
       "doi": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1167,7 +1234,7 @@
       },
       "end_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1182,8 +1249,10 @@
       },
       "end_year": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1204,8 +1273,10 @@
       },
       "funded_outputs": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1225,8 +1296,9 @@
       },
       "funded_outputs_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1247,7 +1319,7 @@
       },
       "funder": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1262,7 +1334,9 @@
       },
       "funder.doi": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1282,7 +1356,9 @@
       },
       "funder.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1302,7 +1378,9 @@
       },
       "funder.ror": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1322,8 +1400,10 @@
       },
       "funder_award_id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1343,7 +1423,9 @@
       },
       "funder_name": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1363,8 +1445,10 @@
       },
       "funder_scheme": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1384,8 +1468,10 @@
       },
       "funding_type": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1405,8 +1491,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1426,7 +1514,7 @@
       },
       "institution_awarded": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1441,7 +1529,9 @@
       },
       "institution_awarded.continent": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1461,7 +1551,9 @@
       },
       "institution_awarded.country_code": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1481,7 +1573,9 @@
       },
       "institution_awarded.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1501,7 +1595,9 @@
       },
       "institution_awarded.lineage": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1521,7 +1617,9 @@
       },
       "institution_awarded.ror": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1541,7 +1639,9 @@
       },
       "institution_awarded.type": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1561,7 +1661,7 @@
       },
       "investigators": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1576,7 +1676,7 @@
       },
       "landing_page_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1591,7 +1691,7 @@
       },
       "lead_investigator": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1606,7 +1706,9 @@
       },
       "lead_investigator.affiliation.country": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1626,7 +1728,9 @@
       },
       "lead_investigator.affiliation.name": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1646,7 +1750,9 @@
       },
       "lead_investigator.family_name": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1666,7 +1772,9 @@
       },
       "lead_investigator.given_name": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1686,7 +1794,9 @@
       },
       "lead_investigator.orcid": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1706,7 +1816,7 @@
       },
       "primary_topic": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1721,7 +1831,9 @@
       },
       "primary_topic.domain.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1741,7 +1853,9 @@
       },
       "primary_topic.field.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1761,7 +1875,9 @@
       },
       "primary_topic.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1781,7 +1897,9 @@
       },
       "primary_topic.subfield.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1801,8 +1919,10 @@
       },
       "provenance": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1822,7 +1942,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1837,7 +1957,7 @@
       },
       "start_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1852,8 +1972,10 @@
       },
       "start_year": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1874,7 +1996,7 @@
       },
       "topics": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1889,7 +2011,9 @@
       },
       "topics.domain.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1909,7 +2033,9 @@
       },
       "topics.field.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1929,7 +2055,9 @@
       },
       "topics.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1949,7 +2077,9 @@
       },
       "topics.subfield.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1969,7 +2099,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -1984,7 +2114,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2001,7 +2131,7 @@
     "concepts": {
       "ancestors": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2016,7 +2146,9 @@
       },
       "ancestors.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2036,8 +2168,10 @@
       },
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -2076,7 +2210,7 @@
       },
       "counts_by_year": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2091,7 +2225,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2123,7 +2257,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2138,8 +2272,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2176,7 +2311,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2195,7 +2331,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2214,7 +2351,9 @@
       },
       "has_wikidata": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2232,7 +2371,7 @@
       },
       "id": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2247,7 +2386,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2262,7 +2401,9 @@
       },
       "ids.openalex": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -2285,7 +2426,7 @@
       },
       "image_thumbnail_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2300,7 +2441,7 @@
       },
       "image_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2315,7 +2456,7 @@
       },
       "international": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2330,8 +2471,10 @@
       },
       "level": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2352,7 +2495,7 @@
       },
       "related_concepts": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2367,7 +2510,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2382,7 +2525,7 @@
       },
       "summary_stats": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2397,7 +2540,9 @@
       },
       "summary_stats.2yr_mean_citedness": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2418,7 +2563,9 @@
       },
       "summary_stats.h_index": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2439,7 +2586,9 @@
       },
       "summary_stats.i10_index": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2460,7 +2609,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2475,7 +2624,7 @@
       },
       "wikidata": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2490,7 +2639,9 @@
       },
       "wikidata_id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2510,7 +2661,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2525,8 +2676,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2549,7 +2702,9 @@
     "continents": {
       "cited_by_count": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -2573,7 +2728,7 @@
       },
       "countries": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2588,7 +2743,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2620,7 +2775,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2635,8 +2790,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2673,7 +2829,7 @@
       },
       "display_name_alternatives": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2688,7 +2844,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2707,7 +2864,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2726,8 +2884,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2745,7 +2905,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2760,7 +2920,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2775,7 +2935,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2790,8 +2950,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2814,7 +2976,7 @@
     "countries": {
       "authors_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2829,8 +2991,10 @@
       },
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -2854,7 +3018,7 @@
       },
       "continent": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2869,7 +3033,7 @@
       },
       "country_code": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2884,7 +3048,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2916,7 +3080,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2931,8 +3095,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2969,7 +3134,7 @@
       },
       "display_name_alternatives": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -2984,7 +3149,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3003,7 +3169,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3022,8 +3189,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3041,7 +3210,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3056,7 +3225,7 @@
       },
       "institutions_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3071,7 +3240,7 @@
       },
       "is_global_south": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3086,7 +3255,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3101,7 +3270,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3116,7 +3285,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3131,8 +3300,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3155,8 +3326,10 @@
     "domains": {
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -3180,7 +3353,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3212,7 +3385,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3227,8 +3400,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3265,7 +3439,7 @@
       },
       "display_name_alternatives": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3280,7 +3454,7 @@
       },
       "fields": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3295,7 +3469,9 @@
       },
       "fields.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3316,7 +3492,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3335,7 +3512,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3354,8 +3532,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3373,7 +3553,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3388,7 +3568,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3403,7 +3583,7 @@
       },
       "siblings": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3418,7 +3598,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3433,7 +3613,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3448,8 +3628,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3472,8 +3654,10 @@
     "fields": {
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -3497,7 +3681,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3529,7 +3713,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3544,8 +3728,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3582,7 +3767,7 @@
       },
       "display_name_alternatives": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3597,7 +3782,7 @@
       },
       "domain": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3612,7 +3797,9 @@
       },
       "domain.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3632,7 +3819,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3651,7 +3839,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3670,8 +3859,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3689,7 +3880,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3704,7 +3895,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3719,7 +3910,7 @@
       },
       "siblings": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3734,7 +3925,7 @@
       },
       "subfields": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3749,7 +3940,9 @@
       },
       "subfields.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3770,7 +3963,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3785,7 +3978,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3800,8 +3993,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3824,7 +4019,7 @@
     "funders": {
       "alternate_titles": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3839,8 +4034,10 @@
       },
       "awards_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3861,8 +4058,10 @@
       },
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -3901,7 +4100,9 @@
       },
       "continent": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3921,8 +4122,10 @@
       },
       "country_code": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3942,7 +4145,7 @@
       },
       "counts_by_year": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3957,7 +4160,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -3989,7 +4192,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4021,8 +4224,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4059,7 +4263,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4078,7 +4283,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4097,7 +4303,7 @@
       },
       "homepage_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4112,7 +4318,7 @@
       },
       "id": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4127,7 +4333,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4142,7 +4348,9 @@
       },
       "ids.crossref": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4162,7 +4370,9 @@
       },
       "ids.doi": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4182,7 +4392,9 @@
       },
       "ids.openalex": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -4205,7 +4417,9 @@
       },
       "ids.ror": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -4227,7 +4441,9 @@
       },
       "ids.wikidata": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -4249,7 +4465,7 @@
       },
       "image_thumbnail_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4264,7 +4480,7 @@
       },
       "image_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4279,7 +4495,9 @@
       },
       "is_global_south": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4297,7 +4515,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4312,7 +4530,7 @@
       },
       "roles": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4327,7 +4545,9 @@
       },
       "roles.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4347,7 +4567,7 @@
       },
       "summary_stats": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4362,7 +4582,9 @@
       },
       "summary_stats.2yr_mean_citedness": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4383,7 +4605,9 @@
       },
       "summary_stats.h_index": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4404,7 +4628,9 @@
       },
       "summary_stats.i10_index": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4425,7 +4651,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4440,8 +4666,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4464,8 +4692,10 @@
     "institution-types": {
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -4489,7 +4719,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4521,7 +4751,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4536,8 +4766,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4574,7 +4805,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4593,7 +4825,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4612,8 +4845,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4631,7 +4866,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4646,7 +4881,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4661,7 +4896,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4676,8 +4911,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4700,7 +4937,7 @@
     "institutions": {
       "associated_institutions": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4715,8 +4952,10 @@
       },
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -4755,7 +4994,9 @@
       },
       "continent": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4775,8 +5016,10 @@
       },
       "country_code": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4796,7 +5039,7 @@
       },
       "counts_by_year": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4811,7 +5054,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4843,8 +5086,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4881,7 +5125,7 @@
       },
       "display_name_acronyms": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4896,7 +5140,7 @@
       },
       "display_name_alternatives": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4911,7 +5155,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4930,7 +5175,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4949,7 +5195,7 @@
       },
       "geo": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4964,7 +5210,9 @@
       },
       "has_ror": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4982,7 +5230,7 @@
       },
       "homepage_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -4997,7 +5245,7 @@
       },
       "id": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5012,7 +5260,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5027,7 +5275,9 @@
       },
       "ids.openalex": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -5051,7 +5301,7 @@
       },
       "image_thumbnail_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5066,7 +5316,7 @@
       },
       "image_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5081,7 +5331,7 @@
       },
       "international": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5096,7 +5346,9 @@
       },
       "is_global_south": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5114,8 +5366,10 @@
       },
       "is_super_system": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5133,8 +5387,10 @@
       },
       "lineage": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5154,7 +5410,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5169,7 +5425,7 @@
       },
       "repositories": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5184,7 +5440,9 @@
       },
       "repositories.host_organization": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5204,7 +5462,9 @@
       },
       "repositories.host_organization_lineage": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5224,7 +5484,9 @@
       },
       "repositories.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5244,7 +5506,7 @@
       },
       "roles": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5259,7 +5521,9 @@
       },
       "roles.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5279,8 +5543,10 @@
       },
       "ror": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5300,8 +5566,10 @@
       },
       "status": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5321,7 +5589,7 @@
       },
       "summary_stats": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5336,7 +5604,9 @@
       },
       "summary_stats.2yr_mean_citedness": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5357,7 +5627,9 @@
       },
       "summary_stats.h_index": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5378,7 +5650,9 @@
       },
       "summary_stats.i10_index": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5399,7 +5673,7 @@
       },
       "topic_share": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5414,7 +5688,9 @@
       },
       "topic_share.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5434,7 +5710,7 @@
       },
       "topics": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5449,7 +5725,9 @@
       },
       "topics.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5469,8 +5747,10 @@
       },
       "type": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5490,7 +5770,7 @@
       },
       "type_id": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5505,7 +5785,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5520,7 +5800,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5535,8 +5815,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5557,7 +5839,7 @@
       },
       "x_concepts": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5572,7 +5854,9 @@
       },
       "x_concepts.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -5597,8 +5881,10 @@
     "keywords": {
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -5637,7 +5923,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5669,8 +5955,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5707,7 +5994,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5726,7 +6014,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5745,8 +6034,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5764,7 +6055,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5779,7 +6070,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5794,7 +6085,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5809,8 +6100,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5833,8 +6126,10 @@
     "languages": {
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -5858,7 +6153,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5890,8 +6185,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5928,7 +6224,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5947,7 +6244,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5966,8 +6264,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -5985,7 +6285,7 @@
       },
       "is_global_south": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6000,7 +6300,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6015,7 +6315,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6030,7 +6330,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6045,8 +6345,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6069,8 +6371,10 @@
     "licenses": {
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -6094,7 +6398,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6126,7 +6430,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6141,8 +6445,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6179,7 +6484,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6198,7 +6504,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6217,8 +6524,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6236,7 +6545,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6251,7 +6560,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6266,7 +6575,7 @@
       },
       "url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6281,7 +6590,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6296,8 +6605,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6337,8 +6648,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6358,7 +6671,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6373,8 +6686,10 @@
       },
       "is_oa": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6392,8 +6707,10 @@
       },
       "is_retracted": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6411,7 +6728,7 @@
       },
       "landing_page_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6426,8 +6743,10 @@
       },
       "language": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6447,8 +6766,10 @@
       },
       "license": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6468,7 +6789,7 @@
       },
       "merge_key": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6483,8 +6804,10 @@
       },
       "native_id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6504,8 +6827,10 @@
       },
       "native_id_namespace": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6525,7 +6850,7 @@
       },
       "pdf_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6540,8 +6865,10 @@
       },
       "provenance": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6561,8 +6888,10 @@
       },
       "publisher": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6582,7 +6911,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6597,8 +6926,10 @@
       },
       "source_id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6618,8 +6949,10 @@
       },
       "source_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6639,8 +6972,10 @@
       },
       "title": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6677,8 +7012,10 @@
       },
       "type": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6698,7 +7035,7 @@
       },
       "urls": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6713,8 +7050,10 @@
       },
       "version": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6734,8 +7073,10 @@
       },
       "work_id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6757,8 +7098,10 @@
     "oa-statuses": {
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -6782,7 +7125,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6814,7 +7157,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6829,8 +7172,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6867,7 +7211,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6886,7 +7231,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6905,8 +7251,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6924,7 +7272,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6939,7 +7287,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6954,7 +7302,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6969,8 +7317,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -6993,7 +7343,7 @@
     "publishers": {
       "alternate_titles": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7008,8 +7358,10 @@
       },
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -7048,7 +7400,9 @@
       },
       "continent": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7068,8 +7422,10 @@
       },
       "country_codes": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7089,7 +7445,7 @@
       },
       "counts_by_year": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7104,7 +7460,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7136,8 +7492,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7174,7 +7531,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7193,7 +7551,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7212,8 +7571,10 @@
       },
       "hierarchy_level": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7234,7 +7595,7 @@
       },
       "homepage_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7249,7 +7610,7 @@
       },
       "id": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7264,7 +7625,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7279,7 +7640,9 @@
       },
       "ids.openalex": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -7302,7 +7665,9 @@
       },
       "ids.ror": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -7324,7 +7689,9 @@
       },
       "ids.wikidata": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -7346,7 +7713,7 @@
       },
       "image_thumbnail_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7361,7 +7728,7 @@
       },
       "image_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7376,8 +7743,10 @@
       },
       "lineage": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7397,8 +7766,10 @@
       },
       "parent_publisher": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7418,7 +7789,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7433,7 +7804,7 @@
       },
       "roles": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7448,7 +7819,9 @@
       },
       "roles.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7468,7 +7841,7 @@
       },
       "sources_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7483,7 +7856,7 @@
       },
       "summary_stats": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7498,7 +7871,9 @@
       },
       "summary_stats.2yr_mean_citedness": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7519,7 +7894,9 @@
       },
       "summary_stats.h_index": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7540,7 +7917,9 @@
       },
       "summary_stats.i10_index": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7561,7 +7940,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7576,8 +7955,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7600,8 +7981,10 @@
     "sdgs": {
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -7640,7 +8023,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7672,7 +8055,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7687,8 +8070,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7725,7 +8109,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7744,7 +8129,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7763,8 +8149,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7782,7 +8170,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7797,7 +8185,7 @@
       },
       "image_thumbnail_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7812,7 +8200,7 @@
       },
       "image_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7827,7 +8215,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7842,7 +8230,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7857,7 +8245,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7872,8 +8260,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7896,8 +8286,10 @@
     "source-types": {
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -7921,7 +8313,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7953,7 +8345,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -7968,8 +8360,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8006,7 +8399,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8025,7 +8419,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8044,8 +8439,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8063,7 +8460,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8078,7 +8475,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8093,7 +8490,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8108,8 +8505,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8132,7 +8531,7 @@
     "sources": {
       "abbreviated_title": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8147,7 +8546,7 @@
       },
       "alternate_titles": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8162,7 +8561,7 @@
       },
       "apc_prices": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8177,7 +8576,9 @@
       },
       "apc_prices.currency": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8197,7 +8598,8 @@
       },
       "apc_prices.price": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8218,8 +8620,10 @@
       },
       "apc_usd": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8240,8 +8644,10 @@
       },
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -8280,7 +8686,9 @@
       },
       "continent": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8300,7 +8708,7 @@
       },
       "country": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8315,8 +8723,10 @@
       },
       "country_code": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8336,7 +8746,7 @@
       },
       "counts_by_year": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8351,7 +8761,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8383,8 +8793,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8421,8 +8832,9 @@
       },
       "first_publication_year": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8443,7 +8855,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8462,7 +8875,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8481,7 +8895,9 @@
       },
       "has_issn": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8499,7 +8915,7 @@
       },
       "homepage_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8514,8 +8930,10 @@
       },
       "host_organization": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8535,7 +8953,9 @@
       },
       "host_organization.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8555,8 +8975,10 @@
       },
       "host_organization_lineage": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8576,7 +8998,7 @@
       },
       "host_organization_name": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8591,7 +9013,7 @@
       },
       "id": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8606,7 +9028,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8621,7 +9043,8 @@
       },
       "ids.mag": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8641,7 +9064,9 @@
       },
       "ids.openalex": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -8664,8 +9089,10 @@
       },
       "is_core": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8683,7 +9110,9 @@
       },
       "is_global_south": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8701,8 +9130,10 @@
       },
       "is_high_oa_rate": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8720,8 +9151,9 @@
       },
       "is_high_oa_rate_since_year": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8742,8 +9174,10 @@
       },
       "is_in_doaj": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8761,8 +9195,9 @@
       },
       "is_in_doaj_since_year": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8783,8 +9218,10 @@
       },
       "is_in_jstage": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8802,8 +9239,9 @@
       },
       "is_in_jstage_since_year": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8824,7 +9262,7 @@
       },
       "is_in_scielo": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8839,7 +9277,7 @@
       },
       "is_indexed_in_scopus": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8854,8 +9292,10 @@
       },
       "is_oa": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8873,8 +9313,10 @@
       },
       "is_ojs": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8892,8 +9334,10 @@
       },
       "issn": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8913,8 +9357,10 @@
       },
       "issn_l": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8934,8 +9380,9 @@
       },
       "last_publication_year": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8956,8 +9403,9 @@
       },
       "oa_flip_year": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8978,7 +9426,7 @@
       },
       "oa_works_count": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -8993,7 +9441,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9008,7 +9456,7 @@
       },
       "societies": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9023,7 +9471,7 @@
       },
       "summary_stats": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9038,7 +9486,9 @@
       },
       "summary_stats.2yr_mean_citedness": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9059,7 +9509,9 @@
       },
       "summary_stats.h_index": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9080,7 +9532,9 @@
       },
       "summary_stats.i10_index": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9101,7 +9555,8 @@
       },
       "to_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9120,7 +9575,8 @@
       },
       "to_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9139,7 +9595,7 @@
       },
       "topic_share": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9154,7 +9610,9 @@
       },
       "topic_share.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9174,7 +9632,7 @@
       },
       "topics": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9189,7 +9647,9 @@
       },
       "topics.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9209,8 +9669,10 @@
       },
       "type": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9230,7 +9692,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9245,7 +9707,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9260,8 +9722,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9282,7 +9746,7 @@
       },
       "x_concepts": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9297,7 +9761,9 @@
       },
       "x_concepts.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -9322,8 +9788,10 @@
     "subfields": {
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -9347,7 +9815,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9379,7 +9847,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9394,8 +9862,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9432,7 +9901,7 @@
       },
       "display_name_alternatives": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9447,7 +9916,7 @@
       },
       "domain": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9462,7 +9931,9 @@
       },
       "domain.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9482,7 +9953,7 @@
       },
       "field": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9497,7 +9968,9 @@
       },
       "field.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9517,7 +9990,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9536,7 +10010,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9555,8 +10030,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9574,7 +10051,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9589,7 +10066,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9604,7 +10081,7 @@
       },
       "siblings": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9619,7 +10096,7 @@
       },
       "topics": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9634,7 +10111,9 @@
       },
       "topics.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9654,7 +10133,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9669,7 +10148,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9684,8 +10163,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9708,8 +10189,10 @@
     "topics": {
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -9748,7 +10231,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9780,7 +10263,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9812,8 +10295,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9850,7 +10334,7 @@
       },
       "domain": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9865,7 +10349,9 @@
       },
       "domain.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9885,7 +10371,7 @@
       },
       "field": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9900,7 +10386,9 @@
       },
       "field.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9920,7 +10408,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9939,7 +10428,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9958,7 +10448,7 @@
       },
       "id": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9973,7 +10463,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -9988,7 +10478,9 @@
       },
       "ids.openalex": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -10011,7 +10503,7 @@
       },
       "keywords": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10043,7 +10535,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10058,7 +10550,7 @@
       },
       "siblings": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10073,7 +10565,7 @@
       },
       "subfield": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10088,7 +10580,9 @@
       },
       "subfield.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "subfield"
@@ -10110,7 +10604,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10125,7 +10619,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10140,8 +10634,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10164,8 +10660,10 @@
     "work-types": {
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -10189,7 +10687,7 @@
       },
       "created_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10204,7 +10702,7 @@
       },
       "crossref_types": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10236,7 +10734,7 @@
       },
       "description": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10251,8 +10749,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10289,7 +10788,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10308,7 +10808,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10327,8 +10828,10 @@
       },
       "id": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10346,7 +10849,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10361,7 +10864,7 @@
       },
       "updated_date": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10376,7 +10879,7 @@
       },
       "works_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10391,8 +10894,10 @@
       },
       "works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10449,7 +10954,7 @@
       },
       "abstract_inverted_index": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10464,7 +10969,7 @@
       },
       "apc_list": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10479,7 +10984,9 @@
       },
       "apc_list.currency": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10499,7 +11006,9 @@
       },
       "apc_list.provenance": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10519,7 +11028,9 @@
       },
       "apc_list.value": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10540,7 +11051,9 @@
       },
       "apc_list.value_usd": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10561,7 +11074,7 @@
       },
       "apc_paid": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10576,7 +11089,9 @@
       },
       "apc_paid.currency": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10596,7 +11111,9 @@
       },
       "apc_paid.provenance": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10616,7 +11133,9 @@
       },
       "apc_paid.value": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10637,7 +11156,9 @@
       },
       "apc_paid.value_usd": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10658,7 +11179,9 @@
       },
       "authors_count": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10679,7 +11202,7 @@
       },
       "authorships": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10694,7 +11217,9 @@
       },
       "authorships.affiliations.institution_ids": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10714,7 +11239,9 @@
       },
       "authorships.author.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -10736,7 +11263,9 @@
       },
       "authorships.author.orcid": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "author orcid"
@@ -10760,7 +11289,9 @@
       },
       "authorships.countries": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10780,7 +11311,9 @@
       },
       "authorships.institutions.continent": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -10802,7 +11335,9 @@
       },
       "authorships.institutions.country_code": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -10824,7 +11359,9 @@
       },
       "authorships.institutions.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -10847,7 +11384,9 @@
       },
       "authorships.institutions.is_global_south": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -10867,7 +11406,9 @@
       },
       "authorships.institutions.lineage": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10887,7 +11428,9 @@
       },
       "authorships.institutions.ror": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -10909,7 +11452,9 @@
       },
       "authorships.institutions.type": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -10931,7 +11476,9 @@
       },
       "authorships.is_corresponding": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -10951,7 +11498,9 @@
       },
       "authorships.raw_orcid": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10971,7 +11520,7 @@
       },
       "awards": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -10986,7 +11535,9 @@
       },
       "awards.doi": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11006,7 +11557,9 @@
       },
       "awards.funder_award_id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11026,7 +11579,9 @@
       },
       "awards.funder_display_name": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11046,7 +11601,9 @@
       },
       "awards.funder_id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11066,7 +11623,9 @@
       },
       "awards.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11086,7 +11645,7 @@
       },
       "best_oa_location": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11101,7 +11660,9 @@
       },
       "best_oa_location.is_accepted": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11119,7 +11680,9 @@
       },
       "best_oa_location.is_oa": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11137,7 +11700,9 @@
       },
       "best_oa_location.is_published": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11155,7 +11720,9 @@
       },
       "best_oa_location.landing_page_url": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11175,7 +11742,9 @@
       },
       "best_oa_location.license": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -11197,7 +11766,9 @@
       },
       "best_oa_location.raw_type": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11217,7 +11788,9 @@
       },
       "best_oa_location.source.host_organization": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11237,7 +11810,9 @@
       },
       "best_oa_location.source.host_organization_lineage": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11257,7 +11832,9 @@
       },
       "best_oa_location.source.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11277,7 +11854,9 @@
       },
       "best_oa_location.source.is_in_doaj": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11295,7 +11874,9 @@
       },
       "best_oa_location.source.is_oa": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11313,7 +11894,9 @@
       },
       "best_oa_location.source.issn": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11333,7 +11916,9 @@
       },
       "best_oa_location.source.type": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11353,7 +11938,9 @@
       },
       "best_oa_location.version": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11373,7 +11960,9 @@
       },
       "best_open_version": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11393,7 +11982,7 @@
       },
       "biblio": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11408,7 +11997,8 @@
       },
       "biblio.first_page": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11428,7 +12018,9 @@
       },
       "biblio.issue": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11448,7 +12040,8 @@
       },
       "biblio.last_page": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11468,7 +12061,9 @@
       },
       "biblio.volume": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11488,7 +12083,7 @@
       },
       "citation_normalized_percentile": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11503,7 +12098,9 @@
       },
       "citation_normalized_percentile.is_in_top_10_percent": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11521,7 +12118,9 @@
       },
       "citation_normalized_percentile.is_in_top_1_percent": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11539,7 +12138,8 @@
       },
       "citation_normalized_percentile.value": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11560,7 +12160,8 @@
       },
       "cited_by": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11580,7 +12181,7 @@
       },
       "cited_by_api_url": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11595,8 +12196,10 @@
       },
       "cited_by_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "citations",
@@ -11620,7 +12223,7 @@
       },
       "cited_by_percentile_year": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11635,7 +12238,9 @@
       },
       "cited_by_percentile_year.max": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11656,7 +12261,9 @@
       },
       "cited_by_percentile_year.min": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11692,7 +12299,7 @@
       },
       "concepts": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11707,7 +12314,9 @@
       },
       "concepts.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -11729,7 +12338,9 @@
       },
       "concepts.wikidata": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11749,7 +12360,9 @@
       },
       "concepts_count": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11770,7 +12383,7 @@
       },
       "content_urls": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11785,8 +12398,10 @@
       },
       "corresponding_author_ids": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11806,8 +12421,10 @@
       },
       "corresponding_institution_ids": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11827,8 +12444,10 @@
       },
       "countries_distinct_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11849,7 +12468,7 @@
       },
       "counts_by_year": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11864,8 +12483,9 @@
       },
       "created_date": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11884,8 +12504,10 @@
       },
       "datasets": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -11939,8 +12561,9 @@
       },
       "display_name": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12000,8 +12623,9 @@
       },
       "doi": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12021,7 +12645,9 @@
       },
       "doi_starts_with": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12041,7 +12667,8 @@
       },
       "from_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12060,7 +12687,8 @@
       },
       "from_publication_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12079,7 +12707,8 @@
       },
       "from_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12139,8 +12768,10 @@
       },
       "fulltext_origin": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12160,7 +12791,7 @@
       },
       "funders": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12175,7 +12806,9 @@
       },
       "funders.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "grants.funder"
@@ -12197,8 +12830,9 @@
       },
       "fwci": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12219,7 +12853,9 @@
       },
       "has_abstract": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12237,7 +12873,7 @@
       },
       "has_content": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12252,7 +12888,9 @@
       },
       "has_content.grobid_xml": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12270,7 +12908,9 @@
       },
       "has_content.pdf": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12288,7 +12928,9 @@
       },
       "has_doi": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12306,7 +12948,9 @@
       },
       "has_embeddings": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12324,8 +12968,10 @@
       },
       "has_fulltext": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12343,7 +12989,9 @@
       },
       "has_oa_accepted_or_published_version": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12361,7 +13009,9 @@
       },
       "has_oa_submitted_version": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12379,7 +13029,9 @@
       },
       "has_old_authors": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12397,7 +13049,9 @@
       },
       "has_orcid": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12415,7 +13069,9 @@
       },
       "has_pdf_url": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12433,7 +13089,9 @@
       },
       "has_pmcid": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12451,7 +13109,9 @@
       },
       "has_pmid": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12469,7 +13129,9 @@
       },
       "has_raw_affiliation_strings": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12487,7 +13149,9 @@
       },
       "has_references": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12505,7 +13169,7 @@
       },
       "id": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12520,7 +13184,7 @@
       },
       "ids": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12535,7 +13199,8 @@
       },
       "ids.mag": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -12557,7 +13222,9 @@
       },
       "ids.openalex": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -12580,7 +13247,8 @@
       },
       "ids.pmcid": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -12602,7 +13270,8 @@
       },
       "ids.pmid": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -12624,8 +13293,10 @@
       },
       "indexed_in": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12645,7 +13316,7 @@
       },
       "institution_assertions": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12660,7 +13331,9 @@
       },
       "institution_assertions.country_code": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12680,7 +13353,9 @@
       },
       "institution_assertions.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12700,7 +13375,9 @@
       },
       "institution_assertions.lineage": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12720,7 +13397,9 @@
       },
       "institution_assertions.ror": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12740,7 +13419,9 @@
       },
       "institution_assertions.type": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12760,7 +13441,7 @@
       },
       "institutions": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12775,8 +13456,10 @@
       },
       "institutions_distinct_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12797,7 +13480,7 @@
       },
       "is_authors_truncated": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12812,8 +13495,10 @@
       },
       "is_paratext": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12831,8 +13516,10 @@
       },
       "is_retracted": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12850,8 +13537,10 @@
       },
       "is_xpac": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12886,7 +13575,7 @@
       },
       "keywords": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12901,7 +13590,9 @@
       },
       "keywords.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12921,8 +13612,10 @@
       },
       "language": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12942,7 +13635,7 @@
       },
       "locations": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12957,7 +13650,9 @@
       },
       "locations.is_accepted": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12975,7 +13670,9 @@
       },
       "locations.is_oa": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -12993,7 +13690,9 @@
       },
       "locations.is_published": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13011,7 +13710,9 @@
       },
       "locations.landing_page_url": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13031,7 +13732,9 @@
       },
       "locations.license": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -13053,7 +13756,9 @@
       },
       "locations.raw_type": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13073,7 +13778,9 @@
       },
       "locations.source.has_issn": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13091,7 +13798,9 @@
       },
       "locations.source.host_organization": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13111,7 +13820,9 @@
       },
       "locations.source.host_organization_lineage": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -13134,7 +13845,9 @@
       },
       "locations.source.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13154,7 +13867,9 @@
       },
       "locations.source.is_core": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13172,7 +13887,9 @@
       },
       "locations.source.is_in_doaj": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13190,7 +13907,9 @@
       },
       "locations.source.is_oa": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13208,7 +13927,9 @@
       },
       "locations.source.issn": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13228,7 +13949,9 @@
       },
       "locations.source.type": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13248,7 +13971,9 @@
       },
       "locations.version": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -13270,8 +13995,10 @@
       },
       "locations_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13292,7 +14019,9 @@
       },
       "mag_only": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13310,7 +14039,7 @@
       },
       "mesh": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13325,7 +14054,7 @@
       },
       "open_access": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13340,7 +14069,9 @@
       },
       "open_access.any_repository_has_fulltext": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13358,7 +14089,9 @@
       },
       "open_access.is_oa": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -13378,7 +14111,9 @@
       },
       "open_access.oa_status": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "OA status"
@@ -13402,7 +14137,7 @@
       },
       "primary_location": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13417,7 +14152,9 @@
       },
       "primary_location.is_accepted": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13435,7 +14172,9 @@
       },
       "primary_location.is_oa": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13453,7 +14192,9 @@
       },
       "primary_location.is_published": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13471,7 +14212,9 @@
       },
       "primary_location.landing_page_url": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13491,7 +14234,9 @@
       },
       "primary_location.license": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -13513,7 +14258,9 @@
       },
       "primary_location.raw_type": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13533,7 +14280,9 @@
       },
       "primary_location.source.has_issn": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13551,7 +14300,9 @@
       },
       "primary_location.source.host_organization": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13571,7 +14322,9 @@
       },
       "primary_location.source.host_organization_lineage": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -13594,7 +14347,9 @@
       },
       "primary_location.source.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [
@@ -13616,7 +14371,9 @@
       },
       "primary_location.source.is_core": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13634,7 +14391,9 @@
       },
       "primary_location.source.is_in_doaj": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13652,7 +14411,9 @@
       },
       "primary_location.source.is_oa": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13670,7 +14431,9 @@
       },
       "primary_location.source.issn": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13690,7 +14453,9 @@
       },
       "primary_location.source.type": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13710,7 +14475,9 @@
       },
       "primary_location.version": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13730,7 +14497,7 @@
       },
       "primary_topic": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13745,7 +14512,9 @@
       },
       "primary_topic.domain.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13765,7 +14534,9 @@
       },
       "primary_topic.field.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13785,7 +14556,9 @@
       },
       "primary_topic.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13805,7 +14578,9 @@
       },
       "primary_topic.subfield.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13825,8 +14600,9 @@
       },
       "publication_date": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13845,8 +14621,10 @@
       },
       "publication_year": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13867,7 +14645,9 @@
       },
       "raw_affiliation_strings": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13926,8 +14706,9 @@
       },
       "referenced_works": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [
           "referenced works"
@@ -13951,8 +14732,10 @@
       },
       "referenced_works_count": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "references count"
@@ -13975,7 +14758,8 @@
       },
       "related_to": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -13995,7 +14779,7 @@
       },
       "related_works": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14010,7 +14794,7 @@
       },
       "relevance_score": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14025,7 +14809,9 @@
       },
       "repository": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14062,7 +14848,7 @@
       },
       "sources": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14077,7 +14863,7 @@
       },
       "sustainable_development_goals": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14092,7 +14878,9 @@
       },
       "sustainable_development_goals.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [
           "sustainable development goal",
@@ -14115,7 +14903,8 @@
       },
       "sustainable_development_goals.score": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14136,7 +14925,7 @@
       },
       "title": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14190,7 +14979,8 @@
       },
       "to_created_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14209,7 +14999,8 @@
       },
       "to_publication_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14228,7 +15019,8 @@
       },
       "to_updated_date": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14247,7 +15039,7 @@
       },
       "topics": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14262,7 +15054,9 @@
       },
       "topics.domain.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14282,7 +15076,9 @@
       },
       "topics.field.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14302,7 +15098,9 @@
       },
       "topics.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14322,7 +15120,9 @@
       },
       "topics.subfield.id": {
         "actions": [
-          "filter"
+          "filter",
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14342,7 +15142,8 @@
       },
       "topics_count": {
         "actions": [
-          "filter"
+          "filter",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14363,8 +15164,10 @@
       },
       "type": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14384,8 +15187,10 @@
       },
       "type_crossref": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "group_by",
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14405,8 +15210,9 @@
       },
       "updated_date": {
         "actions": [
+          "column",
           "filter",
-          "select"
+          "sort"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -14425,7 +15231,7 @@
       },
       "versions": {
         "actions": [
-          "select"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],

@@ -119,7 +119,8 @@ def test_rendered_catalog_is_filter_union_select():
     (#318 / Decision D; #446 alias demotion). The render must NOT mutate
     `ENTITY_PROPERTIES` (the validator's filter-column source) — every selectable
     name appears in the render, every NON-alias filter name appears in the render,
-    and a both-name carries `select` unioned into its filter actions.
+    and a both-name carries `column` unioned into its filter actions (the action
+    was published as `select` until v4.0.0, #450).
     """
     works = render_properties(entity="works")["properties"]["works"]
     filter_names = set(ENTITY_PROPERTIES["works"])
@@ -137,14 +138,14 @@ def test_rendered_catalog_is_filter_union_select():
     assert not (alias_names & set(works)), "demoted aliases must not be in the render"
     assert select_names <= set(works)
 
-    # selectable names carry the `select` action
+    # selectable names carry the `column` action (renamed from `select`, v4.0.0)
     for name in select_names:
-        assert "select" in works[name]["actions"], name
-    # a filter-only name does NOT gain `select` (skip demoted aliases — not rendered)
+        assert "column" in works[name]["actions"], name
+    # a filter-only name does NOT gain `column` (skip demoted aliases — not rendered)
     filter_only = filter_names - select_names - alias_names
     assert filter_only, "expected some filter-only columns on works"
     for name in filter_only:
-        assert "select" not in works[name]["actions"], name
+        assert "column" not in works[name]["actions"], name
 
     # ENTITY_PROPERTIES (validator's filter source) is untouched by the render:
     # select-only names never leak into it.
@@ -154,15 +155,16 @@ def test_rendered_catalog_is_filter_union_select():
 
 
 def test_select_only_property_has_no_filter_surface():
-    """A select-only field (e.g. `abstract_inverted_index`) renders as a property
-    with `actions == ["select"]`, no `type`, no `operators` — it is selectable but
-    not filterable, so it can never be mistaken for a filter column."""
+    """A column-only field (e.g. `abstract_inverted_index`) renders as a property
+    with `actions == ["column"]`, no `type`, no `operators` — it is returnable but
+    not filterable, so it can never be mistaken for a filter column. (Action
+    renamed from `select` in v4.0.0, #450.)"""
     works = render_properties(entity="works")["properties"]["works"]
     select_only = get_selectable_fields("works") - set(ENTITY_PROPERTIES["works"])
     assert "abstract_inverted_index" in select_only
     for name in select_only:
         prop = works[name]
-        assert prop["actions"] == ["select"], name
+        assert prop["actions"] == ["column"], name
         assert prop["type"] is None, name
         assert prop["operators"] == [], name
 
