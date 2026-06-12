@@ -153,10 +153,21 @@ def test_parser_structural_keywords_are_declared_by_the_ebnf():
 # --------------------------------------------------------------------------- #
 # Corpus tokenizes under the EBNF's lexical terminals
 # --------------------------------------------------------------------------- #
+# Diagnostics that fire at the LEXER (a row whose oql can't even tokenize). Such
+# `error` rows are intentionally non-tokenizable, so they are out of scope for the
+# lexical-coverage check below. (zd#8101 row 162 is Claire's own unbalanced-quote
+# line — its whole point is that it does NOT tokenize.)
+_LEXICAL_ERROR_DIAGNOSTICS = {"OQL_UNTERMINATED_STRING"}
+
+
 def _corpus_oql_strings():
     with open(CORPUS) as fh:
         data = yaml.safe_load(fh)
-    return [(r["id"], r["oql"]) for r in data["rows"] if r.get("oql")]
+    return [
+        (r["id"], r["oql"]) for r in data["rows"]
+        if r.get("oql")
+        and r.get("diagnostic") not in _LEXICAL_ERROR_DIAGNOSTICS
+    ]
 
 
 # A token is: a "quoted string", a [bracket annotation], a punctuation operator,

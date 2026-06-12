@@ -192,15 +192,16 @@ def test_standalone_ids_unique():
 def test_coverage_gates():
     """Softer 'enough coverage' gates — distinct from the broken-data checks so a
     coverage shortfall reads differently from a malformed case."""
-    # Mined systematic-review rows (provenance.type == "systematic review",
-    # oxjob #434 -> #363) are literal transcriptions of real librarian boolean
-    # search strategies — large quoted-phrase AND/OR trees, not natural-language
-    # intents anyone would paraphrase. They are out of scope for the NL->OQO eval,
-    # so they don't count toward the NL-coverage denominator.
+    # The "librarian & SR queries" category holds literal transcriptions of real
+    # librarian / systematic-review boolean search strategies — large
+    # quoted-phrase AND/OR trees (zd#8101 Claire, the #434 literature-mined SR
+    # rows, etc.), not natural-language intents anyone would paraphrase. They are
+    # out of scope for the NL->OQO eval, so they don't count toward the
+    # NL-coverage denominator.
     _all_rows = _load_yaml(CORPUS_PATH)["rows"]
     n_corpus_rows = sum(
         1 for r in _all_rows
-        if (r.get("provenance") or {}).get("type") != "systematic review"
+        if r.get("category") != "librarian & SR queries"
     )
     needed = -(-n_corpus_rows * 60 // 100)  # ceil(60% of NL-in-scope corpus rows)
     ref_rows_with_3plus = sum(

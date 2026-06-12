@@ -274,6 +274,13 @@ def test_every_row_has_valid_facets():
         151: "oql-only", 152: "oql-only", 153: "oql-only", 154: "oql-only",
         155: "oql-only", 156: "oql-only", 157: "oql-only", 159: "oql-only",
         160: "oql-only",
+        # zd#8101 Claire's remaining real SR strategies (Vaping & Health,
+        # Educational accountability). All oql-only — each ORs quoted phrases
+        # against bare/stemmed words (and uses within-field NOT), which classic
+        # URL `filter=` syntax can't express. (162 is her own mis-quoted line,
+        # an `error` footgun row — not in this ok-row map.)
+        161: "oql-only", 163: "oql-only", 164: "oql-only",
+        165: "oql-only", 166: "oql-only", 167: "oql-only",
     }
     assert non_has_oxurl == expected, (
         f"oxurl_status classification drifted: "
