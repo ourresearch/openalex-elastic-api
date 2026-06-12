@@ -66,6 +66,15 @@ _SUPPLEMENTAL_NAMES = {
     "A5022654839": "Terry Law",
     "W1984893742": "Uncertainty and Pension Systems Reforms",
     "A5018352470": "Kenji Takizawa",
+    # Keyword entities used by the zd#8101 / #434 SR rows. The resolver keys on
+    # the uppercased last path segment (`keywords/animal-model` -> `ANIMAL-MODEL`).
+    # Names fetched from the live OpenAlex keywords API 2026-06-12; without them
+    # the offline regen mis-annotates these real keywords as `[no entity found]`
+    # on the public cases page.
+    "ANIMAL-MODEL": "Animal model",
+    "ELECTRONIC-CIGARETTE": "Electronic cigarette",
+    "ANTICOAGULANT": "Anticoagulant",
+    "CENTRAL-VENOUS-CATHETER": "Central venous catheter",
 }
 
 # oxurl component order — the readable order users/the GUI emit. `search.semantic`

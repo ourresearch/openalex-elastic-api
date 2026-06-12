@@ -1895,8 +1895,8 @@ rows:
   oxurl: 'https://openalex.org/works?filter=keywords.id:!keywords/animal-model,keywords.id:keywords/electronic-cigarette,language:en,publication_year:2003-2025,type:types/article'
   status: ok
   oql: |-
-    works where keyword is not keywords/animal-model [no entity found]
-      and keyword is keywords/electronic-cigarette [no entity found]
+    works where keyword is not keywords/animal-model [Animal model]
+      and keyword is keywords/electronic-cigarette [Electronic cigarette]
       and language is en [English]
       and year is 2003-2025
       and type is types/article
@@ -1927,7 +1927,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=keywords.id:!keywords/animal-model,language:en,publication_year:2003-2025,type:types/article,display_name.search:vape|vaper|vapers|vapes|vaping'
   status: ok
   oql: |-
-    works where keyword is not keywords/animal-model [no entity found]
+    works where keyword is not keywords/animal-model [Animal model]
       and language is en [English]
       and year is 2003-2025
       and type is types/article
@@ -2760,7 +2760,7 @@ rows:
     title/abstract search.
   oql: |-
     works where (
-        keyword is keywords/anticoagulant [no entity found]
+        keyword is keywords/anticoagulant [Anticoagulant]
         or title/abstract contains INR
         or title/abstract contains aPTT
         or title/abstract contains coagulopathy
@@ -2769,7 +2769,7 @@ rows:
         or title/abstract contains "coagulation disorder"
       )
       and (
-        keyword is keywords/central-venous-catheter [no entity found]
+        keyword is keywords/central-venous-catheter [Central venous catheter]
         or title/abstract contains CVC
         or title/abstract contains "central line"
         or title/abstract contains "central venous catheter"
@@ -2804,7 +2804,7 @@ rows:
     b). Plus year/type/language scalars and a negated keyword filter. oql-only
     (mixes proximity/exact and stemmed match modes).
   oql: |-
-    works where keyword is not keywords/animal-model [no entity found]
+    works where keyword is not keywords/animal-model [Animal model]
       and language is en [English]
       and year is 2003-2025
       and type is types/article
@@ -2974,7 +2974,7 @@ rows:
     scalar + negated-keyword tail as row 161. (Fixes the mis-quoted line 8 =
     row 162.)
   oql: |-
-    works where keyword is not keywords/animal-model [no entity found]
+    works where keyword is not keywords/animal-model [Animal model]
       and language is en [English]
       and year is 2003-2025
       and type is types/article

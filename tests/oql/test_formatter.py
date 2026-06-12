@@ -45,6 +45,12 @@ _SUPPLEMENTAL_NAMES = {
     "A5022654839": "Terry Law",
     "W1984893742": "Uncertainty and Pension Systems Reforms",
     "A5018352470": "Kenji Takizawa",
+    # Keyword entities for the zd#8101 / #434 SR rows (2026-06-12). KEEP IN SYNC
+    # with docs/oql/regen_corpus_oql.py._SUPPLEMENTAL_NAMES.
+    "ANIMAL-MODEL": "Animal model",
+    "ELECTRONIC-CIGARETTE": "Electronic cigarette",
+    "ANTICOAGULANT": "Anticoagulant",
+    "CENTRAL-VENOUS-CATHETER": "Central venous catheter",
 }
 with open(CORPUS) as _fh:
     _NAMES: dict = dict(_SUPPLEMENTAL_NAMES)
