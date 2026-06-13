@@ -652,7 +652,7 @@ class Tok:
     pos: int
 
 
-_WORD_BREAK = set(' \t\n"[](),;')
+_WORD_BREAK = set(' \t\n"[](),;!')
 
 
 def lex(s: str) -> List[Tok]:
@@ -709,6 +709,11 @@ def lex(s: str) -> List[Tok]:
             if i + 1 < n and s[i + 1] == '=':
                 op += '='
             toks.append(Tok("OP", op, i)); i += len(op); continue
+        if c == '!':
+            # within-`.search`-value WoS NOT operator: `A!B` = A AND NOT B (#432).
+            # Only meaningful infix inside a `contains` value group; the parser
+            # (_parse_search_operand) consumes it. A literal `!` must be quoted.
+            toks.append(Tok("BANG", c, i)); i += 1; continue
         # WORD: run until a break char
         j = i
         while j < n and s[j] not in _WORD_BREAK:
@@ -2234,7 +2239,19 @@ class _Parser:
                            f'"{t.val.lower()} of (…)" was removed; '
                            "write the list with parentheses",
                            "e.g. contains (a or b)", t.pos)
-        return self._parse_search_atom(base, in_group=True)
+        operand = self._parse_search_atom(base, in_group=True)
+        # within-`.search`-value WoS NOT: `A!B[!C…]` = A AND NOT B AND NOT C …
+        # (#432; the same decomposition the OXURL parser does, #431). `!` lexes as
+        # BANG; each excluded operand is parsed as a normal atom so it routes to
+        # the right column (quoted -> .search.exact, bare -> .search) and is then
+        # negated. The leading run is positive; every `!run` is a negated clause.
+        nt = self.peek()
+        while nt is not None and nt.kind == "BANG":
+            self.next()
+            excluded = self._parse_search_atom(base, in_group=True)
+            operand = BranchFilter(join="and", filters=[operand, _negate(excluded)])
+            nt = self.peek()
+        return operand
 
     def _is_run_break_word(self, val: str) -> bool:
         """A bare word that TERMINATES a multi-word search run (#1) rather than

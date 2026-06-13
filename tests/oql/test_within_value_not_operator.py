@@ -1,68 +1,35 @@
-"""Known-bug tests for negation shapes that currently parse-but-wrong (#432).
+"""Spec tests for the within-`.search`-value `!` NOT operator (zd#8101 WoS idiom).
 
-These are DELIBERATE red tests, not skips: each documents a negation form the
-parser accepts today but resolves incorrectly. They fail until #363 fixes the
-behavior, at which point they go green (and then guard against regression).
+Inside a field-scoped search value, `A!B` means "A AND NOT B" — the compact form
+librarians paste verbatim from Web of Science / Scopus. It MUST desugar to the
+same query as the explicit `(A and not(B))` form (charter decision 21's functional
+`not()`):
 
-Per Jason (2026-06-13): a corpus case passes fully or it doesn't exist — no
-skipped/xfail placeholder rows. So these live OUTSIDE the corpus (not rows in
-corpus.yaml) as standalone failing tests, and the assertion is written to be
-**resolution-independent**: it holds whether #363 ends up (a) parsing the idiom
-correctly OR (b) rejecting it with a loud diagnostic. Either fix turns these
-green; only the current silent mis-parse fails them.
+  * `England!"New England"`  ==  `England and not("New England")`
+        a quoted `!"phrase"` excludes the EXACT phrase (column → `.search.exact`).
+  * `vaccine!mandatory`      ==  `vaccine and not(mandatory)`
+        a bare `!term` excludes the stemmed term.
 
-Full write-up + the open parse-vs-reject decision:
-  oxjobs working/oql-systematic-reviews/work/NEGATION_PROBLEM_SPACE.md
+#432: was a silent mis-parse — the `!` got swallowed into one positive token
+(`England! New England`), so the excluded phrase was positively REQUIRED. Fixed
+in the search-value grammar. See
+oxjobs working/oql-systematic-reviews/work/NEGATION_PROBLEM_SPACE.md
 """
-from tests.oql.oql_v2 import parse, OQLError
+from tests.oql.oql_v2 import parse
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 
 
-def _leaves(node):
-    """Yield every leaf filter dict under an OQO filter node (groups nest via
-    `filters`)."""
-    if isinstance(node, dict) and "filters" in node:
-        for child in node["filters"]:
-            yield from _leaves(child)
-    else:
-        yield node
+def _canon(oql):
+    return canonicalize_oqo(parse(oql)).to_dict()
 
 
-def _positive_leaf_values(oql):
-    """Parse `oql` and return the values of every POSITIVE (non-negated) leaf.
-
-    If the parser rejects the query (a loud diagnostic — one acceptable fix),
-    return None to signal "no positive leaves to worry about"."""
-    try:
-        oqo = canonicalize_oqo(parse(oql)).to_dict()
-    except OQLError:
-        return None  # rejected loudly == an acceptable resolution
-    vals = []
-    for row in oqo.get("filter_rows", []):
-        for leaf in _leaves(row):
-            if not leaf.get("is_negated"):
-                vals.append(str(leaf.get("value", "")))
-    return vals
+def test_bang_quoted_phrase_excludes_exact():
+    """`A!"phrase"` desugars to A AND NOT the exact phrase."""
+    assert _canon('works where title/abstract contains (England!"New England")') == \
+        _canon('works where title/abstract contains (England and not("New England"))')
 
 
-def test_compact_bang_phrase_excludes_not_includes():
-    """zd#8101 WoS within-value NOT idiom: `England!"New England"` means
-    "England AND NOT the exact phrase New England". The excluded phrase must
-    NEVER survive as a POSITIVE search term.
-
-    Currently mis-parses to a single positive leaf `England! New England`, so
-    "New England" is positively REQUIRED — the opposite of the intent. Fails
-    until #432/#363 either parse it as `England and not "New England"` (New
-    England becomes a negated leaf) or reject it (parse raises). See
-    NEGATION_PROBLEM_SPACE.md."""
-    vals = _positive_leaf_values(
-        'works where title/abstract contains (England!"New England")'
-    )
-    if vals is None:
-        return  # parser rejected it — acceptable fix
-    offending = [v for v in vals if "New England" in v]
-    assert not offending, (
-        "the excluded phrase 'New England' leaked into a POSITIVE leaf "
-        f"{offending!r} — the within-value `!` NOT operator mis-parses "
-        "(it should be a negated leaf, or the query should be rejected)."
-    )
+def test_bang_bare_term_excludes_stemmed():
+    """`A!term` desugars to A AND NOT the stemmed term."""
+    assert _canon('works where title contains (vaccine!mandatory)') == \
+        _canon('works where title contains (vaccine and not(mandatory))')
