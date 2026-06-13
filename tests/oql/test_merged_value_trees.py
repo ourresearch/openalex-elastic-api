@@ -93,9 +93,11 @@ def test_standalone_negated_leaf_renders_bare_prefix():
         == "works where country is not FR"
 
 
-def test_comparators_excluded_range_collapse_wins():
+def test_comparators_excluded_stay_separate_endpoint_clauses():
+    # comparison operators never merge into a value tree; with the dash range
+    # literal gone (decision 24) they stay as two endpoint clauses, lower first.
     assert _identity("works where year >= 2020 and year < 2024") \
-        == "works where year is 2020-2023"
+        == "works where year >= 2020 and year < 2024"
 
 
 def test_lone_bounds_do_not_merge_into_a_value_tree():

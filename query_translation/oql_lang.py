@@ -724,15 +724,13 @@ def lex(s: str) -> List[Tok]:
 
 
 # ---------------------------------------------------------------------------
-# Numeric values + ranges (oxjob #363). A num field's value is either a single
-# number or a bounded/open range written with a hyphen, mirroring the OpenAlex
-# URL range form:
-#     2019-2023   -> >= 2019  AND  <= 2023   (closed range)
-#     2019-       -> >= 2019                  (open lower)
-#     -2023       ->            <= 2023       (open upper)
-# A leading hyphen is always the open-upper form (never a negative number): no
-# num field (year / count / fwci) takes negatives, so the reading is unambiguous.
-_NUM_RE = re.compile(r"\d+(?:\.\d+)?$")
+# Numeric values (oxjob #363). A num field's value is a single number. The dash
+# range literal (`year is 2019-2023`, open-ended `2019-` / `-2023`) was REMOVED as
+# OQL surface syntax — charter decision 24: write explicit endpoint clauses
+# `year >= 2019 and year <= 2023`. `_RANGE_RE` is kept only to RECOGNIZE a typed
+# dash so we can reject it with a targeted fix-it (not a generic "not a number").
+# The OpenAlex URL range form `publication_year:2019-2023` and OQO bound leaves are
+# unaffected — only the OQL literal goes away; a URL range still renders endpoints.
 _RANGE_RE = re.compile(r"^(?P<lo>\d+(?:\.\d+)?)?-(?P<hi>\d+(?:\.\d+)?)?$")
 
 
@@ -766,22 +764,28 @@ def _coerce_number(val: str, fld: "Field", pos):
                    f'"{val}" is not a number for "{fld.oql}"', "", pos)
 
 
-def _parse_num_range(val: str, fld: "Field", pos):
-    """If `val` is a hyphen range for a num field, return a list of bound
-    LeafFilters (>= lo, <= hi); else None. Raises OQL_BAD_NUMBER on a malformed
-    side (e.g. `2019-abc`)."""
+def _range_endpoints(val: str):
+    """If `val` is a removed dash range literal (`2019-2023`, open-ended `2019-` /
+    `-2023`), return its `(lo, hi)` numeric sides (either may be None) — charter
+    decision 24. Else None. A bare `-`, or a dash term with a non-numeric side
+    (`2019-abc`), is NOT a range literal: those fall through to the scalar path and
+    surface as OQL_BAD_NUMBER ("not a number"), the accurate diagnosis. Used only to
+    raise OQL_RANGE_LITERAL_REMOVED on a typed dash with an endpoint-form fix-it."""
     m = _RANGE_RE.match(val)
-    if not m:
+    if not m or (m.group("lo") is None and m.group("hi") is None):
         return None
-    lo, hi = m.group("lo"), m.group("hi")
-    if lo is None and hi is None:
-        return None  # a bare "-" is not a range
-    leaves = []
+    return m.group("lo"), m.group("hi")
+
+
+def _range_endpoint_fixit(field: str, lo, hi) -> str:
+    """The endpoint-clause rewrite suggested for a rejected dash range literal:
+    `field >= lo and field <= hi`, or the single inequality for an open-ended form."""
+    parts = []
     if lo is not None:
-        leaves.append(LeafFilter(fld.column, _coerce_number(lo, fld, pos), ">="))
+        parts.append(f"{field} >= {lo}")
     if hi is not None:
-        leaves.append(LeafFilter(fld.column, _coerce_number(hi, fld, pos), "<="))
-    return leaves
+        parts.append(f"{field} <= {hi}")
+    return " and ".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -1911,20 +1915,20 @@ class _Parser:
         if self.word_is("unknown", "null"):
             self.next()
             return LeafFilter(fld.column, None, "is", is_negated=negated)
-        # a numeric range value: `year is 2019-2023` / `2019-` / `-2023` -> bound
-        # leaves (>= lo AND <= hi). A closed range is an implicit AND that flattens
-        # into the top-level filter_rows, so it round-trips to the same OQO the URL
-        # parser builds from `publication_year:2019-2023`. (oxjob #363)
+        # the dash range literal (`year is 2019-2023` / `2019-` / `-2023`) was
+        # REMOVED — charter decision 24. Reject it with a targeted fix-it pointing
+        # at the explicit endpoint form, rather than letting it fall through to a
+        # generic "not a number". The URL range form + OQO bounds are unaffected;
+        # only the OQL literal goes away (a URL range still renders endpoints).
         if fld.kind == "num":
             t = self.peek()
-            if t is not None and t.kind == "WORD" and "-" in t.val:
-                bounds = _parse_num_range(t.val, fld, t.pos)
-                if bounds is not None:
-                    self.next()
-                    self._skip_annot()
-                    rng = (bounds[0] if len(bounds) == 1
-                           else BranchFilter(join="and", filters=bounds))
-                    return _negate(rng) if negated else rng
+            ends = (_range_endpoints(t.val)
+                    if t is not None and t.kind == "WORD" and "-" in t.val else None)
+            if ends is not None:
+                raise oql_error("OQL_RANGE_LITERAL_REMOVED",
+                               f'numeric ranges like "{t.val}" were removed; '
+                               "write explicit endpoint clauses",
+                               f"e.g. {_range_endpoint_fixit(field, *ends)}", t.pos)
         # a single bare value; 2+ bare values must be parenthesized (D1)
         v = self._parse_scalar(fld)
         self._skip_annot()
@@ -3058,68 +3062,6 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
                      joiner=joiner, meta=GroupMeta(implicit=False))
 
 
-def _fmt_num(v):
-    """Render a numeric bound: ints bare (2019), floats verbatim (1.5)."""
-    return str(v)
-
-
-def _range_clause_node(column_id, lo, hi) -> ClauseNode:
-    """A merged numeric range clause: `col is lo-hi` / `lo-` / `-hi`."""
-    fld = _BY_COLUMN.get(column_id)
-    name = fld.oql if fld else column_id
-    text = f"{'' if lo is None else _fmt_num(lo)}-{'' if hi is None else _fmt_num(hi)}"
-    segs = [_seg("column", name, column_id=column_id),
-            _seg("operator", " is "),
-            _seg("value", text, value=text)]
-    return ClauseNode(segments=segs, clause_kind="comparison", meta=ClauseMeta(
-        column_id=column_id, operator="is", value=text, column_display_name=name))
-
-
-def _merge_num_range_rows(filter_rows):
-    """Collapse a same-column inclusive numeric bound PAIR among the (implicit-AND)
-    top-level filter_rows into a single closed-range render-item `a-b` (oxjob #363).
-
-    Only a closed range collapses — a column with exactly one `>=a` and one `<=b`
-    and no other bound. A SINGLE-ended bound stays an inequality: a lone `>=2020`
-    renders `year >= 2020`, not `year is 2020-` (the `2020-` / `-2023` open forms
-    are still ACCEPTED on input — see `_parse_num_range` — but are not canonical).
-    Strict `>`/`<` (lone, or float pairs the canonicalizer left strict), negated
-    bounds, and multi-bound columns are likewise left as inequalities.
-    Returns a list whose items are either an original FilterType or a
-    ("range", column_id, lo, hi) tuple, in first-occurrence order."""
-    def is_bound(f):
-        return (isinstance(f, LeafFilter) and not f.is_negated
-                and f.operator in (">", ">=", "<", "<=") and f.value is not None
-                and (_BY_COLUMN.get(f.column_id) or Field("", "", "")).kind == "num")
-    # gather per-column bound indices
-    lowers, uppers = {}, {}  # col -> list[(idx, op, value)]
-    for i, f in enumerate(filter_rows):
-        if not is_bound(f):
-            continue
-        (lowers if f.operator in (">", ">=") else uppers).setdefault(f.column_id, []).append(
-            (i, f.operator, f.value))
-    collapse = {}   # first-idx -> ("range", col, lo, hi)
-    consumed = set()
-    cols = set(lowers) | set(uppers)
-    for col in cols:
-        los, his = lowers.get(col, []), uppers.get(col, [])
-        inc_lo = [b for b in los if b[1] == ">="]
-        inc_hi = [b for b in his if b[1] == "<="]
-        if len(inc_lo) == 1 and len(inc_hi) == 1 and len(los) == 1 and len(his) == 1:
-            anchor = min(inc_lo[0][0], inc_hi[0][0])
-            collapse[anchor] = ("range", col, inc_lo[0][2], inc_hi[0][2])
-            consumed.update({inc_lo[0][0], inc_hi[0][0]})
-    items = []
-    for i, f in enumerate(filter_rows):
-        if i in collapse:
-            items.append(collapse[i])
-        elif i in consumed:
-            continue
-        else:
-            items.append(f)
-    return items
-
-
 def _merge_key(item):
     """Decision-20 grouping key: items (children of one boolean node) that share
     a key merge into ONE factored clause — `field op (tree)` — instead of
@@ -3127,10 +3069,11 @@ def _merge_key(item):
     the two factor paths: ("search", base field name) for plain search leaves /
     uniform search subtrees (base-name grouping lets stemmed + exact mix, as in
     a native group), or ("eq", column_id) for `is` value leaves / uniform-eq
-    subtrees. None = never merges: comparisons (per-leaf operator — the range
-    collapse owns those), null / collection / semantic leaves, bool & date
-    columns (bools render as human phrases, date `is` rides the axis surface),
-    and negated branches (canonical OQO is NNF, so none should exist)."""
+    subtrees. None = never merges: comparisons (per-leaf operator — bound
+    endpoints stay as separate `>=`/`<=` clauses, decision 24), null / collection
+    / semantic leaves, bool & date columns (bools render as human phrases, date
+    `is` rides the axis surface), and negated branches (canonical OQO is NNF, so
+    none should exist)."""
     if isinstance(item, BranchFilter):
         if item.is_negated:
             return None
@@ -3142,7 +3085,7 @@ def _merge_key(item):
             return ("eq", ecol)
         return None
     if not isinstance(item, LeafFilter):
-        return None  # range tuples from _merge_num_range_rows
+        return None  # defensive: only leaves/branches reach here
     if _is_search_leaf(item):
         name, mode = _oql_field(item.column_id)
         if mode == "semantic":
@@ -3204,8 +3147,6 @@ def _merge_same_field_items(items, join):
 
 
 def _row_node(item, top, resolver):
-    if isinstance(item, tuple) and item and item[0] == "range":
-        return _range_clause_node(item[1], item[2], item[3])
     return _filter_node(item, top=top, resolver=resolver)
 
 
@@ -3217,8 +3158,9 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
     where = None
     if oqo.filter_rows:
         where_keyword = " where "
-        rows = _merge_num_range_rows(oqo.filter_rows)
-        rows = _merge_same_field_items(rows, "and")  # decision 20
+        # A same-column inclusive bound pair (`>= 2019` AND `<= 2023`) stays as two
+        # endpoint clauses — the dash range render was removed (decision 24).
+        rows = _merge_same_field_items(oqo.filter_rows, "and")  # decision 20
         if len(rows) == 1:
             where = _row_node(rows[0], top=True, resolver=resolver)
         else:

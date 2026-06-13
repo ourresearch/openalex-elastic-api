@@ -938,7 +938,8 @@ rows:
   status: ok
   oql: |-
     works where language is en [English]
-      and year is 2015-2024
+      and year >= 2015
+      and year <= 2024
       and title/abstract contains (
         (ASD or near "autism spectrum disorder" or autism) and
         (intervention or therapy or treatment)
@@ -983,7 +984,8 @@ rows:
   oxurl: 'https://openalex.org/works?filter=publication_year:2018-2023,title_and_abstract.search:CRISPR,title_and_abstract.search:%22genome%20editing%22&sort=cited_by_count:desc&sample=500'
   status: ok
   oql: |-
-    works where year is 2018-2023
+    works where year >= 2018
+      and year <= 2023
       and title/abstract contains (CRISPR and near "genome editing")
     sort by citation count desc
     sample 500
@@ -1491,13 +1493,13 @@ rows:
   tags: [filter]
   provenance:
     type: "spec design"
-    label: "OQL numeric range (#363): closed bounded range, mirrors the URL form publication_year:2019-2023"
+    label: "OQL numeric range (#363, decision 24): closed range written as explicit endpoint clauses, mirrors the URL form publication_year:2019-2023"
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=publication_year:2019-2023'
   status: ok
-  oql: 'works where year is 2019-2023'
+  oql: 'works where year >= 2019 and year <= 2023'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 2019, operator: '>='}, {column_id: publication_year, value: 2023, operator: '<='}]}
-  note: 'A closed numeric range is sugar for the two-bound implicit-AND `year >= 2019 and year <= 2023`; it parses to two bound leaves and the canonical render is the dash form. Round-trips to the same OQO the URL parser builds from `publication_year:2019-2023` (oxjob #363).'
+  note: 'A closed numeric range is written as the two-bound implicit-AND `year >= 2019 and year <= 2023` — the dash range literal `year is 2019-2023` was REMOVED as OQL surface syntax (charter decision 24; typing it now errors OQL_RANGE_LITERAL_REMOVED, see the dash-rejected error row). It parses to two bound leaves and the canonical render is the endpoint form. The OpenAlex URL range form `publication_year:2019-2023` is unaffected — the URL parser still builds the same OQO, so URL round-trip survives (oxjob #363).'
 
 - id: 98
   tags: [filter]
@@ -1509,31 +1511,41 @@ rows:
   status: ok
   oql: 'works where year <= 2023'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 2023, operator: '<='}]}
-  note: 'The URL open-upper form `publication_year:-2023` (== `year <= 2023`) maps to the inequality, NOT a dash range — only a two-ended range is written `a-b`. The dash spellings `year is -2023` / `year is 2019-` are ACCEPTED on input but canonicalize back to `year <= 2023` / `year >= 2020`. A leading hyphen is always open-upper (no numeric field takes negatives, so unambiguous).'
+  note: 'The URL open-upper form `publication_year:-2023` (== `year <= 2023`) maps to the inequality. A single-ended bound is written as a plain inequality (`year <= 2023`); the open-ended dash spellings `year is -2023` / `year is 2019-` were REMOVED with the rest of the range literal (charter decision 24) and now error OQL_RANGE_LITERAL_REMOVED on input. The URL open forms still parse.'
 
 - id: 99
   tags: [filter]
   provenance:
     type: "spec design"
-    label: "OQL numeric range (#363): float field (FWCI) range with decimals"
+    label: "OQL numeric range (#363, decision 24): float field (FWCI) closed range via decimal endpoints"
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=fwci:1.5-3.0'
   status: ok
-  oql: 'works where FWCI is 1.5-3.0'
+  oql: 'works where FWCI >= 1.5 and FWCI <= 3.0'
   oqo: {get_rows: works, filter_rows: [{column_id: fwci, value: 1.5, operator: '>='}, {column_id: fwci, value: 3.0, operator: '<='}]}
-  note: 'FWCI is a float field, so range/scalar values accept decimals. Distinct from year/citation count (integers), where a strict bound PAIR collapses via ±1 (row 100); floats have no clean ±1 so strict float pairs stay as inequalities.'
+  note: 'FWCI is a float field, so endpoint values accept decimals: `FWCI >= 1.5 and FWCI <= 3.0`. The dash literal `FWCI is 1.5-3.0` was removed with the rest of the range syntax (decision 24). The URL range form `fwci:1.5-3.0` is unaffected.'
 
 - id: 100
   tags: [filter]
   provenance:
     type: "spec design"
-    label: "OQL numeric range (#363): strict integer bound PAIR canonicalizes to an inclusive range"
+    label: "OQL numeric bounds (#363, decision 24): a strict integer bound PAIR stays strict (no inclusive-range inference)"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=publication_year:43-99'
+  oxurl: 'https://openalex.org/works?filter=publication_year:>42,publication_year:<100'
   status: ok
-  oql: 'works where year is 43-99'
-  oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 43, operator: '>='}, {column_id: publication_year, value: 99, operator: '<='}]}
-  note: 'On integer fields a strict bound PAIR is an exact inclusive interval: `year > 42 and year < 100` canonicalizes to `>= 43 and <= 99` -> renders `year is 43-99` / `publication_year:43-99`. Only when the column has BOTH bounds; a lone `citation count > 100` keeps its strict inequality (oxjob #363).'
+  oql: 'works where year > 42 and year < 100'
+  oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 42, operator: '>'}, {column_id: publication_year, value: 100, operator: '<'}]}
+  note: 'Strict bounds stay exactly as written — `year > 42 and year < 100` is NOT rewritten to the inclusive `>= 43 and <= 99`. The ±1 strict-integer-pair collapse (which fed the removed dash range) was dropped with the range literal (charter decision 24): more faithful, no inference. Renders as two strict endpoint clauses / `publication_year:>42,publication_year:<100` (oxjob #363).'
+
+- id: 179
+  tags: [filter]
+  provenance:
+    type: "spec design"
+    label: "OQL numeric range literal removed (#363, decision 24): typing a dash range errors with an endpoint fix-it"
+  status: error
+  oql: 'works where year is 2019-2023'
+  diagnostic: OQL_RANGE_LITERAL_REMOVED
+  note: 'The dash range literal was removed as OQL surface syntax (charter decision 24) — write explicit endpoints `year >= 2019 and year <= 2023`. The reject is hard (no lenient parse): a typed `field is lo-hi` / open-ended `lo-` / `-hi` on a num field raises OQL_RANGE_LITERAL_REMOVED with a fix-it echoing the actual endpoints. A non-numeric dash term (`year is 2019-abc`) still falls through to OQL_BAD_NUMBER. The OpenAlex URL range form and OQO bounds are unaffected (oxjob #363).'
 
 - id: 101
   tags: [boolean-nesting, filter]
@@ -1648,7 +1660,8 @@ rows:
         (near "data assimilation" or near "state estimation" or real-time) and
         (near "reduced order model" or near "surrogate model")
       )
-      and year is 2015-2025
+      and year >= 2015
+      and year <= 2025
       and type is article
       and field is (
         15 [Chemical Engineering] or 16 [Chemistry] or 17 [Computer Science] or
@@ -1903,7 +1916,8 @@ rows:
         keywords/electronic-cigarette [Electronic cigarette]
       )
       and language is en [English]
-      and year is 2003-2025
+      and year >= 2003
+      and year <= 2025
       and type is types/article
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true}, {column_id: keywords.id, value: keywords/electronic-cigarette}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: types/article}]}
   note: |-
@@ -1934,7 +1948,8 @@ rows:
   oql: |-
     works where keyword is not keywords/animal-model [Animal model]
       and language is en [English]
-      and year is 2003-2025
+      and year >= 2003
+      and year <= 2025
       and type is types/article
       and title contains (vape or vaper or vapers or vapes or vaping)
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: types/article}, {join: or, filters: [{column_id: display_name.search, value: vape, operator: contains}, {column_id: display_name.search, value: vaper, operator: contains}, {column_id: display_name.search, value: vapers, operator: contains}, {column_id: display_name.search, value: vapes, operator: contains}, {column_id: display_name.search, value: vaping, operator: contains}]}]}
@@ -2796,7 +2811,8 @@ rows:
   oql: |-
     works where keyword is not keywords/animal-model [Animal model]
       and language is en [English]
-      and year is 2003-2025
+      and year >= 2003
+      and year <= 2025
       and type is types/article
       and title/abstract contains (
         vapes or "e vape" or "e vapes" or "e vaping" or "e vaping" or "e vapor" or
@@ -2966,7 +2982,8 @@ rows:
   oql: |-
     works where keyword is not keywords/animal-model [Animal model]
       and language is en [English]
-      and year is 2003-2025
+      and year >= 2003
+      and year <= 2025
       and type is types/article
       and title/abstract contains (
         Juul or "VUSE" or "Vype" or "Geek Bar" or

@@ -22,7 +22,7 @@ registry) — there is no entity-id prefix normalization. See docs/oql-spec.md.
 import json
 from typing import List, Union, Any
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, SortBy
-from query_translation.oql_lang import canon_value_for_column, is_integer_column, _is_search_leaf
+from query_translation.oql_lang import canon_value_for_column, _is_search_leaf
 
 
 def canonicalize_oqo(oqo: OQO) -> OQO:
@@ -55,14 +55,10 @@ def canonicalize_oqo(oqo: OQO) -> OQO:
             else:
                 canonical_filters.append(canonical_f)
 
-    # A strict integer bound PAIR on the same column is an inclusive interval:
-    # `> 42 AND < 100` (whole numbers) == `>= 43 AND <= 99`. Normalize the strict
-    # bounds to inclusive so the pair renders as the closed range `43-99` (OQL) /
-    # `43-99` (URL) and both spellings converge under round-trip. Only when the
-    # column has BOTH a lower and an upper bound (a lone `> 100` stays strict, so
-    # `cited_by_count:>100` is preserved). Integer columns only — a float pair
-    # (fwci) has no clean ±1 and is left as inequalities. (oxjob #363)
-    canonical_filters = _collapse_strict_integer_bound_pairs(canonical_filters)
+    # NOTE: strict integer bound pairs are NOT collapsed to an inclusive range
+    # (`> 42 AND < 100` stays strict, no `>= 43 AND <= 99` inference) — the dash
+    # range literal it fed was removed (charter decision 24). Strict inequalities
+    # now stay exactly as written; more faithful, no inference.
 
     # Top-level filter_rows are an implicit AND -> commutative -> sort for stability
     canonical_filters.sort(key=_sort_key)
@@ -148,37 +144,22 @@ def push_negation(f: FilterType, negate: bool) -> FilterType:
     return f
 
 
+# Order the four comparison bounds within a column lower-before-upper so a range
+# renders `year >= 2019 and year <= 2023` (decision 24). The column_id is the first
+# JSON key and all non-comparison operator values start with a letter, so remapping
+# only ever reorders same-column bound pairs — every other ordering is byte-identical
+# to the plain sorted-keys JSON.
+_BOUND_ORDER = {">": "0", ">=": "1", "<": "2", "<=": "3"}
+
+
 def _sort_key(f: FilterType) -> str:
     """Total order over filters for canonical operand sorting: the JSON of the
-    filter's dict with sorted keys. Stable and deterministic across runs."""
-    return json.dumps(f.to_dict(), sort_keys=True, ensure_ascii=True)
-
-
-def _collapse_strict_integer_bound_pairs(filters: List[FilterType]) -> List[FilterType]:
-    """Rewrite strict bounds to inclusive on integer columns that carry BOTH a
-    lower and an upper bound (see caller). `> n` -> `>= n+1`, `< n` -> `<= n-1`."""
-    def is_bound(f):
-        return (isinstance(f, LeafFilter) and not f.is_negated
-                and f.operator in (">", ">=", "<", "<=")
-                and isinstance(f.value, int) and not isinstance(f.value, bool)
-                and is_integer_column(f.column_id))
-    has_lower, has_upper = set(), set()
-    for f in filters:
-        if is_bound(f):
-            (has_lower if f.operator in (">", ">=") else has_upper).add(f.column_id)
-    paired = has_lower & has_upper
-    if not paired:
-        return filters
-    out = []
-    for f in filters:
-        if is_bound(f) and f.column_id in paired and f.operator in (">", "<"):
-            if f.operator == ">":
-                out.append(LeafFilter(f.column_id, f.value + 1, ">="))
-            else:
-                out.append(LeafFilter(f.column_id, f.value - 1, "<="))
-        else:
-            out.append(f)
-    return out
+    filter's dict with sorted keys, with comparison bounds remapped so a column's
+    lower bound sorts before its upper bound. Stable and deterministic."""
+    d = f.to_dict()
+    if isinstance(f, LeafFilter) and f.operator in _BOUND_ORDER:
+        d = {**d, "operator": _BOUND_ORDER[f.operator]}
+    return json.dumps(d, sort_keys=True, ensure_ascii=True)
 
 
 def canonicalize_filter(f: FilterType) -> Union[FilterType, List[FilterType], None]:

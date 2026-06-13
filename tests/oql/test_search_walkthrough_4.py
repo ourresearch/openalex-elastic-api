@@ -89,7 +89,10 @@ def test_w32_multiword_sort_key_parses(sort_key):
 
 
 def test_w32_same_alias_works_in_where_and_sort():
-    parse("works where citation percentile by subfield is 0.99-1")
+    # the 4-word alias resolves in both a where comparison clause and sort by
+    # (the dash range `0.99-1` was removed in decision 24 -> endpoint clauses).
+    parse("works where citation percentile by subfield >= 0.99 "
+          "and citation percentile by subfield <= 1")
     parse("works sort by citation percentile by subfield desc")
 
 

@@ -210,31 +210,36 @@ works where country is (us and uk)                                         (row 
   The position disambiguates (a group right after `is`/`contains` is a value/term
   group; one where a clause is expected is a clause group).
 
-### 3.2.1 Numeric ranges (#363)
+### 3.2.1 Numeric bounds and ranges (#363, decision 24)
 
-A numeric field (`year`, `citation count`, `FWCI`) takes either a single number or a
-**range** written with a hyphen, mirroring the OpenAlex URL range form:
+A numeric field (`year`, `citation count`, `FWCI`) takes a single number, or a range
+written as **explicit endpoint clauses** with the comparison operators:
 
 ```
-works where year is 2019-2023        (>= 2019 AND <= 2023 — closed range)   (row 97)
-works where FWCI is 1.5-3.0          (>= 1.5 AND <= 3.0 — floats allowed)    (row 99)
-works where year >= 2019             (single-ended bound — stays an inequality)
+works where year >= 2019 and year <= 2023        (closed range — two endpoint clauses)   (row 97)
+works where FWCI >= 1.5 and FWCI <= 3.0          (floats allowed)                          (row 99)
+works where year >= 2019                          (single-ended bound)
+works where year > 42 and year < 100              (strict bounds — stay strict)             (row 100)
 ```
 
-- Only a **closed range** (both ends given) renders as the dash form. It is sugar for
-  the two-bound implicit-AND `year >= 2019 and year <= 2023`; it parses to two bound
-  leaves and (because `filter_rows` is an implicit AND) is indistinguishable from
-  writing the two clauses.
-- **A single-ended bound stays an inequality.** The open-range spellings `year is
-  2019-` (>= 2019) and `year is -2023` (<= 2023) are **accepted on input** (a leading
-  hyphen is always open-upper, never a negative — no numeric field takes negatives),
-  but they **canonicalize back to the inequality form** `year >= 2019` / `year <=
-  2023`. Only a two-ended range is written with a dash.
-- **Strict bounds collapse on integer fields:** `year > 42 and year < 100` canonicalizes
-  to the inclusive `year is 43-99` (a whole-number interval has an exact inclusive
-  spelling). This applies only when a column carries **both** a lower and an upper
-  bound; a lone `citation count > 100` keeps its strict inequality. Float fields (FWCI)
-  have no clean ±1, so a strict float pair stays as two inequalities.
+- **There is no dash range literal.** The `year is 2019-2023` / open-ended `year is
+  2019-` / `year is -2023` spellings were **removed** as OQL surface syntax (decision
+  24): write the explicit endpoints instead. This makes the parser simpler (a numeric
+  value is a pure number, not a "mostly-int string"), buys clean type-checking, and
+  fits OQL's picky/precise philosophy. Typing a dash range on a num field is a **hard
+  error** (`OQL_RANGE_LITERAL_REMOVED`, row 179) with a fix-it echoing the endpoint
+  form — *not* a lenient parse, and *not* a generic "not a number".
+- **A closed range is the two-bound implicit-AND** `year >= 2019 and year <= 2023`.
+  Because `filter_rows` is an implicit AND, the two clauses round-trip as two bound
+  leaves; the canonical render is lower-bound-then-upper-bound.
+- **Strict bounds stay strict — no inference.** `year > 42 and year < 100` renders
+  exactly as written; it is **not** rewritten to the inclusive `year >= 43 and year <=
+  99`. (The old ±1 strict-integer-pair collapse, which fed the removed dash literal,
+  was dropped with it.)
+- **The OpenAlex URL range form is unaffected.** `publication_year:2019-2023` (and
+  `fwci:1.5-3.0`, the open `:-2023`, strict `:>42`) still parse from URLs and still
+  render *to* URLs from the bound leaves — only the OQL *surface literal* went away, so
+  URL round-trip survives.
 
 ### 3.2.2 Canonical render merges same-field structure (decision 20, #432/#363)
 
@@ -261,8 +266,8 @@ works where institution is (not I33213144 [Harvard] and not I97018004 [Stanford]
   stemmed `.search` leaf and an exact `.search.exact` leaf share one group — that
   mix is the row-78 expressiveness win); `is` groups merge by column.
 - **The principled boundary:** comparison operators live on the leaf (`>=`, `<`),
-  so mixed-comparator pairs never merge — they keep the range collapse of §3.2.1
-  (`year >= 2020 and year < 2024` → `year is 2020-2023`). Null (`is unknown`),
+  so mixed-comparator pairs never merge — bound endpoints stay as separate clauses
+  (`year >= 2019 and year <= 2023`, §3.2.1, decision 24). Null (`is unknown`),
   collection membership, semantic search, and bool/date columns keep their own
   surfaces and never merge. Cross-field structure necessarily stays multi-clause.
 - **OQO is untouched.** Canonical OQO remains maximally distributed (NNF,

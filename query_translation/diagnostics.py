@@ -155,6 +155,10 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_BAD_DATE", ERROR, PARSE,
               "a date field was given a value that is not a full ISO date",
               "use YYYY-MM-DD, e.g. date is 2020-05-17"),
+        _spec("OQL_RANGE_LITERAL_REMOVED", ERROR, PARSE,
+              "the dash range literal (year is 2019-2023) was removed; "
+              "write explicit endpoint clauses",
+              "use the endpoints, e.g. year >= 2019 and year <= 2023"),
         _spec("OQL_BAD_COLLECTION_REF", ERROR, PARSE,
               '"is in collection" needs a collection id (col_…)',
               "e.g. work is in collection col_abc123"),

@@ -586,16 +586,16 @@ cases:
     - {text: "papers put out by elsevier bv", difficulty: hard}
 
 # --- numeric ranges + source type (#363) ---
-- ref: 97  # year is 2019-2023  (closed range)
+- ref: 97  # year >= 2019 and year <= 2023  (closed range, inclusive endpoints)
   nl:
     - {text: "papers from 2019 to 2023", difficulty: easy}
     - {text: "works published between 2019 and 2023", difficulty: easy}
     - {text: "anything that came out in the years 2019 through 2023", difficulty: hard}
 
-- ref: 100  # year is 43-99  (strict integer pair collapses to inclusive)
+- ref: 100  # year > 42 and year < 100  (strict bounds — stay strict, decision 24)
   nl:
-    - {text: "works from the years 43 to 99", difficulty: easy}
-    - {text: "papers published after year 42 and before year 100", difficulty: hard}
+    - {text: "works published after year 42 but before year 100", difficulty: easy}
+    - {text: "papers strictly after year 42 and strictly before year 100", difficulty: hard}
     - {text: "anything dated between 43 and 99 inclusive", difficulty: hard}
 
 - ref: 101  # source type is (journal or conference or "ebook platform" or "book series")
