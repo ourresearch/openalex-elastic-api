@@ -254,7 +254,7 @@ All entity IDs in OQO use a normalized format: `entityName/id`
 | Operator | Description |
 |----------|-------------|
 | `contains` | Text search (with stemming) |
-| `does not contain` | Negative text search |
+| `contains not <term>` | Negative text search — bare `not` prefix on the value (`does not contain` accepted on input) |
 
 ---
 

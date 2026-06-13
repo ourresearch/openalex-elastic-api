@@ -4,8 +4,8 @@ field-scoped value tree (the SR branch/leaf "One Right Way", #432/#363).
 Published SRs are search-term trees, not filter-triple trees. The canonical
 render therefore merges the children of one boolean node (incl. the implicit
 top-level AND of filter_rows) that share a (field, base-operator) pair into a
-single `field op (tree)` clause, with merged negated leaves rendered as
-`not(<atom>)` inside the group (functional negation, charter decision 21).
+single `field op (tree)` clause, with merged negated leaves rendered as a bare
+`not <atom>` prefix inside the group (decision 23).
 OQO is UNCHANGED (maximally distributed, NNF);
 the parse direction already accepted every merged form, so this closes a
 render/parse asymmetry. Spec §3.2.2; charter decision 20.
@@ -44,23 +44,23 @@ def test_sr_and_of_or_groups_merges_into_one_clause():
 
 def test_positive_and_negated_leaf_merge_with_not_in_tree():
     assert _identity("works where title contains cat and title does not contain dog") \
-        == "works where title contains (not(dog) and cat)"
+        == "works where title contains (not dog and cat)"
 
 
 def test_demorganed_not_group_stays_in_one_clause():
-    # `not(dog or bird)` -> NNF leaves -> merged back as in-tree not()s
-    assert _identity("works where title contains (cat and not(dog or bird))") \
-        == "works where title contains (not(bird) and not(dog) and cat)"
+    # `not (dog or bird)` -> NNF leaves -> merged back as in-tree bare nots
+    assert _identity("works where title contains (cat and not (dog or bird))") \
+        == "works where title contains (not bird and not dog and cat)"
 
 
 def test_eq_columns_merge_too_all_filter_kinds():
     assert _identity("works where country is US and country is not FR") \
-        == "works where country is (not(FR) and US)"
+        == "works where country is (not FR and US)"
 
 
 def test_is_not_group_renders_merged_not_two_clauses():
-    assert _identity("works where country is not(US or FR)") \
-        == "works where country is (not(FR) and not(US))"
+    assert _identity("works where country is not (US or FR)") \
+        == "works where country is (not FR and not US)"
 
 
 def test_search_leaf_merges_with_same_base_or_group():
@@ -86,9 +86,9 @@ def test_stemmed_and_exact_share_one_merged_group():
 
 # --- what does NOT merge ---------------------------------------------------- #
 
-def test_standalone_negated_leaf_keeps_predicate_form():
+def test_standalone_negated_leaf_renders_bare_prefix():
     assert _identity("works where title does not contain dog") \
-        == "works where title does not contain dog"
+        == "works where title contains not dog"
     assert _identity("works where country is not FR") \
         == "works where country is not FR"
 
@@ -123,7 +123,7 @@ def test_mixed_field_or_branches_do_not_merge():
 
 def test_merged_render_parses_back_to_distributed_oqo():
     fr = canonicalize_oqo(
-        parse("works where title contains (not(dog) and cat)")).to_dict()["filter_rows"]
+        parse("works where title contains (not dog and cat)")).to_dict()["filter_rows"]
     assert fr == [
         {"column_id": "display_name.search", "value": "dog",
          "operator": "contains", "is_negated": True},

@@ -1645,27 +1645,17 @@ class _Parser:
                         f'two conditions with no AND/OR between them (near "{t.val}")',
                         'insert an explicit AND or OR', t.pos)
 
-    def _consume_functional_not(self, t: Tok):
-        """Consume a `not` keyword and require it be written as a function:
-        `not(...)`. A bare `not` (no following `(`) is an error (charter
-        decision 21) — the function-call parens ARE the negation's scope, so
-        there is no precedence to recall. In recover mode the error is recorded
-        and the bare operand is parsed anyway (so the editor's tree shape
-        survives). Leaves the cursor on the `(` (strict) so the caller's normal
-        operand/group parse handles the parenthesized argument."""
+    def _consume_not(self, t: Tok):
+        """Consume a bare `not` prefix keyword (charter decision 23). `not` is a
+        prefix operator that negates the single value-node / operand that follows
+        it — no parentheses required (`not FR`, `not dog`, `not col_x`). A
+        `not (a or b)` still works: the following `(...)` parses as the operand
+        and the canonicalizer pushes negation down to the leaves (NNF). Precedence
+        is the SR/PubMed convention — `not` binds the next operand only, so
+        `not a or b` = `(not a) or b`. Leaves the cursor right after `not` so the
+        caller's normal operand/group/scalar parse handles the argument."""
         self.next()  # consume 'not'
         self._skip_annot()
-        nxt = self.peek()
-        if nxt is None or nxt.kind != "LP":
-            err = oql_error(
-                "OQL_BARE_NOT",
-                "`not` must wrap its argument in parentheses: not(...)",
-                "write it as a function, e.g. not(dog) or not(dog or cat)",
-                t.pos)
-            if self._recover_mode:
-                self._diagnostics.append(err)
-                return
-            raise err
 
     def _parse_operand(self) -> FilterType:
         self._skip_annot()
@@ -1676,8 +1666,8 @@ class _Parser:
         if t is None:
             raise oql_error("OQL_EMPTY", "expected a condition", "")
         if t.kind == "WORD" and t.val.lower() == "not":
-            self._consume_functional_not(t)  # not(...) — bare `not` is an error
-            inner = self._parse_operand()     # next is `(` -> parses the group
+            self._consume_not(t)              # bare prefix `not` (decision 23)
+            inner = self._parse_operand()     # negate the next operand (clause/group)
             self._last_operand_simple = False  # negated -> not a plain clause (#357)
             return _negate(inner)
         if t.kind == "LP":
@@ -1870,13 +1860,21 @@ class _Parser:
         # can raise OQL_MISSING_ENTITY_ID for "institution is [Harvard]".)
         # collection membership: is [not] in collection col_… (oxjob #363)
         if op in ("incoll", "nincoll"):
+            negated = (op == "nincoll")
+            # bare `not` prefix on the value (decision 23): the canonical render is
+            # `work is in collection not col_x`; `is not in collection` is the
+            # accepted input alias (op == "nincoll"). Both land on is_negated.
+            if self.word_is("not"):
+                self.next()
+                self._skip_annot()
+                negated = not negated
             v = self._parse_scalar(fld)
             if not (isinstance(v, str) and v.startswith("col_")):
                 raise oql_error("OQL_BAD_COLLECTION_REF",
                                f'"is in collection" needs a collection id (col_…), got "{v}"',
                                'e.g. work is in collection col_abc123')
             return LeafFilter(fld.column, v, "in collection",
-                              is_negated=(op == "nincoll"))
+                              is_negated=negated)
         # the removed value-list openers: `is any of (...)` / `is in (...)` /
         # `is not any of (...)` / `is not in (...)`. Lists are now parens-boolean
         # (`is (a or b)`); give a targeted migration error.
@@ -1943,7 +1941,7 @@ class _Parser:
         a nested `(...)` group, or one scalar value (-> an `is` leaf)."""
         t = self.peek()
         if t is not None and t.kind == "WORD" and t.val.lower() == "not":
-            self._consume_functional_not(t)  # not(...) — bare `not` is an error
+            self._consume_not(t)  # bare prefix `not` (decision 23)
             return _negate(self._parse_value_operand(fld))
         if t is not None and t.kind == "LP":
             self.next()
@@ -2052,10 +2050,10 @@ class _Parser:
             self._expect_rp()
             return e
         if t is not None and t.kind == "WORD" and t.val.lower() == "not":
-            # A functional `not(...)` is a valid (negated) operand here; a bare
-            # `not` raises OQL_BARE_NOT inside _parse_search_operand. The result
-            # is one negated operand — a standalone negated leaf normalizes to
-            # the `does not contain` predicate form on render (decision 21).
+            # Bare prefix `not` negates the next search operand (decision 23):
+            # `title contains not dog` -> one negated leaf, rendered
+            # `title contains not dog`. A multi-word run is one value-node, so
+            # `not machine learning` negates the whole run.
             return self._parse_search_operand(base)
         if (t is not None and t.kind == "WORD" and t.val.lower() in ("any", "all")
                 and self.word_is("of", k=1)):
@@ -2229,7 +2227,7 @@ class _Parser:
             # a leading `!` (the WoS within-value NOT) — not an OQL operator (#432)
             raise oql_error("OQL_BANG_NOT_SUPPORTED", position=t.pos)
         if t.kind == "WORD" and t.val.lower() == "not":
-            self._consume_functional_not(t)  # not(...) — bare `not` is an error
+            self._consume_not(t)  # bare prefix `not` (decision 23)
             return _negate(self._parse_search_operand(base))
         if t.kind == "LP":
             self.next()
@@ -2718,8 +2716,9 @@ def _render_search_leaf(f: LeafFilter) -> str:
     if mode == "semantic":
         v = (f.value or "").strip('"')
         return f'{name} is similar to "{v}"'
-    verb = "does not contain" if f.is_negated else "contains"
-    return f"{name} {verb} {_render_term(f.value, f.column_id)}"
+    # decision 23: negation is a bare `not ` prefix on the value, not a predicate.
+    term = _render_term(f.value, f.column_id)
+    return f"{name} contains {('not ' + term) if f.is_negated else term}"
 
 
 def _value_needs_quote(value: str) -> bool:
@@ -2870,13 +2869,11 @@ def _factored_segments(f: FilterType, render_leaf):
     `render_leaf(leaf) -> [Segment]` renders one bare atom."""
     if isinstance(f, LeafFilter):
         leaf = render_leaf(f)
-        # In-group negation renders functionally: `not(atom)` (charter decision
-        # 21). Canonical OQO is NNF (negation on leaves), so the argument is
-        # always one atom — we never wrap a whole sub-clause. Emit the open paren
-        # as its own `(` text segment (not glued into `not(`) so the segment-level
-        # width splitter `_split_list_clause` counts paren depth correctly.
+        # In-group negation renders as a bare `not ` prefix on the atom (charter
+        # decision 23). Canonical OQO is NNF (negation on leaves), so the argument
+        # is always one value-node — `not` binds it with no parens to recall.
         if f.is_negated:
-            return [_seg("text", "not"), _seg("text", "(")] + leaf + [_seg("text", ")")]
+            return [_seg("text", "not ")] + leaf
         return leaf
     segs = []
     for i, c in enumerate(f.filters):
@@ -2945,10 +2942,13 @@ def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
                     _seg("operator", " is similar to "),
                     _seg("value", f'"{v}"', value=f.value)]
         else:
-            verb = "does not contain" if f.is_negated else "contains"
+            # decision 23: negation is a bare `not ` prefix on the value, never a
+            # `does not contain` predicate (`title contains not pediatric`).
+            term = _render_term(f.value, f.column_id)
+            val = f"not {term}" if f.is_negated else term
             segs = [_seg("column", name, column_id=f.column_id),
-                    _seg("operator", f" {verb} "),
-                    _seg("value", _render_term(f.value, f.column_id), value=f.value)]
+                    _seg("operator", " contains "),
+                    _seg("value", val, value=f.value)]
         return ClauseNode(segments=segs, clause_kind="text", meta=ClauseMeta(
             column_id=f.column_id, operator=f.operator or "contains",
             value=f.value, column_display_name=name))
@@ -2989,10 +2989,14 @@ def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
             column_id=f.column_id, operator=f.operator, value=f.value,
             column_display_name=name))
     if f.operator == "in collection":  # oxjob #363; col_… value, never name-resolved
-        verb = "is not in collection" if f.is_negated else "is in collection"
+        # decision 23: negation is a bare `not ` prefix on the value
+        # (`work is in collection not col_x`), never an `is not in collection` predicate.
+        col_val = _render_value(fld, f.value)
+        if f.is_negated:
+            col_val = f"not {col_val}"
         segs = [_seg("column", name, column_id=f.column_id),
-                _seg("operator", f" {verb} "),
-                _seg("value", _render_value(fld, f.value), value=f.value)]
+                _seg("operator", " is in collection "),
+                _seg("value", col_val, value=f.value)]
         return ClauseNode(segments=segs, clause_kind="collection", meta=ClauseMeta(
             column_id=f.column_id, operator="in collection", value=f.value,
             column_display_name=name))
@@ -3011,10 +3015,11 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
         return _leaf_node(f, resolver)
     # BranchFilter. A negated branch is non-canonical (NNF pushes negation to
     # the leaves) and should not survive canonicalization; if one reaches here
-    # we render it functionally `not(group)` so it still re-parses (decision 21).
+    # we render it as a bare `not ` prefix on the group so it still re-parses
+    # (decision 23) — `not (a or b)`, which the canonicalizer would distribute.
     if f.is_negated:
         inner = _filter_node(BranchFilter(f.join, f.filters), top=False, resolver=resolver)
-        return GroupNode(join=f.join, children=[inner], prefix="not(", suffix=")",
+        return GroupNode(join=f.join, children=[inner], prefix="not ", suffix="",
                          joiner="", meta=GroupMeta(implicit=False))
     # factor a single-base-field search subtree -> `field contains (a or b)`
     scol = _uniform_search_base(f)
@@ -3165,8 +3170,8 @@ def _merge_same_field_items(items, join):
     `title contains (not dog and cat)` instead of two clauses. Order is
     preserved (the canonicalizer's deterministic sort — negated-first, then
     value — already puts same-key items adjacent and makes the render
-    idempotent); a singleton key keeps its current render, so a standalone
-    negated leaf stays in predicate form (`title does not contain dog`).
+    idempotent); a singleton key keeps its current render — a standalone
+    negated leaf renders bare-prefix too (`title contains not dog`, decision 23).
     Same-join members are flattened into the synthetic branch (the canonical
     flat form; also keeps re-parse → re-render byte-stable)."""
     groups = {}

@@ -170,11 +170,8 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_COMMA_IN_GROUP", ERROR, PARSE,
               "a comma separates items in a (…) group (commas were removed)",
               "separate items with 'or'/'and', e.g. (a or b)"),
-        _spec("OQL_BARE_NOT", ERROR, PARSE,
-              "`not` is a function: its argument must be parenthesized, not(…) "
-              "(a bare `not foo` would re-leak the precedence footgun the "
-              "parens rule kills)",
-              "write it as a function, e.g. not(dog) or not(dog or cat)"),
+        # (OQL_BARE_NOT removed in decision 23 — `not` is now a bare prefix
+        # keyword, so a bare `not foo` is valid, not an error.)
         _spec("OQL_BANG_NOT_SUPPORTED", ERROR, PARSE,
               "`!` is not an OQL operator — it is Web of Science / classic-URL "
               "syntax; OQL negates with not(…). (The compact `term!\"phrase\"` "

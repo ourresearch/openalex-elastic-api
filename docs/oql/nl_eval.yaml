@@ -432,7 +432,7 @@ cases:
     - {text: "spanish-language works", difficulty: hard}
     - {text: "works in Spanish", difficulty: easy}
 
-- ref: 71  # t&a contains covid and t&a does not contain pediatric
+- ref: 71  # t&a contains (not pediatric and covid)
   nl:
     - {text: "papers about covid but not pediatric, in title or abstract", difficulty: easy}
     - {text: "covid research excluding anything mentioning pediatric", difficulty: hard}

@@ -180,15 +180,12 @@ def test_search_model_space_quotes_near():
     p("works where title contains (climate (change or warming))")   # ok
     p("works where title contains ((climate change) or warming)")   # ok
 
-    # `not` is a function `not(X)` (charter decision 21): a bare `not` (no parens)
-    # is an error everywhere — at top level AND inside a group.
-    with pytest.raises(OQLError):
-        p("works where title contains not a")
-    with pytest.raises(OQLError) as e:
-        p("works where title contains (not a and b)")
-    assert e.value.code == "OQL_BARE_NOT"
-    # the functional form negates exactly its argument: `not(a) and b` = (not a) and b
-    fr = rows("works where title contains (not(a) and b)")  # top-level AND flattens
+    # `not` is a bare prefix keyword (charter decision 23): it negates the single
+    # value-node that follows — no parens. Valid at top level AND inside a group.
+    fr = rows("works where title contains not a")  # standalone -> negated leaf
+    assert len(fr) == 1 and fr[0]["value"] == "a" and fr[0].get("is_negated") is True
+    # the bare prefix binds exactly its operand: `not a and b` = (not a) and b
+    fr = rows("works where title contains (not a and b)")  # top-level AND flattens
     by_val = {f["value"]: f.get("is_negated", False) for f in fr}
     assert by_val == {"a": True, "b": False}  # only `a` is negated
 
