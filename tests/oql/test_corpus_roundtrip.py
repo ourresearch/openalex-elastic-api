@@ -212,18 +212,27 @@ def test_corpus_covers_every_locked_behavior():
 OXURL_STATUSES = {"has-oxurl", "oql-only", "translator-bug", "server-unsupported"}
 
 
+# Tag vocabulary (#432 — replaced the single-valued `category`). Free-form by
+# design (tags name OVERLAPPING DSL features / audience, not one bucket), but
+# kept as a registry so a typo can't silently invent a tag nobody filters on.
+# Adding a tag is a deliberate one-line edit here — extend freely; don't loosen
+# the assert. `sr-transcription` is the marker for verbatim librarian / SR
+# boolean strategies (out of NL-eval scope; see test_nl_eval.py).
+KNOWN_TAGS = {
+    "negation", "boolean-logic", "boolean-nesting", "phrase-exact",
+    "proximity", "wildcard", "search-semantics", "entity-references",
+    "group-by", "sort", "sample", "filter", "sr-transcription",
+}
+
+
 def test_every_row_has_valid_facets():
-    """Every case carries a `category` (topical) facet and a structured
-    `provenance` (real origin) facet; every ok/hint row also carries an explicit
-    `oxurl_status` (#384, replacing the old `oxurl_representable` bool). These
-    replaced the old conflated `group` / coarse `source` fields (#345); keeping
-    them mechanical means the dev playground never has to infer semantics from
-    the ID prefix."""
-    categories = {
-        "entity references", "boolean logic", "search semantics",
-        "proximity & wildcards", "filter, sort & sample", "group by",
-        "librarian & SR queries",
-    }
+    """Every case carries a non-empty `tags` list (multi-valued feature facet,
+    #432) and a structured `provenance` (real origin) facet; every ok/hint row
+    also carries an explicit `oxurl_status` (#384, replacing the old
+    `oxurl_representable` bool). These replaced the old conflated `group` /
+    coarse `source` fields (#345) and the single-valued `category` (#432);
+    keeping them mechanical means the dev playground never has to infer
+    semantics from the ID prefix."""
     provenance_types = {
         "spec design", "analytics question", "librarian guide",
         "vendor docs", "zendesk ticket", "systematic review",
@@ -231,8 +240,11 @@ def test_every_row_has_valid_facets():
     bad = []
     for r in ROWS:
         prov = r.get("provenance") or {}
+        tags = r.get("tags")
         ok = (
-            r.get("category") in categories
+            isinstance(tags, list)
+            and bool(tags)
+            and all(t in KNOWN_TAGS for t in tags)
             and isinstance(prov, dict)
             and prov.get("type") in provenance_types
             and bool(prov.get("label"))
@@ -244,7 +256,7 @@ def test_every_row_has_valid_facets():
         else:
             ok = ok and "oxurl_status" not in r and "oxurl" not in r
         if not ok:
-            bad.append((r["id"], r.get("category"), prov.get("type"),
+            bad.append((r["id"], r.get("tags"), prov.get("type"),
                         r.get("oxurl_status")))
     assert not bad, f"rows with missing/unknown facets: {bad}"
 

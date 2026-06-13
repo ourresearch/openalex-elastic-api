@@ -16,8 +16,20 @@
 # an `oqo`; row 78 (the 114-leaf zd#8101 SR tree) is the one materialized from
 # its `oql` by regen_corpus_oql.py (#384) so the GUI mirror needs no live parser.
 #
-# Per-row facets (#345):
-#   * category   — topical grouping (7 values; the GUI playground filters on it).
+# Per-row facets (#345; category->tags refactor #432):
+#   * tags       — multi-valued, free-form labels for the DSL feature(s) /
+#       audience a case exercises (the GUI playground filters on them; OR
+#       semantics across selected tags). Replaced the old single-valued,
+#       mutually-exclusive `category` — cases poke OVERLAPPING features, so one
+#       bucket per row fought us. No central registry; pick a meaningful slug.
+#       Current vocabulary (extend freely): negation, boolean-logic,
+#       boolean-nesting, phrase-exact, proximity, wildcard, search-semantics,
+#       entity-references, group-by, sort, sample, filter, and the marker
+#       `sr-transcription` (a verbatim librarian / systematic-review boolean
+#       strategy — out of scope for the NL->OQO eval; see test_nl_eval.py). The
+#       former "librarian & SR queries" topical category is gone: its real origin
+#       already lives in `provenance`, so those rows now carry `sr-transcription`
+#       + their actual feature tags.
 #   * provenance — real origin: {type, label, url?}. `type` is one of
 #       "spec design"        (#330 design pass — the spec-design spine),
 #       "analytics question" (OpenAlex OAQ#/AKQ# fossils — the analytics rows),
@@ -57,7 +69,7 @@ rows:
 # A. Entity references, sets, annotations  (EXPLORE §2.1, §2.2)
 # ---------------------------------------------------------------------------
 - id: 1
-  category: "entity references"
+  tags: [entity-references]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -69,7 +81,7 @@ rows:
   note: ID authoritative; [Harvard] is an ignored annotation, regenerated on output.
 
 - id: 2
-  category: "entity references"
+  tags: [entity-references]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -81,7 +93,7 @@ rows:
   note: The annotation is free text and is not validated — it cannot lie because nothing reads it.
 
 - id: 3
-  category: "entity references"
+  tags: [boolean-nesting, entity-references]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -95,7 +107,7 @@ rows:
   note: '( ... ) is a value list here; per-item annotations allowed.'
 
 - id: 4
-  category: "entity references"
+  tags: [entity-references, negation]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -113,7 +125,7 @@ rows:
   note: 'Negated set = NOT(a OR b) = (NOT a) AND (NOT b) by De Morgan; canonical NNF carries negation on the leaves.'
 
 - id: 5
-  category: "entity references"
+  tags: [boolean-nesting, entity-references]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -126,7 +138,7 @@ rows:
   note: '`is in` is accepted on input; canonical output spells it `is any of`.'
 
 - id: 6
-  category: "entity references"
+  tags: [entity-references]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -139,7 +151,7 @@ rows:
 # B. Booleans / precedence / casing  (EXPLORE §2.4)
 # ---------------------------------------------------------------------------
 - id: 7
-  category: "boolean logic"
+  tags: [boolean-logic, boolean-nesting]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -155,7 +167,7 @@ rows:
   note: Mixed and/or with explicit parens is unambiguous.
 
 - id: 8
-  category: "boolean logic"
+  tags: [boolean-logic]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -165,7 +177,7 @@ rows:
   note: '`apple and banana or cherry` are bare terms after `contains` with no parentheses (#363 requires 2+ terms be parenthesized) — caught before the mixed-and/or check. Fix-it: wrap them, e.g. `contains (apple and (banana or cherry))`.'
 
 - id: 9
-  category: "boolean logic"
+  tags: [boolean-logic]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -180,7 +192,7 @@ rows:
   note: Pure-and is associative, no parens needed.
 
 - id: 10
-  category: "boolean logic"
+  tags: [boolean-logic]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -195,7 +207,7 @@ rows:
   note: 'SPACE = implicit AND (Google/PubMed convention) — `apple banana cherry` == `apple and banana and cherry`.'
 
 - id: 87
-  category: "boolean logic"
+  tags: [boolean-logic, boolean-nesting]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -220,7 +232,7 @@ rows:
 #    Stemming is ON by default; quotes turn it OFF (exact); `near` is the bridge.
 # ---------------------------------------------------------------------------
 - id: 11
-  category: "search semantics"
+  tags: [search-semantics]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -234,7 +246,7 @@ rows:
   note: 'EXPLICIT `and` = two cross-field AND leaves (the two-filter oxurl); words may be apart (recall). Post-D2-reversal (#363): a bare run `(climate change)` is instead ONE adjacency-boosted node (row 126) — use explicit `and` when you mean two separate search nodes.'
 
 - id: 12
-  category: "search semantics"
+  tags: [phrase-exact, search-semantics]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -246,7 +258,7 @@ rows:
   note: 'QUOTES = exact adjacent phrase, stemming OFF (.search.exact). The precision lever.'
 
 - id: 13
-  category: "search semantics"
+  tags: [proximity, search-semantics]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -258,7 +270,7 @@ rows:
   note: 'NEAR = stemmed adjacent phrase (.search) → matches "whoppers junior". The bridge that keeps recall on a phrase.'
 
 - id: 14
-  category: "search semantics"
+  tags: [phrase-exact, search-semantics]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -270,7 +282,7 @@ rows:
   note: 'Quoting a SINGLE word = exact (no plurals). Same rule as a phrase — quotes always mean exact.'
 
 - id: 15
-  category: "search semantics"
+  tags: [search-semantics]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -282,7 +294,7 @@ rows:
   note: 'Bare word = stemmed (matches cats). Contrast with row 14 "cat" (exact).'
 
 - id: 16
-  category: "search semantics"
+  tags: [phrase-exact, search-semantics]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -294,7 +306,7 @@ rows:
   note: 'Inside quotes = literal: the `or` is a word, not a connective. One exact phrase.'
 
 - id: 17
-  category: "search semantics"
+  tags: [search-semantics]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -304,7 +316,7 @@ rows:
   note: 'Bare search terms after `contains` with no parentheses (#363): a reserved word could be silently swallowed, so 2+ terms must be parenthesized. Fix-it offers `contains (climate (change or warming))` or `contains ((climate change) or warming)`.'
 
 - id: 18
-  category: "search semantics"
+  tags: [boolean-nesting, search-semantics]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -320,7 +332,7 @@ rows:
   note: 'The likely-intended disambiguation: climate AND (change OR warming). Implicit AND between `climate` and the group; the only `or` is nested.'
 
 - id: 19
-  category: "search semantics"
+  tags: [phrase-exact, search-semantics, wildcard]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -332,7 +344,7 @@ rows:
   note: 'Quoted wildcard = the sanctioned path (oxjob #364): runs on the no-stem `.search.exact` column. Reverses #337''s old `OQL_WILDCARD_IN_QUOTES` — quotes are now where wildcards belong (stemming would drop the literal prefix).'
 
 - id: 20
-  category: "search semantics"
+  tags: [search-semantics, wildcard]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -345,7 +357,7 @@ rows:
 # D. Proximity / wildcard edge matrix  (EXPLORE §2.5, §3)
 # ---------------------------------------------------------------------------
 - id: 21
-  category: "proximity & wildcards"
+  tags: [phrase-exact, proximity]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -357,7 +369,7 @@ rows:
   note: 'Exact proximity (quoted) → up to N positional moves apart, any order.'
 
 - id: 22
-  category: "proximity & wildcards"
+  tags: [phrase-exact, wildcard]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -369,7 +381,7 @@ rows:
   note: Mid-word `*` (>=3-char prefix, within one token), quoted so it runs on the no-stem `.search.exact` column (oxjob #364). Bare `foo*bar` is now an error (OQL_WILDCARD_NEEDS_EXACT).
 
 - id: 23
-  category: "proximity & wildcards"
+  tags: [phrase-exact, proximity]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -381,7 +393,7 @@ rows:
   note: Mid-word `?` = exactly one character, quoted so it runs on the no-stem `.search.exact` column (oxjob #364). Bare `wom?n` is now an error (OQL_WILDCARD_NEEDS_EXACT).
 
 - id: 24
-  category: "proximity & wildcards"
+  tags: [proximity]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -391,7 +403,7 @@ rows:
   note: Leading `*` unsupported (perf; allow_leading_wildcard=False).
 
 - id: 25
-  category: "proximity & wildcards"
+  tags: [proximity]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -401,7 +413,7 @@ rows:
   note: Leading `?` unsupported.
 
 - id: 26
-  category: "proximity & wildcards"
+  tags: [wildcard]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -411,7 +423,7 @@ rows:
   note: Sub-3-char prefix -> error, not a silent literal.
 
 - id: 27
-  category: "proximity & wildcards"
+  tags: [phrase-exact, proximity, wildcard]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -423,7 +435,7 @@ rows:
   note: 'Wildcard inside a quoted proximity phrase — SUPPORTED via an ES `intervals` query (trailing-prefix -> prefix rule, mid-word ? -> wildcard rule); ordered=false + max_gaps=N maps 1:1 to slop N (oxjob #355, pinned live on works-v33). query_string used to silently drop the wildcard. Leading / sub-3-char-prefix wildcards inside the phrase still rejected (#337).'
 
 - id: 28
-  category: "proximity & wildcards"
+  tags: [phrase-exact, proximity]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -435,7 +447,7 @@ rows:
   note: 'Binary proximity: two SEPARATE quoted operands NEAR each other (WoS `NEAR/N`). SUPPORTED via an ES `intervals` query — each operand is its own (possibly multi-word, adjacent) sub-interval and the two are combined ordered=false + max_gaps=N (oxjob #355 Goal B; live works-v33 = 5,183 hits). `match_phrase`+slop genuinely cannot express it (slop is whole-phrase). Value encoding `"A"~N~"B"` extends the single-phrase `"phrase"~N` form. Exact-only (both operands quoted/no-stem).'
 
 - id: 29
-  category: "proximity & wildcards"
+  tags: [proximity, wildcard]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -445,7 +457,7 @@ rows:
   note: Wildcard + proximity can't compose.
 
 - id: 79
-  category: "proximity & wildcards"
+  tags: [phrase-exact, wildcard]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -457,7 +469,7 @@ rows:
   note: 'Multi-token quoted wildcard phrase WITHOUT proximity = adjacency. SUPPORTED via an ES `intervals` query (ordered=true, max_gaps=0; trailing-prefix -> prefix rule, mid-word ? -> wildcard rule) — query_string would silently drop the wildcard. The no-`within` sibling of rows 27/58 (oxjob #355 Goal A; live works-v33 = 4,986 hits vs plain "smart phone" = 4,975). A SINGLE quoted wildcard token ("studies*") is #364''s unquoted no-stem path, not this. Leading / sub-3-char-prefix wildcards inside the phrase still rejected (#337).'
 
 - id: 80
-  category: "proximity & wildcards"
+  tags: [phrase-exact, proximity]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -469,7 +481,7 @@ rows:
   note: 'Binary proximity with MULTI-WORD phrase operands on both sides — each phrase stays intact (its own ordered, gap-0 adjacency sub-interval) and the two are combined ordered=false + max_gaps=5. This is the shape only WoS (NEAR/N) and an ES `intervals`/`span` engine can express; `match_phrase`+slop cannot keep two phrases as units (oxjob #355 Goal B; live works-v33 = 1,531 hits).'
 
 - id: 81
-  category: "proximity & wildcards"
+  tags: [phrase-exact, proximity, wildcard]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -479,7 +491,7 @@ rows:
   note: 'oxjob #355 perf guard: two wildcards in one intervals query (here a binary proximity) each need a >=4-char prefix — short 3-char prefixes multiply postings expansion (live: "pro* pro*" ~265ms vs ~45ms at 4 chars). "prot*" within 3 words of "pret*" is accepted. A lone wildcard keeps #337''s >=3-char floor.'
 
 - id: 82
-  category: "proximity & wildcards"
+  tags: [phrase-exact, wildcard]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -489,7 +501,7 @@ rows:
   note: 'oxjob #355 perf guard: at most 2 wildcards are allowed in one phrase / proximity / binary-proximity (one ES `intervals` query); 3+ multiplies prefix-expansion cost unacceptably. Remove a wildcard or split into separate searches.'
 
 - id: 30
-  category: "proximity & wildcards"
+  tags: [proximity]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -502,7 +514,7 @@ rows:
   note: Semantic (search.semantic, 2-phase vector search).
 
 - id: 31
-  category: "proximity & wildcards"
+  tags: [phrase-exact, proximity]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -514,7 +526,7 @@ rows:
   note: Exact phrase, no stemming (.search.exact).
 
 - id: 32
-  category: "proximity & wildcards"
+  tags: [proximity]
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
@@ -528,7 +540,7 @@ rows:
 # E. #284 worked-examples corpus — Stage A (filter / sort / sample)
 # ---------------------------------------------------------------------------
 - id: 33
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#2)"
@@ -540,7 +552,7 @@ rows:
   note: Bare entity query, no filters.
 
 - id: 34
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#3)"
@@ -551,7 +563,7 @@ rows:
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 2020}]}
 
 - id: 35
-  category: "filter, sort & sample"
+  tags: [boolean-nesting, filter]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#23)"
@@ -568,7 +580,7 @@ rows:
         {column_id: publication_year, value: 2020, operator: '>='}]}
 
 - id: 36
-  category: "filter, sort & sample"
+  tags: [sort]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#8)"
@@ -582,7 +594,7 @@ rows:
         sort_by: [{column_id: cited_by_count, direction: desc}]}
 
 - id: 37
-  category: "filter, sort & sample"
+  tags: [filter, negation]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#19)"
@@ -599,7 +611,7 @@ rows:
         {column_id: open_access.is_oa, value: false}]}
 
 - id: 38
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#46)"
@@ -613,7 +625,7 @@ rows:
   note: 'Bare = stemmed AND — exactly what the #284 OXURL did (space = AND on .search). Use `near "climate change"` for an adjacent phrase.'
 
 - id: 39
-  category: "filter, sort & sample"
+  tags: [sort]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#10)"
@@ -624,7 +636,7 @@ rows:
   oqo: {get_rows: authors, sort_by: [{column_id: works_count, direction: desc}]}
 
 - id: 40
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#18)"
@@ -637,7 +649,7 @@ rows:
         {column_id: has_orcid, value: true}]}
 
 - id: 41
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#17)"
@@ -648,7 +660,7 @@ rows:
   oqo: {get_rows: authors, filter_rows: [{column_id: ids.openalex, value: A5022654839}]}
 
 - id: 42
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#6)"
@@ -659,7 +671,7 @@ rows:
   oqo: {get_rows: sources, filter_rows: [{column_id: type, value: journal}]}
 
 - id: 43
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#12)"
@@ -670,7 +682,7 @@ rows:
   oqo: {get_rows: institutions, filter_rows: [{column_id: country_code, value: FR}]}
 
 - id: 44
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (OAQ#14)"
@@ -681,7 +693,7 @@ rows:
   oqo: {get_rows: topics, filter_rows: [{column_id: domain.id, value: '3'}]}
 
 - id: 45
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#37)"
@@ -699,7 +711,7 @@ rows:
 # F. #284 corpus — Stage B (group_by)
 # ---------------------------------------------------------------------------
 - id: 46
-  category: "group by"
+  tags: [group-by]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#10)"
@@ -711,7 +723,7 @@ rows:
         group_by: [{column_id: authorships.author.id}]}
 
 - id: 47
-  category: "group by"
+  tags: [group-by, proximity]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#17)"
@@ -726,7 +738,7 @@ rows:
   note: 'A species name is a phrase but recall matters → `near` (stemmed adjacent), not exact quotes.'
 
 - id: 48
-  category: "group by"
+  tags: [group-by]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#75)"
@@ -739,7 +751,7 @@ rows:
   note: 'Multi-dim group_by, now SUPPORTED (oxjob #387): the live API nests the ES terms aggs (groups within groups). Was server-unsupported (single-dim only -> #297).'
 
 - id: 49
-  category: "group by"
+  tags: [group-by]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#20)"
@@ -756,7 +768,7 @@ rows:
   note: 'col_eu27 is a Collection reference. Cross-type membership: the canonical OQL is `is in collection` (oxjob #363); the URL surface stays the bare `<field>:col_…` value (resolved by the cross-type pre-pass).'
 
 - id: 50
-  category: "group by"
+  tags: [group-by]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#48)"
@@ -768,7 +780,7 @@ rows:
         group_by: [{column_id: authorships.institutions.lineage}]}
 
 - id: 51
-  category: "group by"
+  tags: [group-by, proximity]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#27)"
@@ -785,7 +797,7 @@ rows:
         group_by: [{column_id: primary_location.source.id}]}
 
 - id: 52
-  category: "group by"
+  tags: [group-by]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#13)"
@@ -797,7 +809,7 @@ rows:
         group_by: [{column_id: primary_topic.field.id}]}
 
 - id: 53
-  category: "group by"
+  tags: [group-by]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#59)"
@@ -811,7 +823,7 @@ rows:
         group_by: [{column_id: authorships.author.id}]}
 
 - id: 54
-  category: "group by"
+  tags: [group-by]
   provenance:
     type: "analytics question"
     label: "OpenAlex analytics question (AKQ#22)"
@@ -826,7 +838,7 @@ rows:
 # G. #284 corpus — Librarian / vendor / SR-lit rows
 # ---------------------------------------------------------------------------
 - id: 55
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, proximity, sr-transcription]
   provenance:
     type: "librarian guide"
     label: "Cranfield SLR combining-strings guide"
@@ -852,7 +864,7 @@ rows:
   note: 'AND of OR-groups; the synonym phrases use `near` (stemmed adjacent) for recall. Top level is pure-and so no parens.'
 
 - id: 56
-  category: "librarian & SR queries"
+  tags: [proximity, sr-transcription]
   provenance:
     type: "librarian guide"
     label: "U. Manitoba Scopus proximity guide"
@@ -865,7 +877,7 @@ rows:
   note: 'Stemmed proximity (`near`) → .search, matching the #284 column. Use plain quotes for exact proximity.'
 
 - id: 57
-  category: "librarian & SR queries"
+  tags: [phrase-exact, sr-transcription, wildcard]
   provenance:
     type: "librarian guide"
     label: "U. Manitoba Scopus proximity guide"
@@ -878,7 +890,7 @@ rows:
   note: 'Trailing wildcard, quoted so it runs on the no-stem `title_and_abstract.search.exact` column (oxjob #364). Bare `phone*` is now an error (OQL_WILDCARD_NEEDS_EXACT) — stemming would drop the literal prefix.'
 
 - id: 58
-  category: "librarian & SR queries"
+  tags: [phrase-exact, proximity, sr-transcription, wildcard]
   provenance:
     type: "librarian guide"
     label: "U. Manitoba Scopus proximity guide"
@@ -891,7 +903,7 @@ rows:
   note: 'Wildcard-in-proximity, now SUPPORTED (oxjob #355): compiles to an ES `intervals` query that keeps the wildcard (query_string used to drop it). WoS/Scopus parity. ordered=false + max_gaps=N == slop N (pinned live on works-v33: 48,583 hits). Leading / sub-3-char-prefix wildcards still rejected (#337).'
 
 - id: 59
-  category: "librarian & SR queries"
+  tags: [phrase-exact, sr-transcription]
   provenance:
     type: "librarian guide"
     label: "UCL Scopus search-techniques guide"
@@ -904,7 +916,7 @@ rows:
   note: 'NL says "exact phrase only, no lemmatization" → plain quotes (exact, .search.exact). The textbook quotes-mean-exact case.'
 
 - id: 60
-  category: "librarian & SR queries"
+  tags: [phrase-exact, sr-transcription, wildcard]
   provenance:
     type: "librarian guide"
     label: "Caltech Web of Science wildcard guide"
@@ -916,7 +928,7 @@ rows:
   note: Mid-word wildcard (UK/US spellings in one query), quoted so it runs on the no-stem `title_and_abstract.search.exact` column (oxjob #364). Bare `behavio*r` is now an error (OQL_WILDCARD_NEEDS_EXACT).
 
 - id: 61
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, proximity, sr-transcription]
   provenance:
     type: "librarian guide"
     label: "KCL/Stirling systematic-review template"
@@ -948,7 +960,7 @@ rows:
         {column_id: language, value: en}]}
 
 - id: 62
-  category: "librarian & SR queries"
+  tags: [sr-transcription]
   provenance:
     type: "vendor docs"
     label: "Dimensions DSL reference + cookbook"
@@ -962,7 +974,7 @@ rows:
         {column_id: funders.id, value: F4320337351}]}
 
 - id: 63
-  category: "librarian & SR queries"
+  tags: [proximity, sample, sort, sr-transcription]
   provenance:
     type: "vendor docs"
     label: "Dimensions DSL reference + cookbook"
@@ -984,7 +996,7 @@ rows:
   note: 'Mixes a bare token (CRISPR, stemmed) with a `near` phrase (genome editing) — the explicit version of #284''s loose multi-word search.'
 
 - id: 64
-  category: "librarian & SR queries"
+  tags: [sr-transcription]
   provenance:
     type: "librarian guide"
     label: "Bibliometric study of librarian-authored SRs"
@@ -995,7 +1007,7 @@ rows:
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: library, operator: contains}]}
 
 - id: 65
-  category: "librarian & SR queries"
+  tags: [proximity, sr-transcription]
   provenance:
     type: "vendor docs"
     label: "Elsevier Scopus Search Tips"
@@ -1008,7 +1020,7 @@ rows:
   note: Quoted phrase scopes to ONE affiliation (position_increment_gap); slop ~5 allows order/gap within it.
 
 - id: 66
-  category: "librarian & SR queries"
+  tags: [sr-transcription]
   provenance:
     type: "vendor docs"
     label: "Elsevier Scopus Search Tips"
@@ -1021,7 +1033,7 @@ rows:
   note: 'Reserved chars (+, /) are ordinary inside a bare value; no escaping in OQL.'
 
 - id: 67
-  category: "librarian & SR queries"
+  tags: [sr-transcription]
   provenance:
     type: "vendor docs"
     label: "Clarivate Web of Science field tags"
@@ -1033,7 +1045,7 @@ rows:
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.orcid, value: '0000-0002-1838-9363'}]}
 
 - id: 68
-  category: "librarian & SR queries"
+  tags: [sr-transcription]
   provenance:
     type: "vendor docs"
     label: "Dimensions DSL reference + cookbook"
@@ -1043,7 +1055,7 @@ rows:
   note: '"funded by the acronym DFG" — out of scope (not representable). OQO only expresses funders.id equality AFTER an out-of-band /funders?search=DFG -> ID resolution; the acronym has no OQL/OQO form.'
 
 - id: 69
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "vendor docs"
     label: "Elsevier Scopus Search Tips"
@@ -1056,7 +1068,7 @@ rows:
         {column_id: type, value: article}, {column_id: type, value: review}]}]}
 
 - id: 70
-  category: "librarian & SR queries"
+  tags: [sr-transcription]
   provenance:
     type: "vendor docs"
     label: "Elsevier Scopus Search Tips"
@@ -1068,7 +1080,7 @@ rows:
   oqo: {get_rows: works, filter_rows: [{column_id: language, value: es}]}
 
 - id: 71
-  category: "librarian & SR queries"
+  tags: [negation, sr-transcription]
   provenance:
     type: "librarian guide"
     label: "UCL Web of Science search-tips guide"
@@ -1083,7 +1095,7 @@ rows:
   note: 'One negation mechanism: `does not contain` renders is_negated:true on a contains leaf.'
 
 - id: 72
-  category: "librarian & SR queries"
+  tags: [group-by, sr-transcription]
   provenance:
     type: "vendor docs"
     label: "Clarivate Web of Science field tags"
@@ -1099,7 +1111,7 @@ rows:
   note: Bare = stemmed AND (faithful to the #284 OXURL).
 
 - id: 73
-  category: "librarian & SR queries"
+  tags: [group-by, sr-transcription]
   provenance:
     type: "vendor docs"
     label: "Dimensions DSL reference + cookbook"
@@ -1114,7 +1126,7 @@ rows:
         group_by: [{column_id: authorships.author.id}]}
 
 - id: 74
-  category: "librarian & SR queries"
+  tags: [group-by, sr-transcription]
   provenance:
     type: "vendor docs"
     label: "Dimensions DSL reference + cookbook"
@@ -1128,7 +1140,7 @@ rows:
   note: 'Only the group-by-COUNT form is in scope. Ranking groups by mean citation impact is sort-by-aggregate -> #297.'
 
 - id: 75
-  category: "librarian & SR queries"
+  tags: [proximity, sr-transcription]
   provenance:
     type: "librarian guide"
     label: "Tufts Web of Science proximity examples"
@@ -1140,7 +1152,7 @@ rows:
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"tufts boston"~5', operator: contains}]}
 
 - id: 76
-  category: "librarian & SR queries"
+  tags: [sr-transcription]
   provenance:
     type: "librarian guide"
     label: "UCL Web of Science search-tips guide"
@@ -1150,7 +1162,7 @@ rows:
   note: Set-reference / stateful query composition (refine a saved search) — no single OQO; out of scope.
 
 - id: 77
-  category: "librarian & SR queries"
+  tags: [proximity, sr-transcription]
   provenance:
     type: "zendesk ticket"
     label: "OpenAlex zd#8101 + PR #240 (byline recall)"
@@ -1163,7 +1175,7 @@ rows:
   note: Byline slop ~2 recovers middle-name/initial forms without crossing co-authors.
 
 - id: 78
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "zendesk ticket"
     label: "OpenAlex zd#8101 — Claire's real systematic review"
@@ -1322,7 +1334,7 @@ rows:
 # Cross-type also exercised by row 49 (country). See oql-spec §3.10.
 # ---------------------------------------------------------------------------
 - id: 83
-  category: "entity references"
+  tags: [entity-references]
   provenance:
     type: "spec design"
     label: "Collections-in-filters (oxjob #363; IA from #367)"
@@ -1335,7 +1347,7 @@ rows:
   note: 'Same-type membership: works that are members of a Collection of works. Renders to the dedicated `filter=collection:col_…` API param (CollectionField).'
 
 - id: 84
-  category: "entity references"
+  tags: [entity-references, negation]
   provenance:
     type: "spec design"
     label: "Collections-in-filters (oxjob #363)"
@@ -1348,7 +1360,7 @@ rows:
   note: 'Negated membership rides the single `is_negated` bit (§3.5) → URL `collection:!col_…`.'
 
 - id: 85
-  category: "entity references"
+  tags: [entity-references]
   provenance:
     type: "spec design"
     label: "Collections-in-filters (oxjob #363)"
@@ -1361,7 +1373,7 @@ rows:
   note: 'Cross-type membership: works by authors in a Collection of authors. OQO keeps the referenced entity column; URL surface is the bare `<field>:col_…` (resolved by the cross-type pre-pass).'
 
 - id: 86
-  category: "entity references"
+  tags: [entity-references]
   provenance:
     type: "spec design"
     label: "Collections-in-filters (oxjob #363)"
@@ -1375,7 +1387,7 @@ rows:
 #    (oxjob #363 discovery loop run #1; each maps to a real WoS field tag).
 # ---------------------------------------------------------------------------
 - id: 89
-  category: "librarian & SR queries"
+  tags: [sr-transcription]
   provenance:
     type: "vendor docs"
     label: "Clarivate Web of Science field tag IS= (ISSN); engine param primary_location.source.issn"
@@ -1388,7 +1400,7 @@ rows:
   note: 'The work''s journal, by ISSN (matches ISSN-L or any of a source''s ISSNs). Literal string like DOI/ORCID — no name resolution. WoS IS=, Scopus ISSN().'
 
 - id: 90
-  category: "librarian & SR queries"
+  tags: [sr-transcription]
   provenance:
     type: "vendor docs"
     label: "Clarivate Web of Science field tag PUBL= (Publisher); engine param primary_location.source.publisher_lineage"
@@ -1406,7 +1418,7 @@ rows:
 # lists were removed. These rows pin the new grammar + its loud errors.
 
 - id: 91
-  category: "boolean logic"
+  tags: [boolean-logic, boolean-nesting]
   provenance:
     type: "spec design"
     label: "OQL parens-bag (#363): nested boolean inside a search group"
@@ -1422,7 +1434,7 @@ rows:
   note: 'Parens hold a nested boolean of search terms (the field+operator distribute over every atom). A nested AND inside an OR has no faithful oxurl (URL OR is a flat pipe of one key) → oql-only.'
 
 - id: 92
-  category: "entity references"
+  tags: [entity-references]
   provenance:
     type: "spec design"
     label: "OQL parens-bag (#363): multi-valued AND is meaningful (D7)"
@@ -1436,7 +1448,7 @@ rows:
   note: '`country is (us and gb)` = works with BOTH a US and a UK authorship (D7; `GB` is the ISO code for the United Kingdom — value-domain validation rejects the non-code `UK`, oxjob #363). A top-level AND, so canonical form is the explicit two-clause `country is US and country is GB` (filter_rows is itself an implicit AND).'
 
 - id: 93
-  category: "boolean logic"
+  tags: [boolean-logic]
   provenance:
     type: "spec design"
     label: "OQL parens-bag (#363): mixed and/or inside a group still errors"
@@ -1446,7 +1458,7 @@ rows:
   note: 'Inside a (…) group a space is an AND, so this mixes and/or at one level → loud error (no silent precedence). Fix: `(apple and (banana or cherry))` or `((apple and banana) or cherry)`.'
 
 - id: 94
-  category: "boolean logic"
+  tags: [boolean-logic]
   provenance:
     type: "spec design"
     label: "OQL parens-bag (#363): the removed `any of` list keyword"
@@ -1456,7 +1468,7 @@ rows:
   note: '`is any of`/`is in`/`all of` value-list keywords were removed (#363). Fix-it: write it with parentheses, `type is (article or review)`.'
 
 - id: 95
-  category: "boolean logic"
+  tags: [boolean-logic]
   provenance:
     type: "spec design"
     label: "OQL parens-bag (#363): commas no longer separate group items"
@@ -1466,7 +1478,7 @@ rows:
   note: 'Items in a (…) group are joined by `or`/`and`, not commas (#363). Fix: `type is (article or review)`.'
 
 - id: 96
-  category: "entity references"
+  tags: [entity-references]
   provenance:
     type: "spec design"
     label: "OQL parens-bag (#363): undelimited 2+ values must be parenthesized"
@@ -1476,7 +1488,7 @@ rows:
   note: 'Two bare values after `is` with no parentheses → loud error (the rule that kills the silent-keyword-truncation footgun). Fix: `country is (us or uk)`.'
 
 - id: 97
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL numeric range (#363): closed bounded range, mirrors the URL form publication_year:2019-2023"
@@ -1488,7 +1500,7 @@ rows:
   note: 'A closed numeric range is sugar for the two-bound implicit-AND `year >= 2019 and year <= 2023`; it parses to two bound leaves and the canonical render is the dash form. Round-trips to the same OQO the URL parser builds from `publication_year:2019-2023` (oxjob #363).'
 
 - id: 98
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL numeric range (#363): single-ended bound stays an inequality (open dash form is input-only)"
@@ -1500,7 +1512,7 @@ rows:
   note: 'The URL open-upper form `publication_year:-2023` (== `year <= 2023`) maps to the inequality, NOT a dash range — only a two-ended range is written `a-b`. The dash spellings `year is -2023` / `year is 2019-` are ACCEPTED on input but canonicalize back to `year <= 2023` / `year >= 2020`. A leading hyphen is always open-upper (no numeric field takes negatives, so unambiguous).'
 
 - id: 99
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL numeric range (#363): float field (FWCI) range with decimals"
@@ -1512,7 +1524,7 @@ rows:
   note: 'FWCI is a float field, so range/scalar values accept decimals. Distinct from year/citation count (integers), where a strict bound PAIR collapses via ±1 (row 100); floats have no clean ±1 so strict float pairs stay as inequalities.'
 
 - id: 100
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL numeric range (#363): strict integer bound PAIR canonicalizes to an inclusive range"
@@ -1524,7 +1536,7 @@ rows:
   note: 'On integer fields a strict bound PAIR is an exact inclusive interval: `year > 42 and year < 100` canonicalizes to `>= 43 and <= 99` -> renders `year is 43-99` / `publication_year:43-99`. Only when the column has BOTH bounds; a lone `citation count > 100` keeps its strict inequality (oxjob #363).'
 
 - id: 101
-  category: "filter, sort & sample"
+  tags: [boolean-nesting, filter]
   provenance:
     type: "analytics question"
     label: "Multi-valued source type with multi-word slugs (ebook platform, book series) — the URL form quotes the whole pipe-list"
@@ -1546,7 +1558,7 @@ rows:
   note: 'The source''s type (render word = engine display_name `source type`). A multi-word slug like `ebook platform` is one atom, so it must be QUOTED inside the value group (else it re-parses as adjacency-AND). The URL wraps the whole `|`-list in quotes ("spaces are literal, not AND"); the parser strips the enclosing quotes before the pipe-split, mirroring the engine (oxjob #363).'
 
 - id: 102
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "Jason's random-search walkthrough — primary_topic.subfield.id had no OQL surface while its siblings topic/field/domain were registered"
@@ -1560,7 +1572,7 @@ rows:
   note: 'The subfield of a work''s primary topic (topic hierarchy domain > field > subfield > topic). Render word = registry display_name "subfield"; the value resolves a `[display name]` via the native subfields namespace. Was an "unknown field" before oxjob #363 (only field/domain/topic were registered).'
 
 - id: 103
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "Raw oxurl column ids are always accepted as OQL input aliases (oxjob #363); ids.pmid has no curated friendly name"
@@ -1572,7 +1584,7 @@ rows:
   note: 'Any works-registry column_id is accepted as an OQL input alias even with no curated friendly name — valuable for oxurl-fluent users, language-independence, and testing. The raw key is NOT canonical (it renders back as the raw id, round-tripping). Synthesized from the registry operator metadata. (oxjob #363; search columns are the one excluded family — expressed via the curated fields + quoting.)'
 
 - id: 104
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "Jason's random-search walkthrough batch 2 — citation_normalized_percentile.value had no curated OQL surface (was an 'unknown field')"
@@ -1584,7 +1596,7 @@ rows:
   note: "The work's citation count normalized by subfield + year, as a percentile (0-100). Render word = registry display_name 'citation percentile by subfield'. The is_in_top_1_percent / is_in_top_10_percent siblings are curated bools. (oxjob #363 case 4)"
 
 - id: 105
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "Jason's walkthrough batch 2 — a language code rendered bare (en) with no [English] annotation"
@@ -1596,7 +1608,7 @@ rows:
   note: "Language is a closed code vocabulary (not a 'super obvious' enum like work-type), so it resolves a [display name] (English, not en) from config/languages.yaml. fields/subfields/domains resolve the same way — their numeric path-style IDs (fields/27) can't be routed by get_display_name, so they never resolved via ES before. (oxjob #363 case 5)"
 
 - id: 106
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "analytics question"
     label: "Jason's walkthrough batch 2 — open_access.any_repository_has_fulltext rendered the raw column id (no friendly phrasing)"
@@ -1608,7 +1620,7 @@ rows:
   note: "Full text available in some open repository. Booleans render via their bool_true/bool_false phrasing (gate-exempt from the registry display_name), here 'it has fulltext in a repository'. (oxjob #363 case 6)"
 
 - id: 107
-  category: "entity references"
+  tags: [entity-references]
   provenance:
     type: "analytics question"
     label: "Jason's walkthrough batch 2 — cited_by had no curated render word and the W-id value didn't resolve to a title"
@@ -1622,7 +1634,7 @@ rows:
   note: "cited_by:W = the works in W's reference list ('cited by' W); cites:W = works citing W. Render words = registry display_names 'cited by' / 'cites'. The W-id value resolves the referenced work's title, truncated with an ellipsis at a uniform length (works added to NATIVE_ENTITY_TYPES). (oxjob #363 case 7)"
 
 - id: 108
-  category: "search semantics"
+  tags: [boolean-nesting, proximity, search-semantics, sort]
   provenance:
     type: "analytics question"
     label: "Jason's walkthrough batch 2 — a real author SR query: quoted phrases inside an OR-group lost their quotes on URL->OQL render, producing invalid un-reparseable OQL"
@@ -1649,7 +1661,7 @@ rows:
   note: "A real multi-block systematic-review search. Each quoted phrase ('reduced order model') is one atom and MUST keep its quotes inside the OR-group, else it renders bare ('reduced order model') and re-parses as an ambiguous mix of implicit-AND (space) and explicit-or. The URL parser's boolean-group handler used to strip phrase quotes (case 8a fix). Bare multi-word atoms mixed with 'or' are a hard ambiguity error — OQL never guesses precedence (case 8b). (oxjob #363)"
 
 - id: 109
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL date kind (#407): exact-day filter on the publication date — render word is the registry display_name 'date'"
@@ -1661,7 +1673,7 @@ rows:
   note: "The `date` kind (oxjob #407). `date is YYYY-MM-DD` is an exact-day match on the base `publication_date` param (ES term). Literals are full ISO only — bare `2020` is rejected (it lives at `year is 2020`, the publication_year num field). Render word 'date' = the registry display_name."
 
 - id: 110
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL date kind (#407): closed inclusive date range via >=/<= — routes to the from_/to_ params (the only inclusive form at ES)"
@@ -1673,7 +1685,7 @@ rows:
   note: "Inclusive date bounds (Jason 2026-06-09: range form = comparison operators, not a dash range — the dash collides with ISO dates). `>=` routes to `from_publication_date` (ES gte), `<=` to `to_publication_date` (ES lte) — the ONLY inclusive forms at ES; the base param has only exact-day + strict >/<. The two bound leaves stay two clauses (never collapse to a `lo-hi` dash) and round-trip to the same OQO the URL `from_publication_date:…,to_publication_date:…` builds."
 
 - id: 111
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL date kind (#407): strict comparison stays on the base column (ES gt/lt)"
@@ -1685,7 +1697,7 @@ rows:
   note: "Strict `>`/`<` map to the base `publication_date` param (ES gt/lt), distinct from the inclusive `>=`/`<=` which route to from_/to_ (gte/lte). Mirrors the classic URL `publication_date:>2020-01-01`."
 
 - id: 112
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL date kind (#407): the created-date axis (Premium/Institutional/Partner only) — same surface, gated at query time"
@@ -1697,7 +1709,7 @@ rows:
   note: "The created/updated axes parse exactly like publication `date` (render words 'created date'/'updated date' = registry display_names). NOTE: created/updated are Premium/Institutional/Partner only — free/personal/anon keys get HTTP 200 {\"error\":\"Plan upgrade required\"} at query time (sort=created_date is gated too). OQL surfaces the field; the engine enforces the plan gate. Do NOT use this axis in free-tier example links — `date` (publication) is the free axis."
 
 - id: 113
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL multi-entity (#406): `domain` on works resolves the works column primary_topic.domain.id (was invalid_column / unparseable-from-URL footgun)"
@@ -1709,7 +1721,7 @@ rows:
   note: "#406 Part A: the friendly word resolves to the column that exists ON THE QUERIED ENTITY. On works `domain` is primary_topic.domain.id (the GUI domain param); on topics it's the bare domain.id (row 44). Both round-trip."
 
 - id: 114
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL multi-entity (#406): `field` on topics resolves the bare field.id (was invalid_column — the works-shaped primary_topic.field.id)"
@@ -1721,7 +1733,7 @@ rows:
   note: "#406 Part A: symmetric to row 113 — `field`/`subfield` are correct on works as primary_topic.* but on topics resolve to the bare field.id / subfield.id."
 
 - id: 115
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL multi-entity (#406): `subfield` on topics resolves the bare subfield.id (parse alias added; display_name stays 'parent subfield')"
@@ -1733,7 +1745,7 @@ rows:
   note: "#406 Part A: topics `subfield.id` registry display_name is 'parent subfield'; the friendly word 'subfield' is added as a parse alias so the topic-hierarchy word resolves on topics too."
 
 - id: 116
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL multi-entity (#406): `orcid` on authors resolves the authors column `orcid` (was invalid_column — the works authorships.author.orcid)"
@@ -1745,7 +1757,7 @@ rows:
   note: "#406 Part B: a vendor-ID homonym — the curated word ORCID maps to works' authorships.author.orcid, but on authors the column is bare `orcid`. Entity-aware resolution (registry display_name 'ORCID') picks the entity-correct column. Literal string, no name resolution."
 
 - id: 117
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL multi-entity (#406): `issn` on sources resolves the sources column `issn` (was invalid_column — the works primary_location.source.issn)"
@@ -1757,7 +1769,7 @@ rows:
   note: "#406 Part B: ISSN homonym — works primary_location.source.issn vs sources' bare `issn` (registry display_name 'ISSN'). Literal string."
 
 - id: 118
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL multi-entity (#406 1b): non-works GUI-faceted registry field — sources ISSN-L (no curated _FIELDS surface; parses by display_name/raw id)"
@@ -1769,7 +1781,7 @@ rows:
   note: "#406 Part B: the entity-aware GUI-faceted registry fallback gives non-works columns an OQL surface. Friendly word == engine display_name 'ISSN-L'. Literal string."
 
 - id: 119
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL multi-entity (#406 1b): authors h-index (summary_stats.h_index) — numeric GUI-faceted registry field"
@@ -1781,7 +1793,7 @@ rows:
   note: "#406 Part B: numeric registry field; render word == display_name 'h-index'. summary_stats.h_index is GUI-faceted on every entity that has it, so it renders friendly."
 
 - id: 120
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL multi-entity (#406 1b): funders works_count — GUI-faceted only on funders though the column exists on 5 entities, so it renders RAW (safety gate)"
@@ -1793,7 +1805,7 @@ rows:
   note: "#406 Part B safety gate: `works_count` exists on authors/sources/institutions/funders/publishers but is GUI-faceted only on funders. Parsing 'works count' is funders-scoped, but the GLOBAL render map can't tell which entity, so it renders the RAW column_id (round-trips on every entity) rather than a friendly word that would break re-parse on authors etc."
 
 - id: 121
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL multi-entity (#406 1b): sources article processing charge (apc_usd) — multi-word display_name registry field"
@@ -1805,7 +1817,7 @@ rows:
   note: "#406 Part B: multi-word friendly word ('article processing charge' = display_name) parses greedily and round-trips. sources-only column → renders friendly."
 
 - id: 122
-  category: "search semantics"
+  tags: [boolean-nesting, proximity, search-semantics]
   provenance:
     type: "analytics question"
     label: "Jason's walkthrough batch 3 — a quoted multi-subtoken token ('3xTg-AD') inside a stemmed t/a OR-group must keep its quotes (hyphen/slash phrase != bare on .search)"
@@ -1817,7 +1829,7 @@ rows:
   note: "Walkthrough batch 3 (W3.3): on the STEMMED .search column a quoted token the analyzer splits into >1 subtoken (hyphen/slash, e.g. '3xTg-AD', 'APP/PS1') is adjacent-subtokens (phrase), NOT the bare AND form — measured live `\"3xTg-AD\"` 2027 vs `3xTg-AD` 2354. So the encoder keeps quotes for multi-subtoken stemmed tokens; atomic tokens (5xFAD) and exact-column wildcards ('foo*bar') stay bare. Rendered as `near \"…\"` (stemmed adjacent phrase)."
 
 - id: 123
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL multi-entity (#406 1c): sources is_oa boolean — 'fully open access' (display_name); GUI-faceted source bool"
@@ -1829,7 +1841,7 @@ rows:
   note: "#406 Part B boolean: render word 'fully open access' == engine display_name; phrasing is the curated OQL sentence (the one legit _FIELDS exception). is_oa exists on works too (filters the work's OA flag)."
 
 - id: 124
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL multi-entity (#406 1c): sources is_in_doaj boolean — 'in DOAJ' (sources-only column)"
@@ -1841,7 +1853,7 @@ rows:
   note: "#406 Part B boolean: sources-only column → invalid_column on works (which uses primary_location.source.is_in_doaj, 'indexed by DOAJ')."
 
 - id: 125
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL multi-entity (#406 1c): sources is_core boolean — HOMONYM of works primary_location.source.is_core, entity-resolved in the bool clause"
@@ -1853,7 +1865,7 @@ rows:
   note: "#406 Part B boolean HOMONYM: the word 'CWTS core source' maps to works' primary_location.source.is_core; the bool clause parser entity-resolves it to the bare `is_core` column on sources (no second _f, which would have hijacked the works word). Renders the shared phrasing 'it's in a CWTS core source'."
 
 - id: 126
-  category: "search semantics"
+  tags: [search-semantics]
   provenance:
     type: "analytics question"
     label: "Discovery run #3 (AE prod logs): the dominant real query shape — a multi-word free-text search — is ONE stemmed adjacency-boosted node, not per-word AND (D2 reversal)"
@@ -1865,7 +1877,7 @@ rows:
   note: "D2 reversal (#363 discovery run #3): a maximal run of bare words = ONE stemmed value node. The engine adjacency-boosts the whole run (match_phrase x2 title / x0.15 abstract OR'd on the plain AND), so splitting `mental health` into `mental AND health` would silently drop that ranking boost. Recall is identical (cross_fields AND, #399/#191.7); ranking is not. Explicit and/or/not still build the tree between nodes."
 
 - id: 127
-  category: "search semantics"
+  tags: [search-semantics]
   provenance:
     type: "analytics question"
     label: "Discovery run #3 (AE prod logs): a reserved word literal in a stemmed search value is escaped by quoting just that word"
@@ -1877,7 +1889,7 @@ rows:
   note: "#2 (#363 discovery run #3): a literal reserved word (and/or/not) inside a stemmed value is quoted on render so it folds back as an escaped literal rather than re-parsing as a connective. A quoted token EMBEDDED in a bare run stays stemmed (escape); a STANDALONE quoted phrase is still exact. The whole run remains ONE node."
 
 - id: 128
-  category: "librarian & SR queries"
+  tags: [negation, sr-transcription]
   provenance:
     type: "zendesk ticket"
     label: "OpenAlex zd#8101 — Claire (Vaping & Health SR): subject-heading/MeSH concept → OpenAlex keyword membership"
@@ -1911,7 +1923,7 @@ rows:
     oxjobs working/oql-bulletproof/evidence/zd8101_vaping_and_health.txt
 
 - id: 129
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, negation, sr-transcription]
   provenance:
     type: "zendesk ticket"
     label: "OpenAlex zd#8101 — Claire (Vaping & Health SR): title-field OR of term variants (display_name.search)"
@@ -1939,7 +1951,7 @@ rows:
     oxjobs working/oql-bulletproof/evidence/zd8101_vaping_and_health.txt
 
 - id: 130
-  category: "librarian & SR queries"
+  tags: [negation, sr-transcription]
   provenance:
     type: "zendesk ticket"
     label: "OpenAlex zd#8101 — Claire (UCL EPPI-Centre): within-field NOT (`!`) excludes an exact phrase"
@@ -1969,7 +1981,7 @@ rows:
     the compact form.
 
 - id: 131
-  category: "librarian & SR queries"
+  tags: [negation, sr-transcription]
   provenance:
     type: "zendesk ticket"
     label: "OpenAlex zd#8101 — Claire: geographic within-field NOT (`England!\"New England\"`)"
@@ -1991,7 +2003,7 @@ rows:
 # H. return — column projection (oxjob #450)
 # ---------------------------------------------------------------------------
 - id: 132
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL return clause (#450) — column projection over the column namespace"
@@ -2010,7 +2022,7 @@ rows:
     last, after sort/sample.
 
 - id: 133
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL return clause (#450) — schema-only result columns"
@@ -2028,7 +2040,7 @@ rows:
     catalog.
 
 - id: 134
-  category: "filter, sort & sample"
+  tags: [sort]
   provenance:
     type: "spec design"
     label: "OQL return clause (#450) — composes with sort"
@@ -2048,7 +2060,7 @@ rows:
     round-trips by construction.
 
 - id: 135
-  category: "filter, sort & sample"
+  tags: [filter]
   provenance:
     type: "spec design"
     label: "OQL return clause (#450) — missing column is a loud error"
@@ -2069,7 +2081,7 @@ rows:
 #    are large real-world trees, not hand-authored oracles.
 # ---------------------------------------------------------------------------
 - id: 136
-  category: "librarian & SR queries"
+  tags: [sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · acetaminophen & autism'
@@ -2089,7 +2101,7 @@ rows:
     {column_id: title_and_abstract.search.exact, value: '"autism spectrum disorders"', operator: contains}]}
 
 - id: 137
-  category: "librarian & SR queries"
+  tags: [phrase-exact, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · firm factors & share price'
@@ -2104,7 +2116,7 @@ rows:
     price"', operator: contains}]}
 
 - id: 138
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · concrete sulfuric-acid corrosion'
@@ -2131,7 +2143,7 @@ rows:
     {column_id: title_and_abstract.search.exact, value: '"sulphuric acid"', operator: contains}]}]}
 
 - id: 139
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, phrase-exact, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · whole-body vibration & body composition'
@@ -2161,7 +2173,7 @@ rows:
     value: '"whole body vibration"', operator: contains}]}]}
 
 - id: 140
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · gamification & reading'
@@ -2185,7 +2197,7 @@ rows:
     value: reading, operator: contains}]}]}
 
 - id: 141
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · recurrent miscarriage & heparin'
@@ -2216,7 +2228,7 @@ rows:
     {column_id: title_and_abstract.search.exact, value: '"recurrent pregnancy loss"', operator: contains}]}]}
 
 - id: 142
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription, wildcard]
   provenance:
     type: "systematic review"
     label: 'Mined SR · Klebsiella & colistin resistance'
@@ -2245,7 +2257,7 @@ rows:
     value: suscep*, operator: contains}]}]}
 
 - id: 143
-  category: "librarian & SR queries"
+  tags: [negation, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · obesity & depression (excl. children)'
@@ -2260,7 +2272,7 @@ rows:
     {column_id: title_and_abstract.search, value: obesity, operator: contains}]}
 
 - id: 144
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, negation, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · COVID-19 anticoagulation in ICU'
@@ -2291,7 +2303,7 @@ rows:
     value: '"intensive care units"', operator: contains}]}]}
 
 - id: 145
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · diabetes & AI wearables'
@@ -2328,7 +2340,7 @@ rows:
     value: '"type 2 diabetes"', operator: contains}]}]}
 
 - id: 146
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · oxytocin & vaginal atrophy'
@@ -2365,7 +2377,7 @@ rows:
     operator: contains}]}]}
 
 - id: 147
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription, wildcard]
   provenance:
     type: "systematic review"
     label: 'Mined SR · social media & vaccine hesitancy'
@@ -2394,7 +2406,7 @@ rows:
     operator: contains}]}]}
 
 - id: 148
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · NAION & semaglutide'
@@ -2415,7 +2427,7 @@ rows:
     value: '"glucagon-like peptide-1 agonist"', operator: contains}]}]}
 
 - id: 149
-  category: "librarian & SR queries"
+  tags: [sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · facial-nerve branching variation'
@@ -2435,7 +2447,7 @@ rows:
     {column_id: title_and_abstract.search.exact, value: '"facial nerve"', operator: contains}]}
 
 - id: 150
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription, wildcard]
   provenance:
     type: "systematic review"
     label: 'Mined SR · energy literacy in schools'
@@ -2468,7 +2480,7 @@ rows:
     operator: contains}]}]}
 
 - id: 151
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · blended learning in science ed (PT/EN)'
@@ -2491,7 +2503,7 @@ rows:
     value: b-learning, operator: contains}]}]}
 
 - id: 152
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · seasonality & dietary intake'
@@ -2517,7 +2529,7 @@ rows:
     operator: contains}]}]}]}]}
 
 - id: 153
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · dance & fitness in older women'
@@ -2556,7 +2568,7 @@ rows:
     operator: contains}, {column_id: title_and_abstract.search, value: women, operator: contains}]}]}]}
 
 - id: 154
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · periodontitis & stem-cell therapy'
@@ -2590,7 +2602,7 @@ rows:
     value: '"periodontal regeneration"', operator: contains}]}]}]}]}
 
 - id: 155
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · loneliness in older adults (WoS TS=)'
@@ -2618,7 +2630,7 @@ rows:
     value: lonely, operator: contains}]}]}
 
 - id: 156
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, phrase-exact, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · neuropsych normative data (PubMed [Title])'
@@ -2638,7 +2650,7 @@ rows:
     {column_id: display_name.search.exact, value: '"normative data"', operator: contains}]}]}
 
 - id: 157
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription, wildcard]
   provenance:
     type: "systematic review"
     label: 'Mined SR · generative AI in engineering (Scopus TITLE/TAK)'
@@ -2676,7 +2688,7 @@ rows:
     value: '"natural language"', operator: contains}]}]}]}]}
 
 - id: 158
-  category: "librarian & SR queries"
+  tags: [sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · Suzuki music method (Scopus TITLE-ABS-KEY)'
@@ -2692,7 +2704,7 @@ rows:
     {column_id: title_and_abstract.search, value: suzuki, operator: contains}]}
 
 - id: 159
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, phrase-exact, sr-transcription, wildcard]
   provenance:
     type: "systematic review"
     label: 'Mined SR · Suzuki music method (WoS TI= OR AB=)'
@@ -2714,7 +2726,7 @@ rows:
     operator: contains}]}]}]}
 
 - id: 160
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription]
   provenance:
     type: "systematic review"
     label: 'Mined SR · central venous catheter & coagulopathy (PubMed [Mesh]+[tiab])'
@@ -2764,7 +2776,7 @@ rows:
     value: '"central venous catheter"', operator: contains}]}]}
 
 - id: 161
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, negation, proximity, sr-transcription]
   provenance:
     type: "zendesk ticket"
     label: 'zd#8101 — Claire (Vaping & Health SR): main vape/nicotine concept block'
@@ -2919,7 +2931,7 @@ rows:
     {column_id: title_and_abstract.search.exact, value: e-vaping, operator: contains}]}]}]}
 
 - id: 162
-  category: "librarian & SR queries"
+  tags: [phrase-exact, sr-transcription]
   provenance:
     type: "zendesk ticket"
     label: 'zd#8101 — Claire (Vaping & Health SR): her own mis-quoted line (footgun)'
@@ -2935,7 +2947,7 @@ rows:
   diagnostic: OQL_UNTERMINATED_STRING
 
 - id: 163
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, negation, proximity, sr-transcription]
   provenance:
     type: "zendesk ticket"
     label: 'zd#8101 — Claire (Vaping & Health SR): nicotine-delivery + brand block (corrected)'
@@ -3008,7 +3020,7 @@ rows:
     nicotine"~4', operator: contains}]}]}
 
 - id: 164
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, negation, sr-transcription, wildcard]
   provenance:
     type: "zendesk ticket"
     label: 'zd#8101 — Claire (Educational accountability SR): 5-block AND strategy'
@@ -3183,7 +3195,7 @@ rows:
     value: types/retraction}]}]}
 
 - id: 165
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, sr-transcription, wildcard]
   provenance:
     type: "zendesk ticket"
     label: 'zd#8101 — Claire (Educational accountability SR): inspection-agency names'
@@ -3323,7 +3335,7 @@ rows:
     value: types/retraction}]}]}
 
 - id: 166
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, negation, sr-transcription]
   provenance:
     type: "zendesk ticket"
     label: 'zd#8101 — Claire (Educational accountability SR): country block with within-field NOT'
@@ -3517,7 +3529,7 @@ rows:
     value: types/retraction}]}]}
 
 - id: 167
-  category: "librarian & SR queries"
+  tags: [boolean-nesting, negation, sr-transcription]
   provenance:
     type: "zendesk ticket"
     label: 'zd#8101 — Claire (Educational accountability SR): country via address filter'
@@ -3684,3 +3696,132 @@ rows:
     {column_id: type, value: types/other}, {column_id: type, value: types/report}, {column_id: type,
     value: types/retraction}]}]}
 
+
+# ---------------------------------------------------------------------------
+# N. Negation shapes  (#432 — the NOT problem space)
+# ---------------------------------------------------------------------------
+# A deliberate catalogue of negation forms, tagged `negation`, so the playground
+# can show the whole shape space at once. Seeded by probing each shape through
+# the live parser (#432) to record its ACTUAL current behavior — several are
+# subtle: De Morgan distribution, double-negation collapse, positive-less
+# groups, and the rejected wildcard/list forms. The compact within-value WoS
+# `term!"phrase"` idiom (the thing librarians actually paste) is NOT yet here as
+# a green case: it currently MIS-parses ("New England" survives as a positive
+# term) — an open design problem, see work/NEGATION_PROBLEM_SPACE.md.
+- id: 168
+  tags: [negation]
+  provenance:
+    type: "spec design"
+    label: "Predicate-level negation (standalone)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:!dog'
+  status: ok
+  note: 'Standalone predicate negation — a lone negated leaf with no positive clause. Renders with the `does not contain` predicate, not a `not …` value-group.'
+  oql: 'works where title does not contain dog'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: dog, operator: contains, is_negated: true}]}
+- id: 169
+  tags: [negation, boolean-nesting]
+  provenance:
+    type: "spec design"
+    label: "NOT of an OR-group (De Morgan)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:!cat,display_name.search:!dog'
+  status: ok
+  note: 'NOT distributes over an OR-group: `not (cat or dog)` canonicalizes to `not cat and not dog` (De Morgan). The OR-group disappears — a structure change, not just a label flip.'
+  oql: 'works where title contains (not cat and not dog)'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: cat, operator: contains, is_negated: true}, {column_id: display_name.search, value: dog, operator: contains, is_negated: true}]}
+- id: 170
+  tags: [negation]
+  provenance:
+    type: "spec design"
+    label: "Double negation collapses"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:dog'
+  status: ok
+  note: 'Double negation collapses: `not not dog` == `dog`. Input is accepted and silently simplified to the positive form.'
+  oql: 'works where title contains dog'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: dog, operator: contains}]}
+- id: 171
+  tags: [negation]
+  provenance:
+    type: "spec design"
+    label: "Positive-less (pure-negative) group"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:!dog'
+  status: ok
+  note: 'A group with ONLY an exclusion and no positive clause — "everything except dog". Parses fine and equals the standalone predicate (168). OPEN QUESTION (#432): does the live API actually run a pure-negative query, or does it need a positive anchor? See work/NEGATION_PROBLEM_SPACE.md.'
+  oql: 'works where title does not contain dog'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: dog, operator: contains, is_negated: true}]}
+- id: 172
+  tags: [negation]
+  provenance:
+    type: "spec design"
+    label: "Cross-field negation"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=abstract.search:!dog,display_name.search:cat'
+  status: ok
+  note: 'Negation on a different field than the positive clause: include cat in the title, exclude dog from the abstract.'
+  oql: 'works where abstract does not contain dog and title contains cat'
+  oqo: {get_rows: works, filter_rows: [{column_id: abstract.search, value: dog, operator: contains, is_negated: true}, {column_id: display_name.search, value: cat, operator: contains}]}
+- id: 173
+  tags: [negation, entity-references]
+  provenance:
+    type: "spec design"
+    label: "Negated entity reference (is not)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=authorships.author.id:!A5066175077'
+  status: ok
+  note: 'Negation on an entity-id leaf: exclude works by a specific author. The `is not` predicate on an entity column.'
+  oql: 'works where author is not A5066175077 [Stephen Hawking]'
+  oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.id, value: A5066175077, is_negated: true}]}
+- id: 174
+  tags: [negation, filter]
+  provenance:
+    type: "spec design"
+    label: "Negated closed-vocab scalar (is not)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=type:!article'
+  status: ok
+  note: 'Negation on a closed-vocabulary scalar column: exclude a work type.'
+  oql: 'works where type is not article'
+  oqo: {get_rows: works, filter_rows: [{column_id: type, value: article, is_negated: true}]}
+- id: 175
+  tags: [negation, proximity]
+  provenance:
+    type: "spec design"
+    label: "Negated co-occurrence group"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:!climate%20%2B%20change'
+  status: ok
+  note: 'Negating a `+` co-occurrence group: exclude documents where climate and change co-occur. The negation wraps the whole adjacency group as one negated phrase leaf.'
+  oql: 'works where title does not contain (climate + change)'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: 'climate + change', operator: contains, is_negated: true}]}
+- id: 176
+  tags: [negation, boolean-nesting]
+  provenance:
+    type: "vendor docs"
+    label: "Scopus/WoS AND NOT trailing exclusions"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:!c,display_name.search:!d,display_name.search:a|b'
+  status: ok
+  note: 'The Scopus/WoS `(... ) AND NOT a AND NOT b` shape: an OR-group core followed by trailing exclusions. Canonicalizes with the negated leaves hoisted ahead of the OR-group.'
+  oql: 'works where title contains (not c and not d and (a or b))'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: c, operator: contains, is_negated: true}, {column_id: display_name.search, value: d, operator: contains, is_negated: true}, {join: or, filters: [{column_id: display_name.search, value: a, operator: contains}, {column_id: display_name.search, value: b, operator: contains}]}]}
+- id: 177
+  tags: [negation, wildcard]
+  provenance:
+    type: "spec design"
+    label: "Negated bare wildcard — rejected"
+  status: error
+  oql: 'works where title contains (not climat*)'
+  diagnostic: OQL_WILDCARD_NEEDS_EXACT
+  note: 'A negated bare wildcard is rejected for the same reason as a positive one — wildcards run on exact (no-stem) text. Fix: quote it, `not "climat*"`. Negation does not change the wildcard rule.'
+- id: 178
+  tags: [negation, entity-references]
+  provenance:
+    type: "spec design"
+    label: "Negated is-not-in list — removed keyword"
+  status: error
+  oql: 'works where institution is not in (I27837315, I136199984)'
+  diagnostic: OQL_LIST_KEYWORD_REMOVED
+  note: 'The `is not in (…)` list keyword was removed; a negated list must be written with the bare parenthesized form. Documents that the removal applies to the negated branch too.'
