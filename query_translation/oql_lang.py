@@ -2225,6 +2225,9 @@ class _Parser:
         t = self.peek()
         if t is None:
             raise oql_error("OQL_MISSING_VALUE", "expected a search term", "")
+        if t.kind == "BANG":
+            # a leading `!` (the WoS within-value NOT) — not an OQL operator (#432)
+            raise oql_error("OQL_BANG_NOT_SUPPORTED", position=t.pos)
         if t.kind == "WORD" and t.val.lower() == "not":
             self._consume_functional_not(t)  # not(...) — bare `not` is an error
             return _negate(self._parse_search_operand(base))
@@ -2240,17 +2243,13 @@ class _Parser:
                            "write the list with parentheses",
                            "e.g. contains (a or b)", t.pos)
         operand = self._parse_search_atom(base, in_group=True)
-        # within-`.search`-value WoS NOT: `A!B[!C…]` = A AND NOT B AND NOT C …
-        # (#432; the same decomposition the OXURL parser does, #431). `!` lexes as
-        # BANG; each excluded operand is parsed as a normal atom so it routes to
-        # the right column (quoted -> .search.exact, bare -> .search) and is then
-        # negated. The leading run is positive; every `!run` is a negated clause.
-        nt = self.peek()
-        while nt is not None and nt.kind == "BANG":
-            self.next()
-            excluded = self._parse_search_atom(base, in_group=True)
-            operand = BranchFilter(join="and", filters=[operand, _negate(excluded)])
-            nt = self.peek()
+        # `!` (the WoS / classic-OXURL within-value NOT, e.g. `England!"New England"`)
+        # is NOT an OQL operator — OQL negates with not(…). It is lexed as a BANG
+        # token only so we can reject it loudly with a fix-it, instead of silently
+        # folding it into the stemmed value (the #432 mis-parse). The compact
+        # `term!"phrase"` form lives only on the classic OXURL surface (#431).
+        if self.peek() is not None and self.peek().kind == "BANG":
+            raise oql_error("OQL_BANG_NOT_SUPPORTED", position=self.peek().pos)
         return operand
 
     def _is_run_break_word(self, val: str) -> bool:

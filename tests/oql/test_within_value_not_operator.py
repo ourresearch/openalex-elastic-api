@@ -1,35 +1,43 @@
-"""Spec tests for the within-`.search`-value `!` NOT operator (zd#8101 WoS idiom).
+"""`!` (the WoS / classic-OXURL within-value NOT) is rejected in OQL (#432).
 
-Inside a field-scoped search value, `A!B` means "A AND NOT B" — the compact form
-librarians paste verbatim from Web of Science / Scopus. It MUST desugar to the
-same query as the explicit `(A and not(B))` form (charter decision 21's functional
-`not()`):
+`!` is Web of Science / classic-OpenAlex-URL syntax (`title_and_abstract.search:
+England!"New England"`), NOT an OQL operator — OQL negates with `not(...)`. The
+classic `term!"phrase"` form is decomposed only on the OXURL→OQO surface (#431,
+`url_parser.py`); typed into an OQL query it must raise a loud, fix-it error
+rather than silently fold into a positive value (the original mis-parse, where
+`England!"New England"` became one positive `England! New England` leaf).
 
-  * `England!"New England"`  ==  `England and not("New England")`
-        a quoted `!"phrase"` excludes the EXACT phrase (column → `.search.exact`).
-  * `vaccine!mandatory`      ==  `vaccine and not(mandatory)`
-        a bare `!term` excludes the stemmed term.
-
-#432: was a silent mis-parse — the `!` got swallowed into one positive token
-(`England! New England`), so the excluded phrase was positively REQUIRED. Fixed
-in the search-value grammar. See
+The intent itself is expressed in OQL as `(England and not("New England"))`
+(corpus rows 130/131). See
 oxjobs working/oql-systematic-reviews/work/NEGATION_PROBLEM_SPACE.md
 """
-from tests.oql.oql_v2 import parse
-from query_translation.oqo_canonicalizer import canonicalize_oqo
+import pytest
+
+from tests.oql.oql_v2 import parse, OQLError
 
 
-def _canon(oql):
-    return canonicalize_oqo(parse(oql)).to_dict()
+def test_bang_quoted_phrase_is_rejected():
+    """`A!"phrase"` is not OQL — raise OQL_BANG_NOT_SUPPORTED, don't mis-parse."""
+    with pytest.raises(OQLError) as exc:
+        parse('works where title/abstract contains (England!"New England")')
+    assert exc.value.code == "OQL_BANG_NOT_SUPPORTED"
 
 
-def test_bang_quoted_phrase_excludes_exact():
-    """`A!"phrase"` desugars to A AND NOT the exact phrase."""
-    assert _canon('works where title/abstract contains (England!"New England")') == \
-        _canon('works where title/abstract contains (England and not("New England"))')
+def test_bang_bare_term_is_rejected():
+    """`A!term` is rejected the same way."""
+    with pytest.raises(OQLError) as exc:
+        parse("works where title contains (vaccine!mandatory)")
+    assert exc.value.code == "OQL_BANG_NOT_SUPPORTED"
 
 
-def test_bang_bare_term_excludes_stemmed():
-    """`A!term` desugars to A AND NOT the stemmed term."""
-    assert _canon('works where title contains (vaccine!mandatory)') == \
-        _canon('works where title contains (vaccine and not(mandatory))')
+def test_leading_bang_is_rejected():
+    """A leading `!` is rejected too (OQL has no `!`)."""
+    with pytest.raises(OQLError) as exc:
+        parse('works where title/abstract contains (!"New England")')
+    assert exc.value.code == "OQL_BANG_NOT_SUPPORTED"
+
+
+def test_oql_not_form_still_works():
+    """The OQL way to say it — `not(...)` — is unaffected."""
+    # parses without raising
+    parse('works where title/abstract contains (England and not("New England"))')

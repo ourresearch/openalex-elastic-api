@@ -175,6 +175,11 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "(a bare `not foo` would re-leak the precedence footgun the "
               "parens rule kills)",
               "write it as a function, e.g. not(dog) or not(dog or cat)"),
+        _spec("OQL_BANG_NOT_SUPPORTED", ERROR, PARSE,
+              "`!` is not an OQL operator — it is Web of Science / classic-URL "
+              "syntax; OQL negates with not(…). (The compact `term!\"phrase\"` "
+              "form is accepted only on the classic OXURL surface.)",
+              'use not(…), e.g. (England and not("New England"))'),
         _spec("OQL_SEMANTIC_NEEDS_TEXT", ERROR, PARSE,
               '"is similar to" needs a quoted text passage',
               'e.g. abstract is similar to "..."'),
