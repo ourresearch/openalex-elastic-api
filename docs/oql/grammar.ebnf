@@ -24,7 +24,7 @@ conditions   ::= operand ( connective operand )*
 
 connective   ::= 'and' | 'or'
 
-operand      ::= 'not' operand
+operand      ::= 'not' '(' conditions ')'
                | '(' conditions ')'
                | clause
 
@@ -58,7 +58,7 @@ searchExpr   ::= termRun ( connective termRun )*
 
 termRun      ::= searchOperand+
 
-searchOperand ::= 'not' searchOperand
+searchOperand ::= 'not' '(' searchExpr ')'
                | '(' searchExpr ')'
                | ( 'any' | 'all' ) 'of' '(' searchAtom ( ',' searchAtom )* ','? ')'
                | searchAtom

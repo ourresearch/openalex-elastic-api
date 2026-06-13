@@ -116,8 +116,8 @@ rows:
   status: ok
   oql: |-
     works where institution is (
-        not I33213144 [Harvard] and
-        not I97018004 [Stanford]
+        not(I33213144 [Harvard]) and
+        not(I97018004 [Stanford])
       )
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I33213144, is_negated: true},
@@ -1088,7 +1088,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:!pediatric,title_and_abstract.search:covid'
   status: ok
-  oql: 'works where title/abstract contains (not pediatric and covid)'
+  oql: 'works where title/abstract contains (not(pediatric) and covid)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: covid, operator: contains},
         {column_id: title_and_abstract.search, value: pediatric, operator: contains, is_negated: true}]}
@@ -1899,7 +1899,7 @@ rows:
   status: ok
   oql: |-
     works where keyword is (
-        not keywords/animal-model [Animal model] and
+        not(keywords/animal-model [Animal model]) and
         keywords/electronic-cigarette [Electronic cigarette]
       )
       and language is en [English]
@@ -1959,7 +1959,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:teacher,title_and_abstract.search.exact:!%22academic%20teacher%22'
   status: ok
-  oql: 'works where title/abstract contains (teacher and not "academic teacher")'
+  oql: 'works where title/abstract contains (teacher and not("academic teacher"))'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: teacher, operator: contains},
         {column_id: title_and_abstract.search.exact, value: '"academic teacher"', operator: contains, is_negated: true}]}
@@ -1989,7 +1989,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:England,title_and_abstract.search.exact:!%22New%20England%22'
   status: ok
-  oql: 'works where title/abstract contains (England and not "New England")'
+  oql: 'works where title/abstract contains (England and not("New England"))'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: England, operator: contains},
         {column_id: title_and_abstract.search.exact, value: '"New England"', operator: contains, is_negated: true}]}
@@ -2266,7 +2266,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:!children,title_and_abstract.search:depression,title_and_abstract.search:obesity'
   status: ok
   note: 'Negation (NOT) — only ~4% of real SR strings use it. (source DB: PubMed).'
-  oql: 'works where title/abstract contains (not children and depression and obesity)'
+  oql: 'works where title/abstract contains (not(children) and depression and obesity)'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: children, operator: contains,
     is_negated: true}, {column_id: title_and_abstract.search, value: depression, operator: contains},
     {column_id: title_and_abstract.search, value: obesity, operator: contains}]}
@@ -2285,8 +2285,8 @@ rows:
     Science Direct).
   oql: |-
     works where title/abstract contains (
-        not paediatric and
-        not "myocardial infarction" and
+        not(paediatric) and
+        not("myocardial infarction") and
         (COVID-19 or coronavirus) and
         (anticoagulant or enoxaparin or fondaparinux or heparin) and
         ("critical illness" or "intensive care units")
@@ -3056,8 +3056,8 @@ rows:
           "technical schools" or "university preparatory education" or
           "vocational school" or "vocational schools" or
           (adolescents and education) or (education and "young people") or
-          (teacher and not "academic teacher") or
-          (teachers and not "academic teachers")
+          (teacher and not("academic teacher")) or
+          (teachers and not("academic teachers"))
         ) and
         (
           Policies or context or electoral or policy or political or reform or
@@ -3362,8 +3362,8 @@ rows:
           French or Ireland or Irish or Japan or Japanese or Netherlands or
           Ontarian or Ontario or Poland or Polish or Scotland or Scottish or
           Singapore or Singaporean or Welsh or "U.K." or "UK" or "New Zealand" or
-          "United Kingdom" or (British and not "British Columbia") or
-          (England and not "New England") or (Wales and not "New South Wales")
+          "United Kingdom" or (British and not("British Columbia")) or
+          (England and not("New England")) or (Wales and not("New South Wales"))
         ) and
         (
           HAVO or VWO or atheneum or gymnasium or schooling or
@@ -3383,8 +3383,8 @@ rows:
           "technical schools" or "university preparatory education" or
           "vocational school" or "vocational schools" or
           (adolescents and education) or (education and "young people") or
-          (teacher and not "academic teacher") or
-          (teachers and not "academic teachers")
+          (teacher and not("academic teacher")) or
+          (teachers and not("academic teachers"))
         ) and
         (
           "Self-Assessment" or "Annual School Review" or "Annual School Reviews" or
@@ -3572,8 +3572,8 @@ rows:
           "technical schools" or "university preparatory education" or
           "vocational school" or "vocational schools" or
           (adolescents and education) or (education and "young people") or
-          (teacher and not "academic teacher") or
-          (teachers and not "academic teachers")
+          (teacher and not("academic teacher")) or
+          (teachers and not("academic teachers"))
         ) and
         (
           "Self-Assessment" or "Annual School Review" or "Annual School Reviews" or
@@ -3728,7 +3728,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=display_name.search:!cat,display_name.search:!dog'
   status: ok
   note: 'NOT distributes over an OR-group: `not (cat or dog)` canonicalizes to `not cat and not dog` (De Morgan). The OR-group disappears — a structure change, not just a label flip.'
-  oql: 'works where title contains (not cat and not dog)'
+  oql: 'works where title contains (not(cat) and not(dog))'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: cat, operator: contains, is_negated: true}, {column_id: display_name.search, value: dog, operator: contains, is_negated: true}]}
 - id: 170
   tags: [negation]
@@ -3805,7 +3805,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=display_name.search:!c,display_name.search:!d,display_name.search:a|b'
   status: ok
   note: 'The Scopus/WoS `(... ) AND NOT a AND NOT b` shape: an OR-group core followed by trailing exclusions. Canonicalizes with the negated leaves hoisted ahead of the OR-group.'
-  oql: 'works where title contains (not c and not d and (a or b))'
+  oql: 'works where title contains (not(c) and not(d) and (a or b))'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: c, operator: contains, is_negated: true}, {column_id: display_name.search, value: d, operator: contains, is_negated: true}, {join: or, filters: [{column_id: display_name.search, value: a, operator: contains}, {column_id: display_name.search, value: b, operator: contains}]}]}
 - id: 177
   tags: [negation, wildcard]
@@ -3813,9 +3813,9 @@ rows:
     type: "spec design"
     label: "Negated bare wildcard — rejected"
   status: error
-  oql: 'works where title contains (not climat*)'
+  oql: 'works where title contains (not(climat*))'
   diagnostic: OQL_WILDCARD_NEEDS_EXACT
-  note: 'A negated bare wildcard is rejected for the same reason as a positive one — wildcards run on exact (no-stem) text. Fix: quote it, `not "climat*"`. Negation does not change the wildcard rule.'
+  note: 'A negated bare wildcard is rejected for the same reason as a positive one — wildcards run on exact (no-stem) text. Fix: quote it, `not("climat*")`. Negation does not change the wildcard rule.'
 - id: 178
   tags: [negation, entity-references]
   provenance:

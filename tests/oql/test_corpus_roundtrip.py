@@ -180,11 +180,15 @@ def test_search_model_space_quotes_near():
     p("works where title contains (climate (change or warming))")   # ok
     p("works where title contains ((climate change) or warming)")   # ok
 
-    # a bare `not` at top level must be parenthesized; inside a group `not` binds
-    # to the single next operand (tightest): `(not a and b)` = (not a) and b
+    # `not` is a function `not(X)` (charter decision 21): a bare `not` (no parens)
+    # is an error everywhere — at top level AND inside a group.
     with pytest.raises(OQLError):
         p("works where title contains not a")
-    fr = rows("works where title contains (not a and b)")  # top-level AND flattens
+    with pytest.raises(OQLError) as e:
+        p("works where title contains (not a and b)")
+    assert e.value.code == "OQL_BARE_NOT"
+    # the functional form negates exactly its argument: `not(a) and b` = (not a) and b
+    fr = rows("works where title contains (not(a) and b)")  # top-level AND flattens
     by_val = {f["value"]: f.get("is_negated", False) for f in fr}
     assert by_val == {"a": True, "b": False}  # only `a` is negated
 

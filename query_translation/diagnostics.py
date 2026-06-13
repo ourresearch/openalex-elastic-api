@@ -170,6 +170,11 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_COMMA_IN_GROUP", ERROR, PARSE,
               "a comma separates items in a (…) group (commas were removed)",
               "separate items with 'or'/'and', e.g. (a or b)"),
+        _spec("OQL_BARE_NOT", ERROR, PARSE,
+              "`not` is a function: its argument must be parenthesized, not(…) "
+              "(a bare `not foo` would re-leak the precedence footgun the "
+              "parens rule kills)",
+              "write it as a function, e.g. not(dog) or not(dog or cat)"),
         _spec("OQL_SEMANTIC_NEEDS_TEXT", ERROR, PARSE,
               '"is similar to" needs a quoted text passage',
               'e.g. abstract is similar to "..."'),

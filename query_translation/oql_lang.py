@@ -1640,6 +1640,28 @@ class _Parser:
                         f'two conditions with no AND/OR between them (near "{t.val}")',
                         'insert an explicit AND or OR', t.pos)
 
+    def _consume_functional_not(self, t: Tok):
+        """Consume a `not` keyword and require it be written as a function:
+        `not(...)`. A bare `not` (no following `(`) is an error (charter
+        decision 21) — the function-call parens ARE the negation's scope, so
+        there is no precedence to recall. In recover mode the error is recorded
+        and the bare operand is parsed anyway (so the editor's tree shape
+        survives). Leaves the cursor on the `(` (strict) so the caller's normal
+        operand/group parse handles the parenthesized argument."""
+        self.next()  # consume 'not'
+        self._skip_annot()
+        nxt = self.peek()
+        if nxt is None or nxt.kind != "LP":
+            err = oql_error(
+                "OQL_BARE_NOT",
+                "`not` must wrap its argument in parentheses: not(...)",
+                "write it as a function, e.g. not(dog) or not(dog or cat)",
+                t.pos)
+            if self._recover_mode:
+                self._diagnostics.append(err)
+                return
+            raise err
+
     def _parse_operand(self) -> FilterType:
         self._skip_annot()
         # An empty operand slot (start of conditions, or just after "(" / a
@@ -1649,8 +1671,8 @@ class _Parser:
         if t is None:
             raise oql_error("OQL_EMPTY", "expected a condition", "")
         if t.kind == "WORD" and t.val.lower() == "not":
-            self.next()
-            inner = self._parse_operand()
+            self._consume_functional_not(t)  # not(...) — bare `not` is an error
+            inner = self._parse_operand()     # next is `(` -> parses the group
             self._last_operand_simple = False  # negated -> not a plain clause (#357)
             return _negate(inner)
         if t.kind == "LP":
@@ -1916,7 +1938,7 @@ class _Parser:
         a nested `(...)` group, or one scalar value (-> an `is` leaf)."""
         t = self.peek()
         if t is not None and t.kind == "WORD" and t.val.lower() == "not":
-            self.next()
+            self._consume_functional_not(t)  # not(...) — bare `not` is an error
             return _negate(self._parse_value_operand(fld))
         if t is not None and t.kind == "LP":
             self.next()
@@ -2025,9 +2047,11 @@ class _Parser:
             self._expect_rp()
             return e
         if t is not None and t.kind == "WORD" and t.val.lower() == "not":
-            raise oql_error("OQL_UNDELIMITED_TERM_LIST",
-                           '"not" must be inside a parenthesized term group',
-                           f"wrap it in parentheses, e.g. contains (not foo)", t.pos)
+            # A functional `not(...)` is a valid (negated) operand here; a bare
+            # `not` raises OQL_BARE_NOT inside _parse_search_operand. The result
+            # is one negated operand — a standalone negated leaf normalizes to
+            # the `does not contain` predicate form on render (decision 21).
+            return self._parse_search_operand(base)
         if (t is not None and t.kind == "WORD" and t.val.lower() in ("any", "all")
                 and self.word_is("of", k=1)):
             raise oql_error("OQL_LIST_KEYWORD_REMOVED",
@@ -2197,7 +2221,7 @@ class _Parser:
         if t is None:
             raise oql_error("OQL_MISSING_VALUE", "expected a search term", "")
         if t.kind == "WORD" and t.val.lower() == "not":
-            self.next()
+            self._consume_functional_not(t)  # not(...) — bare `not` is an error
             return _negate(self._parse_search_operand(base))
         if t.kind == "LP":
             self.next()
@@ -2829,8 +2853,15 @@ def _factored_segments(f: FilterType, render_leaf):
     nesting, so a child branch always has the opposite join and needs them).
     `render_leaf(leaf) -> [Segment]` renders one bare atom."""
     if isinstance(f, LeafFilter):
-        prefix = [_seg("text", "not ")] if f.is_negated else []
-        return prefix + render_leaf(f)
+        leaf = render_leaf(f)
+        # In-group negation renders functionally: `not(atom)` (charter decision
+        # 21). Canonical OQO is NNF (negation on leaves), so the argument is
+        # always one atom — we never wrap a whole sub-clause. Emit the open paren
+        # as its own `(` text segment (not glued into `not(`) so the segment-level
+        # width splitter `_split_list_clause` counts paren depth correctly.
+        if f.is_negated:
+            return [_seg("text", "not"), _seg("text", "(")] + leaf + [_seg("text", ")")]
+        return leaf
     segs = []
     for i, c in enumerate(f.filters):
         if i:
@@ -2962,10 +2993,12 @@ def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
 def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
     if isinstance(f, LeafFilter):
         return _leaf_node(f, resolver)
-    # BranchFilter
+    # BranchFilter. A negated branch is non-canonical (NNF pushes negation to
+    # the leaves) and should not survive canonicalization; if one reaches here
+    # we render it functionally `not(group)` so it still re-parses (decision 21).
     if f.is_negated:
         inner = _filter_node(BranchFilter(f.join, f.filters), top=False, resolver=resolver)
-        return GroupNode(join=f.join, children=[inner], prefix="not (", suffix=")",
+        return GroupNode(join=f.join, children=[inner], prefix="not(", suffix=")",
                          joiner="", meta=GroupMeta(implicit=False))
     # factor a single-base-field search subtree -> `field contains (a or b)`
     scol = _uniform_search_base(f)

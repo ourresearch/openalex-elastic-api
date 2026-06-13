@@ -178,11 +178,13 @@ works where country is (us and uk)                                         (row 
 - This is the rule that **kills the silent keyword-truncation footgun**: a reserved
   word (`sort by`, `and`, …) can only "float" inside unquoted free text when there
   are 2+ unparenthesized terms — which the rule forbids.
-- **Inside `( … )` is a boolean of atoms**: `or` / `and` / `not`, nesting allowed;
-  the field + operator distribute over every atom. `country is (us or uk)` is an
-  OR-branch of equality leaves; `country is (us and uk)` means works with **both** a
-  US and a UK authorship (corpus row 92 — D7; for a single-valued field it is the
-  empty set, which is coherent, not a footgun).
+- **Inside `( … )` is a boolean of atoms**: `or` / `and` / `not(…)`, nesting
+  allowed; the field + operator distribute over every atom. `country is (us or uk)`
+  is an OR-branch of equality leaves; `country is (us and uk)` means works with
+  **both** a US and a UK authorship (corpus row 92 — D7; for a single-valued field
+  it is the empty set, which is coherent, not a footgun). Negation inside a group is
+  the function `not(…)` (`contains (cancer and not(mouse))`); a bare `not` is an
+  error (§3.5).
 - **Search values are the exception (D2 reversal, #363):** for a `contains ( … )`
   search group, a **maximal run of bare connective-free words is ONE value node**
   (stemmed, adjacency-boosted), not a distributed AND of per-word leaves —
@@ -196,8 +198,8 @@ works where country is (us and uk)                                         (row 
   `country is (us and uk)` above.)*
 - `is not ( … )` negates the whole group: `is not (a or b)` = `NOT(a OR b)` =
   `(NOT a) AND (NOT b)` by De Morgan — canonical NNF carries the negation on the
-  leaves, and the canonical render keeps the group together with the `not`s inside:
-  `x is (not a and not b)` (corpus row **4**; see §3.2.2).
+  leaves, and the canonical render keeps the group together with the `not(…)`s
+  inside: `x is (not(a) and not(b))` (corpus row **4**; see §3.2.2 and §3.5).
 - **Removed:** the `any of` / `all of` / `is in` list keywords and comma-separated
   lists (`OQL_LIST_KEYWORD_REMOVED` / `OQL_COMMA_IN_GROUP`). `(a or b)` / `(a and b)`
   are strictly more expressive (they nest; flat keyword lists can't) and lose no
@@ -242,17 +244,17 @@ belongs to **one field** as **one clause**, the tree inside the value group:
 
 ```
 works where title contains ((vape or vaping) and (health or harm))
-works where title contains (not dog and cat)
-works where country is (not FR and US)
-works where institution is (not I33213144 [Harvard] and not I97018004 [Stanford])   (row 4)
+works where title contains (not(dog) and cat)
+works where country is (not(FR) and US)
+works where institution is (not(I33213144 [Harvard]) and not(I97018004 [Stanford]))   (row 4)
 ```
 
 - **The rule:** among the children of one boolean node — including the implicit
   top-level AND of the filter rows — the items sharing one **(field,
   base-operator)** pair merge into a single `field op ( tree )` clause, the boolean
   structure preserved inside the parens. A merged negated leaf renders as
-  `not <atom>`; a **standalone** negated leaf keeps the predicate form
-  (`title does not contain dog`, `country is not FR`).
+  `not(<atom>)` (functional negation, §3.5); a **standalone** negated leaf keeps
+  the predicate form (`title does not contain dog`, `country is not FR`).
 - **All filter kinds**, not just search: `country is (not FR and US)` is canonical
   exactly like its `contains` twin. Search groups merge by **base field** (a
   stemmed `.search` leaf and an exact `.search.exact` leaf share one group — that
@@ -341,21 +343,40 @@ works where title/abstract contains covid and title/abstract does not contain pe
 → `{contains covid}` AND `{contains pediatric, is_negated: true}`.
 
 There is **one** negation mechanism, mapping to OQO's `is_negated` (NNF). On the
-surface it reads naturally — `is not`, `does not contain`, `is not (…)`, or a
-prefix `not (…)` on a group. All compile to `is_negated` on the appropriate node;
-the canonical form pushes it to the leaves.
+surface it reads naturally — `is not`, `does not contain`, or the function
+`not(…)`. All compile to `is_negated` on the appropriate node; the canonical form
+pushes it to the leaves.
 
-**`not` binds to the single operand that follows it** (one term, leaf, or
-parenthesized group) — `not a and b` is `(not a) and b`, **not** `not (a and b)`.
-This is the *one* binding rule in OQL, and unlike AND/OR ordering (§3.4) it is kept
-rather than parens-forced, for a reason: "unary NOT is tightest" is **universal and
-unambiguous** (Lucene, PubMed, WoS, every programming language agree), whereas
-AND-vs-OR ordering is *not* standardized across systems — so the footgun the
-parens-rule guards against doesn't exist here. To negate a group, parenthesize:
-`not (a or b)`. Canonical output always renders the scope explicitly — a merged
-same-field group carries each `not` directly on its atom (`contains (not a and b)`,
-§3.2.2), and a standalone negated leaf uses the predicate form
-(`does not contain a`) — so the binding is never hidden on round-trip.
+**`not` is a function: `not(X)`** — the parentheses are part of the keyword, and
+they *are* its scope. `not(dog or cat) and wombat` is unambiguous; `not(dog)`
+negates a single term. A **bare `not` (no parentheses) is an error**
+(`OQL_BARE_NOT`). This is deliberate and aligns with the rest of §3.4: OQL forces
+parentheses precisely so operator precedence never has to live in the user's head.
+A precedence-bound prefix `not a and b` re-leaks that footgun — colloquial English
+*distributes* negation ("not cats or dogs" = *neither*), which collides with the
+formal split reading `(not a) and b`; and PubMed/WoS process operators strictly
+left-to-right with no precedence at all. Making `not` a function removes the
+question: one set of parens does double duty (the call boundary is the grouping),
+so there is no "binds tighter than" rule to recall and no `(not (a or b))`
+nested-parens ugliness. It also reads like the `NOT(...)` systematic-review
+databases already use, and mirrors the block builder (a `not(X)` is a wrapper
+around a block; a floating prefix `not` has no clean block representation).
+
+Canonical output pushes negation **down to the leaf/value** (NNF) and renders the
+scope explicitly — it **never** emits `not(<whole clause>)` (`not(country is FR)`
+is a readability trainwreck). So:
+- a **standalone** negated leaf uses the predicate form
+  (`title does not contain dog`, `country is not FR`) — a `not(…)` written around
+  one leaf normalizes to it;
+- **in-group** negation renders functionally on each atom — `contains (not(a) and b)`,
+  `country is (not(FR) and US)` (§3.2.2).
+
+`is not`, `does not contain`, and boolean negation (`it's not open access` / the
+`bool_false` flip) are **untouched** — they are predicate operators, not the bare
+keyword, and remain valid spellings. Negating a *group* value spells the same NNF
+either way: `title does not contain (dog or cat)` and `title contains not(dog or cat)`
+both canonicalize to `title contains (not(cat) and not(dog))` (two negated leaves
+on one field merge — §3.2.2).
 
 ### 3.6 Search — the governing law
 
