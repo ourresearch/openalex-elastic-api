@@ -12,8 +12,50 @@ Invariants:
 """
 
 import pytest
+from query_translation.oqo import OQO, LeafFilter, BranchFilter
 from query_translation.oql_lang import parse, render
 from query_translation.oql_render_v2 import render_v2, lines_to_text
+
+
+# --- reference reconstruction: v2 tree -> OQO ------------------------------
+# This is the algorithm the CLIENT will implement as v2ToOqo.js (oxjob #428
+# iter 22, decision B: the v2 tree is the builder's edit model). Proving it
+# here = proving the v2 tree is a COMPLETE, lossless edit model (the client can
+# rebuild the OQO from the tree alone, with no side data). Mirrors the build
+# direction in oql_render_v2._expr_node / _value_node.
+
+def _value_to_filter(v, col, op):
+    if v["node"] == "vleaf":
+        return LeafFilter(column_id=col, value=v["value"], operator=op,
+                          is_negated=v["negated"])
+    return BranchFilter(join=v["join"],
+                        filters=[_value_to_filter(c, col, op)
+                                 for c in v["children"]])
+
+
+def _expr_to_filter(n):
+    if n["node"] == "clause":
+        v = n.get("value")
+        if v is not None:                       # factored: value vtree -> branch
+            return _value_to_filter(v, n["column_id"], n["operator"])
+        return LeafFilter.from_dict(n["leaf"])  # simple: raw leaf
+    children = [_expr_to_filter(c) for c in n["children"]]
+    if n.get("negated"):                        # NNF wrapper: not (group)
+        inner = children[0]
+        return BranchFilter(join=inner.join, filters=inner.filters,
+                            is_negated=True)
+    return BranchFilter(join=n["join"], filters=children)
+
+
+def v2_tree_to_oqo(tree):
+    oqo = OQO(get_rows=tree["entity"]["id"], filter_rows=[])
+    w = tree.get("where")
+    if w is not None:
+        if w["node"] == "group" and w.get("implicit"):
+            oqo.filter_rows = [_expr_to_filter(c) for c in w["children"]]
+        else:
+            oqo.filter_rows = [_expr_to_filter(w)]
+    return oqo
 
 
 def _lines(oql):
@@ -46,6 +88,21 @@ def test_layout_round_trips_to_same_oqo(oql):
     oqo = parse(oql)
     txt = lines_to_text(render_v2(oqo)["lines"])
     assert render(parse(txt)) == render(oqo)
+
+
+@pytest.mark.parametrize("oql", ROUND_TRIP_CASES)
+def test_v2_tree_is_a_complete_edit_model(oql):
+    """The v2 tree alone reconstructs the SAME OQO (filter_rows) — proving the
+    client can edit the tree and rebuild the query with no side data. This is
+    the contract the client's v2ToOqo.js depends on."""
+    oqo = parse(oql)
+    tree = render_v2(oqo)
+    rebuilt = v2_tree_to_oqo(tree)
+    # compare the WHERE (filter) structure (sort/select stay component refs);
+    # re-render both filter sets and compare canonical OQL of the filters.
+    a = OQO(get_rows=oqo.get_rows, filter_rows=oqo.filter_rows)
+    b = OQO(get_rows=rebuilt.get_rows, filter_rows=rebuilt.filter_rows)
+    assert render(b) == render(a)
 
 
 @pytest.mark.parametrize("oql", ROUND_TRIP_CASES)

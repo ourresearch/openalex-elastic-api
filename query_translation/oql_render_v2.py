@@ -112,14 +112,17 @@ def _expr_node(f: FilterType, top: bool, resolver, idg) -> dict:
         return {"node": "group", "id": idg(), "join": f.join, "negated": False,
                 "paren": not top, "children": children}
 
-    # LeafFilter -> a simple clause. Reuse _leaf_node for the display segments,
-    # and represent its value as a single vleaf when there is a discrete value.
+    # LeafFilter -> a simple clause (single value / bool phrase / null / comparison
+    # / collection). Reuse _leaf_node for the display segments. `leaf` carries the
+    # raw OQO leaf so the client can reconstruct the OQO from the v2 tree alone
+    # (the tree is the edit model — oxjob #428 iter 22, decision B). Factored
+    # clauses don't need `leaf`: their value vtree fully describes the branch.
     cn = _leaf_node(f, resolver)
-    node = {"node": "clause", "id": idg(), "clause_kind": cn.clause_kind,
+    return {"node": "clause", "id": idg(), "clause_kind": cn.clause_kind,
             "column_id": cn.meta.column_id, "column": cn.meta.column_display_name,
             "operator": cn.meta.operator,
-            "segments": [s.to_dict() for s in cn.segments]}
-    return node
+            "segments": [s.to_dict() for s in cn.segments],
+            "leaf": f.to_dict()}
 
 
 def _seg_val(text, value):
