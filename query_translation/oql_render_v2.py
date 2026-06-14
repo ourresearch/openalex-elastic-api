@@ -168,8 +168,15 @@ def _expr_block(n: dict) -> bool:
     if n["node"] == "clause":
         v = n.get("value")
         return bool(v) and v["node"] == "vgroup" and _vnode_block(v)
-    # group: explodes if it holds a nested group, or a block clause
-    return any(c["node"] == "group" or _expr_block(c) for c in n["children"])
+    # A parenthesized clause-level group ALWAYS explodes into a block: open paren
+    # alone, each child clause indented on its own line, close paren alone —
+    # matching the canonical OQL pretty-print (issue A, now extended from value
+    # sub-groups to clause groups, oxjob #428). Width-independent, so two
+    # structurally-identical groups lay out identically regardless of length.
+    # (A same-column boolean folds to ONE clause + a flat value group upstream
+    # and stays inline; only a MIXED-column group becomes a clause group here, so
+    # the parens carry real structure worth breaking onto their own lines.)
+    return True
 
 
 # ---------------------------------------------------------------------------

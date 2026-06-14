@@ -140,6 +140,26 @@ def test_group_with_subgroup_explodes_block_parens():
     ]
 
 
+def test_mixed_column_clause_group_explodes_block():
+    """A parenthesized MIXED-column clause group (e.g. `(keyword is X or
+    title/abstract contains (...))`) is a block: open paren alone, each child
+    clause indented on its own line led by the connector, close paren alone —
+    matching the canonical OQL pane (oxjob #428: issue A extended from value
+    sub-groups to clause groups). Previously these rendered all-inline with no
+    indentation (the regression Jason hit on the SR-style query). The inner FLAT
+    value list (`(INR or aPTT ...)`) stays inline — only the clause group breaks."""
+    lines = _texts(_lines(
+        "works where (type is types/article or title/abstract contains "
+        "(INR or aPTT or coagulopathy)) and language is en"))
+    assert lines == [
+        "works where (",
+        "    type is types/article",
+        "    or title/abstract contains (INR or aPTT or coagulopathy)",
+        "  )",
+        "  and language is en",
+    ]
+
+
 def test_structurally_identical_clauses_lay_out_identically():
     """Two same-shape factored clauses explode the same way even when one is
     much longer (the consistency the width-based formatter lacks)."""
