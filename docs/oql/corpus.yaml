@@ -1408,7 +1408,7 @@ rows:
     label: "Clarivate Web of Science field tag PUBL= (Publisher); engine param primary_location.source.publisher_lineage"
     url: "https://support.clarivate.com/ScientificandAcademicResearch/s/article/Web-of-Science-Core-Collection-List-of-field-tags-in-output"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=primary_location.source.publisher_lineage:P4310320990'
+  oxurl: 'https://openalex.org/works?filter=primary_location.source.host_organization_lineage:P4310320990'
   status: ok
   oql: 'works where publisher is P4310320990 [Elsevier BV]'
   oqo: {get_rows: works, filter_rows: [{column_id: primary_location.source.publisher_lineage, value: P4310320990}]}

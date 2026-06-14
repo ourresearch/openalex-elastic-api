@@ -117,7 +117,13 @@ def test_case7_cited_by_render_word():
 
 
 def test_case7_cites_render_word():
-    assert _render("works where cites is w1984893742") == "works where cites is w1984893742"
+    # `cites` is an alias of the canonical `referenced_works` (#446). Since #455
+    # canonicalizes alias column_ids to one identity at the parse boundary, the
+    # input word `cites` resolves to `referenced_works` and renders the canonical's
+    # friendly word "references" (a non-lossy flip — the canonical carries a curated
+    # word). Both spellings now render identically.
+    assert _render("works where cites is w1984893742") == "works where references is w1984893742"
+    assert _render("works where references is w1984893742") == "works where references is w1984893742"
 
 
 def _work_title_resolver():

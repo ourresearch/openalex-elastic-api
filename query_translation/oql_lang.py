@@ -27,7 +27,8 @@ from typing import Dict, List, Optional, Tuple, Union
 
 # Load the OQO data model without triggering the Flask-heavy package __init__.
 from query_translation.oqo import (  # noqa: E402
-    OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP)
+    OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP,
+    canonicalize_oqo_column_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -1026,7 +1027,39 @@ def _augment_by_column_for_homonyms() -> None:
                 _BY_COLUMN.setdefault(resolved.column, fld)
 
 
+def _augment_by_column_for_alias_canonicals() -> None:
+    """Render-side completion of #455. Since #455 canonicalizes alias column_ids to
+    one identity at parse time, an OQO that the user spelled with a filter ALIAS now
+    carries the CANONICAL column_id — but a curated friendly word lives in `_FIELDS`
+    keyed to the alias spelling (e.g. "publisher" → `…publisher_lineage`, "from
+    global south" → `institutions.is_global_south`). Without this, the canonical
+    renders RAW, losing the curated word (the lossiness #446 thread A deferred on).
+
+    For every curated Field whose column is a filter alias on an entity, map that
+    alias's CANONICAL column back to the SAME curated Field, so the canonical renders
+    with the alias's word and round-trips. `setdefault` keeps any word the canonical
+    already owns (and the works-first order keeps works deterministic), so this only
+    fills MISSING keys — it never changes an existing render. Render-only: it does
+    NOT touch the registry `display_name`, the registry-consistency gate, or
+    `PROPERTIES_VERSION` (that broader friendly-name re-key is the #455 Phase B/C
+    work). Booleans are included (gate-exempt; they render via their phrasing)."""
+    try:
+        from core.properties import ENTITY_PROPERTIES, canonicalize_column_id
+        entities = list(ENTITY_PROPERTIES.keys())
+    except Exception:
+        return
+    order = ["works"] + [e for e in entities if e != "works"]
+    for ent in order:
+        for _spellings, fld in _FIELDS:
+            if fld.kind in ("search", "collection"):
+                continue
+            canon = canonicalize_column_id(fld.column, ent)
+            if canon != fld.column:
+                _BY_COLUMN.setdefault(canon, fld)
+
+
 _augment_by_column_for_homonyms()
+_augment_by_column_for_alias_canonicals()
 
 
 # --- boolean sentence phrasings for the /properties catalog (oxjob #428) -----
@@ -1421,8 +1454,13 @@ class _Parser:
                                f'unexpected text near "{t.val}" (position {t.pos})',
                                'queries are: <entity> [where <conditions>] [sort by ...] '
                                '[group by ...] [sample N] [return col1, col2]', t.pos)
-        return OQO(get_rows=entity, filter_rows=filters, sort_by=sort_by,
-                   group_by=group_by, sample=sample, seed=seed, select=select)
+        # Collapse alias spellings to one canonical identity at the parse boundary
+        # (#455) — covers leaf, sort, group and select uniformly, so the leaf path's
+        # entity-resolve and the (previously un-canonicalized) sort/group paths all
+        # emit the canonical column_id. Idempotent; downstream sees one spelling.
+        return canonicalize_oqo_column_ids(
+            OQO(get_rows=entity, filter_rows=filters, sort_by=sort_by,
+                group_by=group_by, sample=sample, seed=seed, select=select))
 
     # -- editor-context entry (dual mode; oxjob #363, decision 15) --
     def parse_for_context(self) -> dict:

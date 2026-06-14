@@ -305,6 +305,31 @@ def get_property(entity_type, property_name):
     return ENTITY_PROPERTIES.get(entity_type, {}).get(property_name)
 
 
+def canonicalize_column_id(column_id, entity_type):
+    """Map an alias spelling of a property to its single CANONICAL column_id (#455).
+
+    A property has one identity but many spellings (`is_oa` == `open_access.is_oa`;
+    `institution.id` == `authorships.institutions.id`; `cites` == `referenced_works`;
+    `journal` == `primary_location.source.id`). #446 made the catalog identity-aware by
+    storing each alias's canonical under `Property.alternate_of`; this helper reads that
+    datum so every query-translation surface can collapse a spelling to the one identity
+    at the boundary, leaving downstream consumers (validator, canonicalizer, render, ES
+    translation) canonical-only.
+
+    Aliases stay accepted on INPUT (demoted, not deprecated) — this only rewrites them
+    to canonical, never rejects. Returns `column_id` unchanged when:
+      * it is already canonical (no `alternate_of`), or
+      * the entity/property is unknown (let the validator surface `invalid_column`).
+    Pure (reads the already-built ENTITY_PROPERTIES); safe to call per-clause.
+    """
+    if not column_id:
+        return column_id
+    prop = ENTITY_PROPERTIES.get(entity_type, {}).get(column_id)
+    if prop is not None and prop.alternate_of:
+        return prop.alternate_of
+    return column_id
+
+
 # ---------------------------------------------------------------------------
 # Unified per-property capabilities (#450)
 #

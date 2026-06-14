@@ -7,7 +7,7 @@ Handles the traditional query parameter syntax:
 
 import re
 from typing import Dict, List, Optional, Tuple, Any
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP, canonicalize_oqo_column_ids
 
 # A Collection membership ref: `col_<base58>` (mirrors core/fields.py
 # CollectionField.COLLECTION_ID_RE, `!` stripped before matching). A value of this
@@ -150,7 +150,10 @@ def parse_url_to_oqo(
 
     select = parse_select_string(select_string) if select_string else []
 
-    return OQO(
+    # Collapse alias spellings (e.g. `filter=is_oa:true`, `group_by=institution.id`)
+    # to one canonical identity at the URL-input boundary (#455). Idempotent; the
+    # alias stays accepted on input, it's just normalized for everything downstream.
+    return canonicalize_oqo_column_ids(OQO(
         get_rows=entity_type,
         filter_rows=filter_rows,
         sort_by=sort_by,
@@ -161,7 +164,7 @@ def parse_url_to_oqo(
         per_page=per_page,
         page=page,
         cursor=cursor,
-    )
+    ))
 
 
 def parse_select_string(select_string: str) -> List[str]:

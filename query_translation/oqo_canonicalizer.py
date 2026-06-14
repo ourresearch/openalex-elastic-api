@@ -21,7 +21,7 @@ registry) — there is no entity-id prefix normalization. See docs/oql-spec.md.
 
 import json
 from typing import List, Union, Any
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, SortBy
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, SortBy, canonicalize_oqo_column_ids
 from query_translation.oql_lang import canon_value_for_column, _is_search_leaf
 
 
@@ -35,6 +35,12 @@ def canonicalize_oqo(oqo: OQO) -> OQO:
     Returns:
         A new canonicalized OQO object
     """
+    # Collapse alias column_id spellings to one canonical identity FIRST (#455), so
+    # two spellings of the same property (`is_oa` vs `open_access.is_oa`) produce one
+    # cache/hash key, and the value-typing below keys off the canonical column. The
+    # OQO-construction seams already canonicalize, so for parsed/url OQOs this is a
+    # no-op; it's the safety net for OQOs built another way before hashing.
+    oqo = canonicalize_oqo_column_ids(oqo)
     canonical_filters = []
     for f in oqo.filter_rows:
         nnf_f = push_negation(f, negate=False)  # NNF first

@@ -5,7 +5,7 @@ The canonical JSON representation for query format translation.
 All translations go through OQO as the intermediate format.
 """
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, replace
 from typing import List, Optional, Union, Literal, Any, Dict
 
 # Smart/curly DOUBLE-quote characters coerced to a plain ASCII double-quote
@@ -98,6 +98,55 @@ def filter_from_dict(data: Dict[str, Any]) -> FilterType:
         return BranchFilter.from_dict(data)
     else:
         return LeafFilter.from_dict(data)
+
+
+def canonicalize_oqo_column_ids(oqo: "OQO") -> "OQO":
+    """Return a COPY of `oqo` with every FILTER-namespace `column_id` mapped to its
+    single CANONICAL identity for the entity (#455): filter leaves (recursively
+    through branches), `sort_by`, and `group_by`. An alias spelling (`is_oa`,
+    `institution.id`, `cites`, `journal`) collapses to its canonical
+    (`open_access.is_oa`, `authorships.institutions.id`, `referenced_works`,
+    `primary_location.source.id`) so every downstream consumer — validator,
+    canonicalizer/cache key, render, ES translation — sees ONE spelling.
+
+    `select` is INTENTIONALLY NOT canonicalized here. The column/`select` capability
+    is a SEPARATE namespace from filter/sort/group (#450): its values are the
+    result-field names the executor projects (`id`, `display_name`, `cited_by_count`),
+    which are mostly disjoint from the filter namespace and have their OWN identity
+    rules. The #446 `alternate_of` map encodes the *filter*-namespace identity — e.g.
+    on authors `id`'s `alternate_of` is the filter key `ids.openalex`, which is NOT a
+    valid `?select=` column. Applying it to `select` would corrupt projection, so
+    column-namespace canonicalization is deferred to the friendly-name/display_name
+    work (Phase B/C), which needs a column-namespace alias map.
+
+    Applied at each OQO-construction boundary (OQL parse, URL parse, `from_dict`)
+    and again in the canonicalizer; **idempotent** and pure (never mutates the input
+    — `replace` builds new nodes), so the execution OQO and any render copy stay
+    decoupled. Aliases are accepted on input and rewritten here, never rejected.
+    Synthetic sort keys (`relevance_score`/`count`/`key`) and unknown columns pass
+    through unchanged (the validator still gates the latter). A no-op when
+    `core.properties` can't be imported (degrade to the raw spellings rather than
+    crash a parse)."""
+    try:
+        from core.properties import canonicalize_column_id
+    except Exception:
+        return oqo
+    entity = oqo.get_rows
+
+    def _canon(column_id):
+        return canonicalize_column_id(column_id, entity)
+
+    def _canon_filter(f):
+        if isinstance(f, BranchFilter):
+            return replace(f, filters=[_canon_filter(x) for x in f.filters])
+        return replace(f, column_id=_canon(f.column_id))
+
+    return replace(
+        oqo,
+        filter_rows=[_canon_filter(f) for f in oqo.filter_rows],
+        sort_by=[replace(s, column_id=_canon(s.column_id)) for s in oqo.sort_by],
+        group_by=[replace(g, column_id=_canon(g.column_id)) for g in oqo.group_by],
+    )
 
 
 @dataclass
@@ -244,7 +293,7 @@ class OQO:
         else:
             sort_by = []
 
-        return cls(
+        oqo = cls(
             get_rows=data["get_rows"],
             filter_rows=filter_rows,
             sort_by=sort_by,
@@ -260,6 +309,10 @@ class OQO:
             page=data.get("page"),
             cursor=data.get("cursor"),
         )
+        # Canonicalize alias spellings to one identity at this JSON-input boundary
+        # (#455), so a dict carrying `is_oa` / `institution.id` deserializes to the
+        # same OQO as its canonical spelling. Idempotent; aliases stay accepted.
+        return canonicalize_oqo_column_ids(oqo)
 
 
 # Valid leaf operators (strictly affirmative — negation is the `is_negated` bit,

@@ -60,6 +60,10 @@ _RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
     "topics.id": "topics",
     "funders.id": "funders",
     "primary_location.source.publisher_lineage": "publishers",
+    # #455: `publisher_lineage` is an alias of the canonical `host_organization_lineage`
+    # (#446); since OQOs now carry the canonical column_id, it must name-resolve via the
+    # publishers namespace too (the alias key above is kept for any un-canonicalized input).
+    "primary_location.source.host_organization_lineage": "publishers",
     "primary_topic.field.id": "fields",
     "primary_topic.subfield.id": "subfields",
     "primary_topic.domain.id": "domains",
