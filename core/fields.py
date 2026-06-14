@@ -12,6 +12,7 @@ from core.search import (
     SearchOpenAlex,
     full_search_query,
     full_search_query_exact,
+    strip_singleton_wildcard_quotes,
     validate_wildcard_requires_exact,
     validate_wildcards,
 )
@@ -788,6 +789,11 @@ class SearchField(Field):
     actions = ["search"]
 
     def build_query(self):
+        # Quotes around a single word are a no-op (the OCS contract: quotes only
+        # constrain multi-word adjacency/order), so unwrap a single-word wildcard
+        # like `fulltext.search.exact:"machin*"` to `machin*` -- otherwise ES
+        # query_string silently drops the `*` inside the quotes. zd#9063
+        self.value = strip_singleton_wildcard_quotes(self.value)
         self.validate(self.value)
         # fulltext.search routes through the same broad builder as default.search —
         # title + abstract + full text, NOT body-only (oxjob #374). Its old body-only

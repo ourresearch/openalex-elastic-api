@@ -6,6 +6,7 @@ from core.filter import filter_records
 from core.search import (
     SearchOpenAlex,
     normalize_search_input,
+    strip_singleton_wildcard_quotes,
     validate_search_terms,
     validate_top_level_search_wildcard,
     validate_wildcard_requires_exact,
@@ -493,12 +494,31 @@ class TestValidateWildcards:
             validate_wildcards(terms)
         assert "at least 3 leading characters" in str(exc.value.args[0])
 
-    @pytest.mark.parametrize("terms", ['"bar*"', '"wom?n"'])
-    def test_wildcard_in_quotes_rejected(self, terms):
-        # A SINGLE quoted wildcard token can't wildcard via query_string and isn't an
-        # adjacency phrase (#364 runs it unquoted on the no-stem field instead).
+    @pytest.mark.parametrize("terms", ['"bar*"', '"wom?n"', '"behavi*or"'])
+    def test_single_word_wildcard_in_quotes_passes(self, terms):
+        # zd#9063: quotes around a single word are a no-op (a one-token phrase is just
+        # the word), so a single quoted wildcard is accepted -- it's unwrapped upstream
+        # by strip_singleton_wildcard_quotes and runs on the no-stem field. Per-token
+        # shape rules are still enforced (see below).
+        validate_wildcards(terms)
+
+    @pytest.mark.parametrize(
+        "terms,needle",
+        [
+            ('"ab*"', "at least 3 leading characters"),  # short prefix inside quotes
+            ('"*ology"', "Leading wildcard"),            # leading wildcard inside quotes
+        ],
+    )
+    def test_single_word_wildcard_in_quotes_shape_still_checked(self, terms, needle):
         with pytest.raises(APIQueryParamsError) as exc:
             validate_wildcards(terms)
+        assert needle in str(exc.value.args[0])
+
+    def test_multiword_wildcard_phrase_not_whole_search_rejected(self):
+        # A multi-word quoted wildcard that is only an OR-arm (not the whole search)
+        # can't route to intervals, so it stays rejected.
+        with pytest.raises(APIQueryParamsError) as exc:
+            validate_wildcards('"smart* phone" OR surgery')
         assert "quoted phrase" in str(exc.value.args[0])
 
     @pytest.mark.parametrize("terms", ['"smart* phone"', '"smart phone*"', '"smart wom?n"'])
@@ -531,6 +551,43 @@ class TestValidateWildcards:
         with pytest.raises(APIQueryParamsError) as exc:
             validate_wildcards(terms)
         assert needle in str(exc.value.args[0])
+
+
+class TestStripSingletonWildcardQuotes:
+    """zd#9063: quotes around a single word are a no-op in the OCS search contract,
+    so a single quoted wildcard is unwrapped to its bare form (ES query_string drops
+    a wildcard inside quotes; the bare form runs on the no-stem field)."""
+
+    @pytest.mark.parametrize(
+        "given,expected",
+        [
+            ('"machin*"', "machin*"),
+            ('"wom?n"', "wom?n"),
+            ('("manufactur*")', "(manufactur*)"),       # the zd#9063 query, parens kept
+            ('"bar*" OR "comput*"', "bar* OR comput*"),  # each arm unwrapped
+            ('"behavi*or"', "behavi*or"),                # embedded wildcard, no whitespace
+        ],
+    )
+    def test_unwraps_single_word_wildcard(self, given, expected):
+        assert strip_singleton_wildcard_quotes(given) == expected
+
+    @pytest.mark.parametrize(
+        "given",
+        [
+            '"manufacturing"',        # single word, NO wildcard -> left alone
+            '"smart* phone"',         # multi-word phrase -> real adjacency semantics
+            '"smart phone*"~3',       # proximity -> intervals honors the wildcard
+            '"bar*"~3',               # single-word proximity (~ neighbor) -> untouched
+            '"smart"~3~"comput*"',    # binary proximity -> both operands untouched
+            "machin*",                # already bare
+            "",
+        ],
+    )
+    def test_leaves_other_shapes_unchanged(self, given):
+        assert strip_singleton_wildcard_quotes(given) == given
+
+    def test_non_string_passthrough(self):
+        assert strip_singleton_wildcard_quotes(None) is None
 
 
 class TestWildcardRequiresExact:

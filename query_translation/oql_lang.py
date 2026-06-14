@@ -2319,11 +2319,13 @@ class _Parser:
         if t.kind == "STRING":
             text = t.val
             self.next()
-            # A wildcard inside quotes is allowed ONLY as part of a proximity phrase
-            # ("smart phone*" within N words) — the engine compiles it to an ES
-            # `intervals` query (oxjob #355). Defer the decision: the proximity block
-            # below validates and accepts it; a wildcard-in-quotes WITHOUT proximity is
-            # rejected just after (OQL_WILDCARD_IN_QUOTES, e.g. "bar*").
+            # A wildcard inside quotes is accepted: a quoted phrase is exact (no-stem),
+            # which is where wildcards belong (#364 reversed #337's old
+            # OQL_WILDCARD_IN_QUOTES reject). A single quoted word (`"bar*"`) routes to
+            # the `.search.exact` column and renders bare (corpus #19 -- mirrors the raw
+            # API, where strip_singleton_wildcard_quotes unwraps it, zd#9063); a
+            # multi-word phrase compiles to an ES `intervals` query (oxjob #355). The
+            # blocks below validate each token's shape and pick the column.
             phrase = True
         else:
             # #1 (D2 reversal, oxjob #363): inside a `contains (...)` group a

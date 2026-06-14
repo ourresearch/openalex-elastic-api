@@ -31,6 +31,14 @@ ADJACENT_PHRASE_RE = re.compile(r'^"([^"]*)"$')
 # unordered with max_gaps=N. Built as an ES `intervals` query — see
 # binary_proximity_query() / oxjob #355 (Goal B).
 BINARY_PROXIMITY_RE = re.compile(r'^"([^"]*)"~(\d+)~"([^"]*)"$')
+# A quoted SINGLE word (no internal whitespace), not adjacent to a `~` proximity
+# slop on either side. Quotes around one token are a no-op in the OCS search
+# contract -- they only constrain how MULTIPLE words sit relative to each other
+# (adjacency/order); a one-word "phrase" is just the word (guides/searching.mdx).
+# strip_singleton_wildcard_quotes() unwraps these when they carry a wildcard. The
+# `~` lookarounds exclude the proximity (`"x"~3`) and binary-proximity
+# (`"a"~3~"b*"`) operands, whose quotes ARE meaningful (intervals queries). zd#9063
+SINGLETON_QUOTE_RE = re.compile(r'(?<!~)"([^"\s]+)"(?!~)')
 
 # oxjob #355 perf guard: two short prefix-wildcards in one `intervals` query multiply
 # postings expansion (live on works-v33: `"pro* pro*"` ~265ms vs ~45ms once each prefix
@@ -71,6 +79,35 @@ def _has_unquoted_wildcard(search_terms):
         return False
     unquoted = QUOTED_PHRASE_RE.sub(" ", search_terms)
     return any(("*" in word or "?" in word) for word in unquoted.split())
+
+
+def strip_singleton_wildcard_quotes(search_terms):
+    """Unwrap a quoted SINGLE word that contains a wildcard: `"bar*"` -> `bar*`.
+
+    In the OCS URL search contract, quotes only constrain how MULTIPLE words sit
+    relative to each other (adjacency/order). Around a single token they're a
+    no-op -- a one-word phrase is just the word (guides/searching.mdx). But ES
+    `query_string` silently drops a `*`/`?` inside quotes, so those meaningless
+    quotes would otherwise null out the wildcard and return ~nothing. Strip them so
+    the wildcard runs as written (on the no-stem field; #364's exact-search
+    requirement still applies via the validators, unchanged).
+
+    Left untouched: multi-word phrases (`"smart* phone"`, real adjacency) and the
+    `~`-neighbor shapes -- proximity (`"smart phone*"~3`) / binary proximity
+    (`"a"~3~"b*"`) -- which compile to ES `intervals` queries that DO honor the
+    wildcard. Quoted words WITHOUT a wildcard are also left alone (a quoted single
+    token can still differ from the bare form when the analyzer splits it on a
+    hyphen/slash -- see oxjob #363). This mirrors what OQL already does: a quoted
+    wildcard renders to the bare no-stem form (corpus #19). zd#9063
+    """
+    if not search_terms or not isinstance(search_terms, str):
+        return search_terms
+
+    def _unwrap(m):
+        inner = m.group(1)
+        return inner if ("*" in inner or "?" in inner) else m.group(0)
+
+    return SINGLETON_QUOTE_RE.sub(_unwrap, search_terms)
 
 
 def validate_wildcard_requires_exact(param, search_terms, index):
@@ -135,11 +172,16 @@ def _validate_wildcard_token(word):
             f'Leading wildcards are not supported (too expensive): "{word}". '
             "Anchor the wildcard with at least 3 leading characters, e.g. cycle*."
         )
-    # A `*` needs >=3 word characters before it (matches the engine detector).
-    # star == 0 is a leading/bare `*` (handled above or left alone), not a prefix.
+    # A `*` needs >=3 word characters immediately before it (matches the engine
+    # detector). Count the run of `\w` chars directly preceding the first `*`, not
+    # from the token start, so leading punctuation that query_string treats as
+    # structure -- e.g. the grouping paren in `(manufactur*)` -- doesn't zero out
+    # the count and wrongly trip this guard (zd#9063). star == 0 is a leading/bare
+    # `*` (handled above or left alone), not a prefix.
     star = word.find("*")
     if star > 0:
-        chars_before = len(re.match(r"\w*", word).group(0)[:star])
+        m = re.search(r"(\w*)\*", word)
+        chars_before = len(m.group(1)) if m else 0
         if chars_before < 3:
             raise APIQueryParamsError(
                 f'A * wildcard needs at least 3 leading characters: "{word}". '
@@ -185,26 +227,26 @@ def _validate_wildcard_budget(words):
 def validate_wildcards(search_terms):
     """Reject unsupported wildcard shapes with friendly messages (oxjob #337).
 
-    Mirrors the OQL v2 diagnostics (OQL_LEADING_WILDCARD, OQL_SHORT_WILDCARD_PREFIX,
-    OQL_WILDCARD_IN_QUOTES) so the raw API and OQL give identical guidance. The
-    "wildcards must target the no-stem field" rule (#364) is enforced separately by
+    Mirrors the OQL v2 diagnostics (OQL_LEADING_WILDCARD, OQL_SHORT_WILDCARD_PREFIX)
+    so the raw API and OQL give identical guidance. The "wildcards must target the
+    no-stem field" rule (#364) is enforced separately by
     validate_wildcard_requires_exact (it needs the field param, not just the terms).
 
-    One shape that LOOKS like wildcard-in-quotes is allowed: a wildcard inside a quoted
-    PROXIMITY phrase, `"smart phone*"~3`. That compiles to an ES `intervals` query
-    (oxjob #355) rather than being dropped, so we accept it here — but still enforce the
-    per-token shape rules (no leading wildcard, >=3-char prefix) inside the phrase.
+    Wildcards inside quotes ARE allowed and just have their per-token shape checked
+    (no leading wildcard, >=3-char prefix): a single quoted word (`"studies*"`, whose
+    quotes are a no-op -- strip_singleton_wildcard_quotes unwraps it, zd#9063), a
+    multi-word adjacency phrase (`"smart* phone"`), and a proximity phrase
+    (`"smart phone*"~3`) -- the multi-word forms compile to ES `intervals` queries
+    (#355) rather than being dropped. Only a multi-word quoted wildcard that is NOT
+    the whole search (an OR-arm) is rejected.
     """
     if not search_terms or not isinstance(search_terms, str):
         return
 
-    # `*`/`?` inside a quoted phrase can't wildcard via query_string — run a
-    # single word on the no-stem `.search.exact` field unquoted (#364), or keep it
-    # inside a MULTI-word quoted phrase, which the engine supports via intervals: an
+    # A `*`/`?` inside a MULTI-word quoted phrase is supported via intervals: an
     # adjacency phrase `"smart* phone"` (ordered, max_gaps=0) or a proximity phrase
-    # `"smart phone*"~N` (#355). (Don't say "move it outside the quotes": a bare
-    # wildcard on the stemmed `.search` field is itself rejected by #364, so that
-    # advice is now a dead end.)
+    # `"smart phone*"~N` (#355). A single quoted word is unwrapped upstream and runs
+    # as a bare wildcard on the no-stem field (#364).
     stripped = search_terms.strip()
 
     # Binary proximity `"A"~N~"B"` (oxjob #355 Goal B) -> intervals. Both operands and
@@ -231,18 +273,31 @@ def validate_wildcards(search_terms):
             continue
         # Adjacency phrase: the WHOLE search is a single multi-token quoted phrase
         # containing a wildcard (`"smart* phone"`) -> intervals ordered, max_gaps=0
-        # (oxjob #355, Goal A). A single quoted wildcard token (`"studies*"`) is NOT
-        # this path — #364 runs it unquoted on the no-stem field — so keep rejecting it.
+        # (oxjob #355, Goal A).
         if stripped == f'"{phrase}"' and len(phrase.split()) >= 2:
             for word in phrase.split():
                 _validate_wildcard_token(word)
             _validate_wildcard_budget(phrase.split())
             continue
+        # Single quoted word with a wildcard (`"studies*"`): the quotes are a no-op
+        # (a one-token phrase is just the word; OCS quotes only constrain multi-word
+        # adjacency/order -- guides/searching.mdx). strip_singleton_wildcard_quotes()
+        # unwraps it upstream and it runs as an unquoted wildcard on the no-stem
+        # field, so accept it here -- just enforce the per-token shape rules. This
+        # matches OQL, which already routes a quoted wildcard to `.search.exact`
+        # (corpus #19); the old reject (#337's OQL_WILDCARD_IN_QUOTES) was reversed
+        # in #364. (#364's exact-search requirement is enforced by the field-aware
+        # validators, not here.) zd#9063
+        if len(phrase.split()) == 1:
+            _validate_wildcard_token(phrase)
+            continue
+        # A multi-word quoted wildcard that is NOT the whole search (e.g. one OR-arm
+        # `"smart* phone" OR x`) can't route to intervals and query_string would drop
+        # the wildcard, so it stays rejected.
         raise APIQueryParamsError(
-            f'Wildcards (* or ?) do not work inside a quoted phrase: "{phrase}". '
-            "For a single word, remove the quotes and use exact (no-stem) search; "
-            'for a multi-word phrase use an adjacency phrase ("smart* phone") or '
-            'proximity ("smart phone*"~3).'
+            f'Wildcards (* or ?) do not work inside this quoted phrase: "{phrase}". '
+            'For a multi-word phrase use an adjacency phrase ("smart* phone") or '
+            'proximity ("smart phone*"~3) as the whole search.'
         )
 
     # Outside quotes, check each whitespace-delimited token.
