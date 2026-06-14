@@ -121,15 +121,21 @@ def test_flat_list_stays_one_line_regardless_of_length():
     assert len(lines) == 1
 
 
-def test_group_with_subgroup_explodes_leading_connectors():
-    """A value holding nested sub-groups explodes; the inner flat groups stay
-    inline (one line each). Connectors LEAD their row (SQL leading-AND style)."""
+def test_group_with_subgroup_explodes_block_parens():
+    """A value holding nested sub-groups explodes; each inner sub-group is a
+    BLOCK — open paren alone, flat content on its own line, close paren alone —
+    so every "(" starts a fresh line (issue A). Connectors TRAIL the preceding
+    sub-group (`) and`), which is what keeps each open paren alone."""
     lines = _texts(_lines(
         "works where title contains ((a or b) and (c or d))"))
     assert lines == [
         "works where title contains (",
-        "    (a or b)",
-        "    and (c or d)",
+        "    (",
+        "      a or b",
+        "    ) and",
+        "    (",
+        "      c or d",
+        "    )",
         "  )",
     ]
 
@@ -141,14 +147,23 @@ def test_structurally_identical_clauses_lay_out_identically():
     long = ("abstract contains ((" + " or ".join(f"x{i}" for i in range(30))
             + ") and (" + " or ".join(f"y{i}" for i in range(30)) + "))")
     lines = _texts(_lines(f"works where {short} and {long}"))
-    # title clause: open / grp / and-grp / close  (lines 1-4)
+    # title clause: open / (block grp) / ) and / (block grp) / close  (lines 0-7)
     assert lines[0] == "works where title contains ("
-    assert lines[2] == "    and (c or d)"
-    assert lines[3] == "  )"
-    # abstract clause explodes identically: 'and abstract contains (' / grp / and-grp / ')'
-    assert lines[4] == "  and abstract contains ("
+    assert lines[1] == "    ("
+    assert lines[3] == "    ) and"
     assert lines[7] == "  )"
-    assert len(lines) == 8
+    # abstract clause explodes identically (same 8-line block shape) even though
+    # its value lists are far longer — flat content stays on ONE line (soft-wrap),
+    # so the structure is width-INDEPENDENT.
+    assert lines[8] == "  and abstract contains ("
+    assert lines[9] == "    ("
+    assert lines[11] == "    ) and"
+    assert lines[15] == "  )"
+    assert len(lines) == 16
+    # the two clauses share the identical paren/connector skeleton (indents +
+    # bracket lines), independent of how long their value lists are.
+    assert [ln for ln in lines[1:8] if ln.strip() in ("(", ") and", ")")] == \
+           [ln for ln in lines[9:16] if ln.strip() in ("(", ") and", ")")]
 
 
 def test_works_where_merged_on_one_line():
@@ -158,9 +173,11 @@ def test_works_where_merged_on_one_line():
     assert lines == ["works where title contains bikes"]
 
 
-def test_example_78_nine_logical_lines():
-    """The real SR query (zd#8101) lays out as 9 logical lines: title explodes,
-    full text inline, title/abstract explodes — matching the builder gutter."""
+def test_example_78_block_paren_logical_lines():
+    """The real SR query (zd#8101): title explodes into block sub-groups, full
+    text stays inline (flat list, one logical line + soft-wrap), title/abstract
+    explodes — the builder renders these `lines` so its gutter matches the OQL
+    pane line-for-line (issue A)."""
     oql = (
         "works where title contains ("
         "(Boy or Girl or Minors or adolescent or boys) and "
@@ -169,11 +186,14 @@ def test_example_78_nine_logical_lines():
         "and title/abstract contains ((attitude or beliefs or diaries) and "
         "(interview or interviews or perceptions))")
     lines = _texts(_lines(oql))
-    assert len(lines) == 9
+    assert len(lines) == 17
     assert lines[0] == "works where title contains ("
-    assert lines[4].startswith("  and full text contains (")  # inline (flat)
-    assert lines[5] == "  and title/abstract contains ("        # explodes
-    assert lines[8] == "  )"
+    assert lines[1] == "    ("                                   # sub-group block open
+    assert lines[3] == "    ) and"                               # trailing connector
+    assert lines[7] == "  )"                                     # title clause close
+    assert lines[8].startswith("  and full text contains (")     # inline (flat)
+    assert lines[9] == "  and title/abstract contains ("         # explodes
+    assert lines[16] == "  )"
 
 
 def test_negated_value_round_trips_and_flags():

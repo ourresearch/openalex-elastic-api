@@ -224,20 +224,25 @@ def layout(tree: dict):
                           "label": v["join"]})
                 lay_value(c, indent)
             return
-        # block -> each child on its own line(s), LEADING connectors (the SQL
-        # "leading AND" convention — same rule as top-level rows: first child
-        # has no connector, every continuation row starts with `and `/`or `).
+        # block -> each child renders as a BLOCK (issue A, Jason 2026-06-14): a
+        # child vgroup gets its OWN paren lines — open paren alone, content
+        # indented on its own line(s), close paren alone — so every "(" starts a
+        # fresh line, matching the canonical OQL pane. A bare vleaf child sits on
+        # its own line. Connectors TRAIL the preceding child (`) and` / `x or`),
+        # which is what keeps each open paren alone on its line.
         for i, c in enumerate(children):
             newline(indent)
-            if i:
-                emit({"t": "conn", "id": v["id"], "text": f"{v['join']} ",
-                      "label": v["join"]})
             if c["node"] == "vgroup":
                 emit({"t": "paren", "id": c["id"], "text": "("})
+                newline(indent + _INDENT)
                 lay_value(c, indent + _INDENT)
+                newline(indent)
                 emit({"t": "paren", "id": c["id"], "text": ")"})
             else:
                 lay_value(c, indent)
+            if i < len(children) - 1:
+                emit({"t": "conn", "id": v["id"], "text": f" {v['join']}",
+                      "label": v["join"]})
 
     # --- expr (clause | group) ---------------------------------------------
     _SEG2TOK = {"column": "col", "operator": "op", "value": "vbrick",
