@@ -6,14 +6,19 @@ Invariants:
 - LAYOUT round-trip: joining the `lines` projection re-parses to the SAME OQO as
   the canonical render (so the builder's rows can't drift from the language).
 - IDEMPOTENCE: laying out the round-tripped query yields identical lines.
-- STRUCTURAL line rule: a node explodes onto its own lines IFF it contains a
-  nested parenthesized sub-group; flat boolean lists stay on one line —
-  independent of length (unlike the 80-col `format_oql`).
+- LINE-FOR-LINE with `format_oql`: the builder's `lines` reproduce the canonical
+  OQL pane exactly (same breaks, same indentation, same content per line), so the
+  no-code builder and the OQL text read identically (oxjob #428, Jason's ask).
+  Layout is width-based — `render_v2` reflows the token stream onto `format_oql`'s
+  own lines (the single layout engine), so the two cannot diverge.
 """
 
+import pathlib
+
 import pytest
+import yaml
 from query_translation.oqo import OQO, LeafFilter, BranchFilter
-from query_translation.oql_lang import parse, render
+from query_translation.oql_lang import parse, render, render_tree, format_oql
 from query_translation.oql_render_v2 import render_v2, lines_to_text
 
 
@@ -113,77 +118,55 @@ def test_layout_is_idempotent(oql):
     assert render_v2(parse(txt))["lines"] == v2["lines"]
 
 
-def test_flat_list_stays_one_line_regardless_of_length():
-    """A long flat OR list is ONE logical line (soft-wraps in the UI), unlike
-    the 80-col canonical string which hard-wraps it."""
+def _norm(text):
+    """Lines with whitespace collapsed — token-edge spaces (e.g. a leading-space
+    ` or ` connector chip) are invisible in the builder, so layout equality is
+    asserted up to whitespace runs."""
+    return [" ".join(line.split()) for line in text.splitlines()]
+
+
+def _fo(oql):
+    """The canonical OQL pane string the builder must match line-for-line."""
+    return format_oql(render_tree(parse(oql))[1])
+
+
+def _v2_text(oql):
+    return lines_to_text(render_v2(parse(oql))["lines"])
+
+
+def test_short_query_stays_one_line():
+    """A query whose one-line form fits the width is a single line — same as the
+    OQL pane (no gratuitous explosion)."""
+    oql = "works where title contains ((a or b) and (c or d))"
+    assert _norm(_v2_text(oql)) == ["works where title contains ((a or b) and (c or d))"]
+    assert _norm(_v2_text(oql)) == _norm(_fo(oql))
+
+
+def test_clause_group_and_nested_value_list_explode_like_oql():
+    """The SR-style query Jason flagged: an over-width parenthesized clause group
+    explodes (open paren / clauses indented / close paren), AND the long value
+    list inside `title/abstract contains (…)` ALSO explodes one-value-per-line —
+    line-for-line with the OQL pane (the value list no longer stays inline)."""
+    oql = ('works where (keyword is types/article or title/abstract contains '
+           '(INR or aPTT or coagulopathy or thrombocytopenia or '
+           '"blood coagulation disorders" or "coagulation disorder")) '
+           'and language is en')
+    assert _norm(_v2_text(oql)) == _norm(_fo(oql))
+    # spot-check the shape Jason wanted: clause line ends with the open paren,
+    # values start indented on the next lines.
+    norm = _norm(_v2_text(oql))
+    assert norm[0] == "works where ("
+    assert "or title/abstract contains (" in norm
+    assert "INR or" in norm                       # value on its own line
+
+
+def test_long_flat_value_list_explodes_by_width():
+    """A long flat OR list now explodes by width (matching the OQL pane) instead
+    of staying on one soft-wrapping line — the reversed behavior Jason asked for."""
     long_or = " or ".join(f"term{i}" for i in range(40))
-    lines = _lines(f"works where title contains ({long_or})")
-    assert len(lines) == 1
-
-
-def test_group_with_subgroup_explodes_block_parens():
-    """A value holding nested sub-groups explodes; each inner sub-group is a
-    BLOCK — open paren alone, flat content on its own line, close paren alone —
-    so every "(" starts a fresh line (issue A). Connectors TRAIL the preceding
-    sub-group (`) and`), which is what keeps each open paren alone."""
-    lines = _texts(_lines(
-        "works where title contains ((a or b) and (c or d))"))
-    assert lines == [
-        "works where title contains (",
-        "    (",
-        "      a or b",
-        "    ) and",
-        "    (",
-        "      c or d",
-        "    )",
-        "  )",
-    ]
-
-
-def test_mixed_column_clause_group_explodes_block():
-    """A parenthesized MIXED-column clause group (e.g. `(keyword is X or
-    title/abstract contains (...))`) is a block: open paren alone, each child
-    clause indented on its own line led by the connector, close paren alone —
-    matching the canonical OQL pane (oxjob #428: issue A extended from value
-    sub-groups to clause groups). Previously these rendered all-inline with no
-    indentation (the regression Jason hit on the SR-style query). The inner FLAT
-    value list (`(INR or aPTT ...)`) stays inline — only the clause group breaks."""
-    lines = _texts(_lines(
-        "works where (type is types/article or title/abstract contains "
-        "(INR or aPTT or coagulopathy)) and language is en"))
-    assert lines == [
-        "works where (",
-        "    type is types/article",
-        "    or title/abstract contains (INR or aPTT or coagulopathy)",
-        "  )",
-        "  and language is en",
-    ]
-
-
-def test_structurally_identical_clauses_lay_out_identically():
-    """Two same-shape factored clauses explode the same way even when one is
-    much longer (the consistency the width-based formatter lacks)."""
-    short = "title contains ((a or b) and (c or d))"
-    long = ("abstract contains ((" + " or ".join(f"x{i}" for i in range(30))
-            + ") and (" + " or ".join(f"y{i}" for i in range(30)) + "))")
-    lines = _texts(_lines(f"works where {short} and {long}"))
-    # title clause: open / (block grp) / ) and / (block grp) / close  (lines 0-7)
-    assert lines[0] == "works where title contains ("
-    assert lines[1] == "    ("
-    assert lines[3] == "    ) and"
-    assert lines[7] == "  )"
-    # abstract clause explodes identically (same 8-line block shape) even though
-    # its value lists are far longer — flat content stays on ONE line (soft-wrap),
-    # so the structure is width-INDEPENDENT.
-    assert lines[8] == "  and abstract contains ("
-    assert lines[9] == "    ("
-    assert lines[11] == "    ) and"
-    assert lines[15] == "  )"
-    assert len(lines) == 16
-    # the two clauses share the identical paren/connector skeleton (indents +
-    # bracket lines), independent of how long their value lists are.
-    assert [ln for ln in lines[1:8] if ln.strip() in ("(", ") and", ")")] == \
-           [ln for ln in lines[9:16] if ln.strip() in ("(", ") and", ")")]
+    oql = f"works where title contains ({long_or})"
+    assert len(render_v2(parse(oql))["lines"]) > 1
+    assert _norm(_v2_text(oql)) == _norm(_fo(oql))
 
 
 def test_works_where_merged_on_one_line():
@@ -193,11 +176,10 @@ def test_works_where_merged_on_one_line():
     assert lines == ["works where title contains bikes"]
 
 
-def test_example_78_block_paren_logical_lines():
-    """The real SR query (zd#8101): title explodes into block sub-groups, full
-    text stays inline (flat list, one logical line + soft-wrap), title/abstract
-    explodes — the builder renders these `lines` so its gutter matches the OQL
-    pane line-for-line (issue A)."""
+def test_example_78_matches_oql_pane():
+    """The real SR query (zd#8101): title's nested sub-groups explode, the short
+    full-text flat list stays inline, title/abstract explodes — all line-for-line
+    with the OQL pane."""
     oql = (
         "works where title contains ("
         "(Boy or Girl or Minors or adolescent or boys) and "
@@ -205,15 +187,63 @@ def test_example_78_block_paren_logical_lines():
         "and full text contains (Britain or England or GB or UK or Wales) "
         "and title/abstract contains ((attitude or beliefs or diaries) and "
         "(interview or interviews or perceptions))")
-    lines = _texts(_lines(oql))
-    assert len(lines) == 17
-    assert lines[0] == "works where title contains ("
-    assert lines[1] == "    ("                                   # sub-group block open
-    assert lines[3] == "    ) and"                               # trailing connector
-    assert lines[7] == "  )"                                     # title clause close
-    assert lines[8].startswith("  and full text contains (")     # inline (flat)
-    assert lines[9] == "  and title/abstract contains ("         # explodes
-    assert lines[16] == "  )"
+    norm = _norm(_v2_text(oql))
+    assert norm == _norm(_fo(oql))
+    assert norm[0] == "works where title contains ("
+    assert "(Boy or Girl or Minors or adolescent or boys) and" in norm
+    assert "and full text contains (Britain or England or GB or UK or Wales)" in norm
+
+
+# --- the contract: the builder's lines ARE the OQL pane, line for line --------
+
+_CONTRACT_CASES = [
+    "works where title contains bikes",                       # one line
+    "works where type is article and is_oa is true",          # short, one line
+    "works where (type is article or type is book) and title contains cats",
+    "works where institution is (I136199984 or I27837315) "
+        "and title contains (not bikes and cars)",
+    "works where title contains (a or (b and c) or (d and (e or f)))",
+    # long clause group + long value list -> both explode (Jason's SR case)
+    'works where (keyword is types/article or title/abstract contains '
+        '(INR or aPTT or coagulopathy or thrombocytopenia or '
+        '"blood coagulation disorders" or "coagulation disorder")) '
+        'and (keyword is types/book or title/abstract contains '
+        '(CVC or "central line" or "central venous catheter"))',
+    # >8 items -> fill/pack mode
+    "works where institution is (" + " or ".join(f"I{i}" for i in range(1, 40)) + ")",
+    "works where not (type is article or type is book) and title contains x",
+    "works where title contains bikes sort by cited_by_count desc",
+]
+
+
+@pytest.mark.parametrize("oql", _CONTRACT_CASES)
+def test_lines_match_format_oql(oql):
+    """Joining `lines` (ws-normalized) equals the canonical OQL pane line-for-line.
+    This is THE contract: builder rows and OQL text cannot drift."""
+    assert _norm(_v2_text(oql)) == _norm(_fo(oql))
+
+
+def _corpus_oqls():
+    path = pathlib.Path(__file__).resolve().parents[2] / "docs/oql/corpus.yaml"
+    rows = yaml.safe_load(path.read_text())["rows"]
+    out = []
+    for r in rows:
+        oql = r.get("oql")
+        if not oql:
+            continue
+        try:
+            parse(oql)            # skip the intentionally-invalid diagnostic rows
+        except Exception:
+            continue
+        out.append(pytest.param(oql, id=str(r.get("id"))))
+    return out
+
+
+@pytest.mark.parametrize("oql", _corpus_oqls())
+def test_corpus_lines_match_format_oql(oql):
+    """Every VALID corpus query lays out line-for-line identically to the OQL
+    pane — the strongest guarantee the two engines can't diverge."""
+    assert _norm(_v2_text(oql)) == _norm(_fo(oql))
 
 
 def test_negated_value_round_trips_and_flags():

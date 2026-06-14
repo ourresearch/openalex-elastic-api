@@ -17,31 +17,42 @@ the tree so the client never re-derives the formatting rules. Both the builder's
 visual rows and #463's OQL text pane render from the SAME `lines` projection, so
 their line-number gutters cannot drift from the canonicalizer.
 
-LAYOUT MODEL (oxjob #428 iter 22, decided with Jason)
------------------------------------------------------
-LOGICAL lines, not width-wrapped. A node "explodes" onto its own lines IFF it
-contains a nested parenthesized sub-group; a flat boolean list stays on ONE
-logical line and SOFT-wraps in the UI (chips by pixel, text by CSS). This is a
-*structural* rule (independent of the 80-col `format_oql` used for the canonical
-`oql` string), so two structurally-identical clauses always lay out identically.
+LAYOUT MODEL (oxjob #428, decided with Jason: "match line-for-line with OQL")
+-----------------------------------------------------------------------------
+The builder's `lines` MUST match the canonical OQL pane (`format_oql`) line for
+line — same breaks, same indentation, same content per line — so the no-code
+builder and the OQL text read identically. Rather than maintain a second layout
+engine that has to stay byte-identical to `format_oql` forever, we use
+`format_oql` as the SINGLE layout engine and REFLOW the v2 token stream onto its
+lines:
 
-Top-level `where` filter rows are each their own line (the builder's rows): the
-first rides the `works where …` line, the rest start new lines led by `and`/`or`.
+  1. emit the v2 tree's tokens INLINE, in order (each carries its node id + the
+     metadata the client needs: value / entity / negated / column_id);
+  2. run `format_oql` to get the canonical multi-line string;
+  3. walk that string and assign each token to the line its characters land on.
 
-INVARIANT: joining `lines` (indent + token text, structural newlines only)
-re-parses to the same OQO as the canonical `oql` — verified in the offline tests.
+This is correct by construction: `format_oql` only ever reformats WHITESPACE
+(line breaks + indentation; it never reorders or rewrites non-whitespace
+characters), so the non-whitespace character sequence of the canonical string is
+identical to the concatenated inline tokens. Every token's non-whitespace
+characters therefore fall on exactly one line, and the mapping is unambiguous.
+A corpus-wide contract test asserts `lines == format_oql` for every valid query.
+
+Because the layout is now width-based (not structural), two structurally-identical
+clauses can lay out differently when one is longer — that is intentional: it is
+what the OQL pane does.
+
+INVARIANT: joining `lines` (indent + token text) re-parses to the same OQO as the
+canonical `oql` — verified in the offline tests.
 """
 
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
 from query_translation.oql_lang import (
     _merge_same_field_items, _uniform_search_base, _uniform_eq_column,
     _oql_field, _render_term, _value_segments, _is_search_leaf, _leaf_node,
-    _BY_COLUMN, _build_tree,
+    _BY_COLUMN, _build_tree, format_oql,
 )
 from query_translation.oql_render_tree import _stringify_directive
-
-_INDENT = 2  # spaces per nesting level (matches format_oql)
-
 
 class _IdGen:
     def __init__(self):
@@ -154,201 +165,159 @@ def build_tree(oqo: OQO, resolver=None) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Block (explode) decision: a node renders multi-line IFF it contains a nested
-# parenthesized sub-group. Flat boolean lists stay one (soft-wrapping) line.
-# ---------------------------------------------------------------------------
-
-def _vnode_block(v: dict) -> bool:
-    if v["node"] == "vleaf":
-        return False
-    return any(c["node"] == "vgroup" for c in v["children"])
-
-
-def _expr_block(n: dict) -> bool:
-    if n["node"] == "clause":
-        v = n.get("value")
-        return bool(v) and v["node"] == "vgroup" and _vnode_block(v)
-    # A parenthesized clause-level group ALWAYS explodes into a block: open paren
-    # alone, each child clause indented on its own line, close paren alone —
-    # matching the canonical OQL pretty-print (issue A, now extended from value
-    # sub-groups to clause groups, oxjob #428). Width-independent, so two
-    # structurally-identical groups lay out identically regardless of length.
-    # (A same-column boolean folds to ONE clause + a flat value group upstream
-    # and stays inline; only a MIXED-column group becomes a clause group here, so
-    # the parens carry real structure worth breaking onto their own lines.)
-    return True
-
-
-# ---------------------------------------------------------------------------
-# Layout: v2 tree -> ordered logical `lines`. Each line = {n, indent, tokens}.
-# A token is {t, text, id?, ...meta}. Token kinds:
-#   kw     keyword chrome (works / where / sort by …) — inert
+# Inline token stream: the v2 tree -> a flat, ordered list of tokens whose
+# concatenated `text` IS the canonical one-line OQL (== render(oqo)). Each token
+# carries its node `id` + the metadata the client needs. Token kinds:
+#   kw     keyword chrome (works / where / not / sort by …) — inert
 #   col    column chip            op   operator chip
 #   paren  '(' or ')'             conn ' and ' / ' or ' connector
 #   vbrick a value atom (chip / input); carries id, value, negated, entity?
 #   text   raw passthrough (rare)
-# `id` ties a token to its v2 node so the client can route edits.
+# These are reflowed onto `format_oql`'s lines by `_reflow` below.
 # ---------------------------------------------------------------------------
 
-def layout(tree: dict):
-    lines = []
-    cur = {"indent": 0, "tokens": []}
+_SEG2TOK = {"column": "col", "operator": "op", "value": "vbrick",
+            "keyword": "kw", "id": "id", "text": "text"}
 
-    def flush():
-        nonlocal cur
-        if cur["tokens"]:
-            lines.append(cur)
-        cur = {"indent": 0, "tokens": []}
 
-    def newline(indent):
-        nonlocal cur
-        flush()
-        cur = {"indent": indent, "tokens": []}
+def _flat_tokens(tree: dict) -> list:
+    toks = []
 
-    def emit(tok):
-        cur["tokens"].append(tok)
-
-    # --- value tree ---------------------------------------------------------
-    def lay_value(v, indent):
+    def fv(v):
         if v["node"] == "vleaf":
-            # token `text` is stringify-canonical (incl. the bare `not ` prefix,
-            # decision 23); the client renders `not` as chrome off the `negated`
-            # flag and shows `display` (the bare value) in the brick.
+            # `text` is stringify-canonical (incl. the bare `not ` prefix,
+            # decision 23); the client renders `not` as chrome off `negated` and
+            # shows `display` (the bare value) in the brick.
             text = f"not {v['display']}" if v["negated"] else v["display"]
             tok = {"t": "vbrick", "id": v["id"], "text": text,
                    "display": v["display"], "value": v["value"],
                    "negated": v["negated"]}
             if "entity" in v:
                 tok["entity"] = v["entity"]
-            emit(tok)
+            toks.append(tok)
             return
-        # vgroup
-        children = v["children"]
-        if not _vnode_block(v):  # flat -> inline (a or b or c)
-            for i, c in enumerate(children):
-                if i:
-                    emit({"t": "conn", "id": v["id"], "text": f" {v['join']} ",
-                          "label": v["join"]})
-                lay_value(c, indent)
+        toks.append({"t": "paren", "id": v["id"], "text": "("})
+        for i, c in enumerate(v["children"]):
+            if i:
+                toks.append({"t": "conn", "id": v["id"],
+                             "text": f" {v['join']} ", "label": v["join"]})
+            fv(c)
+        toks.append({"t": "paren", "id": v["id"], "text": ")"})
+
+    def fe(n):
+        # A negated group renders as `not <child>` (decision 23, NNF): no parens
+        # of its own — the single inner node supplies any it needs. This also
+        # carries the `not` the old structural layout silently dropped.
+        if n["node"] == "group" and n.get("negated"):
+            toks.append({"t": "kw", "id": n["id"], "text": "not ", "label": "not"})
+            for c in n["children"]:
+                fe(c)
             return
-        # block -> each child renders as a BLOCK (issue A, Jason 2026-06-14): a
-        # child vgroup gets its OWN paren lines — open paren alone, content
-        # indented on its own line(s), close paren alone — so every "(" starts a
-        # fresh line, matching the canonical OQL pane. A bare vleaf child sits on
-        # its own line. Connectors TRAIL the preceding child (`) and` / `x or`),
-        # which is what keeps each open paren alone on its line.
-        for i, c in enumerate(children):
-            newline(indent)
-            if c["node"] == "vgroup":
-                emit({"t": "paren", "id": c["id"], "text": "("})
-                newline(indent + _INDENT)
-                lay_value(c, indent + _INDENT)
-                newline(indent)
-                emit({"t": "paren", "id": c["id"], "text": ")"})
-            else:
-                lay_value(c, indent)
-            if i < len(children) - 1:
-                emit({"t": "conn", "id": v["id"], "text": f" {v['join']}",
-                      "label": v["join"]})
-
-    # --- expr (clause | group) ---------------------------------------------
-    _SEG2TOK = {"column": "col", "operator": "op", "value": "vbrick",
-                "keyword": "kw", "id": "id", "text": "text"}
-
-    def lay_clause(n, indent):
-        v = n.get("value")
-        if v is None:  # simple clause: render its display segments verbatim
-            for s in n["segments"]:
-                tok = {"t": _SEG2TOK.get(s["kind"], "text"), "id": n["id"],
-                       "text": s["text"]}
-                m = s.get("meta") or {}
-                if "column_id" in m:
-                    tok["column_id"] = m["column_id"]
-                if "value" in m:
-                    tok["value"] = m["value"]
-                emit(tok)
-            return
-        emit({"t": "col", "id": n["id"], "text": n["column"],
-              "column_id": n["column_id"]})
-        emit({"t": "op", "id": n["id"], "text": f" {n['operator']} "})
-        block = v["node"] == "vgroup" and _vnode_block(v)
-        emit({"t": "paren", "id": v["id"], "text": "("})
-        if block:
-            lay_value(v, indent + _INDENT)
-            newline(indent)
-            emit({"t": "paren", "id": v["id"], "text": ")"})
-        else:
-            lay_value(v, indent)
-            emit({"t": "paren", "id": v["id"], "text": ")"})
-
-    def lay_group_paren(n, indent):
-        """A parenthesized clause-level group (e.g. (type is x or type is y))."""
-        block = _expr_block(n)
-        emit({"t": "paren", "id": n["id"], "text": "("})
-        if not block:
-            for i, c in enumerate(n["children"]):
-                if i:
-                    emit({"t": "conn", "id": n["id"], "text": f" {n['join']} ",
-                          "label": n["join"]})
-                lay_expr_inline(c, indent)
-            emit({"t": "paren", "id": n["id"], "text": ")"})
-        else:
-            for i, c in enumerate(n["children"]):
-                newline(indent + _INDENT)
-                if i:
-                    emit({"t": "conn", "id": n["id"], "text": f"{n['join']} ",
-                          "label": n["join"]})
-                lay_expr(c, indent + _INDENT)
-            newline(indent)
-            emit({"t": "paren", "id": n["id"], "text": ")"})
-
-    def lay_expr_inline(n, indent):
         if n["node"] == "clause":
-            lay_clause(n, indent)
-        else:
-            lay_group_paren(n, indent)
+            v = n.get("value")
+            if v is None:  # simple clause: its display segments verbatim
+                for s in n["segments"]:
+                    tok = {"t": _SEG2TOK.get(s["kind"], "text"), "id": n["id"],
+                           "text": s["text"]}
+                    m = s.get("meta") or {}
+                    if "column_id" in m:
+                        tok["column_id"] = m["column_id"]
+                    if "value" in m:
+                        tok["value"] = m["value"]
+                    toks.append(tok)
+                return
+            toks.append({"t": "col", "id": n["id"], "text": n["column"],
+                         "column_id": n["column_id"]})
+            toks.append({"t": "op", "id": n["id"], "text": f" {n['operator']} "})
+            fv(v)
+            return
+        # plain group: parens iff `paren`; children joined by the connector.
+        paren = n.get("paren")
+        if paren:
+            toks.append({"t": "paren", "id": n["id"], "text": "("})
+        for i, c in enumerate(n["children"]):
+            if i:
+                toks.append({"t": "conn", "id": n["id"],
+                             "text": f" {n['join']} ", "label": n["join"]})
+            fe(c)
+        if paren:
+            toks.append({"t": "paren", "id": n["id"], "text": ")"})
 
-    def lay_expr(n, indent):
-        if n["node"] == "clause":
-            lay_clause(n, indent)
-        else:
-            lay_group_paren(n, indent)
-
-    # --- top level ----------------------------------------------------------
-    emit({"t": "kw", "id": tree["entity"]["id"], "text": tree["entity"]["text"],
-          "label": tree["entity"]["text"]})
+    toks.append({"t": "kw", "id": tree["entity"]["id"],
+                 "text": tree["entity"]["text"], "label": tree["entity"]["text"]})
     where = tree.get("where")
     if where is not None:
-        emit({"t": "kw", "text": tree["where_keyword"], "label": "where"})
-        if where["node"] == "group" and where.get("implicit"):
-            # top-level filter rows: first rides this line, rest are new lines
-            for i, c in enumerate(where["children"]):
-                if i:
-                    newline(_INDENT)
-                    emit({"t": "conn", "id": where["id"],
-                          "text": f"{where['join']} ", "label": where["join"]})
-                lay_expr(c, _INDENT)
-        else:
-            lay_expr(where, _INDENT)
+        toks.append({"t": "kw", "text": tree["where_keyword"], "label": "where"})
+        fe(where)
     for d in tree["directives"]:
-        newline(0)
-        emit({"t": "kw", "text": d["text"], "label": d["text"]})
+        # leading space mirrors stringify (` sort by …`); on its own line the
+        # space is harmless, inline it separates the directive from the clause.
+        toks.append({"t": "kw", "text": " " + d["text"], "label": d["text"]})
+    return toks
+
+
+# ---------------------------------------------------------------------------
+# Reflow: map the inline token stream onto `format_oql`'s exact lines. Correct
+# by construction — `format_oql` only reformats WHITESPACE, so the canonical
+# string and the concatenated tokens share an identical non-whitespace character
+# sequence; each token's non-ws chars therefore land on exactly one line.
+# ---------------------------------------------------------------------------
+
+def _reflow(toks: list, canonical: str) -> list:
+    nonws = []                      # token index for each non-ws char of `toks`
+    for idx, t in enumerate(toks):
+        for ch in t["text"]:
+            if not ch.isspace():
+                nonws.append(idx)
+    lines, cur = [], {"indent": 0, "tokens": [], "_seen": set()}
+
+    def flush():
+        nonlocal cur
+        if cur["tokens"]:
+            lines.append({"indent": cur["indent"], "tokens": cur["tokens"]})
+        cur = {"indent": 0, "tokens": [], "_seen": set()}
+
+    ci, i, n = 0, 0, len(canonical)
+    while i < n:
+        ch = canonical[i]
+        if ch == "\n":
+            flush()
+            j, ind = i + 1, 0
+            while j < n and canonical[j] == " ":
+                ind, j = ind + 1, j + 1
+            cur["indent"], i = ind, j
+            continue
+        if ch.isspace():
+            i += 1
+            continue
+        tk = nonws[ci]
+        ci += 1
+        if tk not in cur["_seen"]:
+            cur["tokens"].append(toks[tk])
+            cur["_seen"].add(tk)
+        i += 1
     flush()
-    for i, ln in enumerate(lines, 1):
-        ln["n"] = i
+    for k, ln in enumerate(lines, 1):
+        ln["n"] = k
     return lines
+
+
+def layout(tree: dict, canonical: str):
+    """Reflow the v2 tree's inline tokens onto the canonical `format_oql` lines."""
+    return _reflow(_flat_tokens(tree), canonical)
 
 
 def render_v2(oqo: OQO, resolver=None) -> dict:
     tree = build_tree(oqo, resolver)
-    tree["lines"] = layout(tree)
+    canonical = format_oql(_build_tree(oqo, resolver))
+    tree["lines"] = layout(tree, canonical)
     return tree
 
 
 def lines_to_text(lines) -> str:
-    """Stringify the `lines` projection to logical-line OQL (structural newlines
-    only; long value lists stay on one line). Used by tests to assert the layout
-    round-trips to the same OQO as the canonical string."""
+    """Stringify the `lines` projection back to multi-line OQL. Used by tests to
+    assert it round-trips to the same OQO, and (ws-normalized) equals the
+    canonical `format_oql` line for line."""
     out = []
     for ln in lines:
         out.append(" " * ln["indent"] + "".join(t["text"] for t in ln["tokens"]))
