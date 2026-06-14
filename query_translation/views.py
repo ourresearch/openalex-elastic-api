@@ -42,6 +42,7 @@ from query_translation.oqo_to_es import (
 from query_translation.oql_parser import OQLParseError, parse_oql_to_oqo
 from query_translation.oql_renderer import render_oqo_to_oql
 from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
+from query_translation.oql_render_v2 import render_v2
 from query_translation.url_parser import fold_scoped_search_params, parse_url_to_oqo
 from query_translation.url_renderer import (
     URLRenderError, can_render_to_url, render_oqo_to_url, )
@@ -343,9 +344,14 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult):
         canonical_oqo, entity_resolver=safe_get_display_name
     )
 
+    # oql_render v2 (oxjob #428): OQO-faithful, layout-bearing tree + logical
+    # `lines` projection — drives the no-code builder rows + #463 view-code
+    # gutter from the canonicalizer (one source of layout truth).
+    oql_render_v2 = render_v2(canonical_oqo, resolver=safe_get_display_name)
+
     # Build response
     return {
-        "oxurl": oxurl_output, "oql": oql_output, "oql_render": oql_render_tree.to_dict(), "oqo": canonical_oqo.to_dict(), "validation": {
+        "oxurl": oxurl_output, "oql": oql_output, "oql_render": oql_render_tree.to_dict(), "oql_render_v2": oql_render_v2, "oqo": canonical_oqo.to_dict(), "validation": {
             "valid": True, "errors": [
                 {"type": e.type, "message": e.message, "location": e.location}
                 for e in validation_result.errors
