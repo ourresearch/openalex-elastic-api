@@ -107,6 +107,44 @@ def test_build_x_query_with_resolver_annotates_hits_and_misses():
 
 
 # --------------------------------------------------------------------------- #
+# safe_get_display_name — keyword namespace resolution (oxjob #428)
+# --------------------------------------------------------------------------- #
+
+
+def test_safe_get_display_name_resolves_keyword_via_keyword_index(monkeypatch):
+    """Keywords have slug-based, path-namespaced ids (keywords/<slug>) that the
+    letter+digit-only get_display_name can't resolve — they rendered as
+    `[no entity found]` on valid filters. safe_get_display_name routes them to the
+    keywords index, keyed by the full openalex URL it stores."""
+    from query_translation import x_query
+
+    captured = {}
+
+    def fake_lookup(ids, connection="default"):
+        captured["ids"] = ids
+        return {"https://openalex.org/keywords/anticoagulant": "Anticoagulant"}
+
+    monkeypatch.setattr(
+        "core.group_by.display_names.get_display_names_keywords_licenses_topics",
+        fake_lookup,
+    )
+    assert x_query.safe_get_display_name("keywords/anticoagulant") == "Anticoagulant"
+    # routed by the FULL url the keywords index stores, not the bare slug
+    assert captured["ids"] == ["https://openalex.org/keywords/anticoagulant"]
+
+
+def test_safe_get_display_name_keyword_miss_returns_none(monkeypatch):
+    """An unresolvable keyword still yields None (-> `[no entity found]`)."""
+    from query_translation import x_query
+
+    monkeypatch.setattr(
+        "core.group_by.display_names.get_display_names_keywords_licenses_topics",
+        lambda ids, connection="default": {},
+    )
+    assert x_query.safe_get_display_name("keywords/not-a-real-keyword") is None
+
+
+# --------------------------------------------------------------------------- #
 # attach_x_query  (core.shared_view)
 # --------------------------------------------------------------------------- #
 

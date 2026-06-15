@@ -63,6 +63,20 @@ def safe_get_display_name(entity_id: str):
         return None  # Let default resolver handle it
 
     try:
+        if entity_type == "keywords":
+            # Keywords have a slug-based, path-namespaced canonical id
+            # (https://openalex.org/keywords/<slug>) that get_display_name can't
+            # resolve: get_index_name_by_id / normalize_openalex_id only handle
+            # letter+digit ids (I/A/S/T/C…), so a keyword raised + returned None,
+            # rendering valid keyword filters as "[no entity found]" in the OQL
+            # string AND the builder (oxjob #428). Resolve them against the
+            # keywords index instead, keyed by the full URL it stores.
+            from core.group_by.display_names import (
+                get_display_names_keywords_licenses_topics,
+            )
+            full_id = f"https://openalex.org/{entity_id}"
+            names = get_display_names_keywords_licenses_topics([full_id]) or {}
+            return names.get(full_id)
         # Pass just the short ID - get_display_name prepends the URL
         return _get_display_name(short_id)
     except Exception:
