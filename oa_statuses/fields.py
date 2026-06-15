@@ -36,7 +36,8 @@ fields = [
     ),
     RangeField(param="cited_by_count"),
     RangeField(param="works_count"),
-    SearchField(param="default.search", index="oa-statuses"),
+    SearchField(param="text.search", index="oa-statuses"),
+    SearchField(param="default.search", index="oa-statuses", alternate_of="text.search"),
     SearchField(
         param="display_name.search",
         docstring="Free text search among OA statuses' names",

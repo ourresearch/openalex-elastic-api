@@ -163,6 +163,14 @@ _f("abstract", "abstract", "search", aliases=["abstract.search"])
 # external URL→OQO still render to "full text" via the _BY_COLUMN alias below.)
 _f("full text", "fulltext", "search",
    aliases=["fulltext.search", "fulltext", "anywhere", "any field", "default", "default.search"])
+# oxjob #430: "text" is the non-works broad-search canonical (column `text.search` —
+# name + alternate names + description/keywords per entity). Mechanics only here
+# (the #406 guardrail); human input aliases ("anywhere"/"any field"/"default") live
+# on the registry side in core/display_names.py. `text.search` exists only on
+# non-works entities, so the entity-aware resolver maps "text" to it there; "full
+# text" stays the works broad word (fulltext.search). Both render their own word —
+# no homonym collision, since they are distinct columns.
+_f("text", "text", "search", aliases=["text.search"])
 _f("raw affiliation", "raw_affiliation_strings", "search",
    aliases=["raw_affiliation_strings.search", "affiliation", "raw affiliation string"])
 _f("byline", "raw_author_name", "search",

@@ -24,7 +24,8 @@ fields = [
         custom_es_field="source_id",
         docstring="The source where this location is found",
     ),
-    SearchField(param="default.search", index="locations"),
+    SearchField(param="text.search", index="locations"),
+    SearchField(param="default.search", index="locations", alternate_of="text.search"),
     SearchField(
         param="title.search",
         unique_id="location_search",

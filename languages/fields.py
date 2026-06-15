@@ -37,7 +37,8 @@ fields = [
     ),
     RangeField(param="cited_by_count"),
     RangeField(param="works_count"),
-    SearchField(param="default.search", index="languages"),
+    SearchField(param="text.search", index="languages"),
+    SearchField(param="default.search", index="languages", alternate_of="text.search"),
     SearchField(
         param="display_name.search",
         docstring="Free text search among languages' names",

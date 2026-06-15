@@ -69,7 +69,8 @@ fields = [
     RangeField(param="summary_stats.h_index"),
     RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
-    SearchField(param="default.search", index="funders"),
+    SearchField(param="text.search", index="funders"),
+    SearchField(param="default.search", index="funders", alternate_of="text.search"),
     SearchField(param="description.search", custom_es_field="description"),
     SearchField(
         param="display_name.search",

@@ -66,7 +66,8 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("concept.level", None),
     ),
     RangeField(param="works_count"),
-    SearchField(param="default.search", index="concepts"),
+    SearchField(param="text.search", index="concepts"),
+    SearchField(param="default.search", index="concepts", alternate_of="text.search"),
     SearchField(
         param="display_name.search",
         docstring="Free text search among concepts' names",

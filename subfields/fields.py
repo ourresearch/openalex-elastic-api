@@ -26,7 +26,8 @@ fields = [
     TermField(param="domain.id"),
     TermField(param="field.id"),
     RangeField(param="works_count"),
-    SearchField(param="default.search", index="subfields"),
+    SearchField(param="text.search", index="subfields"),
+    SearchField(param="default.search", index="subfields", alternate_of="text.search"),
     SearchField(
         param="display_name.search",
         docstring="Free text search among subfields' names",

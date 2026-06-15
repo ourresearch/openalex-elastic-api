@@ -30,7 +30,8 @@ fields = [
         param="start_year",
         docstring="The year when the project officially begins"
     ),
-    SearchField(param="default.search", index="awards"),
+    SearchField(param="text.search", index="awards"),
+    SearchField(param="default.search", index="awards", alternate_of="text.search"),
     SearchField(param="description.search", custom_es_field="description", index="awards"),
     SearchField(param="display_name.search", custom_es_field="display_name", index="awards"),
     TermField(

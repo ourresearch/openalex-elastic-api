@@ -52,7 +52,8 @@ fields = [
     ),
     RangeField(param="cited_by_count"),
     RangeField(param="works_count"),
-    SearchField(param="default.search", index="topics"),
+    SearchField(param="text.search", index="topics"),
+    SearchField(param="default.search", index="topics", alternate_of="text.search"),
     SearchField(param="description.search", custom_es_field="description"),
     SearchField(param="keywords.search", custom_es_field="keywords"),
     SearchField(
