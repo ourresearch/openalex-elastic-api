@@ -116,8 +116,8 @@ rows:
   status: ok
   oql: |-
     works where institution is (
-        not I33213144 [Harvard] and
-        not I97018004 [Stanford]
+        not I33213144 [Harvard]
+        and not I97018004 [Stanford]
       )
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I33213144, is_negated: true},
@@ -848,9 +848,9 @@ rows:
   status: ok
   oql: |-
     works where title/abstract contains (
-        agile and
-        (near "cycle time" or near "lead time") and
-        (near "demand chain" or near "supply chain" or near "value chain")
+        agile
+        and (near "cycle time" or near "lead time")
+        and (near "demand chain" or near "supply chain" or near "value chain")
       )
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: agile, operator: contains},
@@ -941,8 +941,8 @@ rows:
       and year >= 2015
       and year <= 2024
       and title/abstract contains (
-        (ASD or near "autism spectrum disorder" or autism) and
-        (intervention or therapy or treatment)
+        (ASD or near "autism spectrum disorder" or autism)
+        and (intervention or therapy or treatment)
       )
       and type is (article or review)
   oqo: {get_rows: works, filter_rows: [
@@ -1193,42 +1193,43 @@ rows:
   oql: |-
     works where title contains (
         (
-          Boy or Girl or Minors or Prepubescent or adolescent or boys or child's or
-          children or girls or juvenile or preadolescent or preteen or pubertal or
-          pubescent or schoolboy or schoolchild or schoolgirl or teen or tweenage or
-          tweens or youth or youths or "Pre pubescent" or "early adolescent" or
-          "pre adolescent" or "pre pubertal" or "school aged" or "young people" or
-          "young person"
-        ) and
-        (
-          Height or bodyweight or fat or fatness or obese or obesity or
-          overweight or thin or thinness or weight or "anti fat" or "being fat" or
-          "being thin" or "body esteem" or "body hatred" or "body ideal" or
-          "body image" or "body positive" or "body shame" or "body shape" or
-          "body size" or "body sizes" or "fat ideal" or "ideal body" or
-          "thin ideal" or "weight bias"
+          Boy or Girl or Minors or Prepubescent or adolescent or boys or child's
+          or children or girls or juvenile or preadolescent or preteen or pubertal
+          or pubescent or schoolboy or schoolchild or schoolgirl or teen or tweenage
+          or tweens or youth or youths or "Pre pubescent" or "early adolescent"
+          or "pre adolescent" or "pre pubertal" or "school aged" or "young people"
+          or "young person"
+        )
+        and (
+          Height or bodyweight or fat or fatness or obese or obesity or overweight
+          or thin or thinness or weight or "anti fat" or "being fat" or "being thin"
+          or "body esteem" or "body hatred" or "body ideal" or "body image"
+          or "body positive" or "body shame" or "body shape" or "body size"
+          or "body sizes" or "fat ideal" or "ideal body" or "thin ideal"
+          or "weight bias"
         )
       )
       and full text contains (
-        Britain or England or GB or Scotland or Scottish or UK or Wales or Welsh or
-        "English adolescent" or "English children" or "English girls" or
-        "English schoolchild" or "English teen" or "English young people" or
-        "North Ireland" or "North Irish" or "Northern Ireland" or
-        "Northern Irish" or "United Kingdom" or "english boys" or "english school"
+        Britain or England or GB or Scotland or Scottish or UK or Wales or Welsh
+        or "English adolescent" or "English children" or "English girls"
+        or "English schoolchild" or "English teen" or "English young people"
+        or "North Ireland" or "North Irish" or "Northern Ireland"
+        or "Northern Irish" or "United Kingdom" or "english boys"
+        or "english school"
       )
       and title/abstract contains (
         (
-          attitude or attitudes or beliefs or diaries or diary or experiences or
-          in-depth or indepth or informal or open or perceptions or perspective or
-          perspectives or qualitative or semistructured or unstructured or
-          "focus group" or "focus groups" or "lived experience" or "open ended" or
-          "semi structured"
-        ) and
-        (
-          attitude or attitudes or beliefs or diaries or diary or experiences or
-          interview or interviews or perceptions or perspective or perspectives or
-          qualitative or questionnaire or questionnaires or "focus group" or
-          "focus groups" or "lived experience"
+          attitude or attitudes or beliefs or diaries or diary or experiences
+          or in-depth or indepth or informal or open or perceptions or perspective
+          or perspectives or qualitative or semistructured or unstructured
+          or "focus group" or "focus groups" or "lived experience" or "open ended"
+          or "semi structured"
+        )
+        and (
+          attitude or attitudes or beliefs or diaries or diary or experiences
+          or interview or interviews or perceptions or perspective or perspectives
+          or qualitative or questionnaire or questionnaires or "focus group"
+          or "focus groups" or "lived experience"
         )
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: display_name.search, value: Boy,
@@ -1557,10 +1558,10 @@ rows:
   status: ok
   oql: |-
     works where source type is (
-        "book series" or
-        conference or
-        "ebook platform" or
-        journal
+        "book series"
+        or conference
+        or "ebook platform"
+        or journal
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
         {column_id: primary_location.source.type, value: journal},
@@ -1656,18 +1657,18 @@ rows:
   oql: |-
     works where author is a5018352470 [Kenji Takizawa]
       and full text contains (
-        simulation and
-        (near "data assimilation" or near "state estimation" or real-time) and
-        (near "reduced order model" or near "surrogate model")
+        simulation
+        and (near "data assimilation" or near "state estimation" or real-time)
+        and (near "reduced order model" or near "surrogate model")
       )
       and year >= 2015
       and year <= 2025
       and type is article
       and field is (
-        15 [Chemical Engineering] or 16 [Chemistry] or 17 [Computer Science] or
-        19 [Earth and Planetary Sciences] or 21 [Energy] or 22 [Engineering] or
-        23 [Environmental Science] or 25 [Materials Science] or 26 [Mathematics] or
-        31 [Physics and Astronomy]
+        15 [Chemical Engineering] or 16 [Chemistry] or 17 [Computer Science]
+        or 19 [Earth and Planetary Sciences] or 21 [Energy] or 22 [Engineering]
+        or 23 [Environmental Science] or 25 [Materials Science] or 26 [Mathematics]
+        or 31 [Physics and Astronomy]
       )
     sort by year desc
   oqo: {get_rows: works, sort_by: [{column_id: publication_year, direction: desc}], filter_rows: [{column_id: authorships.author.id, value: a5018352470}, {column_id: fulltext.search, operator: contains, value: simulation}, {column_id: publication_year, operator: '>=', value: 2015}, {column_id: publication_year, operator: <=, value: 2025}, {column_id: type, value: article}, {join: or, filters: [{column_id: fulltext.search, operator: contains, value: '"data assimilation"'}, {column_id: fulltext.search, operator: contains, value: '"state estimation"'}, {column_id: fulltext.search, operator: contains, value: real-time}]}, {join: or, filters: [{column_id: fulltext.search, operator: contains, value: '"reduced order model"'}, {column_id: fulltext.search, operator: contains, value: '"surrogate model"'}]}, {join: or, filters: [{column_id: primary_topic.field.id, value: '15'}, {column_id: primary_topic.field.id, value: '16'}, {column_id: primary_topic.field.id, value: '17'}, {column_id: primary_topic.field.id, value: '19'}, {column_id: primary_topic.field.id, value: '21'}, {column_id: primary_topic.field.id, value: '22'}, {column_id: primary_topic.field.id, value: '23'}, {column_id: primary_topic.field.id, value: '25'}, {column_id: primary_topic.field.id, value: '26'}, {column_id: primary_topic.field.id, value: '31'}]}]}
@@ -1912,8 +1913,8 @@ rows:
   status: ok
   oql: |-
     works where keyword is (
-        not keywords/animal-model [Animal model] and
-        keywords/electronic-cigarette [Electronic cigarette]
+        not keywords/animal-model [Animal model]
+        and keywords/electronic-cigarette [Electronic cigarette]
       )
       and language is en [English]
       and year >= 2003
@@ -2109,8 +2110,8 @@ rows:
     title/abstract. (source DB: PubMed).
   oql: |-
     works where title/abstract contains (
-        acetaminophen and
-        "autism spectrum disorders"
+        acetaminophen
+        and "autism spectrum disorders"
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: acetaminophen, operator: contains},
     {column_id: title_and_abstract.search.exact, value: '"autism spectrum disorders"', operator: contains}]}
@@ -2144,10 +2145,10 @@ rows:
     (source DB: Engineering Village).
   oql: |-
     works where title/abstract contains (
-        concrete and
-        (corrosion or deterioration) and
-        (durability or resistance) and
-        ("sulfuric acid" or "sulphuric acid")
+        concrete
+        and (corrosion or deterioration)
+        and (durability or resistance)
+        and ("sulfuric acid" or "sulphuric acid")
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: concrete, operator: contains},
     {join: or, filters: [{column_id: title_and_abstract.search, value: corrosion, operator: contains},
@@ -2169,13 +2170,13 @@ rows:
   note: 'AND of OR-groups; mixes quoted phrases with bare single words.'
   oql: |-
     works where title/abstract contains (
-        "body composition" and
-        (elderly or older) and
-        (
-          "vibrating platform" or
-          "vibratory intervention" or
-          "vibratory therapy" or
-          "whole body vibration"
+        "body composition"
+        and (elderly or older)
+        and (
+          "vibrating platform"
+          or "vibratory intervention"
+          or "vibratory therapy"
+          or "whole body vibration"
         )
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"body composition"',
@@ -2201,8 +2202,8 @@ rows:
     Science).
   oql: |-
     works where title/abstract contains (
-        (game or gamification or gamified) and
-        (literacy or read or reading)
+        (game or gamification or gamified)
+        and (literacy or read or reading)
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: game,
     operator: contains}, {column_id: title_and_abstract.search, value: gamification, operator: contains},
@@ -2223,13 +2224,13 @@ rows:
   note: 'Three-block PICO-style AND of OR-groups. (source DB: PubMed).'
   oql: |-
     works where title/abstract contains (
-        (LMWH or antithrombotic or heparin) and
-        (idiopathic or unexplained) and
-        (
-          "habitual abortion" or
-          "recurrent abortion" or
-          "recurrent miscarriage" or
-          "recurrent pregnancy loss"
+        (LMWH or antithrombotic or heparin)
+        and (idiopathic or unexplained)
+        and (
+          "habitual abortion"
+          or "recurrent abortion"
+          or "recurrent miscarriage"
+          or "recurrent pregnancy loss"
         )
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: LMWH,
@@ -2256,10 +2257,10 @@ rows:
     column (#364).
   oql: |-
     works where title/abstract contains (
-        Iran and
-        (colimycin or colistimethate or colistin or "Polymyxin E") and
-        ("K.pneumoniae" or "Klebsiella pneumoniae") and
-        ("Resistan*" or "suscep*")
+        Iran
+        and (colimycin or colistimethate or colistin or "Polymyxin E")
+        and ("K.pneumoniae" or "Klebsiella pneumoniae")
+        and ("Resistan*" or "suscep*")
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: Iran, operator: contains},
     {join: or, filters: [{column_id: title_and_abstract.search, value: colimycin, operator: contains},
@@ -2300,11 +2301,11 @@ rows:
     Science Direct).
   oql: |-
     works where title/abstract contains (
-        not paediatric and
-        not "myocardial infarction" and
-        (COVID-19 or coronavirus) and
-        (anticoagulant or enoxaparin or fondaparinux or heparin) and
-        ("critical illness" or "intensive care units")
+        not paediatric
+        and not "myocardial infarction"
+        and (COVID-19 or coronavirus)
+        and (anticoagulant or enoxaparin or fondaparinux or heparin)
+        and ("critical illness" or "intensive care units")
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: paediatric, operator: contains,
     is_negated: true}, {column_id: title_and_abstract.search.exact, value: '"myocardial infarction"',
@@ -2331,15 +2332,15 @@ rows:
     Cochrane Library, ClinicalTrials.gov).
   oql: |-
     works where title/abstract contains (
-        (AI or "artificial intelligence" or "machine learning") and
-        (
-          "artificial pancreas" or
-          "automated insulin delivery" or
-          "closed loop" or
-          "continuous glucose monitor" or
-          "wearable devices"
-        ) and
-        ("diabetes mellitus" or "type 1 diabetes" or "type 2 diabetes")
+        (AI or "artificial intelligence" or "machine learning")
+        and (
+          "artificial pancreas"
+          or "automated insulin delivery"
+          or "closed loop"
+          or "continuous glucose monitor"
+          or "wearable devices"
+        )
+        and ("diabetes mellitus" or "type 1 diabetes" or "type 2 diabetes")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: AI,
     operator: contains}, {column_id: title_and_abstract.search.exact, value: '"artificial
@@ -2366,15 +2367,15 @@ rows:
   note: 'A nested AND-of-ORs inside one block (drug AND (site AND condition)).'
   oql: |-
     works where title/abstract contains (
-        (atrophic or atrophy or dryness or lubrication or vaginitis) and
-        (carbetocin or oxytocin or pitocin or syntocinon) and
-        (
-          dyspareunia or
-          intravaginal or
-          urogenital or
-          vaginal or
-          vulvar or
-          vulvovaginal
+        (atrophic or atrophy or dryness or lubrication or vaginitis)
+        and (carbetocin or oxytocin or pitocin or syntocinon)
+        and (
+          dyspareunia
+          or intravaginal
+          or urogenital
+          or vaginal
+          or vulvar
+          or vulvovaginal
         )
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: atrophic,
@@ -2404,10 +2405,10 @@ rows:
   oql: |-
     works where title/abstract contains (
         (
-          facebook or instagram or linkedin or reddit or tiktok or twitter or
-          youtube or "sina weibo" or "social media"
-        ) and
-        ("immuni*" or "vaccin*")
+          facebook or instagram or linkedin or reddit or tiktok or twitter
+          or youtube or "sina weibo" or "social media"
+        )
+        and ("immuni*" or "vaccin*")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: facebook,
     operator: contains}, {column_id: title_and_abstract.search, value: instagram, operator: contains},
@@ -2432,8 +2433,8 @@ rows:
   note: 'Spelled-out term OR its acronym — a very common SR idiom.'
   oql: |-
     works where title/abstract contains (
-        (NAION or "nonarteritic anterior ischemic optic neuropathy") and
-        (semaglutide or "glucagon-like peptide-1 agonist")
+        (NAION or "nonarteritic anterior ischemic optic neuropathy")
+        and (semaglutide or "glucagon-like peptide-1 agonist")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: NAION,
     operator: contains}, {column_id: title_and_abstract.search.exact, value: '"nonarteritic
@@ -2453,9 +2454,9 @@ rows:
   note: 'Plain three-phrase AND, no synonyms.'
   oql: |-
     works where title/abstract contains (
-        variation and
-        "branching pattern" and
-        "facial nerve"
+        variation
+        and "branching pattern"
+        and "facial nerve"
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: variation, operator: contains},
     {column_id: title_and_abstract.search.exact, value: '"branching pattern"', operator: contains},
@@ -2476,13 +2477,13 @@ rows:
   oql: |-
     works where title/abstract contains (
         (
-          "clean energy" or
-          "energy education" or
-          "energy literacy" or
-          "energy source*" or
-          "renewable energy"
-        ) and
-        ("college*" or "school*" or "universit*")
+          "clean energy"
+          or "energy education"
+          or "energy literacy"
+          or "energy source*"
+          or "renewable energy"
+        )
+        and ("college*" or "school*" or "universit*")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search.exact,
     value: '"clean energy"', operator: contains}, {column_id: title_and_abstract.search.exact,
@@ -2506,8 +2507,8 @@ rows:
   note: 'Multilingual phrases (Portuguese/English) — corpus is not English-only.'
   oql: |-
     works where title/abstract contains (
-        (biology or chemistry or physics or "ensino de ciências") and
-        ("blended learning" or "ensino híbrido" or "b-learning")
+        (biology or chemistry or physics or "ensino de ciências")
+        and ("blended learning" or "ensino híbrido" or "b-learning")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: biology,
     operator: contains}, {column_id: title_and_abstract.search, value: chemistry, operator: contains},
@@ -2532,8 +2533,8 @@ rows:
     (source DB: PubMed).
   oql: |-
     works where title/abstract contains (
-        intake and
-        (season or (spring and summer and winter and (autumn or fall)))
+        intake
+        and (season or (spring and summer and winter and (autumn or fall)))
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: intake, operator: contains},
     {join: or, filters: [{column_id: title_and_abstract.search, value: season, operator: contains},
@@ -2558,15 +2559,15 @@ rows:
   oql: |-
     works where title/abstract contains (
         (
-          balance or
-          coordination or
-          flexibility or
-          "muscle strength" or
-          "physical fitness" or
-          "reaction time"
-        ) and
-        (dance or dancing or salsa or "dance therapy" or "salsa dancing") and
-        ("older women" or (elderly and women))
+          balance
+          or coordination
+          or flexibility
+          or "muscle strength"
+          or "physical fitness"
+          or "reaction time"
+        )
+        and (dance or dancing or salsa or "dance therapy" or "salsa dancing")
+        and ("older women" or (elderly and women))
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: balance,
     operator: contains}, {column_id: title_and_abstract.search, value: coordination, operator: contains},
@@ -2597,12 +2598,12 @@ rows:
     representable and oql-only. (source DB: PubMed).
   oql: |-
     works where title/abstract contains (
-        ("dental stem cell" and (periodontitis or "periodontal regeneration")) or
-        (
-          "mesenchymal stem cell" and
-          (periodontitis or "periodontal regeneration")
-        ) or
-        ("stem cell" and (periodontitis or "periodontal regeneration"))
+        ("dental stem cell" and (periodontitis or "periodontal regeneration"))
+        or (
+          "mesenchymal stem cell"
+          and (periodontitis or "periodontal regeneration")
+        )
+        or ("stem cell" and (periodontitis or "periodontal regeneration"))
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{join: and, filters: [{column_id: title_and_abstract.search.exact,
     value: '"dental stem cell"', operator: contains}, {join: or, filters: [{column_id: title_and_abstract.search,
@@ -2631,9 +2632,9 @@ rows:
     Science).
   oql: |-
     works where title/abstract contains (
-        (aged or elderly or "older adults") and
-        (burden or outbreak or prevalence) and
-        ("loneliness" or "lonely")
+        (aged or elderly or "older adults")
+        and (burden or outbreak or prevalence)
+        and ("loneliness" or "lonely")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: aged,
     operator: contains}, {column_id: title_and_abstract.search, value: elderly, operator: contains},
@@ -2680,12 +2681,12 @@ rows:
     keyword text field). (source DB: Scopus).
   oql: |-
     works where title contains (
-        (engineering or industry or "application*") and
-        (genai or "generative ai" or "generative artificial intelligence")
+        (engineering or industry or "application*")
+        and (genai or "generative ai" or "generative artificial intelligence")
       )
       and title/abstract contains (
-        (generation and text) or
-        ((generation or "model*") and (multimodal or nlp or "natural language"))
+        (generation and text)
+        or ((generation or "model*") and (multimodal or nlp or "natural language"))
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: display_name.search, value: engineering,
     operator: contains}, {column_id: display_name.search, value: industry, operator: contains},
@@ -2763,20 +2764,20 @@ rows:
     works where (
         keyword is keywords/anticoagulant [Anticoagulant]
         or title/abstract contains (
-          INR or
-          aPTT or
-          coagulopathy or
-          thrombocytopenia or
-          "blood coagulation disorders" or
-          "coagulation disorder"
+          INR
+          or aPTT
+          or coagulopathy
+          or thrombocytopenia
+          or "blood coagulation disorders"
+          or "coagulation disorder"
         )
       )
       and (
         keyword is keywords/central-venous-catheter [Central venous catheter]
         or title/abstract contains (
-          CVC or
-          "central line" or
-          "central venous catheter"
+          CVC
+          or "central line"
+          or "central venous catheter"
         )
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: keywords.id, value: keywords/anticoagulant},
@@ -2815,33 +2816,33 @@ rows:
       and year <= 2025
       and type is types/article
       and title/abstract contains (
-        vapes or "e vape" or "e vapes" or "e vaping" or "e vaping" or "e vapor" or
-        "e vapors" or "e vapour" or "e vapours" or "liquid nicotine" or
-        "nicotine aerosol" or "nicotine bag" or "nicotine bags" or "nicotine gum" or
-        "nicotine gummies" or "nicotine inhaler" or "nicotine lozenge" or
-        "nicotine microtab" or "nicotine microtablet" or "nicotine microtablets" or
-        "nicotine microtabs" or "nicotine pouch" or "nicotine pouches" or
-        "nicotine snus" within 8 words or "nicotine spray" or "nicotine tablet" or
-        "nicotine tablets" or "oral nicotine product" or "vape device" or
-        "vape flavor" within 1 word or "vape flavor" within 1 word or
-        "vape flavored" within 1 word or "vape flavoring" within 1 word or
-        "vape flavour" within 1 word or "vape flavoured" within 1 word or
-        "vape flavouring" within 1 word or "vape free" or "vape product" or
-        "vape use" or "vaping device" or "vaping flavor" within 1 word or
-        "vaping flavor" within 1 word or "vaping flavored" within 1 word or
-        "vaping flavoring" within 1 word or "vaping flavour" within 1 word or
-        "vaping flavoured" within 1 word or "vaping flavouring" within 1 word or
-        "vaping free" or "vaping product" or "evape" or "evapes" or "evaping" or
-        (cigarette and evaping) or (cigarette and vape) or (cigarette and vaper) or
-        (cigarette and vapers) or (cigarette and vaping) or (cigarette and vapor) or
-        (cigarette and vaporiser) or (cigarette and vaporizer) or
-        (cigarette and vapour) or (cigarette and vapouriser) or
-        (cigarette and vapourizer) or (cigarette and "e-vaping") or
-        (evaping and nicotine) or (nicotine and vape) or (nicotine and vaper) or
-        (nicotine and vapers) or (nicotine and vaping) or (nicotine and vapor) or
-        (nicotine and vaporiser) or (nicotine and vaporizer) or
-        (nicotine and vapour) or (nicotine and vapouriser) or
-        (nicotine and vapourizer) or (nicotine and "e-vaping")
+        vapes or "e vape" or "e vapes" or "e vaping" or "e vaping" or "e vapor"
+        or "e vapors" or "e vapour" or "e vapours" or "liquid nicotine"
+        or "nicotine aerosol" or "nicotine bag" or "nicotine bags" or "nicotine gum"
+        or "nicotine gummies" or "nicotine inhaler" or "nicotine lozenge"
+        or "nicotine microtab" or "nicotine microtablet" or "nicotine microtablets"
+        or "nicotine microtabs" or "nicotine pouch" or "nicotine pouches"
+        or "nicotine snus" within 8 words or "nicotine spray" or "nicotine tablet"
+        or "nicotine tablets" or "oral nicotine product" or "vape device"
+        or "vape flavor" within 1 word or "vape flavor" within 1 word
+        or "vape flavored" within 1 word or "vape flavoring" within 1 word
+        or "vape flavour" within 1 word or "vape flavoured" within 1 word
+        or "vape flavouring" within 1 word or "vape free" or "vape product"
+        or "vape use" or "vaping device" or "vaping flavor" within 1 word
+        or "vaping flavor" within 1 word or "vaping flavored" within 1 word
+        or "vaping flavoring" within 1 word or "vaping flavour" within 1 word
+        or "vaping flavoured" within 1 word or "vaping flavouring" within 1 word
+        or "vaping free" or "vaping product" or "evape" or "evapes" or "evaping"
+        or (cigarette and evaping) or (cigarette and vape) or (cigarette and vaper)
+        or (cigarette and vapers) or (cigarette and vaping) or (cigarette and vapor)
+        or (cigarette and vaporiser) or (cigarette and vaporizer)
+        or (cigarette and vapour) or (cigarette and vapouriser)
+        or (cigarette and vapourizer) or (cigarette and "e-vaping")
+        or (evaping and nicotine) or (nicotine and vape) or (nicotine and vaper)
+        or (nicotine and vapers) or (nicotine and vaping) or (nicotine and vapor)
+        or (nicotine and vaporiser) or (nicotine and vaporizer)
+        or (nicotine and vapour) or (nicotine and vapouriser)
+        or (nicotine and vapourizer) or (nicotine and "e-vaping")
       )
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true},
     {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: <=},
@@ -2986,22 +2987,22 @@ rows:
       and year <= 2025
       and type is types/article
       and title/abstract contains (
-        Juul or "VUSE" or "Vype" or "Geek Bar" or
-        "cigarette" within 4 words of "ultra sonic" or "e Voke" or "e cigar" or
-        "e cigarette" or "e cigarettes" or "e liquid" or "e liquids" or
-        "electric cigarette" within 4 words or "electric nicotine" within 4 words or
-        "electrical cigarette" within 4 words or
-        "electrical nicotine" within 4 words or
-        "electronic cigarette" within 4 words or
-        "electronic nicotine" within 4 words or
-        "nicotine" within 4 words of "delivering system" or
-        "nicotine" within 4 words of "delivery device" or
-        "nicotine" within 4 words of "delivery product" or
-        "nicotine" within 4 words of "delivery system" or
-        "nicotine" within 4 words of "delivery system" or
-        "nicotine" within 4 words of "ultra sonic" or "u cigar" or "u cigarette" or
-        "u cigarettes" or "u cigars" or "ultrasonic cigarette" within 4 words or
-        "ultrasonic nicotine" within 4 words
+        Juul or "VUSE" or "Vype" or "Geek Bar"
+        or "cigarette" within 4 words of "ultra sonic" or "e Voke" or "e cigar"
+        or "e cigarette" or "e cigarettes" or "e liquid" or "e liquids"
+        or "electric cigarette" within 4 words or "electric nicotine" within 4 words
+        or "electrical cigarette" within 4 words
+        or "electrical nicotine" within 4 words
+        or "electronic cigarette" within 4 words
+        or "electronic nicotine" within 4 words
+        or "nicotine" within 4 words of "delivering system"
+        or "nicotine" within 4 words of "delivery device"
+        or "nicotine" within 4 words of "delivery product"
+        or "nicotine" within 4 words of "delivery system"
+        or "nicotine" within 4 words of "delivery system"
+        or "nicotine" within 4 words of "ultra sonic" or "u cigar" or "u cigarette"
+        or "u cigarettes" or "u cigars" or "ultrasonic cigarette" within 4 words
+        or "ultrasonic nicotine" within 4 words
       )
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true},
     {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: <=},
@@ -3054,59 +3055,60 @@ rows:
     the intended phrases. Origin DBs: APA PsycInfo / Web of Science.
   oql: |-
     works where title/abstract contains (
-        review and
-        (
-          HAVO or VWO or atheneum or gymnasium or schooling or
-          (secondary vocational education) or "Elementary Education" or
-          "Multi Academy Trust" or "Multi Academy Trusts" or "School Academies" or
-          "School Academy" or "basic school" or "basic school" or "basic schools" or
-          "basic schools" or "comprehensive school" or "comprehensive schools" or
-          "elementary school" or "elementary schools" or "grade school" or
-          "grade schools" or "grammar school" or "grammar schools" or
-          "high school" or "high schools" or "intermediate school" or
-          "intermediate schools" or "middle school" or "middle schools" or
-          "post primary school" or "post primary schools" or
-          "post-primary education" or "postprimary education" or
-          "postprimary education" or "postprimary school" or
-          "postprimary schools" or "school system" or "secondary education" or
-          "secondary school" or "secondary schools" or "technical school" or
-          "technical schools" or "university preparatory education" or
-          "vocational school" or "vocational schools" or
-          (adolescents and education) or (education and "young people") or
-          (teacher and not "academic teacher") or
-          (teachers and not "academic teachers")
-        ) and
-        (
-          Policies or context or electoral or policy or political or reform or
-          reforming or "national standards" or "school improvement" or "influence*"
-        ) and
-        (evidence or literature) and
-        (
-          "Self-Assessment" or "Annual School Review" or "Annual School Reviews" or
-          "School Assessment" or "School Development Plan" or
-          "School Development Plans" or "School Improvement Plan" or
-          "School Improvement Plans" or "educational accountability" or
-          "evaluation structures" or "school accountability" or "school audit" or
-          "school effectiveness" or "school effectiveness" or "school evaluation" or
-          "school excellence" or "school improvement" or "school inspection" or
-          "school inspector" or "school performance" or "school quality" or
-          "school self-assessment" or "school self-evaluation" or
-          "shool oversight" or "special measures" or
-          (school and "educational quality")
+        review
+        and (
+          HAVO or VWO or atheneum or gymnasium or schooling
+          or (secondary vocational education) or "Elementary Education"
+          or "Multi Academy Trust" or "Multi Academy Trusts" or "School Academies"
+          or "School Academy" or "basic school" or "basic school" or "basic schools"
+          or "basic schools" or "comprehensive school" or "comprehensive schools"
+          or "elementary school" or "elementary schools" or "grade school"
+          or "grade schools" or "grammar school" or "grammar schools"
+          or "high school" or "high schools" or "intermediate school"
+          or "intermediate schools" or "middle school" or "middle schools"
+          or "post primary school" or "post primary schools"
+          or "post-primary education" or "postprimary education"
+          or "postprimary education" or "postprimary school"
+          or "postprimary schools" or "school system" or "secondary education"
+          or "secondary school" or "secondary schools" or "technical school"
+          or "technical schools" or "university preparatory education"
+          or "vocational school" or "vocational schools"
+          or (adolescents and education) or (education and "young people")
+          or (teacher and not "academic teacher")
+          or (teachers and not "academic teachers")
+        )
+        and (
+          Policies or context or electoral or policy or political or reform
+          or reforming or "national standards" or "school improvement"
+          or "influence*"
+        )
+        and (evidence or literature)
+        and (
+          "Self-Assessment" or "Annual School Review" or "Annual School Reviews"
+          or "School Assessment" or "School Development Plan"
+          or "School Development Plans" or "School Improvement Plan"
+          or "School Improvement Plans" or "educational accountability"
+          or "evaluation structures" or "school accountability" or "school audit"
+          or "school effectiveness" or "school effectiveness" or "school evaluation"
+          or "school excellence" or "school improvement" or "school inspection"
+          or "school inspector" or "school performance" or "school quality"
+          or "school self-assessment" or "school self-evaluation"
+          or "shool oversight" or "special measures"
+          or (school and "educational quality")
         )
       )
       and year is (
-        2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or
-        2023 or 2024 or 2025
+        2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or 2023
+        or 2024 or 2025
       )
       and type is (
-        types/book or
-        types/book-chapter or
-        types/dissertation or
-        types/erratum or
-        types/other or
-        types/report or
-        types/retraction
+        types/book
+        or types/book-chapter
+        or types/dissertation
+        or types/erratum
+        or types/other
+        or types/report
+        or types/retraction
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: review, operator: contains},
     {join: or, filters: [{column_id: publication_year, value: 2014}, {column_id: publication_year,
@@ -3228,48 +3230,48 @@ rows:
     tail.
   oql: |-
     works where year is (
-        2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or
-        2023 or 2024 or 2025
+        2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or 2023
+        or 2024 or 2025
       )
       and title/abstract contains (
-        DEPP or EQAO or HGIOS or OFSTED or Onderwijsinspectie or
-        "Conseil de l'Evaluation de l'Ecole" or
-        "Direction de l'Evaluation de la Prospective et de l'Evaluation" or
-        "Education Scotland" or "Educational Quality and Accountability Office" or
-        "FINEEC Evaluation*" or "General Inspectorate" or
-        "How Good is Our School" or "Institute for Development of Education" or
-        "Instytut Rozwoju Edukacji" or "Kurator Oświaty" or
-        "Ocena jakości pracy szkoły" or "Odpowiedzialność szkoły" or
-        "Plany Rozwoju Szkoły" or "Samodzielna ocena szkoły" or
-        (Estyn and accountability) or (Estyn and inspection) or
-        (Estyn and inspectors) or (Finland and "Education Evaluation Centre") or
-        (Ireland and "Department of Education") or
-        (Ireland and "Education and Training Inspectorate") or
-        (Irish and "Department of Education") or
-        (Irish and "Education and Training Inspectorate") or
-        (Japan and "Ministry of Education") or
-        (Japanese and "Ministry of Education") or
-        (Netherlands and "Inspectorate of Education") or
-        (Ontario and "standard of instruction") or
-        (Poland and "Ministry of Education") or
-        (Poland and "regional education authority") or
-        (Polish and "Ministry of Education") or
-        (Polish and "regional education authority") or (SEAB and Singapore) or
-        (Singapore and "MOE") or
-        (Singapore and "Examinations and Assessment Board") or
-        (Singapore and "Ministry of Education") or
-        ("Dutch" and "Inspectorate of Education") or
-        ("Finnish" and "Education Evaluation Centre") or
-        ("Education Review Office" and "New Zealand")
+        DEPP or EQAO or HGIOS or OFSTED or Onderwijsinspectie
+        or "Conseil de l'Evaluation de l'Ecole"
+        or "Direction de l'Evaluation de la Prospective et de l'Evaluation"
+        or "Education Scotland" or "Educational Quality and Accountability Office"
+        or "FINEEC Evaluation*" or "General Inspectorate"
+        or "How Good is Our School" or "Institute for Development of Education"
+        or "Instytut Rozwoju Edukacji" or "Kurator Oświaty"
+        or "Ocena jakości pracy szkoły" or "Odpowiedzialność szkoły"
+        or "Plany Rozwoju Szkoły" or "Samodzielna ocena szkoły"
+        or (Estyn and accountability) or (Estyn and inspection)
+        or (Estyn and inspectors) or (Finland and "Education Evaluation Centre")
+        or (Ireland and "Department of Education")
+        or (Ireland and "Education and Training Inspectorate")
+        or (Irish and "Department of Education")
+        or (Irish and "Education and Training Inspectorate")
+        or (Japan and "Ministry of Education")
+        or (Japanese and "Ministry of Education")
+        or (Netherlands and "Inspectorate of Education")
+        or (Ontario and "standard of instruction")
+        or (Poland and "Ministry of Education")
+        or (Poland and "regional education authority")
+        or (Polish and "Ministry of Education")
+        or (Polish and "regional education authority") or (SEAB and Singapore)
+        or (Singapore and "MOE")
+        or (Singapore and "Examinations and Assessment Board")
+        or (Singapore and "Ministry of Education")
+        or ("Dutch" and "Inspectorate of Education")
+        or ("Finnish" and "Education Evaluation Centre")
+        or ("Education Review Office" and "New Zealand")
       )
       and type is (
-        types/book or
-        types/book-chapter or
-        types/dissertation or
-        types/erratum or
-        types/other or
-        types/report or
-        types/retraction
+        types/book
+        or types/book-chapter
+        or types/dissertation
+        or types/erratum
+        or types/other
+        or types/report
+        or types/retraction
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: publication_year, value: 2014},
     {column_id: publication_year, value: 2015}, {column_id: publication_year, value: 2016},
@@ -3370,61 +3372,61 @@ rows:
     expresses it fine.)
   oql: |-
     works where year is (
-        2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or
-        2023 or 2024 or 2025
+        2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or 2023
+        or 2024 or 2025
       )
       and title/abstract contains (
         (
-          Britain or Dutch or Estonia or Finland or Finnish or Flemish or France or
-          French or Ireland or Irish or Japan or Japanese or Netherlands or
-          Ontarian or Ontario or Poland or Polish or Scotland or Scottish or
-          Singapore or Singaporean or Welsh or "U.K." or "UK" or "New Zealand" or
-          "United Kingdom" or (British and not "British Columbia") or
-          (England and not "New England") or (Wales and not "New South Wales")
-        ) and
-        (
-          HAVO or VWO or atheneum or gymnasium or schooling or
-          (secondary vocational education) or "Elementary Education" or
-          "Multi Academy Trust" or "Multi Academy Trusts" or "School Academies" or
-          "School Academy" or "basic school" or "basic school" or "basic schools" or
-          "basic schools" or "comprehensive school" or "comprehensive schools" or
-          "elementary school" or "elementary schools" or "grade school" or
-          "grade schools" or "grammar school" or "grammar schools" or
-          "high school" or "high schools" or "intermediate school" or
-          "intermediate schools" or "middle school" or "middle schools" or
-          "post primary school" or "post primary schools" or
-          "post-primary education" or "postprimary education" or
-          "postprimary education" or "postprimary school" or
-          "postprimary schools" or "school system" or "secondary education" or
-          "secondary school" or "secondary schools" or "technical school" or
-          "technical schools" or "university preparatory education" or
-          "vocational school" or "vocational schools" or
-          (adolescents and education) or (education and "young people") or
-          (teacher and not "academic teacher") or
-          (teachers and not "academic teachers")
-        ) and
-        (
-          "Self-Assessment" or "Annual School Review" or "Annual School Reviews" or
-          "School Assessment" or "School Development Plan" or
-          "School Development Plans" or "School Improvement Plan" or
-          "School Improvement Plans" or "educational accountability" or
-          "evaluation structures" or "school accountability" or "school audit" or
-          "school effectiveness" or "school effectiveness" or "school evaluation" or
-          "school excellence" or "school improvement" or "school inspection" or
-          "school inspector" or "school performance" or "school quality" or
-          "school self-assessment" or "school self-evaluation" or
-          "shool oversight" or "special measures" or
-          (school and "educational quality")
+          Britain or Dutch or Estonia or Finland or Finnish or Flemish or France
+          or French or Ireland or Irish or Japan or Japanese or Netherlands
+          or Ontarian or Ontario or Poland or Polish or Scotland or Scottish
+          or Singapore or Singaporean or Welsh or "U.K." or "UK" or "New Zealand"
+          or "United Kingdom" or (British and not "British Columbia")
+          or (England and not "New England") or (Wales and not "New South Wales")
+        )
+        and (
+          HAVO or VWO or atheneum or gymnasium or schooling
+          or (secondary vocational education) or "Elementary Education"
+          or "Multi Academy Trust" or "Multi Academy Trusts" or "School Academies"
+          or "School Academy" or "basic school" or "basic school" or "basic schools"
+          or "basic schools" or "comprehensive school" or "comprehensive schools"
+          or "elementary school" or "elementary schools" or "grade school"
+          or "grade schools" or "grammar school" or "grammar schools"
+          or "high school" or "high schools" or "intermediate school"
+          or "intermediate schools" or "middle school" or "middle schools"
+          or "post primary school" or "post primary schools"
+          or "post-primary education" or "postprimary education"
+          or "postprimary education" or "postprimary school"
+          or "postprimary schools" or "school system" or "secondary education"
+          or "secondary school" or "secondary schools" or "technical school"
+          or "technical schools" or "university preparatory education"
+          or "vocational school" or "vocational schools"
+          or (adolescents and education) or (education and "young people")
+          or (teacher and not "academic teacher")
+          or (teachers and not "academic teachers")
+        )
+        and (
+          "Self-Assessment" or "Annual School Review" or "Annual School Reviews"
+          or "School Assessment" or "School Development Plan"
+          or "School Development Plans" or "School Improvement Plan"
+          or "School Improvement Plans" or "educational accountability"
+          or "evaluation structures" or "school accountability" or "school audit"
+          or "school effectiveness" or "school effectiveness" or "school evaluation"
+          or "school excellence" or "school improvement" or "school inspection"
+          or "school inspector" or "school performance" or "school quality"
+          or "school self-assessment" or "school self-evaluation"
+          or "shool oversight" or "special measures"
+          or (school and "educational quality")
         )
       )
       and type is (
-        types/book or
-        types/book-chapter or
-        types/dissertation or
-        types/erratum or
-        types/other or
-        types/report or
-        types/retraction
+        types/book
+        or types/book-chapter
+        or types/dissertation
+        or types/erratum
+        or types/other
+        or types/report
+        or types/retraction
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: publication_year, value: 2014},
     {column_id: publication_year, value: 2015}, {column_id: publication_year, value: 2016},
@@ -3562,58 +3564,58 @@ rows:
     block vs entity filter) in one corpus.
   oql: |-
     works where country is (
-        CA [Canada] or COUNTRIES/GB [United Kingdom] or EE [Estonia] or
-        FI [Finland] or FR [France] or IE [Ireland] or JP [Japan] or
-        NL [Netherlands] or NZ [New Zealand] or PL [Poland] or SG [Singapore]
+        CA [Canada] or COUNTRIES/GB [United Kingdom] or EE [Estonia] or FI [Finland]
+        or FR [France] or IE [Ireland] or JP [Japan] or NL [Netherlands]
+        or NZ [New Zealand] or PL [Poland] or SG [Singapore]
       )
       and year is (
-        2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or
-        2023 or 2024 or 2025
+        2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or 2023
+        or 2024 or 2025
       )
       and title/abstract contains (
         (
-          HAVO or VWO or atheneum or gymnasium or schooling or
-          (secondary vocational education) or "Elementary Education" or
-          "Multi Academy Trust" or "Multi Academy Trusts" or "School Academies" or
-          "School Academy" or "basic school" or "basic school" or "basic schools" or
-          "basic schools" or "comprehensive school" or "comprehensive schools" or
-          "elementary school" or "elementary schools" or "grade school" or
-          "grade schools" or "grammar school" or "grammar schools" or
-          "high school" or "high schools" or "intermediate school" or
-          "intermediate schools" or "middle school" or "middle schools" or
-          "post primary school" or "post primary schools" or
-          "post-primary education" or "postprimary education" or
-          "postprimary education" or "postprimary school" or
-          "postprimary schools" or "school system" or "secondary education" or
-          "secondary school" or "secondary schools" or "technical school" or
-          "technical schools" or "university preparatory education" or
-          "vocational school" or "vocational schools" or
-          (adolescents and education) or (education and "young people") or
-          (teacher and not "academic teacher") or
-          (teachers and not "academic teachers")
-        ) and
-        (
-          "Self-Assessment" or "Annual School Review" or "Annual School Reviews" or
-          "School Assessment" or "School Development Plan" or
-          "School Development Plans" or "School Improvement Plan" or
-          "School Improvement Plans" or "educational accountability" or
-          "evaluation structures" or "school accountability" or "school audit" or
-          "school effectiveness" or "school effectiveness" or "school evaluation" or
-          "school excellence" or "school improvement" or "school inspection" or
-          "school inspector" or "school performance" or "school quality" or
-          "school self-assessment" or "school self-evaluation" or
-          "shool oversight" or "special measures" or
-          (school and "educational quality")
+          HAVO or VWO or atheneum or gymnasium or schooling
+          or (secondary vocational education) or "Elementary Education"
+          or "Multi Academy Trust" or "Multi Academy Trusts" or "School Academies"
+          or "School Academy" or "basic school" or "basic school" or "basic schools"
+          or "basic schools" or "comprehensive school" or "comprehensive schools"
+          or "elementary school" or "elementary schools" or "grade school"
+          or "grade schools" or "grammar school" or "grammar schools"
+          or "high school" or "high schools" or "intermediate school"
+          or "intermediate schools" or "middle school" or "middle schools"
+          or "post primary school" or "post primary schools"
+          or "post-primary education" or "postprimary education"
+          or "postprimary education" or "postprimary school"
+          or "postprimary schools" or "school system" or "secondary education"
+          or "secondary school" or "secondary schools" or "technical school"
+          or "technical schools" or "university preparatory education"
+          or "vocational school" or "vocational schools"
+          or (adolescents and education) or (education and "young people")
+          or (teacher and not "academic teacher")
+          or (teachers and not "academic teachers")
+        )
+        and (
+          "Self-Assessment" or "Annual School Review" or "Annual School Reviews"
+          or "School Assessment" or "School Development Plan"
+          or "School Development Plans" or "School Improvement Plan"
+          or "School Improvement Plans" or "educational accountability"
+          or "evaluation structures" or "school accountability" or "school audit"
+          or "school effectiveness" or "school effectiveness" or "school evaluation"
+          or "school excellence" or "school improvement" or "school inspection"
+          or "school inspector" or "school performance" or "school quality"
+          or "school self-assessment" or "school self-evaluation"
+          or "shool oversight" or "special measures"
+          or (school and "educational quality")
         )
       )
       and type is (
-        types/book or
-        types/book-chapter or
-        types/dissertation or
-        types/erratum or
-        types/other or
-        types/report or
-        types/retraction
+        types/book
+        or types/book-chapter
+        or types/dissertation
+        or types/erratum
+        or types/other
+        or types/report
+        or types/retraction
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: authorships.countries, value: CA},
     {column_id: authorships.countries, value: COUNTRIES/GB}, {column_id: authorships.countries,

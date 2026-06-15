@@ -3377,38 +3377,43 @@ def _split_group_text(text: str):
     return items, conn
 
 
-def _fmt_group_item(it: str, indent: int, width: int, trailing: str) -> str:
-    """Lay out one exploded-group item at `indent`, with the parent's trailing
-    connective (`" and"` / `" or"` / empty) attached to its last line. An item
-    that fits stays on one line; an over-width parenthesized sub-group explodes
-    recursively (its closing paren carries the trailing connective)."""
+def _fmt_group_item(it: str, indent: int, width: int, leading: str) -> str:
+    """Lay out one exploded-group item at `indent`, with the parent's leading
+    connective (`"and "` / `"or "` / empty for the first item) prefixed to its
+    first line. An item that fits stays on one line; an over-width parenthesized
+    sub-group explodes recursively (its open paren carries the leading
+    connective, its closing paren sits back at `indent`)."""
     pad = " " * indent
-    if len(pad) + len(it) + len(trailing) <= width:
-        return f"{pad}{it}{trailing}"
+    if len(pad) + len(leading) + len(it) <= width:
+        return f"{pad}{leading}{it}"
     if it.startswith("(") and it.endswith(")"):
         parts = _split_group_text(it[1:-1])
         if parts is not None:
             sub_items, sub_conn = parts
-            body = _fmt_list(f"{pad}(", sub_items, sub_conn, indent, width)
-            return f"{body}{trailing}"
-    return f"{pad}{it}{trailing}"   # unbreakable (e.g. one long term)
+            return _fmt_list(f"{pad}{leading}(", sub_items, sub_conn,
+                             indent, width)
+    return f"{pad}{leading}{it}"   # unbreakable (e.g. one long term)
 
 
 def _fmt_list(head: str, items, conn: str, indent: int, width: int) -> str:
     """Lay out an exploded factored group. `indent` is the clause's own indent
     (where the closing `)` sits); items sit at `indent + _INDENT`. The connective
-    trails every item but the last (idempotence anchor + clean diffs; the parser
-    is whitespace-blind). >8 items that all fit -> fill/pack to `width`;
-    otherwise one per line, recursively exploding any over-width sub-group item
-    (decision 20 merged clauses nest whole OR-blocks inside an AND)."""
+    LEADS every item but the first — i.e. a wrapped/exploded line begins with
+    `and`/`or` (decision 25; matches the leading-connective `where` body, and
+    `and`/`or` are infix, never terminal, so a trailing form would dirty two
+    lines on append where leading dirties one). The parser is whitespace-blind,
+    so the multi-line form re-parses to the identical OQO. >8 items that all fit
+    -> fill/pack to `width`; otherwise one per line, recursively exploding any
+    over-width sub-group item (decision 20 merged clauses nest whole OR-blocks
+    inside an AND)."""
     pad = " " * (indent + _INDENT)
     out = [head]
     n = len(items)
 
     def piece(i, it):
-        return it if i == n - 1 else f"{it} {conn}"
+        return it if i == 0 else f"{conn} {it}"
 
-    all_fit = all(len(pad) + len(it) + len(conn) + 1 <= width for it in items)
+    all_fit = all(len(pad) + len(conn) + 1 + len(it) <= width for it in items)
     if n > 8 and all_fit:
         line, empty = pad, True
         for i, it in enumerate(items):
@@ -3420,9 +3425,9 @@ def _fmt_list(head: str, items, conn: str, indent: int, width: int) -> str:
             empty = False
         out.append(line)
     else:
-        trail = f" {conn}"
+        lead = f"{conn} "
         out.extend(_fmt_group_item(it, indent + _INDENT, width,
-                                   "" if i == n - 1 else trail)
+                                   "" if i == 0 else lead)
                    for i, it in enumerate(items))
     out.append(f"{' ' * indent})")
     return "\n".join(out)

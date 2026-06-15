@@ -92,19 +92,26 @@ Implemented in [`query_translation/oql_lang.py`](../query_translation/oql_lang.p
 - **Top level.** A statement that fits stays on one line. Otherwise the entity
   head, the `where` body, and **each directive** go on their own line(s); the
   directives (`group by …`, `sort by …`, `sample …`, `return …`) sit at column 0.
-- **Leading connectives.** When a boolean explodes, `and` / `or` **begin** each
-  continuation line (one operand per line). A parenthesized group puts `(` on
-  the current line, its operands one level deeper, and `)` back at the group's
-  indent.
+- **Leading connectives — everywhere (oxjob #363, decision 25).** When *anything*
+  explodes, `and` / `or` **begin** each continuation line (the first operand is
+  bare; every later one is prefixed by the connective). This holds at the boolean
+  `where` body **and** inside value/term groups — they read the same. A
+  parenthesized group puts `(` on the current line, its operands one level
+  deeper, and `)` back at the group's indent.
 - **Value/term groups** (`is ( … )`, `contains ( … )`): inline if they fit; else
   **> 8 items that all fit the width → fill/pack** (this is what tames row 78's
-  synonym blocks); otherwise **one item per line**, and an item that is itself an
-  over-width parenthesized sub-group **explodes recursively** (a §3.2.2-merged
-  clause nests whole OR-blocks inside an AND; each block gets the same treatment,
-  its closing paren carrying the trailing connective).
-- **The connective trails every item but the last** of an **exploded** group (the
-  idempotence anchor + clean diffs); the parser is whitespace-blind, so the multi-line
-  form re-parses to the identical OQO.
+  synonym blocks) — a *wrapped* line begins with the connective; otherwise **one
+  item per line**, and an item that is itself an over-width parenthesized
+  sub-group **explodes recursively** (a §3.2.2-merged clause nests whole OR-blocks
+  inside an AND; each block gets the same treatment, its open paren carrying the
+  leading connective).
+- **Why leading, not trailing.** `and`/`or` are **infix** — they can never sit on
+  the last line the way a trailing comma can — so the Python/Black trailing-comma
+  "clean append" trick doesn't transfer. With leading connectives, appending an
+  item dirties **one** line (the new one); a trailing form would dirty **two** (the
+  old last item gains a connective + the new line). The parser is whitespace-blind,
+  so either form re-parses to the identical OQO; leading just gives the cleaner
+  diff and a single rule across the whole tree.
 - **Idempotence is a hard invariant:** `format(format(x)) == format(x)`. Every
   break decision is a pure function of *(content, width, depth)*.
 - **Hard ceiling 100 columns:** only a **single unbreakable atom** (one quoted
@@ -112,11 +119,11 @@ Implemented in [`query_translation/oql_lang.py`](../query_translation/oql_lang.p
   with an internal ` or `/` and ` break point ever does.
 
 ```
-works
-where year >= 2020
+works where year >= 2020
   and title contains (
-    fat or obese or obesity or overweight or thin or "anti fat" or "being fat" or
-    "body esteem" or "body image" or "fat ideal" or "thin ideal" or "weight bias"
+    fat or obese or obesity or overweight or thin or "anti fat" or "being fat"
+    or "body esteem" or "body image" or "fat ideal" or "thin ideal"
+    or "weight bias"
   )
 sort by citation count desc
 ```

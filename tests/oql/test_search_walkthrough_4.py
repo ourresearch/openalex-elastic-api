@@ -149,4 +149,4 @@ def test_w3_full_url_render_is_semantically_stable():
     # multi-subtoken phrases kept their quotes; the atomic token went bare
     assert 'near "3xTg-AD"' in oql2
     assert 'near "APP/PS1"' in oql2
-    assert "\n    5xFAD or" in oql2 or " 5xFAD or" in oql2
+    assert "5xFAD" in oql2 and '"5xFAD"' not in oql2  # bare, unquoted atom

@@ -157,7 +157,8 @@ def test_clause_group_and_nested_value_list_explode_like_oql():
     norm = _norm(_v2_text(oql))
     assert norm[0] == "works where ("
     assert "or title/abstract contains (" in norm
-    assert "INR or" in norm                       # value on its own line
+    assert "INR" in norm                           # first value, bare on its line
+    assert "or aPTT" in norm                        # later value, connective leads
 
 
 def test_long_flat_value_list_explodes_by_width():
@@ -190,7 +191,8 @@ def test_example_78_matches_oql_pane():
     norm = _norm(_v2_text(oql))
     assert norm == _norm(_fo(oql))
     assert norm[0] == "works where title contains ("
-    assert "(Boy or Girl or Minors or adolescent or boys) and" in norm
+    assert "(Boy or Girl or Minors or adolescent or boys)" in norm
+    assert "and (Height or bodyweight or fat or obese or weight)" in norm
     assert "and full text contains (Britain or England or GB or UK or Wales)" in norm
 
 

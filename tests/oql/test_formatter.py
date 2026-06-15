@@ -125,22 +125,24 @@ GOLDENS = {
         "  and year >= 2020\n"
         "  and (institution is I27837315 or type is article)",
 
-    # (d) a search group <=8 items -> one per line, trailing connective
+    # (d) a search group <=8 items -> one per line, leading connective
+    # (decision 25 — `or` begins each continuation line, like the `where` body)
     'works where title contains ("randomized controlled trial" or '
     '"systematic review" or "meta analysis" or "clinical practice guideline")':
         "works where title contains (\n"
-        '    "clinical practice guideline" or\n'
-        '    "meta analysis" or\n'
-        '    "randomized controlled trial" or\n'
-        '    "systematic review"\n'
+        '    "clinical practice guideline"\n'
+        '    or "meta analysis"\n'
+        '    or "randomized controlled trial"\n'
+        '    or "systematic review"\n'
         "  )",
 
-    # (e) a value group >8 items -> fill/pack to width, trailing connective
+    # (e) a value group >8 items -> fill/pack to width, leading connective
+    # (decision 25 — a wrapped line begins with `or`, not ends with it)
     "works where language is (en or zh or es or fr or de or ja or pt or ru or ko "
     "or it or ar or nl or pl or tr or sv or cs or fa or uk or vi or da)":
         "works where language is (\n"
-        "    ar or cs or da or de or en or es or fa or fr or it or ja or ko or nl or\n"
-        "    pl or pt or ru or sv or tr or uk or vi or zh\n"
+        "    ar or cs or da or de or en or es or fa or fr or it or ja or ko or nl or pl\n"
+        "    or pt or ru or sv or tr or uk or vi or zh\n"
         "  )",
 
     # (f) directives on their own lines at col 0. Input keeps the legacy `;`
