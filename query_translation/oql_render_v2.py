@@ -215,15 +215,52 @@ def _flat_tokens(tree: dict) -> list:
             return
         if n["node"] == "clause":
             v = n.get("value")
-            if v is None:  # simple clause: its display segments verbatim
+            if v is None:  # simple clause: render from its display segments
+                leaf = n.get("leaf") or {}
+                neg = bool(leaf.get("is_negated"))
+                ck = n.get("clause_kind")
                 for s in n["segments"]:
-                    tok = {"t": _SEG2TOK.get(s["kind"], "text"), "id": n["id"],
+                    kind = s["kind"]
+                    tok = {"t": _SEG2TOK.get(kind, "text"), "id": n["id"],
                            "text": s["text"]}
                     m = s.get("meta") or {}
                     if "column_id" in m:
                         tok["column_id"] = m["column_id"]
                     if "value" in m:
                         tok["value"] = m["value"]
+                    # A boolean clause is one human phrase ("it's open access"). Surface
+                    # it as an INTERACTIVE value brick the builder can toggle (a click
+                    # flips negation -> the opposite phrase), not inert keyword chrome
+                    # (oxjob #428 boolean-filter feedback).
+                    if ck == "boolean" and kind == "keyword":
+                        # `negated` reflects the DISPLAYED phrase, not the raw leaf
+                        # bit: the canonicalizer folds `it's not …` into value=false,
+                        # so the effective truth is value XOR is_negated.
+                        effective = bool(leaf.get("value")) != neg
+                        tok["t"] = "vbrick"
+                        tok["bool_phrase"] = True
+                        tok["value"] = leaf.get("value")
+                        tok["negated"] = not effective
+                        tok["kind"] = "boolean"
+                    # Predicate-level negation is no longer part of OQL (decision 23):
+                    # the one render still emitting `is not` is the generic entity/other
+                    # `is` path. Move the `not` onto the VALUE brick so the builder shows
+                    # `is` + a negated value chip, never `is not`. The canonical character
+                    # stream is unchanged (" is "+"not X" reflows identically to
+                    # " is not "+"X"). (oxjob #428 non-mutating-predicate feedback.)
+                    if kind == "operator" and neg and s["text"] == " is not ":
+                        tok["text"] = " is "
+                    elif kind == "value" and neg and ck in ("entity", "other"):
+                        tok["display"] = s["text"]        # bare value, no prefix
+                        tok["text"] = "not " + s["text"]  # keeps the canonical stream
+                        tok["negated"] = True
+                    # Let the client trust the server's value KIND. The /properties
+                    # catalog the builder consults is keyed by group, so a column like
+                    # `domain.id` isn't found there and would fall back to a bare scalar
+                    # brick; the kind hint makes it render an entity chip (oxjob #428 bug
+                    # 5: "domain shown as an int").
+                    if kind == "value" and "kind" not in tok:
+                        tok["kind"] = ck
                     toks.append(tok)
                 return
             toks.append({"t": "col", "id": n["id"], "text": n["column"],

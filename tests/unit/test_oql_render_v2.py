@@ -258,3 +258,48 @@ def test_negated_value_round_trips_and_flags():
     assert neg["negated"] is True
     assert neg["display"] == "bikes"
     assert neg["text"] == "not bikes"
+
+
+def _toks(oql):
+    return [t for ln in render_v2(parse(oql))["lines"] for t in ln["tokens"]]
+
+
+def test_single_negated_leaf_has_no_predicate_negation():
+    """A single negated value renders `is` + a negated value brick, never the
+    predicate `is not` (OQL has no predicate-level negation — decision 23). The
+    canonical string is unchanged. (oxjob #428 non-mutating-predicate feedback.)"""
+    toks = _toks("works where institution is not I97018004")
+    op = next(t for t in toks if t["t"] == "op")
+    assert op["text"] == " is "                       # not " is not "
+    vb = next(t for t in toks if t["t"] == "vbrick")
+    assert vb["negated"] is True
+    assert vb["value"] == "I97018004"
+    assert vb["display"] == "I97018004"               # bare; chip prepends the `not`
+    # canonical char stream preserved -> round-trips + matches the OQL pane
+    assert _norm(_v2_text("works where institution is not I97018004")) == \
+        _norm(_fo("works where institution is not I97018004"))
+
+
+def test_simple_value_carries_kind_hint():
+    """The value brick of a simple clause carries the server's clause kind so the
+    builder can render an entity chip even when the /properties catalog (keyed by
+    group) can't resolve the column. (oxjob #428 bug 5: domain shown as an int.)"""
+    toks = _toks("topics where domain is 3")
+    vb = next(t for t in toks if t["t"] == "vbrick")
+    assert vb["kind"] == "entity"
+
+
+def test_boolean_phrase_is_an_interactive_value_brick():
+    """A boolean clause renders its human phrase as an interactive value brick
+    (toggleable), not inert keyword chrome. (oxjob #428 boolean-filter feedback.)"""
+    toks = _toks("works where it's open access")
+    phrase = next(t for t in toks if t.get("bool_phrase"))
+    assert phrase["t"] == "vbrick"
+    assert phrase["text"] == "it's open access"
+    assert phrase["negated"] is False
+    assert phrase["kind"] == "boolean"
+    # negated bool -> the opposite phrase, still an interactive brick
+    toks_n = _toks("works where it's not open access")
+    phrase_n = next(t for t in toks_n if t.get("bool_phrase"))
+    assert phrase_n["text"] == "it's not open access"
+    assert phrase_n["negated"] is True
