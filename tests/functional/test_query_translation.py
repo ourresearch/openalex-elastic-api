@@ -909,18 +909,20 @@ class TestEquivalence:
 
 
 class TestTopLevelSearch:
-    """`?search=X` → a `default.search` filter (#323 2a).
+    """`?search=X` → the honest per-entity broad-search filter (#323 2a, #430).
 
-    Legacy maps a bare `?search=X` to scope `("default", None)`, identical to
-    `filter=default.search:X` (core/params.py:96-98). The OQO parser AND's a
-    `default.search` has-filter in.
+    Legacy mapped a bare `?search=X` to scope `("default", None)` /
+    `filter=default.search:X`. #430 deprecates `default.search`: the parser now
+    seeds the honestly-named column it already resolved to — `fulltext.search`
+    on works (byte-identical), `text.search` on every other entity — so
+    `default.search` never enters the OQO. Results are unchanged.
     """
 
-    def test_search_maps_to_default_search_filter(self):
+    def test_search_maps_to_fulltext_search_filter(self):
         oqo = parse_url_to_oqo("works", search_string="quantum computing")
         assert len(oqo.filter_rows) == 1
         leaf = oqo.filter_rows[0]
-        assert leaf.column_id == "default.search"
+        assert leaf.column_id == "fulltext.search"
         assert leaf.value == "quantum computing"
         assert leaf.operator == "has"
         assert validate_oqo(oqo).valid
@@ -937,15 +939,15 @@ class TestTopLevelSearch:
             "works", filter_string="type:article", search_string="quantum"
         )
         cols = [f.column_id for f in oqo.filter_rows]
-        assert "type" in cols and "default.search" in cols
+        assert "type" in cols and "fulltext.search" in cols
         assert validate_oqo(oqo).valid
 
     def test_search_lucene_boolean_lifts(self):
         """A Lucene boolean in the search value lifts to AND'd has leaves,
-        same as `filter=default.search:a AND b`."""
+        same as `filter=fulltext.search:a AND b`."""
         oqo = parse_url_to_oqo("works", search_string="machine AND learning")
         assert len(oqo.filter_rows) == 2
-        assert all(f.column_id == "default.search" for f in oqo.filter_rows)
+        assert all(f.column_id == "fulltext.search" for f in oqo.filter_rows)
         assert {f.value for f in oqo.filter_rows} == {"machine", "learning"}
 
 

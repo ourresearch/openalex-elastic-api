@@ -160,7 +160,22 @@ CAP_COLUMN = "column"
 # `corpus` selector (#481). A top-level property REMOVAL from the contract = MAJOR. The
 # OQO/OQL/oxurl boundary additionally redirects any is_xpac leaf → corpus. Jason-approved
 # (clean-MAJOR call, #498 session, 2026-06-20). = MAJOR.
-PROPERTIES_VERSION = "5.0.0"
+# 6.0.0 (#430 deprecate default.search): `default.search` was a per-entity footgun name — on works
+# it duplicated `fulltext.search` (byte-identical: both route through full_search_query on the works
+# index); on every non-works entity it was the ONLY handle on the broad name+alternates+description/
+# keywords search (measured ≠ display_name.search — broader). Realigned via the #446 mechanism:
+#   * works: `default.search`/`default.search.exact` → alternate_of `fulltext.search`/`.exact`.
+#   * non-works (23 entities): minted a new HONEST canonical `text.search` (same full_search_query
+#     behavior, byte-identical to the old default.search per entity) and demoted `default.search` →
+#     alternate_of `text.search`. NOT named `names.search`: the broad search also covers descriptions
+#     (concepts/funders/awards) and keywords (topics), so "name" would be dishonest. OQL word: `text`.
+# All `default.search` spellings stay fully accepted (filter API / OQO validator / OQL parse) — demoted,
+# not removed — so no live query breaks; the public catalog just drops `default.search` and gains
+# `text.search`. The bare `?search=` now seeds `fulltext.search` (works) / `text.search` (non-works)
+# into the OQO, fixing the #363 finding-#8 OQL render break at the source. Jason signed off option C +
+# the `text.search` name 2026-06-14 (oxjobs #430). Same MAJOR rationale as 2.0.0/3.0.0/5.0.0 (a top-
+# level catalog entry is removed). = MAJOR.
+PROPERTIES_VERSION = "6.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

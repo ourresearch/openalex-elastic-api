@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "0166a5f14d83dc84d9a79aec7d93295b720a9c0c4b634744847c39068c6237b3",
-    "property_count": 783,
-    "version": "5.0.0"
+    "fingerprint": "89205d98ba23bbe579861ea46e1072da2547de0e56fdb5caf74121042d6a7610",
+    "property_count": 781,
+    "version": "6.0.0"
   },
   "properties": {
     "authors": {
@@ -226,23 +226,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "other",
-        "display_name": "name",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "display_name": {
         "actions": [
@@ -843,6 +826,31 @@
         ],
         "type": "number"
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "to_created_date": {
         "actions": [
           "filter",
@@ -1128,23 +1136,6 @@
           "or"
         ],
         "type": "string"
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "description": {
         "actions": [
@@ -1994,6 +1985,31 @@
         ],
         "type": "number"
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "topics": {
         "actions": [
           "column"
@@ -2237,23 +2253,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "description": {
         "actions": [
@@ -2607,6 +2606,31 @@
         ],
         "type": "number"
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "updated_date": {
         "actions": [
           "column"
@@ -2755,23 +2779,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "description": {
         "actions": [
@@ -2933,6 +2940,31 @@
         "operators": [],
         "type": null
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "updated_date": {
         "actions": [
           "column"
@@ -3060,23 +3092,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "description": {
         "actions": [
@@ -3268,6 +3283,31 @@
         "operators": [],
         "type": null
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "updated_date": {
         "actions": [
           "column"
@@ -3365,23 +3405,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "description": {
         "actions": [
@@ -3596,6 +3619,31 @@
         "operators": [],
         "type": null
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "updated_date": {
         "actions": [
           "column"
@@ -3693,23 +3741,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "description": {
         "actions": [
@@ -3961,6 +3992,31 @@
         ],
         "type": "number"
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "updated_date": {
         "actions": [
           "column"
@@ -4172,23 +4228,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "other",
-        "display_name": "name",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "description": {
         "actions": [
@@ -4649,6 +4688,31 @@
         ],
         "type": "number"
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "updated_date": {
         "actions": [
           "column"
@@ -4731,23 +4795,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "description": {
         "actions": [
@@ -4878,6 +4925,31 @@
         "name": "relevance_score",
         "operators": [],
         "type": null
+      },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
       },
       "updated_date": {
         "actions": [
@@ -5066,23 +5138,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "other",
-        "display_name": "name",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "display_name": {
         "actions": [
@@ -5671,6 +5726,31 @@
         ],
         "type": "number"
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "topic_share": {
         "actions": [
           "column"
@@ -5936,23 +6016,6 @@
         "operators": [],
         "type": null
       },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
-      },
       "display_name": {
         "actions": [
           "column",
@@ -6068,6 +6131,31 @@
         "operators": [],
         "type": null
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "updated_date": {
         "actions": [
           "column"
@@ -6165,23 +6253,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "display_name": {
         "actions": [
@@ -6313,6 +6384,31 @@
         "operators": [],
         "type": null
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "updated_date": {
         "actions": [
           "column"
@@ -6410,23 +6506,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "description": {
         "actions": [
@@ -6558,6 +6637,31 @@
         "operators": [],
         "type": null
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "updated_date": {
         "actions": [
           "column"
@@ -6629,23 +6733,6 @@
       }
     },
     "locations": {
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
-      },
       "id": {
         "actions": [
           "column",
@@ -6970,6 +7057,31 @@
         ],
         "type": "string"
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "title": {
         "actions": [
           "column",
@@ -7138,23 +7250,6 @@
         "operators": [],
         "type": null
       },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
-      },
       "description": {
         "actions": [
           "column"
@@ -7284,6 +7379,31 @@
         "name": "relevance_score",
         "operators": [],
         "type": null
+      },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
       },
       "updated_date": {
         "actions": [
@@ -7472,23 +7592,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "display_name": {
         "actions": [
@@ -7938,6 +8041,31 @@
         ],
         "type": "number"
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "updated_date": {
         "actions": [
           "column"
@@ -8035,23 +8163,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "description": {
         "actions": [
@@ -8228,6 +8339,31 @@
         "operators": [],
         "type": null
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "updated_date": {
         "actions": [
           "column"
@@ -8325,23 +8461,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "description": {
         "actions": [
@@ -8472,6 +8591,31 @@
         "name": "relevance_score",
         "operators": [],
         "type": null
+      },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
       },
       "updated_date": {
         "actions": [
@@ -8773,23 +8917,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "other",
-        "display_name": "name",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "display_name": {
         "actions": [
@@ -9553,6 +9680,31 @@
         ],
         "type": "number"
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "to_created_date": {
         "actions": [
           "filter",
@@ -9828,23 +9980,6 @@
         "operators": [],
         "type": null
       },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
-      },
       "description": {
         "actions": [
           "column"
@@ -10094,6 +10229,31 @@
         "operators": [],
         "type": null
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "topics": {
         "actions": [
           "column"
@@ -10243,23 +10403,6 @@
         "name": "created_date",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "description": {
         "actions": [
@@ -10602,6 +10745,31 @@
         ],
         "type": "string"
       },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
+      },
       "updated_date": {
         "actions": [
           "column"
@@ -10714,23 +10882,6 @@
         "name": "crossref_types",
         "operators": [],
         "type": null
-      },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
       },
       "description": {
         "actions": [
@@ -10861,6 +11012,31 @@
         "name": "relevance_score",
         "operators": [],
         "type": null
+      },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "type": "search"
       },
       "updated_date": {
         "actions": [
@@ -12525,40 +12701,6 @@
         ],
         "type": "openalex_id"
       },
-      "default.search": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
-      },
-      "default.search.exact": {
-        "actions": [
-          "search"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "default",
-        "entity_type": null,
-        "name": "default.search.exact",
-        "operators": [
-          "search"
-        ],
-        "type": "search"
-      },
       "display_name": {
         "actions": [
           "column",
@@ -12737,7 +12879,9 @@
           "full text",
           "fulltext"
         ],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "default.search"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": "other",
@@ -12754,7 +12898,9 @@
           "search"
         ],
         "aliases": [],
-        "alternate_keys": [],
+        "alternate_keys": [
+          "default.search.exact"
+        ],
         "bool_false": null,
         "bool_true": null,
         "category": null,

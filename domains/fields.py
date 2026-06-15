@@ -23,7 +23,8 @@ fields = [
     ),
     RangeField(param="fields.id"),
     RangeField(param="works_count"),
-    SearchField(param="default.search", index="domains"),
+    SearchField(param="text.search", index="domains"),
+    SearchField(param="default.search", index="domains", alternate_of="text.search"),
     SearchField(
         param="display_name.search",
         docstring="Free text search among domains' names",

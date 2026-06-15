@@ -817,8 +817,12 @@ class SearchField(Field):
         # title + abstract + full text, NOT body-only (oxjob #374). Its old body-only
         # behavior is intentionally removed: no param searches the body in isolation.
         # default.search is retained but deprecated (see works/fields.py); it behaves
-        # identically.
-        if self.param in ("default.search", "fulltext.search"):
+        # identically. text.search (oxjob #430) is the honest non-works canonical for
+        # this same broad per-entity search (name + alternates + description/keywords);
+        # default.search is its alternate_of on every non-works entity. All three route
+        # through full_search_query, which dispatches on index — so they are
+        # byte-identical per entity.
+        if self.param in ("default.search", "fulltext.search", "text.search"):
             q = full_search_query(self.index, self.value)
         elif self.param in ("default.search.exact", "fulltext.search.exact"):
             # No-stem sibling of the broad search (#364) — the exact target a

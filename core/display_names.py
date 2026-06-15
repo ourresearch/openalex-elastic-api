@@ -569,6 +569,12 @@ GLOBAL_DISPLAY_NAME_OVERRIDES: Dict[str, dict] = {
     'cited_by_count': {"display_name": 'citation count', "aliases": ['citations', 'cited by count']},
     'referenced_works': {"display_name": 'references', "aliases": ['referenced works']},
     'referenced_works_count': {"display_name": 'reference count', "aliases": ['references count']},
+    # oxjob #430 — text.search is the honest non-works canonical for the broad
+    # per-entity search (name + alternate names + description/keywords). Same label
+    # on every non-works entity, so it lives here, not per-entity. NOT "name": on
+    # concepts/funders/awards/topics it also searches descriptions/keywords.
+    # `default` / `default.search` are the demoted alternate keys/spellings.
+    'text.search': {"display_name": 'text', "aliases": ['anywhere', 'any field', 'default', 'default.search', 'text']},
 }
 
 

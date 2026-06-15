@@ -63,7 +63,8 @@ fields = [
     RangeField(param="hierarchy_level"),
     RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
-    SearchField(param="default.search", index="publishers"),
+    SearchField(param="text.search", index="publishers"),
+    SearchField(param="default.search", index="publishers", alternate_of="text.search"),
     SearchField(
         param="display_name.search",
         docstring="Free text search among publishers' names",

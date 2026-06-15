@@ -112,7 +112,8 @@ fields = [
     RangeField(param="summary_stats.h_index"),
     RangeField(param="summary_stats.i10_index"),
     RangeField(param="works_count"),
-    SearchField(param="default.search", index="institutions"),
+    SearchField(param="text.search", index="institutions"),
+    SearchField(param="default.search", index="institutions", alternate_of="text.search"),
     SearchField(
         param="display_name.search",
         docstring="Free text search among institutions' names",

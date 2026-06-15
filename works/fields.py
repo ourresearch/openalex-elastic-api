@@ -649,12 +649,14 @@ fields = [
     SearchField(
         param="default.search",
         index="works",
+        alternate_of="fulltext.search",
         docstring="(DEPRECATED — use fulltext.search) Free text search among the work's title, abstract (when available) and full text (when available)",
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
     SearchField(
         param="default.search.exact",
         index="works",
+        alternate_of="fulltext.search.exact",
         docstring="(DEPRECATED — use fulltext.search.exact) Free text search among the work's title, abstract and full text, without stemming. The no-stem field wildcards (* and ?) must target.",
         documentation_link="https://developers.openalex.org/guides/searching",
     ),

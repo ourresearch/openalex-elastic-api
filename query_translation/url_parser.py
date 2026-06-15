@@ -134,8 +134,21 @@ def parse_url_to_oqo(
         filter_rows.extend(parse_filter_string(filter_string, entity_type))
 
     if search_string:
+        # oxjob #430: seed the HONEST per-entity broad-search column, not the
+        # deprecated `default.search`. works → `fulltext.search` (byte-identical:
+        # both route through full_search_query on the works index); every other
+        # entity → `text.search` (the new canonical, identical behavior to the old
+        # `default.search` it replaces). This stops `default.search` ever entering
+        # the OQO, so OQL renders the correct word per entity and the #363
+        # finding-#8 round-trip break ("full text contains …" on non-works) is
+        # fixed at the source. `default.search` stays an accepted alternate key.
+        search_column = (
+            "fulltext.search"
+            if (entity_type or "").lower().startswith("work")
+            else "text.search"
+        )
         parsed_search = parse_single_filter(
-            "default.search", search_string, entity_type
+            search_column, search_string, entity_type
         )
         if isinstance(parsed_search, list):
             filter_rows.extend(parsed_search)

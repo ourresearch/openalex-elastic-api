@@ -34,7 +34,8 @@ fields = [
     ),
     RangeField(param="cited_by_count"),
     RangeField(param="works_count"),
-    SearchField(param="default.search", index="sdgs"),
+    SearchField(param="text.search", index="sdgs"),
+    SearchField(param="default.search", index="sdgs", alternate_of="text.search"),
     SearchField(
         param="display_name.search",
         docstring="Free text search among sdgs' names",
