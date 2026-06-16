@@ -9,7 +9,7 @@ operand only, so `not a or b` = `(not a) or b`. To negate a group, write
 
 This REVERSES the functional `not()` (decision 21) and supersedes Change B
 (decision 22). There is one negation surface and the canonical render is always
-the bare `not <value>` prefix — `is not` / `does not contain` /
+the bare `not <value>` prefix — `is not` / `does not have` /
 `is not in collection` are accepted as INPUT aliases but never emitted (the OQO
 has no negated-predicate operator; negation only rides the `is_negated` bit).
 Booleans, which have no value brick, keep the natural verb flip.
@@ -40,9 +40,9 @@ def _identity(oql):
 
 @pytest.mark.parametrize("oql", [
     "works where country is (not FR and US)",          # inside a value group
-    "works where title contains (not dog and cat)",    # inside a search group
-    "works where title contains not dog",              # top search-value slot
-    "works where title contains (cat and not dog)",    # in-group, second operand
+    "works where title has (not dog and cat)",    # inside a search group
+    "works where title has not dog",              # top search-value slot
+    "works where title has (cat and not dog)",    # in-group, second operand
     "works where not (country is FR or type is article)",  # group-negator (clause level)
 ])
 def test_bare_not_parses(oql):
@@ -60,8 +60,8 @@ def test_bare_not_code_is_gone():
 def test_standalone_negated_leaves_render_bare_prefix():
     assert _identity("works where country is not FR") \
         == "works where country is not FR"
-    assert _identity("works where title contains not dog") \
-        == "works where title contains not dog"
+    assert _identity("works where title has not dog") \
+        == "works where title has not dog"
     assert _identity("works where work is in collection not col_abc123") \
         == "works where work is in collection not col_abc123"
     assert _identity("works where language is not unknown") \
@@ -69,34 +69,34 @@ def test_standalone_negated_leaves_render_bare_prefix():
 
 
 def test_in_group_not_renders_bare_prefix():
-    assert _identity("works where title contains (not dog and cat)") \
-        == "works where title contains (not dog and cat)"
+    assert _identity("works where title has (not dog and cat)") \
+        == "works where title has (not dog and cat)"
     assert _identity("works where country is (not FR and US)") \
         == "works where country is (not FR and US)"
 
 
 def test_no_parens_around_the_negated_atom():
     """The whole point of decision 23: no `not(...)` parens anywhere."""
-    out = _identity("works where title contains (not dog and cat)")
+    out = _identity("works where title has (not dog and cat)")
     assert "not(" not in out and "not (" not in out
 
 
 # --- not of a group De Morgans to per-atom bare nots ----------------------- #
 
 def test_not_of_a_group_demorgans_to_per_atom_nots():
-    assert _identity("works where title contains not (dog or cat)") \
-        == "works where title contains (not cat and not dog)"
+    assert _identity("works where title has not (dog or cat)") \
+        == "works where title has (not cat and not dog)"
 
 
 def test_not_group_and_x_flattens_with_no_nested_parens():
-    out = _identity("works where title contains (not (dog or cat) and wombat)")
-    assert out == "works where title contains (not cat and not dog and wombat)"
+    out = _identity("works where title has (not (dog or cat) and wombat)")
+    assert out == "works where title has (not cat and not dog and wombat)"
     assert "not(" not in out and "not (" not in out
 
 
 def test_quoted_phrase_negation_round_trips():
-    assert _identity('works where title/abstract contains (teacher and not "academic teacher")') \
-        == 'works where title/abstract contains (teacher and not "academic teacher")'
+    assert _identity('works where title/abstract has (teacher and not "academic teacher")') \
+        == 'works where title/abstract has (teacher and not "academic teacher")'
 
 
 # --- a multi-word search run is ONE value-node that `not` negates whole ----- #
@@ -104,8 +104,8 @@ def test_quoted_phrase_negation_round_trips():
 def test_not_negates_a_whole_bare_word_run():
     # `not machine learning` negates the single stemmed run, rendered parenthesized
     # because a multi-token stemmed value is parenthesized (arity rule, §3.6).
-    assert _identity("works where title contains not machine learning") \
-        == "works where title contains not (machine learning)"
+    assert _identity("works where title has not machine learning") \
+        == "works where title has not (machine learning)"
 
 
 # --- precedence: `not` binds the next operand only (SR / left-to-right) ----- #
@@ -113,7 +113,7 @@ def test_not_negates_a_whole_bare_word_run():
 def test_not_binds_next_operand_only():
     # `not a or b` == `(not a) or b`: only the first leaf is negated.
     fr = canonicalize_oqo(parse(
-        "works where title contains (not a or b)")).to_dict()["filter_rows"]
+        "works where title has (not a or b)")).to_dict()["filter_rows"]
     # one OR branch of two leaves; only `a` negated
     assert len(fr) == 1 and fr[0]["join"] == "or"
     by_val = {f["value"]: f.get("is_negated", False) for f in fr[0]["filters"]}
@@ -123,8 +123,8 @@ def test_not_binds_next_operand_only():
 # --- input aliases renormalize to the bare prefix (no predicate survives) --- #
 
 def test_predicate_input_aliases_renormalize_to_bare_prefix():
-    assert _identity("works where title does not contain dog") \
-        == "works where title contains not dog"
+    assert _identity("works where title does not have dog") \
+        == "works where title has not dog"
     assert _identity("works where work is not in collection col_abc123") \
         == "works where work is in collection not col_abc123"
     assert _identity("works where country is not FR") \

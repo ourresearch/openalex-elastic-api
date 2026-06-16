@@ -27,7 +27,7 @@ class LeafFilter:
     `"article"`, an SDG is `"13"` — never `"institutions/I136199984"` etc.
 
     Negation is the `is_negated` polarity bit, never an operator: there is one
-    negation mechanism. (The old `is not` / `does not contain` operators are
+    negation mechanism. (The old `is not` / `does not have` operators are
     removed; see VALID_OPERATORS.)
     """
     column_id: str
@@ -316,12 +316,13 @@ class OQO:
 
 
 # Valid leaf operators (strictly affirmative — negation is the `is_negated` bit,
-# not an operator). The old `is not` / `does not contain` were dropped in the
-# #284 spec: one negation mechanism only.
+# not an operator). The old `is not` / `does not have` were dropped in the
+# #284 spec: one negation mechanism only. `has` is the search operator (renamed
+# from `contains` in #363 decision 27 — shorter, friendlier, fits a monitor).
 VALID_OPERATORS = {
     "is",
     ">", ">=", "<", "<=",
-    "contains",
+    "has",
     # Membership in a named Collection (col_… set). Distinct from `is` because the
     # intent + value space differ; negation still rides the is_negated bit. The
     # value is always a `col_…` id. See oql-spec §3.10. (oxjob #363)

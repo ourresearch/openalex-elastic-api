@@ -53,7 +53,7 @@ def test_group_operand_recovery_collects_each_bad_element():
 
 def test_adjacency_is_recorded_then_next_clause_still_parses():
     # missing AND/OR between two clauses: record the adjacency, keep going
-    diags = parse_collecting("works where year is abc title contains")[1]
+    diags = parse_collecting("works where year is abc title has")[1]
     got = [d.code for d in diags]
     assert "OQL_IMPLICIT_ADJACENCY" in got
     assert "OQL_BAD_NUMBER" in got  # the clause before the adjacency still reported
@@ -83,7 +83,7 @@ def test_mixed_bool_does_not_abort_recovery():
     "works where year is abc or cited_by_count is xyz",
     "works where year is (2020 or abc or xyz)",
     "works where (year is abc and cited_by_count is def",
-    "works where year is abc title contains cat",
+    "works where year is abc title has cat",
 ])
 def test_collected_codes_are_registered(q):
     for d in parse_collecting(q)[1]:
@@ -109,7 +109,7 @@ def test_strict_parse_is_still_fail_fast():
 def test_empty_and_lexer_errors_match_strict_single_diagnostic():
     # no tokens to recover across -> a single diagnostic, same code strict raises
     assert codes("") == ["OQL_EMPTY"]
-    assert codes('works where title contains "open') == ["OQL_UNTERMINATED_STRING"]
+    assert codes('works where title has "open') == ["OQL_UNTERMINATED_STRING"]
 
 
 def test_collecting_never_raises_on_pathological_input():

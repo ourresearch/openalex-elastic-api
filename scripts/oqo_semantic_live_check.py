@@ -52,7 +52,7 @@ oqo_dict = {
     "get_rows": "works",
     "filter_rows": [
         {"column_id": "abstract.search.semantic", "value": QUERY,
-         "operator": "contains"}
+         "operator": "has"}
     ],
     "per_page": 10,
 }

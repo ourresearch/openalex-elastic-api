@@ -98,7 +98,7 @@ Implemented in [`query_translation/oql_lang.py`](../query_translation/oql_lang.p
   `where` body **and** inside value/term groups — they read the same. A
   parenthesized group puts `(` on the current line, its operands one level
   deeper, and `)` back at the group's indent.
-- **Value/term groups** (`is ( … )`, `contains ( … )`): inline if they fit; else
+- **Value/term groups** (`is ( … )`, `has ( … )`): inline if they fit; else
   **> 8 items that all fit the width → fill/pack** (this is what tames row 78's
   synonym blocks) — a *wrapped* line begins with the connective; otherwise **one
   item per line**, and an item that is itself an over-width parenthesized
@@ -120,7 +120,7 @@ Implemented in [`query_translation/oql_lang.py`](../query_translation/oql_lang.p
 
 ```
 works where year >= 2020
-  and title contains (
+  and title has (
     fat or obese or obesity or overweight or thin or "anti fat" or "being fat"
     or "body esteem" or "body image" or "fat ideal" or "thin ideal"
     or "weight bias"
@@ -177,9 +177,9 @@ works where institution is not (I33213144 or I97018004)                    (row 
 works where country is (us and uk)                                         (row 92, D7)
 ```
 
-- **The arity rule (one rule, both `is` and `contains`):** a list of **2+
+- **The arity rule (one rule, both `is` and `has`):** a list of **2+
   values/terms must be parenthesized**; a **single** value/term may be bare
-  (`type is article`, `title contains cancer`). An *atom* is one bare word, one
+  (`type is article`, `title has cancer`). An *atom* is one bare word, one
   quoted phrase, or one parenthesized sub-group, so `"systematic review"` is a
   single atom and stays bare. `type is article review` → `OQL_UNDELIMITED_TERM_LIST`.
 - This is the rule that **kills the silent keyword-truncation footgun**: a reserved
@@ -190,12 +190,12 @@ works where country is (us and uk)                                         (row 
   is an OR-branch of equality leaves; `country is (us and uk)` means works with
   **both** a US and a UK authorship (corpus row 92 — D7; for a single-valued field
   it is the empty set, which is coherent, not a footgun). Negation inside a group is
-  the bare prefix `not` binding the next atom (`contains (cancer and not mouse)`,
+  the bare prefix `not` binding the next atom (`has (cancer and not mouse)`,
   §3.5).
-- **Search values are the exception (D2 reversal, #363):** for a `contains ( … )`
+- **Search values are the exception (D2 reversal, #363):** for a `has ( … )`
   search group, a **maximal run of bare connective-free words is ONE value node**
   (stemmed, adjacency-boosted), not a distributed AND of per-word leaves —
-  `title/abstract contains (mental health)` is a single
+  `title/abstract has (mental health)` is a single
   `{title_and_abstract.search: "mental health"}` leaf. The engine adjacency-boosts
   the whole run (`match_phrase`), so splitting it would silently change ranking;
   recall is unaffected (cross-field AND, #399). Explicit `and`/`or`/`not` still build
@@ -214,7 +214,7 @@ works where country is (us and uk)                                         (row 
   capability. Re-adding `any of` later as a non-breaking accepted spelling is allowed.
 - `( … )` does **double duty**: a clause-group at the clause level
   (`(year >= 2020 or it's open access)`) and a value/term group after an operator.
-  The position disambiguates (a group right after `is`/`contains` is a value/term
+  The position disambiguates (a group right after `is`/`has` is a value/term
   group; one where a clause is expected is a clause group).
 
 ### 3.2.1 Numeric bounds and ranges (#363, decision 24)
@@ -256,8 +256,8 @@ filter-triple trees. Canonical OQL therefore renders all the boolean structure t
 belongs to **one field** as **one clause**, the tree inside the value group:
 
 ```
-works where title contains ((vape or vaping) and (health or harm))
-works where title contains (not dog and cat)
+works where title has ((vape or vaping) and (health or harm))
+works where title has (not dog and cat)
 works where country is (not FR and US)
 works where institution is (not I33213144 [Harvard] and not I97018004 [Stanford])   (row 4)
 ```
@@ -266,10 +266,10 @@ works where institution is (not I33213144 [Harvard] and not I97018004 [Stanford]
   top-level AND of the filter rows — the items sharing one **(field,
   base-operator)** pair merge into a single `field op ( tree )` clause, the boolean
   structure preserved inside the parens. A negated leaf renders as a bare `not
-  <atom>` prefix (§3.5), merged or standalone alike (`title contains not dog`,
-  `country is not FR`, `title contains (not dog and cat)`).
+  <atom>` prefix (§3.5), merged or standalone alike (`title has not dog`,
+  `country is not FR`, `title has (not dog and cat)`).
 - **All filter kinds**, not just search: `country is (not FR and US)` is canonical
-  exactly like its `contains` twin. Search groups merge by **base field** (a
+  exactly like its `has` twin. Search groups merge by **base field** (a
   stemmed `.search` leaf and an exact `.search.exact` leaf share one group — that
   mix is the row-78 expressiveness win); `is` groups merge by column.
 - **The principled boundary:** comparison operators live on the leaf (`>=`, `<`),
@@ -294,7 +294,7 @@ works where institution is (not I33213144 [Harvard] and not I97018004 [Stanford]
 
 | Delimiter | Meaning |
 |---|---|
-| `( … )` | boolean grouping: a group of clauses **and** a group of values/terms (`is (a or b)`, `contains (a or b)`) |
+| `( … )` | boolean grouping: a group of clauses **and** a group of values/terms (`is (a or b)`, `has (a or b)`) |
 | `[ … ]` | annotation slot — ignored on input, regenerated as a display name on output |
 | `" … "` | literal text to match (a phrase) |
 | `{ … }` | **unused** — banked for later |
@@ -312,10 +312,10 @@ punctuation away, so it is meaningless anyway) and documented, not escaped.
 ### 3.4 Booleans, casing, precedence
 
 ```
-works where title contains apple and title contains (banana or cherry)  (row 7)  ✓
-works where title contains apple and banana or cherry      (row 8)   ✗ OQL_UNDELIMITED_TERM_LIST
-works where title contains ("a" and "b" and "c")           (row 9)   ✓ (pure-AND, associative)
-works where title contains FOO and (bar or baz)            (row 10)  ✓ (any case accepted on input)
+works where title has apple and title has (banana or cherry)  (row 7)  ✓
+works where title has apple and banana or cherry      (row 8)   ✗ OQL_UNDELIMITED_TERM_LIST
+works where title has ("a" and "b" and "c")           (row 9)   ✓ (pure-AND, associative)
+works where title has FOO and (bar or baz)            (row 10)  ✓ (any case accepted on input)
 ```
 
 - **Operators always sit OUTSIDE quotes.** Inside quotes, even `or` is a literal
@@ -325,7 +325,7 @@ works where title contains FOO and (bar or baz)            (row 10)  ✓ (any ca
   principle #1 is "reads aloud," and the rule "**`and`/`or`/`not` outside quotes are
   *always* operators — quote them to search them literally**" removes any ambiguity
   with content words, so the uppercase-for-disambiguation convention scholarly DBs
-  rely on buys us nothing. (All keywords are lowercase: `where`, `is`, `contains`,
+  rely on buys us nothing. (All keywords are lowercase: `where`, `is`, `has`,
   `within`, `near`, `and`/`or`/`not`.)
 - **Mixed and/or at one grouping level REQUIRES explicit parentheses — a loud error
   otherwise** (`OQL_MIXED_BOOL_NEEDS_PARENS`). Pure-and or pure-or runs are
@@ -339,9 +339,9 @@ works where title contains FOO and (bar or baz)            (row 10)  ✓ (any ca
   because negation only ever applies to one value (§3.5). To negate a group, write
   `not (a or b)`.
 - **Adjacency (space) between *search words* = ONE value node, NOT AND** (§3.6, D2
-  reversal #363): `title contains (climate change)` is a single stemmed
+  reversal #363): `title has (climate change)` is a single stemmed
   adjacency-boosted node, not climate AND change. At the top level a 2+ word value
-  must still be parenthesized (`title contains climate change` →
+  must still be parenthesized (`title has climate change` →
   `OQL_UNDELIMITED_TERM_LIST`, §3.6 row 17; the canonical render always
   parenthesizes). Explicit `and`/`or`/`not` build the tree *between* nodes, so
   `(climate change or warming)` = `node("climate change") OR node("warming")` (no
@@ -356,14 +356,14 @@ works where title contains FOO and (bar or baz)            (row 10)  ✓ (any ca
 ### 3.5 Negation — one mechanism
 
 ```
-works where title contains covid and abstract contains not pediatric
+works where title has covid and abstract has not pediatric
 ```
-→ `{title contains covid}` AND `{abstract contains pediatric, is_negated: true}`.
+→ `{title has covid}` AND `{abstract has pediatric, is_negated: true}`.
 
 There is **one** negation mechanism, mapping to OQO's `is_negated` (NNF). On the
 surface it is the bare prefix keyword **`not`**, written immediately before the
 value it negates: `not FR`, `not dog`, `not col_abc`, `not unknown`. The predicate
-spellings `is not` / `does not contain` / `is not in collection` are **accepted on
+spellings `is not` / `does not have` / `is not in collection` are **accepted on
 input** as friendly aliases, but they are pure sugar — they lex straight to an
 `is_negated` leaf (the OQO has no "negated predicate": its leaf operators are
 strictly affirmative and negation only ever rides the `is_negated` bit), so they
@@ -390,20 +390,27 @@ Canonical output pushes negation **down to the leaf/value** (NNF) and renders it
 a bare `not <value>` prefix — it **never** emits `not <whole clause>` (`not (country
 is FR)` is a readability trainwreck, and the canonicalizer's NNF guarantees a
 clause-level negation can't reach the surface). So:
-- a **standalone** negated leaf: `country is not FR`, `title contains not dog`,
+- a **standalone** negated leaf: `country is not FR`, `title has not dog`,
   `work is in collection not col_abc`, `language is not unknown`;
-- **in-group** negation prefixes each atom: `contains (not a and b)`,
+- **in-group** negation prefixes each atom: `has (not a and b)`,
   `country is (not FR and US)` (§3.2.2).
 
 **Booleans negate by phrasing, not a `not` prefix** — a boolean flag has no value
 brick to prepend to (the builder toggles it): `it's open access` / `it's not open
 access`, `it has a DOI` / `it doesn't have a DOI` (the `bool_true`/`bool_false`
 registry strings). Negating a *group* value spells the same NNF either way:
-`title contains not (dog or cat)` and `title contains (not dog and not cat)` both
-canonicalize to `title contains (not cat and not dog)` (two negated leaves on one
+`title has not (dog or cat)` and `title has (not dog and not cat)` both
+canonicalize to `title has (not cat and not dog)` (two negated leaves on one
 field merge — §3.2.2).
 
 ### 3.6 Search — the governing law
+
+> **The search operator is `has`** (`title has cancer`). It was renamed from
+> `contains` in #363 (charter decision 27 — shorter, friendlier, fits a monitor
+> better) for both the OQL surface keyword **and** the OQO `operator` value, in
+> lockstep. The old `contains` / `does not contain` spellings are a **hard error**
+> (`OQL_CONTAINS_RENAMED`, with a `has` fix-it) — greenfield, no lenient parse,
+> the same stance as decisions 23 & 24.
 
 > **Stemming is ON by default; quotes are the only thing that turns it off.**
 > A **run of bare words is ONE stemmed value node** (`(machine learning)` is one
@@ -420,7 +427,7 @@ field merge — §3.2.2).
 This is the mainstream model (Google, Bing, PubMed, Web of Science, Elasticsearch
 all do space=AND and quotes=exact), chosen after surveying peers — see the design
 note in `plans/oqlo.md` and oxjob #330's research. OQO has exactly **one** text
-operator, `contains`; the *mode* is split across the **column** (stemmed vs exact
+operator, `has`; the *mode* is split across the **column** (stemmed vs exact
 vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); the
 **boolean** structure is the filter tree.
 
@@ -451,7 +458,7 @@ vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); 
 
 The gauntlet pins the consequences (all are corpus rows):
 
-| row | OQL (`title contains …`) | Result |
+| row | OQL (`title has …`) | Result |
 |---|---|---|
 | 11 | `(climate change)` | **a bare-word run = ONE stemmed adjacency-boosted node** (D2 reversal, #363; corpus row 126), NOT climate AND change. The everyday default. Use explicit `and` for two separate nodes (row 11 oqo). |
 | 12 | `"climate change"` | **quotes = exact adjacent phrase**, no stemming (`.search.exact`) |
@@ -467,7 +474,7 @@ The gauntlet pins the consequences (all are corpus rows):
 Key rules these encode:
 
 - **A single bare term is fine; a 2+ word value must be parenthesized at top level**
-  (the arity rule, §3.2). `title contains cancer` ✓; `title contains climate change` →
+  (the arity rule, §3.2). `title has cancer` ✓; `title has climate change` →
   `OQL_UNDELIMITED_TERM_LIST` (row 17) — this is the rule that kills the silent
   keyword-truncation footgun. **Inside a `( … )` group** a bare-word run is ONE node
   (D2 reversal, #363), so `(climate change or warming)` = `node("climate change") OR
@@ -484,33 +491,33 @@ Key rules these encode:
 - **`near "…"` = the stemmed phrase** — adjacent *and* lemmatized (`.search`), for
   when you want phrase precision without losing recall (corpus rows **13**, **32**).
   Without quotes you don't need `near`: bare terms are already stemmed.
-- **Booleans are structural, never lexical.** `contains "foo or bar"` searches the
-  literal phrase; the boolean is the tree (`contains (foo or bar)`).
+- **Booleans are structural, never lexical.** `has "foo or bar"` searches the
+  literal phrase; the boolean is the tree (`has (foo or bar)`).
 - **`is similar to "…"` is semantic** vector search (`.search.semantic`, corpus
   row **30**).
-- **A parenthesized group holds a boolean of terms** (`contains (a or (b and c))`);
+- **A parenthesized group holds a boolean of terms** (`has (a or (b and c))`);
   items may themselves be `"exact"` or `near "stemmed"` phrases. The `any of`/`all of`
   list keywords were removed (§3.2).
-- **A search value runs until the next field-clause.** `title contains (a or b) and
-  year >= 2020` is `(title contains (a or b)) and year >= 2020` — the `or` is the
-  contains-group's, the `and` joins clauses. This is deterministic, not a precedence
-  choice: a `year >= …` clause can't live *inside* a `contains`, so the value
+- **A search value runs until the next field-clause.** `title has (a or b) and
+  year >= 2020` is `(title has (a or b)) and year >= 2020` — the `or` is the
+  has-group's, the `and` joins clauses. This is deterministic, not a precedence
+  choice: a `year >= …` clause can't live *inside* a `has`, so the value
   boundary is forced. A genuinely mixed and/or *between clauses* still errors (§3.4).
 
 ### 3.7 Proximity and wildcards — the edge matrix
 
 ```
-works where title contains "smart phone" within 3 words      (row 21) ✓ exact proximity → .search.exact "smart phone"~3
-works where title contains near "smart phone" within 3 words (row 32) ✓ stemmed proximity → .search "smart phone"~3
-works where title contains "foo*bar"                        (row 22) ✓ mid-word * (quoted = no-stem .search.exact)
-works where title contains "wom?n"                          (row 23) ✓ ? = exactly one char (quoted = no-stem)
-works where title contains bar*                             (row 20) ✗ OQL_WILDCARD_NEEDS_EXACT (bare = stemmed = wrong)
-works where title contains *cycle                           (row 24) ✗ OQL_LEADING_WILDCARD
-works where title contains ?cycle                           (row 25) ✗ OQL_LEADING_WILDCARD
-works where title contains ab*                              (row 26) ✗ OQL_SHORT_WILDCARD_PREFIX (need ≥3)
-works where title contains "smart phone*" within 3 words    (row 27) ✓ wildcard-in-proximity → ES intervals (oxjob #355)
-works where title contains "smart" within 3 words of "phone"(row 28) ✗ OQL_BINARY_PROXIMITY
-works where title contains smart* within 3 words            (row 29) ✗ OQL_WILDCARD_IN_PROXIMITY
+works where title has "smart phone" within 3 words      (row 21) ✓ exact proximity → .search.exact "smart phone"~3
+works where title has near "smart phone" within 3 words (row 32) ✓ stemmed proximity → .search "smart phone"~3
+works where title has "foo*bar"                        (row 22) ✓ mid-word * (quoted = no-stem .search.exact)
+works where title has "wom?n"                          (row 23) ✓ ? = exactly one char (quoted = no-stem)
+works where title has bar*                             (row 20) ✗ OQL_WILDCARD_NEEDS_EXACT (bare = stemmed = wrong)
+works where title has *cycle                           (row 24) ✗ OQL_LEADING_WILDCARD
+works where title has ?cycle                           (row 25) ✗ OQL_LEADING_WILDCARD
+works where title has ab*                              (row 26) ✗ OQL_SHORT_WILDCARD_PREFIX (need ≥3)
+works where title has "smart phone*" within 3 words    (row 27) ✓ wildcard-in-proximity → ES intervals (oxjob #355)
+works where title has "smart" within 3 words of "phone"(row 28) ✗ OQL_BINARY_PROXIMITY
+works where title has smart* within 3 words            (row 29) ✗ OQL_WILDCARD_IN_PROXIMITY
 ```
 
 - **Proximity is a whole-phrase modifier**, not a binary `X within N of Y`. ES slop
@@ -522,7 +529,7 @@ works where title contains smart* within 3 words            (row 29) ✗ OQL_WIL
 - On the multi-valued per-record search fields (`raw affiliation` /
   `byline`), a **quoted phrase scopes to one sub-record** (one affiliation / one
   byline) via ES `position_increment_gap`; slop widens within it. This is how a
-  single `contains` leaf expresses intra-affiliation co-occurrence (corpus rows **65**,
+  single `has` leaf expresses intra-affiliation co-occurrence (corpus rows **65**,
   **75**, **77**).
 - **Wildcards require the no-stem (exact) field — quote them (oxjob #364).** A
   wildcard matches indexed tokens literally, but the default search is *stemmed*
@@ -548,7 +555,7 @@ works where title contains smart* within 3 words            (row 29) ✗ OQL_WIL
 > what the "lift proximity/wildcard into OQO **structure**" recommendation enables
 > (charter §4; adjacent to #298 / #337). Note: a wildcard **on its own word** —
 > `behavi*or` (UK/US spelling) — works fine today; only the *combination with a
-> phrase/proximity* is gapped, and you can often sidestep it with `contains x and
+> phrase/proximity* is gapped, and you can often sidestep it with `has x and
 > y*` when the words needn't be adjacent.
 
 ### 3.8 `null` / `unknown`

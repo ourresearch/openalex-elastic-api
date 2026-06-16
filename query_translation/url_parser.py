@@ -96,17 +96,17 @@ def parse_url_to_oqo(
         search_string: Optional top-level `?search=` value. Legacy maps a bare
             `?search=X` to the same internal scope as `filter=default.search:X`
             (`core/params.py:96-98`, scope `("default", None)`), so it AND's a
-            `default.search` contains-filter into the OQO. Routed through
+            `default.search` has-filter into the OQO. Routed through
             `parse_single_filter` (NOT the comma-splitting filter-string parser)
             so a free-text value containing commas stays one search clause; this
-            also gives `.search` columns the `contains` operator and Lucene
+            also gives `.search` columns the `has` operator and Lucene
             boolean lifting for free.
         semantic_search_string: Optional top-level `?search.semantic=` value. The
             engine exposes two-phase vector search ONLY as this param — there is
             no `filter=…search.semantic:` form (core/vector_index.py refuses to
             combine it with a filter) — and it is field-less (whole-document). It
             maps to the canonical OQL semantic surface `abstract is similar to
-            "…"` → a `LeafFilter("abstract.search.semantic", value, "contains")`
+            "…"` → a `LeafFilter("abstract.search.semantic", value, "has")`
             (spec §search-modes, corpus row 30). Inverse of the
             `render_oqo_to_url` semantic-routing branch, so a working prod
             `?search.semantic=` URL round-trips to OQL.
@@ -136,7 +136,7 @@ def parse_url_to_oqo(
             LeafFilter(
                 column_id="abstract.search.semantic",
                 value=semantic_search_string,
-                operator="contains",
+                operator="has",
             )
         )
 
@@ -301,7 +301,7 @@ def parse_single_filter(
     - Null: null, !null
     - Lucene boolean in `.search` values: `a AND (b OR c) NOT d`
 
-    For `.search`-suffix columns the default operator is `contains` (free-text
+    For `.search`-suffix columns the default operator is `has` (free-text
     matching); for all other columns it's `is` (exact equality).
     """
     # Coerce curly/smart double-quotes to ASCII and collapse a run of 2+
@@ -311,7 +311,7 @@ def parse_single_filter(
     # position-preserving collapse. (oxjob #363)
     value = re.sub('"{2,}', '"', value.translate(CURLY_DQUOTE_MAP))
     # Lucene-style boolean inside a .search value (AND/OR/NOT keywords,
-    # optionally with parens) lifts to a BranchFilter tree of contains-leaves.
+    # optionally with parens) lifts to a BranchFilter tree of has-leaves.
     # See _parse_search_boolean for grammar. A top-level AND-branch is
     # flattened into a list — outer filter_rows is itself an implicit AND, so
     # nesting an explicit AND-branch there is redundant and would diverge from
@@ -348,7 +348,7 @@ def parse_single_filter(
     # `term!"phrase"` = term AND NOT (exact) phrase. Live-verified on prod:
     # `title_and_abstract.search:teacher!"academic teacher"` == `teacher`
     # minus exact `"academic teacher"`. The parser used to keep the whole string
-    # as one opaque `contains` value, so the OQO carried no negation and the
+    # as one opaque `has` value, so the OQO carried no negation and the
     # renderer dropped the `!` → a NOT silently became an AND (oxjob #431,
     # zd#8101). Decompose into a positive clause + negated clause(s) on the same
     # field; the renderer spells the negation `does not contain`. A LEADING `!`
@@ -394,8 +394,8 @@ def parse_single_filter(
 
 
 def _default_operator_for(field: str) -> str:
-    """`.search`-suffix columns default to `contains`; everything else to `is`."""
-    return "contains" if field.endswith(".search") else "is"
+    """`.search`-suffix columns default to `has`; everything else to `is`."""
+    return "has" if field.endswith(".search") else "is"
 
 
 def parse_or_values(field: str, value: str) -> FilterType:
@@ -483,22 +483,22 @@ def _search_not_leaf(field: str, operand: str, is_negated: bool) -> LeafFilter:
     """Build one `.search` leaf for a within-field-NOT operand. A quoted operand
     is an exact phrase → route to the `.search.exact` column (matching the live
     API, where the subtracted set size equals the exact-phrase count); a bare
-    operand stays on the stemmed `.search` column. Operator is always `contains`
+    operand stays on the stemmed `.search` column. Operator is always `has`
     (note `.search.exact` does not end in `.search`, so the default-operator
     helper would wrongly pick `is` — set it explicitly)."""
     operand = operand.strip()
     if len(operand) >= 2 and operand.startswith('"') and operand.endswith('"'):
         return LeafFilter(column_id=field + ".exact", value=operand,
-                          operator="contains", is_negated=is_negated)
+                          operator="has", is_negated=is_negated)
     return LeafFilter(column_id=field, value=operand,
-                      operator="contains", is_negated=is_negated)
+                      operator="has", is_negated=is_negated)
 
 
 def parse_search_within_field_not(field: str, value: str) -> List[LeafFilter]:
     """Decompose a `.search` value's within-field NOT (`!`) into clauses.
 
-    `teacher!"academic teacher"` → [contains teacher,
-    does-not-contain exact "academic teacher"]. The leading run is the positive
+    `teacher!"academic teacher"` → [has teacher,
+    does-not-have exact "academic teacher"]. The leading run is the positive
     term/run; each subsequent `!run` is a negated clause on the SAME field
     (multiple `!`s chain: `a!b!c` = a AND NOT b AND NOT c). Quoted run → exact
     (`.search.exact`), bare run → stemmed (`.search`). Mirrors how the parser
@@ -658,7 +658,7 @@ def parse_bounded_range(field: str, value: str) -> List[LeafFilter]:
 #   atom     := '(' expr ')' | <phrase> | <quoted-phrase-with-optional-proximity>
 #
 # A `<phrase>` is any run of non-paren / non-boolean text — spaces are part of
-# the phrase (so `supply chain` inside `(supply chain)` is one contains leaf,
+# the phrase (so `supply chain` inside `(supply chain)` is one has leaf,
 # not AND(supply, chain)).
 
 _SEARCH_BOOLEAN_KEYWORD_RE = re.compile(r"(?:^|\s)(AND|OR|NOT)(?=\s|\()")
@@ -740,7 +740,7 @@ def _tokenize_search_boolean(value: str) -> List[Tuple[str, str]]:
 def _parse_search_boolean(field: str, value: str) -> FilterType:
     """Parse a Lucene-style boolean search value into a BranchFilter tree.
 
-    All leaves are `LeafFilter(column_id=field, operator="contains")`.
+    All leaves are `LeafFilter(column_id=field, operator="has")`.
     NOT lifts to `is_negated=True` on the wrapped leaf or branch (the
     canonicalizer pushes branch-level negation down to leaves).
     """
@@ -758,7 +758,7 @@ def _parse_search_boolean(field: str, value: str) -> FilterType:
     def parse_atom() -> FilterType:
         tok = peek()
         if tok is None:
-            return LeafFilter(column_id=field, value="", operator="contains")
+            return LeafFilter(column_id=field, value="", operator="has")
         kind, text = tok
         if kind == "LPAREN":
             consume()
@@ -776,10 +776,10 @@ def _parse_search_boolean(field: str, value: str) -> FilterType:
             # model)`), which is invalid, un-reparseable OQL (a space is an implicit
             # AND, so it mixes AND/OR at one level). The renderer relies on the quotes
             # to print the value as a phrase. (oxjob #363 case 8a)
-            return LeafFilter(column_id=field, value=text, operator="contains")
+            return LeafFilter(column_id=field, value=text, operator="has")
         # Unexpected token (shouldn't happen for well-formed input)
         consume()
-        return LeafFilter(column_id=field, value=text, operator="contains")
+        return LeafFilter(column_id=field, value=text, operator="has")
 
     def parse_not() -> FilterType:
         if peek() and peek()[0] == "NOT":

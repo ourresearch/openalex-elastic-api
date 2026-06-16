@@ -184,7 +184,7 @@ def test_case8b_bare_multiword_or_is_two_phrase_nodes():
     # stemmed node, so `(reduced order model or surrogate model)` is an
     # unambiguous OR of two phrase-nodes — NOT the old mixed-bool error (there is
     # no space-AND to mix with the `or` anymore).
-    fr = parse("works where full text contains "
+    fr = parse("works where full text has "
                "(reduced order model or surrogate model)").to_dict()["filter_rows"]
     assert len(fr) == 1 and fr[0]["join"] == "or"
     assert sorted(f["value"] for f in fr[0]["filters"]) == \
@@ -194,9 +194,9 @@ def test_case8b_bare_multiword_or_is_two_phrase_nodes():
 # --------------------------------------------------------------------------- #
 # #399 follow-up — a plain multi-word search VALUE renders parenthesized.
 # A bare `default.search:a b` URL (one leaf, multi-word value) used to render
-# `... contains a b` (no delimiter) -> OQL_UNDELIMITED_TERM_LIST on re-parse.
+# `... has a b` (no delimiter) -> OQL_UNDELIMITED_TERM_LIST on re-parse.
 # Post-#399 the engine runs plain multi-word as cross-field AND, which is exactly
-# `contains (a b)`, so the renderer must parenthesize. (oxjob #363)
+# `has (a b)`, so the renderer must parenthesize. (oxjob #363)
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("filter_string", [
     "default.search:cenizas volcánicas",
@@ -206,12 +206,12 @@ def test_case8b_bare_multiword_or_is_two_phrase_nodes():
 def test_multiword_search_value_renders_parenthesized_and_reparses(filter_string):
     out = render_tree(canonicalize_oqo(parse_url_to_oqo("works", filter_string=filter_string)))[0]
     # parenthesized, not a bare undelimited term list
-    assert " contains (" in out, out
+    assert " has (" in out, out
     parse(out)  # the headline guarantee: the rendered OQL re-parses
 
 
 def test_singleword_search_value_stays_bare():
     # a single stemmed term must NOT gain parens (regression guard on the fix)
     out = render_tree(canonicalize_oqo(parse_url_to_oqo("works", filter_string="title.search:single")))[0]
-    assert "contains single" in out and "(" not in out, out
+    assert "has single" in out and "(" not in out, out
     parse(out)

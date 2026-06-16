@@ -61,7 +61,7 @@ _DIRECTIONS = ("asc", "desc", "ascending", "descending")
 # Operators offered per field kind, in canonical OQL spelling (mirrors the shapes
 # `match_operator` accepts; `within N words` / `near "..."` are search-value modes).
 KIND_OPERATORS: Dict[str, List[str]] = {
-    "search": ["contains", "does not contain", "near", "is similar to"],
+    "search": ["has", "does not have", "near", "is similar to"],
     "bool":   [],  # surfaced via the "it's ..." phrasings instead
     "num":    ["is", "is not", ">", ">=", "<", "<=", "is unknown"],
     # lists are written with parentheses now (#363): `is (a or b)` — the `any of`/

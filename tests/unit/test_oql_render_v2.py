@@ -73,17 +73,17 @@ def _texts(lines):
 
 
 ROUND_TRIP_CASES = [
-    "works where title contains bikes",
+    "works where title has bikes",
     "works where type is article and is_oa is true",
-    "works where (type is article or type is book) and title contains cats",
-    "works where title contains bikes sort by cited_by_count desc",
+    "works where (type is article or type is book) and title has cats",
+    "works where title has bikes sort by cited_by_count desc",
     "works where institution is (I136199984 or I27837315) "
-        "and title contains (not bikes and cars)",
-    "works where title contains (a or (b and c) or (d and (e or f)))",
+        "and title has (not bikes and cars)",
+    "works where title has (a or (b and c) or (d and (e or f)))",
     "works where publication_year >= 2019 and publication_year <= 2023",
-    "works where title contains ((Boy or Girl or boys) and (Height or weight)) "
-        "and full text contains (Britain or England or UK) "
-        "and abstract contains ((attitude or beliefs) and (interview or surveys))",
+    "works where title has ((Boy or Girl or boys) and (Height or weight)) "
+        "and full text has (Britain or England or UK) "
+        "and abstract has ((attitude or beliefs) and (interview or surveys))",
 ]
 
 
@@ -137,17 +137,17 @@ def _v2_text(oql):
 def test_short_query_stays_one_line():
     """A query whose one-line form fits the width is a single line — same as the
     OQL pane (no gratuitous explosion)."""
-    oql = "works where title contains ((a or b) and (c or d))"
-    assert _norm(_v2_text(oql)) == ["works where title contains ((a or b) and (c or d))"]
+    oql = "works where title has ((a or b) and (c or d))"
+    assert _norm(_v2_text(oql)) == ["works where title has ((a or b) and (c or d))"]
     assert _norm(_v2_text(oql)) == _norm(_fo(oql))
 
 
 def test_clause_group_and_nested_value_list_explode_like_oql():
     """The SR-style query Jason flagged: an over-width parenthesized clause group
     explodes (open paren / clauses indented / close paren), AND the long value
-    list inside `title/abstract contains (…)` ALSO explodes one-value-per-line —
+    list inside `title/abstract has (…)` ALSO explodes one-value-per-line —
     line-for-line with the OQL pane (the value list no longer stays inline)."""
-    oql = ('works where (keyword is types/article or title/abstract contains '
+    oql = ('works where (keyword is types/article or title/abstract has '
            '(INR or aPTT or coagulopathy or thrombocytopenia or '
            '"blood coagulation disorders" or "coagulation disorder")) '
            'and language is en')
@@ -156,7 +156,7 @@ def test_clause_group_and_nested_value_list_explode_like_oql():
     # values start indented on the next lines.
     norm = _norm(_v2_text(oql))
     assert norm[0] == "works where ("
-    assert "or title/abstract contains (" in norm
+    assert "or title/abstract has (" in norm
     assert "INR" in norm                           # first value, bare on its line
     assert "or aPTT" in norm                        # later value, connective leads
 
@@ -165,7 +165,7 @@ def test_long_flat_value_list_explodes_by_width():
     """A long flat OR list now explodes by width (matching the OQL pane) instead
     of staying on one soft-wrapping line — the reversed behavior Jason asked for."""
     long_or = " or ".join(f"term{i}" for i in range(40))
-    oql = f"works where title contains ({long_or})"
+    oql = f"works where title has ({long_or})"
     assert len(render_v2(parse(oql))["lines"]) > 1
     assert _norm(_v2_text(oql)) == _norm(_fo(oql))
 
@@ -173,8 +173,8 @@ def test_long_flat_value_list_explodes_by_width():
 def test_works_where_merged_on_one_line():
     """Entity + where + first clause share line 1 (builder no longer splits
     `works` onto its own row)."""
-    lines = _texts(_lines("works where title contains bikes"))
-    assert lines == ["works where title contains bikes"]
+    lines = _texts(_lines("works where title has bikes"))
+    assert lines == ["works where title has bikes"]
 
 
 def test_example_78_matches_oql_pane():
@@ -182,39 +182,39 @@ def test_example_78_matches_oql_pane():
     full-text flat list stays inline, title/abstract explodes — all line-for-line
     with the OQL pane."""
     oql = (
-        "works where title contains ("
+        "works where title has ("
         "(Boy or Girl or Minors or adolescent or boys) and "
         "(Height or bodyweight or fat or obese or weight)) "
-        "and full text contains (Britain or England or GB or UK or Wales) "
-        "and title/abstract contains ((attitude or beliefs or diaries) and "
+        "and full text has (Britain or England or GB or UK or Wales) "
+        "and title/abstract has ((attitude or beliefs or diaries) and "
         "(interview or interviews or perceptions))")
     norm = _norm(_v2_text(oql))
     assert norm == _norm(_fo(oql))
-    assert norm[0] == "works where title contains ("
+    assert norm[0] == "works where title has ("
     assert "(Boy or Girl or Minors or adolescent or boys)" in norm
     assert "and (Height or bodyweight or fat or obese or weight)" in norm
-    assert "and full text contains (Britain or England or GB or UK or Wales)" in norm
+    assert "and full text has (Britain or England or GB or UK or Wales)" in norm
 
 
 # --- the contract: the builder's lines ARE the OQL pane, line for line --------
 
 _CONTRACT_CASES = [
-    "works where title contains bikes",                       # one line
+    "works where title has bikes",                       # one line
     "works where type is article and is_oa is true",          # short, one line
-    "works where (type is article or type is book) and title contains cats",
+    "works where (type is article or type is book) and title has cats",
     "works where institution is (I136199984 or I27837315) "
-        "and title contains (not bikes and cars)",
-    "works where title contains (a or (b and c) or (d and (e or f)))",
+        "and title has (not bikes and cars)",
+    "works where title has (a or (b and c) or (d and (e or f)))",
     # long clause group + long value list -> both explode (Jason's SR case)
-    'works where (keyword is types/article or title/abstract contains '
+    'works where (keyword is types/article or title/abstract has '
         '(INR or aPTT or coagulopathy or thrombocytopenia or '
         '"blood coagulation disorders" or "coagulation disorder")) '
-        'and (keyword is types/book or title/abstract contains '
+        'and (keyword is types/book or title/abstract has '
         '(CVC or "central line" or "central venous catheter"))',
     # >8 items -> fill/pack mode
     "works where institution is (" + " or ".join(f"I{i}" for i in range(1, 40)) + ")",
-    "works where not (type is article or type is book) and title contains x",
-    "works where title contains bikes sort by cited_by_count desc",
+    "works where not (type is article or type is book) and title has x",
+    "works where title has bikes sort by cited_by_count desc",
 ]
 
 
@@ -251,7 +251,7 @@ def test_corpus_lines_match_format_oql(oql):
 def test_negated_value_round_trips_and_flags():
     """A negated value keeps `not` in the stringify text AND exposes a `negated`
     flag + bare display for the chip."""
-    v2 = render_v2(parse("works where title contains (not bikes and cars)"))
+    v2 = render_v2(parse("works where title has (not bikes and cars)"))
     bricks = [t for ln in v2["lines"] for t in ln["tokens"]
               if t["t"] == "vbrick"]
     neg = next(b for b in bricks if b["value"] == "bikes")

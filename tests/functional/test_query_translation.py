@@ -464,7 +464,7 @@ class TestURLRenderer:
             get_rows="works",
             filter_rows=[LeafFilter(
                 column_id="abstract.search.semantic",
-                value="graph neural networks", operator="contains")],
+                value="graph neural networks", operator="has")],
         )
 
         result = render_oqo_to_url(oqo)
@@ -478,7 +478,7 @@ class TestURLRenderer:
             get_rows="works",
             filter_rows=[
                 LeafFilter(column_id="abstract.search.semantic",
-                           value="graph neural networks", operator="contains"),
+                           value="graph neural networks", operator="has"),
                 LeafFilter(column_id="type", value="article"),
             ],
         )
@@ -494,7 +494,7 @@ class TestURLRenderer:
             get_rows="works",
             filter_rows=[LeafFilter(
                 column_id="abstract.search.semantic",
-                value="x", operator="contains", is_negated=True)],
+                value="x", operator="has", is_negated=True)],
         )
 
         with pytest.raises(URLRenderError):
@@ -506,9 +506,9 @@ class TestURLRenderer:
             get_rows="works",
             filter_rows=[
                 LeafFilter(column_id="abstract.search.semantic",
-                           value="a", operator="contains"),
+                           value="a", operator="has"),
                 LeafFilter(column_id="abstract.search.semantic",
-                           value="b", operator="contains"),
+                           value="b", operator="has"),
             ],
         )
 
@@ -521,9 +521,9 @@ class TestURLRenderer:
             get_rows="works",
             filter_rows=[BranchFilter(join="or", filters=[
                 LeafFilter(column_id="abstract.search.semantic",
-                           value="a", operator="contains"),
+                           value="a", operator="has"),
                 LeafFilter(column_id="abstract.search.semantic",
-                           value="b", operator="contains"),
+                           value="b", operator="has"),
             ])],
         )
 
@@ -536,7 +536,7 @@ class TestURLRenderer:
             get_rows="works",
             filter_rows=[LeafFilter(
                 column_id="abstract.search.semantic",
-                value="graph neural networks", operator="contains")],
+                value="graph neural networks", operator="has")],
         )
 
         result = render_oqo_to_url(oqo)
@@ -619,10 +619,10 @@ class TestOQOModel:
     
     def test_leaf_filter_to_dict_with_operator(self):
         """Test LeafFilter serialization with non-default operator."""
-        f = LeafFilter(column_id="title.search", value="ml", operator="contains")
+        f = LeafFilter(column_id="title.search", value="ml", operator="has")
         d = f.to_dict()
 
-        assert d == {"column_id": "title.search", "value": "ml", "operator": "contains"}
+        assert d == {"column_id": "title.search", "value": "ml", "operator": "has"}
 
     def test_leaf_filter_to_dict_with_is_negated(self):
         """Test LeafFilter serialization carries is_negated polarity bit."""
@@ -913,7 +913,7 @@ class TestTopLevelSearch:
 
     Legacy maps a bare `?search=X` to scope `("default", None)`, identical to
     `filter=default.search:X` (core/params.py:96-98). The OQO parser AND's a
-    `default.search` contains-filter in.
+    `default.search` has-filter in.
     """
 
     def test_search_maps_to_default_search_filter(self):
@@ -922,7 +922,7 @@ class TestTopLevelSearch:
         leaf = oqo.filter_rows[0]
         assert leaf.column_id == "default.search"
         assert leaf.value == "quantum computing"
-        assert leaf.operator == "contains"
+        assert leaf.operator == "has"
         assert validate_oqo(oqo).valid
 
     def test_search_with_comma_is_one_clause(self):
@@ -941,7 +941,7 @@ class TestTopLevelSearch:
         assert validate_oqo(oqo).valid
 
     def test_search_lucene_boolean_lifts(self):
-        """A Lucene boolean in the search value lifts to AND'd contains leaves,
+        """A Lucene boolean in the search value lifts to AND'd has leaves,
         same as `filter=default.search:a AND b`."""
         oqo = parse_url_to_oqo("works", search_string="machine AND learning")
         assert len(oqo.filter_rows) == 2

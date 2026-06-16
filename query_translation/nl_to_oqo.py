@@ -105,7 +105,7 @@ SYSTEM_RULES = r"""You translate a user's natural-language search request about 
 A <filter> is either a LEAF or a BRANCH:
   LEAF:   {"column_id": "<col>", "value": <scalar>, "operator": "is", "is_negated": false}
   BRANCH: {"join": "and"|"or", "filters": [ <filter>, ... ]}
-Operators: "is" (default; equality/entity/enum/bool), ">" ">=" "<" "<=" (numbers/years), "contains" (search columns only). For equality use "is" or simply OMIT the operator — NEVER "=" or "==" (those are invalid and will be rejected). Negate a leaf with "is_negated": true (this is the ONLY negation mechanism — there is no "is not" operator).
+Operators: "is" (default; equality/entity/enum/bool), ">" ">=" "<" "<=" (numbers/years), "has" (search columns only). For equality use "is" or simply OMIT the operator — NEVER "=" or "==" (those are invalid and will be rejected). Negate a leaf with "is_negated": true (this is the ONLY negation mechanism — there is no "is not" operator).
 
 # Values
 - Entity-valued columns (marked ->entity in the registry, e.g. institution/funder/topic/author/source) take a SHORT OpenAlex id (e.g. "I136199984", "F4320332161", "T10895"). You MUST resolve names to ids with resolve_entity — never guess an id.
@@ -120,7 +120,7 @@ Pick the search column by SCOPE, and the variant by exactness:
 - anywhere/full text:    default.search
 - author byline:         raw_author_name.search
 - raw affiliation text:  raw_affiliation_strings.search
-All search leaves use operator "contains". Encode the user's intent in the VALUE.
+All search leaves use operator "has". Encode the user's intent in the VALUE.
 
 ## Multi-word terms: near-phrase by DEFAULT
 A multi-word search term is, by default, ONE stemmed near-phrase — a single leaf on the .search column whose value is the phrase wrapped in escaped double-quotes, e.g. "\"climate change\"". It matches the words adjacent and in order, but stemmed (plurals/tenses). Bare "coral bleaching", "machine learning", "genome editing", "quantum computing" -> ONE near-phrase leaf. This is what users almost always mean — do NOT split a bare phrase into separate words.
@@ -158,10 +158,10 @@ e.g. "papers not from MIT or Stanford" -> {"get_rows":"works","filter_rows":[{"c
 # Examples (synthetic — follow the SHAPE, not the words)
 "papers from MIT" -> resolve_entity("institutions","MIT") -> {"get_rows":"works","filter_rows":[{"column_id":"authorships.institutions.lineage","value":"<id>"}]}
 "open access reviews since 2021" -> {"get_rows":"works","filter_rows":[{"column_id":"open_access.is_oa","value":true},{"column_id":"type","value":"review"},{"column_id":"publication_year","value":2021,"operator":">="}]}
-"papers about spin glass" (multi-word, NO exact signal -> near-phrase, stemmed) -> {"get_rows":"works","filter_rows":[{"column_id":"title_and_abstract.search","value":"\"spin glass\"","operator":"contains"}]}
-"the exact phrase \"spin glass\" in title or abstract" (exact signal) -> {"get_rows":"works","filter_rows":[{"column_id":"title_and_abstract.search.exact","value":"\"spin glass\"","operator":"contains"}]}
-"most cited papers about graphene" (single word) -> {"get_rows":"works","filter_rows":[{"column_id":"title_and_abstract.search","value":"graphene","operator":"contains"}],"sort_by":[{"column_id":"cited_by_count","direction":"desc"}]}
-"count papers per country about graphene" -> {"get_rows":"works","filter_rows":[{"column_id":"title_and_abstract.search","value":"graphene","operator":"contains"}],"group_by":[{"column_id":"authorships.countries"}]}
+"papers about spin glass" (multi-word, NO exact signal -> near-phrase, stemmed) -> {"get_rows":"works","filter_rows":[{"column_id":"title_and_abstract.search","value":"\"spin glass\"","operator":"has"}]}
+"the exact phrase \"spin glass\" in title or abstract" (exact signal) -> {"get_rows":"works","filter_rows":[{"column_id":"title_and_abstract.search.exact","value":"\"spin glass\"","operator":"has"}]}
+"most cited papers about graphene" (single word) -> {"get_rows":"works","filter_rows":[{"column_id":"title_and_abstract.search","value":"graphene","operator":"has"}],"sort_by":[{"column_id":"cited_by_count","direction":"desc"}]}
+"count papers per country about graphene" -> {"get_rows":"works","filter_rows":[{"column_id":"title_and_abstract.search","value":"graphene","operator":"has"}],"group_by":[{"column_id":"authorships.countries"}]}
 "papers from EU27 countries" (a COLLECTION) -> cannot_translate("collections like EU27 are not supported in NL v1")
 
 # Common column choices (prefer these — don't invent variants)

@@ -240,7 +240,7 @@ def _encode_leaf_value(leaf: LeafFilter) -> str:
     # Everything else: stringify the bare value, then add the operator prefix.
     s = str(v)
 
-    if op == "is" or op == "contains":
+    if op == "is" or op == "has":
         return s
     # Collection membership: the URL surface carries the bare col_… value (the
     # field's build_query handles resolution — same-type via CollectionField, which
@@ -261,5 +261,5 @@ def _encode_leaf_value(leaf: LeafFilter) -> str:
 
     raise OQOTranslationError(
         f"Unknown operator '{op}' on column_id '{leaf.column_id}'. "
-        f"Valid operators: is, >, >=, <, <=, contains, in collection."
+        f"Valid operators: is, >, >=, <, <=, has, in collection."
     )

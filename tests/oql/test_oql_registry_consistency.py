@@ -128,7 +128,7 @@ def test_oql_render_word_round_trips(spellings, field):
         pytest.skip("collection takes a col_… set ref, not a value")
     word = field.oql
     if field.kind == "search":
-        oql = f'works where {word} contains "x"'
+        oql = f'works where {word} has "x"'
     elif field.kind == "num":
         oql = f"works where {word} > 1"
     elif field.kind in ("id",):
@@ -217,7 +217,7 @@ def test_default_search_does_not_narrow():
     render→re-parse round trip (the old 95→63 bug)."""
     cols = set()
     for word in ["full text", "fulltext", "anywhere", "any field", "default", "default.search"]:
-        oqo = parse(f'works where {word} contains "x"')
+        oqo = parse(f'works where {word} has "x"')
         row = oqo.filter_rows[0]
         cols.add(row["column_id"] if isinstance(row, dict) else row.column_id)
     assert len(cols) == 1, f"broad-search spellings diverge across columns: {cols}"

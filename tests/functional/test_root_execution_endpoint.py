@@ -230,7 +230,7 @@ def _semantic_oqo(extra_filters=None):
             {
                 "column_id": "abstract.search.semantic",
                 "value": "graph neural networks",
-                "operator": "contains",
+                "operator": "has",
             }
         ],
     }
@@ -324,7 +324,7 @@ class TestSemanticOqoExecution:
                 {
                     "column_id": "abstract.search.semantic",
                     "value": "graph neural networks",
-                    "operator": "contains",
+                    "operator": "has",
                     "is_negated": True,
                 }
             ],

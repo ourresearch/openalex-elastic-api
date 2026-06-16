@@ -36,7 +36,7 @@ POSITIVES = {
         {"column_id": "open_access.is_oa", "value": False}]},
     "38": {"get_rows": "works", "filter_rows": [
         {"column_id": "title_and_abstract.search", "value": "climate change",
-         "operator": "contains"}]},
+         "operator": "has"}]},
     "39": {"get_rows": "authors", "sort_by_column": "works_count",
             "sort_by_order": "desc"},
     "40": {"get_rows": "authors", "filter_rows": [
@@ -58,7 +58,7 @@ POSITIVES = {
         "group_by": [{"column_id": "authorships.author.id"}]},
     "47": {"get_rows": "works", "filter_rows": [
         {"column_id": "default.search", "value": "Macrocystis pyrifera",
-         "operator": "contains"}],
+         "operator": "has"}],
         "group_by": [{"column_id": "authorships.author.id"}]},
     "48": {"get_rows": "works", "filter_rows": [
         {"column_id": "publication_year", "value": "1976", "operator": ">="}],
@@ -73,7 +73,7 @@ POSITIVES = {
         "group_by": [{"column_id": "authorships.institutions.lineage"}]},
     "51": {"get_rows": "works", "filter_rows": [
         {"column_id": "title_and_abstract.search", "value": "coral bleaching",
-         "operator": "contains"},
+         "operator": "has"},
         {"column_id": "cited_by_count", "value": "100", "operator": ">"}],
         "group_by": [{"column_id": "primary_location.source.id"}]},
     "52": {"get_rows": "works", "filter_rows": [
@@ -88,21 +88,21 @@ POSITIVES = {
         "group_by": [{"column_id": "sustainable_development_goals.id"}]},
     "55": {"get_rows": "works", "filter_rows": [
         {"column_id": "title_and_abstract.search", "value": "agile",
-         "operator": "contains"},
+         "operator": "has"},
         {"join": "or", "filters": [
             {"column_id": "title_and_abstract.search", "value": "supply chain",
-             "operator": "contains"},
+             "operator": "has"},
             {"column_id": "title_and_abstract.search", "value": "value chain",
-             "operator": "contains"}]}]},
+             "operator": "has"}]}]},
     "56": {"get_rows": "works", "filter_rows": [
         {"column_id": "title_and_abstract.search", "value": "\"smart phone\"~3",
-         "operator": "contains"}]},
+         "operator": "has"}]},
     "61": {"get_rows": "works", "filter_rows": [
         {"join": "or", "filters": [
             {"column_id": "title_and_abstract.search", "value": "autism",
-             "operator": "contains"},
+             "operator": "has"},
             {"column_id": "title_and_abstract.search", "value": "ASD",
-             "operator": "contains"}]},
+             "operator": "has"}]},
         {"column_id": "publication_year", "value": "2015", "operator": ">="},
         {"column_id": "publication_year", "value": "2024", "operator": "<="},
         {"join": "or", "filters": [
@@ -114,13 +114,13 @@ POSITIVES = {
         {"column_id": "funders.id", "value": "F4320337351"}]},
     "63": {"get_rows": "works", "filter_rows": [
         {"column_id": "title_and_abstract.search", "value": "CRISPR genome editing",
-         "operator": "contains"},
+         "operator": "has"},
         {"column_id": "publication_year", "value": "2018", "operator": ">="},
         {"column_id": "publication_year", "value": "2023", "operator": "<="}],
         "sort_by_column": "cited_by_count", "sort_by_order": "desc", "sample": 500},
     "64": {"get_rows": "works", "filter_rows": [
         {"column_id": "raw_affiliation_strings.search", "value": "library",
-         "operator": "contains"}]},
+         "operator": "has"}]},
     "66": {"get_rows": "works", "filter_rows": [
         {"column_id": "doi", "value": "10.1021/es052595+"}]},
     "67": {"get_rows": "works", "filter_rows": [
@@ -133,16 +133,16 @@ POSITIVES = {
         {"column_id": "language", "value": "es"}]},
     "71": {"get_rows": "works", "filter_rows": [
         {"column_id": "title_and_abstract.search", "value": "covid",
-         "operator": "contains"},
+         "operator": "has"},
         {"column_id": "title_and_abstract.search", "value": "pediatric",
-         "operator": "contains", "is_negated": True}]},
+         "operator": "has", "is_negated": True}]},
     "72": {"get_rows": "works", "filter_rows": [
         {"column_id": "title_and_abstract.search", "value": "quantum computing",
-         "operator": "contains"}],
+         "operator": "has"}],
         "group_by": [{"column_id": "authorships.countries"}]},
     "77": {"get_rows": "works", "filter_rows": [
         {"column_id": "raw_author_name.search", "value": "\"john smith\"~2",
-         "operator": "contains"}]},
+         "operator": "has"}]},
 }
 
 
@@ -186,9 +186,9 @@ NEGATIVES = [
      {"get_rows": "works", "filter_rows": [
          {"column_id": "type", "value": "article", "operator": ">"}]},
      "invalid_operator_for_column"),
-    ("contains_on_number",
+    ("has_on_number",
      {"get_rows": "works", "filter_rows": [
-         {"column_id": "cited_by_count", "value": "5", "operator": "contains"}]},
+         {"column_id": "cited_by_count", "value": "5", "operator": "has"}]},
      "invalid_operator_for_column"),
     ("number_on_boolean",
      {"get_rows": "works", "filter_rows": [
@@ -198,10 +198,10 @@ NEGATIVES = [
      {"get_rows": "works", "filter_rows": [
          {"column_id": "cited_by_count", "value": "lots", "operator": ">"}]},
      "invalid_value_type"),
-    ("contains_on_number_nested",
+    ("has_on_number_nested",
      {"get_rows": "works", "filter_rows": [
          {"join": "and", "filters": [
-             {"column_id": "cited_by_count", "value": "5", "operator": "contains"}]}]},
+             {"column_id": "cited_by_count", "value": "5", "operator": "has"}]}]},
      "invalid_operator_for_column"),
     ("unknown_entity",
      {"get_rows": "widgets", "filter_rows": []},
@@ -285,7 +285,7 @@ def test_semantic_search_column_validates():
     result = validate_oqo(OQO.from_dict({
         "get_rows": "works",
         "filter_rows": [{"column_id": "abstract.search.semantic",
-                         "value": "graph neural networks", "operator": "contains"}],
+                         "value": "graph neural networks", "operator": "has"}],
     }))
     assert result.valid, [(e.type, e.message) for e in result.errors]
 

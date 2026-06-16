@@ -296,7 +296,7 @@
         "<=",
         ">",
         ">=",
-        "contains",
+        "has",
         "in collection",
         "is"
       ],
@@ -366,12 +366,12 @@
           {
             "column_id": "title_and_abstract.search",
             "value": "covid",
-            "operator": "contains"
+            "operator": "has"
           },
           {
             "column_id": "title_and_abstract.search",
             "value": "pediatric",
-            "operator": "contains",
+            "operator": "has",
             "is_negated": true
           }
         ]

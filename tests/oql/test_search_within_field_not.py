@@ -3,7 +3,7 @@
 The compact OpenAlex form `term!"phrase"` means *term AND NOT (exact) phrase*
 (live-verified on prod: `title_and_abstract.search:teacher!"academic teacher"`
 == `teacher` minus the exact phrase). The parser used to keep the whole string
-as one opaque `contains` value, dropping the `!` so the NOT silently became an
+as one opaque `has` value, dropping the `!` so the NOT silently became an
 AND. These tests pin the decomposition: leading run is positive, each `!run` is
 a negated clause on the same field; quoted run → exact (`.search.exact`), bare
 run → stemmed (`.search`). Source: zd#8101 (Claire Stansfield, UCL EPPI-Centre).
@@ -32,17 +32,17 @@ def _leaves(value, field=SEARCH):
 
 
 def test_quoted_operand_routes_to_exact_negated():
-    """`teacher!"academic teacher"` → contains teacher AND NOT exact phrase."""
+    """`teacher!"academic teacher"` → has teacher AND NOT exact phrase."""
     rows = _leaves('teacher!"academic teacher"')
     assert {
         "column_id": SEARCH,
         "value": "teacher",
-        "operator": "contains",
+        "operator": "has",
     } in rows
     assert {
         "column_id": EXACT,
         "value": '"academic teacher"',
-        "operator": "contains",
+        "operator": "has",
         "is_negated": True,
     } in rows
     # No `!` survives inside any value string.
@@ -50,14 +50,14 @@ def test_quoted_operand_routes_to_exact_negated():
 
 
 def test_matches_oql_oracle_round_trip():
-    """The parsed OQO equals the one the OQL `does not contain` oracle produces."""
+    """The parsed OQO equals the one the OQL `does not have` oracle produces."""
     from tests.oql.oql_v2 import parse as oql_parse
 
     got = _leaves('teacher!"academic teacher"')
     want = canonicalize_oqo(
         oql_parse(
-            "works where title and abstract contains teacher "
-            'and title and abstract does not contain "academic teacher"'
+            "works where title and abstract has teacher "
+            'and title and abstract does not have "academic teacher"'
         )
     ).to_dict()["filter_rows"]
     assert got == want
@@ -66,11 +66,11 @@ def test_matches_oql_oracle_round_trip():
 def test_bare_operand_stays_stemmed():
     """A bare (unquoted) negated operand stays on the stemmed `.search` column."""
     rows = _leaves("England!Wales")
-    assert {"column_id": SEARCH, "value": "England", "operator": "contains"} in rows
+    assert {"column_id": SEARCH, "value": "England", "operator": "has"} in rows
     assert {
         "column_id": SEARCH,
         "value": "Wales",
-        "operator": "contains",
+        "operator": "has",
         "is_negated": True,
     } in rows
 
@@ -96,11 +96,11 @@ def test_pipe_or_composes_with_not_outermost():
     and_branch = [m for m in members if m.get("join") == "and"]
     assert leaf_a and and_branch
     sub = and_branch[0]["filters"]
-    assert {"column_id": SEARCH, "value": "b", "operator": "contains"} in sub
+    assert {"column_id": SEARCH, "value": "b", "operator": "has"} in sub
     assert {
         "column_id": EXACT,
         "value": '"c d"',
-        "operator": "contains",
+        "operator": "has",
         "is_negated": True,
     } in sub
 
@@ -118,7 +118,7 @@ def test_trailing_bang_with_no_operand_stays_opaque():
     """`hello!` (no operand after `!`) is left as an opaque value, unchanged."""
     rows = _leaves("hello!")
     assert rows == [
-        {"column_id": SEARCH, "value": "hello!", "operator": "contains"}
+        {"column_id": SEARCH, "value": "hello!", "operator": "has"}
     ]
 
 
@@ -134,7 +134,7 @@ def test_plus_is_not_an_operator():
     """Regression guard: `+` is a literal (URL-decoded space), not an operator."""
     rows = _leaves("nicotine+snus")
     assert rows == [
-        {"column_id": SEARCH, "value": "nicotine+snus", "operator": "contains"}
+        {"column_id": SEARCH, "value": "nicotine+snus", "operator": "has"}
     ]
 
 
@@ -156,6 +156,6 @@ def test_full_url_path():
     assert {
         "column_id": EXACT,
         "value": '"academic teacher"',
-        "operator": "contains",
+        "operator": "has",
         "is_negated": True,
     } in rows

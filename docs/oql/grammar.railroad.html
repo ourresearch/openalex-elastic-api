@@ -481,7 +481,7 @@
          <text class="terminal" x="215" y="173">to</text>
          <rect x="51" y="199" width="76" height="32" rx="10"></rect>
          <rect x="49" y="197" width="76" height="32" class="terminal" rx="10"></rect>
-         <text class="terminal" x="59" y="217">contains</text>
+         <text class="terminal" x="59" y="217">has</text>
          <rect x="71" y="243" width="52" height="32" rx="10"></rect>
          <rect x="69" y="241" width="52" height="32" class="terminal" rx="10"></rect>
          <text class="terminal" x="79" y="261">does</text>
@@ -496,7 +496,7 @@
          <text class="terminal" x="79" y="349">doesnt</text>
          <rect x="225" y="243" width="70" height="32" rx="10"></rect>
          <rect x="223" y="241" width="70" height="32" class="terminal" rx="10"></rect>
-         <text class="terminal" x="233" y="261">contain</text>
+         <text class="terminal" x="233" y="261">have</text>
          <rect x="51" y="375" width="40" height="32" rx="10"></rect>
          <rect x="49" y="373" width="40" height="32" class="terminal" rx="10"></rect>
          <text class="terminal" x="59" y="393">&gt;=</text>
@@ -514,8 +514,8 @@
          <polygon points="497 17 489 13 489 21"></polygon></svg><p>
          <div class="ebnf"><code>
                <div><a href="#operator" title="operator">operator</a> ::= 'is' ( 'not'? ( 'any' 'of' | 'in' 'collection'? )? | 'similar' 'to' )</div>
-               <div>           | 'contains'</div>
-               <div>           | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'contain'</div>
+               <div>           | 'has'</div>
+               <div>           | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'have'</div>
                <div>           | '&gt;='</div>
                <div>           | '&lt;='</div>
                <div>           | '&gt;'</div>
@@ -611,7 +611,7 @@
             <rect x="29" y="1" width="92" height="32" class="nonterminal"></rect>
             <text class="nonterminal" x="39" y="21">searchField</text></a><rect x="183" y="3" width="76" height="32" rx="10"></rect>
          <rect x="181" y="1" width="76" height="32" class="terminal" rx="10"></rect>
-         <text class="terminal" x="191" y="21">contains</text>
+         <text class="terminal" x="191" y="21">has</text>
          <rect x="203" y="47" width="52" height="32" rx="10"></rect>
          <rect x="201" y="45" width="52" height="32" class="terminal" rx="10"></rect>
          <text class="terminal" x="211" y="65">does</text>
@@ -626,7 +626,7 @@
          <text class="terminal" x="211" y="153">doesnt</text>
          <rect x="357" y="47" width="70" height="32" rx="10"></rect>
          <rect x="355" y="45" width="70" height="32" class="terminal" rx="10"></rect>
-         <text class="terminal" x="365" y="65">contain</text><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#searchExpr" xlink:title="searchExpr">
+         <text class="terminal" x="365" y="65">have</text><a xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#searchExpr" xlink:title="searchExpr">
             <rect x="467" y="3" width="90" height="32"></rect>
             <rect x="465" y="1" width="90" height="32" class="nonterminal"></rect>
             <text class="nonterminal" x="475" y="21">searchExpr</text></a><rect x="163" y="179" width="30" height="32" rx="10"></rect>
@@ -645,7 +645,7 @@
          <polygon points="595 17 587 13 587 21"></polygon></svg><p>
          <div class="ebnf"><code>
                <div><a href="#searchClause" title="searchClause">searchClause</a></div>
-               <div>         ::= <a href="#searchField" title="searchField">searchField</a> ( ( 'contains' | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'contain' ) <a href="#searchExpr" title="searchExpr">searchExpr</a> | 'is' 'similar' 'to' <a href="#STRING" title="STRING">STRING</a> )</div></code></div>
+               <div>         ::= <a href="#searchField" title="searchField">searchField</a> ( ( 'has' | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'have' ) <a href="#searchExpr" title="searchExpr">searchExpr</a> | 'is' 'similar' 'to' <a href="#STRING" title="STRING">STRING</a> )</div></code></div>
       </p>
       <p>referenced by:
          <ul>

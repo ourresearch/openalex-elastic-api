@@ -88,10 +88,10 @@ class TestLeafEncoding:
             _encode_leaf_value(LeafFilter("cited_by_count", 100, "<=")) == "-100"
         )
 
-    def test_contains(self):
+    def test_has(self):
         assert (
             _encode_leaf_value(
-                LeafFilter("title.search", "covid", operator="contains")
+                LeafFilter("title.search", "covid", operator="has")
             )
             == "covid"
         )
@@ -291,7 +291,7 @@ class TestSearchFilterSplit:
         oqo = OQO(
             get_rows="works",
             filter_rows=[
-                LeafFilter("default.search", "quantum", operator="contains"),
+                LeafFilter("default.search", "quantum", operator="has"),
                 LeafFilter("type", "article"),
             ],
         )
@@ -305,7 +305,7 @@ class TestSearchFilterSplit:
     def test_pure_search_has_no_filter_q(self):
         oqo = OQO(
             get_rows="works",
-            filter_rows=[LeafFilter("default.search", "quantum", operator="contains")],
+            filter_rows=[LeafFilter("default.search", "quantum", operator="has")],
         )
         search_q, filter_q = oqo_to_search_and_filter_q(oqo, works_fields)
         assert search_q is not None
@@ -322,7 +322,7 @@ class TestSearchFilterSplit:
         so everything (incl. search) goes to filter_q, search_q is None."""
         oqo = OQO(
             get_rows="works",
-            filter_rows=[LeafFilter("default.search", "quantum", operator="contains")],
+            filter_rows=[LeafFilter("default.search", "quantum", operator="has")],
         )
         search_q, filter_q = oqo_to_search_and_filter_q(
             oqo, works_fields, scoring=False
@@ -336,7 +336,7 @@ class TestSearchFilterSplit:
             get_rows="works",
             filter_rows=[
                 LeafFilter(
-                    "default.search", "quantum", operator="contains", is_negated=True
+                    "default.search", "quantum", operator="has", is_negated=True
                 )
             ],
         )

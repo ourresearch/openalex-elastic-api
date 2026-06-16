@@ -38,19 +38,19 @@ def _identity(oql):
 
 def test_sr_and_of_or_groups_merges_into_one_clause():
     assert _identity(
-        "works where title contains (vape or vaping) and title contains (health or harm)"
-    ) == "works where title contains ((harm or health) and (vape or vaping))"
+        "works where title has (vape or vaping) and title has (health or harm)"
+    ) == "works where title has ((harm or health) and (vape or vaping))"
 
 
 def test_positive_and_negated_leaf_merge_with_not_in_tree():
-    assert _identity("works where title contains cat and title does not contain dog") \
-        == "works where title contains (not dog and cat)"
+    assert _identity("works where title has cat and title does not have dog") \
+        == "works where title has (not dog and cat)"
 
 
 def test_demorganed_not_group_stays_in_one_clause():
     # `not (dog or bird)` -> NNF leaves -> merged back as in-tree bare nots
-    assert _identity("works where title contains (cat and not (dog or bird))") \
-        == "works where title contains (not bird and not dog and cat)"
+    assert _identity("works where title has (cat and not (dog or bird))") \
+        == "works where title has (not bird and not dog and cat)"
 
 
 def test_eq_columns_merge_too_all_filter_kinds():
@@ -65,30 +65,30 @@ def test_is_not_group_renders_merged_not_two_clauses():
 
 def test_search_leaf_merges_with_same_base_or_group():
     assert _identity(
-        "works where title contains health and title contains (vape or vaping)"
-    ) == "works where title contains (health and (vape or vaping))"
+        "works where title has health and title has (vape or vaping)"
+    ) == "works where title has (health and (vape or vaping))"
 
 
 def test_merge_anchors_at_first_same_field_row():
     # other-field rows keep their canonical position; same-field rows merge at
     # the first occurrence in canonical row order
     assert _identity(
-        "works where title contains alpha and country is US and title contains beta"
-    ) == "works where country is US and title contains (alpha and beta)"
+        "works where title has alpha and country is US and title has beta"
+    ) == "works where country is US and title has (alpha and beta)"
 
 
 def test_stemmed_and_exact_share_one_merged_group():
     # base-field grouping: .search + .search.exact mix in one group (row-78 win)
     assert _identity(
-        'works where title contains "exact phrase" and title contains (stemmed words)'
-    ) == 'works where title contains ((stemmed words) and "exact phrase")'
+        'works where title has "exact phrase" and title has (stemmed words)'
+    ) == 'works where title has ((stemmed words) and "exact phrase")'
 
 
 # --- what does NOT merge ---------------------------------------------------- #
 
 def test_standalone_negated_leaf_renders_bare_prefix():
-    assert _identity("works where title does not contain dog") \
-        == "works where title contains not dog"
+    assert _identity("works where title does not have dog") \
+        == "works where title has not dog"
     assert _identity("works where country is not FR") \
         == "works where country is not FR"
 
@@ -107,38 +107,39 @@ def test_lone_bounds_do_not_merge_into_a_value_tree():
 
 
 def test_cross_field_stays_multi_clause():
-    assert _identity("works where title contains cat and abstract contains dog") \
-        == "works where abstract contains dog and title contains cat"
+    assert _identity("works where title has cat and abstract has dog") \
+        == "works where abstract has dog and title has cat"
 
 
 def test_mixed_field_or_branches_do_not_merge():
     # OR branches spanning different fields are not uniform -> no merge
     out = _identity(
-        "works where (title contains a or country is US) "
-        "and (title contains b or country is FR)"
+        "works where (title has a or country is US) "
+        "and (title has b or country is FR)"
     )
-    assert out == ("works where (country is FR or title contains b)\n"
-                   "  and (country is US or title contains a)")
+    # `has` (shorter than the old `contains`) lets this fit on one line now.
+    assert out == ("works where (country is FR or title has b) "
+                   "and (country is US or title has a)")
 
 
 # --- OQO is untouched (render-direction rule only) -------------------------- #
 
 def test_merged_render_parses_back_to_distributed_oqo():
     fr = canonicalize_oqo(
-        parse("works where title contains (not dog and cat)")).to_dict()["filter_rows"]
+        parse("works where title has (not dog and cat)")).to_dict()["filter_rows"]
     assert fr == [
         {"column_id": "display_name.search", "value": "dog",
-         "operator": "contains", "is_negated": True},
+         "operator": "has", "is_negated": True},
         {"column_id": "display_name.search", "value": "cat",
-         "operator": "contains"},
+         "operator": "has"},
     ]
 
 
 def test_hoisted_and_distributed_spellings_converge():
     a = canonicalize_oqo(parse(
-        "works where title contains ((vape or vaping) and (health or harm))"))
+        "works where title has ((vape or vaping) and (health or harm))"))
     b = canonicalize_oqo(parse(
-        "works where title contains (vape or vaping) and title contains (health or harm)"))
+        "works where title has (vape or vaping) and title has (health or harm)"))
     assert a.to_dict() == b.to_dict()
 
 
@@ -146,8 +147,8 @@ def test_hoisted_and_distributed_spellings_converge():
 
 def test_long_merged_clause_explodes_within_hard_ceiling():
     synonyms = " or ".join(f"term{i:02d}" for i in range(30))
-    oql = (f"works where title contains ({synonyms}) "
-           f"and title contains (health or harm or damage or risk)")
+    oql = (f"works where title has ({synonyms}) "
+           f"and title has (health or harm or damage or risk)")
     out = _identity(oql)
     assert out.count("\n") > 2
     for line in out.split("\n"):

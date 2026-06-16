@@ -64,20 +64,20 @@ TABLE = [
     ("works where it's ", None, C.VALUE, {"value_kind": "bool"}),
     # connective then new field
     ("works where year > 2000 and ti", None, C.FIELD, {"prefix": "ti"}),
-    # Under the parens-bag grammar (#363) `title contains foo` is a complete
+    # Under the parens-bag grammar (#363) `title has foo` is a complete
     # single-term clause (a bare 2+ term list is illegal), so `and (` opens a new
     # *clause* group -> the cursor expects a FIELD, not another search term.
-    ("works where title contains foo and (", None, C.FIELD, {}),
-    # a search-term group continues the SEARCH: inside `contains (` a term slot
-    ("works where title contains (foo or ", None, C.VALUE,
+    ("works where title has foo and (", None, C.FIELD, {}),
+    # a search-term group continues the SEARCH: inside `has (` a term slot
+    ("works where title has (foo or ", None, C.VALUE,
      {"value_kind": "search", "field": "title"}),
     # directives
     ("works sort by ", None, C.FIELD, {}),
     ("works group by ", None, C.FIELD, {}),
     # suppression: inside a string / annotation
-    ('works where title contains "clim', None, C.NONE, {}),   # unterminated string
+    ('works where title has "clim', None, C.NONE, {}),   # unterminated string
     ('works where institution is I27 [Harv', None, C.NONE, {}),  # unterminated annot
-    ('works where title contains "climate"', 33, C.NONE, {}),  # strictly inside string
+    ('works where title has "climate"', 27, C.NONE, {}),  # strictly inside string
 ]
 
 
@@ -239,7 +239,7 @@ def test_pos_out_of_range_is_clamped():
 
 def test_never_raises_on_arbitrary_prefixes():
     # Typing a real query one char at a time must never throw.
-    full = 'works where institution is I27837315 [Harvard] and title contains "climate change" and year >= 2020 sort by citations desc'
+    full = 'works where institution is I27837315 [Harvard] and title has "climate change" and year >= 2020 sort by citations desc'
     for i in range(len(full) + 1):
         parse_context(full, i)  # must not raise
 
@@ -256,12 +256,12 @@ _FUZZ_QUERIES = [
     "works where type is (article or review)",
     "works where institution is in collection col_abc123",
     "works where abstract is similar to \"machine learning\"",
-    'works where title contains "smart phone" within 3 words',
+    'works where title has "smart phone" within 3 words',
     "works where (year >= 2020 and is_oa is true) or type is review",
     "works where it's open access and it has a DOI",
     "authors where works_count > 100 sort by cited_by_count desc",
     "works group by type sample 50",
-    "works where title contains foo and (climate or warming)",
+    "works where title has foo and (climate or warming)",
 ]
 
 
@@ -375,7 +375,7 @@ def test_field_matcher_agrees_with_parser():
     fields_to_check = ["year", "institution", "title", "title & abstract",
                        "last known institution", "open access", "type", "DOI"]
     for spelling in fields_to_check:
-        toks = lex(f"{spelling} is x") if spelling not in ("title", "title & abstract", "open access") else lex(f"{spelling} contains x")
+        toks = lex(f"{spelling} is x") if spelling not in ("title", "title & abstract", "open access") else lex(f"{spelling} has x")
         m = C._match_field(toks, 0)
         assert m is not None, f"walker failed to match field {spelling!r}"
         _sp, fld, flen = m
@@ -389,7 +389,7 @@ def test_operator_matcher_agrees_with_parser():
     cases = [("year is", "is"), ("year is not", "isnot"),
              ("institution is any of", "in"), ("institution is not any of", "nin"),
              ("institution is in", "in"), ("year >=", ">="),
-             ("title contains", "contains")]
+             ("title has", "has")]
     for text, expected_op in cases:
         toks = lex(text + " x") if not text.endswith("of") else lex(text + " (x)")
         # skip the field
@@ -480,13 +480,13 @@ def test_annotation_click_reanchors_to_the_value():
 
 
 def test_annotation_click_with_no_preceding_word_stays_suppressed():
-    q = 'works where title contains "x" [note]'
+    q = 'works where title has "x" [note]'
     pos = q.index("[note]") + 2  # preceding token is a STRING, not a WORD
     assert cat(q, pos) == C.NONE
 
 
 def test_string_click_still_suppressed():
-    q = 'works where title contains "climate change"'
+    q = 'works where title has "climate change"'
     pos = q.index("climate") + 3
     assert cat(q, pos) == C.NONE
 

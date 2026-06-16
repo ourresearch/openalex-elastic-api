@@ -127,9 +127,9 @@ GOLDENS = {
 
     # (d) a search group <=8 items -> one per line, leading connective
     # (decision 25 — `or` begins each continuation line, like the `where` body)
-    'works where title contains ("randomized controlled trial" or '
+    'works where title has ("randomized controlled trial" or '
     '"systematic review" or "meta analysis" or "clinical practice guideline")':
-        "works where title contains (\n"
+        "works where title has (\n"
         '    "clinical practice guideline"\n'
         '    or "meta analysis"\n'
         '    or "randomized controlled trial"\n'
@@ -226,7 +226,7 @@ def test_long_sr_query_showcase():
     row = max(OK_ROWS, key=lambda r: len(r["oql"]))   # the corpus' widest query
     out = _fmt(row["oql"])
     assert "\n" in out, "the widest corpus query must lay out multi-line"
-    assert "contains (" in out, "fill-mode search groups must survive"
+    assert "has (" in out, "fill-mode search groups must survive"
     assert _oqo(out) == _oqo(row["oql"]), "showcase must round-trip"
     assert _fmt(out) == out, "showcase must be idempotent"
     assert max(len(l) for l in out.split("\n")) <= FORMAT_WIDTH, \
@@ -246,7 +246,7 @@ def test_short_query_stays_inline():
 def test_commas_in_group_are_rejected():
     from query_translation.oql_lang import OQLError
     for q in ("works where type is (article, review)",
-              "works where title contains (cat, dog)"):
+              "works where title has (cat, dog)"):
         with pytest.raises(OQLError) as ei:
             _oqo(q)
         assert ei.value.code == "OQL_COMMA_IN_GROUP", q

@@ -140,7 +140,7 @@ def test_return_word_in_search_value_round_trips():
     oqo = OQO(get_rows="works",
               filter_rows=[LeafFilter(column_id="display_name.search",
                                       value="the return on investment",
-                                      operator="contains")])
+                                      operator="has")])
     out = render(oqo)
     assert '"return"' in out
     again = parse(out)

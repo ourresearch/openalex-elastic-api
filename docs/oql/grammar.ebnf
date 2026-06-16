@@ -39,8 +39,8 @@ field        ::= word+
 
 operator     ::= 'is' 'not'? ( 'any' 'of' | 'in' 'collection'? | 'in' )?
                | 'is' 'similar' 'to'
-               | 'contains'
-               | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'contain'
+               | 'has'
+               | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'have'
                | '>=' | '<=' | '>' | '<'
 
 value        ::= valueList | 'unknown' | 'null' | scalar
@@ -49,7 +49,7 @@ valueList    ::= '(' scalar ( ',' scalar )* ','? ')'
 
 scalar       ::= ( WORD | NUMBER | STRING ) ANNOT?
 
-searchClause ::= searchField ( 'contains' | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'contain' ) searchExpr
+searchClause ::= searchField ( 'has' | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'have' ) searchExpr
                | searchField 'is' 'similar' 'to' STRING
 
 searchField  ::= word ( ( '&' | 'and' ) word )*

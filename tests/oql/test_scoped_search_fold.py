@@ -73,7 +73,7 @@ def test_exact_fold_validates_and_renders_exact_phrase():
     # canonical column (NOT title_and_abstract.exact.search), exact-phrase value
     assert leaf["column_id"] == "title_and_abstract.search"
     assert leaf["value"] == '"Windows AND (DLL OR DLLs)"'
-    assert "contains near" in render(oqo)
+    assert "has near" in render(oqo)
 
 
 @pytest.mark.parametrize("field", ["title", "abstract", "title_and_abstract"])

@@ -33,7 +33,7 @@ def _load_oqo_module():
 def build_schema() -> dict:
     oqo = _load_oqo_module()
     entity_types = sorted(oqo.VALID_ENTITY_TYPES)
-    operators = sorted(oqo.VALID_OPERATORS)  # {<, <=, >, >=, contains, is}
+    operators = sorted(oqo.VALID_OPERATORS)  # {<, <=, >, >=, has, is}
 
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -308,8 +308,8 @@ def build_schema() -> dict:
             {
                 "description": "Negation via is_negated (COVID NOT pediatric)",
                 "value": {"get_rows": "works", "filter_rows": [
-                    {"column_id": "title_and_abstract.search", "value": "covid", "operator": "contains"},
-                    {"column_id": "title_and_abstract.search", "value": "pediatric", "operator": "contains", "is_negated": True},
+                    {"column_id": "title_and_abstract.search", "value": "covid", "operator": "has"},
+                    {"column_id": "title_and_abstract.search", "value": "pediatric", "operator": "has", "is_negated": True},
                 ]},
             },
             {

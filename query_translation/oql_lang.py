@@ -12,7 +12,7 @@ Design anchors (see docs/oql-spec.md for prose, oxjob #330 EXPLORE.md for the wh
 - No implicit adjacency: two operands with no connective is an error.
 - `[...]` is an ignored annotation; the ID is authoritative.
 - `(...)` does double duty: boolean grouping of clauses AND a boolean group of
-  search terms / values (`title contains (a or b)`, `country is (us or uk)`). A
+  search terms / values (`title has (a or b)`, `country is (us or uk)`). A
   list of 2+ bare terms/values must be parenthesized; a single one may be bare.
 - Only `"` delimits strings; there are no escape sequences.
 - Quotes = phrase with stemming ON; `exactly` = non-stemmed; `within N words` =
@@ -712,7 +712,7 @@ def lex(s: str) -> List[Tok]:
             toks.append(Tok("OP", op, i)); i += len(op); continue
         if c == '!':
             # within-`.search`-value WoS NOT operator: `A!B` = A AND NOT B (#432).
-            # Only meaningful infix inside a `contains` value group; the parser
+            # Only meaningful infix inside a `has` value group; the parser
             # (_parse_search_operand) consumes it. A literal `!` must be quoted.
             toks.append(Tok("BANG", c, i)); i += 1; continue
         # WORD: run until a break char
@@ -1270,8 +1270,8 @@ def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool, bo
         return tk.val.lower() if tk and tk.kind == "WORD" else None
 
     w0 = w(0)
-    if w0 == "contains":
-        return "contains", 1, True, False
+    if w0 == "has":
+        return "has", 1, True, False
     if w0 == "is":
         if w(1) == "similar":
             if w(2) == "to":
@@ -1299,9 +1299,9 @@ def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool, bo
         return "is", 1, True, False
     if w0 in ("does", "doesn't", "doesnt"):
         j = 1 if w(1) == "not" else 0
-        if w(1 + j) == "contain":
-            return "ncontains", 2 + j, True, False
-        return "ncontains", 1 + j, False, False        # `does not` — typing
+        if w(1 + j) == "have":
+            return "nhas", 2 + j, True, False
+        return "nhas", 1 + j, False, False             # `does not` — typing
     return None
 
 
@@ -1752,16 +1752,16 @@ class _Parser:
         if fld.kind == "search":
             if op == "similar":
                 return self._parse_semantic(fld)
-            if op not in ("contains", "ncontains"):
+            if op not in ("has", "nhas"):
                 raise oql_error("OQL_BAD_OPERATOR_FOR_FIELD",
-                               f'search field "{field}" needs "contains" (not "{op}")',
-                               'use: <field> contains <terms>')
+                               f'search field "{field}" needs "has" (not "{op}")',
+                               'use: <field> has <terms>')
             tree = self._parse_search_value(fld.column)
-            if op == "ncontains":
+            if op == "nhas":
                 tree = _negate(tree)
             return tree
         # non-search
-        if op in ("contains", "ncontains", "similar"):
+        if op in ("has", "nhas", "similar"):
             raise oql_error("OQL_BAD_OPERATOR_FOR_FIELD",
                            f'field "{field}" does not support "{op}"',
                            'use "is" / a comparison')
@@ -1831,6 +1831,13 @@ class _Parser:
             op, n, _complete, _opens = m
             self.i += n
             return op
+        # Legacy `contains` was renamed to `has` (#363 decision 27). It's a HARD
+        # error (no lenient parse), with a fix-it echoing the new keyword — the
+        # same greenfield, no-back-compat stance as decisions 23 & 24.
+        if t.kind == "WORD" and t.val.lower() == "contains":
+            raise oql_error("OQL_CONTAINS_RENAMED",
+                           "`contains` was renamed to `has`",
+                           "use: <field> has <terms>", t.pos)
         # Not a complete operator. Replicate the fail-fast fallbacks: a partial
         # `is …` (e.g. `is any`, `is similar`) degrades to the bare `is` operator
         # (the tail becomes the value); a partial `does …` has no shorter form, so
@@ -1839,7 +1846,17 @@ class _Parser:
             self.next()
             return "is"
         if t.kind == "WORD" and t.val.lower() in ("does", "doesn't", "doesnt"):
-            raise oql_error("OQL_MISSING_OPERATOR", 'expected "does not contain"')
+            # `does not contain` is the renamed-away negation sugar; `does not have`
+            # is accepted above (the complete `nhas` operator). Echo the fix-it.
+            nxt = self.toks[self.i + 1] if self.i + 1 < len(self.toks) else None
+            after = self.i + (2 if nxt and nxt.kind == "WORD"
+                              and nxt.val.lower() == "not" else 1)
+            af = self.toks[after] if after < len(self.toks) else None
+            if af and af.kind == "WORD" and af.val.lower() == "contain":
+                raise oql_error("OQL_CONTAINS_RENAMED",
+                               "`does not contain` was renamed to `does not have`",
+                               "use: <field> does not have <terms>", t.pos)
+            raise oql_error("OQL_MISSING_OPERATOR", 'expected "does not have"')
         raise oql_error("OQL_MISSING_OPERATOR",
                        f'expected an operator, got "{t.val}"', None, t.pos)
 
@@ -2075,11 +2092,11 @@ class _Parser:
                            '"is similar to" needs a quoted text passage',
                            'e.g. abstract is similar to "..."', t.pos if t else None)
         self.next()
-        return LeafFilter(fld.column + ".search.semantic", t.val, "contains")
+        return LeafFilter(fld.column + ".search.semantic", t.val, "has")
 
     def _parse_search_value(self, base: str) -> FilterType:
-        """Top-level value after `contains`: a single bare atom, or a `(...)`
-        boolean group. 2+ bare atoms (`title contains foo bar`, `... foo or bar`)
+        """Top-level value after `has`: a single bare atom, or a `(...)`
+        boolean group. 2+ bare atoms (`title has foo bar`, `... foo or bar`)
         are a loud OQL_UNDELIMITED_TERM_LIST (D1) — that's the rule that kills the
         silent-keyword-truncation footgun, since a reserved word can only float
         when there are 2+ unparenthesized terms."""
@@ -2093,8 +2110,8 @@ class _Parser:
             return e
         if t is not None and t.kind == "WORD" and t.val.lower() == "not":
             # Bare prefix `not` negates the next search operand (decision 23):
-            # `title contains not dog` -> one negated leaf, rendered
-            # `title contains not dog`. A multi-word run is one value-node, so
+            # `title has not dog` -> one negated leaf, rendered
+            # `title has not dog`. A multi-word run is one value-node, so
             # `not machine learning` negates the whole run.
             return self._parse_search_operand(base)
         if (t is not None and t.kind == "WORD" and t.val.lower() in ("any", "all")
@@ -2102,7 +2119,7 @@ class _Parser:
             raise oql_error("OQL_LIST_KEYWORD_REMOVED",
                            f'"{t.val.lower()} of (…)" was removed; '
                            "write the list with parentheses",
-                           "e.g. contains (a or b)", t.pos)
+                           "e.g. has (a or b)", t.pos)
         leaf = self._parse_search_atom(base)
         self._skip_annot()
         if self._continues_value():
@@ -2110,8 +2127,8 @@ class _Parser:
             raise oql_error("OQL_UNDELIMITED_TERM_LIST",
                            "two or more search terms with no parentheses "
                            "(a reserved word could be silently swallowed)",
-                           'wrap the terms, e.g. contains (a or b), or quote a '
-                           'phrase, e.g. contains "a b"', t2.pos if t2 else None)
+                           'wrap the terms, e.g. has (a or b), or quote a '
+                           'phrase, e.g. has "a b"', t2.pos if t2 else None)
         return leaf
 
     def _parse_bool_expr(self, parse_operand) -> FilterType:
@@ -2120,7 +2137,7 @@ class _Parser:
         an explicit `and` with an explicit `or` at one level is a loud
         OQL_MIXED_BOOL_NEEDS_PARENS — we never silently pick precedence.
         `parse_operand` reads one operand (search term or value, per the caller).
-        Shared by the search side (`contains (...)`) and the value side
+        Shared by the search side (`has (...)`) and the value side
         (`is (...)`) so they can't drift."""
         outer = self._in_list
         self._in_list = True
@@ -2221,7 +2238,7 @@ class _Parser:
                     after = self.peek(j + 1)
                     if after and (after.kind == "OP" or
                                   (after.kind == "WORD" and after.val.lower() in
-                                   ("is", "contains", "does", "doesn't", "doesnt"))):
+                                   ("is", "has", "does", "doesn't", "doesnt"))):
                         return True
             return False
         finally:
@@ -2250,17 +2267,17 @@ class _Parser:
                 after = self.peek(j + 1)
                 if after and (after.kind == "OP" or
                               (after.kind == "WORD" and after.val.lower() in
-                               ("is", "contains", "does", "doesn't", "doesnt"))):
+                               ("is", "has", "does", "doesn't", "doesnt"))):
                     return True
             return False
         finally:
             self.i = save
 
     def _parse_search_operand(self, base: str) -> FilterType:
-        """One operand inside a `contains (...)` group: a `not`-prefixed operand,
+        """One operand inside a `has (...)` group: a `not`-prefixed operand,
         a nested `(...)` group, or one search atom."""
         self._skip_annot()
-        # an empty search-term slot at the cursor (`title contains |`)
+        # an empty search-term slot at the cursor (`title has |`)
         self._want(CTX_VALUE, fld=self._cur_fld, kind="search")
         t = self.peek()
         if t is None:
@@ -2281,7 +2298,7 @@ class _Parser:
             raise oql_error("OQL_LIST_KEYWORD_REMOVED",
                            f'"{t.val.lower()} of (…)" was removed; '
                            "write the list with parentheses",
-                           "e.g. contains (a or b)", t.pos)
+                           "e.g. has (a or b)", t.pos)
         operand = self._parse_search_atom(base, in_group=True)
         # `!` (the WoS / classic-OXURL within-value NOT, e.g. `England!"New England"`)
         # is NOT an OQL operator — OQL negates with not(…). It is lexed as a BANG
@@ -2328,7 +2345,7 @@ class _Parser:
             # blocks below validate each token's shape and pick the column.
             phrase = True
         else:
-            # #1 (D2 reversal, oxjob #363): inside a `contains (...)` group a
+            # #1 (D2 reversal, oxjob #363): inside a `has (...)` group a
             # maximal run of space-adjacent bare words is ONE stemmed value node
             # (the engine adjacency-boosts the whole run), NOT per-word AND leaves.
             # An embedded *quoted* token is an escape — a literal word that stays
@@ -2404,7 +2421,7 @@ class _Parser:
                     _validate_wildcards(word, t.pos)
                 _validate_wildcard_budget(words, t.pos)
                 return LeafFilter(base + ".search.exact",
-                                  f'"{text}"~{n}~"{right}"', "contains")
+                                  f'"{text}"~{n}~"{right}"', "has")
             # A bare (unquoted) wildcard token can't carry proximity
             # (e.g. `smart* within 3 words`).
             if has_wildcard and not phrase:
@@ -2423,7 +2440,7 @@ class _Parser:
                 for word in text.split():
                     _validate_wildcards(word, t.pos)
                 _validate_wildcard_budget(text.split(), t.pos)
-            return LeafFilter(col, f'"{text}"~{n}', "contains")
+            return LeafFilter(col, f'"{text}"~{n}', "has")
         # #364: outside a proximity phrase, a wildcard must run on exact (no-stem)
         # text — stemming at index time removes the literal prefix, so a wildcard
         # on a stemmed field is silently wrong (`studies*` = 2.4k stemmed vs 2.2M
@@ -2465,7 +2482,7 @@ class _Parser:
             value = f'"{text}"'
         else:
             value = text
-        return LeafFilter(col, value, "contains")
+        return LeafFilter(col, value, "has")
 
     # -- directives --
     def _parse_sort(self) -> List[SortBy]:
@@ -2762,7 +2779,7 @@ def _render_search_leaf(f: LeafFilter) -> str:
         return f'{name} is similar to "{v}"'
     # decision 23: negation is a bare `not ` prefix on the value, not a predicate.
     term = _render_term(f.value, f.column_id)
-    return f"{name} contains {('not ' + term) if f.is_negated else term}"
+    return f"{name} has {('not ' + term) if f.is_negated else term}"
 
 
 def _value_needs_quote(value: str) -> bool:
@@ -2774,7 +2791,7 @@ def _value_needs_quote(value: str) -> bool:
         return False
     return (any(c.isspace() for c in value)
             or value.lower() in _CONNECTIVES
-            or value.lower() in ("not", "is", "contains", "where", "sort", "group",
+            or value.lower() in ("not", "is", "has", "where", "sort", "group",
                                  "sample", "return", "unknown", "null")
             or any(c in value for c in "()[],;\""))
 
@@ -2858,8 +2875,8 @@ def _value_with_name(fld, value, column_id, resolver) -> str:
 def _uniform_search_base(f: FilterType):
     """If every leaf anywhere under `f` is a plain (non-semantic) search leaf on
     the same *base* field, return a representative column_id; else None. The whole
-    boolean subtree then factors into one `field contains (...)` clause whose
-    parens hold the boolean of bare terms (`title contains (a or (b and c))`).
+    boolean subtree then factors into one `field has (...)` clause whose
+    parens hold the boolean of bare terms (`title has (a or (b and c))`).
     Grouping by base field (not full column_id) lets a mixed stemmed/exact group
     — `.search` + `.search.exact` — factor; each leaf keeps its own column so
     `_render_term` renders its mode surface (bare vs quoted)."""
@@ -2987,14 +3004,14 @@ def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
                     _seg("value", f'"{v}"', value=f.value)]
         else:
             # decision 23: negation is a bare `not ` prefix on the value, never a
-            # `does not contain` predicate (`title contains not pediatric`).
+            # `does not have` predicate (`title has not pediatric`).
             term = _render_term(f.value, f.column_id)
             val = f"not {term}" if f.is_negated else term
             segs = [_seg("column", name, column_id=f.column_id),
-                    _seg("operator", " contains "),
+                    _seg("operator", " has "),
                     _seg("value", val, value=f.value)]
         return ClauseNode(segments=segs, clause_kind="text", meta=ClauseMeta(
-            column_id=f.column_id, operator=f.operator or "contains",
+            column_id=f.column_id, operator=f.operator or "has",
             value=f.value, column_display_name=name))
 
     fld = _BY_COLUMN.get(f.column_id)
@@ -3065,7 +3082,7 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
         inner = _filter_node(BranchFilter(f.join, f.filters), top=False, resolver=resolver)
         return GroupNode(join=f.join, children=[inner], prefix="not ", suffix="",
                          joiner="", meta=GroupMeta(implicit=False))
-    # factor a single-base-field search subtree -> `field contains (a or b)`
+    # factor a single-base-field search subtree -> `field has (a or b)`
     scol = _uniform_search_base(f)
     if scol is not None:
         name, _ = _oql_field(scol)
@@ -3073,10 +3090,10 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
             f, lambda lf: [_seg("value", _render_term(lf.value, lf.column_id),
                                 value=lf.value)])
         segs = ([_seg("column", name, column_id=scol),
-                 _seg("operator", " contains "), _seg("text", "(")]
+                 _seg("operator", " has "), _seg("text", "(")]
                 + inner + [_seg("text", ")")])
         return ClauseNode(segments=segs, clause_kind="text", meta=ClauseMeta(
-            column_id=scol, operator="contains", value=None,
+            column_id=scol, operator="has", value=None,
             column_display_name=name))
     # factor a single-column equality subtree -> `field is (a or b)`
     ecol = _uniform_eq_column(f)
@@ -3148,13 +3165,13 @@ def _merge_same_field_items(items, join):
     `filter_rows` — the items sharing a `_merge_key` merge into ONE synthetic
     uniform branch, which the factor paths render as a single `field op (tree)`
     clause with the boolean structure (and any leaf `not`s) inside the value
-    group. So `title contains (A) and title contains (B)` re-merges to
-    `title contains ((A) and (B))`, and `cat ∧ ¬dog` on one field renders
-    `title contains (not dog and cat)` instead of two clauses. Order is
+    group. So `title has (A) and title has (B)` re-merges to
+    `title has ((A) and (B))`, and `cat ∧ ¬dog` on one field renders
+    `title has (not dog and cat)` instead of two clauses. Order is
     preserved (the canonicalizer's deterministic sort — negated-first, then
     value — already puts same-key items adjacent and makes the render
     idempotent); a singleton key keeps its current render — a standalone
-    negated leaf renders bare-prefix too (`title contains not dog`, decision 23).
+    negated leaf renders bare-prefix too (`title has not dog`, decision 23).
     Same-join members are flattened into the synthetic branch (the canonical
     flat form; also keeps re-parse → re-render byte-stable)."""
     groups = {}
@@ -3293,7 +3310,7 @@ def _leading_conn(group: GroupNode) -> str:
 
 
 def _split_list_clause(clause: ClauseNode):
-    """If `clause` is a factored group clause (`… contains (a or b or …)` /
+    """If `clause` is a factored group clause (`… has (a or b or …)` /
     `… is (a or b or …)`), return `(head, items, conn, close)` where `head` ends
     with `"("`, `items` is the list of top-level item strings, `conn` is the
     group's connective (`"or"`/`"and"`), and `close == ")"`; else None. Splits on

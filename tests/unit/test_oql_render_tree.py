@@ -342,7 +342,7 @@ class TestTreeStructure:
         assert len(clause.segments) > 0
     
     def test_clause_meta_has_semantics(self):
-        """Test that clause meta contains semantic info."""
+        """Test that clause meta has semantic info."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[LeafFilter(column_id="publication_year", value=2020, operator=">=")]
@@ -500,12 +500,12 @@ class TestEdgeCases:
         """A stemmed search value renders bare (canonical) — no auto-quoting."""
         oqo = OQO(
             get_rows="works",
-            filter_rows=[LeafFilter(column_id="title_and_abstract.search", value="machine learning", operator="contains")]
+            filter_rows=[LeafFilter(column_id="title_and_abstract.search", value="machine learning", operator="has")]
         )
         oql, tree = render_oqo_to_oql_and_tree(oqo)
 
         assert stringify(tree) == oql
-        assert "contains machine learning" in oql
+        assert "has machine learning" in oql
 
     def test_different_entity_types(self):
         """Test different entity types render correctly (lowercase, canonical)."""

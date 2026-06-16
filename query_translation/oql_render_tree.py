@@ -24,7 +24,7 @@ EntityType = Literal[
 # Valid operators (mirrors OQO.VALID_OPERATORS — affirmative only;
 # negation is the is_negated polarity bit, not an operator).
 Operator = Literal[
-    "is", ">", ">=", "<", "<=", "contains"
+    "is", ">", ">=", "<", "<=", "has"
 ]
 
 # Segment kinds for styling

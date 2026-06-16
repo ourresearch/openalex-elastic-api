@@ -254,7 +254,7 @@ def render_leaf_filter(f: LeafFilter) -> str:
         return f"{field}:>{str_value}"
     elif operator in ("<", "is less than"):
         return f"{field}:<{str_value}"
-    elif operator in ("contains", "includes"):
+    elif operator in ("has", "includes"):
         # For search fields, just use the value
         return f"{field}:{str_value}"
     else:

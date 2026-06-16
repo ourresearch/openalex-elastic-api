@@ -470,7 +470,7 @@ class TestValidateWildcards:
         validate_wildcards("phone*")
         validate_wildcards("behavi*or")
         validate_wildcards("wom?n")
-        validate_wildcards("title contains chem*stry")
+        validate_wildcards("title has chem*stry")
 
     def test_trailing_question_mark_passes(self):
         # a real "?" used as punctuation is not a leading/short wildcard

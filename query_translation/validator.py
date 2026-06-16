@@ -10,7 +10,7 @@ three questions:
   (c) does `value` match the property's type?                       -> invalid_value_type
 
 Strict: every one of these is a hard error (the route returns 400). This catches
-nonsense like `cited_by_count contains 5` or `is_oa is 5` before it reaches ES.
+nonsense like `cited_by_count has 5` or `is_oa is 5` before it reaches ES.
 
 Negation is the `is_negated` polarity bit, not an operator; the OQO->ES translator
 applies it uniformly via `~q`, so it is NOT constrained here.
@@ -170,7 +170,7 @@ def _operator_fits_column(operator: str, value: Any, operators: List[str]) -> bo
         return operator == "is" and "null" in operators
     if operator == "is":
         return "eq" in operators
-    if operator == "contains":
+    if operator == "has":
         return "search" in operators or "phrase" in operators
     if operator in COMPARISON_OPERATORS:
         return "range" in operators or "date_range" in operators

@@ -34,20 +34,20 @@ def _rows(oql):
 # --- #1: a bare multi-word run is ONE node, not per-word AND --------------- #
 
 def test_bare_run_is_one_node():
-    fr = _rows("works where title/abstract contains (mental health)")
+    fr = _rows("works where title/abstract has (mental health)")
     assert fr == [{"column_id": "title_and_abstract.search",
-                   "value": "mental health", "operator": "contains"}]
+                   "value": "mental health", "operator": "has"}]
 
 
 def test_explicit_connective_builds_tree():
-    fr = _rows("works where title/abstract contains (mental health or anxiety)")
+    fr = _rows("works where title/abstract has (mental health or anxiety)")
     assert len(fr) == 1 and fr[0]["join"] == "or"
     assert sorted(f["value"] for f in fr[0]["filters"]) == ["anxiety", "mental health"]
 
 
 def test_single_word_unchanged():
-    fr = _rows("works where title contains cancer")
-    assert fr == [{"column_id": "display_name.search", "value": "cancer", "operator": "contains"}]
+    fr = _rows("works where title has cancer")
+    assert fr == [{"column_id": "display_name.search", "value": "cancer", "operator": "has"}]
 
 
 @pytest.mark.parametrize("search_value,expected_value", [
@@ -61,7 +61,7 @@ def test_url_multiword_round_trips_as_one_node(search_value, expected_value):
     after = canonicalize_oqo(parse(_render(u))).to_dict()
     assert before == after
     assert before["filter_rows"] == [{"column_id": "title_and_abstract.search",
-                                      "value": expected_value, "operator": "contains"}]
+                                      "value": expected_value, "operator": "has"}]
 
 
 # --- #2: reserved-word escape --------------------------------------------- #
@@ -81,13 +81,13 @@ def test_reserved_word_literal_round_trips(value):
 def test_embedded_quote_is_a_stemmed_escape():
     # a quoted token inside a bare run folds in as a literal STEMMED word (stays
     # on .search), unlike a standalone quoted phrase (which is exact)
-    fr = _rows('works where title/abstract contains (road traffic "and" Ghana)')
+    fr = _rows('works where title/abstract has (road traffic "and" Ghana)')
     assert fr == [{"column_id": "title_and_abstract.search",
-                   "value": "road traffic and Ghana", "operator": "contains"}]
+                   "value": "road traffic and Ghana", "operator": "has"}]
 
 
 def test_standalone_quote_still_exact():
-    fr = _rows('works where title/abstract contains "road traffic"')
+    fr = _rows('works where title/abstract has "road traffic"')
     assert fr[0]["column_id"] == "title_and_abstract.search.exact"
 
 
@@ -113,6 +113,6 @@ def test_special_chars_dropped_and_reparse_clean(value, expected):
 
 def test_wildcard_on_exact_column_keeps_metachars():
     # genuine wildcards live on .search.exact and must NOT be stripped
-    fr = _rows('works where title contains "bar*"')
+    fr = _rows('works where title has "bar*"')
     assert fr[0]["column_id"] == "display_name.search.exact"
     assert "*" in fr[0]["value"]

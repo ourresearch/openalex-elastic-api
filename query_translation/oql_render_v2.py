@@ -7,7 +7,7 @@ WHY THIS EXISTS
 The v1 `oql_render` tree (oql_render_tree.py) FACTORS a same-column boolean into
 one `ClauseNode` whose value-internal structure is flattened into literal `(` /
 ` or ` / `)` *text segments*. That is fine for stringifying to OQL, but it hides
-the tree the OQO actually is: `title contains (Boy or Girl)` is, in OQO, a
+the tree the OQO actually is: `title has (Boy or Girl)` is, in OQO, a
 `BranchFilter(or, [Leaf(title,"Boy"), Leaf(title,"Girl")])` — a real tree down to
 scalar leaves (`LeafFilter.value` is a bare scalar; it *cannot* hold a list).
 
@@ -102,7 +102,7 @@ def _expr_node(f: FilterType, top: bool, resolver, idg) -> dict:
                 f, lambda lf: [_seg_val(_render_term(lf.value, lf.column_id),
                                         lf.value)], idg)
             return {"node": "clause", "id": idg(), "clause_kind": "text",
-                    "column_id": scol, "column": name, "operator": "contains",
+                    "column_id": scol, "column": name, "operator": "has",
                     "value": val}
         ecol = _uniform_eq_column(f)
         if ecol is not None:

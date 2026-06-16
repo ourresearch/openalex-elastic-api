@@ -103,7 +103,7 @@ def test_w32_same_alias_works_in_where_and_sort():
 def test_w33_multisubtoken_stemmed_token_keeps_quotes(token):
     # `near "X"` = stemmed adjacent phrase; for a hyphen/slash token it must NOT
     # collapse to bare (different result set on the engine).
-    oqo = parse(f'works where title/abstract contains (near "{token}")')
+    oqo = parse(f'works where title/abstract has (near "{token}")')
     leaf = oqo.to_dict()["filter_rows"][0]
     leaf = leaf.get("filters", [leaf])[0] if "filters" in leaf else leaf
     assert leaf["value"] == f'"{token}"', leaf
@@ -114,7 +114,7 @@ def test_w33_multisubtoken_stemmed_token_keeps_quotes(token):
 def test_w33_atomic_stemmed_token_stays_bare(token):
     # an atomic alphanumeric token is not split by the analyzer (measured equal),
     # so it stays bare so the common case isn't gratuitously quoted.
-    oqo = parse(f'works where title/abstract contains (near "{token}")')
+    oqo = parse(f'works where title/abstract has (near "{token}")')
     leaf = oqo.to_dict()["filter_rows"][0]
     leaf = leaf.get("filters", [leaf])[0] if "filters" in leaf else leaf
     assert leaf["value"] == token, leaf
@@ -124,7 +124,7 @@ def test_w33_exact_column_wildcard_token_stays_bare():
     # regression guard for corpus rows 22/23/60: a wildcard pattern on the EXACT
     # column ("foo*bar") must stay bare — `*`/`?` are metachars, not delimiters,
     # and the subtoken exception is stemmed-only.
-    oqo = parse('works where title contains "foo*bar"')
+    oqo = parse('works where title has "foo*bar"')
     leaf = oqo.to_dict()["filter_rows"][0]
     assert leaf["value"] == "foo*bar"
     assert leaf["column_id"].endswith(".search.exact")

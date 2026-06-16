@@ -91,7 +91,7 @@ def test_strict_no_auto_resolution():
 # --- non-vocab string columns are untouched (only entity_type vocabs gated) --
 def test_free_text_search_value_not_membership_checked():
     # a title search value is open free text — never membership-checked.
-    assert _invalid_value_errors('works where title contains "anything at all"') == []
+    assert _invalid_value_errors('works where title has "anything at all"') == []
 
 
 def test_open_id_entity_not_membership_checked_here():

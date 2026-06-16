@@ -64,7 +64,7 @@ def _declared_keywords():
 
     Excludes pure-punctuation literals ('(' ',' '>=' …) — those are operators /
     structure, checked structurally, not vocabulary. A keyword is any literal
-    that contains a letter."""
+    that has a letter."""
     body = _strip_comments(_ebnf_text())
     lits = {(a or b) for a, b in _LIT.findall(body)}
     return {w for w in lits if any(c.isalpha() for c in w)}
@@ -135,7 +135,7 @@ def test_parser_structural_keywords_are_declared_by_the_ebnf():
     # The grammar's structural vocabulary: clause/operator/directive/search words.
     structural = {
         "where", "and", "or", "not", "is", "any", "of", "in", "collection",
-        "contains", "does", "doesn't", "doesnt", "contain", "similar", "to",
+        "has", "does", "doesn't", "doesnt", "have", "similar", "to",
         "near", "within", "words", "word", "group", "by", "sort", "asc", "desc",
         "sample", "seed", "it's", "its", "it", "has", "have", "all",
         "return",
@@ -193,7 +193,7 @@ def test_corpus_oql_tokenizes_under_grammar(cid, oql):
     # only inter-token whitespace may remain
     leftover = residue.strip()
     assert leftover == "", (
-        f"corpus #{cid}: OQL contains text the grammar's lexical terminals "
+        f"corpus #{cid}: OQL has text the grammar's lexical terminals "
         f"can't tokenize: {leftover!r}\n  OQL: {oql!r}"
     )
 

@@ -107,7 +107,7 @@ Boolean logic lives **only** in the tree shape, never inside a `value` string:
 
 - **AND / OR** are `BranchFilter.join`. Top-level `filter_rows` is an implicit AND.
 - A `LeafFilter` is a single proposition. Its `value` may carry **inline search
-  syntax** for the `contains` operator — `"phrase"` for an exact phrase, `*` / `?`
+  syntax** for the `has` operator — `"phrase"` for an exact phrase, `*` / `?`
   for wildcards, `"phrase"~N` for proximity — but **never** `AND`/`OR`/`NOT`; those
   always lift to a `BranchFilter`.
 
@@ -115,13 +115,13 @@ Example — `agile AND (supply chain OR value chain) AND (lead time OR cycle tim
 
 ```jsonc
 { "get_rows": "works", "filter_rows": [
-  { "column_id": "title_and_abstract.search", "value": "agile", "operator": "contains" },
+  { "column_id": "title_and_abstract.search", "value": "agile", "operator": "has" },
   { "join": "or", "filters": [
-      { "column_id": "title_and_abstract.search", "value": "supply chain", "operator": "contains" },
-      { "column_id": "title_and_abstract.search", "value": "value chain",  "operator": "contains" } ] },
+      { "column_id": "title_and_abstract.search", "value": "supply chain", "operator": "has" },
+      { "column_id": "title_and_abstract.search", "value": "value chain",  "operator": "has" } ] },
   { "join": "or", "filters": [
-      { "column_id": "title_and_abstract.search", "value": "lead time",  "operator": "contains" },
-      { "column_id": "title_and_abstract.search", "value": "cycle time", "operator": "contains" } ] }
+      { "column_id": "title_and_abstract.search", "value": "lead time",  "operator": "has" },
+      { "column_id": "title_and_abstract.search", "value": "cycle time", "operator": "has" } ] }
 ] }
 ```
 
@@ -136,7 +136,7 @@ On the multi-valued affiliation/byline search fields (`raw_affiliation_strings.s
 the words may land in *different* affiliations/bylines on the same work. A
 **quoted phrase** matches *sub-record-scoped*: ES inserts a large
 `position_increment_gap` between the repeated field's values, so a phrase (even
-with slop) cannot span two of them. This makes a single `contains` leaf express
+with slop) cannot span two of them. This makes a single `has` leaf express
 true **intra-affiliation co-occurrence**:
 
 - `raw_affiliation_strings.search: "london hospital"~5` — both words in the *same*
@@ -157,8 +157,8 @@ co-occurrence; the quote+slop form is the representable-today answer.)
 
 Negation is a boolean **`is_negated`** on every node (`LeafFilter` and
 `BranchFilter`). It is the **single** negation mechanism — the old `is not` /
-`does not contain` operators were removed. Leaf operators are strictly
-affirmative: `is`, `>`, `>=`, `<`, `<=`, `contains`.
+`does not have` operators were removed. Leaf operators are strictly
+affirmative: `is`, `>`, `>=`, `<`, `<=`, `has`.
 
 - A negated leaf maps 1:1 to the OpenAlex URL per-leaf negation `!`
   (`field:!value`). It renders naturally as "foo is not bar".
@@ -180,8 +180,8 @@ Example — COVID papers excluding pediatric ones:
 
 ```jsonc
 { "get_rows": "works", "filter_rows": [
-  { "column_id": "title_and_abstract.search", "value": "covid",     "operator": "contains" },
-  { "column_id": "title_and_abstract.search", "value": "pediatric", "operator": "contains", "is_negated": true }
+  { "column_id": "title_and_abstract.search", "value": "covid",     "operator": "has" },
+  { "column_id": "title_and_abstract.search", "value": "pediatric", "operator": "has", "is_negated": true }
 ] }
 ```
 

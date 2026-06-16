@@ -59,12 +59,12 @@ def test_case1_short_query_stays_flat():
 # Case 2.1 — curly + multi-quote coercion
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("src", [
-    'works where title contains """hello world"""',
-    'works where title contains “hello world”',          # curly
-    'works where title contains “““hello world”””',      # curly + triple
+    'works where title has """hello world"""',
+    'works where title has “hello world”',          # curly
+    'works where title has “““hello world”””',      # curly + triple
 ])
 def test_case2_1_weird_quotes_coerce_to_single(src):
-    assert _render(src) == 'works where title contains "hello world"'
+    assert _render(src) == 'works where title has "hello world"'
 
 
 def test_case2_1_url_triple_quote_roundtrips():
@@ -194,7 +194,7 @@ def test_case3_3_search_columns_excluded():
     # search columns are mode-encoded (use the curated fields + quoting); their
     # raw .search.exact key is NOT accepted as an input alias.
     with pytest.raises(OQLError):
-        parse('works where abstract.search.exact contains "x"')
+        parse('works where abstract.search.exact has "x"')
 
 
 # --------------------------------------------------------------------------- #
@@ -210,5 +210,5 @@ def test_case3_3_search_columns_excluded():
     ("fulltext.search", "fulltext.search.exact"),
 ])
 def test_397_gui_scope_search_aliases_resolve(param, column):
-    assert _leaves(f'works where {param} contains "x"') == [
-        {"column_id": column, "value": "x", "operator": "contains"}]
+    assert _leaves(f'works where {param} has "x"') == [
+        {"column_id": column, "value": "x", "operator": "has"}]

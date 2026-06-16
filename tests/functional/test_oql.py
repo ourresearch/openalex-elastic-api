@@ -111,11 +111,11 @@ class TestOQLRenderer:
         oqo = OQO(
             get_rows="works",
             filter_rows=[
-                LeafFilter(column_id="title_and_abstract.search", value="machine learning", operator="contains")
+                LeafFilter(column_id="title_and_abstract.search", value="machine learning", operator="has")
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == 'works where title & abstract contains machine learning'
+        assert result == 'works where title & abstract has machine learning'
 
     def test_null_value(self):
         """Test null values render as 'unknown'."""
@@ -326,13 +326,13 @@ class TestOQLParser:
         A quoted phrase is *exact* (no-stem) → the `.search.exact` column, and the
         value keeps its quotes.
         """
-        oql = 'Works where title & abstract contains "machine learning"'
+        oql = 'Works where title & abstract has "machine learning"'
         oqo = parse_oql_to_oqo(oql)
 
         f = oqo.filter_rows[0]
         assert f.column_id == "title_and_abstract.search.exact"
         assert f.value == '"machine learning"'
-        assert f.operator == "contains"
+        assert f.operator == "has"
     
     def test_parse_null_value(self):
         """Test parsing null/unknown value."""
@@ -598,7 +598,7 @@ class TestEdgeCases:
 
     def test_quoted_value_with_spaces(self):
         """A quoted multi-word phrase is exact (`.search.exact`) and keeps its quotes."""
-        oql = 'Works where title & abstract contains "climate change adaptation"'
+        oql = 'Works where title & abstract has "climate change adaptation"'
         oqo = parse_oql_to_oqo(oql)
 
         f = oqo.filter_rows[0]

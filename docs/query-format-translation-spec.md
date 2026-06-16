@@ -109,7 +109,7 @@ OQO is the canonical JSON representation. All translations go through OQO.
 | `<` | Less than | `{"column_id": "cited_by_count", "value": "100", "operator": "<"}` |
 | `>=` | Range inclusive | `{"column_id": "fwci", "value": "2", "operator": ">="}` |
 | `<=` | Range inclusive | `{"column_id": "publication_year", "value": "2024", "operator": "<="}` |
-| `contains` | Text search | `{"column_id": "title.search", "value": "climate", "operator": "contains"}` |
+| `has` | Text search | `{"column_id": "title.search", "value": "climate", "operator": "has"}` |
 
 ### 1.4 Examples
 

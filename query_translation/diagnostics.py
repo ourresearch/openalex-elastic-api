@@ -134,11 +134,14 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "check the field name against the properties registry"),
         _spec("OQL_MISSING_OPERATOR", ERROR, PARSE,
               "an operator is expected after the field",
-              "add an operator, e.g. is / contains / >="),
+              "add an operator, e.g. is / has / >="),
         _spec("OQL_BAD_OPERATOR_FOR_FIELD", ERROR, PARSE,
               "the operator does not fit the field's kind",
-              'use an operator that matches the field (e.g. "contains" for search, '
+              'use an operator that matches the field (e.g. "has" for search, '
               '"is"/comparison for values)'),
+        _spec("OQL_CONTAINS_RENAMED", ERROR, PARSE,
+              "the `contains` operator was renamed to `has` (#363 decision 27)",
+              "use `has`, e.g. title has machine learning"),
         _spec("OQL_UNKNOWN_BOOLEAN", ERROR, PARSE,
               'an "it\'s ..."/"it has ..." phrase names no known boolean property',
               'e.g. "it\'s open access", "it has a DOI"'),
@@ -165,12 +168,12 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_UNDELIMITED_TERM_LIST", ERROR, PARSE,
               "two or more bare terms/values follow an operator without "
               "parentheses (a reserved word could be silently swallowed)",
-              "wrap the terms in parentheses, e.g. contains (a or b), "
-              "or quote a phrase, e.g. contains \"a b\""),
+              "wrap the terms in parentheses, e.g. has (a or b), "
+              "or quote a phrase, e.g. has \"a b\""),
         _spec("OQL_LIST_KEYWORD_REMOVED", ERROR, PARSE,
               '"any of"/"all of"/"is in" value-list keywords were removed; '
               "lists are written with parentheses",
-              "write it with parentheses, e.g. is (a or b) / contains (a or b)"),
+              "write it with parentheses, e.g. is (a or b) / has (a or b)"),
         _spec("OQL_COMMA_IN_GROUP", ERROR, PARSE,
               "a comma separates items in a (…) group (commas were removed)",
               "separate items with 'or'/'and', e.g. (a or b)"),
@@ -187,7 +190,7 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         # -- search: proximity & wildcards ----------------------------------------
         _spec("OQL_BAD_PROXIMITY", ERROR, PARSE,
               'malformed "within N words" proximity syntax',
-              'e.g. title contains "a b" within 5 words'),
+              'e.g. title has "a b" within 5 words'),
         _spec("OQL_BINARY_PROXIMITY_NEEDS_PHRASES", ERROR, PARSE,
               "binary proximity requires exact-quoted phrases on both sides",
               'e.g. "machine learning" within 5 words of "health"'),
@@ -236,7 +239,7 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "check the column against /properties for this entity"),
         _spec("invalid_operator", ERROR, VALIDATE,
               "the operator is not a recognized OQO operator",
-              "use a recognized operator (is / is not / contains / >= …)"),
+              "use a recognized operator (is / is not / has / >= …)"),
         _spec("invalid_operator_for_column", ERROR, VALIDATE,
               "the operator does not fit the column's type",
               "use an operator that matches the column's type"),
