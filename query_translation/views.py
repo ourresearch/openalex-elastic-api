@@ -163,10 +163,57 @@ def get_query():
             "msg": (
                 "Translate a query: GET /query/{oxurl|oql|oqo}/<query> "
                 "(un-encoded or urlencoded) → {oxurl, oql, oql_render, oqo, "
-                "validation}. Execute a query: GET /works?filter=…, "
+                "validation}. For a query too long for a URL (gunicorn caps the "
+                "request line at 8190 bytes), POST /query with a JSON body "
+                "{\"oql\"|\"oqo\"|\"oxurl\": ...} — the body has no length limit. "
+                "Execute a query: GET /works?filter=…, "
                 "GET /?oql=…, GET /?oqo=…, or POST / with {oqo} or {oql}."
             ), "documentation_url": "/docs", }
     ), 200
+
+
+@blueprint.route("/query", methods=["POST"])
+def post_query():
+    """Translate a query supplied in the JSON body (the POST sibling of the
+    `GET /query/{oxurl|oql|oqo}/<value>` routes). Same translation-only contract —
+    parses + renders {oxurl, oql, oql_render, oql_render_v2, oqo, validation}; does
+    NOT execute or touch ES.
+
+    Why this exists (oxjob #428): the GET routes carry the whole query in the URL
+    path, so a large Boolean query (e.g. the no-code builder re-rendering a 100-term
+    OQO, whose JSON encodes to ~17 KB) blows past gunicorn's `--limit-request-line
+    8190` and 400s at the edge — which made every structural EDIT of a large query in
+    the builder silently fail (it re-renders through `/query/oqo/<json>` after each
+    edit). The body has no such cap, so the builder POSTs here when the GET URL would
+    be too long. Mirrors the GET routes' operand-order rule (decision 30, #363):
+    oql/oqo preserve the user's given order (sort_operands=False); oxurl is canonical.
+
+    Body: exactly one of {"oql": "<string>"}, {"oqo": {<dict>}}, {"oxurl": "<string>"}.
+    """
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return _error_response(
+            "POST /query needs a JSON body with one of: oql, oqo, oxurl.",
+            "bad_request", status=400)
+
+    if body.get("oql") is not None:
+        try:
+            oqo = parse_oql_to_oqo(body["oql"])
+        except Exception as e:  # OQLParseError and friends → 400
+            return _error_response(f"Failed to parse OQL: {e}", "parse_error", status=400)
+        return _translate_response(oqo, None, sort_operands=False)
+
+    if body.get("oqo") is not None:
+        oqo, err = parse_oqo_input(None, body["oqo"])
+        return _translate_response(oqo, err, sort_operands=False)
+
+    if body.get("oxurl") is not None:
+        oqo, err = _parse_oxurl_value(body["oxurl"])
+        return _translate_response(oqo, err)
+
+    return _error_response(
+        "POST /query needs a JSON body with one of: oql, oqo, oxurl.",
+        "bad_request", status=400)
 
 
 def _full_query_value(path_value: str) -> str:

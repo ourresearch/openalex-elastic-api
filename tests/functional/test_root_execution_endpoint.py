@@ -184,15 +184,28 @@ class TestRootErrors:
 
 class TestOldExecuteFormRemoved:
     def test_post_query_no_longer_executes(self, client):
-        # Execution moved to the root; `POST /query` is removed. `/query` is now
-        # GET-only (translation descriptor) → POST yields 405 (or 404 if the
-        # route is fully absent). Either way it must NOT execute (no 200).
+        # Execution moved to the root and never came back. `POST /query` was later
+        # re-introduced as a TRANSLATE route (oxjob #428 — the body-based sibling of
+        # GET /query/{oql|oqo}/<value>, for queries too long for a URL), so it must
+        # still NOT execute: a bare execute-style OQO body (no {"oqo": ...} wrapper)
+        # is rejected (400, "needs oql/oqo/oxurl"), and the response is never an
+        # execution envelope (no `results`).
         res = client.post(
             "/query",
             data=json.dumps({"get_rows": "works"}),
             content_type="application/json",
         )
-        assert res.status_code in (404, 405), res.status_code
+        assert res.status_code == 400, res.status_code
+        assert "results" not in (res.get_json() or {})
+
+    def test_post_query_translates_but_never_executes(self, client):
+        # A properly-wrapped translate POST returns the translation payload
+        # (oql/oqo/validation/oql_render_v2) — and crucially NO execution envelope.
+        res = client.post("/query", json={"oqo": {"get_rows": "works"}})
+        assert res.status_code == 200, res.get_json()
+        body = res.get_json()
+        assert "results" not in body and "meta" not in body
+        assert "oql" in body and "oql_render_v2" in body
 
 
 # ---------------------------------------------------------------------------
