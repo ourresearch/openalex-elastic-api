@@ -13,7 +13,10 @@ Canonical form (per the #284 spec):
    cancels, so a canonical OQO carries `is_negated` only on leaves.
 3. Flattened nested same-join groups; single-child groups unwrapped; empty groups dropped.
 4. **Sorted** operands within every group and at the top level (AND/OR are commutative;
-   NOT lives only on leaves after NNF), giving order-independent output.
+   NOT lives only on leaves after NNF), giving order-independent output — but ONLY when
+   `sort_operands=True` (the default). The OQL-text / builder render paths pass
+   `sort_operands=False` to PRESERVE the user's given order (charter decision 30, #363);
+   only the legacy-URL and NL→OQO paths (machine-shaped, unordered input) keep the sort.
 
 Values are *bare* (the namespace is the column_id, resolved via the column
 registry) — there is no entity-id prefix normalization. See docs/oql-spec.md.
@@ -25,12 +28,25 @@ from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, Sor
 from query_translation.oql_lang import canon_value_for_column, _is_search_leaf
 
 
-def canonicalize_oqo(oqo: OQO) -> OQO:
+def canonicalize_oqo(oqo: OQO, sort_operands: bool = True) -> OQO:
     """
     Canonicalize an OQO object into deterministic canonical form.
 
     Args:
         oqo: The OQO object to canonicalize
+        sort_operands: when True (default), commutative operands are alphabetically
+            sorted — top-level `filter_rows` and the children of every AND/OR group —
+            for an order-independent canonical form (cache keys, hashing, dedup, and
+            the legacy-URL / NL→OQO paths, where input order is machine-shaped and not
+            meaningful). When False, the user's given operand order is **preserved**
+            end-to-end (charter decision 30, #363): OQL-text and builder/direct-OQO
+            input render in the order the user wrote, so the LEGO builder doesn't jump
+            a new clause to its alphabetical slot and SR authors keep their block order.
+            All the OTHER canonical transforms (NNF, type coercion, column-id collapse,
+            flatten/hoist, redundant-sort drop) run regardless. NOTE: with
+            sort_operands=False, OQO is no longer a single canonical form on the OQL
+            side — `where A and B` and `where B and A` become distinct; idempotence
+            (render→parse→render fixed point) still holds.
 
     Returns:
         A new canonicalized OQO object
@@ -44,7 +60,7 @@ def canonicalize_oqo(oqo: OQO) -> OQO:
     canonical_filters = []
     for f in oqo.filter_rows:
         nnf_f = push_negation(f, negate=False)  # NNF first
-        canonical_f = canonicalize_filter(nnf_f)
+        canonical_f = canonicalize_filter(nnf_f, sort_operands)
         if canonical_f is not None:
             # Flatten if we get a single-child result that should be unwrapped
             if isinstance(canonical_f, list):
@@ -66,8 +82,10 @@ def canonicalize_oqo(oqo: OQO) -> OQO:
     # range literal it fed was removed (charter decision 24). Strict inequalities
     # now stay exactly as written; more faithful, no inference.
 
-    # Top-level filter_rows are an implicit AND -> commutative -> sort for stability
-    canonical_filters.sort(key=_sort_key)
+    # Top-level filter_rows are an implicit AND -> commutative -> sort for stability,
+    # UNLESS we're preserving the user's given order (decision 30, #363).
+    if sort_operands:
+        canonical_filters.sort(key=_sort_key)
 
     canonical_sort_by = _drop_redundant_default_sort(canonical_filters, oqo.sort_by)
 
@@ -168,10 +186,12 @@ def _sort_key(f: FilterType) -> str:
     return json.dumps(d, sort_keys=True, ensure_ascii=True)
 
 
-def canonicalize_filter(f: FilterType) -> Union[FilterType, List[FilterType], None]:
+def canonicalize_filter(f: FilterType, sort_operands: bool = True) -> Union[FilterType, List[FilterType], None]:
     """
     Canonicalize a single filter.
-    
+
+    `sort_operands` is threaded to branch children (see `canonicalize_oqo`).
+
     Returns:
         - A canonicalized filter
         - A list of filters (if a group was flattened)
@@ -180,7 +200,7 @@ def canonicalize_filter(f: FilterType) -> Union[FilterType, List[FilterType], No
     if isinstance(f, LeafFilter):
         return canonicalize_leaf_filter(f)
     elif isinstance(f, BranchFilter):
-        return canonicalize_branch_filter(f)
+        return canonicalize_branch_filter(f, sort_operands)
     return None
 
 
@@ -248,7 +268,7 @@ def canonicalize_value(value: Any, column_id: str) -> Any:
     return value
 
 
-def canonicalize_branch_filter(f: BranchFilter) -> Union[FilterType, List[FilterType], None]:
+def canonicalize_branch_filter(f: BranchFilter, sort_operands: bool = True) -> Union[FilterType, List[FilterType], None]:
     """
     Canonicalize a branch filter.
 
@@ -258,6 +278,8 @@ def canonicalize_branch_filter(f: BranchFilter) -> Union[FilterType, List[Filter
     3. Flatten nested same-join groups (AND inside AND)
     4. Unwrap single-child groups
     5. **Sort** children (AND/OR are commutative; NOT lives only on leaves after NNF)
+       — unless `sort_operands` is False, in which case the user's value order is
+       preserved (decision 30, #363).
 
     Assumes the branch is already in NNF (branch-level negation pushed to leaves
     by `push_negation`), so `is_negated` on a BranchFilter is not expected here.
@@ -265,7 +287,7 @@ def canonicalize_branch_filter(f: BranchFilter) -> Union[FilterType, List[Filter
     canonical_children: List[FilterType] = []
 
     for child in f.filters:
-        canonical_child = canonicalize_filter(child)
+        canonical_child = canonicalize_filter(child, sort_operands)
         if canonical_child is None:
             continue
 
@@ -285,8 +307,10 @@ def canonicalize_branch_filter(f: BranchFilter) -> Union[FilterType, List[Filter
     if len(canonical_children) == 1:
         return canonical_children[0]
 
-    # Sort operands for order-independent canonical output
-    canonical_children.sort(key=_sort_key)
+    # Sort operands for order-independent canonical output, unless preserving the
+    # user's given value order (decision 30, #363).
+    if sort_operands:
+        canonical_children.sort(key=_sort_key)
 
     return BranchFilter(
         join=f.join,

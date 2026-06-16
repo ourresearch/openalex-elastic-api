@@ -49,6 +49,18 @@ URL  ↔  OQO  ↔  OQL          (OQO is canonical)
   canonical spelling, regenerated `[names]`, comments gone.) This is how comments
   are allowed to exist without breaking "OQL is a pure function of OQO": they live
   only in the text layer, exactly like whitespace.
+- **Operand order is the user's (decision 30, #363).** The order of clauses (the
+  implicit top-level AND of `filter_rows`) and of values inside `is ( … )` /
+  `has ( … )` groups is **preserved**, not alphabetized — for OQL-text and
+  builder/direct-OQO input alike. So the LEGO builder never jumps a freshly-added
+  clause to an alphabetical slot, and a systematic-review author's block order is
+  kept. **Consequence:** OQO is no longer a *single* canonical form on the OQL
+  side — `where A and B` and `where B and A` are distinct OQO (idempotence still
+  holds: `OQO → OQL → OQO` is a fixed point). **Exception — the legacy ox-URL and
+  NL→OQO paths sort operands alphabetically** into one canonical order: their input
+  order is machine-shaped, not author-meaningful, and a deterministic order keeps
+  their translation CI stable (this is also where decision 24's lower-bound-then-
+  upper-bound numeric ordering applies).
 
 This invariant is the spec's runnable contract — see §9.
 
@@ -282,9 +294,10 @@ works where institution is (not I33213144 [Harvard] and not I97018004 [Stanford]
   distributes the field over every atom (§3.2). This rule is **render-direction
   only** — it makes OQO→OQL emit the same forms OQL→OQO already accepts, so the
   round-trip identity (§1) is preserved by construction.
-- **Ordering inside the merged group** is the canonicalizer's existing
-  deterministic order (negated leaves first, then by value) — identical to a
-  native group's order, so merged and hand-written groups read the same.
+- **Ordering inside the merged group** follows the same operand-order rule as
+  everything else (§1, decision 30): the user's given value order is preserved on
+  the OQL/builder path, and alphabetized only on the legacy-URL / NL paths. Merged
+  and hand-written groups therefore read the same.
 - Decided in **#432** (the SR branch/leaf "One Right Way"), charter decision 20,
   grounded in the #434 survey of 732 real published SR search strings (the
   dominant real-world shape is a flat AND of OR-groups over one field — which the

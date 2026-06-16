@@ -213,8 +213,12 @@ def _parse_oxurl_value(value: str):
     return parse_url_input(entity_type, input_data)
 
 
-def _translate_response(oqo, parse_error):
-    """Shared tail for the translation routes: validate + render all formats."""
+def _translate_response(oqo, parse_error, sort_operands: bool = True):
+    """Shared tail for the translation routes: validate + render all formats.
+
+    `sort_operands=False` (the OQL-text / direct-OQO routes) preserves the user's
+    given operand order in the rendered output (decision 30, #363).
+    """
     if parse_error:
         return _error_response(parse_error, "parse_error", status=400)
 
@@ -223,7 +227,7 @@ def _translate_response(oqo, parse_error):
         return jsonify({
             "oxurl": None, "oql": None, "oqo": oqo.to_dict(), "validation": validation_result.to_dict(), }), 400
 
-    return jsonify(render_all_formats(oqo, validation_result)), 200
+    return jsonify(render_all_formats(oqo, validation_result, sort_operands=sort_operands)), 200
 
 
 @blueprint.route("/query/oxurl/<path:value>", methods=["GET"])
@@ -253,7 +257,8 @@ def translate_oql(value: str):
         oqo = parse_oql_to_oqo(value)
     except Exception as e:  # OQLParseError and friends → 400
         return _error_response(f"Failed to parse OQL: {e}", "parse_error", status=400)
-    return _translate_response(oqo, None)
+    # decision 30 (#363): honor the order the user wrote — don't re-sort clauses/values.
+    return _translate_response(oqo, None, sort_operands=False)
 
 
 @blueprint.route("/query/oqo/<path:value>", methods=["GET"])
@@ -264,7 +269,8 @@ def translate_oqo(value: str):
     query params (`?mailto=…`) are never part of the OQO JSON (#428).
     """
     oqo, err = parse_oqo_input(None, value)
-    return _translate_response(oqo, err)
+    # decision 30 (#363): a builder/direct-OQO submit keeps its given operand order.
+    return _translate_response(oqo, err, sort_operands=False)
 
 
 def parse_url_input(entity_type: str, input_data):
@@ -321,12 +327,18 @@ def parse_oqo_input(entity_type: str, input_data):
         return None, f"Failed to parse OQO format: {str(e)}"
 
 
-def render_all_formats(oqo: OQO, validation_result: ValidationResult):
-    """Render OQO to all output formats: {oxurl, oql, oql_render, oqo, validation}."""
+def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_operands: bool = True):
+    """Render OQO to all output formats: {oxurl, oql, oql_render, oqo, validation}.
+
+    `sort_operands=False` preserves the user's given clause/value order in every
+    rendered format (decision 30, #363) — used by the OQL-text and direct-OQO routes
+    so the builder/editor echo the order the user wrote. The legacy-URL and NL routes
+    keep the default (sorted/canonical), since their input order is machine-shaped.
+    """
     warnings = list(validation_result.warnings)
 
-    # Canonicalize OQO for deterministic output
-    canonical_oqo = canonicalize_oqo(oqo)
+    # Canonicalize OQO for deterministic output (order-preserving when sort_operands=False)
+    canonical_oqo = canonicalize_oqo(oqo, sort_operands=sort_operands)
 
     # Render to oxurl (OpenAlex URL string)
     oxurl_output = None
