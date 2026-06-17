@@ -240,19 +240,23 @@ def test_short_query_stays_inline():
 
 
 # ---------------------------------------------------------------------------
-# Commas no longer separate group items (#363): they are a loud error, so the
-# parens-bag form is the only spelling. The connective is the idempotence anchor.
+# Commas don't separate items in a BARE (…) group (#363): that's a loud error.
+# Commas ARE the separator inside an `any of`/`all of` list (decision 31) — see
+# test_any_all_of.py. The connective is the idempotence anchor.
 # ---------------------------------------------------------------------------
-def test_commas_in_group_are_rejected():
+def test_commas_in_bare_group_are_rejected():
     from query_translation.oql_lang import OQLError
     for q in ("works where type is (article, review)",
               "works where title has (cat, dog)"):
         with pytest.raises(OQLError) as ei:
             _oqo(q)
         assert ei.value.code == "OQL_COMMA_IN_GROUP", q
-    # the parens-bag form is what works
+    # the parens-bag form is what works ...
     assert _oqo("works where type is (article or review)") == \
         _oqo("works where type is (review or article)")
+    # ... and so does the comma-separated `any of` sugar (same OQO).
+    assert _oqo("works where type is any of (article, review)") == \
+        _oqo("works where type is (article or review)")
 
 
 # ---------------------------------------------------------------------------

@@ -1246,22 +1246,27 @@ def _augment_by_column_for_entity_fallback() -> None:
 _augment_by_column_for_entity_fallback()
 
 
-def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool, bool]]:
+def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool]]:
     """Greedy operator match at ``toks[i]``.
 
-    Returns ``(op, n_tokens, complete, opens_list)`` or ``None`` if the token can't
-    begin an operator. For every ``complete=True`` result, ``n_tokens``/``op`` are
-    exactly what the fail-fast parser consumes/returns. ``complete=False`` means a
-    multi-word operator is still being typed (e.g. ``is any`` without ``of``) — the
-    editor treats that as "keep typing"; the parser falls back to the shorter complete
-    operator (``is``) or raises. ``opens_list`` is True for the value-list openers
-    (``is any of`` / ``is not any of`` / ``is in`` / ``is not in``).
+    Returns ``(op, n_tokens, complete)`` or ``None`` if the token can't begin an
+    operator. For every ``complete=True`` result, ``n_tokens``/``op`` are exactly what
+    the fail-fast parser consumes/returns. ``complete=False`` means a multi-word
+    operator is still being typed (e.g. ``is similar`` without ``to``) — the editor
+    treats that as "keep typing"; the parser falls back to the shorter complete
+    operator (``is``) or raises.
+
+    NOTE: the old value-list openers ``is any of`` / ``is in`` / their negations are
+    GONE (charter decision 31). ``any of (…)`` / ``all of (…)`` are now group-OPENERS
+    parsed inside the value/search body (sugar for ``(a or b)`` / ``(a and b)``), not
+    operators — so they never reach this matcher. ``is [not] in collection`` (the live
+    Collections operator) is unrelated and preserved below.
     """
     if i >= len(toks):
         return None
     t = toks[i]
     if t.kind == "OP":  # > >= < <=
-        return t.val, 1, True, False
+        return t.val, 1, True
     if t.kind != "WORD":
         return None
 
@@ -1271,37 +1276,26 @@ def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool, bo
 
     w0 = w(0)
     if w0 == "has":
-        return "has", 1, True, False
+        return "has", 1, True
     if w0 == "is":
         if w(1) == "similar":
             if w(2) == "to":
-                return "similar", 3, True, False
-            return "similar", 2, False, False        # `is similar` — still typing
+                return "similar", 3, True
+            return "similar", 2, False                # `is similar` — still typing
         if w(1) == "not":
-            if w(2) == "any":
-                if w(3) == "of":
-                    return "nin", 4, True, True
-                return "nin", 3, False, True          # `is not any` — typing
-            if w(2) == "in":
-                # `is not in collection` MUST precede the bare `is not in`
-                if w(3) == "collection":
-                    return "nincoll", 4, True, False
-                return "nin", 3, True, True            # `is not in` == "is not any of"
-            return "isnot", 2, True, False            # `is not` (scalar)
-        if w(1) == "any":
-            if w(2) == "of":
-                return "in", 3, True, True
-            return "in", 2, False, True               # `is any` — typing
-        if w(1) == "in":
-            if w(2) == "collection":
-                return "incoll", 3, True, False
-            return "in", 2, True, True                # `is in` == "is any of"
-        return "is", 1, True, False
+            # `is not in collection` (the live Collections operator) — the bare
+            # `is not in` list form was removed; `in` then falls through as a value.
+            if w(2) == "in" and w(3) == "collection":
+                return "nincoll", 4, True
+            return "isnot", 2, True                    # `is not` (scalar)
+        if w(1) == "in" and w(2) == "collection":
+            return "incoll", 3, True                   # `is in collection`
+        return "is", 1, True
     if w0 in ("does", "doesn't", "doesnt"):
         j = 1 if w(1) == "not" else 0
         if w(1 + j) == "have":
-            return "nhas", 2 + j, True, False
-        return "nhas", 1 + j, False, False             # `does not` — typing
+            return "nhas", 2 + j, True
+        return "nhas", 1 + j, False                    # `does not` — typing
     return None
 
 
@@ -1726,7 +1720,7 @@ class _Parser:
         if t is not None and t.kind == "COMMA":
             raise oql_error("OQL_COMMA_IN_GROUP",
                            "items in a (…) group are separated by 'or'/'and', "
-                           "not commas",
+                           "not commas (use an 'any of'/'all of' list for commas)",
                            "replace the comma with 'or' (or 'and')", t.pos)
         if t is None or t.kind != "RP":
             raise oql_error("OQL_UNBALANCED_PARENS", "missing a closing parenthesis",
@@ -1828,7 +1822,7 @@ class _Parser:
             self._ctx = (CTX_OPERATOR, {"fld": self._cur_fld})
             raise _CtxFound()
         if m is not None and m[2]:  # complete
-            op, n, _complete, _opens = m
+            op, n, _complete = m
             self.i += n
             return op
         # Legacy `contains` was renamed to `has` (#363 decision 27). It's a HARD
@@ -1934,14 +1928,6 @@ class _Parser:
                                'e.g. work is in collection col_abc123')
             return LeafFilter(fld.column, v, "in collection",
                               is_negated=negated)
-        # the removed value-list openers: `is any of (...)` / `is in (...)` /
-        # `is not any of (...)` / `is not in (...)`. Lists are now parens-boolean
-        # (`is (a or b)`); give a targeted migration error.
-        if op in ("in", "nin"):
-            raise oql_error("OQL_LIST_KEYWORD_REMOVED",
-                           '"is any of (…)" / "is in (…)" were removed; '
-                           "write the list with parentheses",
-                           f'e.g. {field} is (a or b)')
         # comparison — always a single bare scalar (D5)
         if op in (">", ">=", "<", "<="):
             v = self._parse_scalar(fld)
@@ -1958,13 +1944,23 @@ class _Parser:
             return LeafFilter(fld.column, v, op)
         # is / is not
         negated = (op == "isnot")
+        # `is not any of (…)` / `is not all of (…)` is NOT allowed — decision 31
+        # negates leaves, not lists. (The bare-paren `is not (a or b)` group negation
+        # is unchanged — De Morgan pushes it to leaves; only the keyword form is
+        # blocked, with a fix-it.)
+        if negated and self._group_opener_kind() in ("or", "and"):
+            kw = self.peek().val.lower()
+            raise oql_error("OQL_NEGATED_LIST_KEYWORD",
+                           f'"is not {kw} of (…)" is not allowed — '
+                           "negate the items, not the list",
+                           f"e.g. {field} is {kw} of (not a, not b)",
+                           self.peek().pos)
         # a parenthesized boolean group of values: `country is (us or uk)`,
-        # `country is not (us or uk)` (the base operator negates the whole group)
-        t = self.peek()
-        if t is not None and t.kind == "LP":
-            self.next()
-            grp = self._parse_bool_expr(lambda: self._parse_value_operand(fld))
-            self._expect_rp()
+        # `country is not (us or uk)` (the base operator negates the whole group);
+        # OR an `any of (…)` / `all of (…)` keyword group (sugar for `(a or b)` /
+        # `(a and b)`, charter decision 31) — `_parse_grouped_operand` handles both.
+        grp = self._parse_grouped_operand(lambda: self._parse_value_operand(fld))
+        if grp is not None:
             return _negate(grp) if negated else grp
         # unknown / null
         if self.word_is("unknown", "null"):
@@ -1997,20 +1993,19 @@ class _Parser:
 
     def _parse_value_operand(self, fld: Field) -> FilterType:
         """One operand inside an `is (...)` value group: a `not`-prefixed operand,
-        a nested `(...)` group, or one scalar value (-> an `is` leaf)."""
+        a nested group (`(...)` or `any of (...)` / `all of (...)`), or one scalar
+        value (-> an `is` leaf)."""
         t = self.peek()
         if t is not None and t.kind == "WORD" and t.val.lower() == "not":
             self._consume_not(t)  # bare prefix `not` (decision 23)
             return _negate(self._parse_value_operand(fld))
-        if t is not None and t.kind == "LP":
-            self.next()
-            e = self._parse_bool_expr(lambda: self._parse_value_operand(fld))
-            self._expect_rp()
-            return e
+        grp = self._parse_grouped_operand(lambda: self._parse_value_operand(fld))
+        if grp is not None:
+            return grp
         if t is not None and t.kind == "COMMA":
             raise oql_error("OQL_COMMA_IN_GROUP",
                            "items in a (…) group are separated by 'or'/'and', "
-                           "not commas",
+                           "not commas (use an 'any of'/'all of' list for commas)",
                            "replace the comma with 'or' (or 'and')", t.pos)
         v = self._parse_scalar(fld)
         return LeafFilter(fld.column, v, "is")
@@ -2103,23 +2098,17 @@ class _Parser:
         self._skip_annot()
         self._want(CTX_VALUE, fld=self._cur_fld, kind="search")
         t = self.peek()
-        if t is not None and t.kind == "LP":
-            self.next()
-            e = self._parse_bool_expr(lambda: self._parse_search_operand(base))
-            self._expect_rp()
-            return e
         if t is not None and t.kind == "WORD" and t.val.lower() == "not":
             # Bare prefix `not` negates the next search operand (decision 23):
             # `title has not dog` -> one negated leaf, rendered
             # `title has not dog`. A multi-word run is one value-node, so
             # `not machine learning` negates the whole run.
             return self._parse_search_operand(base)
-        if (t is not None and t.kind == "WORD" and t.val.lower() in ("any", "all")
-                and self.word_is("of", k=1)):
-            raise oql_error("OQL_LIST_KEYWORD_REMOVED",
-                           f'"{t.val.lower()} of (…)" was removed; '
-                           "write the list with parentheses",
-                           "e.g. has (a or b)", t.pos)
+        # a `(...)` boolean group OR an `any of (…)` / `all of (…)` keyword group
+        # (sugar, charter decision 31) — `_parse_grouped_operand` handles both.
+        grp = self._parse_grouped_operand(lambda: self._parse_search_operand(base))
+        if grp is not None:
+            return grp
         leaf = self._parse_search_atom(base)
         self._skip_annot()
         if self._continues_value():
@@ -2130,6 +2119,86 @@ class _Parser:
                            'wrap the terms, e.g. has (a or b), or quote a '
                            'phrase, e.g. has "a b"', t2.pos if t2 else None)
         return leaf
+
+    def _group_opener_kind(self) -> Optional[str]:
+        """At the cursor, is there a group opener? Returns 'paren' for a bare `(`,
+        'or' for `any of (`, 'and' for `all of (`, else None. Does not consume.
+
+        `any of` / `all of` are atomic two-word group-opener keywords — sugar for
+        `(a or b)` / `(a and b)` (charter decision 31). They open a group ONLY when
+        both words are immediately followed by `(`; otherwise `any`/`all`/`of` are
+        ordinary value/search words (`university of florida`, `title has all of the
+        above`)."""
+        t = self.peek()
+        if t is None:
+            return None
+        if t.kind == "LP":
+            return "paren"
+        if (t.kind == "WORD" and t.val.lower() in ("any", "all")
+                and self.word_is("of", k=1)):
+            t2 = self.peek(2)
+            if t2 is not None and t2.kind == "LP":
+                return "or" if t.val.lower() == "any" else "and"
+        return None
+
+    def _parse_grouped_operand(self, parse_operand) -> Optional[FilterType]:
+        """If the cursor is at a group opener, parse the whole group (consuming its
+        `)`) and return its filter; else return None without consuming. Handles the
+        bare `(…)` group (`or`/`and`-separated — the existing `_parse_bool_expr`
+        machinery) and the `any of (…)` / `all of (…)` keyword groups (comma-
+        separated, join fixed by the opener — charter decision 31). Groups nest
+        freely in each other via `parse_operand`."""
+        kind = self._group_opener_kind()
+        if kind is None:
+            return None
+        if kind == "paren":
+            self.next()                       # (
+            e = self._parse_bool_expr(parse_operand)
+            self._expect_rp()
+            return e
+        self.next(); self.next(); self.next()  # `any`/`all`, `of`, `(`
+        e = self._parse_keyword_group(parse_operand, "or" if kind == "or" else "and")
+        self._expect_rp()
+        return e
+
+    def _parse_keyword_group(self, parse_operand, join: str) -> FilterType:
+        """Body of an `any of (…)` / `all of (…)` group: COMMA-separated operands,
+        the join FIXED by the opener (`any`→or, `all`→and). One separator per level —
+        a bare `or`/`and` word here is rejected (OQL_COMMA_IN_GROUP; the opener already
+        fixes the join). No trailing comma; a single item unwraps (`any of (a)` → `a`).
+        Operands may nest (`all of (a, any of (b, c))`). Pure sugar: builds the same
+        `BranchFilter` the parens form does, so it canonicalizes/renders identically
+        (it never round-trips back to `any of`)."""
+        outer = self._in_list
+        self._in_list = True
+        try:
+            items = [self._group_operand(parse_operand)]
+            while True:
+                self._skip_annot()
+                t = self.peek()
+                if t is not None and t.kind == "COMMA":
+                    self.next()
+                    self._skip_annot()
+                    nt = self.peek()
+                    if nt is None or nt.kind == "RP":
+                        raise oql_error("OQL_MISSING_VALUE",
+                                       "a trailing comma leaves an empty list item",
+                                       "remove the trailing comma", t.pos)
+                    items.append(self._group_operand(parse_operand))
+                    continue
+                if (t is not None and t.kind == "WORD"
+                        and t.val.lower() in _CONNECTIVES):
+                    raise oql_error("OQL_COMMA_IN_GROUP",
+                                   "items in an 'any of'/'all of' list are separated "
+                                   "by commas, not 'or'/'and'",
+                                   "use commas, e.g. any of (a, b) — or nest a group, "
+                                   "e.g. any of (a, (b and c))", t.pos)
+                break
+            if len(items) == 1:
+                return items[0]
+            return BranchFilter(join=join, filters=items)
+        finally:
+            self._in_list = outer
 
     def _parse_bool_expr(self, parse_operand) -> FilterType:
         """A boolean group body inside `(...)`: explicit-connective-separated
@@ -2274,8 +2343,8 @@ class _Parser:
             self.i = save
 
     def _parse_search_operand(self, base: str) -> FilterType:
-        """One operand inside a `has (...)` group: a `not`-prefixed operand,
-        a nested `(...)` group, or one search atom."""
+        """One operand inside a `has (...)` group: a `not`-prefixed operand, a nested
+        group (`(...)` or `any of (...)` / `all of (...)`), or one search atom."""
         self._skip_annot()
         # an empty search-term slot at the cursor (`title has |`)
         self._want(CTX_VALUE, fld=self._cur_fld, kind="search")
@@ -2288,17 +2357,11 @@ class _Parser:
         if t.kind == "WORD" and t.val.lower() == "not":
             self._consume_not(t)  # bare prefix `not` (decision 23)
             return _negate(self._parse_search_operand(base))
-        if t.kind == "LP":
-            self.next()
-            e = self._parse_bool_expr(lambda: self._parse_search_operand(base))
-            self._expect_rp()
-            return e
-        if (t.kind == "WORD" and t.val.lower() in ("any", "all")
-                and self.word_is("of", k=1)):
-            raise oql_error("OQL_LIST_KEYWORD_REMOVED",
-                           f'"{t.val.lower()} of (…)" was removed; '
-                           "write the list with parentheses",
-                           "e.g. has (a or b)", t.pos)
+        # a `(...)` boolean group OR an `any of (…)` / `all of (…)` keyword group
+        # (sugar, charter decision 31) — `_parse_grouped_operand` handles both.
+        grp = self._parse_grouped_operand(lambda: self._parse_search_operand(base))
+        if grp is not None:
+            return grp
         operand = self._parse_search_atom(base, in_group=True)
         # `!` (the WoS / classic-OXURL within-value NOT, e.g. `England!"New England"`)
         # is NOT an OQL operator — OQL negates with not(…). It is lexed as a BANG
@@ -2362,6 +2425,11 @@ class _Parser:
                 while True:
                     nt = self.peek()
                     if nt is None:
+                        break
+                    # `any of (` / `all of (` mid-run starts a nested keyword group
+                    # (charter decision 31), not more stemmed words — break the run so
+                    # `has (machine learning all of (a, b))` reads the run then the group.
+                    if self._group_opener_kind() is not None:
                         break
                     if nt.kind == "WORD" and not self._is_run_break_word(nt.val):
                         _validate_wildcards(nt.val, nt.pos)

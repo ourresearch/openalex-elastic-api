@@ -170,13 +170,18 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "parentheses (a reserved word could be silently swallowed)",
               "wrap the terms in parentheses, e.g. has (a or b), "
               "or quote a phrase, e.g. has \"a b\""),
-        _spec("OQL_LIST_KEYWORD_REMOVED", ERROR, PARSE,
-              '"any of"/"all of"/"is in" value-list keywords were removed; '
-              "lists are written with parentheses",
-              "write it with parentheses, e.g. is (a or b) / has (a or b)"),
+        # (OQL_LIST_KEYWORD_REMOVED removed in decision 31 — `any of`/`all of` are
+        # back, now as comma-separated group-openers, e.g. `is any of (a, b)`.)
+        _spec("OQL_NEGATED_LIST_KEYWORD", ERROR, PARSE,
+              "an 'any of'/'all of' list can't be negated as a whole (decision 31 "
+              "negates leaves, not clauses) — there is no 'is not any of'/'is not "
+              "all of'",
+              "negate each item instead, e.g. is any of (not a, not b)"),
         _spec("OQL_COMMA_IN_GROUP", ERROR, PARSE,
-              "a comma separates items in a (…) group (commas were removed)",
-              "separate items with 'or'/'and', e.g. (a or b)"),
+              "wrong separator: a bare (…) group joins items with 'or'/'and', while "
+              "an 'any of'/'all of' list joins them with commas — the two can't be "
+              "mixed at one level",
+              "use 'or'/'and' inside (…), or commas inside any of/all of (…)"),
         # (OQL_BARE_NOT removed in decision 23 — `not` is now a bare prefix
         # keyword, so a bare `not foo` is valid, not an error.)
         _spec("OQL_BANG_NOT_SUPPORTED", ERROR, PARSE,

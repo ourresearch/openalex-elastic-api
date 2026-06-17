@@ -37,15 +37,27 @@ valueClause  ::= field operator value
 
 field        ::= word+
 
-operator     ::= 'is' 'not'? ( 'any' 'of' | 'in' 'collection'? | 'in' )?
+operator     ::= 'is' 'not'? 'in' 'collection'
+               | 'is' 'not'?
                | 'is' 'similar' 'to'
                | 'has'
                | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'have'
                | '>=' | '<=' | '>' | '<'
 
-value        ::= valueList | 'unknown' | 'null' | scalar
+value        ::= valueGroup | 'unknown' | 'null' | scalar
 
-valueList    ::= '(' scalar ( ',' scalar )* ','? ')'
+/* A parenthesized boolean of values (`(a or b)`, `(a and b)`, nests), OR the
+   `any of (…)` / `all of (…)` comma-list sugar (decision 31) — same meaning,
+   comma-separated, join fixed by the keyword (any->or, all->and). The two are
+   one-for-one aliases and nest freely in each other; one separator per level
+   (commas in a keyword list, 'or'/'and' in a bare group — never mixed). Sugar is
+   input-only: it canonicalizes/renders back as the bare-parens form. */
+valueGroup   ::= '(' valueExpr ')'
+               | ( 'any' | 'all' ) 'of' '(' valueItem ( ',' valueItem )* ')'
+
+valueExpr    ::= valueItem ( connective valueItem )*
+
+valueItem    ::= 'not'? ( valueGroup | scalar )
 
 scalar       ::= ( WORD | NUMBER | STRING ) ANNOT?
 
@@ -60,7 +72,7 @@ termRun      ::= searchOperand+
 
 searchOperand ::= 'not' searchOperand
                | '(' searchExpr ')'
-               | ( 'any' | 'all' ) 'of' '(' searchAtom ( ',' searchAtom )* ','? ')'
+               | ( 'any' | 'all' ) 'of' '(' searchOperand ( ',' searchOperand )* ')'
                | searchAtom
 
 searchAtom   ::= 'near'? term proximity?

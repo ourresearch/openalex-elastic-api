@@ -220,10 +220,26 @@ works where country is (us and uk)                                         (row 
   render keeps the group together with the `not`s inside: `x is (not a and not b)`
   (corpus row **4**; see §3.2.2 and §3.5). (`is not (a or b)` is an accepted input
   spelling for the same thing.)
-- **Removed:** the `any of` / `all of` / `is in` list keywords and comma-separated
-  lists (`OQL_LIST_KEYWORD_REMOVED` / `OQL_COMMA_IN_GROUP`). `(a or b)` / `(a and b)`
-  are strictly more expressive (they nest; flat keyword lists can't) and lose no
-  capability. Re-adding `any of` later as a non-breaking accepted spelling is allowed.
+- **`any of` / `all of` comma-list sugar (decision 31):** `<op> any of (a, b)` ≡
+  `<op> (a or b)` and `<op> all of (a, b)` ≡ `<op> (a and b)`, for both `is` and `has`
+  (`type is any of (article, review)`, `title has all of (cat, dog)`). `any of (` /
+  `all of (` are atomic two-word group-OPENERS: the keyword fixes the join and the
+  items are **comma-separated**. They are one-for-one aliases of the parens form and
+  **nest freely** in it and each other —
+  `title has all of (foo, any of (bar, baz))` ≡ `title has (foo and (bar or baz))`.
+  A single item unwraps (`is any of (a)` = `is a`). This is **input-only sugar**: it
+  parses to the same tree as the parens form, so the canonical render is always the
+  bare parens (`is (a or b)`) — it never round-trips back to `any of`. (The bare `is
+  in` list and the comma-list-without-a-keyword form remain gone.)
+  - **One separator per level** — commas inside an `any of`/`all of` list, `or`/`and`
+    inside a bare `( … )`; mixing them (`any of (a, b or c)`, or a comma in a bare
+    group) is `OQL_COMMA_IN_GROUP`. No trailing comma.
+  - **A list is never operator-negated** — there is no `is not any of` / `is not all
+    of` (`OQL_NEGATED_LIST_KEYWORD`); negation lives on leaves, so "none of A, B" is
+    `is all of (not A, not B)` and "not all of A, B" is `is any of (not A, not B)`.
+    (The bare-group `is not (a or b)` form above is unchanged.)
+  - `any` / `all` / `of` are ordinary value/search words unless the two keyword words
+    are immediately followed by `(` — `title has all of the above` is a plain run.
 - `( … )` does **double duty**: a clause-group at the clause level
   (`(year >= 2020 or it's open access)`) and a value/term group after an operator.
   The position disambiguates (a group right after `is`/`has` is a value/term
@@ -509,8 +525,9 @@ Key rules these encode:
 - **`is similar to "…"` is semantic** vector search (`.search.semantic`, corpus
   row **30**).
 - **A parenthesized group holds a boolean of terms** (`has (a or (b and c))`);
-  items may themselves be `"exact"` or `near "stemmed"` phrases. The `any of`/`all of`
-  list keywords were removed (§3.2).
+  items may themselves be `"exact"` or `near "stemmed"` phrases. The comma-list sugar
+  `has any of (a, b)` ≡ `has (a or b)` / `has all of (a, b)` ≡ `has (a and b)` works
+  here too and nests with parens (decision 31, §3.2).
 - **A search value runs until the next field-clause.** `title has (a or b) and
   year >= 2020` is `(title has (a or b)) and year >= 2020` — the `or` is the
   has-group's, the `and` joins clauses. This is deterministic, not a precedence

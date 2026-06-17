@@ -409,7 +409,7 @@ def _value_run_start(prior: List[Tok]) -> Optional[int]:
         m = _match_operator(prior, i)
         if not m:
             continue
-        _op, n, complete, _opens = m
+        _op, n, complete = m
         if not complete:
             continue
         val_start = i + n
