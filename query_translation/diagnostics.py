@@ -26,7 +26,7 @@ still works, and ``oql_v2``'s ``import *`` still re-exports the engine).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 
 # --- severities & layers ------------------------------------------------------
@@ -332,12 +332,16 @@ class Diagnostic:
     start: Optional[int] = None
     end: Optional[int] = None
     location: Optional[str] = None
+    # The offending node's decimal address as a list of ints, GraphQL
+    # `errors[].path` style (oxjob #474) — set for validation diagnostics on a
+    # filter node, None for parse errors (no tree yet) and non-filter locations.
+    path: Optional[List[int]] = None
 
     def to_dict(self) -> Dict[str, object]:
         return {
             "code": self.code, "message": self.message, "fixit": self.fixit,
             "severity": self.severity, "start": self.start, "end": self.end,
-            "location": self.location,
+            "location": self.location, "path": self.path,
         }
 
 
@@ -352,13 +356,17 @@ def parse_diagnostic(e: OQLError) -> Diagnostic:
 
 
 def validation_diagnostic(code: str, message: str,
-                          location: Optional[str] = None) -> Diagnostic:
+                          location: Optional[str] = None,
+                          path: Optional[List[int]] = None) -> Diagnostic:
     """Normalize an OQO ``ValidationError`` — supplying the fix-it and severity the
-    validator's own (``type``, ``message``, ``location``) shape never carried."""
+    validator's own (``type``, ``message``, ``location``) shape never carried.
+
+    ``path`` (oxjob #474) is the offending node's decimal address (list of ints),
+    resolved from ``location`` by the caller; None for non-filter locations."""
     return Diagnostic(
         code=code, message=message,
         fixit=default_fixit(code), severity=severity_of(code),
-        start=None, end=None, location=location,
+        start=None, end=None, location=location, path=path,
     )
 
 

@@ -19,7 +19,10 @@ import yaml
 from tests.oql.oql_v2 import parse  # noqa: F401  (also triggers _qt_loader)
 from query_translation.oql_render_v2 import (
     build_tree, address_index, stamp_addresses, dotted,
+    oqo_location_addresses, address_for_location,
 )
+from query_translation.validator import validate_oqo
+from query_translation.diagnostics import parse_diagnostic, validation_diagnostic, OQLError
 
 CORPUS = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))), "docs", "oql", "corpus.yaml")
@@ -145,3 +148,56 @@ def test_stamp_addresses_decorates_nodes_and_maps():
     assert index[(4, 1, 2)]["display"] == "cat"
     # Token-only positions (root join, field heads) are NOT in the node map.
     assert (0,) not in index and (1, 0) not in index
+
+
+# --------------------------------------------------------------------------- #
+# 4. Phase 3 — diagnostics carry the offending node's decimal address (errors[].path).
+# --------------------------------------------------------------------------- #
+
+def _error_paths(oql: str):
+    """[(error_type, resolved_path)] for a query's validation errors."""
+    oqo = parse(oql)
+    loc_addr = oqo_location_addresses(oqo)
+    return [(e.type, address_for_location(loc_addr, e.location))
+            for e in validate_oqo(oqo).errors]
+
+
+def test_diagnostic_path_unmerged_clause():
+    # invalid value on the first of two distinct-field clauses → points at clause 1.
+    assert _error_paths("works where type is bogus and year >= 2019") == [
+        ("invalid_value", [1])]
+
+
+def test_diagnostic_path_second_clause():
+    # the bad clause is the second row → [2], not [1].
+    assert _error_paths("works where year >= 2019 and type is zzz") == [
+        ("invalid_value", [2])]
+
+
+def test_diagnostic_path_inside_merged_value_group():
+    # a bad value inside a same-field OR group resolves to the value's address.
+    assert _error_paths("works where type is (article or bogus)") == [
+        ("invalid_value", [1, 2])]
+
+
+def test_diagnostic_path_multiple_errors():
+    # two bad values in the 2nd clause's value group → [2,2] and [2,3].
+    paths = _error_paths(
+        "works where title has cat and type is (article or fake1 or fake2)")
+    assert paths == [("invalid_value", [2, 2]), ("invalid_value", [2, 3])]
+
+
+def test_diagnostic_path_none_for_non_filter_location():
+    # Addressing is filters-only (spec §7): sort/group_by/etc. locations resolve to None.
+    loc_addr = oqo_location_addresses(parse("works where year >= 2019"))
+    assert address_for_location(loc_addr, "sort_by[0].column_id") is None
+    assert address_for_location(loc_addr, "group_by[0].column_id") is None
+    assert address_for_location(loc_addr, None) is None
+
+
+def test_diagnostic_dict_carries_path_field():
+    # The wire shape gains `path` (additive): set for a resolved validation error,
+    # None for a parse error (no tree yet).
+    d = validation_diagnostic("invalid_value", "bad", "filter_rows[0].value", [1, 2])
+    assert d.to_dict()["path"] == [1, 2]
+    assert parse_diagnostic(OQLError("OQL_EMPTY", "empty")).to_dict()["path"] is None

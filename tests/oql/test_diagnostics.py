@@ -94,10 +94,11 @@ def test_parse_diagnostic_shape():
     e = oql_error("OQL_LEADING_WILDCARD", "leading wildcard", "anchor it", 12)
     d = parse_diagnostic(e).to_dict()
     assert set(d) == {"code", "message", "fixit", "severity",
-                      "start", "end", "location"}
+                      "start", "end", "location", "path"}
     assert d["code"] == "OQL_LEADING_WILDCARD"
     assert d["start"] == d["end"] == 12
     assert d["location"] is None
+    assert d["path"] is None  # parse errors have no tree → no address (#474)
     assert d["severity"] == ERROR
 
 

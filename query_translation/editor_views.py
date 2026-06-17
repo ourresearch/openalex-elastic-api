@@ -139,11 +139,18 @@ def validate_oql_route():
     vr = validate_oqo(oqo)
     # Validator errors/warnings flow through the shared registry, so they pick up the
     # canonical fix-it + severity their (type, message, location) shape never carried.
+    # #474: also resolve each location to the offending node's decimal address (path).
+    from query_translation.oql_render_v2 import (  # lazy: avoid import cycle
+        oqo_location_addresses, address_for_location,
+    )
+    loc_addr = oqo_location_addresses(oqo)
     diagnostics = [
-        validation_diagnostic(er.type, er.message, er.location).to_dict()
+        validation_diagnostic(er.type, er.message, er.location,
+                              address_for_location(loc_addr, er.location)).to_dict()
         for er in vr.errors
     ] + [
-        validation_diagnostic(w.type, w.message, w.location).to_dict()
+        validation_diagnostic(w.type, w.message, w.location,
+                              address_for_location(loc_addr, w.location)).to_dict()
         for w in vr.warnings
     ]
 

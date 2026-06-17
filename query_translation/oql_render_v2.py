@@ -68,7 +68,15 @@ class _IdGen:
 # emits value sub-trees as real nodes instead of flat text segments.
 # ---------------------------------------------------------------------------
 
-def _value_node(f: FilterType, render_leaf, idg) -> dict:
+def _origin(origins, f, node):
+    """Record id(OQO filter object) -> v2 node, for #474 addressing (errors[].path).
+    No-op unless an `origins` dict is threaded through (default render path)."""
+    if origins is not None:
+        origins[id(f)] = node
+    return node
+
+
+def _value_node(f: FilterType, render_leaf, idg, origins=None) -> dict:
     """A factored value as a real tree: vleaf (scalar atom, +negation bit) or
     vgroup (parenthesized boolean of value nodes)."""
     if isinstance(f, LeafFilter):
@@ -82,17 +90,20 @@ def _value_node(f: FilterType, render_leaf, idg) -> dict:
             node["entity"] = {"id": ent.entity_id,
                               "short_id": ent.entity_short_id,
                               "display_name": ent.entity_display_name}
-        return node
-    children = [_value_node(c, render_leaf, idg) for c in f.filters]
-    return {"node": "vgroup", "id": idg(), "join": f.join, "children": children}
+        return _origin(origins, f, node)
+    children = [_value_node(c, render_leaf, idg, origins) for c in f.filters]
+    node = {"node": "vgroup", "id": idg(), "join": f.join, "children": children}
+    return _origin(origins, f, node)
 
 
-def _expr_node(f: FilterType, top: bool, resolver, idg) -> dict:
+def _expr_node(f: FilterType, top: bool, resolver, idg, origins=None) -> dict:
     """OQO filter -> v2 expr node (clause | group), mirroring _filter_node."""
     if isinstance(f, BranchFilter) and f.is_negated:
-        inner = _expr_node(BranchFilter(f.join, f.filters), False, resolver, idg)
-        return {"node": "group", "id": idg(), "join": f.join, "negated": True,
-                "paren": True, "children": [inner]}
+        inner = _expr_node(BranchFilter(f.join, f.filters), False, resolver, idg,
+                           origins)
+        return _origin(origins, f, {"node": "group", "id": idg(), "join": f.join,
+                                    "negated": True, "paren": True,
+                                    "children": [inner]})
 
     if isinstance(f, BranchFilter):
         scol = _uniform_search_base(f)
@@ -100,28 +111,28 @@ def _expr_node(f: FilterType, top: bool, resolver, idg) -> dict:
             name, _ = _oql_field(scol)
             val = _value_node(
                 f, lambda lf: [_seg_val(_render_term(lf.value, lf.column_id),
-                                        lf.value)], idg)
-            return {"node": "clause", "id": idg(), "clause_kind": "text",
-                    "column_id": scol, "column": name, "operator": "has",
-                    "value": val}
+                                        lf.value)], idg, origins)
+            return _origin(origins, f, {"node": "clause", "id": idg(),
+                    "clause_kind": "text", "column_id": scol, "column": name,
+                    "operator": "has", "value": val})
         ecol = _uniform_eq_column(f)
         if ecol is not None:
             fld = _BY_COLUMN.get(ecol)
             name = fld.oql if fld else ecol
             val = _value_node(
                 f, lambda lf: _value_segments(fld, lf.value, lf.column_id,
-                                              resolver)[0], idg)
+                                              resolver)[0], idg, origins)
             kind = "entity" if (fld and fld.kind == "id") else "other"
-            return {"node": "clause", "id": idg(), "clause_kind": kind,
-                    "column_id": ecol, "column": name, "operator": "is",
-                    "value": val}
+            return _origin(origins, f, {"node": "clause", "id": idg(),
+                    "clause_kind": kind, "column_id": ecol, "column": name,
+                    "operator": "is", "value": val})
         # generic boolean group of (possibly mixed-column) children
         items = _merge_same_field_items(list(f.filters), f.join)
-        children = [_expr_node(c, False, resolver, idg) for c in items]
+        children = [_expr_node(c, False, resolver, idg, origins) for c in items]
         if len(children) == 1:
-            return children[0]
-        return {"node": "group", "id": idg(), "join": f.join, "negated": False,
-                "paren": not top, "children": children}
+            return _origin(origins, f, children[0])
+        return _origin(origins, f, {"node": "group", "id": idg(), "join": f.join,
+                "negated": False, "paren": not top, "children": children})
 
     # LeafFilter -> a simple clause (single value / bool phrase / null / comparison
     # / collection). Reuse _leaf_node for the display segments. `leaf` carries the
@@ -129,11 +140,12 @@ def _expr_node(f: FilterType, top: bool, resolver, idg) -> dict:
     # (the tree is the edit model — oxjob #428 iter 22, decision B). Factored
     # clauses don't need `leaf`: their value vtree fully describes the branch.
     cn = _leaf_node(f, resolver)
-    return {"node": "clause", "id": idg(), "clause_kind": cn.clause_kind,
+    return _origin(origins, f, {"node": "clause", "id": idg(),
+            "clause_kind": cn.clause_kind,
             "column_id": cn.meta.column_id, "column": cn.meta.column_display_name,
             "operator": cn.meta.operator,
             "segments": [s.to_dict() for s in cn.segments],
-            "leaf": f.to_dict()}
+            "leaf": f.to_dict()})
 
 
 def _seg_val(text, value):
@@ -141,17 +153,21 @@ def _seg_val(text, value):
     return _seg("value", text, value=value)
 
 
-def build_tree(oqo: OQO, resolver=None) -> dict:
-    """OQO -> v2 node tree (entity / where / directives), no layout yet."""
+def build_tree(oqo: OQO, resolver=None, origins=None) -> dict:
+    """OQO -> v2 node tree (entity / where / directives), no layout yet.
+
+    `origins` (optional, #474): a dict populated with `id(OQO filter) -> v2 node`
+    for every filter object reached, so addressing can map a validator's OQO-path
+    diagnostic back to a decimal address. Default None keeps the render path inert."""
     idg = _IdGen()
     head = {"id": oqo.get_rows, "text": oqo.get_rows.lower()}
     where = None
     if oqo.filter_rows:
         rows = _merge_same_field_items(oqo.filter_rows, "and")
         if len(rows) == 1:
-            where = _expr_node(rows[0], True, resolver, idg)
+            where = _expr_node(rows[0], True, resolver, idg, origins)
         else:
-            children = [_expr_node(f, False, resolver, idg) for f in rows]
+            children = [_expr_node(f, False, resolver, idg, origins) for f in rows]
             where = {"node": "group", "id": idg(), "join": "and",
                      "negated": False, "paren": False, "implicit": True,
                      "children": children}
@@ -482,3 +498,50 @@ def stamp_addresses(tree: dict) -> dict:
 def dotted(addr) -> str:
     """Display form of an address: dotted, always (semver-style). `[1, 10]` -> `1.10`."""
     return ".".join(str(x) for x in addr)
+
+
+# Trailing parts of a validator `location` that name a sub-attribute of a filter
+# node (the node itself is what we address). `.filters` (empty_branch) and `.join`
+# resolve to the branch node; `.value`/`.operator`/`.column_id` to the leaf.
+_LOCATION_SUBKEYS = (".value", ".operator", ".column_id", ".join", ".filters")
+
+
+def oqo_location_addresses(oqo, resolver=None) -> dict:
+    """Map each OQO filter *location string* (the validator's `location`, e.g.
+    `filter_rows[0].filters[1]`) to the decimal address of the node it names —
+    for #474 diagnostics (`errors[].path`).
+
+    The validator walks the distributed OQO; addressing lives on the merged OQL
+    tree. They are bridged by object identity: `_merge_same_field_items` reuses the
+    original leaf objects, so the same leaf the validator flagged is the one
+    `build_tree` placed in the tree. Filters only — non-filter locations
+    (sort/group_by/sample/page/…) are out of scope (spec §7) and absent here."""
+    origins = {}
+    stamp_addresses(build_tree(oqo, resolver, origins=origins))
+    out = {}
+
+    def visit(node, loc):
+        n = origins.get(id(node))
+        if n is not None and "addr" in n:
+            out[loc] = list(n["addr"])
+        if isinstance(node, BranchFilter):
+            for j, c in enumerate(node.filters):
+                visit(c, f"{loc}.filters[{j}]")
+
+    for i, row in enumerate(oqo.filter_rows or []):
+        visit(row, f"filter_rows[{i}]")
+    return out
+
+
+def address_for_location(loc_map: dict, location):
+    """Resolve a validator `location` to a decimal address (a list of ints) via the
+    `oqo_location_addresses` map, or None. Strips one trailing sub-attribute
+    (`.value`/`.operator`/…) so an error on a leaf's value still points at the leaf."""
+    if not location:
+        return None
+    node_loc = location
+    for sk in _LOCATION_SUBKEYS:
+        if node_loc.endswith(sk):
+            node_loc = node_loc[: -len(sk)]
+            break
+    return loc_map.get(node_loc) or loc_map.get(location)
