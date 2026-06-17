@@ -359,3 +359,126 @@ def lines_to_text(lines) -> str:
     for ln in lines:
         out.append(" " * ln["indent"] + "".join(t["text"] for t in ln["tokens"]))
     return "\n".join(out)
+
+
+# ---------------------------------------------------------------------------
+# Decimal addressing (oxjob #474). An outline coordinate for every meaningful
+# node in the canonical OQL filter tree — `1`, `3.1`, `4.1.2` — for diagnostics
+# (errors[].path), the builder gutter, and human reference. Spec + worked cases:
+# docs/oql-addressing.md (the §8 cases are mirrored as `addr:` rows in
+# docs/oql/corpus.yaml). It is a PURE walk of this v2 tree; it changes nothing.
+#
+# The rules, all grounded in "address what is a distinct token in the rendered
+# OQL string" (so the address matches what the user reads):
+#   * The whole `where` is one implicit ROOT group. Its head `0` is the root
+#     conjunction (the top-level join); its clauses are `1, 2, 3…`. A single
+#     top-level clause has no conjunction, so no `0` — it is just `1`.
+#   * The ENTITY (`works`) is the query subject, not a filter node — unaddressed.
+#   * `N.0` = a node's head: a group's join, a leaf's field.
+#   * `N.1, N.2…` = children: a group's members, or a leaf's value(s). A leaf
+#     whose value is a group FUSES — the group's operands become the leaf's
+#     `.1, .2…` directly (the value-root join rides the leaf as an attribute, the
+#     field already owning `.0`); a nested value group keeps its own `.0` join.
+#   * A BOOLEAN flag is atomic — one fused phrase (`it's open access`) with no
+#     separable field or value token, so just `N` (no `.0`, no `.1`). Its
+#     true/false lives in the OQO, not the OQL string, so it gets no address.
+#   * Internal address = list of ints (GraphQL errors[].path shape); display is
+#     dotted, always, semver-style (`1.10` is the tenth child; dots delimit).
+#   * parens, operators, and `not` (`is_negated`) are node ATTRIBUTES, not nodes.
+# ---------------------------------------------------------------------------
+
+def _addr_field_label(n: dict) -> str:
+    return n.get("column")
+
+
+def _addr_scalar_value(n: dict):
+    """The displayed value token of a simple (non-factored) leaf, or None when
+    there is none (a boolean flag — atomic). Null renders its `unknown` token."""
+    if n.get("clause_kind") == "boolean":
+        return None
+    for s in n.get("segments", []):
+        if s["kind"] == "value":
+            return s["text"]
+    return None
+
+
+def _addr_vleaf_label(n: dict) -> str:
+    return ("not " if n.get("negated") else "") + str(n.get("display"))
+
+
+def address_index(tree: dict) -> list:
+    """Walk the v2 render tree → an ordered list of address entries, the full
+    logical numbering (the normative table in docs/oql-addressing.md §8).
+
+    Each entry is `{"addr": [int, …], "kind": str, "label": str, "node": dict|None}`.
+    `node` is the backing v2 dict when the address names a structural node
+    (clause / group / vgroup / vleaf); it is None for positions that are tokens
+    rather than nodes (the root conjunction, a leaf's field head, a group's join,
+    a simple leaf's scalar value)."""
+    out = []
+
+    def emit(addr, kind, label, node=None):
+        out.append({"addr": list(addr), "kind": kind, "label": label, "node": node})
+
+    def walk_value(n, base):
+        if n["node"] == "vleaf":
+            emit(base, "value", _addr_vleaf_label(n), n)
+            return
+        emit(base, "vgroup", "( … )", n)              # nested value group
+        emit(base + (0,), "join", n["join"])          # its head
+        for i, c in enumerate(n["children"], 1):
+            walk_value(c, base + (i,))
+
+    def walk_expr(n, base):
+        if n["node"] == "clause":
+            if n.get("clause_kind") == "boolean":     # atomic — one fused phrase
+                emit(base, "clause",
+                     "".join(s["text"] for s in n.get("segments", [])), n)
+                return
+            emit(base, "clause",
+                 f"{n.get('column')} {n.get('operator') or ''}".strip(), n)
+            emit(base + (0,), "field", _addr_field_label(n))
+            v = n.get("value")
+            if v is None:
+                sv = _addr_scalar_value(n)
+                if sv is not None:
+                    emit(base + (1,), "value", sv)
+            elif v["node"] == "vleaf":
+                emit(base + (1,), "value", _addr_vleaf_label(v), v)
+            else:                                      # value group fuses into leaf
+                for i, c in enumerate(v["children"], 1):
+                    walk_value(c, base + (i,))
+            return
+        # cross-field clause group
+        emit(base, "group", "( … )", n)
+        emit(base + (0,), "join", n["join"])
+        for i, c in enumerate(n["children"], 1):
+            walk_expr(c, base + (i,))
+
+    where = tree.get("where")
+    if where is None:
+        return out
+    if where["node"] == "group" and where.get("implicit"):
+        emit((0,), "root-join", where["join"])        # the root conjunction
+        for i, c in enumerate(where["children"], 1):
+            walk_expr(c, (i,))
+    else:
+        walk_expr(where, (1,))                          # single top-level clause
+    return out
+
+
+def stamp_addresses(tree: dict) -> dict:
+    """Stamp `node["addr"]` (an int list, alongside the opaque `id`) on every
+    structural node and return the flat `{tuple(addr): node}` lookup map. Pure
+    convenience over `address_index` for consumers that hold the tree."""
+    index = {}
+    for e in address_index(tree):
+        if e["node"] is not None:
+            e["node"]["addr"] = e["addr"]
+            index[tuple(e["addr"])] = e["node"]
+    return index
+
+
+def dotted(addr) -> str:
+    """Display form of an address: dotted, always (semver-style). `[1, 10]` -> `1.10`."""
+    return ".".join(str(x) for x in addr)

@@ -788,6 +788,9 @@ work-list.
 ## 10. Related documentation
 
 - [`oqo-spec.md`](./oqo-spec.md) — the canonical query object OQL is sugar over.
+- [`oql-addressing.md`](./oql-addressing.md) — decimal addressing (outline
+  coordinates `1`, `3.1`, `4.1.2`) over this filter tree, for diagnostics, the
+  builder, and human reference (oxjob #474). Additive; changes no language surface.
 - [`oql/corpus.yaml`](./oql/corpus.yaml) — the normative cases.
 - [`oql/gap_report.md`](./oql/gap_report.md) — v1.1 → v2 work-list.
 - [`oql/engine_findings.md`](./oql/engine_findings.md) — engine reality behind the
