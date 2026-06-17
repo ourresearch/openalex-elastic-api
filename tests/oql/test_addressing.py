@@ -18,7 +18,7 @@ import yaml
 # render tree, exactly like the rest of the harness.
 from tests.oql.oql_v2 import parse  # noqa: F401  (also triggers _qt_loader)
 from query_translation.oql_render_v2 import (
-    build_tree, address_index, stamp_addresses, dotted,
+    build_tree, address_index, stamp_addresses, dotted, render_v2,
     oqo_location_addresses, address_for_location,
 )
 from query_translation.validator import validate_oqo
@@ -193,6 +193,19 @@ def test_diagnostic_path_none_for_non_filter_location():
     assert address_for_location(loc_addr, "sort_by[0].column_id") is None
     assert address_for_location(loc_addr, "group_by[0].column_id") is None
     assert address_for_location(loc_addr, None) is None
+
+
+def test_render_v2_tags_tokens_with_address():
+    # The builder footer reads `addr` off the hovered token (#474 Phase 4 enablement).
+    tree = render_v2(parse(
+        "works where title has animal and type is (article or preprint)"))
+    by_text = {tok["text"]: tok.get("addr")
+               for ln in tree["lines"] for tok in ln["tokens"]}
+    assert by_text["title"] == "1"          # field token → its clause address
+    assert by_text["animal"] == "1.1"       # value brick → value address
+    assert by_text["article"] == "2.1" and by_text["preprint"] == "2.2"
+    # Structural nodes are also stamped in place on the tree.
+    assert tree["where"]["children"][0]["addr"] == [1]
 
 
 def test_diagnostic_dict_carries_path_field():

@@ -364,6 +364,26 @@ def render_v2(oqo: OQO, resolver=None) -> dict:
     tree = build_tree(oqo, resolver)
     canonical = format_oql(_build_tree(oqo, resolver))
     tree["lines"] = layout(tree, canonical)
+    # #474: decimal addresses for the builder footer/gutter. Stamp every structural
+    # node with `addr` (list of ints), then tag each rendered token with the address
+    # of *what it is*, as a display-ready dotted string, so the client shows "the
+    # address of whatever you're hovering" with no client-side derivation. Additive —
+    # tokens whose node isn't addressed (entity / `where` chrome) have no `addr`.
+    id_to_node = {n["id"]: n for n in stamp_addresses(tree).values()}
+    for ln in tree["lines"]:
+        for tok in ln["tokens"]:
+            node = id_to_node.get(tok.get("id"))
+            if node is None:
+                continue
+            addr = node["addr"]
+            # A simple (non-factored) clause's scalar value is its `.1` child, but it
+            # rides the clause node — so a value brick there addresses .1, while the
+            # field/operator tokens address the clause. Factored values are their own
+            # vleaf nodes (already value-level); a boolean is atomic (no value).
+            if (tok.get("t") == "vbrick" and node["node"] == "clause"
+                    and node.get("clause_kind") != "boolean"):
+                addr = addr + [1]
+            tok["addr"] = dotted(addr)
     return tree
 
 
