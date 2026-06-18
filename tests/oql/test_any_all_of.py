@@ -1,4 +1,4 @@
-"""`any` / `all` group sugar — charter decision 31 (#363).
+"""`any` / `all` keyword groups — charter decisions 31 + 32 (#363).
 
 `<op> any (a, b)` ≡ `<op> (a or b)` and `<op> all (a, b)` ≡ `<op> (a and b)`.
 `any (` / `all (` are comma-separated group-OPENERS (an atomic keyword + `(`),
@@ -8,10 +8,12 @@ briefly spelled `any of (` / `all of (`; the `of` was dropped because the bare
 keyword reads more directly when nesting — the old form now errors
 OQL_ANY_OF_RENAMED with a fix-it.)
 
-This is PURE INPUT SUGAR (for now): it parses to the SAME `BranchFilter` the parens
-form builds, so the canonicalizer and renderer are untouched and it NEVER round-trips
-— `is any (a, b)` re-renders as `is (a or b)`. (That's why the positive forms live
-here, not in the canonical corpus, whose `ok` rows are regenerated to canonical.)
+Decision 32 made `any`/`all` the CANONICAL render of every boolean group and
+DEMOTED the infix `or`/`and` parens form to accepted-but-not-canonical input —
+so the round-trip now runs the other way: `is (a or b)` re-renders as
+`is any (a, b)`. The two forms still parse to the SAME `BranchFilter` (the
+equivalence tests below), so the parens form stays valid input; it just never
+appears in canonical output.
 
 Guardrails:
   * one separator per level — commas inside `any`/`all`, `or`/`and` inside a
@@ -61,12 +63,16 @@ def test_sugar_equals_parens(sugar, parens):
     assert _oqo(sugar) == _oqo(parens)
 
 
-# --- input-only: it never round-trips; canonical render is the parens form ---- #
+# --- decision 32: any/all is canonical; the parens form is the demoted input --- #
 
-def test_sugar_renders_back_as_parens_not_keyword():
+def test_parens_renders_back_as_keyword_not_infix():
+    out = render(parse("works where type is (article or review)"))
+    assert out == "works where type is any (article, review)"
+    assert " or " not in out and " and " not in out
+
+def test_keyword_form_round_trips():
     out = render(parse("works where type is any (article, review)"))
-    assert out == "works where type is (article or review)"
-    assert "any (" not in out and "all (" not in out
+    assert out == "works where type is any (article, review)"
 
 
 # --- nesting: a one-for-one alias of (…), freely mixable both ways ------------ #

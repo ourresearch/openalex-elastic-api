@@ -167,8 +167,8 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "e.g. work is in collection col_abc123"),
         _spec("OQL_UNDELIMITED_TERM_LIST", ERROR, PARSE,
               "two or more bare terms/values follow an operator without "
-              "parentheses (a reserved word could be silently swallowed)",
-              "wrap the terms in parentheses, e.g. has (a or b), "
+              "a group (a reserved word could be silently swallowed)",
+              "group the terms, e.g. has any (a, b) / has all (a, b), "
               "or quote a phrase, e.g. has \"a b\""),
         # (OQL_LIST_KEYWORD_REMOVED removed in decision 31 — `any`/`all` are
         # back, now as comma-separated group-openers, e.g. `is any (a, b)`.)

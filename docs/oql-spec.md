@@ -50,8 +50,8 @@ URL  ↔  OQO  ↔  OQL          (OQO is canonical)
   are allowed to exist without breaking "OQL is a pure function of OQO": they live
   only in the text layer, exactly like whitespace.
 - **Operand order is the user's (decision 30, #363).** The order of clauses (the
-  implicit top-level AND of `filter_rows`) and of values inside `is ( … )` /
-  `has ( … )` groups is **preserved**, not alphabetized — for OQL-text and
+  implicit top-level AND of `filter_rows`) and of values inside `is any (…)` /
+  `has all (…)` groups is **preserved**, not alphabetized — for OQL-text and
   builder/direct-OQO input alike. So the LEGO builder never jumps a freshly-added
   clause to an alphabetical slot, and a systematic-review author's block order is
   kept. **Consequence:** OQO is no longer a *single* canonical form on the OQL
@@ -104,38 +104,39 @@ Implemented in [`query_translation/oql_lang.py`](../query_translation/oql_lang.p
 - **Top level.** A statement that fits stays on one line. Otherwise the entity
   head, the `where` body, and **each directive** go on their own line(s); the
   directives (`group by …`, `sort by …`, `sample …`, `return …`) sit at column 0.
-- **Leading connectives — everywhere (oxjob #363, decision 25).** When *anything*
-  explodes, `and` / `or` **begin** each continuation line (the first operand is
-  bare; every later one is prefixed by the connective). This holds at the boolean
-  `where` body **and** inside value/term groups — they read the same. A
-  parenthesized group puts `(` on the current line, its operands one level
-  deeper, and `)` back at the group's indent.
-- **Value/term groups** (`is ( … )`, `has ( … )`): inline if they fit; else
+- **Keyword groups everywhere (decision 32).** Every boolean group renders as the
+  `all (…)` / `any (…)` keyword form — comma-separated, the keyword fixing the join
+  — at the `where` body **and** inside value/term groups, which read the same. The
+  whole `where` body (an implicit AND of 2+ clauses) is itself an `all (…)` group;
+  a single-clause body renders bare. When a group explodes, the opener `… (` sits
+  on the current line, each item on its own line one level deeper with a comma
+  after every item **but the last** (no trailing comma), and `)` back at the
+  group's indent.
+- **Value/term groups** (`is any (…)`, `has all (…)`): inline if they fit; else
   **> 8 items that all fit the width → fill/pack** (this is what tames row 78's
-  synonym blocks) — a *wrapped* line begins with the connective; otherwise **one
-  item per line**, and an item that is itself an over-width parenthesized
-  sub-group **explodes recursively** (a §3.2.2-merged clause nests whole OR-blocks
-  inside an AND; each block gets the same treatment, its open paren carrying the
-  leading connective).
-- **Why leading, not trailing.** `and`/`or` are **infix** — they can never sit on
-  the last line the way a trailing comma can — so the Python/Black trailing-comma
-  "clean append" trick doesn't transfer. With leading connectives, appending an
-  item dirties **one** line (the new one); a trailing form would dirty **two** (the
-  old last item gains a connective + the new line). The parser is whitespace-blind,
-  so either form re-parses to the identical OQO; leading just gives the cleaner
-  diff and a single rule across the whole tree.
+  synonym blocks); otherwise **one item per line**, and an item that is itself an
+  over-width nested keyword group **explodes recursively** (a §3.2.2-merged clause
+  nests whole `any (…)` blocks inside an `all (…)`; each gets the same treatment).
+- **Comma, not leading connective (supersedes decision 25).** The earlier infix
+  layout led every wrapped line with `and`/`or` because an infix connective can
+  never sit on the last line the way a trailing separator can. With the keyword
+  form there is no infix connective at all — items are comma-separated, and the
+  comma rides the **end** of each line but the last (the natural Python/Black
+  shape). The parser is whitespace-blind, so the multi-line form re-parses to the
+  identical OQO.
 - **Idempotence is a hard invariant:** `format(format(x)) == format(x)`. Every
   break decision is a pure function of *(content, width, depth)*.
 - **Hard ceiling 100 columns:** only a **single unbreakable atom** (one quoted
   phrase, ID, or term longer than the budget) may exceed the target; nothing
-  with an internal ` or `/` and ` break point ever does.
+  with an internal `, ` break point ever does.
 
 ```
-works where year >= 2020
-  and title has (
-    fat or obese or obesity or overweight or thin or "anti fat" or "being fat"
-    or "body esteem" or "body image" or "fat ideal" or "thin ideal"
-    or "weight bias"
+works where all (
+    year >= 2020,
+    title has any (
+      fat, obese, obesity, overweight, thin, "anti fat", "being fat",
+      "body esteem", "body image", "fat ideal", "thin ideal", "weight bias"
+    )
   )
 sort by citation count desc
 ```
@@ -180,72 +181,68 @@ OpenAlex ID's uppercase prefix is conventional; search text is the user's litera
 words). `col_…` references are always preserved. (Per-column canonical case is a
 registry property.)
 
-### 3.2 Sets / value groups: `is ( … )`  (parens-bag, #363)
+### 3.2 Sets / value groups: `is any (…)` / `is all (…)`  (keyword groups, #363)
 
 ```
-works where institution is (I33213144 [Harvard] or I97018004 [Stanford])   (row 3)
-works where type is (article or review)                                    (row 5)
-works where institution is not (I33213144 or I97018004)                    (row 4)
-works where country is (us and uk)                                         (row 92, D7)
+works where institution is any (I33213144 [Harvard], I97018004 [Stanford])   (row 3)
+works where type is any (article, review)                                     (row 5)
+works where institution is all (not I33213144, not I97018004)                (row 4)
+works where country is all (us, uk)                                          (row 92, D7)
 ```
 
+- **`any` / `all` is the CANONICAL group form (decision 32):** `<op> any (a, b)`
+  is an OR group, `<op> all (a, b)` an AND group, for both `is` and `has`. `any (` /
+  `all (` are atomic group-OPENERS: the keyword fixes the join and the items are
+  **comma-separated**. They **nest freely** (`title has all (foo, any (bar, baz))`)
+  and a single item unwraps (`is any (a)` = `is a`).
+- **The bare parens-with-infix form is accepted INPUT, demoted (decision 32):**
+  `<op> (a or b)` ≡ `<op> any (a, b)` and `<op> (a and b)` ≡ `<op> all (a, b)` —
+  the parens form still parses (one-for-one alias, nests both ways) but
+  canonicalizes/renders back as the keyword form; it never appears in canonical
+  output. (It inverts decision 31, which had the keyword form as the demoted sugar.)
 - **The arity rule (one rule, both `is` and `has`):** a list of **2+
-  values/terms must be parenthesized**; a **single** value/term may be bare
-  (`type is article`, `title has cancer`). An *atom* is one bare word, one
-  quoted phrase, or one parenthesized sub-group, so `"systematic review"` is a
-  single atom and stays bare. `type is article review` → `OQL_UNDELIMITED_TERM_LIST`.
+  values/terms must be grouped** (`any (…)`/`all (…)`, or the demoted bare parens);
+  a **single** value/term may be bare (`type is article`, `title has cancer`). An
+  *atom* is one bare word, one quoted phrase, or one nested group, so
+  `"systematic review"` is a single atom and stays bare.
+  `type is article review` → `OQL_UNDELIMITED_TERM_LIST`.
 - This is the rule that **kills the silent keyword-truncation footgun**: a reserved
   word (`sort by`, `and`, …) can only "float" inside unquoted free text when there
-  are 2+ unparenthesized terms — which the rule forbids.
-- **Inside `( … )` is a boolean of atoms**: `or` / `and` / `not`, nesting
-  allowed; the field + operator distribute over every atom. `country is (us or uk)`
-  is an OR-branch of equality leaves; `country is (us and uk)` means works with
-  **both** a US and a UK authorship (corpus row 92 — D7; for a single-valued field
-  it is the empty set, which is coherent, not a footgun). Negation inside a group is
-  the bare prefix `not` binding the next atom (`has (cancer and not mouse)`,
+  are 2+ ungrouped terms — which the rule forbids.
+- **Semantics.** The field + operator distribute over every atom. `country is any
+  (us, uk)` is an OR-branch of equality leaves; `country is all (us, uk)` means works
+  with **both** a US and a UK authorship (corpus row 92 — D7; for a single-valued
+  field it is the empty set, which is coherent, not a footgun). Negation inside a
+  group is the bare prefix `not` binding the next atom (`has all (cancer, not mouse)`,
   §3.5).
-- **Search values are the exception (D2 reversal, #363):** for a `has ( … )`
-  search group, a **maximal run of bare connective-free words is ONE value node**
-  (stemmed, adjacency-boosted), not a distributed AND of per-word leaves —
+- **Search values are the exception (D2 reversal, #363):** for a `has (…)` search
+  group, a **maximal run of bare connective-free words is ONE value node** (stemmed,
+  adjacency-boosted), not a distributed AND of per-word leaves —
   `title/abstract has (mental health)` is a single
   `{title_and_abstract.search: "mental health"}` leaf. The engine adjacency-boosts
   the whole run (`match_phrase`), so splitting it would silently change ranking;
-  recall is unaffected (cross-field AND, #399). Explicit `and`/`or`/`not` still build
-  the tree *between* such nodes (`(mental health or anxiety)` = two nodes OR'd). See
+  recall is unaffected (cross-field AND, #399). Explicit grouping still builds the
+  tree *between* such nodes (`any (mental health, anxiety)` = two nodes OR'd). See
   §3.6 and corpus rows 126–127. *(This reverses the earlier "space inside a group =
-  AND" rule for **search** values; it still holds for **enum/value** groups like
-  `country is (us and uk)` above.)*
-- `not (a or b)` negates the whole group: `NOT(a OR b)` = `(NOT a) AND (NOT b)` by
-  De Morgan — canonical NNF carries the negation on the leaves, and the canonical
-  render keeps the group together with the `not`s inside: `x is (not a and not b)`
-  (corpus row **4**; see §3.2.2 and §3.5). (`is not (a or b)` is an accepted input
-  spelling for the same thing.)
-- **`any` / `all` comma-list sugar (decision 31):** `<op> any (a, b)` ≡
-  `<op> (a or b)` and `<op> all (a, b)` ≡ `<op> (a and b)`, for both `is` and `has`
-  (`type is any (article, review)`, `title has all (cat, dog)`). `any (` /
-  `all (` are atomic group-OPENERS: the keyword fixes the join and the
-  items are **comma-separated**. They are one-for-one aliases of the parens form and
-  **nest freely** in it and each other —
-  `title has all (foo, any (bar, baz))` ≡ `title has (foo and (bar or baz))`.
-  A single item unwraps (`is any (a)` = `is a`). This is **input-only sugar**: it
-  parses to the same tree as the parens form, so the canonical render is always the
-  bare parens (`is (a or b)`) — it never round-trips back to `any`. (The bare `is
-  in` list and the comma-list-without-a-keyword form remain gone. The keyword is a
-  bare `any`/`all` — the original `any of`/`all of` spelling was shortened because it
-  reads more directly when nesting; the dropped-`of` form errors `OQL_ANY_OF_RENAMED`.)
-  - **One separator per level** — commas inside an `any`/`all` list, `or`/`and`
-    inside a bare `( … )`; mixing them (`any (a, b or c)`, or a comma in a bare
-    group) is `OQL_COMMA_IN_GROUP`. No trailing comma.
-  - **A list is never operator-negated** — there is no `is not any` / `is not all`
+  AND" rule for **search** values; it still holds for **enum/value** groups.)*
+- `not (a or b)` (or `is not (a or b)`) negates the whole group: `NOT(a OR b)` =
+  `(NOT a) AND (NOT b)` by De Morgan — canonical NNF carries the negation on the
+  leaves, and the canonical render keeps the group together with the `not`s inside:
+  `x is all (not a, not b)` (corpus row **4**; see §3.2.2 and §3.5).
+  - **One separator per level** — commas inside an `any`/`all` group, `or`/`and`
+    inside the demoted bare `( … )`; mixing them (`any (a, b or c)`, or a comma in a
+    bare group) is `OQL_COMMA_IN_GROUP`. No trailing comma.
+  - **A group is never operator-negated** — there is no `is not any` / `is not all`
     (`OQL_NEGATED_LIST_KEYWORD`); negation lives on leaves, so "none of A, B" is
     `is all (not A, not B)` and "not all of A, B" is `is any (not A, not B)`.
-    (The bare-group `is not (a or b)` form above is unchanged.)
   - `any` / `all` are ordinary value/search words unless immediately followed by
-    `(` — `title has all of the above` is a plain run.
-- `( … )` does **double duty**: a clause-group at the clause level
-  (`(year >= 2020 or it's open access)`) and a value/term group after an operator.
-  The position disambiguates (a group right after `is`/`has` is a value/term
-  group; one where a clause is expected is a clause group).
+    `(` — `title has all of the above` is a plain run. (The original `any of (…)` /
+    `all of (…)` spelling errors `OQL_ANY_OF_RENAMED`; the bare `is in` list and the
+    comma-list-without-a-keyword form remain gone.)
+- `any (…)` / `all (…)` (and the demoted `( … )`) do **double duty**: a clause-group
+  at the clause level (`any (year >= 2020, it's open access)`) and a value/term group
+  after an operator. The position disambiguates (a group right after `is`/`has` is a
+  value/term group; one where a clause is expected is a clause group).
 
 ### 3.2.1 Numeric bounds and ranges (#363, decision 24)
 
@@ -286,19 +283,19 @@ filter-triple trees. Canonical OQL therefore renders all the boolean structure t
 belongs to **one field** as **one clause**, the tree inside the value group:
 
 ```
-works where title has ((vape or vaping) and (health or harm))
-works where title has (not dog and cat)
-works where country is (not FR and US)
-works where institution is (not I33213144 [Harvard] and not I97018004 [Stanford])   (row 4)
+works where title has all (any (vape, vaping), any (health, harm))
+works where title has all (not dog, cat)
+works where country is all (not FR, US)
+works where institution is all (not I33213144 [Harvard], not I97018004 [Stanford])   (row 4)
 ```
 
 - **The rule:** among the children of one boolean node — including the implicit
   top-level AND of the filter rows — the items sharing one **(field,
-  base-operator)** pair merge into a single `field op ( tree )` clause, the boolean
-  structure preserved inside the parens. A negated leaf renders as a bare `not
-  <atom>` prefix (§3.5), merged or standalone alike (`title has not dog`,
-  `country is not FR`, `title has (not dog and cat)`).
-- **All filter kinds**, not just search: `country is (not FR and US)` is canonical
+  base-operator)** pair merge into a single `field op all (…)` / `any (…)` clause,
+  the boolean structure preserved inside the keyword group. A negated leaf renders
+  as a bare `not <atom>` prefix (§3.5), merged or standalone alike (`title has not
+  dog`, `country is not FR`, `title has all (not dog, cat)`).
+- **All filter kinds**, not just search: `country is all (not FR, US)` is canonical
   exactly like its `has` twin. Search groups merge by **base field** (a
   stemmed `.search` leaf and an exact `.search.exact` leaf share one group — that
   mix is the row-78 expressiveness win); `is` groups merge by column.
@@ -325,7 +322,7 @@ works where institution is (not I33213144 [Harvard] and not I97018004 [Stanford]
 
 | Delimiter | Meaning |
 |---|---|
-| `( … )` | boolean grouping: a group of clauses **and** a group of values/terms (`is (a or b)`, `has (a or b)`) |
+| `any (…)` / `all (…)` | boolean grouping (canonical): a group of clauses **and** a group of values/terms (`is any (a, b)`, `has all (a, b)`). The bare `( … )` form (`is (a or b)`) is accepted input, demoted (decision 32) |
 | `[ … ]` | annotation slot — ignored on input, regenerated as a display name on output |
 | `" … "` | literal text to match (a phrase) |
 | `{ … }` | **unused** — banked for later |
@@ -363,7 +360,9 @@ works where title has FOO and (bar or baz)            (row 10)  ✓ (any case ac
   associative, so they need no parens. This is the **one deliberate departure** from
   WoS/Scopus muscle memory, and it is where the field is already heading (Scopus
   mid-migration; Dimensions enforces; Lucene/Sourcegraph advise full
-  parenthesization). Canonical output fully parenthesizes mixed logic.
+  parenthesization). Mixed logic is accepted as input when explicitly grouped;
+  canonical output renders every group as an `any (…)`/`all (…)` keyword group
+  (decision 32), so the structure is always explicit.
 - **`not` is the one prefix operator with precedence: it binds the single value
   immediately after it** (`not a or b` = `(not a) or b`, the SR/PubMed left-to-right
   convention). This is the lone relaxation of the no-precedence rule, and it is safe
@@ -526,10 +525,11 @@ Key rules these encode:
   literal phrase; the boolean is the tree (`has (foo or bar)`).
 - **`is similar to "…"` is semantic** vector search (`.search.semantic`, corpus
   row **30**).
-- **A parenthesized group holds a boolean of terms** (`has (a or (b and c))`);
-  items may themselves be `"exact"` or `near "stemmed"` phrases. The comma-list sugar
-  `has any (a, b)` ≡ `has (a or b)` / `has all (a, b)` ≡ `has (a and b)` works
-  here too and nests with parens (decision 31, §3.2).
+- **A keyword group holds a boolean of terms** — canonical `has all (a, any (b, c))`
+  (decision 32); items may themselves be `"exact"` or `near "stemmed"` phrases. The
+  bare parens form `has (a or (b and c))` is accepted input and canonicalizes to the
+  keyword form. `has any (a, b)` ≡ `has (a or b)` / `has all (a, b)` ≡ `has (a and
+  b)`; the two nest freely (§3.2).
 - **A search value runs until the next field-clause.** `title has (a or b) and
   year >= 2020` is `(title has (a or b)) and year >= 2020` — the `or` is the
   has-group's, the `and` joins clauses. This is deterministic, not a precedence

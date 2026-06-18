@@ -45,10 +45,11 @@ def test_case1_entity_head_joins_where_line():
         "works where institution is i1295562517 and source is not s4306400562 "
         "and source is s4210230483")
     lines = out.split("\n")
-    # multi-line (it wraps) but line 1 is "works where …", not a bare "works"
+    # multi-line (the body wraps in `all (…)`, decision 32) but line 1 keeps
+    # `works where` on the same line as the opener — not a bare "works".
     assert len(lines) > 1
-    assert lines[0].startswith("works where institution is i1295562517")
-    assert lines[1].lstrip().startswith("and ")
+    assert lines[0] == "works where all ("
+    assert lines[1].lstrip().startswith("institution is i1295562517")
 
 
 def test_case1_short_query_stays_flat():

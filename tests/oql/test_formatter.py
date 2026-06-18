@@ -104,71 +104,78 @@ OK_ROWS = [r for r in ROWS if r["status"] in ("ok", "hint")]
 # Test 6 — golden fixtures: the documented shapes render to the exact form.
 # ---------------------------------------------------------------------------
 GOLDENS = {
-    # (a) short query stays inline
+    # (a) short query stays inline (body wraps in `all (…)`, decision 32)
     "works where it's open access and type is article":
-        "works where it's open access and type is article",
+        "works where all (it's open access, type is article)",
 
-    # (b) medium query explodes into a leading-`and` chain. The entity head
-    # stays on the `where` line (oxjob #363); continuation operands wrap below.
+    # (b) medium query explodes: the body is an `all (…)` keyword group, one
+    # clause per line, comma after each but the last (decision 32; the entity
+    # head stays on the `where` line, oxjob #363).
     "works where it's open access and publication_year >= 2020 and type is "
     "article and has_doi is true and language is en":
-        "works where it has a DOI\n"
-        "  and language is en\n"
-        "  and it's open access\n"
-        "  and year >= 2020\n"
-        "  and type is article",
-
-    # (c) a nested boolean that fits stays inline inside the exploded parent
-    "works where (institution is I27837315 or type is article) and "
-    "publication_year >= 2020 and language is en":
-        "works where language is en\n"
-        "  and year >= 2020\n"
-        "  and (institution is I27837315 or type is article)",
-
-    # (d) a search group <=8 items -> one per line, leading connective
-    # (decision 25 — `or` begins each continuation line, like the `where` body)
-    'works where title has ("randomized controlled trial" or '
-    '"systematic review" or "meta analysis" or "clinical practice guideline")':
-        "works where title has (\n"
-        '    "clinical practice guideline"\n'
-        '    or "meta analysis"\n'
-        '    or "randomized controlled trial"\n'
-        '    or "systematic review"\n'
+        "works where all (\n"
+        "    it has a DOI,\n"
+        "    language is en,\n"
+        "    it's open access,\n"
+        "    year >= 2020,\n"
+        "    type is article\n"
         "  )",
 
-    # (e) a value group >8 items -> fill/pack to width, leading connective
-    # (decision 25 — a wrapped line begins with `or`, not ends with it)
+    # (c) a nested boolean that fits stays inline (`any (…)`) inside the exploded
+    # `all (…)` parent.
+    "works where (institution is I27837315 or type is article) and "
+    "publication_year >= 2020 and language is en":
+        "works where all (\n"
+        "    language is en,\n"
+        "    year >= 2020,\n"
+        "    any (institution is I27837315, type is article)\n"
+        "  )",
+
+    # (d) a search group <=8 items -> the `any (…)` keyword group, one per line,
+    # comma-separated (decision 32 retired the decision-25 leading connective).
+    'works where title has ("randomized controlled trial" or '
+    '"systematic review" or "meta analysis" or "clinical practice guideline")':
+        "works where title has any (\n"
+        '    "clinical practice guideline",\n'
+        '    "meta analysis",\n'
+        '    "randomized controlled trial",\n'
+        '    "systematic review"\n'
+        "  )",
+
+    # (e) a value group >8 items -> fill/pack to width, comma-separated
     "works where language is (en or zh or es or fr or de or ja or pt or ru or ko "
     "or it or ar or nl or pl or tr or sv or cs or fa or uk or vi or da)":
-        "works where language is (\n"
-        "    ar or cs or da or de or en or es or fa or fr or it or ja or ko or nl or pl\n"
-        "    or pt or ru or sv or tr or uk or vi or zh\n"
+        "works where language is any (\n"
+        "    ar, cs, da, de, en, es, fa, fr, it, ja, ko, nl, pl, pt, ru, sv, tr, uk, vi,\n"
+        "    zh\n"
         "  )",
 
     # (f) directives on their own lines at col 0. Input keeps the legacy `;`
     # separators to prove the parser still accepts them (back-compat); the
-    # canonical output drops them (oxjob #377). With the entity head now sharing
-    # the `where` line (oxjob #363), the body's first line is `works where …`,
-    # so the and-chain wraps (it no longer fits within width inline).
+    # canonical output drops them (oxjob #377). The body is an `all (…)` group.
     "works where it's open access and publication_year >= 2020 and type is "
     "article and language is en ; group by publication_year ; sort by "
     "cited_by_count desc":
-        "works where language is en\n"
-        "  and it's open access\n"
-        "  and year >= 2020\n"
-        "  and type is article\n"
+        "works where all (\n"
+        "    language is en,\n"
+        "    it's open access,\n"
+        "    year >= 2020,\n"
+        "    type is article\n"
+        "  )\n"
         "group by year\n"
         "sort by citation count desc",
 
-    # (g) a nested boolean group that is too wide -> the group explodes
+    # (g) a nested boolean group that is too wide -> the `any (…)` group explodes
     "works where publication_year >= 2020 and (institution is I27837315 or "
     "funder is F4320332161 or source is S137773608 or author is A5023888391)":
-        "works where year >= 2020\n"
-        "  and (\n"
-        "    author is A5023888391\n"
-        "    or institution is I27837315\n"
-        "    or funder is F4320332161\n"
-        "    or source is S137773608\n"
+        "works where all (\n"
+        "    year >= 2020,\n"
+        "    any (\n"
+        "      author is A5023888391,\n"
+        "      institution is I27837315,\n"
+        "      funder is F4320332161,\n"
+        "      source is S137773608\n"
+        "    )\n"
         "  )",
 }
 
@@ -226,7 +233,8 @@ def test_long_sr_query_showcase():
     row = max(OK_ROWS, key=lambda r: len(r["oql"]))   # the corpus' widest query
     out = _fmt(row["oql"])
     assert "\n" in out, "the widest corpus query must lay out multi-line"
-    assert "has (" in out, "fill-mode search groups must survive"
+    assert ("has any (" in out or "has all (" in out), \
+        "keyword-group search groups must survive (decision 32)"
     assert _oqo(out) == _oqo(row["oql"]), "showcase must round-trip"
     assert _fmt(out) == out, "showcase must be idempotent"
     assert max(len(l) for l in out.split("\n")) <= FORMAT_WIDTH, \

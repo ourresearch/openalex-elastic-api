@@ -78,10 +78,10 @@ class TestStringifyInvariant:
         oql, tree = render_oqo_to_oql_and_tree(oqo)
         
         assert stringify(tree) == oql
-        assert " and " in oql
-    
+        assert "all (" in oql   # body wraps in an `all (…)` group (decision 32)
+
     def test_or_group_filter(self):
-        """A same-column OR factors into a canonical `is (a or b)` group (#363)."""
+        """A same-column OR factors into a canonical `is any (a, b)` group (#363)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -97,7 +97,7 @@ class TestStringifyInvariant:
         oql, tree = render_oqo_to_oql_and_tree(oqo)
 
         assert stringify(tree) == oql
-        assert "type is (article or book)" in oql
+        assert "type is any (article, book)" in oql
     
     def test_sort_directive(self):
         """Test sort directive."""
@@ -355,7 +355,8 @@ class TestTreeStructure:
         assert clause.meta.value == 2020
     
     def test_group_has_joiner(self):
-        """Test that group nodes have explicit joiner."""
+        """Group nodes are keyword groups: comma joiner + `all (`/`any (` prefix
+        (charter decision 32; infix `and`/`or` is no longer canonical)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -364,17 +365,17 @@ class TestTreeStructure:
             ]
         )
         _, tree = render_oqo_to_oql_and_tree(oqo)
-        
+
         group = tree.where
         assert isinstance(group, GroupNode)
-        assert group.joiner == " and "
-    
-    def test_or_group_has_parentheses(self):
-        """A nested OR group is parenthesized.
+        assert group.joiner == ", "
+        assert group.prefix == "all (" and group.suffix == ")"
+
+    def test_or_group_has_keyword_opener(self):
+        """A nested OR group renders as an `any (…)` keyword group (decision 32).
 
         Two *different* columns so the OR stays a genuine boolean group (a
-        same-column OR would factor into `is any of (...)`), and it's nested
-        under an AND so it isn't the unparenthesized top-level expression.
+        same-column OR would factor into `is any (...)`), nested under an AND.
         """
         oqo = OQO(
             get_rows="works",
@@ -394,9 +395,9 @@ class TestTreeStructure:
         and_group = tree.where
         assert isinstance(and_group, GroupNode)
         or_group = next(c for c in and_group.children if isinstance(c, GroupNode))
-        assert or_group.prefix == "("
+        assert or_group.prefix == "any ("
         assert or_group.suffix == ")"
-        assert or_group.joiner == " or "
+        assert or_group.joiner == ", "
 
 
 class TestToDict:

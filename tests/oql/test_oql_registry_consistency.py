@@ -190,12 +190,13 @@ def test_date_kind_round_trips():
     two-leaf OQO (bounds stay two clauses — never collapse to a `lo-hi` dash, which
     would collide with ISO dates)."""
     oql = "works where date >= 2019-01-01 and date <= 2023-12-31"
+    canonical = "works where all (date >= 2019-01-01, date <= 2023-12-31)"
     oqo = parse(oql)
     leaves = [_leaf_tuple(r) for r in oqo.filter_rows]
     assert leaves == [("from_publication_date", "is", "2019-01-01"),
                       ("to_publication_date", "is", "2023-12-31")]
     out = render(oqo)
-    assert out == oql
+    assert out == canonical  # body wraps in `all (…)` (decision 32)
     assert render(parse(out)) == out
 
 

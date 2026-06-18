@@ -111,12 +111,15 @@ def test_unparenthesized_or_connective_is_not_absorbed_into_value():
     assert [f["value"] for f in fr3[0]["filters"]] == ["article", "review", "book"]
 
 
-def test_canonical_output_is_lowercase_connectives():
+def test_canonical_output_is_lowercase_group_keywords():
     from tests.oql.oql_v2 import parse as p, render as r
-    # different-column OR won't factor into `any`, so an `or` survives to output
+    # decision 32: every boolean group renders as the `any`/`all` keyword form
+    # (infix and/or is demoted and never appears in canonical output); the
+    # keywords are lowercase regardless of input casing.
     out = r(canonicalize_oqo(p("works where it's open access AND (institution is I1 OR type is article)")))
-    assert " and " in out and " or " in out
-    assert " AND " not in out and " OR " not in out
+    assert "all (" in out and "any (" in out
+    assert " and " not in out and " or " not in out
+    assert "ALL (" not in out and "ANY (" not in out
 
 
 def test_renderer_resolves_display_names_for_id_and_country_columns():

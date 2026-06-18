@@ -95,7 +95,7 @@ def test_closed_range_matches_url_form():
 def test_url_range_renders_endpoint_clauses_not_dash():
     out = render(canonicalize_oqo(parse_url_to_oqo(
         "works", filter_string="publication_year:2019-2023")))
-    assert out == "works where year >= 2019 and year <= 2023"
+    assert out == "works where all (year >= 2019, year <= 2023)"
     assert "-" not in out.split("where", 1)[1]  # no dash range anywhere
 
 
@@ -103,9 +103,9 @@ def test_url_range_renders_endpoint_clauses_not_dash():
 # 3. endpoint rendering (lower-first; strict stays strict — no collapse)
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("src,want", [
-    ("works where year >= 2019 and year <= 2023", "works where year >= 2019 and year <= 2023"),
-    ("works where year <= 2023 and year >= 2019", "works where year >= 2019 and year <= 2023"),
-    ("works where FWCI >= 1.5 and FWCI <= 3.0", "works where FWCI >= 1.5 and FWCI <= 3.0"),
+    ("works where year >= 2019 and year <= 2023", "works where all (year >= 2019, year <= 2023)"),
+    ("works where year <= 2023 and year >= 2019", "works where all (year >= 2019, year <= 2023)"),
+    ("works where FWCI >= 1.5 and FWCI <= 3.0", "works where all (FWCI >= 1.5, FWCI <= 3.0)"),
     ("works where year >= 2019", "works where year >= 2019"),
     ("works where year <= 2023", "works where year <= 2023"),
 ])
@@ -116,10 +116,10 @@ def test_render_endpoint_form(src, want):
 def test_strict_integer_pair_stays_strict_no_collapse():
     # decision 24: > 42 and < 100 is NOT rewritten to the inclusive 43-99
     assert render(canonicalize_oqo(parse(
-        "works where year > 42 and year < 100"))) == "works where year > 42 and year < 100"
+        "works where year > 42 and year < 100"))) == "works where all (year > 42, year < 100)"
     assert render(canonicalize_oqo(parse(
         "works where citation count > 42 and citation count < 100"
-    ))) == "works where citation count > 42 and citation count < 100"
+    ))) == "works where all (citation count > 42, citation count < 100)"
 
 
 def test_lone_strict_bound_stays_inequality():

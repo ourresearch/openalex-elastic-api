@@ -29,11 +29,12 @@ def _sorted(oql):
 
 # --- clause order ------------------------------------------------------------
 def test_clause_order_preserved_both_ways():
-    """Two clause orderings stay distinct under sort_operands=False."""
+    """Two clause orderings stay distinct under sort_operands=False (the body
+    wraps in `all (…)` per decision 32, preserving the authored order)."""
     a = "works where year is 2020 and type is article"
     b = "works where type is article and year is 2020"
-    assert _preserve(a) == a
-    assert _preserve(b) == b
+    assert _preserve(a) == "works where all (year is 2020, type is article)"
+    assert _preserve(b) == "works where all (type is article, year is 2020)"
 
 
 def test_clause_order_sorted_by_default():
@@ -46,21 +47,21 @@ def test_clause_order_sorted_by_default():
 # --- value-group order -------------------------------------------------------
 def test_value_order_preserved_in_search_group():
     assert _preserve("works where title has (dog or cat)") == \
-        "works where title has (dog or cat)"
+        "works where title has any (dog, cat)"
     assert _preserve("works where title has (cat or dog)") == \
-        "works where title has (cat or dog)"
+        "works where title has any (cat, dog)"
 
 
 def test_value_order_preserved_in_enum_group():
     assert _preserve("works where country is (US or FR or DE)") == \
-        "works where country is (US or FR or DE)"
+        "works where country is any (US, FR, DE)"
 
 
 def test_value_order_sorted_by_default():
     assert _sorted("works where title has (dog or cat)") == \
-        "works where title has (cat or dog)"
+        "works where title has any (cat, dog)"
     assert _sorted("works where country is (US or FR or DE)") == \
-        "works where country is (DE or FR or US)"
+        "works where country is any (DE, FR, US)"
 
 
 # --- invariants that MUST survive --------------------------------------------

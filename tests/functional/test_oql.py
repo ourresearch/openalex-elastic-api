@@ -142,10 +142,10 @@ class TestOQLRenderer:
         assert "it's open access" in result
         assert "year >= 2020" in result
         assert "country is ca [Canada]" in result
-        assert " and " in result
+        assert "all (" in result   # body wraps in an `all (…)` group (decision 32)
 
     def test_or_branch_filter(self):
-        """A same-column OR factors into a canonical `is (a or b)` group (#363)."""
+        """A same-column OR factors into a canonical `is any (a, b)` group (#363)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -159,7 +159,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "works where type is (article or book)"
+        assert result == "works where type is any (article, book)"
 
     def test_sort_with_display_name(self):
         """Test sort uses display name."""

@@ -20,11 +20,15 @@ sortKey      ::= word ( 'asc' | 'desc' )?
 
 sample       ::= 'sample' NUMBER ( 'seed' NUMBER )?
 
+/* The `where` body is a boolean of clauses. CANONICAL render wraps any 2+ body
+   in the `all (…)` keyword group (decision 32); the infix `a and b` / bare
+   `(a or b)` forms below stay valid INPUT but never appear in canonical output. */
 conditions   ::= operand ( connective operand )*
 
 connective   ::= 'and' | 'or'
 
 operand      ::= 'not' operand
+               | ( 'any' | 'all' ) '(' operand ( ',' operand )* ')'
                | '(' conditions ')'
                | clause
 
@@ -46,12 +50,12 @@ operator     ::= 'is' 'not'? 'in' 'collection'
 
 value        ::= valueGroup | 'unknown' | 'null' | scalar
 
-/* A parenthesized boolean of values (`(a or b)`, `(a and b)`, nests), OR the
-   `any (…)` / `all (…)` comma-list sugar (decision 31) — same meaning,
-   comma-separated, join fixed by the keyword (any->or, all->and). The two are
-   one-for-one aliases and nest freely in each other; one separator per level
-   (commas in a keyword list, 'or'/'and' in a bare group — never mixed). Sugar is
-   input-only: it canonicalizes/renders back as the bare-parens form. */
+/* The `any (…)` / `all (…)` comma-list form is the CANONICAL value group
+   (decision 32): comma-separated, join fixed by the keyword (any->or, all->and),
+   nests freely. The bare parenthesized boolean (`(a or b)`, `(a and b)`, nests)
+   stays valid INPUT (one separator per level — 'or'/'and' in a bare group, commas
+   in a keyword list, never mixed) but canonicalizes/renders back as the keyword
+   form. */
 valueGroup   ::= '(' valueExpr ')'
                | ( 'any' | 'all' ) '(' valueItem ( ',' valueItem )* ')'
 
