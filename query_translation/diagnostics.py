@@ -170,18 +170,22 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "parentheses (a reserved word could be silently swallowed)",
               "wrap the terms in parentheses, e.g. has (a or b), "
               "or quote a phrase, e.g. has \"a b\""),
-        # (OQL_LIST_KEYWORD_REMOVED removed in decision 31 — `any of`/`all of` are
-        # back, now as comma-separated group-openers, e.g. `is any of (a, b)`.)
+        # (OQL_LIST_KEYWORD_REMOVED removed in decision 31 — `any`/`all` are
+        # back, now as comma-separated group-openers, e.g. `is any (a, b)`.)
+        _spec("OQL_ANY_OF_RENAMED", ERROR, PARSE,
+              "the `any of (…)` / `all of (…)` group openers were shortened to "
+              "`any (…)` / `all (…)` — drop the `of`",
+              "e.g. is any (a, b), has all (a, b)"),
         _spec("OQL_NEGATED_LIST_KEYWORD", ERROR, PARSE,
-              "an 'any of'/'all of' list can't be negated as a whole (decision 31 "
-              "negates leaves, not clauses) — there is no 'is not any of'/'is not "
-              "all of'",
-              "negate each item instead, e.g. is any of (not a, not b)"),
+              "an 'any'/'all' list can't be negated as a whole (decision 31 "
+              "negates leaves, not clauses) — there is no 'is not any'/'is not "
+              "all'",
+              "negate each item instead, e.g. is any (not a, not b)"),
         _spec("OQL_COMMA_IN_GROUP", ERROR, PARSE,
               "wrong separator: a bare (…) group joins items with 'or'/'and', while "
-              "an 'any of'/'all of' list joins them with commas — the two can't be "
+              "an 'any'/'all' list joins them with commas — the two can't be "
               "mixed at one level",
-              "use 'or'/'and' inside (…), or commas inside any of/all of (…)"),
+              "use 'or'/'and' inside (…), or commas inside any/all (…)"),
         # (OQL_BARE_NOT removed in decision 23 — `not` is now a bare prefix
         # keyword, so a bare `not foo` is valid, not an error.)
         _spec("OQL_BANG_NOT_SUPPORTED", ERROR, PARSE,

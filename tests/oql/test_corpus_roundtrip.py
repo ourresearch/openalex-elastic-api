@@ -92,7 +92,7 @@ def test_unparenthesized_or_connective_is_not_absorbed_into_value():
     made `parse_oql_to_oqo` delegate to the oracle grammar. This guards the **production
     entry point** the #373 OQL-submit pipeline calls, and the **un-parenthesized** shape
     (TestOQLParser.test_parse_or_expression only covers the parenthesized form). Distinct
-    parser production from the `is any of (...)` value-list sugar (corpus rows 5 / 7)."""
+    parser production from the `is any (...)` value-list sugar (corpus rows 5 / 7)."""
     from query_translation.oql_parser import parse_oql_to_oqo
 
     # Same-field OR, no parens.
@@ -113,7 +113,7 @@ def test_unparenthesized_or_connective_is_not_absorbed_into_value():
 
 def test_canonical_output_is_lowercase_connectives():
     from tests.oql.oql_v2 import parse as p, render as r
-    # different-column OR won't factor into `any of`, so an `or` survives to output
+    # different-column OR won't factor into `any`, so an `or` survives to output
     out = r(canonicalize_oqo(p("works where it's open access AND (institution is I1 OR type is article)")))
     assert " and " in out and " or " in out
     assert " AND " not in out and " OR " not in out

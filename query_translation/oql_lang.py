@@ -1257,7 +1257,7 @@ def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool]]:
     operator (``is``) or raises.
 
     NOTE: the old value-list openers ``is any of`` / ``is in`` / their negations are
-    GONE (charter decision 31). ``any of (…)`` / ``all of (…)`` are now group-OPENERS
+    GONE (charter decision 31). ``any (…)`` / ``all (…)`` are now group-OPENERS
     parsed inside the value/search body (sugar for ``(a or b)`` / ``(a and b)``), not
     operators — so they never reach this matcher. ``is [not] in collection`` (the live
     Collections operator) is unrelated and preserved below.
@@ -1720,7 +1720,7 @@ class _Parser:
         if t is not None and t.kind == "COMMA":
             raise oql_error("OQL_COMMA_IN_GROUP",
                            "items in a (…) group are separated by 'or'/'and', "
-                           "not commas (use an 'any of'/'all of' list for commas)",
+                           "not commas (use an 'any'/'all' list for commas)",
                            "replace the comma with 'or' (or 'and')", t.pos)
         if t is None or t.kind != "RP":
             raise oql_error("OQL_UNBALANCED_PARENS", "missing a closing parenthesis",
@@ -1944,20 +1944,20 @@ class _Parser:
             return LeafFilter(fld.column, v, op)
         # is / is not
         negated = (op == "isnot")
-        # `is not any of (…)` / `is not all of (…)` is NOT allowed — decision 31
+        # `is not any (…)` / `is not all (…)` is NOT allowed — decision 31
         # negates leaves, not lists. (The bare-paren `is not (a or b)` group negation
         # is unchanged — De Morgan pushes it to leaves; only the keyword form is
         # blocked, with a fix-it.)
         if negated and self._group_opener_kind() in ("or", "and"):
             kw = self.peek().val.lower()
             raise oql_error("OQL_NEGATED_LIST_KEYWORD",
-                           f'"is not {kw} of (…)" is not allowed — '
+                           f'"is not {kw} (…)" is not allowed — '
                            "negate the items, not the list",
-                           f"e.g. {field} is {kw} of (not a, not b)",
+                           f"e.g. {field} is {kw} (not a, not b)",
                            self.peek().pos)
         # a parenthesized boolean group of values: `country is (us or uk)`,
         # `country is not (us or uk)` (the base operator negates the whole group);
-        # OR an `any of (…)` / `all of (…)` keyword group (sugar for `(a or b)` /
+        # OR an `any (…)` / `all (…)` keyword group (sugar for `(a or b)` /
         # `(a and b)`, charter decision 31) — `_parse_grouped_operand` handles both.
         grp = self._parse_grouped_operand(lambda: self._parse_value_operand(fld))
         if grp is not None:
@@ -1993,7 +1993,7 @@ class _Parser:
 
     def _parse_value_operand(self, fld: Field) -> FilterType:
         """One operand inside an `is (...)` value group: a `not`-prefixed operand,
-        a nested group (`(...)` or `any of (...)` / `all of (...)`), or one scalar
+        a nested group (`(...)` or `any (...)` / `all (...)`), or one scalar
         value (-> an `is` leaf)."""
         t = self.peek()
         if t is not None and t.kind == "WORD" and t.val.lower() == "not":
@@ -2005,7 +2005,7 @@ class _Parser:
         if t is not None and t.kind == "COMMA":
             raise oql_error("OQL_COMMA_IN_GROUP",
                            "items in a (…) group are separated by 'or'/'and', "
-                           "not commas (use an 'any of'/'all of' list for commas)",
+                           "not commas (use an 'any'/'all' list for commas)",
                            "replace the comma with 'or' (or 'and')", t.pos)
         v = self._parse_scalar(fld)
         return LeafFilter(fld.column, v, "is")
@@ -2104,7 +2104,7 @@ class _Parser:
             # `title has not dog`. A multi-word run is one value-node, so
             # `not machine learning` negates the whole run.
             return self._parse_search_operand(base)
-        # a `(...)` boolean group OR an `any of (…)` / `all of (…)` keyword group
+        # a `(...)` boolean group OR an `any (…)` / `all (…)` keyword group
         # (sugar, charter decision 31) — `_parse_grouped_operand` handles both.
         grp = self._parse_grouped_operand(lambda: self._parse_search_operand(base))
         if grp is not None:
@@ -2122,53 +2122,71 @@ class _Parser:
 
     def _group_opener_kind(self) -> Optional[str]:
         """At the cursor, is there a group opener? Returns 'paren' for a bare `(`,
-        'or' for `any of (`, 'and' for `all of (`, else None. Does not consume.
+        'or' for `any (`, 'and' for `all (`, else None. Does not consume.
 
-        `any of` / `all of` are atomic two-word group-opener keywords — sugar for
-        `(a or b)` / `(a and b)` (charter decision 31). They open a group ONLY when
-        both words are immediately followed by `(`; otherwise `any`/`all`/`of` are
-        ordinary value/search words (`university of florida`, `title has all of the
-        above`)."""
+        `any` / `all` are atomic group-opener keywords — sugar for `(a or b)` /
+        `(a and b)` (charter decision 31). They open a group ONLY when immediately
+        followed by `(`; otherwise `any`/`all` are ordinary value/search words
+        (`title has any cat`, `country is all`). The shorter `any (…)`/`all (…)`
+        form replaced the original `any of (…)`/`all of (…)` (it reads more directly
+        when nesting); the dropped `of` form is caught by `_reject_legacy_any_of`."""
         t = self.peek()
         if t is None:
             return None
         if t.kind == "LP":
             return "paren"
-        if (t.kind == "WORD" and t.val.lower() in ("any", "all")
+        if t.kind == "WORD" and t.val.lower() in ("any", "all"):
+            t1 = self.peek(1)
+            if t1 is not None and t1.kind == "LP":
+                return "or" if t.val.lower() == "any" else "and"
+        return None
+
+    def _reject_legacy_any_of(self) -> None:
+        """The decision-31 group openers were briefly `any of (…)` / `all of (…)`;
+        they were shortened to `any (…)` / `all (…)`. Catch the dropped-`of` form at
+        a group-opener position with a fix-it instead of letting it fall through to a
+        confusing undelimited-term error. Only the exact `any|all` `of` `(` shape
+        triggers, so ordinary words (`title has all of the above`) are unaffected."""
+        t = self.peek()
+        if (t is not None and t.kind == "WORD" and t.val.lower() in ("any", "all")
                 and self.word_is("of", k=1)):
             t2 = self.peek(2)
             if t2 is not None and t2.kind == "LP":
-                return "or" if t.val.lower() == "any" else "and"
-        return None
+                kw = t.val.lower()
+                raise oql_error("OQL_ANY_OF_RENAMED",
+                               f'"{kw} of (…)" was shortened to "{kw} (…)" — '
+                               'drop the "of"',
+                               f"e.g. {kw} (a, b)", t.pos)
 
     def _parse_grouped_operand(self, parse_operand) -> Optional[FilterType]:
         """If the cursor is at a group opener, parse the whole group (consuming its
         `)`) and return its filter; else return None without consuming. Handles the
         bare `(…)` group (`or`/`and`-separated — the existing `_parse_bool_expr`
-        machinery) and the `any of (…)` / `all of (…)` keyword groups (comma-
-        separated, join fixed by the opener — charter decision 31). Groups nest
-        freely in each other via `parse_operand`."""
+        machinery) and the `any (…)` / `all (…)` keyword groups (comma-separated,
+        join fixed by the opener — charter decision 31). Groups nest freely in each
+        other via `parse_operand`."""
         kind = self._group_opener_kind()
         if kind is None:
+            self._reject_legacy_any_of()
             return None
         if kind == "paren":
             self.next()                       # (
             e = self._parse_bool_expr(parse_operand)
             self._expect_rp()
             return e
-        self.next(); self.next(); self.next()  # `any`/`all`, `of`, `(`
+        self.next(); self.next()              # `any`/`all`, `(`
         e = self._parse_keyword_group(parse_operand, "or" if kind == "or" else "and")
         self._expect_rp()
         return e
 
     def _parse_keyword_group(self, parse_operand, join: str) -> FilterType:
-        """Body of an `any of (…)` / `all of (…)` group: COMMA-separated operands,
+        """Body of an `any (…)` / `all (…)` group: COMMA-separated operands,
         the join FIXED by the opener (`any`→or, `all`→and). One separator per level —
         a bare `or`/`and` word here is rejected (OQL_COMMA_IN_GROUP; the opener already
-        fixes the join). No trailing comma; a single item unwraps (`any of (a)` → `a`).
-        Operands may nest (`all of (a, any of (b, c))`). Pure sugar: builds the same
+        fixes the join). No trailing comma; a single item unwraps (`any (a)` → `a`).
+        Operands may nest (`all (a, any (b, c))`). Pure sugar: builds the same
         `BranchFilter` the parens form does, so it canonicalizes/renders identically
-        (it never round-trips back to `any of`)."""
+        (it never round-trips back to `any`)."""
         outer = self._in_list
         self._in_list = True
         try:
@@ -2189,10 +2207,10 @@ class _Parser:
                 if (t is not None and t.kind == "WORD"
                         and t.val.lower() in _CONNECTIVES):
                     raise oql_error("OQL_COMMA_IN_GROUP",
-                                   "items in an 'any of'/'all of' list are separated "
+                                   "items in an 'any'/'all' list are separated "
                                    "by commas, not 'or'/'and'",
-                                   "use commas, e.g. any of (a, b) — or nest a group, "
-                                   "e.g. any of (a, (b and c))", t.pos)
+                                   "use commas, e.g. any (a, b) — or nest a group, "
+                                   "e.g. any (a, (b and c))", t.pos)
                 break
             if len(items) == 1:
                 return items[0]
@@ -2344,7 +2362,7 @@ class _Parser:
 
     def _parse_search_operand(self, base: str) -> FilterType:
         """One operand inside a `has (...)` group: a `not`-prefixed operand, a nested
-        group (`(...)` or `any of (...)` / `all of (...)`), or one search atom."""
+        group (`(...)` or `any (...)` / `all (...)`), or one search atom."""
         self._skip_annot()
         # an empty search-term slot at the cursor (`title has |`)
         self._want(CTX_VALUE, fld=self._cur_fld, kind="search")
@@ -2357,7 +2375,7 @@ class _Parser:
         if t.kind == "WORD" and t.val.lower() == "not":
             self._consume_not(t)  # bare prefix `not` (decision 23)
             return _negate(self._parse_search_operand(base))
-        # a `(...)` boolean group OR an `any of (…)` / `all of (…)` keyword group
+        # a `(...)` boolean group OR an `any (…)` / `all (…)` keyword group
         # (sugar, charter decision 31) — `_parse_grouped_operand` handles both.
         grp = self._parse_grouped_operand(lambda: self._parse_search_operand(base))
         if grp is not None:
@@ -2426,9 +2444,9 @@ class _Parser:
                     nt = self.peek()
                     if nt is None:
                         break
-                    # `any of (` / `all of (` mid-run starts a nested keyword group
+                    # `any (` / `all (` mid-run starts a nested keyword group
                     # (charter decision 31), not more stemmed words — break the run so
-                    # `has (machine learning all of (a, b))` reads the run then the group.
+                    # `has (machine learning all (a, b))` reads the run then the group.
                     if self._group_opener_kind() is not None:
                         break
                     if nt.kind == "WORD" and not self._is_run_break_word(nt.val):

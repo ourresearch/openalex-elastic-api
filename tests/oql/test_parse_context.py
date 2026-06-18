@@ -386,21 +386,21 @@ def test_field_matcher_agrees_with_parser():
 
 
 def test_operator_matcher_agrees_with_parser():
-    # decision 31: `any of`/`all of`/`is in` are no longer operators — `any of (`/
-    # `all of (` are value/search group-openers parsed in the value body, and the
-    # bare `is in` list is gone. So `is any of` matches just `is` (the `any of (…)`
-    # group is the value); `is not any of` matches just `isnot`; `is in` (no
-    # `collection`) matches `is` (then `in` is a value). Only `is [not] in collection`
-    # is a real `in`-family operator.
+    # decision 31: `any`/`all`/`is in` are no longer operators — `any (`/`all (`
+    # are value/search group-openers parsed in the value body, and the bare `is in`
+    # list is gone. So `is any` matches just `is` (the `any (…)` group is the value);
+    # `is not any` matches just `isnot`; `is in` (no `collection`) matches `is` (then
+    # `in` is a value). Only `is [not] in collection` is a real `in`-family operator.
     cases = [("year is", "is"), ("year is not", "isnot"),
-             ("institution is any of", "is"), ("institution is not any of", "isnot"),
+             ("institution is any", "is"), ("institution is not any", "isnot"),
              ("institution is in", "is"),
              ("work is in collection", "incoll"),
              ("work is not in collection", "nincoll"),
              ("year >=", ">="),
              ("title has", "has")]
     for text, expected_op in cases:
-        toks = lex(text + " x") if not text.endswith("of") else lex(text + " (x)")
+        toks = (lex(text + " (x)") if text.endswith(("any", "all"))
+                else lex(text + " x"))
         # skip the field
         m = C._match_field(toks, 0)
         _sp, _fld, flen = m

@@ -47,13 +47,13 @@ operator     ::= 'is' 'not'? 'in' 'collection'
 value        ::= valueGroup | 'unknown' | 'null' | scalar
 
 /* A parenthesized boolean of values (`(a or b)`, `(a and b)`, nests), OR the
-   `any of (…)` / `all of (…)` comma-list sugar (decision 31) — same meaning,
+   `any (…)` / `all (…)` comma-list sugar (decision 31) — same meaning,
    comma-separated, join fixed by the keyword (any->or, all->and). The two are
    one-for-one aliases and nest freely in each other; one separator per level
    (commas in a keyword list, 'or'/'and' in a bare group — never mixed). Sugar is
    input-only: it canonicalizes/renders back as the bare-parens form. */
 valueGroup   ::= '(' valueExpr ')'
-               | ( 'any' | 'all' ) 'of' '(' valueItem ( ',' valueItem )* ')'
+               | ( 'any' | 'all' ) '(' valueItem ( ',' valueItem )* ')'
 
 valueExpr    ::= valueItem ( connective valueItem )*
 
@@ -72,7 +72,7 @@ termRun      ::= searchOperand+
 
 searchOperand ::= 'not' searchOperand
                | '(' searchExpr ')'
-               | ( 'any' | 'all' ) 'of' '(' searchOperand ( ',' searchOperand )* ')'
+               | ( 'any' | 'all' ) '(' searchOperand ( ',' searchOperand )* ')'
                | searchAtom
 
 searchAtom   ::= 'near'? term proximity?
