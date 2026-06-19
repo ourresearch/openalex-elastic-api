@@ -17,6 +17,17 @@ from core.schemas import (
 logger = logging.getLogger(__name__)
 
 
+# zd#22072: W3150055031's only location is a Microsoft-Academic-Graph-era
+# landing page (id `mag:3150055031`) on a domain that has lapsed and now serves
+# malicious/pornographic pop-ups. Until the location is removed from the
+# Databricks source (so it stays gone after the next snapshot rebuild), scrub it
+# from every serialized response and mark the work toll-access. Map of
+# OpenAlex work id -> set of offending location ids to strip.
+SCRUBBED_WORK_LOCATIONS = {
+    "https://openalex.org/W3150055031": {"mag:3150055031"},
+}
+
+
 def _parse_abstract_inverted_index(abstract_inverted_index_str):
     """
     Parse abstract_inverted_index JSON string and handle malformed data gracefully.
@@ -391,6 +402,44 @@ class WorksSchema(Schema):
     @post_dump
     def remove_relevance_score(self, data, many, **kwargs):
         return hide_relevance(data, self.context)
+
+    @post_dump
+    def scrub_bad_locations(self, data, many, **kwargs):
+        """zd#22072: strip known-bad locations and force toll-access.
+
+        Runs for both single-record and list (`results`) serialization, so the
+        offending location never reaches the GUI's HTML button or the API.
+        """
+        bad_ids = SCRUBBED_WORK_LOCATIONS.get(data.get("id"))
+        if not bad_ids:
+            return data
+
+        def is_bad(loc):
+            return isinstance(loc, dict) and loc.get("id") in bad_ids
+
+        if "locations" in data:
+            data["locations"] = [
+                loc for loc in (data.get("locations") or []) if not is_bad(loc)
+            ]
+            if "locations_count" in data:
+                data["locations_count"] = len(data["locations"])
+
+        for key in ("primary_location", "best_oa_location"):
+            if is_bad(data.get(key)):
+                data[key] = None
+
+        # No OA location survives -> the work is toll-access (closed).
+        remaining = data.get("locations") or []
+        if not any(isinstance(loc, dict) and loc.get("is_oa") for loc in remaining):
+            if data.get("open_access") is not None:
+                data["open_access"] = {
+                    "is_oa": False,
+                    "oa_status": "closed",
+                    "oa_url": None,
+                    "any_repository_has_fulltext": False,
+                }
+
+        return data
 
     @staticmethod
     def get_relevance_score(obj):
