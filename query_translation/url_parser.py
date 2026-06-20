@@ -68,6 +68,7 @@ def parse_url_to_oqo(
     cursor: Optional[str] = None,
     search_string: Optional[str] = None,
     semantic_search_string: Optional[str] = None,
+    include_xpac: bool = False,
 ) -> OQO:
     """
     Parse URL filter/sort/group_by strings into an OQO object.
@@ -110,6 +111,16 @@ def parse_url_to_oqo(
             (spec §search-modes, corpus row 30). Inverse of the
             `render_oqo_to_url` semantic-routing branch, so a working prod
             `?search.semantic=` URL round-trips to OQL.
+        include_xpac: The legacy `?include_xpac=true` corpus-expansion flag (#481
+            leftover, #498). When True, the OQO carries `corpus="all"` (core +
+            expansion), matching what the executor actually does with that param —
+            so the canonical OQO / x_query echo is faithful instead of defaulting
+            to `core`. An explicit `is_xpac:` filter still wins (it redirects to
+            `corpus` in `canonicalize_oqo_column_ids`, run below, OVERRIDING this),
+            mirroring the legacy precedence (explicit filter > include_xpac > core).
+            Note: a non-core corpus is OQL-only on the render side — `?include_xpac`
+            itself is on #464's drop list — so this is an oxurl→OQO INPUT fidelity
+            fix, not a round-trippable URL form.
 
     Returns:
         OQO object representing the query
@@ -153,8 +164,14 @@ def parse_url_to_oqo(
     # Collapse alias spellings (e.g. `filter=is_oa:true`, `group_by=institution.id`)
     # to one canonical identity at the URL-input boundary (#455). Idempotent; the
     # alias stays accepted on input, it's just normalized for everything downstream.
+    # Legacy `?include_xpac=true` ⇒ corpus="all" (#481 leftover, #498). Set before
+    # canonicalize: an `is_xpac:` filter present in `filter_rows` redirects to
+    # `corpus` there and OVERRIDES this, matching the executor's precedence
+    # (explicit filter > include_xpac > core).
+    corpus = "all" if include_xpac else "core"
     return canonicalize_oqo_column_ids(OQO(
         get_rows=entity_type,
+        corpus=corpus,
         filter_rows=filter_rows,
         sort_by=sort_by,
         sample=sample,

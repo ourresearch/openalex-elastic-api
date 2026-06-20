@@ -243,8 +243,30 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["is_retracted"],
         alternate_names=ALTERNATE_NAMES.get("is_retracted", None),
     ),
+    # ┌─ DEPRECATED — DO NOT USE THE `is_xpac` FILTER (#498) ─────────────────────┐
+    # │ AGENTS & HUMANS: do NOT reach for `filter=is_xpac:true|false` in new code, │
+    # │ queries, tools, or docs. It is RETIRED in favor of the first-class corpus  │
+    # │ selector (#481):                                                            │
+    # │     is_xpac:true   →  corpus=expansion   (the expansion corpus alone)        │
+    # │     is_xpac:false  →  corpus=core         (the curated corpus; the default)  │
+    # │     (neither)      →  corpus=all          (core + expansion)                 │
+    # │ The filter conflated two different things — *selecting* a corpus vs.         │
+    # │ *filtering within* one — and was a silent no-op unless paired with           │
+    # │ `include_xpac=true`. That ambiguity is the footgun; `corpus` removes it.     │
+    # │                                                                              │
+    # │ Why this Field still exists: it is `unlisted=True` — kept LIVE so the        │
+    # │ legacy REST path (`/works?filter=is_xpac:`) and any in-flight caller keep     │
+    # │ executing (soft-deprecation, no hard break), but DROPPED from the public      │
+    # │ `/properties` catalog so it is no longer advertised or discoverable. The      │
+    # │ OQO/OQL/oxurl boundary additionally REDIRECTS any `is_xpac` leaf into          │
+    # │ `corpus` (query_translation/oqo.py:redirect_is_xpac_to_corpus), so canonical   │
+    # │ queries never carry it. Internal corpus→is_xpac ES mapping lives in            │
+    # │ query_translation/execution.py + works/views.py (the core default) — that's    │
+    # │ the engine plumbing, not a user lever. Don't resurrect this as a filter.       │
+    # └────────────────────────────────────────────────────────────────────────────┘
     BooleanField(
-        param="is_xpac"
+        param="is_xpac",
+        unlisted=True,
     ),
     BooleanField(
         param="locations.is_oa",

@@ -197,6 +197,18 @@ class Property:
     # words ("country"); `alternate_keys` are machine key spellings ("institution.id").
     alternate_of: Optional[str] = None
     alternate_keys: List[str] = field(default_factory=list)
+    # Soft-deprecation visibility (#498). When True, this property stays a live,
+    # resolvable column EVERYWHERE the server executes (filter API / validator /
+    # OQL parse — it's still in `fields_dict` and `ENTITY_PROPERTIES`), but the
+    # PUBLIC `/properties` render (`core.properties._merged_properties`) drops it
+    # as a top-level entry so it is no longer advertised/discoverable. Distinct
+    # from `alternate_of` (an alias machine-key spelling that folds into a
+    # canonical property): an `unlisted` column has NO canonical replacement key —
+    # it is simply retired from the catalog because a *different mechanism* now
+    # covers it (e.g. `is_xpac` → the `corpus` selector). Server-internal: NOT
+    # serialized (a dropped entry never reaches the wire anyway). Set via the
+    # `Field(..., unlisted=True)` constructor arg.
+    unlisted: bool = False
     # Boolean sentence phrasing (#428). The curated human sentence for a boolean
     # property's two values — e.g. open_access.is_oa: "it's open access" /
     # "it's not open access"; has_doi: "it has a DOI" / "it doesn't have a DOI".
@@ -265,6 +277,7 @@ class Field(ABC):
         alternate_names=None,
         entity_type=None,
         alternate_of=None,
+        unlisted=False,
     ):
         self.param = param
         self.alias = alias
@@ -284,6 +297,10 @@ class Field(ABC):
         # `/properties` catalog demotes it from a top-level entry, folding it into
         # the canonical property's `alternate_keys`. None ⇒ this IS a canonical key.
         self.alternate_of = alternate_of
+        # Soft-deprecation (#498): keep the column live + executable but drop it
+        # from the PUBLIC `/properties` catalog. See Property.unlisted for the full
+        # contract. Used for `is_xpac` (superseded by the `corpus` selector, #481).
+        self.unlisted = unlisted
         # Cross-type collection filter (#266): when set, allows
         # `<param>:col_xxx` to resolve a collection of this entity type and
         # apply it as a terms clause. None means the field does not support
@@ -344,6 +361,7 @@ class Field(ABC):
             custom_es_field=self.custom_es_field,
             entity_type=self.entity_type,
             alternate_of=self.alternate_of,
+            unlisted=self.unlisted,
         )
 
 

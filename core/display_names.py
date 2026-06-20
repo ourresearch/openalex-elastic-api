@@ -360,6 +360,11 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'institutions.is_global_south': {"display_name": 'from global south'},
         'institutions_distinct_count': {"display_name": 'institutions count'},
         'is_retracted': {"display_name": 'retracted'},
+        # DEPRECATED filter (#498): `is_xpac` is `unlisted` (dropped from public
+        # /properties) — use the `corpus` selector instead (#481). This label is
+        # kept only so the still-live column stays consistent with the GUI's
+        # surviving facet (keeps the label-consistency gate green). Don't advertise
+        # is_xpac as a filter. See works/fields.py for the full deprecation banner.
         'is_xpac': {"display_name": 'in extended index'},
         'keywords.id': {"display_name": 'keyword'},
         'language': {"display_name": 'language'},

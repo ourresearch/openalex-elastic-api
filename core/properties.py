@@ -154,7 +154,13 @@ CAP_COLUMN = "column"
 # has_/is_ booleans, gui-facet labels) intentionally left as-is. No gui sync needed (none of the
 # relabeled params are gui facets; #381 label-consistency gate stays green). Jason-approved
 # 2026-06-12 (#446 session). = MINOR.
-PROPERTIES_VERSION = "4.1.0"
+# 5.0.0 (#498, retire the is_xpac filter): the `is_xpac` works property is now `unlisted`
+# (Field flag) — it stays LIVE/executable (legacy REST + validator + ?select=is_xpac keep
+# working) but is DROPPED from the PUBLIC /properties catalog, superseded by the first-class
+# `corpus` selector (#481). A top-level property REMOVAL from the contract = MAJOR. The
+# OQO/OQL/oxurl boundary additionally redirects any is_xpac leaf → corpus. Jason-approved
+# (clean-MAJOR call, #498 session, 2026-06-20). = MAJOR.
+PROPERTIES_VERSION = "5.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -430,12 +436,26 @@ def _merged_properties(entity_type):
     # PUBLIC catalog — they survive only as `alternate_keys` on their canonical
     # property. They REMAIN in `ENTITY_PROPERTIES` (so filter/validator/OQL parse
     # keep resolving them); the demotion is render-surface only.
+    # Also drop `unlisted` columns (#498): soft-deprecated fields that stay live
+    # and resolvable in ENTITY_PROPERTIES (filter/validator/OQL parse keep working)
+    # but are retired from the PUBLIC catalog because a different mechanism now
+    # covers them (e.g. `is_xpac` → the `corpus` selector). See Property.unlisted.
+    all_props = ENTITY_PROPERTIES.get(entity_type, {})
     merged = {
         name: prop
-        for name, prop in ENTITY_PROPERTIES.get(entity_type, {}).items()
-        if not prop.alternate_of
+        for name, prop in all_props.items()
+        if not prop.alternate_of and not prop.unlisted
     }
+    # An `unlisted` column that is ALSO a selectable result field (e.g. `is_xpac`,
+    # which is in WorksSchema) must not sneak back in via the column union below —
+    # otherwise it'd reappear as a `column`-only property. Drop it there too so the
+    # retirement is total in the public catalog. (It stays serialized in entity
+    # output + `?select=is_xpac` still resolves — unlisted is a catalog hide, not a
+    # functional removal.)
+    _unlisted = {name for name, prop in all_props.items() if prop.unlisted}
     for name in get_selectable_fields(entity_type) or set():
+        if name in _unlisted:
+            continue
         existing = merged.get(name)
         if existing is None:
             display_name, aliases = resolve_display_name(entity_type, name)

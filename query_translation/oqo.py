@@ -100,6 +100,65 @@ def filter_from_dict(data: Dict[str, Any]) -> FilterType:
         return LeafFilter.from_dict(data)
 
 
+def _is_xpac_value_truthy(value) -> bool:
+    """Interpret an `is_xpac` filter leaf value as a boolean. Accepts the parsed
+    string forms (`"true"`/`"false"`) the URL/OQL parsers produce, a real bool, or
+    any other value (treated by Python truthiness; `None`/`"false"` → False)."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() == "true"
+    return bool(value)
+
+
+def redirect_is_xpac_to_corpus(oqo: "OQO") -> "OQO":
+    """Soft-retire the legacy `is_xpac` works filter (#498): fold a TOP-LEVEL
+    `is_xpac` leaf into the first-class `corpus` selector (#481).
+
+        is_xpac:true   → corpus="expansion"   (the expansion corpus alone)
+        is_xpac:false  → corpus="core"          (the curated corpus)
+        !is_xpac:true  ≡ is_xpac:false → core
+        !is_xpac:false ≡ is_xpac:true  → expansion
+
+    Why: #481 made `corpus` the first-class way to pick core/expansion/all, which
+    makes the user-facing `is_xpac` filter redundant. This redirect keeps every
+    OQO/OQL/oxurl caller that still names `is_xpac` working, while the CANONICAL
+    OQO carries `corpus` (so it renders + round-trips as the corpus selector and
+    never re-emits the deprecated filter).
+
+    Scope:
+      * works queries only (`corpus` is works-only); other entities pass through.
+      * TOP-LEVEL leaves only. A nested `is_xpac` inside an OR/AND branch is NOT a
+        corpus *selection* (you can't OR a base-corpus choice), so it's left as a
+        plain ES term filter — the column survives internally (it stays a live,
+        UNLISTED works field; see works/fields.py). The executor's
+        `_oqo_mentions_column(..., "is_xpac")` escape-hatch still suppresses corpus
+        injection for that exotic case, so behavior is unchanged.
+
+    Last top-level `is_xpac` leaf wins, and the derived corpus OVERRIDES any
+    pre-existing `corpus` — mirroring the legacy "an explicit is_xpac filter is the
+    escape hatch that wins" precedence (query_translation/execution.py). Pure +
+    idempotent (a second pass finds no `is_xpac` leaf and is a no-op)."""
+    if oqo.get_rows != "works":
+        return oqo
+    if not any(
+        isinstance(f, LeafFilter) and f.column_id == "is_xpac"
+        for f in oqo.filter_rows
+    ):
+        return oqo
+    corpus = oqo.corpus
+    kept = []
+    for f in oqo.filter_rows:
+        if isinstance(f, LeafFilter) and f.column_id == "is_xpac":
+            truthy = _is_xpac_value_truthy(f.value)
+            if f.is_negated:
+                truthy = not truthy
+            corpus = "expansion" if truthy else "core"
+            continue  # drop the redirected leaf
+        kept.append(f)
+    return replace(oqo, corpus=corpus, filter_rows=kept)
+
+
 def canonicalize_oqo_column_ids(oqo: "OQO") -> "OQO":
     """Return a COPY of `oqo` with every FILTER-namespace `column_id` mapped to its
     single CANONICAL identity for the entity (#455): filter leaves (recursively
@@ -126,7 +185,12 @@ def canonicalize_oqo_column_ids(oqo: "OQO") -> "OQO":
     Synthetic sort keys (`relevance_score`/`count`/`key`) and unknown columns pass
     through unchanged (the validator still gates the latter). A no-op when
     `core.properties` can't be imported (degrade to the raw spellings rather than
-    crash a parse)."""
+    crash a parse).
+
+    Also folds the deprecated `is_xpac` works filter into the `corpus` selector
+    (#498) — done FIRST and import-independently, so the redirect runs on every
+    construction boundary even if the column-id canonicalization below degrades."""
+    oqo = redirect_is_xpac_to_corpus(oqo)
     try:
         from core.properties import canonicalize_column_id
     except Exception:

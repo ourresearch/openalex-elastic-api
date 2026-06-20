@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "786b6f82558f9e2f420800c47b59711709aa3b6f3df1e12618f6bc5a8756b481",
-    "property_count": 784,
-    "version": "4.1.0"
+    "fingerprint": "0166a5f14d83dc84d9a79aec7d93295b720a9c0c4b634744847c39068c6237b3",
+    "property_count": 783,
+    "version": "5.0.0"
   },
   "properties": {
     "authors": {
@@ -13529,27 +13529,6 @@
         "display_name": "retracted",
         "entity_type": null,
         "name": "is_retracted",
-        "operators": [
-          "eq",
-          "null"
-        ],
-        "type": "boolean"
-      },
-      "is_xpac": {
-        "actions": [
-          "column",
-          "filter",
-          "group_by",
-          "sort"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": "it's not in the extended index",
-        "bool_true": "it's in the extended index",
-        "category": "other",
-        "display_name": "in extended index",
-        "entity_type": null,
-        "name": "is_xpac",
         "operators": [
           "eq",
           "null"

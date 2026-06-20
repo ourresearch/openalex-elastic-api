@@ -127,6 +127,10 @@ def attach_x_query(result, request, index_name):
             cursor=request.args.get("cursor"),
             search_string=request.args.get("search"),
             semantic_search_string=request.args.get("search.semantic"),
+            include_xpac=(
+                request.args.get("include_xpac") == "true"
+                or request.args.get("include-xpac") == "true"
+            ),
         )
         result["meta"]["x_query"] = build_x_query(oqo)
     except Exception:

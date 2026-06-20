@@ -336,6 +336,11 @@ def parse_url_input(entity_type: str, input_data):
             cursor = input_data.get("cursor")
             search_string = input_data.get("search")
             semantic_search_string = input_data.get("search.semantic")
+            # Legacy corpus-expansion flag (#481 leftover, #498) → corpus="all".
+            include_xpac = (
+                input_data.get("include_xpac") in (True, "true")
+                or input_data.get("include-xpac") in (True, "true")
+            )
         else:
             # Input is just the filter string
             filter_string = input_data
@@ -349,9 +354,10 @@ def parse_url_input(entity_type: str, input_data):
             cursor = None
             search_string = None
             semantic_search_string = None
+            include_xpac = False
 
         oqo = parse_url_to_oqo(
-            entity_type=entity_type, filter_string=filter_string, sort_string=sort_string, sample=sample, group_by_string=group_by_string, select_string=select_string, seed=seed, per_page=per_page, page=page, cursor=cursor, search_string=search_string, semantic_search_string=semantic_search_string, )
+            entity_type=entity_type, filter_string=filter_string, sort_string=sort_string, sample=sample, group_by_string=group_by_string, select_string=select_string, seed=seed, per_page=per_page, page=page, cursor=cursor, search_string=search_string, semantic_search_string=semantic_search_string, include_xpac=include_xpac, )
         return oqo, None
     except Exception as e:
         return None, f"Failed to parse URL format: {str(e)}"
