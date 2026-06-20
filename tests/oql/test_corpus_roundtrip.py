@@ -300,8 +300,10 @@ def test_every_row_has_valid_facets():
         165: "oql-only", 166: "oql-only", 167: "oql-only",
         # Corpus selector (#481): a non-core corpus has no classic OXURL form
         # (the legacy include_xpac param is on #464's drop list), so url_renderer
-        # raises and these are oql-only. (185 is the error row — not in this map.)
-        182: "oql-only", 183: "oql-only", 184: "oql-only",
+        # raises and these are oql-only. (185 is the error row — not in this map;
+        # the "all corpora" row is 186, renumbered from a dup of #363's error id
+        # 182 — see #497.)
+        183: "oql-only", 184: "oql-only", 186: "oql-only",
     }
     assert non_has_oxurl == expected, (
         f"oxurl_status classification drifted: "

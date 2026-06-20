@@ -4073,10 +4073,8 @@ rows:
 # canonical spelling (covered in tests/oql/test_corpus_selector.py, not here —
 # corpus rows must carry the CANONICAL oql to satisfy the formatter gate). Non-core
 # corpora are OQL-only: the legacy include_xpac param is on #464's drop list, so
-# url_renderer raises and oxurl is null. NOTE: hand-author these rows — do NOT run
-# docs/oql/regen_corpus_oql.py (its in-place block rewriter mis-aligns and corrupts
-# the preceding error row; the CI gate is the per-row pytest tests, which pass).
-- id: 182
+# url_renderer raises and oxurl is null.
+- id: 186
   tags: [corpus]
   provenance:
     type: "spec design"

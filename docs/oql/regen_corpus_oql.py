@@ -267,13 +267,44 @@ def rewrite_block(block: list, row: dict, resolver) -> list:
 def regenerate(src: list) -> list:
     resolver = make_resolver(harvest_names("".join(src)))
     data = yaml.safe_load("".join(src))
-    rows_by_id = {r["id"]: r for r in data["rows"]}
+    rows = data["rows"]
+
+    # Duplicate ids are a corpus data bug, not a tool input we can disambiguate:
+    # the old {id: row} lookup silently collapsed them (last-wins), so a block
+    # whose id was reused elsewhere got rewritten against the *other* row's data
+    # — cross-writing one row's derived fields into a different (often error) row.
+    # Refuse to run rather than corrupt. (#497: #481 reused id 182, an existing
+    # #363 error row, and the ok row's oqo landed in the error row.)
+    seen, dups = set(), set()
+    for r in rows:
+        if r["id"] in seen:
+            dups.add(r["id"])
+        seen.add(r["id"])
+    if dups:
+        raise ValueError(
+            f"corpus.yaml has duplicate row id(s) {sorted(dups)} — every row "
+            f"must have a unique id; renumber the collision before regenerating.")
 
     preamble, blocks = split_blocks(src)
+    # split_blocks walks the file top-to-bottom and yaml.safe_load preserves file
+    # order, so blocks[i] is exactly rows[i]. Pair them POSITIONALLY (never by a
+    # global id dict) and assert the ids agree — this is what makes a cross-row
+    # write structurally impossible: a row's fields can only ever go into its own
+    # block.
+    if len(blocks) != len(rows):
+        raise ValueError(
+            f"block/row count mismatch: {len(blocks)} blocks vs {len(rows)} rows "
+            f"— the corpus.yaml layout the rewriter assumes (one `- id:` line per "
+            f"row, at column 0) has drifted.")
     out = list(preamble)
-    for block in blocks:
+    for block, row in zip(blocks, rows):
         m = re.match(r"- id:\s*(\d+)", block[0])
-        row = rows_by_id[int(m.group(1))]
+        block_id = int(m.group(1))
+        if block_id != row["id"]:
+            raise ValueError(
+                f"block/row misalignment: text block `- id: {block_id}` does not "
+                f"match parsed row id {row['id']}. Refusing to write to avoid "
+                f"cross-row corruption.")
         out.extend(rewrite_block(block, row, resolver))
     return out
 
@@ -300,7 +331,13 @@ def main() -> int:
 
     with open(CORPUS, "w") as fh:
         fh.writelines(out)
-    changed = sum(1 for a, b in zip(out, src) if a != b) + abs(len(out) - len(src))
+    # Honest diff size: count the actual +/- lines, not a positional zip (which
+    # overcounts every line after an insertion as "changed" — the #497 "2454/2485
+    # changed" misreport).
+    import difflib
+    changed = sum(
+        1 for ln in difflib.unified_diff(src, out, n=0)
+        if ln[:1] in "+-" and not ln.startswith(("+++", "---")))
     print(f"regenerated corpus.yaml ({changed} line(s) changed)")
     return 0
 
