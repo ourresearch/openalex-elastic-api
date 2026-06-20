@@ -103,6 +103,7 @@ def _components_to_oxurl(entity_type: str, components: dict) -> str:
 def build_x_query(
     oqo: OQO,
     entity_resolver: Optional[Callable[[str], Optional[str]]] = None,
+    sort_operands: bool = True,
 ) -> dict:
     """Build the private `meta.x_query` triple {oql, oqo, url} (oxjob #373).
 
@@ -112,6 +113,16 @@ def build_x_query(
       - url: the OXURL (`/works?filter=…`) form, or None when the OQO isn't
              URL-expressible (nested boolean trees, multi-dim group_by) — the URL
              syntax is a lossy subset of OQO, so this is null, never a 500.
+
+    `sort_operands` (charter decision 30, #363) controls whether commutative
+    operands — top-level `filter_rows` and the members of every `any (…)` / `all (…)`
+    value bag — are alphabetically sorted. The OQL/builder **execute** path passes
+    `sort_operands=False` so the user's authored order is HONORED end-to-end: the
+    SERP rebuilds `?oql=` from this `x_query`, so a sort here silently reorders the
+    user's values (e.g. `has any (c, b, a)` → `(a, b, c)`) — a spec violation (#475).
+    The legacy-URL / per-entity path keeps the default sort (machine-shaped input).
+    All the OTHER canonical transforms (NNF, flatten/hoist, column-id collapse,
+    redundant-default-sort drop) run regardless of this flag.
 
     `x_query` is deliberately **private/unstable**: `x_` prefix, undocumented,
     injected onto the serialized `meta` and kept out of `/properties` + the docs.
@@ -132,7 +143,7 @@ def build_x_query(
     looked up" from "looked up and missed" — so every resolvable entity ID a user
     executed got a false `[no entity found]` annotation (oxjob #363 / #418).
     """
-    canonical = canonicalize_oqo(oqo)
+    canonical = canonicalize_oqo(oqo, sort_operands=sort_operands)
 
     url_form = None
     try:

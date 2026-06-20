@@ -257,11 +257,33 @@ class TestMetaXQuery:
         assert x_query["oqo"]["get_rows"] == "works"
         # A simple flat filter IS URL-expressible → url is a /works?filter=… form.
         assert x_query["url"] and x_query["url"].startswith("/works?filter=")
-        # oql round-trips: re-parsing it canonicalizes back to the same oqo.
+        # oql round-trips: re-parsing it canonicalizes back to the same oqo. The
+        # execute path honors authored order (sort_operands=False, #475), so reparse
+        # the same way to compare against the order-preserving x_query.oqo.
         from query_translation.oql_parser import parse_oql_to_oqo
         from query_translation.oqo_canonicalizer import canonicalize_oqo
-        reparsed = canonicalize_oqo(parse_oql_to_oqo(x_query["oql"])).to_dict()
+        reparsed = canonicalize_oqo(
+            parse_oql_to_oqo(x_query["oql"]), sort_operands=False).to_dict()
         assert reparsed == x_query["oqo"]
+
+    def test_execute_path_honors_value_bag_order(self, client):
+        """#475: the execute path must NOT alphabetize a value bag's commutative
+        members — the SERP rebuilds `?oql=` from x_query, so a sort here silently
+        reorders the user's values. Submitting `c, b, a` must round-trip as `c, b, a`,
+        NOT `a, b, c`."""
+        oqo_body = {
+            "get_rows": "works",
+            "filter_rows": [{"join": "or", "filters": [
+                {"column_id": "title_and_abstract.search", "value": v, "operator": "has"}
+                for v in ("c", "b", "a")]}],
+        }
+        res = self._stub_run(client, oqo_body)
+        assert res.status_code == 200, res.get_json()
+        x_query = res.get_json()["meta"]["x_query"]
+        assert x_query["oql"] == "works where title/abstract has any (c, b, a)"
+        vals = [f["value"] for f in x_query["oqo"]["filter_rows"][0]["filters"]]
+        assert vals == ["c", "b", "a"]
+        assert x_query["url"].endswith("title_and_abstract.search:c|b|a")
 
     def test_execute_path_x_query_oql_is_bare_id(self, client):
         """OQLO charter decision 14 (#378 S3): the execute path emits CANONICAL

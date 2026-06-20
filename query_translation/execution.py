@@ -575,7 +575,11 @@ def _finalize_oqo_response(result, oqo: OQO, MessageSchema):
         )
     message_schema = MessageSchema(only=only_fields) if only_fields else MessageSchema()
     serialized = message_schema.dump(result)
-    serialized.setdefault("meta", {})["x_query"] = build_x_query(oqo)
+    # Honor the user's authored operand order (charter decision 30, #363/#475): this
+    # is the OQL/builder execute path, and the SERP rebuilds `?oql=` from x_query, so
+    # sorting commutative value-bag members here would silently alphabetize the user's
+    # values. Sorting stays on the legacy-URL path (shared_view) and dedup hash-keys.
+    serialized.setdefault("meta", {})["x_query"] = build_x_query(oqo, sort_operands=False)
     return jsonify(serialized), 200
 
 
