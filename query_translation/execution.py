@@ -485,8 +485,15 @@ def _execute_oqo(oqo_dict: dict):
     except OQOTranslationError as e:
         return _error_response(str(e), "translation_error", status=400)
 
-    # Apply the standard works-walden is_xpac:false default unless the OQO
-    # already references is_xpac or the caller opts in via include_xpac=true.
+    # Corpus selection for works-walden (#481). The OQO `corpus` field is the
+    # first-class signal; map it to the is_xpac base constraint:
+    #   core      → is_xpac:false (curated only — the historical default)
+    #   expansion → is_xpac:true  (the expansion corpus alone)
+    #   all       → no constraint (core + expansion)
+    # Precedence (transitional back-compat): an explicit is_xpac filter still in
+    # the OQO wins (legacy escape hatch); else a non-default `corpus` wins; else
+    # the legacy `include_xpac=true` URL param maps to "all" until #464 drops it;
+    # else "core".
     extra_qs = []
     if oqo.get_rows == "works" and connection == "walden":
         include_xpac = (
@@ -494,8 +501,19 @@ def _execute_oqo(oqo_dict: dict):
             or request.args.get("include-xpac") == "true"
         )
         oqo_mentions_xpac = _oqo_mentions_column(oqo.filter_rows, "is_xpac")
-        if not include_xpac and not oqo_mentions_xpac:
+        if oqo_mentions_xpac:
+            effective_corpus = None  # explicit filter stands; inject nothing
+        elif oqo.corpus and oqo.corpus != "core":
+            effective_corpus = oqo.corpus
+        elif include_xpac:
+            effective_corpus = "all"
+        else:
+            effective_corpus = "core"
+        if effective_corpus == "core":
             extra_qs.append(Q("term", is_xpac="false"))
+        elif effective_corpus == "expansion":
+            extra_qs.append(Q("term", is_xpac="true"))
+        # "all" / None ⇒ no is_xpac constraint
 
     # Mirror the /authors works_count>0 default (authors/views.py, #287): hide
     # curation-emptied (0-works) authors unless the OQO explicitly references
@@ -622,17 +640,30 @@ def _execute_semantic_oqo(
     if filters is None:
         filters = []
 
-    # Apply the works-walden is_xpac:false default exactly as works/views.py does
-    # before shared_view's semantic check: the vector path strips it (the vector
-    # index holds only non-xpac works) and the single-index fallback applies it
-    # as a kNN pre-filter — so adding it here matches legacy on both branches.
+    # Corpus selection on the semantic path (#481), mirroring the normal path's
+    # precedence (explicit filter > non-default corpus > legacy include_xpac >
+    # core). core → is_xpac:false, expansion → is_xpac:true, all → no constraint.
+    # Caveat: the vector index holds only non-xpac works, so the prod vector path
+    # can't surface the expansion corpus regardless — that's a known index
+    # limitation, not this selector's concern; the single-index fallback honors
+    # the kNN pre-filter correctly.
     if oqo.get_rows == "works" and connection == "walden":
         include_xpac = (
             request.args.get("include_xpac") == "true"
             or request.args.get("include-xpac") == "true"
         )
-        if not include_xpac and not _oqo_mentions_column(oqo.filter_rows, "is_xpac"):
+        if _oqo_mentions_column(oqo.filter_rows, "is_xpac"):
+            effective_corpus = None
+        elif oqo.corpus and oqo.corpus != "core":
+            effective_corpus = oqo.corpus
+        elif include_xpac:
+            effective_corpus = "all"
+        else:
+            effective_corpus = "core"
+        if effective_corpus == "core":
             filters = filters + [{"is_xpac": "false"}]
+        elif effective_corpus == "expansion":
+            filters = filters + [{"is_xpac": "true"}]
     params["filters"] = filters or None
 
     # Two-phase vector index (the prod path: USE_VECTOR_INDEX=true). Builds and

@@ -34,6 +34,7 @@ def build_schema() -> dict:
     oqo = _load_oqo_module()
     entity_types = sorted(oqo.VALID_ENTITY_TYPES)
     operators = sorted(oqo.VALID_OPERATORS)  # {<, <=, >, >=, has, is}
+    corpora = sorted(oqo.VALID_CORPORA)  # {all, core, expansion}
 
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -59,6 +60,19 @@ def build_schema() -> dict:
             "get_rows": {
                 "$ref": "#/$defs/EntityType",
                 "description": "The entity type to retrieve (works, authors, institutions, ...).",
+            },
+            "corpus": {
+                "type": "string",
+                "enum": corpora,
+                "default": "core",
+                "description": (
+                    "Which corpus(es) seed the base result set (works only): "
+                    "'core' (the curated corpus, default), 'expansion' (the "
+                    "expansion corpus alone — broader coverage, lower quality), or "
+                    "'all' (core + expansion). A corpus SELECTION, distinct from a "
+                    "filter (which only narrows an already-chosen corpus). Absent "
+                    "⇒ 'core'."
+                ),
             },
             "filter_rows": {
                 "type": "array",

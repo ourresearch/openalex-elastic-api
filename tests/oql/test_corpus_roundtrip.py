@@ -226,6 +226,7 @@ KNOWN_TAGS = {
     "negation", "boolean-logic", "boolean-nesting", "phrase-exact",
     "proximity", "wildcard", "search-semantics", "entity-references",
     "group-by", "sort", "sample", "filter", "sr-transcription",
+    "corpus",  # corpus selector — core / expansion / all (oxjob #481)
 }
 
 
@@ -297,6 +298,10 @@ def test_every_row_has_valid_facets():
         # an `error` footgun row — not in this ok-row map.)
         161: "oql-only", 163: "oql-only", 164: "oql-only",
         165: "oql-only", 166: "oql-only", 167: "oql-only",
+        # Corpus selector (#481): a non-core corpus has no classic OXURL form
+        # (the legacy include_xpac param is on #464's drop list), so url_renderer
+        # raises and these are oql-only. (185 is the error row — not in this map.)
+        182: "oql-only", 183: "oql-only", 184: "oql-only",
     }
     assert non_has_oxurl == expected, (
         f"oxurl_status classification drifted: "

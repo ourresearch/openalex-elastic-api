@@ -362,11 +362,15 @@ class OQLRenderTree:
     where_keyword: str  # " where " or ""
     where: Optional[ExprNode]  # None if no filters
     directives: List[DirectiveNode] = field(default_factory=list)
-    
+    # Corpus selector parenthetical (#481), e.g. " (all corpora)". Sits between
+    # the entity head and the `where` keyword; "" for the default core corpus.
+    corpus_phrase: str = ""
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "version": self.version,
             "entity": self.entity.to_dict(),
+            "corpus_phrase": self.corpus_phrase,
             "where_keyword": self.where_keyword,
             "where": self.where.to_dict() if self.where else None,
             "directives": [d.to_dict() for d in self.directives]
@@ -389,7 +393,10 @@ def stringify(tree: OQLRenderTree) -> str:
     
     # Entity head
     parts.append(tree.entity.text)
-    
+
+    # Corpus selector parenthetical (#481), e.g. " (all corpora)"; "" for core.
+    parts.append(tree.corpus_phrase)
+
     # Where keyword (includes spaces if present)
     parts.append(tree.where_keyword)
     

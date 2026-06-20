@@ -28,7 +28,7 @@ from typing import Dict, List, Optional, Tuple, Union
 # Load the OQO data model without triggering the Flask-heavy package __init__.
 from query_translation.oqo import (  # noqa: E402
     OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP,
-    canonicalize_oqo_column_ids)
+    canonicalize_oqo_column_ids, normalize_corpus, CORPUS_CANONICAL_PHRASE)
 
 
 # ---------------------------------------------------------------------------
@@ -1398,6 +1398,9 @@ class _Parser:
         self._skip_annot()
         entity = self._parse_entity()
         self._entity = entity
+        # Optional corpus selector parenthetical right after the entity (#481),
+        # e.g. `works (all corpora) where ...`. Default "core" when absent.
+        corpus = self._parse_corpus_opt()
         filters: List[FilterType] = []
         sort_by: List[SortBy] = []
         group_by: List[GroupBy] = []
@@ -1453,7 +1456,7 @@ class _Parser:
         # entity-resolve and the (previously un-canonicalized) sort/group paths all
         # emit the canonical column_id. Idempotent; downstream sees one spelling.
         return canonicalize_oqo_column_ids(
-            OQO(get_rows=entity, filter_rows=filters, sort_by=sort_by,
+            OQO(get_rows=entity, corpus=corpus, filter_rows=filters, sort_by=sort_by,
                 group_by=group_by, sample=sample, seed=seed, select=select))
 
     # -- editor-context entry (dual mode; oxjob #363, decision 15) --
@@ -1604,6 +1607,46 @@ class _Parser:
         raise oql_error("OQL_UNKNOWN_ENTITY",
                        f'unknown entity type "{t.val}"',
                        f'use one of: works, authors, institutions, sources, ...', t.pos)
+
+    def _parse_corpus_opt(self) -> str:
+        """Optional corpus selector parenthetical immediately after the entity
+        (#481): `(core corpus)` / `(core)` / `(all corpora)` / `(all)` /
+        `(expansion corpus)` / `(expansion)` / `(xpac)` / `(xpac corpus)`.
+
+        Returns the canonical corpus value ("core" when no parenthetical). A `(`
+        at this position is unambiguous — nothing else is valid between the
+        entity and `where`."""
+        self._skip_annot()
+        t = self.peek()
+        if t is None or t.kind != "LP":
+            return "core"
+        open_pos = t.pos
+        self.next()  # consume "("
+        words: List[str] = []
+        while True:
+            self._skip_annot()
+            tk = self.peek()
+            if tk is None:
+                raise oql_error("OQL_BAD_CORPUS",
+                               "the corpus parenthetical was opened but never closed",
+                               "e.g. works (all corpora) where ...", open_pos)
+            if tk.kind == "RP":
+                self.next()
+                break
+            if tk.kind != "WORD":
+                raise oql_error("OQL_BAD_CORPUS",
+                               f'unexpected "{tk.val}" inside the corpus parenthetical',
+                               "e.g. works (all corpora) where ...", tk.pos)
+            words.append(tk.val)
+            self.next()
+        phrase = " ".join(words)
+        corpus = normalize_corpus(phrase)
+        if corpus is None:
+            raise oql_error("OQL_BAD_CORPUS",
+                           f'"({phrase})" is not a corpus',
+                           "use (core corpus), (expansion corpus), or (all corpora)",
+                           open_pos)
+        return corpus
 
     # -- boolean expression with single-connective-per-level enforcement --
     def _parse_expr(self, top=False) -> FilterType:
@@ -3308,6 +3351,11 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
     """OQO -> canonical `oql_render` tree. `render()` stringifies this; the two
     never drift (Invariant A by construction)."""
     head = EntityHead(id=oqo.get_rows, text=oqo.get_rows.lower())
+    # Corpus selector parenthetical (#481). Canonical phrase for non-core; "" for
+    # core (the default ⇒ omitted, so a core OQO round-trips to the bare entity).
+    corpus_phrase = ""
+    if getattr(oqo, "corpus", "core") and oqo.corpus != "core":
+        corpus_phrase = f" ({CORPUS_CANONICAL_PHRASE.get(oqo.corpus, oqo.corpus)})"
     where_keyword = ""
     where = None
     if oqo.filter_rows:
@@ -3378,7 +3426,8 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
             prefix="return ", segments=segs, meta=ReturnMeta(columns=cols)))
 
     return OQLRenderTree(version="1.0", entity=head, where_keyword=where_keyword,
-                         where=where, directives=directives)
+                         where=where, directives=directives,
+                         corpus_phrase=corpus_phrase)
 
 
 # ---------------------------------------------------------------------------
@@ -3608,11 +3657,12 @@ def format_oql(tree: OQLRenderTree, width: int = FORMAT_WIDTH) -> str:
         # clause): `works where institution is …`, with continuation operands
         # wrapping below at `_INDENT`. The prefix's width seeds the column so the
         # first clause still wraps correctly when it alone overflows.
-        prefix = f"{tree.entity.text}{tree.where_keyword}"   # e.g. "works where "
+        # e.g. "works where " or "works (all corpora) where "
+        prefix = f"{tree.entity.text}{tree.corpus_phrase}{tree.where_keyword}"
         body = _fmt_expr(tree.where, _INDENT, len(prefix), width)
         lines.append(f"{prefix}{body}")
     else:
-        lines.append(tree.entity.text)
+        lines.append(f"{tree.entity.text}{tree.corpus_phrase}")
     lines.extend(_stringify_directive(d) for d in tree.directives)
     return "\n".join(lines)
 

@@ -220,6 +220,17 @@ class OQO:
     back-compatible additions — absent ⇒ the prior behavior.
     """
     get_rows: str
+    # `corpus` selects which corpus(es) seed the base result set — a
+    # corpus-*selection* decision, distinct from a `filter` (which only narrows
+    # an already-chosen corpus). Three states (#481):
+    #   "core"      curated corpus only (default; engine injects is_xpac:false)
+    #   "expansion" the expansion corpus ALONE — a distinct set, "more coverage,
+    #               lower quality" (engine injects is_xpac:true). Subsumes the
+    #               old `is_xpac` filter, which is now redirected here.
+    #   "all"       core + expansion (engine applies no is_xpac constraint)
+    # "core" is the back-compat default ⇒ absent behaves exactly as before.
+    # ("xpac" is the internal engine term; user-facing language is core/expansion/all.)
+    corpus: str = "core"
     filter_rows: List[FilterType] = field(default_factory=list)
     # `sort_by` is an ordered list of (column, direction) sort keys — the list
     # order is the tiebreaker priority. A multi-column sort URL round-trips
@@ -245,6 +256,10 @@ class OQO:
 
     def to_dict(self) -> Dict[str, Any]:
         result = {"get_rows": self.get_rows}
+
+        # Only emit non-default corpus so canonical OQOs stay minimal/comparable.
+        if self.corpus and self.corpus != "core":
+            result["corpus"] = self.corpus
 
         if self.filter_rows:
             result["filter_rows"] = [f.to_dict() for f in self.filter_rows]
@@ -295,6 +310,8 @@ class OQO:
 
         oqo = cls(
             get_rows=data["get_rows"],
+            # Back-compat: absent ⇒ "core" (prior default-exclusion behavior).
+            corpus=data.get("corpus") or "core",
             filter_rows=filter_rows,
             sort_by=sort_by,
             sample=data.get("sample"),
@@ -328,6 +345,38 @@ VALID_OPERATORS = {
     # value is always a `col_…` id. See oql-spec §3.10. (oxjob #363)
     "in collection",
 }
+
+# Valid corpus selections (#481). "core" is the default; "expansion" is the
+# expansion corpus alone (subsumes the retired `is_xpac` filter); "all" is both.
+VALID_CORPORA = {"core", "expansion", "all"}
+
+# Surface aliases accepted in the OQL corpus parenthetical, normalized →
+# canonical value. Keys are lowercased + single-spaced. "xpac" stays accepted as
+# the internal-term alias even though the user-facing word is "expansion".
+CORPUS_ALIASES = {
+    "core": "core", "core corpus": "core",
+    "all": "all", "all corpora": "all",
+    "expansion": "expansion", "expansion corpus": "expansion",
+    "xpac": "expansion", "xpac corpus": "expansion",
+}
+
+# Canonical surface phrase the renderer emits for each non-default corpus.
+CORPUS_CANONICAL_PHRASE = {
+    "all": "all corpora",
+    "expansion": "expansion corpus",
+}
+
+
+def normalize_corpus(text):
+    """Map an OQL corpus-parenthetical surface phrase to its canonical value.
+
+    Returns None if the phrase isn't a recognized corpus alias (caller decides
+    whether that's an error). Case- and whitespace-insensitive."""
+    if text is None:
+        return None
+    key = " ".join(str(text).strip().lower().split())
+    return CORPUS_ALIASES.get(key)
+
 
 # Valid entity types
 VALID_ENTITY_TYPES = {

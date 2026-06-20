@@ -4064,3 +4064,57 @@ rows:
   oql: 'works where title does not contain dog'
   diagnostic: OQL_CONTAINS_RENAMED
   note: 'The negation sugar `does not contain` was renamed in lockstep with `contains` → `has` (charter decision 27): write `does not have` (input sugar → is_negated, never re-emitted; the canonical render is the bare `title has not dog`). The old spelling hard-errors OQL_CONTAINS_RENAMED with a `does not have` fix-it. (oxjob #363)'
+
+# --- Corpus selector (oxjob #481) ---------------------------------------------
+# `corpus` is a top-level OQO field selecting which corpus(es) seed the base set:
+# core (curated, default) / expansion (the expansion corpus alone) / all (both).
+# OQL surface is a parenthetical right after the entity. core is the default and
+# renders omitted; aliases ((all)/(expansion)/(xpac)/(core)/…) normalize to the
+# canonical spelling (covered in tests/oql/test_corpus_selector.py, not here —
+# corpus rows must carry the CANONICAL oql to satisfy the formatter gate). Non-core
+# corpora are OQL-only: the legacy include_xpac param is on #464's drop list, so
+# url_renderer raises and oxurl is null. NOTE: hand-author these rows — do NOT run
+# docs/oql/regen_corpus_oql.py (its in-place block rewriter mis-aligns and corrupts
+# the preceding error row; the CI gate is the per-row pytest tests, which pass).
+- id: 182
+  tags: [corpus]
+  provenance:
+    type: "spec design"
+    label: "OQL corpus selector — all corpora (core + expansion) (#481)"
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: 'works (all corpora)'
+  oqo: {get_rows: works, corpus: all}
+  note: 'The `all` corpus = core + expansion. Canonical spelling `(all corpora)`; `(all)` is an accepted alias. A corpus SELECTION (which corpus seeds the base set), distinct from a filter (which only narrows).'
+- id: 183
+  tags: [corpus]
+  provenance:
+    type: "spec design"
+    label: "OQL corpus selector — expansion corpus alone (#481)"
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: 'works (expansion corpus)'
+  oqo: {get_rows: works, corpus: expansion}
+  note: 'The `expansion` corpus is the xpac corpus ALONE — a distinct set (broader coverage, lower quality), NOT a superset of core. Subsumes the retired `is_xpac` filter. Aliases: `(expansion)`, `(xpac)`, `(xpac corpus)`.'
+- id: 184
+  tags: [corpus, filter]
+  provenance:
+    type: "spec design"
+    label: "OQL corpus selector — corpus + where clause (#481)"
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: 'works (all corpora) where it''s open access'
+  oqo: {get_rows: works, corpus: all, filter_rows: [{column_id: open_access.is_oa, value: true}]}
+  note: 'The corpus parenthetical sits between the entity and `where`; filters still narrow WITHIN the selected corpus.'
+- id: 185
+  tags: [corpus]
+  provenance:
+    type: "spec design"
+    label: "OQL corpus selector — unknown corpus is a hard error (#481)"
+  status: error
+  oql: 'works (banana) where year is 2020'
+  diagnostic: OQL_BAD_CORPUS
+  note: 'A parenthetical after the entity that is not a known corpus hard-errors OQL_BAD_CORPUS with a fix-it naming core / expansion / all. (core is the default, so a bare `works` needs no parenthetical.)'

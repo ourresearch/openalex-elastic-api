@@ -91,6 +91,9 @@ def canonicalize_oqo(oqo: OQO, sort_operands: bool = True) -> OQO:
 
     return OQO(
         get_rows=oqo.get_rows.lower(),  # Normalize entity type to lowercase
+        # Corpus selection passes through unchanged (#481); "core" is the default,
+        # left as-is so canonical OQOs stay minimal/comparable.
+        corpus=oqo.corpus,
         filter_rows=canonical_filters,
         # sort_by order is meaningful (tiebreaker priority: primary, secondary,
         # …) -> preserved, NOT sorted (unlike the commutative filter_rows above).

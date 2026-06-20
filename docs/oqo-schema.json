@@ -13,6 +13,16 @@
       "$ref": "#/$defs/EntityType",
       "description": "The entity type to retrieve (works, authors, institutions, ...)."
     },
+    "corpus": {
+      "type": "string",
+      "enum": [
+        "all",
+        "core",
+        "expansion"
+      ],
+      "default": "core",
+      "description": "Which corpus(es) seed the base result set (works only): 'core' (the curated corpus, default), 'expansion' (the expansion corpus alone — broader coverage, lower quality), or 'all' (core + expansion). A corpus SELECTION, distinct from a filter (which only narrows an already-chosen corpus). Absent ⇒ 'core'."
+    },
     "filter_rows": {
       "type": "array",
       "description": "Filters applied to the retrieved rows. Top-level items are implicitly AND-joined.",

@@ -40,6 +40,7 @@ from query_translation.oqo import (
     FilterType,
     SortBy,
     VALID_OPERATORS,
+    VALID_CORPORA,
 )
 
 
@@ -316,6 +317,28 @@ class OQOValidator:
                     message="Sample must be a positive integer",
                     location="sample",
                 ))
+
+        # Corpus selection (#481). Enum-gated; only `works` has an expansion
+        # corpus, so a non-core corpus on any other entity is a no-op we warn on
+        # rather than silently honoring.
+        if oqo.corpus not in VALID_CORPORA:
+            errors.append(ValidationError(
+                type="invalid_corpus",
+                message=(
+                    f"'{oqo.corpus}' is not a valid corpus; expected one of "
+                    f"{', '.join(sorted(VALID_CORPORA))}"
+                ),
+                location="corpus",
+            ))
+        elif oqo.corpus != "core" and oqo.get_rows != "works":
+            warnings.append(ValidationError(
+                type="corpus_ignored",
+                message=(
+                    f"corpus '{oqo.corpus}' only affects 'works'; ignored for "
+                    f"'{oqo.get_rows}'"
+                ),
+                location="corpus",
+            ))
 
         # group_by dimensions must be non-empty strings AND real columns.
         for i, g in enumerate(oqo.group_by):

@@ -176,6 +176,9 @@ def build_tree(oqo: OQO, resolver=None, origins=None) -> dict:
     directives = [{"type": d.type, "text": _stringify_directive(d),
                    "meta": d.meta.to_dict()} for d in v1.directives]
     return {"version": "2.0", "entity": head,
+            # Corpus selector parenthetical (#481), e.g. " (all corpora)"; ""
+            # for the default core corpus. Reuses the v1 tree's computed phrase.
+            "corpus_phrase": v1.corpus_phrase,
             "where_keyword": " where " if where else "", "where": where,
             "directives": directives}
 
@@ -302,6 +305,14 @@ def _flat_tokens(tree: dict) -> list:
 
     toks.append({"t": "kw", "id": tree["entity"]["id"],
                  "text": tree["entity"]["text"], "label": tree["entity"]["text"]})
+    # Corpus selector parenthetical (#481), e.g. " (all corpora)". Emitted as its
+    # own token after the entity so it lands on `format_oql`'s line for the head;
+    # "" (core) contributes nothing. A distinct `t` so the GUI builder can target
+    # it as the corpus chip later.
+    corpus_phrase = tree.get("corpus_phrase") or ""
+    if corpus_phrase:
+        toks.append({"t": "corpus", "text": corpus_phrase,
+                     "label": corpus_phrase.strip(" ()")})
     where = tree.get("where")
     if where is not None:
         toks.append({"t": "kw", "text": tree["where_keyword"], "label": "where"})

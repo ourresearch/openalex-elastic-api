@@ -33,6 +33,18 @@ def render_oqo_to_url(oqo: OQO) -> Dict[str, Any]:
         URLRenderError: If the OQO contains structures that cannot be
                        expressed in URL format (e.g., nested boolean logic)
     """
+    # Corpus selection (#481) has no classic OXURL form — the legacy
+    # `include_xpac` param is on #464's drop list and a `?filter=is_xpac:` form
+    # is being retired — so a non-core corpus is OQL-only. Raise rather than
+    # silently render a URL that drops the corpus (which would mislead callers
+    # into thinking the URL is a faithful equivalent).
+    if getattr(oqo, "corpus", "core") and oqo.corpus != "core":
+        raise URLRenderError(
+            f"corpus '{oqo.corpus}' cannot be expressed as a classic OpenAlex "
+            "URL; it is OQL-only (use the OQL corpus selector, e.g. "
+            "'works (all corpora) …')"
+        )
+
     # Semantic search (`<field> is similar to "..."`) is lifted OUT of the
     # `filter=` string into its own top-level `search.semantic=` param — the
     # engine exposes vector search only that way (see _extract_semantic).

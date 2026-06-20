@@ -114,6 +114,10 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_UNKNOWN_ENTITY", ERROR, PARSE,
               "the leading word is not a known entity type",
               "use one of: works, authors, institutions, sources, ..."),
+        _spec("OQL_BAD_CORPUS", ERROR, PARSE,
+              "the corpus parenthetical after the entity is not a known corpus",
+              "use (core corpus), (expansion corpus), or (all corpora), "
+              "e.g. works (all corpora) where ..."),
         _spec("OQL_TRAILING_TOKENS", ERROR, PARSE,
               "unexpected text after the query's clauses",
               "queries are: <entity> [where <conditions>] [sort by ...] "
@@ -267,6 +271,12 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("invalid_sample", ERROR, VALIDATE,
               "sample must be a positive integer",
               "give a positive count, e.g. sample 100"),
+        _spec("invalid_corpus", ERROR, VALIDATE,
+              "the corpus is not one of core / expansion / all",
+              "use core, expansion, or all (e.g. works (all corpora))"),
+        _spec("corpus_ignored", WARNING, VALIDATE,
+              "a non-core corpus was set on an entity other than works",
+              "corpus only affects works; drop it for other entities"),
         _spec("invalid_group_by", ERROR, VALIDATE,
               "a group_by dimension is malformed or not groupable",
               "group by a groupable column"),
