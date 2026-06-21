@@ -308,7 +308,8 @@ def add_search_query(params, index_name, s):
 SEARCH_FILTER_KEYS = {
     "abstract.search", "default.search", "display_name.search",
     "fulltext.search", "keyword.search", "raw_affiliation_strings.search",
-    "raw_author_name.search", "title.search", "title_and_abstract.search",
+    "raw_author_name.search", "text.search", "title.search",
+    "title_and_abstract.search",
 }
 
 

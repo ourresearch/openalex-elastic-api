@@ -98,3 +98,31 @@ def test_oql_renders_text_not_full_text_on_non_works():
     # #363 decision 27/29 renamed the search operator `contains` → `has`.
     assert "text has" in render(parse_url_to_oqo(entity_type="authors", search_string="x"))
     assert "full text has" in render(parse_url_to_oqo(entity_type="works", search_string="x"))
+
+
+# --- relevance registration (the post-deploy gap, 2026-06-21) ---
+# The original ship checked the build_query *clause* but not whether `text.search`
+# was registered as a "search query" — the flag that turns on relevance scoring
+# and makes `sort=relevance_score` legal. It was missing from check_is_search_query
+# (and the two semantic-exclusion lists), so live `text.search` matched the right
+# docs but came back relevance_score=None, ordered by the entity default (works_count)
+# instead of relevance, and `sort=relevance_score:desc` 400'd. Lock it here.
+
+def test_text_search_counts_as_a_search_query():
+    """`text.search` must enable relevance scoring/sorting, exactly like the
+    `default.search` it replaces (else non-works search loses relevance ranking)."""
+    from core.search import check_is_search_query
+
+    assert check_is_search_query([{"text.search": "patients"}], None) is True
+    # parity with the key it supersedes
+    assert check_is_search_query([{"default.search": "patients"}], None) is True
+
+
+def test_text_search_in_semantic_exclusion_lists():
+    """`text.search` is a free-text search op, so it must be incompatible with
+    semantic search just like every other `*.search` key (consistency guard)."""
+    from core.shared_view import SEARCH_FILTER_KEYS
+    from core.vector_index import _SEARCH_FILTER_KEYS
+
+    assert "text.search" in SEARCH_FILTER_KEYS
+    assert "text.search" in _SEARCH_FILTER_KEYS
