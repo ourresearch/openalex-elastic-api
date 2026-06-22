@@ -57,7 +57,7 @@ jobs:
         if: failure()
         uses: slackapi/slack-github-action@v1.27.0
         with:
-          channel-id: 'CESFJUHGD'  # #general
+          channel-id: 'C07JS893QE4'  # #dev (moved off #general 2026-06-22 — gate alerts are too noisy for #general)
           slack-message: |
             :rotating_light: *OQL conformance gate FAILED on master!*
 
