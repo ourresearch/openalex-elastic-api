@@ -174,11 +174,16 @@ def test_search_model_space_quotes_near():
     fr = rows("works where title has (climate change or warming)")
     assert len(fr) == 1 and fr[0]["join"] == "or"
     assert sorted(f["value"] for f in fr[0]["filters"]) == ["climate change", "warming"]
-    # explicit and+or at one level is still a loud mixed-bool error
-    with pytest.raises(OQLError) as e:
-        p("works where title has (climate and change or warming)")
-    assert e.value.code == "OQL_MIXED_BOOL_NEEDS_PARENS"
-    # the disambiguated forms are fine
+    # explicit and+or at one level resolves by precedence AND > OR (#506) — no
+    # error. `climate and change or warming` = `(climate and change) or warming`.
+    fr = rows("works where title has (climate and change or warming)")
+    assert len(fr) == 1 and fr[0]["join"] == "or"
+    kids = fr[0]["filters"]
+    assert any(k.get("join") == "and" and
+               sorted(g["value"] for g in k["filters"]) == ["change", "climate"]
+               for k in kids)
+    assert any(k.get("value") == "warming" for k in kids)
+    # explicit grouping still works and the precedence form round-trips to it
     p("works where title has (climate (change or warming))")   # ok
     p("works where title has ((climate change) or warming)")   # ok
 
@@ -282,6 +287,7 @@ def test_every_row_has_valid_facets():
         78: "oql-only",            # zd#8101 OR across stemmed/exact match-modes
         87: "oql-only",            # cross-field OR (title vs. abstract); #363
         91: "oql-only",            # nested AND inside an OR search group; #363
+        93: "oql-only",            # precedence AND > OR nests AND inside OR; #506
         # Real mined SR strategies (#434 -> #363). oql-only because the OR-group
         # mixes quoted phrases (no-stem .search.exact) with bare words (stemmed
         # .search), or nests an AND inside an OR, or ORs across fields — none of

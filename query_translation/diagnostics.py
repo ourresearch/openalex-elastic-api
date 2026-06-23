@@ -126,9 +126,9 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_IMPLICIT_ADJACENCY", ERROR, PARSE,
               "two conditions sit side by side with no AND/OR between them",
               "insert an explicit AND or OR"),
-        _spec("OQL_MIXED_BOOL_NEEDS_PARENS", ERROR, PARSE,
-              "AND and OR are mixed at one grouping level (ambiguous)",
-              'group explicitly, e.g. "a and (b or c)" or "(a and b) or c"'),
+        # OQL_MIXED_BOOL_NEEDS_PARENS retired (#506): mixed and/or at one level is
+        # no longer an error — it resolves by the standard precedence AND > OR
+        # (the canonical render re-parenthesizes the grouping).
         _spec("OQL_UNBALANCED_PARENS", ERROR, PARSE,
               "a closing parenthesis is missing",
               "add a )"),

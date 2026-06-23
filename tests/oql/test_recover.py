@@ -67,14 +67,15 @@ def test_unbalanced_parens_collected_alongside_inner_errors():
     assert "OQL_UNBALANCED_PARENS" in got
 
 
-def test_mixed_bool_does_not_abort_recovery():
-    # an ambiguous mixed AND/OR is recorded but doesn't stop us collecting the
-    # genuine errors around it
+def test_mixed_bool_recovers_without_a_mixed_bool_diagnostic():
+    # mixed AND/OR is no longer an error (#506): it resolves by precedence
+    # (AND > OR), so recovery collects only the genuine errors around it and
+    # never emits OQL_MIXED_BOOL_NEEDS_PARENS (a retired code).
     diags = parse_collecting(
         "works where bogus1 is 1 and year is 2020 or bogus2 is 2")[1]
     got = [d.code for d in diags]
     assert got.count("OQL_UNKNOWN_FIELD") == 2
-    assert "OQL_MIXED_BOOL_NEEDS_PARENS" in got
+    assert "OQL_MIXED_BOOL_NEEDS_PARENS" not in got
 
 
 # --- every recovered diagnostic is a registered code (registry lockstep) -------

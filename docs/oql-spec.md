@@ -342,29 +342,33 @@ works where title has FOO and (bar or baz)            (row 10)  ✓ (any case ac
   with content words, so the uppercase-for-disambiguation convention scholarly DBs
   rely on buys us nothing. (All keywords are lowercase: `where`, `is`, `has`,
   `within`, `near`, `and`/`or`/`not`.)
-- **Mixed and/or at one grouping level REQUIRES explicit parentheses — a loud error
-  otherwise** (`OQL_MIXED_BOOL_NEEDS_PARENS`). Pure-and or pure-or runs are
-  associative, so they need no parens. This is the **one deliberate departure** from
-  WoS/Scopus muscle memory, and it is where the field is already heading (Scopus
-  mid-migration; Dimensions enforces; Lucene/Sourcegraph advise full
-  parenthesization). Mixed logic is accepted as input when explicitly grouped;
-  canonical output keeps the explicit parentheses, so the structure is always
-  explicit.
-- **`not` is the one prefix operator with precedence: it binds the single value
-  immediately after it** (`not a or b` = `(not a) or b`, the SR/PubMed left-to-right
-  convention). This is the lone relaxation of the no-precedence rule, and it is safe
-  because negation only ever applies to one value (§3.5). To negate a group, write
-  `not (a or b)`.
+- **Mixed and/or at one grouping level resolves by the standard precedence
+  `NOT > AND > OR`** (oxjob #506) — it is **not** an error. `AND` binds tighter than
+  `OR`, so `a and b or c` = `(a and b) or c` and `a or b and c` = `a or (b and c)`.
+  This is the precedence boolean algebra and every programming language use, and —
+  since Scopus changed early 2026 — **both Web of Science and Scopus now agree on
+  it**, so honoring it (rather than throwing) matches the muscle memory of anyone
+  coming from those tools. Pure-and or pure-or runs are associative and stay flat.
+  **Canonical output always re-parenthesizes the precedence grouping**, so the
+  structure is never left to the reader's head: the AND group inside a top-level OR
+  renders parenthesized (`a or (b and c)`), while a single-connective level renders
+  paren-free. (This reverses the pre-#506 rule, which raised
+  `OQL_MIXED_BOOL_NEEDS_PARENS` and required hand-written parens — that code is
+  retired.)
+- **`not` is the prefix operator with the tightest precedence: it binds the single
+  value immediately after it** (`not a or b` = `(not a) or b`). To negate a group,
+  write `not (a or b)`. With AND/OR precedence now also in effect, the full operator
+  ordering is the conventional `NOT > AND > OR`.
 - **Adjacency (space) between *search words* = ONE value node, NOT AND** (§3.6, D2
   reversal #363): `title has (climate change)` is a single stemmed
   adjacency-boosted node, not climate AND change. At the top level a 2+ word value
   must still be parenthesized (`title has climate change` →
   `OQL_UNDELIMITED_TERM_LIST`, §3.6 row 17; the canonical render always
   parenthesizes). Explicit `and`/`or`/`not` build the tree *between* nodes, so
-  `(climate change or warming)` = `node("climate change") OR node("warming")` (no
-  mixed-bool error — there is no space-AND to mix with the `or`). A mixed-bool error
-  now only fires on **explicit** `and` + `or` at one level
-  (`(climate and change or warming)` → `OQL_MIXED_BOOL_NEEDS_PARENS`). Between *whole
+  `(climate change or warming)` = `node("climate change") OR node("warming")`.
+  Explicit `and` + `or` at one level no longer errors — it resolves by precedence
+  AND > OR (`(climate and change or warming)` = `(climate and change) or warming`),
+  and the canonical render re-parenthesizes it. Between *whole
   clauses* at the top level a connective is still required (`year >= 2020 and it's
   open access`); two full clauses jammed together with no `and` is
   `OQL_IMPLICIT_ADJACENCY`. *(Adjacency-as-AND still holds for enum/value groups —
@@ -387,21 +391,21 @@ strictly affirmative and negation only ever rides the `is_negated` bit), so they
 **never survive canonicalization** — the emitted form is always the bare `not`
 prefix.
 
-**`not` binds the single value-node that follows it.** A run of bare words is one
-value-node (§3.6), so `not machine learning` negates the whole run. Precedence is
-the systematic-review / PubMed convention — strictly left-to-right, `not` binding
-only the next operand: **`not a or b` = `(not a) or b`.** To negate a group, write
+**`not` binds the single value-node that follows it** — the tightest-binding
+operator in OQL's `NOT > AND > OR` precedence (§3.4). A run of bare words is one
+value-node (§3.6), so `not machine learning` negates the whole run. `not` binds only
+the next operand: **`not a or b` = `(not a) or b`.** To negate a group, write
 `not (a or b)`: the parens are an ordinary group and the canonicalizer pushes the
 negation down to the leaves by De Morgan — `not (a or b)` → `(not a and not b)`.
 
-This is the one place OQL relaxes its "you never need precedence in your head" rule
-(§3.4), deliberately: because negation only ever applies to a **single value**
-(canonical NNF never negates a whole clause — §3.2.2), in everything OQL *emits*
+`not`'s tight binding is the conventional top of the precedence ladder (§3.4), and
+it is especially safe here because negation only ever applies to a **single value**
+(canonical NNF never negates a whole clause — §3.2.2): in everything OQL *emits*
 `not` always has exactly one value to its right, so there is no group for it to
 ambiguously scope over. The **block builder** (the primary on-ramp) makes this
 concrete — you negate an individual value brick, which prepends `not` to that one
 chip; there is no affordance to negate a sub-clause. The OQL text matches the brick
-1:1, and the language carries fewer parentheses for it.
+1:1.
 
 Canonical output pushes negation **down to the leaf/value** (NNF) and renders it as
 a bare `not <value>` prefix — it **never** emits `not <whole clause>` (`not (country
@@ -484,7 +488,7 @@ The gauntlet pins the consequences (all are corpus rows):
 | 15 | `cat` | bare word = stemmed (matches cats) — a single bare term is fine |
 | 16 | `"rock or roll"` | inside quotes = literal: `or` is a word, one exact phrase |
 | 17 | `climate change or warming` | ✗ `OQL_UNDELIMITED_TERM_LIST` — 2+ bare terms must be parenthesized |
-| 18 | `(climate and (change or warming))` | ✓ `climate AND (change OR warming)` — the disambiguated form |
+| 18 | `(climate and change or warming)` | ✓ resolves by precedence → `(climate and change) or warming` (canonical re-parenthesizes) |
 | 19 | `"bar*"` | ✓ quoted wildcard = the sanctioned path → no-stem `.search.exact` (oxjob #364) |
 | 20 | `bar*` | ✗ `OQL_WILDCARD_NEEDS_EXACT` — bare wildcard is stemmed (wrong); fix-it: quote it `"bar*"` |
 
@@ -495,12 +499,11 @@ Key rules these encode:
   `OQL_UNDELIMITED_TERM_LIST` (row 17) — this is the rule that kills the silent
   keyword-truncation footgun. **Inside a `( … )` group** a bare-word run is ONE node
   (D2 reversal, #363), so `(climate change or warming)` = `node("climate change") OR
-  node("warming")` — no mixed-bool error. **No silent order of operations** still
-  holds for **explicit** connectives: mixing an explicit `and` with an explicit `or`
-  at one level is `OQL_MIXED_BOOL_NEEDS_PARENS` (`(climate and change or warming)`
-  errors); say which you mean — `(climate (change or warming))` (row 18) or
-  `((climate change) or warming)`. (Pure runs — all-`and` or all-`or` — need no inner
-  parens.) A literal reserved word inside a value is quoted as an escape
+  node("warming")`. **Mixing explicit `and` and `or` at one level resolves by the
+  standard precedence AND > OR** (#506) — `(climate and change or warming)` =
+  `(climate and change) or warming`; the canonical render re-parenthesizes it so the
+  grouping is always explicit. (Pure runs — all-`and` or all-`or` — stay flat with no
+  inner parens.) A literal reserved word inside a value is quoted as an escape
   (`("road traffic" "and" ghana)` style — §3.6 governing law).
 - **Quotes = exact, single word or phrase.** `"cat"` excludes "cats"; `"climate
   change"` is the adjacent, unstemmed phrase. This is the mainstream "quotes = exact
@@ -519,7 +522,8 @@ Key rules these encode:
   year >= 2020` is `(title has (a or b)) and year >= 2020` — the `or` is the
   has-group's, the `and` joins clauses. This is deterministic, not a precedence
   choice: a `year >= …` clause can't live *inside* a `has`, so the value
-  boundary is forced. A genuinely mixed and/or *between clauses* still errors (§3.4).
+  boundary is forced. A genuinely mixed and/or *between clauses* resolves by
+  precedence AND > OR (§3.4).
 
 ### 3.7 Proximity and wildcards — the edge matrix
 
@@ -640,7 +644,6 @@ NL) share codes and only localize prose. Every `✗` corpus row asserts its code
 
 | Code | When | Fix-it |
 |---|---|---|
-| `OQL_MIXED_BOOL_NEEDS_PARENS` | mixed and/or at one level | add parens: `a and (b or c)` |
 | `OQL_IMPLICIT_ADJACENCY` | two operands, no connective | insert an `and` or `or` |
 | `OQL_MISSING_ENTITY_ID` | entity ref with only a `[name]` | put the ID first: `institution is I136199984 [Harvard]` |
 | `OQL_WILDCARD_NEEDS_EXACT` | bare (stemmed) `*`/`?` wildcard | quote it: `"bar*"` (runs on no-stem `.search.exact`) |

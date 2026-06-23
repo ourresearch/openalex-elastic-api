@@ -1647,7 +1647,7 @@ class _Parser:
                            open_pos)
         return corpus
 
-    # -- boolean expression with single-connective-per-level enforcement --
+    # -- boolean expression; mixed and/or resolved by precedence (AND > OR) --
     def _parse_expr(self, top=False) -> FilterType:
         operands = [self._operand_tracked()]
         conns: List[str] = []
@@ -1693,26 +1693,10 @@ class _Parser:
                 operands.append(self._operand_tracked())  # recover: implicit AND
                 continue
             self._adjacency_error(t)
-        if not conns:
-            return operands[0]
-        if len(set(conns)) > 1:
-            first = self.toks[0]
-            if self._recover_mode:
-                # Don't abort the whole parse for a mixed-bool ambiguity: record it
-                # and pick the first connective so recovery keeps the tree's shape.
-                self._diagnostics.append(oql_error(
-                    "OQL_MIXED_BOOL_NEEDS_PARENS",
-                    "mixed AND/OR at one level is ambiguous — add parentheses",
-                    'group explicitly, e.g. "a and (b or c)" or "(a and b) or c"',
-                    first.pos))
-            else:
-                raise oql_error(
-                    "OQL_MIXED_BOOL_NEEDS_PARENS",
-                    "mixed AND/OR at one level is ambiguous — add parentheses",
-                    'group explicitly, e.g. "a and (b or c)" or "(a and b) or c"',
-                    first.pos)
-        join = conns[0]
-        return BranchFilter(join=join, filters=operands)
+        # Mixed and/or at one level is NOT an error — it's resolved by the standard
+        # precedence AND > OR (WoS/Scopus/boolean-algebra convention). The canonical
+        # render re-parenthesizes the grouping so it's never implicit on the page.
+        return _precedence_tree(operands, conns)
 
     def _adjacency_error(self, t: Tok):
         raise self._adjacency_err(t)
@@ -2161,18 +2145,17 @@ class _Parser:
 
     def _parse_bool_expr(self, parse_operand) -> FilterType:
         """A boolean group body inside `(...)`: explicit-connective-separated
-        *runs* of space-adjacent operands (implicit AND). Mixing a space-run or
-        an explicit `and` with an explicit `or` at one level is a loud
-        OQL_MIXED_BOOL_NEEDS_PARENS — we never silently pick precedence.
-        `parse_operand` reads one operand (search term or value, per the caller).
-        Shared by the search side (`has (...)`) and the value side
-        (`is (...)`) so they can't drift."""
+        *runs* of space-adjacent operands (implicit AND). Mixing a space-run or an
+        explicit `and` with an explicit `or` at one level is resolved by the
+        standard precedence AND > OR (not an error) — each implicit/explicit AND
+        run becomes one OR-operand. `parse_operand` reads one operand (search term
+        or value, per the caller). Shared by the search side (`has (...)`) and the
+        value side (`is (...)`) so they can't drift."""
         outer = self._in_list
         self._in_list = True
         try:
             unit, n = self._parse_bool_run(parse_operand)
             units = [unit]
-            implicit_and = n > 1
             conns: List[str] = []
             while True:
                 self._skip_annot()
@@ -2188,20 +2171,12 @@ class _Parser:
                     self.next()
                     unit, n = self._parse_bool_run(parse_operand)
                     units.append(unit)
-                    implicit_and = implicit_and or n > 1
                     continue
                 break
-            effective = set(conns) | ({"and"} if implicit_and else set())
-            if "and" in effective and "or" in effective:
-                raise oql_error(
-                    "OQL_MIXED_BOOL_NEEDS_PARENS",
-                    "mixed and/or at one level is ambiguous — add parentheses "
-                    "(a space between words is an AND)",
-                    'group explicitly, e.g. "a (b or c)" or "(a b) or c"',
-                    self.toks[0].pos)
-            if not conns:
-                return units[0]
-            return BranchFilter(join=conns[0], filters=units)
+            # AND > OR precedence over the (implicit-AND-grouped) units. A space-run
+            # is already one AND-unit; the helper groups explicit `and`-joined units
+            # too, then ORs across — never silently flat, never an error.
+            return _precedence_tree(units, conns)
         finally:
             self._in_list = outer
 
@@ -2226,8 +2201,9 @@ class _Parser:
             return self._recovery_placeholder()
 
     def _parse_bool_run(self, parse_operand) -> Tuple[FilterType, int]:
-        """One or more space-adjacent operands = implicit AND. Returns
-        (filter, n_operands) so the caller can apply the mixed-and/or rule."""
+        """One or more space-adjacent operands = implicit AND (one AND-precedence
+        unit). Returns (filter, n_operands); the caller treats the unit as a single
+        operand when building the AND > OR precedence tree."""
         atoms = [self._group_operand(parse_operand)]
         while True:
             self._skip_annot()
@@ -2557,6 +2533,41 @@ def _negate(f: FilterType) -> FilterType:
     if isinstance(f, LeafFilter):
         return LeafFilter(f.column_id, f.value, f.operator, is_negated=not f.is_negated)
     return BranchFilter(f.join, f.filters, is_negated=not f.is_negated)
+
+
+def _precedence_tree(operands: List[FilterType], conns: List[str]) -> FilterType:
+    """Combine a flat operand sequence joined by `and`/`or` connectives into a
+    tree honoring the standard boolean precedence **AND binds tighter than OR**
+    (`not` already binds tightest — it's a prefix operator handled at the operand
+    level). `conns[i]` is the connective between `operands[i]` and `operands[i+1]`;
+    `len(conns) == len(operands) - 1`.
+
+    This is the same precedence Web of Science, Scopus (since early 2026), boolean
+    algebra, and every programming language use — so OQL never throws on a mixed
+    `and`/`or` level; it groups it. The canonical render makes the grouping
+    explicit with parentheses (a nested AND group inside the top-level OR is
+    rendered parenthesized), so the structure is never left to the reader's head.
+
+    A pure-AND or pure-OR sequence collapses to a single flat `BranchFilter`
+    (no nesting, no added parens) — identical to the pre-precedence behavior.
+    """
+    if not conns:
+        return operands[0]
+    # Split the sequence at every `or`: each maximal `and`-joined run becomes one
+    # OR-operand. (Implicit-AND units from a value/search group arrive already
+    # grouped as one operand; AND is associative, so treating them as a single
+    # AND-precedence operand is equivalent.)
+    or_groups: List[List[FilterType]] = [[operands[0]]]
+    for conn, operand in zip(conns, operands[1:]):
+        if conn == "or":
+            or_groups.append([operand])
+        else:  # "and"
+            or_groups[-1].append(operand)
+    and_nodes = [grp[0] if len(grp) == 1 else BranchFilter(join="and", filters=grp)
+                 for grp in or_groups]
+    if len(and_nodes) == 1:
+        return and_nodes[0]
+    return BranchFilter(join="or", filters=and_nodes)
 
 
 def _validate_wildcards(word: str, pos: int):
