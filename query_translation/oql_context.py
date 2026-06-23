@@ -53,10 +53,7 @@ NONE = CTX_NONE
 
 # Directive words that bound a partially-typed multi-word field alias when widening
 # the replace-range backwards.
-_DIRECTIVE_WORDS = {"where", "sort", "group", "sample", "return"}
-
-# Sort-direction words (canonical first — the suggestion list offers asc/desc only).
-_DIRECTIONS = ("asc", "desc", "ascending", "descending")
+_DIRECTIVE_WORDS = {"where", "group", "sample"}
 
 # Operators offered per field kind, in canonical OQL spelling (mirrors the shapes
 # `match_operator` accepts; `within N words` / `near "..."` are search-value modes).
@@ -187,7 +184,7 @@ def _value_context(category, fld: Field, in_list=False) -> Dict[str, Any]:
 
 def _directive_suggestions() -> List[Dict[str, str]]:
     return [{"value": w, "kind": "directive"}
-            for w in ("where", "sort by", "group by", "sample", "return")]
+            for w in ("where", "group by", "sample")]
 
 
 def _shape(raw: Dict[str, Any]) -> Dict[str, Any]:
@@ -251,17 +248,15 @@ def _shape(raw: Dict[str, Any]) -> Dict[str, Any]:
                 "operators": [], "autocomplete_entity": None, "suggestions": []}
     if cat == CONNECTIVE:
         # The cursor sits after a complete clause. The grammar accepts a connective
-        # (continue the where-expr) OR a trailing directive (sort/group/sample) OR
+        # (continue the where-expr) OR a trailing directive (group/sample) OR
         # end. Offer all of them so the editor's "menu 1" is the full two-level
-        # design's first level (oxjob #357): and / or / sort by / group by /
-        # sample / return.
+        # design's first level (oxjob #357): and / or / group by / sample.
         # (`where` is NOT re-offered — we're already inside the where-expression.)
         return {"category": CONNECTIVE,
                 "suggestions": [{"value": "and", "kind": "connective"},
                                 {"value": "or", "kind": "connective"}]
                                + [{"value": w, "kind": "directive"}
-                                  for w in ("sort by", "group by", "sample",
-                                            "return")]}
+                                  for w in ("group by", "sample")]}
     if cat in (DIRECTIVE, END):
         return {"category": cat, "suggestions": _directive_suggestions()}
     # NONE / unclassifiable
@@ -361,11 +356,6 @@ def parse_context(q: str, pos: Optional[int] = None) -> Dict[str, Any]:
         # widen the replace range backwards across a partially-typed multi-word field
         if ctx["category"] == FIELD and prefix:
             _extend_multiword_prefix(prior, ctx, replace)
-        # sort-direction slot (#357 iter-5): after `sort by <column>` the grammar also
-        # accepts asc/desc, but the engine's END/DIRECTIVE report doesn't surface it —
-        # so a click on `desc` had no menu. On a direction word, the slot IS the
-        # asc/desc choice; on the open slot after the column, direction joins the list.
-        _apply_direction_slot(q, prior, ctx, replace)
     # resolve the sibling clause's token-index spans into char offsets (#357)
     if ctx.get("sibling"):
         _resolve_sibling_ranges(prior, ctx["sibling"])
@@ -424,19 +414,18 @@ def _value_run_start(prior: List[Tok]) -> Optional[int]:
 
 
 def _is_directive_boundary(run: List[Tok], j: int) -> bool:
-    """True if run[j] starts a trailing directive (`sort by` / `group by` /
-    `sample <N>` / `return` / `where`) rather than continuing a multi-word value.
-    Without this a doc like `type is article sort by citation count de▮sc` widens
-    the whole tail into one giant 'value' and the cursor never reaches the
-    direction slot (oxjob #357 iter-5)."""
+    """True if run[j] starts a trailing directive (`group by` / `sample <N>` /
+    `where`) rather than continuing a multi-word value. Without this a doc like
+    `type is article group by publication year` widens the whole tail into one
+    giant 'value' (oxjob #357 iter-5)."""
     t = run[j]
     if t.kind != "WORD":
         return False
     w = t.val.lower()
-    if w in ("where", "return"):
+    if w == "where":
         return True
     nxt = run[j + 1] if j + 1 < len(run) else None
-    if w in ("sort", "group"):
+    if w == "group":
         return nxt is not None and nxt.kind == "WORD" and nxt.val.lower() == "by"
     if w == "sample":
         return nxt is not None and nxt.kind == "WORD" and nxt.val.isdigit()
@@ -489,54 +478,6 @@ def _widen_post_connective_value(prior: List[Tok], prefix: str):
     if not (sib and sib.get("value_kind") in ("id", "enum")):
         return None
     return ctx, val_start
-
-
-def _direction_allowed(prior: List[Tok]) -> bool:
-    """True when the cursor sits in the current `sort by` segment after >=1 column
-    word with no direction word yet — i.e. exactly where the grammar accepts a
-    direction (oxjob #357 iter-5)."""
-    last_sort = None
-    for i, t in enumerate(prior):
-        if t.kind != "WORD":
-            continue
-        w = t.val.lower()
-        if w == "sort" and i + 1 < len(prior) and prior[i + 1].kind == "WORD" \
-                and prior[i + 1].val.lower() == "by":
-            last_sort = i
-        elif w in ("group", "sample", "where", "return") and last_sort is not None \
-                and i > last_sort:
-            last_sort = None  # a later directive ended the sort tail
-    if last_sort is None:
-        return False
-    seg: List[Tok] = []
-    for t in prior[last_sort + 2:]:
-        if t.kind == "COMMA":
-            seg = []  # multi-sort: only the current comma segment counts
-        else:
-            seg.append(t)
-    if not seg or not all(t.kind == "WORD" for t in seg):
-        return False
-    return not any(t.val.lower() in _DIRECTIONS for t in seg)
-
-
-def _apply_direction_slot(q: str, prior: List[Tok], ctx: Dict[str, Any],
-                          replace: Dict[str, int]) -> None:
-    """Surface the sort-direction choice the engine's report omits (#357 iter-5):
-    mutate `ctx` when the cursor sits where `asc`/`desc` is legal."""
-    if ctx.get("category") not in (DIRECTIVE, END):
-        return
-    if not _direction_allowed(prior):
-        return
-    dir_sugg = [{"value": "asc", "kind": "direction"},
-                {"value": "desc", "kind": "direction"}]
-    full_token = q[replace["start"]:replace["end"]].strip().lower()
-    if full_token in _DIRECTIONS:
-        # the cursor is ON a direction word: this slot is exactly the asc/desc choice
-        ctx["category"] = "direction"
-        ctx["suggestions"] = dir_sugg
-    else:
-        # open slot right after the sort column: direction is a legal next step too
-        ctx["suggestions"] = dir_sugg + ctx.get("suggestions", [])
 
 
 def _extend_multiword_prefix(prior: List[Tok], ctx: Dict[str, Any],

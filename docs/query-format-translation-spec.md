@@ -232,7 +232,9 @@ Human-readable query language for copy-paste and display.
 ### 3.1 Basic Syntax
 
 ```
-{EntityType} where {clause} [and {clause}]* [; sort by {field}] [; sample {n}]
+{EntityType} where {clause} [and {clause}]* [; sample {n}]
+# Note: sort order / column selection are NOT part of the OQL surface (oxjob #504);
+# they live on the URL (?sort= / ?select=) and OQO (sort_by / select) only.
 ```
 
 ### 3.2 Clause Types
@@ -333,7 +335,7 @@ Translates between query formats.
     "sort": "cited_by_count:desc",
     "sample": null
   },
-  "oql": "Works where type is Article [article] and year ≥ 2024; sort by citation count",
+  "oql": "Works where type is Article [article] and year ≥ 2024",
   "oqo": {
     "get_rows": "works",
     "filter_rows": [
@@ -401,7 +403,7 @@ All existing entity endpoints (`/works`, `/authors`, etc.) should include query 
         "filter": "type:article",
         "sort": "cited_by_count:desc"
       },
-      "oql": "Works where type is Article [article]; sort by citation count",
+      "oql": "Works where type is Article [article]",
       "oqo": {
         "get_rows": "works",
         "filter_rows": [{"column_id": "type", "value": "types/article"}],
@@ -691,8 +693,9 @@ OQL_PARSING_TESTS = [
          ]}
      ]}),
     
-    # Sort
-    ("works where type is Article [article]; sort by citation count",
+    # Sort — NOT an OQL directive (oxjob #504); sort_by rides on the URL/OQO only,
+    # so the OQL string carries no sort and the sort_by comes from ?sort= instead.
+    ("works where type is Article [article]",
      {"entity": "works", "filters": [...], "sort_by": [{"column_id": "cited_by_count", "direction": "desc"}]}),
     
     # Sample
@@ -717,7 +720,7 @@ EQUIVALENCE_TESTS = [
     {
         "description": "Year range with sort",
         "url": {"filter": "publication_year:2024-", "sort": "fwci:desc"},
-        "oql": "Works where year ≥ 2024; sort by FWCI",
+        "oql": "Works where year ≥ 2024",
         "oqo": {
             "get_rows": "works",
             "filter_rows": [{"column_id": "publication_year", "value": "2024", "operator": ">="}],

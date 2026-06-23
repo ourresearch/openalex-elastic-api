@@ -12,8 +12,8 @@ import pytest
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, SortBy
 from query_translation.oql_render_tree import (
     OQLRenderTree, EntityHead, GroupNode, ClauseNode, Segment, SegmentMeta,
-    ClauseMeta, GroupMeta, EntityValue, SortDirective, SampleDirective,
-    SortMeta, SampleMeta, stringify
+    ClauseMeta, GroupMeta, EntityValue, SampleDirective,
+    SampleMeta, stringify
 )
 from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
 from query_translation.oqo_canonicalizer import canonicalize_oqo
@@ -99,8 +99,8 @@ class TestStringifyInvariant:
         assert stringify(tree) == oql
         assert "type is (article or book)" in oql
     
-    def test_sort_directive(self):
-        """Test sort directive."""
+    def test_sort_by_not_rendered(self):
+        """OQO.sort_by is the kept URL/OQO layer; the OQL surface omits it (#504)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[],
@@ -109,30 +109,9 @@ class TestStringifyInvariant:
         oql, tree = render_oqo_to_oql_and_tree(oqo)
 
         assert stringify(tree) == oql
-        assert "sort by" in oql
-        assert ";" not in oql
+        assert "sort by" not in oql
+        assert all(d.type != "sort" for d in tree.directives)
 
-    def test_multi_column_sort_directive(self):
-        """A multi-key sort renders one directive; stringify is invariant (#333)."""
-        oqo = OQO(
-            get_rows="works",
-            filter_rows=[],
-            sort_by=[
-                SortBy("publication_year", "desc"),
-                SortBy("cited_by_count", "desc"),
-            ],
-        )
-        oql, tree = render_oqo_to_oql_and_tree(oqo)
-
-        assert stringify(tree) == oql
-        assert "sort by" in oql
-        assert ";" not in oql
-        # Both keys present, in order, comma-separated.
-        sort_directive = next(d for d in tree.directives if d.type == "sort")
-        assert [k["column_id"] for k in sort_directive.meta.keys] == [
-            "publication_year", "cited_by_count",
-        ]
-    
     def test_sample_directive(self):
         """Test sample directive."""
         oqo = OQO(
@@ -147,7 +126,7 @@ class TestStringifyInvariant:
         assert ";" not in oql
     
     def test_complex_query(self):
-        """Test complex query with filters, sort, and sample."""
+        """Test complex query with filters and sample."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -161,7 +140,6 @@ class TestStringifyInvariant:
                     ]
                 )
             ],
-            sort_by=[SortBy("cited_by_count", "desc")],
             sample=100
         )
         oql, tree = render_oqo_to_oql_and_tree(oqo)
@@ -409,7 +387,6 @@ class TestToDict:
         oqo = OQO(
             get_rows="works",
             filter_rows=[LeafFilter(column_id="publication_year", value=2020, operator=">=")],
-            sort_by=[SortBy("cited_by_count", "desc")],
         )
         _, tree = render_oqo_to_oql_and_tree(oqo)
         

@@ -150,14 +150,13 @@ GOLDENS = {
     # separators to prove the parser still accepts them (back-compat); the
     # canonical output drops them (oxjob #377). The body is an implicit-AND list.
     "works where it's open access and publication_year >= 2020 and type is "
-    "article and language is en ; group by publication_year ; sort by "
-    "cited_by_count desc":
+    "article and language is en ; group by publication_year ; sample 100":
         "works where language is en\n"
         "  and it's open access\n"
         "  and year >= 2020\n"
         "  and type is article\n"
         "group by year\n"
-        "sort by citation count desc",
+        "sample 100",
 
     # (g) a nested boolean group that is too wide -> the infix `( or )` group
     # explodes with leading `or ` connectives.

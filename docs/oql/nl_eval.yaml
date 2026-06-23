@@ -192,7 +192,7 @@ cases:
     - {text: 'title: near "smart phone" within 3', difficulty: hard}
 
 # ---------------------------------------------------------------------------
-# E. Filter, sort & sample  (corpus rows 33–45) — non-works entities, sorts, operators.
+# E. Filter & sample  (corpus rows 33–45) — non-works entities, operators.
 # ---------------------------------------------------------------------------
 - ref: 33  # works  (bare, no filters)
   nl:
@@ -212,11 +212,11 @@ cases:
     - {text: "works affiliated with Harvard or UF since 2020", difficulty: hard}
     - {text: "harvard or florida stuff from 2020 onwards", difficulty: hard}
 
-- ref: 36  # institution is Memorial U. of Newfoundland sort by citations desc
+- ref: 36  # institution is Memorial U. of Newfoundland
   nl:
-    - {text: "papers from Memorial University of Newfoundland, sorted by most cited first", difficulty: easy}
-    - {text: "most cited works affiliated with Memorial University of Newfoundland", difficulty: hard}
-    - {text: "memorial university of newfoundland papers, highest citations first", difficulty: hard}
+    - {text: "papers from Memorial University of Newfoundland", difficulty: easy}
+    - {text: "works affiliated with Memorial University of Newfoundland", difficulty: hard}
+    - {text: "memorial university of newfoundland research output", difficulty: hard}
 
 - ref: 37  # institution UW AND funder NIH AND not open access
   nl:
@@ -233,12 +233,6 @@ cases:
     - {text: "papers where the title or abstract has the word climate and the word change (not necessarily together)", difficulty: easy}
     - {text: "title or abstract contains both the word climate and, separately, the word change", difficulty: hard}
     - {text: "title/abstract: the word climate AND the word change, as two separate words", difficulty: hard}
-
-- ref: 39  # authors sort by works_count desc
-  nl:
-    - {text: "authors ranked by number of works, most prolific first", difficulty: easy}
-    - {text: "which authors have the most papers", difficulty: hard}
-    - {text: "authors sorted by works count descending", difficulty: easy}
 
 - ref: 40  # authors where country is BR and has ORCID
   nl:
@@ -390,11 +384,11 @@ cases:
     - {text: "NCI-funded gold OA works", difficulty: hard}
     - {text: "gold OA research with National Cancer Institute funding", difficulty: hard}
 
-- ref: 63  # CRISPR and near "genome editing" and 2018-2023 sort citations desc sample 500
+- ref: 63  # CRISPR and near "genome editing" and 2018-2023 sample 500
   nl:
-    - {text: 'papers about CRISPR and "genome editing" from 2018 to 2023, sorted by most cited, take a sample of 500', difficulty: hard}
-    - {text: "500-paper sample of CRISPR genome editing work 2018–2023, highest cited first", difficulty: hard}
-    - {text: "CRISPR + genome editing, 2018–2023, sample 500, sort by citations descending", difficulty: hard}
+    - {text: 'papers about CRISPR and "genome editing" from 2018 to 2023, take a sample of 500', difficulty: hard}
+    - {text: "500-paper sample of CRISPR genome editing work 2018–2023", difficulty: hard}
+    - {text: "CRISPR + genome editing, 2018–2023, sample 500", difficulty: hard}
 
 - ref: 64  # raw affiliation has library
   nl:

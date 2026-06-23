@@ -155,8 +155,9 @@ payload, where they are derivable and would only bloat the response.
 
 ## 7. Out of scope
 
-- **`sort by` / `group by`** — flat ordered lists; list position already *is* the
-  meaning. No hierarchical numbering.
+- **`group by`** — a flat ordered list; list position already *is* the
+  meaning. No hierarchical numbering. (`sort`/`select` are not in the OQL surface —
+  oxjob #504.)
 - **The v1.1 ↔ v2 reconciliation** — moot here: oxjob #376 collapsed the two into
   one engine (`query_translation/oql_lang.py`); `tests/oql/oql_v2.py` is a thin
   re-export. Addressing attaches to the single `oql_render_v2` tree.

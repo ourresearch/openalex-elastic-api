@@ -629,8 +629,8 @@ _CONNECTIVES = {"and", "or"}
 # of these appears as a LITERAL word inside a stemmed search value it must be
 # quoted on render (`… "and" …`) so it folds back as an escaped literal rather
 # than re-parsing as structure. Kept in lockstep with `_Parser._is_run_break_word`.
-_SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "near", "within", "sort", "group",
-                                       "sample", "return"}
+_SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "near", "within", "group",
+                                       "sample"}
 
 # Characters dropped from a STEMMED search value on render (#3, oxjob #363): the
 # ES stemmed-search analyzer strips this punctuation anyway (so dropping it is
@@ -1211,8 +1211,8 @@ def match_entity_fallback(toks: List[Tok], i: int, entity: Optional[str]
 def _augment_by_column_for_entity_fallback() -> None:
     """RENDER side of the Part B fallback: map each GUI-faceted non-works column to
     its synthesized Field so it renders the friendly `display_name` (and round-trips
-    — both the filter path `_parse_field` and the sort path `_parse_sort_field`
-    accept these words). `setdefault` keeps any curated/works key.
+    — the filter path `_parse_field` accepts these words). `setdefault` keeps any
+    curated/works key.
 
     SAFETY GATE: `_BY_COLUMN` is a GLOBAL (entity-blind) reverse map, but parsing a
     Part-B word is entity-SCOPED. So we only render a column's friendly word if that
@@ -1345,7 +1345,7 @@ class _Parser:
         self._entity = None       # resolved get_rows entity (for the context reply)
         self._cur_fld = None      # field of the clause currently being parsed
         self._in_list = False     # are we inside a parenthesized value list?
-        self._directive = None    # "sort" / "group" when inside a directive
+        self._directive = None    # "group" when inside a directive
         # --- editor sectioned-menu bookkeeping (oxjob #357, ctx-mode only) ---
         # Spans of the most-recent TOP-LEVEL operand, recorded as token indices so the
         # post-connective FIELD context can describe the "sibling" clause (the one the
@@ -1409,9 +1409,7 @@ class _Parser:
         # e.g. `works (all corpora) where ...`. Default "core" when absent.
         corpus = self._parse_corpus_opt()
         filters: List[FilterType] = []
-        sort_by: List[SortBy] = []
         group_by: List[GroupBy] = []
-        select: List[str] = []
         sample = None
         seed = None
         self._skip_annot()
@@ -1437,18 +1435,12 @@ class _Parser:
             if t.kind == "SEMI":
                 self.next()
                 continue
-            if t.kind == "WORD" and t.val.lower() == "sort" and self.word_is("by", k=1):
-                self.i += 2
-                sort_by = self._parse_sort()
-            elif t.kind == "WORD" and t.val.lower() == "group" and self.word_is("by", k=1):
+            if t.kind == "WORD" and t.val.lower() == "group" and self.word_is("by", k=1):
                 self.i += 2
                 group_by = self._parse_group_by()
             elif t.kind == "WORD" and t.val.lower() == "sample":
                 self.next()
                 sample, seed = self._parse_sample()
-            elif t.kind == "WORD" and t.val.lower() == "return":
-                self.next()
-                select = self._parse_return()
             else:
                 if self._ctx_mode:
                     # trailing junk after a complete query: offer directives / end
@@ -1456,15 +1448,15 @@ class _Parser:
                     raise _CtxFound()
                 raise oql_error("OQL_TRAILING_TOKENS",
                                f'unexpected text near "{t.val}" (position {t.pos})',
-                               'queries are: <entity> [where <conditions>] [sort by ...] '
-                               '[group by ...] [sample N] [return col1, col2]', t.pos)
+                               'queries are: <entity> [where <conditions>] '
+                               '[group by ...] [sample N]', t.pos)
         # Collapse alias spellings to one canonical identity at the parse boundary
-        # (#455) — covers leaf, sort, group and select uniformly, so the leaf path's
-        # entity-resolve and the (previously un-canonicalized) sort/group paths all
-        # emit the canonical column_id. Idempotent; downstream sees one spelling.
+        # (#455) — covers leaf and group uniformly, so the leaf path's entity-resolve
+        # and the (previously un-canonicalized) group path both emit the canonical
+        # column_id. Idempotent; downstream sees one spelling.
         return canonicalize_oqo_column_ids(
-            OQO(get_rows=entity, corpus=corpus, filter_rows=filters, sort_by=sort_by,
-                group_by=group_by, sample=sample, seed=seed, select=select))
+            OQO(get_rows=entity, corpus=corpus, filter_rows=filters,
+                group_by=group_by, sample=sample, seed=seed))
 
     # -- editor-context entry (dual mode; oxjob #363, decision 15) --
     def parse_for_context(self) -> dict:
@@ -1579,7 +1571,7 @@ class _Parser:
                     return
                 if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
                     return
-                if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample", "return"):
+                if t.kind == "WORD" and t.val.lower() in ("group", "sample"):
                     return
                 # A new field clause begins here (e.g. `... year is abc title is x`):
                 # stop so the connective loop reports the missing AND/OR rather than
@@ -1693,8 +1685,7 @@ class _Parser:
                 operands.append(self._operand_tracked())
                 continue
             # directive keywords end the where-expression
-            if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample",
-                                                      "return"):
+            if t.kind == "WORD" and t.val.lower() in ("group", "sample"):
                 break
             # anything else with no connective = implicit adjacency
             if self._recover_mode:
@@ -1926,7 +1917,7 @@ class _Parser:
         while True:
             t = self.peek()
             if not t or t.kind != "WORD" or t.val.lower() in _CONNECTIVES \
-               or t.val.lower() in ("sort", "group", "sample", "return"):
+               or t.val.lower() in ("group", "sample"):
                 break
             parts.append(t.val)
             self.next()
@@ -2055,7 +2046,7 @@ class _Parser:
         t = self.peek()
         if t is None or t.kind in ("RP", "SEMI", "COMMA"):
             return False
-        if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample", "return"):
+        if t.kind == "WORD" and t.val.lower() in ("group", "sample"):
             return False
         if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
             # Editor context: a connective with NOTHING after it (cursor sits right
@@ -2245,7 +2236,7 @@ class _Parser:
                 break
             if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
                 break  # explicit connective -> handled by _parse_bool_expr
-            if t.kind == "WORD" and t.val.lower() in ("sort", "group", "sample", "return"):
+            if t.kind == "WORD" and t.val.lower() in ("group", "sample"):
                 break
             atoms.append(self._group_operand(parse_operand))  # implicit AND
         if len(atoms) == 1:
@@ -2346,7 +2337,7 @@ class _Parser:
         `within`, `sort`, `group`, `sample`, `return`)."""
         low = val.lower()
         return (low in _CONNECTIVES or low == "not"
-                or low in ("near", "within", "sort", "group", "sample", "return"))
+                or low in ("near", "within", "group", "sample"))
 
     def _parse_search_atom(self, base: str, in_group: bool = False) -> LeafFilter:
         # Stemming is ON by default; quotes turn it OFF (exact). `near "phrase"`
@@ -2520,52 +2511,6 @@ class _Parser:
         return LeafFilter(col, value, "has")
 
     # -- directives --
-    def _parse_sort(self) -> List[SortBy]:
-        keys = []
-        while True:
-            field, col = self._parse_sort_field()
-            direction = "asc"
-            if self.word_is("desc", "descending"):
-                self.next(); direction = "desc"
-            elif self.word_is("asc", "ascending"):
-                self.next(); direction = "asc"
-            keys.append(SortBy(column_id=col, direction=direction))
-            self._skip_annot()
-            t = self.peek()
-            if t and t.kind == "COMMA":
-                self.next(); continue
-            break
-        return keys
-
-    def _parse_sort_field(self) -> Tuple[str, str]:
-        # accept a known field OR a bare technical column / synthetic key
-        self._want(CTX_FIELD, directive="sort")
-        t = self.peek()
-        if not t or t.kind != "WORD":
-            raise oql_error("OQL_BAD_SORT", "expected a field to sort by", "")
-        # A non-works GUI-faceted registry field can also be a sort key, so a
-        # friendly-rendered sort (`funders sort by works count desc`) round-trips
-        # (oxjob #406 1b). LONGEST-match over the curated alias (same precedence as
-        # `_parse_field`): a multi-word label beats a curated word that is only its
-        # first token. Ties go to the curated alias.
-        # Use the SHARED greedy matcher (up to 4 words) — same source of truth as
-        # the filter path `_parse_field`. A hand-rolled 3-word loop here drifted:
-        # it couldn't match a 4-word curated alias like `citation percentile by
-        # subfield`, so that sort key parsed in `where` but raised OQL_TRAILING_TOKENS
-        # in `sort by` (oxjob #363 case W3.2, charter decision 13).
-        m = match_field(self.toks, self.i)
-        am = (m[0], m[1].column, m[2]) if m is not None else None
-        em = match_entity_fallback(self.toks, self.i, self._entity)
-        if em is not None and (am is None or em[2] > am[2]):
-            spelling, efld, en = em
-            self.i += en
-            return spelling, efld.column
-        if am is not None:
-            self.i += am[2]
-            return am[0], am[1]
-        self.next()
-        return t.val, t.val  # synthetic / technical (relevance_score, count, ...)
-
     def _parse_group_by(self) -> List[GroupBy]:
         dims = []
         while True:
@@ -2577,54 +2522,6 @@ class _Parser:
                 self.next(); continue
             break
         return dims
-
-    def _parse_return(self) -> List[str]:
-        # return col1, col2, … — the OQL surface of `OQO.select` (oxjob #450).
-        # Resolves over the COLUMN namespace (`_entity_column_maps`), NOT the
-        # filter namespace `_parse_field` reads: the two are mostly disjoint
-        # (`return open_access` / `return authorships` name result columns that
-        # are not filter predicates). Order is meaningful and preserved.
-        cols = []
-        while True:
-            cols.append(self._parse_return_field())
-            self._skip_annot()
-            t = self.peek()
-            if t and t.kind == "COMMA":
-                self.next(); continue
-            break
-        return cols
-
-    def _parse_return_field(self) -> str:
-        self._want(CTX_FIELD, directive="return")
-        t = self.peek()
-        if not t or t.kind != "WORD":
-            raise oql_error("OQL_BAD_RETURN", "expected a column to return",
-                           "e.g. return id, title, cited by count",
-                           t.pos if t else None)
-        # Greedy longest match over the column namespace: raw column name,
-        # display_name, or alias (mirrors match_field's longest-wins rule).
-        idx, _render, max_words = _entity_column_maps(self._entity)
-        best = None
-        best_len = 0
-        parts: List[str] = []
-        for k in range(0, max(max_words, 1)):
-            tk = self.peek(k)
-            if not tk or tk.kind != "WORD":
-                break
-            parts.append(tk.val)
-            key = " ".join(parts).lower()
-            if key in idx:
-                best = idx[key]
-                best_len = k + 1
-        if best is not None:
-            self.i += best_len
-            return best
-        # Unknown word: consume one token and pass it through verbatim — the
-        # validator gates `select` against the column capability and reports a
-        # structured invalid-column error (mirrors `_parse_sort_field`'s
-        # accept-bare-word behavior).
-        self.next()
-        return t.val
 
     def _parse_sample(self):
         self._want(CTX_VALUE, kind="num", field="sample")
@@ -2826,8 +2723,8 @@ def _value_needs_quote(value: str) -> bool:
         return False
     return (any(c.isspace() for c in value)
             or value.lower() in _CONNECTIVES
-            or value.lower() in ("not", "is", "has", "where", "sort", "group",
-                                 "sample", "return", "unknown", "null")
+            or value.lower() in ("not", "is", "has", "where", "group",
+                                 "sample", "unknown", "null")
             or any(c in value for c in "()[],;\""))
 
 
@@ -2994,9 +2891,8 @@ def _factored_segments(f: FilterType, render_leaf):
 # ---------------------------------------------------------------------------
 from query_translation.oql_render_tree import (  # noqa: E402
     OQLRenderTree, EntityHead, GroupNode, ClauseNode, Segment, SegmentMeta,
-    ClauseMeta, GroupMeta, EntityValue, SortDirective, SampleDirective,
-    GroupByDirective, GroupByMeta, SortMeta, SampleMeta, ReturnDirective,
-    ReturnMeta, ExprNode, stringify,
+    ClauseMeta, GroupMeta, EntityValue, SampleDirective,
+    GroupByDirective, GroupByMeta, SampleMeta, ExprNode, stringify,
 )
 
 
@@ -3279,25 +3175,6 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
             dims.append({"column_id": g.column_id, "column_display_name": nm})
         directives.append(GroupByDirective(
             prefix="group by ", segments=segs, meta=GroupByMeta(dimensions=dims)))
-    if oqo.sort_by:
-        segs = []
-        keys = []
-        for i, s in enumerate(oqo.sort_by):
-            fld = _BY_COLUMN.get(s.column_id)
-            nm = fld.oql if fld else s.column_id
-            if i:
-                segs.append(_seg("text", ", "))
-            segs.append(_seg("column", nm, column_id=s.column_id))
-            segs.append(_seg("text", " "))
-            segs.append(_seg("keyword", s.direction))
-            keys.append({"column_id": s.column_id, "order": s.direction,
-                         "column_display_name": nm})
-        primary = keys[0]
-        directives.append(SortDirective(
-            prefix="sort by ", segments=segs,
-            meta=SortMeta(column_id=primary["column_id"], order=primary["order"],
-                          column_display_name=primary["column_display_name"],
-                          keys=keys)))
     if oqo.sample:
         segs = [_seg("value", str(oqo.sample), value=oqo.sample)]
         if oqo.seed is not None:
@@ -3305,20 +3182,6 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
             segs.append(_seg("value", str(oqo.seed), value=oqo.seed))
         directives.append(SampleDirective(
             prefix="sample ", segments=segs, meta=SampleMeta(n=oqo.sample)))
-    if oqo.select:
-        # `return` renders LAST: it's the query's output projection, read after
-        # the row semantics (filter/group/sort/sample). Omitted when empty
-        # (absent select ⇒ full object). (oxjob #450)
-        segs = []
-        cols = []
-        for i, c in enumerate(oqo.select):
-            nm = _column_render_word(oqo.get_rows, c)
-            if i:
-                segs.append(_seg("text", ", "))
-            segs.append(_seg("column", nm, column_id=c))
-            cols.append({"column_id": c, "column_display_name": nm})
-        directives.append(ReturnDirective(
-            prefix="return ", segments=segs, meta=ReturnMeta(columns=cols)))
 
     return OQLRenderTree(version="1.0", entity=head, where_keyword=where_keyword,
                          where=where, directives=directives,

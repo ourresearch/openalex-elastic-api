@@ -161,8 +161,9 @@ class TestOQLRenderer:
         result = render_oqo_to_oql(oqo)
         assert result == "works where type is (article or book)"
 
-    def test_sort_with_display_name(self):
-        """Test sort uses display name."""
+    def test_sort_by_not_rendered_to_oql(self):
+        """`sort by` was removed from the OQL surface (#504); OQO.sort_by is the
+        kept URL/OQO layer, so it must NOT appear in the rendered OQL."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -171,21 +172,8 @@ class TestOQLRenderer:
             sort_by=[SortBy("cited_by_count", "desc")],
         )
         result = render_oqo_to_oql(oqo)
-        assert "sort by citation count desc" in result
-        assert ";" not in result
-
-    def test_multi_column_sort_render_oql(self):
-        """A multi-key sort renders comma-separated in tiebreaker order (#333)."""
-        oqo = OQO(
-            get_rows="works",
-            sort_by=[
-                SortBy("publication_year", "desc"),
-                SortBy("cited_by_count", "desc"),
-            ],
-        )
-        result = render_oqo_to_oql(oqo)
-        assert "sort by year desc, citation count desc" in result
-        assert ";" not in result
+        assert "sort by" not in result
+        assert result == "works where it's open access"
 
     def test_sample(self):
         """Test sample clause."""
@@ -360,22 +348,11 @@ class TestOQLParser:
         assert f.join == "or"
         assert len(f.filters) == 2
     
-    def test_parse_sort(self):
-        """Test parsing sort clause."""
-        oql = "Works where it's Open Access; sort by citations desc"
-        oqo = parse_oql_to_oqo(oql)
-
-        assert oqo.sort_by == [SortBy("cited_by_count", "desc")]
-
-    def test_parse_multi_column_sort(self):
-        """A comma-separated OQL sort clause parses to an ordered list (#333)."""
-        oql = "Works; sort by year desc, citations desc"
-        oqo = parse_oql_to_oqo(oql)
-
-        assert oqo.sort_by == [
-            SortBy("publication_year", "desc"),
-            SortBy("cited_by_count", "desc"),
-        ]
+    def test_parse_sort_rejected(self):
+        """`sort by` was removed from the OQL surface (#504): it's no longer a
+        directive, so it parses as unexpected trailing text."""
+        with pytest.raises(OQLParseError):
+            parse_oql_to_oqo("Works where it's Open Access; sort by citations desc")
 
     def test_parse_sample(self):
         """Test parsing sample clause."""
@@ -384,23 +361,14 @@ class TestOQLParser:
         
         assert oqo.sample == 100
     
-    def test_parse_sort_and_sample(self):
-        """Test parsing both sort and sample."""
-        oql = "Works where it's Open Access; sort by citations desc; sample 50"
-        oqo = parse_oql_to_oqo(oql)
-
-        assert oqo.sort_by == [SortBy("cited_by_count", "desc")]
-        assert oqo.sample == 50
-
     def test_parse_directives_without_semicolons(self):
         """Directives now read without `;` separators (oxjob #377); the `;` form
         still parses (back-compat) and yields an identical OQO."""
         without = parse_oql_to_oqo(
-            "Works where it's Open Access sort by citations desc sample 50")
+            "Works where it's Open Access group by publication_year sample 50")
         with_semis = parse_oql_to_oqo(
-            "Works where it's Open Access; sort by citations desc; sample 50")
+            "Works where it's Open Access; group by publication_year; sample 50")
         assert without.to_dict() == with_semis.to_dict()
-        assert without.sort_by == [SortBy("cited_by_count", "desc")]
         assert without.sample == 50
 
     def test_parse_technical_format(self):
@@ -566,7 +534,6 @@ class TestRoundTrip:
                 LeafFilter(column_id="institutions.is_global_south", value=True),
                 LeafFilter(column_id="publication_year", value=2020, operator=">=")
             ],
-            sort_by=[SortBy("cited_by_count", "desc")],
         ))
 
         oql = render_oqo_to_oql(original)
@@ -574,7 +541,6 @@ class TestRoundTrip:
 
         assert parsed.get_rows == original.get_rows
         assert len(parsed.filter_rows) == len(original.filter_rows)
-        assert parsed.sort_by == original.sort_by
         assert parsed.to_dict() == original.to_dict()
 
 

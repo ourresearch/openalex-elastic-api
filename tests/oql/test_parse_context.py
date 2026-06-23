@@ -72,7 +72,6 @@ TABLE = [
     ("works where title has (foo or ", None, C.VALUE,
      {"value_kind": "search", "field": "title"}),
     # directives
-    ("works sort by ", None, C.FIELD, {}),
     ("works group by ", None, C.FIELD, {}),
     # suppression: inside a string / annotation
     ('works where title has "clim', None, C.NONE, {}),   # unterminated string
@@ -96,7 +95,7 @@ def test_state_table():
 
 def test_entity_resolved():
     assert parse_context("works where institution is har")["entity"] == "works"
-    assert parse_context("authors sort by works_count")["entity"] == "authors"
+    assert parse_context("authors where works_count > 100")["entity"] == "authors"
     assert parse_context("wor")["entity"] is None  # not yet a complete entity
 
 
@@ -239,7 +238,7 @@ def test_pos_out_of_range_is_clamped():
 
 def test_never_raises_on_arbitrary_prefixes():
     # Typing a real query one char at a time must never throw.
-    full = 'works where institution is I27837315 [Harvard] and title has "climate change" and year >= 2020 sort by citations desc'
+    full = 'works where institution is I27837315 [Harvard] and title has "climate change" and year >= 2020 sample 100'
     for i in range(len(full) + 1):
         parse_context(full, i)  # must not raise
 
@@ -259,7 +258,7 @@ _FUZZ_QUERIES = [
     'works where title has "smart phone" within 3 words',
     "works where (year >= 2020 and is_oa is true) or type is review",
     "works where it's open access and it has a DOI",
-    "authors where works_count > 100 sort by cited_by_count desc",
+    "authors where works_count > 100",
     "works group by type sample 50",
     "works where title has foo and (climate or warming)",
 ]
@@ -316,12 +315,13 @@ def test_post_connective_is_value_is_field_not_none():
 
 def test_connective_menu_offers_directives_too():
     # "menu 1" of the two-level design: after a complete clause, offer and/or AND the
-    # trailing directives (sort by / group by / sample) — but never re-offer `where`.
+    # trailing directives (group by / sample) — but never re-offer `where`.
     c = ctx("works where year > 2000 ")
     assert c["category"] == C.CONNECTIVE
     vals = {s["value"] for s in c["suggestions"]}
-    assert {"and", "or", "sort by", "group by", "sample"} <= vals
+    assert {"and", "or", "group by", "sample"} <= vals
     assert "where" not in vals
+    assert "sort by" not in vals and "return" not in vals
 
 
 def test_post_connective_carries_enum_sibling_with_ranges():
@@ -431,53 +431,9 @@ def test_editor_recognizes_is_in_collection_operator():
 
 
 # --- iter-5: click-anywhere gaps (oxjob #357) ----------------------------------
-_SORT_Q = "works where institution is I27837315 [UM] sort by citation count desc"
-
-
-def test_direction_click_offers_asc_desc():
-    # cursor inside `desc` -> the slot IS the asc/desc choice
-    pos = _SORT_Q.index("desc") + 2
-    c = ctx(_SORT_Q, pos)
-    assert c["category"] == "direction"
-    assert [s["value"] for s in c["suggestions"]] == ["asc", "desc"]
-    assert all(s["kind"] == "direction" for s in c["suggestions"])
-    assert c["replace_range"] == {"start": _SORT_Q.index("desc"),
-                                  "end": _SORT_Q.index("desc") + 4}
-
-
-def test_open_slot_after_sort_column_offers_direction_too():
-    q = "works sort by year "
-    c = ctx(q)
-    vals = [s["value"] for s in c["suggestions"]]
-    assert vals[:2] == ["asc", "desc"]          # direction first
-    assert "group by" in vals                    # the END directives still offered
-
-
-def test_direction_not_offered_after_group_by():
-    q = "works group by type "
-    c = ctx(q)
-    vals = [s["value"] for s in c["suggestions"]]
-    assert "asc" not in vals and "desc" not in vals
-
-
-def test_direction_not_offered_when_direction_already_present():
-    q = "works sort by year desc "
-    c = ctx(q)
-    vals = [s["value"] for s in c["suggestions"]]
-    assert "asc" not in vals and "desc" not in vals
-
-
-def test_direction_multi_sort_second_segment():
-    # after a comma the new segment gets its own direction slot
-    q = "works sort by year desc, citation count "
-    c = ctx(q)
-    vals = [s["value"] for s in c["suggestions"]]
-    assert vals[:2] == ["asc", "desc"]
-
-
 def test_annotation_click_reanchors_to_the_value():
     # cursor inside `[UM]` -> the id-value context of the preceding token
-    q = "works where institution is I27837315 [UM] sort by year"
+    q = "works where institution is I27837315 [UM]"
     pos = q.index("[UM]") + 2
     c = ctx(q, pos)
     assert c["category"] == C.VALUE
@@ -498,17 +454,6 @@ def test_string_click_still_suppressed():
     q = 'works where title has "climate change"'
     pos = q.index("climate") + 3
     assert cat(q, pos) == C.NONE
-
-
-def test_direction_click_after_enum_value_clause():
-    # regression (#357 iter-5): with an enum clause before the sort, the multiword-
-    # value widener used to swallow `article sort by citation count` as one value
-    # run, so the cursor in `desc` never reached the direction slot.
-    q = "works where type is article sort by citation count desc"
-    pos = q.index("desc") + 2
-    c = ctx(q, pos)
-    assert c["category"] == "direction"
-    assert [s["value"] for s in c["suggestions"]] == ["asc", "desc"]
 
 
 def test_multiword_value_widening_still_works():

@@ -8,11 +8,11 @@ search) surfaced three independent translator bugs:
         splitter does not trim, so the column id became " title_and_abstract.search"
         (leading space) -> `invalid_column`. The engine itself rejects a
         space-prefixed column, so the join must use a bare comma.
-  W3.2. The friendly sort key `citation percentile by subfield` is FOUR words, but
-        `_parse_sort_field` hand-rolled a 3-word longest-match loop (the filter path
-        uses the shared 4-word `match_field`). So the key parsed in `where` but
-        raised OQL_TRAILING_TOKENS in `sort by`. Fixed by pointing the sort path at
-        the shared matcher.
+  W3.2. A friendly 4-word alias (`citation percentile by subfield`) must resolve
+        via the shared 4-word `match_field` greedy matcher. (Originally this guarded
+        a `sort by` 3-word-loop regression; `sort by`/`return` were removed from the
+        OQL surface in #504, so the alias-matching coverage now lives in the `where`
+        comparison + `group by` paths.)
   W3.3. A quoted single "word" that the analyzer splits into >1 subtoken (a
         hyphen/slash token like "3xTg-AD" / "APP/PS1") is NOT equivalent to the bare
         form on a STEMMED .search column: quoted = adjacent subtokens, bare =
@@ -77,23 +77,26 @@ def test_w31_simple_scoped_search_folds_clean():
 
 
 # --------------------------------------------------------------------------- #
-# W3.2 — a 4-word curated alias is a valid sort key (parity with the filter path)
+# W3.2 — a 4-word curated alias resolves via the shared greedy matcher
+# (sort by/return were removed from the OQL surface in #504; the alias-matching
+# concern now lives in the `where` comparison + `group by` paths).
 # --------------------------------------------------------------------------- #
-@pytest.mark.parametrize("sort_key", [
+@pytest.mark.parametrize("alias", [
     "citation percentile by subfield",   # 4 words — the regression
     "cited by count",                    # 3 words — already worked, guard it
-    "FWCI",                              # 1 word
+    "fwci",                              # 1 word
 ])
-def test_w32_multiword_sort_key_parses(sort_key):
-    parse(f"works sort by {sort_key} desc")  # must not raise OQL_TRAILING_TOKENS
+def test_w32_multiword_alias_parses_in_where(alias):
+    # must not raise OQL_TRAILING_TOKENS — the greedy matcher consumes the full alias
+    parse(f"works where {alias} >= 1")
 
 
-def test_w32_same_alias_works_in_where_and_sort():
-    # the 4-word alias resolves in both a where comparison clause and sort by
+def test_w32_same_alias_works_in_where_and_group_by():
+    # the 4-word alias resolves in both a where comparison clause and group by
     # (the dash range `0.99-1` was removed in decision 24 -> endpoint clauses).
     parse("works where citation percentile by subfield >= 0.99 "
           "and citation percentile by subfield <= 1")
-    parse("works sort by citation percentile by subfield desc")
+    parse("works group by citation percentile by subfield")
 
 
 # --------------------------------------------------------------------------- #

@@ -224,7 +224,7 @@ OXURL_STATUSES = {"has-oxurl", "oql-only", "translator-bug", "server-unsupported
 KNOWN_TAGS = {
     "negation", "boolean-logic", "boolean-nesting", "phrase-exact",
     "proximity", "wildcard", "search-semantics", "entity-references",
-    "group-by", "sort", "sample", "filter", "sr-transcription",
+    "group-by", "sample", "filter", "sr-transcription",
     "corpus",  # corpus selector — core / expansion / all (oxjob #481)
 }
 

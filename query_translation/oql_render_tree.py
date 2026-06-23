@@ -198,58 +198,12 @@ ExprNode = Union[GroupNode, ClauseNode]
 
 
 @dataclass
-class SortMeta:
-    """Metadata for a sort directive.
-
-    `keys` is the full ordered list of sort keys (multi-column sort, #333),
-    mirroring `GroupByMeta.dimensions`; list order is the tiebreaker priority.
-    The top-level `column_id`/`order`/`column_display_name` mirror the *primary*
-    (first) key for back-compat with consumers that read the single-sort shape.
-    """
-    column_id: str
-    order: Literal["asc", "desc"]
-    column_display_name: Optional[str] = None
-    keys: Optional[List[Dict[str, Any]]] = None  # [{column_id, order, column_display_name?}, ...]
-
-    def to_dict(self) -> Dict[str, Any]:
-        result = {
-            "column_id": self.column_id,
-            "order": self.order
-        }
-        if self.column_display_name is not None:
-            result["column_display_name"] = self.column_display_name
-        if self.keys is not None:
-            result["keys"] = list(self.keys)
-        return result
-
-
-@dataclass
 class SampleMeta:
     """Metadata for sample directive."""
     n: int
     
     def to_dict(self) -> Dict[str, Any]:
         return {"n": self.n}
-
-
-@dataclass
-class SortDirective:
-    """Sorting directive."""
-    prefix: str
-    segments: List[Segment]
-    meta: SortMeta
-    
-    @property
-    def type(self) -> str:
-        return "sort"
-    
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "type": "sort",
-            "prefix": self.prefix,
-            "segments": [s.to_dict() for s in self.segments],
-            "meta": self.meta.to_dict()
-        }
 
 
 @dataclass
@@ -301,39 +255,7 @@ class GroupByDirective:
         }
 
 
-@dataclass
-class ReturnMeta:
-    """Metadata for the return directive (#450). List preserves column order
-    (OQO.select order is meaningful — it is the display order)."""
-    columns: List[Dict[str, Any]]  # [{column_id, column_display_name?}, ...]
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {"columns": list(self.columns)}
-
-
-@dataclass
-class ReturnDirective:
-    """return directive — the OQL surface of OQO.select (#450). Renders
-    `return col1, col2`."""
-    prefix: str
-    segments: List[Segment]
-    meta: ReturnMeta
-
-    @property
-    def type(self) -> str:
-        return "return"
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "type": "return",
-            "prefix": self.prefix,
-            "segments": [s.to_dict() for s in self.segments],
-            "meta": self.meta.to_dict()
-        }
-
-
-DirectiveNode = Union[SortDirective, SampleDirective, GroupByDirective,
-                      ReturnDirective]
+DirectiveNode = Union[SampleDirective, GroupByDirective]
 
 
 @dataclass
@@ -435,6 +357,6 @@ def _stringify_group(group: GroupNode) -> str:
 
 
 def _stringify_directive(directive: DirectiveNode) -> str:
-    """Stringify a directive (sort or sample)."""
+    """Stringify a directive (group by or sample)."""
     segments_text = "".join(seg.text for seg in directive.segments)
     return f"{directive.prefix}{segments_text}"
