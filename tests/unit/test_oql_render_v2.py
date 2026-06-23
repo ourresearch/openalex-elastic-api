@@ -138,7 +138,7 @@ def test_short_query_stays_one_line():
     """A query whose one-line form fits the width is a single line — same as the
     OQL pane (no gratuitous explosion)."""
     oql = "works where title has ((a or b) and (c or d))"
-    assert _norm(_v2_text(oql)) == ["works where title has all (any (a, b), any (c, d))"]
+    assert _norm(_v2_text(oql)) == ["works where title has ((a or b) and (c or d))"]
     assert _norm(_v2_text(oql)) == _norm(_fo(oql))
 
 
@@ -152,14 +152,14 @@ def test_clause_group_and_nested_value_list_explode_like_oql():
            '"blood coagulation disorders" or "coagulation disorder")) '
            'and language is en')
     assert _norm(_v2_text(oql)) == _norm(_fo(oql))
-    # spot-check the shape: the body wraps in `all (…)` (decision 32), and the
-    # long value list inside `title/abstract has any (…)` explodes one-per-line,
-    # comma-separated.
+    # spot-check the shape: the over-width clause group explodes with an infix
+    # open paren, and the long value list inside `title/abstract has (…)`
+    # explodes one-per-line with leading `or ` connectives (decision 32 revert).
     norm = _norm(_v2_text(oql))
-    assert norm[0] == "works where all ("
-    assert "title/abstract has any (" in norm
-    assert "INR," in norm                           # first value, on its own line
-    assert "aPTT," in norm                          # later value, comma-separated
+    assert norm[0] == "works where ("
+    assert "or title/abstract has (" in norm
+    assert "INR" in norm                            # first value, on its own line
+    assert "or aPTT" in norm                         # later value, leading `or`
 
 
 def test_long_flat_value_list_explodes_by_width():
@@ -191,10 +191,10 @@ def test_example_78_matches_oql_pane():
         "(interview or interviews or perceptions))")
     norm = _norm(_v2_text(oql))
     assert norm == _norm(_fo(oql))
-    assert norm[0] == "works where all ("
-    assert "any (Boy, Girl, Minors, adolescent, boys)," in norm
-    assert "any (Height, bodyweight, fat, obese, weight)" in norm
-    assert "full text has any (Britain, England, GB, UK, Wales)," in norm
+    assert norm[0] == "works where title has ("
+    assert "(Boy or Girl or Minors or adolescent or boys)" in norm
+    assert "and (Height or bodyweight or fat or obese or weight)" in norm
+    assert "and full text has (Britain or England or GB or UK or Wales)" in norm
 
 
 # --- the contract: the builder's lines ARE the OQL pane, line for line --------

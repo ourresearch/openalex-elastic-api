@@ -100,7 +100,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I33213144|I97018004'
   status: ok
-  oql: 'works where institution is any (I33213144 [Harvard], I97018004 [Stanford])'
+  oql: 'works where institution is (I33213144 [Harvard] or I97018004 [Stanford])'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
         {column_id: authorships.institutions.lineage, value: I33213144},
         {column_id: authorships.institutions.lineage, value: I97018004}]}]}
@@ -120,9 +120,9 @@ rows:
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:!I33213144,authorships.institutions.lineage:!I97018004'
   status: ok
   oql: |-
-    works where institution is all (
-        not I33213144 [Harvard],
-        not I97018004 [Stanford]
+    works where institution is (
+        not I33213144 [Harvard]
+        and not I97018004 [Stanford]
       )
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I33213144, is_negated: true},
@@ -137,10 +137,10 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=type:article|review'
   status: ok
-  oql: 'works where type is any (article, review)'
+  oql: 'works where type is (article or review)'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
         {column_id: type, value: article}, {column_id: type, value: review}]}]}
-  note: 'May also be written `type is any (article, review)` — `any`/`all` are comma-separated group sugar (decision 31), input-only; canonical output is the parens form shown.'
+  note: 'A 2+ value list is parenthesized and joined by `or`/`and`: `type is (article or review)` is an OR-group of equality leaves.'
 
 - id: 6
   tags: [entity-references]
@@ -163,7 +163,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search:apple,display_name.search:banana|cherry'
   status: ok
-  oql: 'works where title has all (apple, any (banana, cherry))'
+  oql: 'works where title has (apple and (banana or cherry))'
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: apple, operator: has},
         {join: or, filters: [
@@ -189,7 +189,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search:apple,display_name.search:banana,display_name.search:cherry'
   status: ok
-  oql: 'works where title has all (apple, banana, cherry)'
+  oql: 'works where title has (apple and banana and cherry)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: apple, operator: has},
         {column_id: display_name.search, value: banana, operator: has},
@@ -204,7 +204,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search:apple,display_name.search:banana,display_name.search:cherry'
   status: ok
-  oql: 'works where title has all (apple, banana, cherry)'
+  oql: 'works where title has (apple and banana and cherry)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: apple, operator: has},
         {column_id: display_name.search, value: banana, operator: has},
@@ -219,7 +219,7 @@ rows:
   oxurl_status: oql-only
   oxurl: null
   status: ok
-  oql: 'works where any (abstract has banana, title has apple)'
+  oql: 'works where abstract has banana or title has apple'
   oqo: {get_rows: works, filter_rows: [
         {join: or, filters: [
           {column_id: display_name.search, value: apple, operator: has},
@@ -244,7 +244,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search:change,display_name.search:climate'
   status: ok
-  oql: 'works where title has all (change, climate)'
+  oql: 'works where title has (change and climate)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: climate, operator: has},
         {column_id: display_name.search, value: change, operator: has}]}
@@ -328,7 +328,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search:climate,display_name.search:change|warming'
   status: ok
-  oql: 'works where title has all (climate, any (change, warming))'
+  oql: 'works where title has (climate and (change or warming))'
   oqo: {get_rows: works, filter_rows: [
         {column_id: display_name.search, value: climate, operator: has},
         {join: or, filters: [
@@ -576,10 +576,8 @@ rows:
   oxurl: 'https://openalex.org/works?filter=publication_year:2020-,authorships.institutions.lineage:I136199984|I33213144'
   status: ok
   oql: |-
-    works where all (
-        year >= 2020,
-        institution is any (I136199984 [Harvard], I33213144 [Harvard])
-      )
+    works where year >= 2020
+      and institution is (I136199984 [Harvard] or I33213144 [Harvard])
   oqo: {get_rows: works, filter_rows: [
         {join: or, filters: [
           {column_id: authorships.institutions.lineage, value: I33213144},
@@ -609,11 +607,9 @@ rows:
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I201448701,funders.id:F4320332161,open_access.is_oa:false'
   status: ok
   oql: |-
-    works where all (
-        institution is I201448701 [UW],
-        funder is F4320332161 [NIH],
-        it's not open access
-      )
+    works where institution is I201448701 [UW]
+      and funder is F4320332161 [NIH]
+      and it's not open access
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I201448701},
         {column_id: funders.id, value: F4320332161},
@@ -627,7 +623,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:change,title_and_abstract.search:climate'
   status: ok
-  oql: 'works where title/abstract has all (change, climate)'
+  oql: 'works where title/abstract has (change and climate)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: climate, operator: has},
         {column_id: title_and_abstract.search, value: change, operator: has}]}
@@ -658,7 +654,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/authors?filter=has_orcid:true,last_known_institutions.country_code:BR'
   status: ok
-  oql: 'authors where all (it has an ORCID, author country is BR [Brazil])'
+  oql: 'authors where it has an ORCID and author country is BR [Brazil]'
   oqo: {get_rows: authors, filter_rows: [
         {column_id: last_known_institutions.country_code, value: BR},
         {column_id: has_orcid, value: true}]}
@@ -716,10 +712,8 @@ rows:
   oxurl: 'https://openalex.org/authors?filter=last_known_institutions.id:I114027177,topics.id:T10895'
   status: ok
   oql: |-
-    authors where all (
-        last known institution is I114027177 [UNC],
-        topics is T10895 [climate change]
-      )
+    authors where last known institution is I114027177 [UNC]
+      and topics is T10895 [climate change]
   oqo: {get_rows: authors, filter_rows: [
         {column_id: last_known_institutions.id, value: I114027177},
         {column_id: topics.id, value: T10895}]}
@@ -776,10 +770,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=authorships.countries:col_eu27,authorships.countries:US&group_by=primary_topic.id'
   status: ok
   oql: |-
-    works where all (
-        country is in collection col_eu27,
-        country is US [United States]
-      )
+    works where country is in collection col_eu27 and country is US [United States]
     group by topic
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.countries, value: col_eu27, operator: in collection},
@@ -808,10 +799,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=cited_by_count:>100,title_and_abstract.search:%22coral%20bleaching%22&group_by=primary_location.source.id'
   status: ok
   oql: |-
-    works where all (
-        citation count > 100,
-        title/abstract has near "coral bleaching"
-      )
+    works where citation count > 100 and title/abstract has near "coral bleaching"
     group by source
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: '"coral bleaching"', operator: has},
@@ -838,9 +826,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I154570441,is_retracted:true&group_by=authorships.author.id'
   status: ok
-  oql: |-
-    works where all (institution is I154570441 [UCSB], it's retracted)
-    group by author
+  oql: 'works where institution is I154570441 [UCSB] and it''s retracted group by author'
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I154570441},
         {column_id: is_retracted, value: true}],
@@ -871,10 +857,10 @@ rows:
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:agile,title_and_abstract.search:%22cycle%20time%22|%22lead%20time%22,title_and_abstract.search:%22demand%20chain%22|%22supply%20chain%22|%22value%20chain%22'
   status: ok
   oql: |-
-    works where title/abstract has all (
-        agile,
-        any (near "cycle time", near "lead time"),
-        any (near "demand chain", near "supply chain", near "value chain")
+    works where title/abstract has (
+        agile
+        and (near "cycle time" or near "lead time")
+        and (near "demand chain" or near "supply chain" or near "value chain")
       )
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: agile, operator: has},
@@ -961,16 +947,14 @@ rows:
   oxurl: 'https://openalex.org/works?filter=language:en,publication_year:2015-2024,title_and_abstract.search:ASD|%22autism%20spectrum%20disorder%22|autism,title_and_abstract.search:intervention|therapy|treatment,type:article|review'
   status: ok
   oql: |-
-    works where all (
-        language is en [English],
-        year >= 2015,
-        year <= 2024,
-        title/abstract has all (
-          any (ASD, near "autism spectrum disorder", autism),
-          any (intervention, therapy, treatment)
-        ),
-        type is any (article, review)
+    works where language is en [English]
+      and year >= 2015
+      and year <= 2024
+      and title/abstract has (
+        (ASD or near "autism spectrum disorder" or autism)
+        and (intervention or therapy or treatment)
       )
+      and type is (article or review)
   oqo: {get_rows: works, filter_rows: [
         {join: or, filters: [
           {column_id: title_and_abstract.search, value: autism, operator: has},
@@ -995,7 +979,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=funders.id:F4320337351,open_access.oa_status:gold'
   status: ok
-  oql: 'works where all (funder is F4320337351 [NCI], open access status is gold)'
+  oql: 'works where funder is F4320337351 [NCI] and open access status is gold'
   oqo: {get_rows: works, filter_rows: [
         {column_id: open_access.oa_status, value: gold},
         {column_id: funders.id, value: F4320337351}]}
@@ -1010,11 +994,9 @@ rows:
   oxurl: 'https://openalex.org/works?filter=publication_year:2018-2023,title_and_abstract.search:CRISPR,title_and_abstract.search:%22genome%20editing%22&sort=cited_by_count:desc&sample=500'
   status: ok
   oql: |-
-    works where all (
-        year >= 2018,
-        year <= 2023,
-        title/abstract has all (CRISPR, near "genome editing")
-      )
+    works where year >= 2018
+      and year <= 2023
+      and title/abstract has (CRISPR and near "genome editing")
     sort by citation count desc
     sample 500
   oqo: {get_rows: works, filter_rows: [
@@ -1093,7 +1075,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=type:article|review'
   status: ok
-  oql: 'works where type is any (article, review)'
+  oql: 'works where type is (article or review)'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
         {column_id: type, value: article}, {column_id: type, value: review}]}]}
 
@@ -1118,7 +1100,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:!pediatric,title_and_abstract.search:covid'
   status: ok
-  oql: 'works where title/abstract has all (not pediatric, covid)'
+  oql: 'works where title/abstract has (not pediatric and covid)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: covid, operator: has},
         {column_id: title_and_abstract.search, value: pediatric, operator: has, is_negated: true}]}
@@ -1133,7 +1115,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:computing,title_and_abstract.search:quantum&group_by=authorships.countries'
   status: ok
-  oql: 'works where title/abstract has all (computing, quantum) group by country'
+  oql: 'works where title/abstract has (computing and quantum) group by country'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: quantum, operator: has},
         {column_id: title_and_abstract.search, value: computing, operator: has}],
@@ -1149,7 +1131,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:CRISPR,title_and_abstract.search:Cas9&group_by=authorships.author.id'
   status: ok
-  oql: 'works where title/abstract has all (CRISPR, Cas9) group by author'
+  oql: 'works where title/abstract has (CRISPR and Cas9) group by author'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: CRISPR, operator: has},
         {column_id: title_and_abstract.search, value: Cas9, operator: has}],
@@ -1349,43 +1331,45 @@ rows:
     (title / title & abstract x2 / anywhere). 114 leaves. No explicit oqo oracle
     — the harness asserts OQO->OQL->OQO identity through the whole tree.
   oql: |-
-    works where all (
-        title has all (
-          any (
-            Boy, Girl, Minors, Prepubescent, adolescent, boys, child's, children,
-            girls, juvenile, preadolescent, preteen, pubertal, pubescent, schoolboy,
-            schoolchild, schoolgirl, teen, tweenage, tweens, youth, youths,
-            "Pre pubescent", "early adolescent", "pre adolescent", "pre pubertal",
-            "school aged", "young people", "young person"
-          ),
-          any (
-            Height, bodyweight, fat, fatness, obese, obesity, overweight, thin,
-            thinness, weight, "anti fat", "being fat", "being thin", "body esteem",
-            "body hatred", "body ideal", "body image", "body positive",
-            "body shame", "body shape", "body size", "body sizes", "fat ideal",
-            "ideal body", "thin ideal", "weight bias"
-          )
-        ),
-        full text has any (
-          Britain, England, GB, Scotland, Scottish, UK, Wales, Welsh,
-          "English adolescent", "English children", "English girls",
-          "English schoolchild", "English teen", "English young people",
-          "North Ireland", "North Irish", "Northern Ireland", "Northern Irish",
-          "United Kingdom", "english boys", "english school"
-        ),
-        title/abstract has all (
-          any (
-            attitude, attitudes, beliefs, diaries, diary, experiences, in-depth,
-            indepth, informal, open, perceptions, perspective, perspectives,
-            qualitative, semistructured, unstructured, "focus group",
-            "focus groups", "lived experience", "open ended", "semi structured"
-          ),
-          any (
-            attitude, attitudes, beliefs, diaries, diary, experiences, interview,
-            interviews, perceptions, perspective, perspectives, qualitative,
-            questionnaire, questionnaires, "focus group", "focus groups",
-            "lived experience"
-          )
+    works where title has (
+        (
+          Boy or Girl or Minors or Prepubescent or adolescent or boys or child's
+          or children or girls or juvenile or preadolescent or preteen or pubertal
+          or pubescent or schoolboy or schoolchild or schoolgirl or teen or tweenage
+          or tweens or youth or youths or "Pre pubescent" or "early adolescent"
+          or "pre adolescent" or "pre pubertal" or "school aged" or "young people"
+          or "young person"
+        )
+        and (
+          Height or bodyweight or fat or fatness or obese or obesity or overweight
+          or thin or thinness or weight or "anti fat" or "being fat" or "being thin"
+          or "body esteem" or "body hatred" or "body ideal" or "body image"
+          or "body positive" or "body shame" or "body shape" or "body size"
+          or "body sizes" or "fat ideal" or "ideal body" or "thin ideal"
+          or "weight bias"
+        )
+      )
+      and full text has (
+        Britain or England or GB or Scotland or Scottish or UK or Wales or Welsh
+        or "English adolescent" or "English children" or "English girls"
+        or "English schoolchild" or "English teen" or "English young people"
+        or "North Ireland" or "North Irish" or "Northern Ireland"
+        or "Northern Irish" or "United Kingdom" or "english boys"
+        or "english school"
+      )
+      and title/abstract has (
+        (
+          attitude or attitudes or beliefs or diaries or diary or experiences
+          or in-depth or indepth or informal or open or perceptions or perspective
+          or perspectives or qualitative or semistructured or unstructured
+          or "focus group" or "focus groups" or "lived experience" or "open ended"
+          or "semi structured"
+        )
+        and (
+          attitude or attitudes or beliefs or diaries or diary or experiences
+          or interview or interviews or perceptions or perspective or perspectives
+          or qualitative or questionnaire or questionnaires or "focus group"
+          or "focus groups" or "lived experience"
         )
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: display_name.search, value: Boy,
@@ -1573,10 +1557,8 @@ rows:
 
 # --- search/value delimiter redesign: parens-bag (#363, 2026-06-08) ----------
 # A list of 2+ terms/values must be parenthesized; a single one may be bare.
-# `(…)` holds a boolean of atoms (and/or/not, nests). `any (…)`/`all (…)`
-# came back as comma-separated group sugar (decision 31, 2026-06-17) — input-only,
-# canonical render stays the parens form. These rows pin the grammar + its loud
-# errors; the positive sugar lives in tests/oql/test_any_all_of.py.
+# `(…)` holds a boolean of atoms (and/or/not, nests). These rows pin the grammar
+# + its loud errors.
 
 - id: 91
   tags: [boolean-logic, boolean-nesting]
@@ -1586,7 +1568,7 @@ rows:
   oxurl_status: oql-only
   oxurl: null
   status: ok
-  oql: 'works where title has any (foo, all (bar, baz))'
+  oql: 'works where title has (foo or (bar and baz))'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
         {column_id: display_name.search, value: foo, operator: has},
         {join: and, filters: [
@@ -1602,7 +1584,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.countries:GB,authorships.countries:US'
   status: ok
-  oql: 'works where country is all (GB [United Kingdom], US [United States])'
+  oql: 'works where country is (GB [United Kingdom] and US [United States])'
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.countries, value: US},
         {column_id: authorships.countries, value: GB}]}
@@ -1618,35 +1600,15 @@ rows:
   diagnostic: OQL_MIXED_BOOL_NEEDS_PARENS
   note: 'Inside a (…) group a space is an AND, so this mixes and/or at one level → loud error (no silent precedence). Fix: `(apple and (banana or cherry))` or `((apple and banana) or cherry)`.'
 
-- id: 94
-  tags: [boolean-logic]
-  provenance:
-    type: "spec design"
-    label: "OQL any/all sugar (#363, decision 31): one separator per level"
-  status: error
-  oql: 'works where type is any (article or review)'
-  diagnostic: OQL_COMMA_IN_GROUP
-  note: '`any (…)`/`all (…)` lists are comma-separated (the keyword fixes the join), so `or`/`and` inside them is rejected — one separator per level. Fix: `type is any (article, review)` or `type is (article or review)`. (decision 31)'
-
 - id: 95
   tags: [boolean-logic]
   provenance:
     type: "spec design"
-    label: "OQL parens-bag (#363): commas need an any/all list"
+    label: "OQL parens-bag (#363): items use or/and, not commas"
   status: error
   oql: 'works where type is (article, review)'
   diagnostic: OQL_COMMA_IN_GROUP
-  note: 'A bare (…) group joins items with `or`/`and`, not commas. Commas are for an `any`/`all` list. Fix: `type is (article or review)` or `type is any (article, review)`. (#363, decision 31)'
-
-- id: 182
-  tags: [boolean-logic]
-  provenance:
-    type: "spec design"
-    label: "OQL any/all openers dropped the `of` (#363, decision 31): the old `any of (` spelling hard-errors with a fix-it"
-  status: error
-  oql: 'works where type is any of (article, review)'
-  diagnostic: OQL_ANY_OF_RENAMED
-  note: 'The group openers were briefly `any of (…)`/`all of (…)`; they were shortened to `any (…)`/`all (…)` (reads more directly when nesting). Typing the dropped-`of` form at a group-opener position hard-errors OQL_ANY_OF_RENAMED with a fix-it (`drop the "of"`). Only the exact `any|all of (` shape triggers, so ordinary words like `title has all of the above` are untouched. Fix: `type is any (article, review)`. (decision 31)'
+  note: 'A (…) group joins items with `or`/`and`, not commas. Fix: `type is (article or review)`.'
 
 - id: 96
   tags: [entity-references]
@@ -1666,7 +1628,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=publication_year:2019-2023'
   status: ok
-  oql: 'works where all (year >= 2019, year <= 2023)'
+  oql: 'works where year >= 2019 and year <= 2023'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 2019, operator: '>='}, {column_id: publication_year, value: 2023, operator: '<='}]}
   note: 'A closed numeric range is written as the two-bound implicit-AND `year >= 2019 and year <= 2023` — the dash range literal `year is 2019-2023` was REMOVED as OQL surface syntax (charter decision 24; typing it now errors OQL_RANGE_LITERAL_REMOVED, see the dash-rejected error row). It parses to two bound leaves and the canonical render is the endpoint form. The OpenAlex URL range form `publication_year:2019-2023` is unaffected — the URL parser still builds the same OQO, so URL round-trip survives (oxjob #363).'
 
@@ -1690,7 +1652,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=fwci:1.5-3.0'
   status: ok
-  oql: 'works where all (FWCI >= 1.5, FWCI <= 3.0)'
+  oql: 'works where FWCI >= 1.5 and FWCI <= 3.0'
   oqo: {get_rows: works, filter_rows: [{column_id: fwci, value: 1.5, operator: '>='}, {column_id: fwci, value: 3.0, operator: '<='}]}
   note: 'FWCI is a float field, so endpoint values accept decimals: `FWCI >= 1.5 and FWCI <= 3.0`. The dash literal `FWCI is 1.5-3.0` was removed with the rest of the range syntax (decision 24). The URL range form `fwci:1.5-3.0` is unaffected.'
 
@@ -1702,7 +1664,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=publication_year:>42,publication_year:<100'
   status: ok
-  oql: 'works where all (year > 42, year < 100)'
+  oql: 'works where year > 42 and year < 100'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 42, operator: '>'}, {column_id: publication_year, value: 100, operator: '<'}]}
   note: 'Strict bounds stay exactly as written — `year > 42 and year < 100` is NOT rewritten to the inclusive `>= 43 and <= 99`. The ±1 strict-integer-pair collapse (which fed the removed dash range) was dropped with the range literal (charter decision 24): more faithful, no inference. Renders as two strict endpoint clauses / `publication_year:>42,publication_year:<100` (oxjob #363).'
 
@@ -1725,11 +1687,11 @@ rows:
   oxurl: 'https://openalex.org/works?filter=primary_location.source.type:book%20series|conference|ebook%20platform|journal'
   status: ok
   oql: |-
-    works where source type is any (
-        "book series",
-        conference,
-        "ebook platform",
-        journal
+    works where source type is (
+        "book series"
+        or conference
+        or "ebook platform"
+        or journal
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [
         {column_id: primary_location.source.type, value: journal},
@@ -1747,10 +1709,8 @@ rows:
   oxurl: 'https://openalex.org/works?filter=primary_topic.subfield.id:2712,type:article'
   status: ok
   oql: |-
-    works where all (
-        subfield is 2712 [Endocrinology, Diabetes and Metabolism],
-        type is article
-      )
+    works where subfield is 2712 [Endocrinology, Diabetes and Metabolism]
+      and type is article
   oqo: {get_rows: works, filter_rows: [{column_id: primary_topic.subfield.id, value: '2712'}, {column_id: type, value: article}]}
   note: 'The subfield of a work''s primary topic (topic hierarchy domain > field > subfield > topic). Render word = registry display_name "subfield"; the value resolves a `[display name]` via the native subfields namespace. Was an "unknown field" before oxjob #363 (only field/domain/topic were registered).'
 
@@ -1774,7 +1734,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=citation_normalized_percentile.value:99,type:article'
   status: ok
-  oql: 'works where all (citation percentile by subfield is 99, type is article)'
+  oql: 'works where citation percentile by subfield is 99 and type is article'
   oqo: {get_rows: works, filter_rows: [{column_id: citation_normalized_percentile.value, value: 99}, {column_id: type, value: article}]}
   note: "The work's citation count normalized by subfield + year, as a percentile (0-100). Render word = registry display_name 'citation percentile by subfield'. The is_in_top_1_percent / is_in_top_10_percent siblings are curated bools. (oxjob #363 case 4)"
 
@@ -1798,7 +1758,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=open_access.any_repository_has_fulltext:true,type:article'
   status: ok
-  oql: 'works where all (it has fulltext in a repository, type is article)'
+  oql: 'works where it has fulltext in a repository and type is article'
   oqo: {get_rows: works, filter_rows: [{column_id: open_access.any_repository_has_fulltext, value: true}, {column_id: type, value: article}]}
   note: "Full text available in some open repository. Booleans render via their bool_true/bool_false phrasing (gate-exempt from the registry display_name), here 'it has fulltext in a repository'. (oxjob #363 case 6)"
 
@@ -1811,10 +1771,8 @@ rows:
   oxurl: 'https://openalex.org/works?filter=cited_by:w1984893742,type:article'
   status: ok
   oql: |-
-    works where all (
-        cited by is w1984893742 [Uncertainty and Pension Systems Reforms],
-        type is article
-      )
+    works where cited by is w1984893742 [Uncertainty and Pension Systems Reforms]
+      and type is article
   oqo: {get_rows: works, filter_rows: [{column_id: cited_by, value: w1984893742}, {column_id: type, value: article}]}
   note: "cited_by:W = the works in W's reference list ('cited by' W); cites:W = works citing W. Render words = registry display_names 'cited by' / 'cites'. The W-id value resolves the referenced work's title, truncated with an ellipsis at a uniform length (works added to NATIVE_ENTITY_TYPES). (oxjob #363 case 7)"
 
@@ -1827,22 +1785,20 @@ rows:
   oxurl: 'https://openalex.org/works?filter=authorships.author.id:a5018352470,fulltext.search:simulation,publication_year:2015-2025,type:article,fulltext.search:%22data%20assimilation%22|%22state%20estimation%22|real-time,fulltext.search:%22reduced%20order%20model%22|%22surrogate%20model%22,primary_topic.field.id:15|16|17|19|21|22|23|25|26|31&sort=publication_year:desc'
   status: ok
   oql: |-
-    works where all (
-        author is a5018352470 [Kenji Takizawa],
-        full text has all (
-          simulation,
-          any (near "data assimilation", near "state estimation", real-time),
-          any (near "reduced order model", near "surrogate model")
-        ),
-        year >= 2015,
-        year <= 2025,
-        type is article,
-        field is any (
-          15 [Chemical Engineering], 16 [Chemistry], 17 [Computer Science],
-          19 [Earth and Planetary Sciences], 21 [Energy], 22 [Engineering],
-          23 [Environmental Science], 25 [Materials Science], 26 [Mathematics],
-          31 [Physics and Astronomy]
-        )
+    works where author is a5018352470 [Kenji Takizawa]
+      and full text has (
+        simulation
+        and (near "data assimilation" or near "state estimation" or real-time)
+        and (near "reduced order model" or near "surrogate model")
+      )
+      and year >= 2015
+      and year <= 2025
+      and type is article
+      and field is (
+        15 [Chemical Engineering] or 16 [Chemistry] or 17 [Computer Science]
+        or 19 [Earth and Planetary Sciences] or 21 [Energy] or 22 [Engineering]
+        or 23 [Environmental Science] or 25 [Materials Science] or 26 [Mathematics]
+        or 31 [Physics and Astronomy]
       )
     sort by year desc
   oqo: {get_rows: works, sort_by: [{column_id: publication_year, direction: desc}], filter_rows: [{column_id: authorships.author.id, value: a5018352470}, {column_id: fulltext.search, operator: has, value: simulation}, {column_id: publication_year, operator: '>=', value: 2015}, {column_id: publication_year, operator: <=, value: 2025}, {column_id: type, value: article}, {join: or, filters: [{column_id: fulltext.search, operator: has, value: '"data assimilation"'}, {column_id: fulltext.search, operator: has, value: '"state estimation"'}, {column_id: fulltext.search, operator: has, value: real-time}]}, {join: or, filters: [{column_id: fulltext.search, operator: has, value: '"reduced order model"'}, {column_id: fulltext.search, operator: has, value: '"surrogate model"'}]}, {join: or, filters: [{column_id: primary_topic.field.id, value: '15'}, {column_id: primary_topic.field.id, value: '16'}, {column_id: primary_topic.field.id, value: '17'}, {column_id: primary_topic.field.id, value: '19'}, {column_id: primary_topic.field.id, value: '21'}, {column_id: primary_topic.field.id, value: '22'}, {column_id: primary_topic.field.id, value: '23'}, {column_id: primary_topic.field.id, value: '25'}, {column_id: primary_topic.field.id, value: '26'}, {column_id: primary_topic.field.id, value: '31'}]}]}
@@ -1868,7 +1824,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=from_publication_date:2020-01-01,to_publication_date:2020-12-31'
   status: ok
-  oql: 'works where all (date >= 2020-01-01, date <= 2020-12-31)'
+  oql: 'works where date >= 2020-01-01 and date <= 2020-12-31'
   oqo: {get_rows: works, filter_rows: [{column_id: from_publication_date, value: '2020-01-01'}, {column_id: to_publication_date, value: '2020-12-31'}]}
   note: "Inclusive date bounds (Jason 2026-06-09: range form = comparison operators, not a dash range — the dash collides with ISO dates). `>=` routes to `from_publication_date` (ES gte), `<=` to `to_publication_date` (ES lte) — the ONLY inclusive forms at ES; the base param has only exact-day + strict >/<. The two bound leaves stay two clauses (never collapse to a `lo-hi` dash) and round-trip to the same OQO the URL `from_publication_date:…,to_publication_date:…` builds."
 
@@ -2012,7 +1968,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:%223xTg-AD%22|%22in%20vivo%22'
   status: ok
-  oql: 'works where title/abstract has any (near "3xTg-AD", near "in vivo")'
+  oql: 'works where title/abstract has (near "3xTg-AD" or near "in vivo")'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: '"3xTg-AD"', operator: has}, {column_id: title_and_abstract.search, value: '"in vivo"', operator: has}]}]}
   note: "Walkthrough batch 3 (W3.3): on the STEMMED .search column a quoted token the analyzer splits into >1 subtoken (hyphen/slash, e.g. '3xTg-AD', 'APP/PS1') is adjacent-subtokens (phrase), NOT the bare AND form — measured live `\"3xTg-AD\"` 2027 vs `3xTg-AD` 2354. So the encoder keeps quotes for multi-subtoken stemmed tokens; atomic tokens (5xFAD) and exact-column wildcards ('foo*bar') stay bare. Rendered as `near \"…\"` (stemmed adjacent phrase)."
 
@@ -2086,16 +2042,14 @@ rows:
   oxurl: 'https://openalex.org/works?filter=keywords.id:!keywords/animal-model,keywords.id:keywords/electronic-cigarette,language:en,publication_year:2003-2025,type:types/article'
   status: ok
   oql: |-
-    works where all (
-        keyword is all (
-          not keywords/animal-model [Animal model],
-          keywords/electronic-cigarette [Electronic cigarette]
-        ),
-        language is en [English],
-        year >= 2003,
-        year <= 2025,
-        type is types/article
+    works where keyword is (
+        not keywords/animal-model [Animal model]
+        and keywords/electronic-cigarette [Electronic cigarette]
       )
+      and language is en [English]
+      and year >= 2003
+      and year <= 2025
+      and type is types/article
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true}, {column_id: keywords.id, value: keywords/electronic-cigarette}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: types/article}]}
   note: |-
     zd#8101 "Vaping & Health Living Map" (Claire Stansfield, UCL EPPI-Centre),
@@ -2123,14 +2077,12 @@ rows:
   oxurl: 'https://openalex.org/works?filter=keywords.id:!keywords/animal-model,language:en,publication_year:2003-2025,type:types/article,display_name.search:vape|vaper|vapers|vapes|vaping'
   status: ok
   oql: |-
-    works where all (
-        keyword is not keywords/animal-model [Animal model],
-        language is en [English],
-        year >= 2003,
-        year <= 2025,
-        type is types/article,
-        title has any (vape, vaper, vapers, vapes, vaping)
-      )
+    works where keyword is not keywords/animal-model [Animal model]
+      and language is en [English]
+      and year >= 2003
+      and year <= 2025
+      and type is types/article
+      and title has (vape or vaper or vapers or vapes or vaping)
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: types/article}, {join: or, filters: [{column_id: display_name.search, value: vape, operator: has}, {column_id: display_name.search, value: vaper, operator: has}, {column_id: display_name.search, value: vapers, operator: has}, {column_id: display_name.search, value: vapes, operator: has}, {column_id: display_name.search, value: vaping, operator: has}]}]}
   note: |-
     zd#8101 "Vaping & Health Living Map" (Claire), OpenAlex Custom-filter line 7,
@@ -2153,7 +2105,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:teacher,title_and_abstract.search.exact:!%22academic%20teacher%22'
   status: ok
-  oql: 'works where title/abstract has all (teacher, not "academic teacher")'
+  oql: 'works where title/abstract has (teacher and not "academic teacher")'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: teacher, operator: has},
         {column_id: title_and_abstract.search.exact, value: '"academic teacher"', operator: has, is_negated: true}]}
@@ -2183,7 +2135,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:England,title_and_abstract.search.exact:!%22New%20England%22'
   status: ok
-  oql: 'works where title/abstract has all (England, not "New England")'
+  oql: 'works where title/abstract has (England and not "New England")'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: England, operator: has},
         {column_id: title_and_abstract.search.exact, value: '"New England"', operator: has, is_negated: true}]}
@@ -2286,7 +2238,7 @@ rows:
   note: >-
     depth-0 AND of two concepts; the untagged free-text default ->
     title/abstract. (source DB: PubMed).
-  oql: 'works where title/abstract has all (acetaminophen, "autism spectrum disorders")'
+  oql: 'works where title/abstract has (acetaminophen and "autism spectrum disorders")'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: acetaminophen, operator: has},
     {column_id: title_and_abstract.search.exact, value: '"autism spectrum disorders"', operator: has}]}
 
@@ -2300,7 +2252,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:%22firm-specific%20factors%22,title_and_abstract.search.exact:%22share%20price%22'
   status: ok
   note: 'Two quoted multi-word phrases AND-ed (exact-adjacent, no stemming).'
-  oql: 'works where title/abstract has all ("firm-specific factors", "share price")'
+  oql: 'works where title/abstract has ("firm-specific factors" and "share price")'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"firm-specific
     factors"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"share
     price"', operator: has}]}
@@ -2318,11 +2270,11 @@ rows:
     Canonical SR shape: a flat AND of OR-synonym groups (here 4 blocks).
     (source DB: Engineering Village).
   oql: |-
-    works where title/abstract has all (
-        concrete,
-        any (corrosion, deterioration),
-        any (durability, resistance),
-        any ("sulfuric acid", "sulphuric acid")
+    works where title/abstract has (
+        concrete
+        and (corrosion or deterioration)
+        and (durability or resistance)
+        and ("sulfuric acid" or "sulphuric acid")
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: concrete, operator: has},
     {join: or, filters: [{column_id: title_and_abstract.search, value: corrosion, operator: has},
@@ -2343,14 +2295,14 @@ rows:
   status: ok
   note: 'AND of OR-groups; mixes quoted phrases with bare single words.'
   oql: |-
-    works where title/abstract has all (
-        "body composition",
-        any (elderly, older),
-        any (
-          "vibrating platform",
-          "vibratory intervention",
-          "vibratory therapy",
-          "whole body vibration"
+    works where title/abstract has (
+        "body composition"
+        and (elderly or older)
+        and (
+          "vibrating platform"
+          or "vibratory intervention"
+          or "vibratory therapy"
+          or "whole body vibration"
         )
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"body composition"',
@@ -2375,9 +2327,9 @@ rows:
     Two synonym groups AND-ed; all single-word stems. (source DB: Web of
     Science).
   oql: |-
-    works where title/abstract has all (
-        any (game, gamification, gamified),
-        any (literacy, read, reading)
+    works where title/abstract has (
+        (game or gamification or gamified)
+        and (literacy or read or reading)
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: game,
     operator: has}, {column_id: title_and_abstract.search, value: gamification, operator: has},
@@ -2397,14 +2349,14 @@ rows:
   status: ok
   note: 'Three-block PICO-style AND of OR-groups. (source DB: PubMed).'
   oql: |-
-    works where title/abstract has all (
-        any (LMWH, antithrombotic, heparin),
-        any (idiopathic, unexplained),
-        any (
-          "habitual abortion",
-          "recurrent abortion",
-          "recurrent miscarriage",
-          "recurrent pregnancy loss"
+    works where title/abstract has (
+        (LMWH or antithrombotic or heparin)
+        and (idiopathic or unexplained)
+        and (
+          "habitual abortion"
+          or "recurrent abortion"
+          or "recurrent miscarriage"
+          or "recurrent pregnancy loss"
         )
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: LMWH,
@@ -2430,11 +2382,11 @@ rows:
     Truncation: wildcards quoted so they run on the no-stem .search.exact
     column (#364).
   oql: |-
-    works where title/abstract has all (
-        Iran,
-        any (colimycin, colistimethate, colistin, "Polymyxin E"),
-        any ("K.pneumoniae", "Klebsiella pneumoniae"),
-        any ("Resistan*", "suscep*")
+    works where title/abstract has (
+        Iran
+        and (colimycin or colistimethate or colistin or "Polymyxin E")
+        and ("K.pneumoniae" or "Klebsiella pneumoniae")
+        and ("Resistan*" or "suscep*")
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: Iran, operator: has},
     {join: or, filters: [{column_id: title_and_abstract.search, value: colimycin, operator: has},
@@ -2456,7 +2408,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:!children,title_and_abstract.search:depression,title_and_abstract.search:obesity'
   status: ok
   note: 'Negation (NOT) — only ~4% of real SR strings use it. (source DB: PubMed).'
-  oql: 'works where title/abstract has all (not children, depression, obesity)'
+  oql: 'works where title/abstract has (not children and depression and obesity)'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: children, operator: has,
     is_negated: true}, {column_id: title_and_abstract.search, value: depression, operator: has},
     {column_id: title_and_abstract.search, value: obesity, operator: has}]}
@@ -2474,12 +2426,12 @@ rows:
     Multiple trailing NOT exclusions after an AND-of-ORs core. (source DB:
     Science Direct).
   oql: |-
-    works where title/abstract has all (
-        not paediatric,
-        not "myocardial infarction",
-        any (COVID-19, coronavirus),
-        any (anticoagulant, enoxaparin, fondaparinux, heparin),
-        any ("critical illness", "intensive care units")
+    works where title/abstract has (
+        not paediatric
+        and not "myocardial infarction"
+        and (COVID-19 or coronavirus)
+        and (anticoagulant or enoxaparin or fondaparinux or heparin)
+        and ("critical illness" or "intensive care units")
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: paediatric, operator: has,
     is_negated: true}, {column_id: title_and_abstract.search.exact, value: '"myocardial infarction"',
@@ -2505,16 +2457,16 @@ rows:
     Three concept blocks; many quoted device phrases. (source DB: PubMed,
     Cochrane Library, ClinicalTrials.gov).
   oql: |-
-    works where title/abstract has all (
-        any (AI, "artificial intelligence", "machine learning"),
-        any (
-          "artificial pancreas",
-          "automated insulin delivery",
-          "closed loop",
-          "continuous glucose monitor",
-          "wearable devices"
-        ),
-        any ("diabetes mellitus", "type 1 diabetes", "type 2 diabetes")
+    works where title/abstract has (
+        (AI or "artificial intelligence" or "machine learning")
+        and (
+          "artificial pancreas"
+          or "automated insulin delivery"
+          or "closed loop"
+          or "continuous glucose monitor"
+          or "wearable devices"
+        )
+        and ("diabetes mellitus" or "type 1 diabetes" or "type 2 diabetes")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: AI,
     operator: has}, {column_id: title_and_abstract.search.exact, value: '"artificial
@@ -2540,10 +2492,17 @@ rows:
   status: ok
   note: 'A nested AND-of-ORs inside one block (drug AND (site AND condition)).'
   oql: |-
-    works where title/abstract has all (
-        any (atrophic, atrophy, dryness, lubrication, vaginitis),
-        any (carbetocin, oxytocin, pitocin, syntocinon),
-        any (dyspareunia, intravaginal, urogenital, vaginal, vulvar, vulvovaginal)
+    works where title/abstract has (
+        (atrophic or atrophy or dryness or lubrication or vaginitis)
+        and (carbetocin or oxytocin or pitocin or syntocinon)
+        and (
+          dyspareunia
+          or intravaginal
+          or urogenital
+          or vaginal
+          or vulvar
+          or vulvovaginal
+        )
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: atrophic,
     operator: has}, {column_id: title_and_abstract.search, value: atrophy, operator: has},
@@ -2570,12 +2529,12 @@ rows:
   status: ok
   note: 'Long brand-name OR list AND a truncated-stem group. (source DB: Scopus).'
   oql: |-
-    works where title/abstract has all (
-        any (
-          facebook, instagram, linkedin, reddit, tiktok, twitter, youtube,
-          "sina weibo", "social media"
-        ),
-        any ("immuni*", "vaccin*")
+    works where title/abstract has (
+        (
+          facebook or instagram or linkedin or reddit or tiktok or twitter
+          or youtube or "sina weibo" or "social media"
+        )
+        and ("immuni*" or "vaccin*")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: facebook,
     operator: has}, {column_id: title_and_abstract.search, value: instagram, operator: has},
@@ -2599,9 +2558,9 @@ rows:
   status: ok
   note: 'Spelled-out term OR its acronym — a very common SR idiom.'
   oql: |-
-    works where title/abstract has all (
-        any (NAION, "nonarteritic anterior ischemic optic neuropathy"),
-        any (semaglutide, "glucagon-like peptide-1 agonist")
+    works where title/abstract has (
+        (NAION or "nonarteritic anterior ischemic optic neuropathy")
+        and (semaglutide or "glucagon-like peptide-1 agonist")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: NAION,
     operator: has}, {column_id: title_and_abstract.search.exact, value: '"nonarteritic
@@ -2620,10 +2579,10 @@ rows:
   status: ok
   note: 'Plain three-phrase AND, no synonyms.'
   oql: |-
-    works where title/abstract has all (
-        variation,
-        "branching pattern",
-        "facial nerve"
+    works where title/abstract has (
+        variation
+        and "branching pattern"
+        and "facial nerve"
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: variation, operator: has},
     {column_id: title_and_abstract.search.exact, value: '"branching pattern"', operator: has},
@@ -2642,15 +2601,15 @@ rows:
     Truncation across both blocks; education-research SR (non-biomed field).
     (source DB: Scopus).
   oql: |-
-    works where title/abstract has all (
-        any (
-          "clean energy",
-          "energy education",
-          "energy literacy",
-          "energy source*",
-          "renewable energy"
-        ),
-        any ("college*", "school*", "universit*")
+    works where title/abstract has (
+        (
+          "clean energy"
+          or "energy education"
+          or "energy literacy"
+          or "energy source*"
+          or "renewable energy"
+        )
+        and ("college*" or "school*" or "universit*")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search.exact,
     value: '"clean energy"', operator: has}, {column_id: title_and_abstract.search.exact,
@@ -2673,9 +2632,9 @@ rows:
   status: ok
   note: 'Multilingual phrases (Portuguese/English) — corpus is not English-only.'
   oql: |-
-    works where title/abstract has all (
-        any (biology, chemistry, physics, "ensino de ciências"),
-        any ("blended learning", "ensino híbrido", "b-learning")
+    works where title/abstract has (
+        (biology or chemistry or physics or "ensino de ciências")
+        and ("blended learning" or "ensino híbrido" or "b-learning")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: biology,
     operator: has}, {column_id: title_and_abstract.search, value: chemistry, operator: has},
@@ -2699,9 +2658,9 @@ rows:
     cannot express this (it has no parens), so it is oql-only. ~3-deep.
     (source DB: PubMed).
   oql: |-
-    works where title/abstract has all (
-        intake,
-        any (season, all (spring, summer, winter, any (autumn, fall)))
+    works where title/abstract has (
+        intake
+        and (season or (spring and summer and winter and (autumn or fall)))
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: intake, operator: has},
     {join: or, filters: [{column_id: title_and_abstract.search, value: season, operator: has},
@@ -2724,17 +2683,17 @@ rows:
     The middle block "(elderly and women) or (older women)" is an AND inside
     an OR — not distributable, hence oql-only. (source DB: PubMed).
   oql: |-
-    works where title/abstract has all (
-        any (
-          balance,
-          coordination,
-          flexibility,
-          "muscle strength",
-          "physical fitness",
-          "reaction time"
-        ),
-        any (dance, dancing, salsa, "dance therapy", "salsa dancing"),
-        any ("older women", all (elderly, women))
+    works where title/abstract has (
+        (
+          balance
+          or coordination
+          or flexibility
+          or "muscle strength"
+          or "physical fitness"
+          or "reaction time"
+        )
+        and (dance or dancing or salsa or "dance therapy" or "salsa dancing")
+        and ("older women" or (elderly and women))
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: balance,
     operator: has}, {column_id: title_and_abstract.search, value: coordination, operator: has},
@@ -2764,13 +2723,13 @@ rows:
     block AND (a or b or c), but the as-written OR-of-ANDs is faithfully
     representable and oql-only. (source DB: PubMed).
   oql: |-
-    works where title/abstract has any (
-        all ("dental stem cell", any (periodontitis, "periodontal regeneration")),
-        all (
-          "mesenchymal stem cell",
-          any (periodontitis, "periodontal regeneration")
-        ),
-        all ("stem cell", any (periodontitis, "periodontal regeneration"))
+    works where title/abstract has (
+        ("dental stem cell" and (periodontitis or "periodontal regeneration"))
+        or (
+          "mesenchymal stem cell"
+          and (periodontitis or "periodontal regeneration")
+        )
+        or ("stem cell" and (periodontitis or "periodontal regeneration"))
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{join: and, filters: [{column_id: title_and_abstract.search.exact,
     value: '"dental stem cell"', operator: has}, {join: or, filters: [{column_id: title_and_abstract.search,
@@ -2798,10 +2757,10 @@ rows:
     Filter-tree and value-tree share one OQL syntax. (source DB: Web of
     Science).
   oql: |-
-    works where title/abstract has all (
-        any (aged, elderly, "older adults"),
-        any (burden, outbreak, prevalence),
-        any ("loneliness", "lonely")
+    works where title/abstract has (
+        (aged or elderly or "older adults")
+        and (burden or outbreak or prevalence)
+        and ("loneliness" or "lonely")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: aged,
     operator: has}, {column_id: title_and_abstract.search, value: elderly, operator: has},
@@ -2825,10 +2784,8 @@ rows:
     PubMed [Title] block scoped to title; the untagged block defaults to
     title/abstract — two different fields in one query. (source DB: PubMed).
   oql: |-
-    works where all (
-        title/abstract has "neuropsychological test",
-        title has any (normative, norms, "normative data")
-      )
+    works where title/abstract has "neuropsychological test"
+      and title has (normative or norms or "normative data")
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"neuropsychological
     test"', operator: has}, {join: or, filters: [{column_id: display_name.search, value: normative,
     operator: has}, {column_id: display_name.search, value: norms, operator: has},
@@ -2880,18 +2837,13 @@ rows:
     block). TITLE-ABS-KEY≈title/abstract (OpenAlex has no separate author-
     keyword text field). (source DB: Scopus).
   oql: |-
-    works where all (
-        title has all (
-          any (engineering, industry, "application*"),
-          any (genai, "generative ai", "generative artificial intelligence")
-        ),
-        title/abstract has any (
-          all (generation, text),
-          all (
-            any (generation, "model*"),
-            any (multimodal, nlp, "natural language")
-          )
-        )
+    works where title has (
+        (engineering or industry or "application*")
+        and (genai or "generative ai" or "generative artificial intelligence")
+      )
+      and title/abstract has (
+        (generation and text)
+        or ((generation or "model*") and (multimodal or nlp or "natural language"))
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: display_name.search, value: engineering,
     operator: has}, {column_id: display_name.search, value: industry, operator: has},
@@ -2920,7 +2872,7 @@ rows:
   note: >-
     Scopus TITLE-ABS-KEY wrapping one small boolean -> one title/abstract
     clause. The common single-field Scopus idiom. (source DB: Scopus).
-  oql: 'works where title/abstract has all (music, suzuki)'
+  oql: 'works where title/abstract has (music and suzuki)'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: music, operator: has},
     {column_id: title_and_abstract.search, value: suzuki, operator: has}]}
 
@@ -2938,10 +2890,8 @@ rows:
     abstract). Classic URL filters cannot OR across fields -> oql-only (the
     #191.7 cross-field-OR shape). (source DB: Web of Science).
   oql: |-
-    works where any (
-        abstract has all ("Suzuki*", "music*"),
-        title has all ("Suzuki*", "music*")
-      )
+    works where abstract has ("Suzuki*" and "music*")
+      or title has ("Suzuki*" and "music*")
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{join: and, filters: [{column_id: abstract.search.exact,
     value: Suzuki*, operator: has}, {column_id: abstract.search.exact, value: music*,
     operator: has}]}, {join: and, filters: [{column_id: display_name.search.exact,
@@ -2968,22 +2918,20 @@ rows:
     fall back to free-text. oql-only: ORs an entity-membership filter with a
     title/abstract search.
   oql: |-
-    works where all (
-        any (
-          keyword is keywords/anticoagulant [Anticoagulant],
-          title/abstract has any (
-            INR,
-            aPTT,
-            coagulopathy,
-            thrombocytopenia,
-            "blood coagulation disorders",
-            "coagulation disorder"
-          )
-        ),
-        any (
-          keyword is keywords/central-venous-catheter [Central venous catheter],
-          title/abstract has any (CVC, "central line", "central venous catheter")
+    works where (
+        keyword is keywords/anticoagulant [Anticoagulant]
+        or title/abstract has (
+          INR
+          or aPTT
+          or coagulopathy
+          or thrombocytopenia
+          or "blood coagulation disorders"
+          or "coagulation disorder"
         )
+      )
+      and (
+        keyword is keywords/central-venous-catheter [Central venous catheter]
+        or title/abstract has (CVC or "central line" or "central venous catheter")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: keywords.id, value: keywords/anticoagulant},
     {column_id: title_and_abstract.search, value: INR, operator: has}, {column_id: title_and_abstract.search,
@@ -3015,41 +2963,39 @@ rows:
     b). Plus year/type/language scalars and a negated keyword filter. oql-only
     (mixes proximity/exact and stemmed match modes).
   oql: |-
-    works where all (
-        keyword is not keywords/animal-model [Animal model],
-        language is en [English],
-        year >= 2003,
-        year <= 2025,
-        type is types/article,
-        title/abstract has any (
-          vapes, "e vape", "e vapes", "e vaping", "e vaping", "e vapor", "e vapors",
-          "e vapour", "e vapours", "liquid nicotine", "nicotine aerosol",
-          "nicotine bag", "nicotine bags", "nicotine gum", "nicotine gummies",
-          "nicotine inhaler", "nicotine lozenge", "nicotine microtab",
-          "nicotine microtablet", "nicotine microtablets", "nicotine microtabs",
-          "nicotine pouch", "nicotine pouches", "nicotine snus" within 8 words,
-          "nicotine spray", "nicotine tablet", "nicotine tablets",
-          "oral nicotine product", "vape device", "vape flavor" within 1 word,
-          "vape flavor" within 1 word, "vape flavored" within 1 word,
-          "vape flavoring" within 1 word, "vape flavour" within 1 word,
-          "vape flavoured" within 1 word, "vape flavouring" within 1 word,
-          "vape free", "vape product", "vape use", "vaping device",
-          "vaping flavor" within 1 word, "vaping flavor" within 1 word,
-          "vaping flavored" within 1 word, "vaping flavoring" within 1 word,
-          "vaping flavour" within 1 word, "vaping flavoured" within 1 word,
-          "vaping flavouring" within 1 word, "vaping free", "vaping product",
-          "evape", "evapes", "evaping", all (cigarette, evaping),
-          all (cigarette, vape), all (cigarette, vaper), all (cigarette, vapers),
-          all (cigarette, vaping), all (cigarette, vapor),
-          all (cigarette, vaporiser), all (cigarette, vaporizer),
-          all (cigarette, vapour), all (cigarette, vapouriser),
-          all (cigarette, vapourizer), all (cigarette, "e-vaping"),
-          all (evaping, nicotine), all (nicotine, vape), all (nicotine, vaper),
-          all (nicotine, vapers), all (nicotine, vaping), all (nicotine, vapor),
-          all (nicotine, vaporiser), all (nicotine, vaporizer),
-          all (nicotine, vapour), all (nicotine, vapouriser),
-          all (nicotine, vapourizer), all (nicotine, "e-vaping")
-        )
+    works where keyword is not keywords/animal-model [Animal model]
+      and language is en [English]
+      and year >= 2003
+      and year <= 2025
+      and type is types/article
+      and title/abstract has (
+        vapes or "e vape" or "e vapes" or "e vaping" or "e vaping" or "e vapor"
+        or "e vapors" or "e vapour" or "e vapours" or "liquid nicotine"
+        or "nicotine aerosol" or "nicotine bag" or "nicotine bags" or "nicotine gum"
+        or "nicotine gummies" or "nicotine inhaler" or "nicotine lozenge"
+        or "nicotine microtab" or "nicotine microtablet" or "nicotine microtablets"
+        or "nicotine microtabs" or "nicotine pouch" or "nicotine pouches"
+        or "nicotine snus" within 8 words or "nicotine spray" or "nicotine tablet"
+        or "nicotine tablets" or "oral nicotine product" or "vape device"
+        or "vape flavor" within 1 word or "vape flavor" within 1 word
+        or "vape flavored" within 1 word or "vape flavoring" within 1 word
+        or "vape flavour" within 1 word or "vape flavoured" within 1 word
+        or "vape flavouring" within 1 word or "vape free" or "vape product"
+        or "vape use" or "vaping device" or "vaping flavor" within 1 word
+        or "vaping flavor" within 1 word or "vaping flavored" within 1 word
+        or "vaping flavoring" within 1 word or "vaping flavour" within 1 word
+        or "vaping flavoured" within 1 word or "vaping flavouring" within 1 word
+        or "vaping free" or "vaping product" or "evape" or "evapes" or "evaping"
+        or (cigarette and evaping) or (cigarette and vape) or (cigarette and vaper)
+        or (cigarette and vapers) or (cigarette and vaping) or (cigarette and vapor)
+        or (cigarette and vaporiser) or (cigarette and vaporizer)
+        or (cigarette and vapour) or (cigarette and vapouriser)
+        or (cigarette and vapourizer) or (cigarette and "e-vaping")
+        or (evaping and nicotine) or (nicotine and vape) or (nicotine and vaper)
+        or (nicotine and vapers) or (nicotine and vaping) or (nicotine and vapor)
+        or (nicotine and vaporiser) or (nicotine and vaporizer)
+        or (nicotine and vapour) or (nicotine and vapouriser)
+        or (nicotine and vapourizer) or (nicotine and "e-vaping")
       )
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true},
     {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: <=},
@@ -3188,30 +3134,28 @@ rows:
     scalar + negated-keyword tail as row 161. (Fixes the mis-quoted line 8 =
     row 162.)
   oql: |-
-    works where all (
-        keyword is not keywords/animal-model [Animal model],
-        language is en [English],
-        year >= 2003,
-        year <= 2025,
-        type is types/article,
-        title/abstract has any (
-          Juul, "VUSE", "Vype", "Geek Bar",
-          "cigarette" within 4 words of "ultra sonic", "e Voke", "e cigar",
-          "e cigarette", "e cigarettes", "e liquid", "e liquids",
-          "electric cigarette" within 4 words, "electric nicotine" within 4 words,
-          "electrical cigarette" within 4 words,
-          "electrical nicotine" within 4 words,
-          "electronic cigarette" within 4 words,
-          "electronic nicotine" within 4 words,
-          "nicotine" within 4 words of "delivering system",
-          "nicotine" within 4 words of "delivery device",
-          "nicotine" within 4 words of "delivery product",
-          "nicotine" within 4 words of "delivery system",
-          "nicotine" within 4 words of "delivery system",
-          "nicotine" within 4 words of "ultra sonic", "u cigar", "u cigarette",
-          "u cigarettes", "u cigars", "ultrasonic cigarette" within 4 words,
-          "ultrasonic nicotine" within 4 words
-        )
+    works where keyword is not keywords/animal-model [Animal model]
+      and language is en [English]
+      and year >= 2003
+      and year <= 2025
+      and type is types/article
+      and title/abstract has (
+        Juul or "VUSE" or "Vype" or "Geek Bar"
+        or "cigarette" within 4 words of "ultra sonic" or "e Voke" or "e cigar"
+        or "e cigarette" or "e cigarettes" or "e liquid" or "e liquids"
+        or "electric cigarette" within 4 words or "electric nicotine" within 4 words
+        or "electrical cigarette" within 4 words
+        or "electrical nicotine" within 4 words
+        or "electronic cigarette" within 4 words
+        or "electronic nicotine" within 4 words
+        or "nicotine" within 4 words of "delivering system"
+        or "nicotine" within 4 words of "delivery device"
+        or "nicotine" within 4 words of "delivery product"
+        or "nicotine" within 4 words of "delivery system"
+        or "nicotine" within 4 words of "delivery system"
+        or "nicotine" within 4 words of "ultra sonic" or "u cigar" or "u cigarette"
+        or "u cigarettes" or "u cigars" or "ultrasonic cigarette" within 4 words
+        or "ultrasonic nicotine" within 4 words
       )
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true},
     {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: <=},
@@ -3263,58 +3207,61 @@ rows:
     2025)` list. Her stray leading quote on the first group is fixed here to
     the intended phrases. Origin DBs: APA PsycInfo / Web of Science.
   oql: |-
-    works where all (
-        title/abstract has all (
-          review,
-          any (
-            HAVO, VWO, atheneum, gymnasium, schooling,
-            (secondary vocational education), "Elementary Education",
-            "Multi Academy Trust", "Multi Academy Trusts", "School Academies",
-            "School Academy", "basic school", "basic school", "basic schools",
-            "basic schools", "comprehensive school", "comprehensive schools",
-            "elementary school", "elementary schools", "grade school",
-            "grade schools", "grammar school", "grammar schools", "high school",
-            "high schools", "intermediate school", "intermediate schools",
-            "middle school", "middle schools", "post primary school",
-            "post primary schools", "post-primary education",
-            "postprimary education", "postprimary education", "postprimary school",
-            "postprimary schools", "school system", "secondary education",
-            "secondary school", "secondary schools", "technical school",
-            "technical schools", "university preparatory education",
-            "vocational school", "vocational schools", all (adolescents, education),
-            all (education, "young people"), all (teacher, not "academic teacher"),
-            all (teachers, not "academic teachers")
-          ),
-          any (
-            Policies, context, electoral, policy, political, reform, reforming,
-            "national standards", "school improvement", "influence*"
-          ),
-          any (evidence, literature),
-          any (
-            "Self-Assessment", "Annual School Review", "Annual School Reviews",
-            "School Assessment", "School Development Plan",
-            "School Development Plans", "School Improvement Plan",
-            "School Improvement Plans", "educational accountability",
-            "evaluation structures", "school accountability", "school audit",
-            "school effectiveness", "school effectiveness", "school evaluation",
-            "school excellence", "school improvement", "school inspection",
-            "school inspector", "school performance", "school quality",
-            "school self-assessment", "school self-evaluation", "shool oversight",
-            "special measures", all (school, "educational quality")
-          )
-        ),
-        year is any (
-          2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025
-        ),
-        type is any (
-          types/book,
-          types/book-chapter,
-          types/dissertation,
-          types/erratum,
-          types/other,
-          types/report,
-          types/retraction
+    works where title/abstract has (
+        review
+        and (
+          HAVO or VWO or atheneum or gymnasium or schooling
+          or (secondary vocational education) or "Elementary Education"
+          or "Multi Academy Trust" or "Multi Academy Trusts" or "School Academies"
+          or "School Academy" or "basic school" or "basic school" or "basic schools"
+          or "basic schools" or "comprehensive school" or "comprehensive schools"
+          or "elementary school" or "elementary schools" or "grade school"
+          or "grade schools" or "grammar school" or "grammar schools"
+          or "high school" or "high schools" or "intermediate school"
+          or "intermediate schools" or "middle school" or "middle schools"
+          or "post primary school" or "post primary schools"
+          or "post-primary education" or "postprimary education"
+          or "postprimary education" or "postprimary school"
+          or "postprimary schools" or "school system" or "secondary education"
+          or "secondary school" or "secondary schools" or "technical school"
+          or "technical schools" or "university preparatory education"
+          or "vocational school" or "vocational schools"
+          or (adolescents and education) or (education and "young people")
+          or (teacher and not "academic teacher")
+          or (teachers and not "academic teachers")
         )
+        and (
+          Policies or context or electoral or policy or political or reform
+          or reforming or "national standards" or "school improvement"
+          or "influence*"
+        )
+        and (evidence or literature)
+        and (
+          "Self-Assessment" or "Annual School Review" or "Annual School Reviews"
+          or "School Assessment" or "School Development Plan"
+          or "School Development Plans" or "School Improvement Plan"
+          or "School Improvement Plans" or "educational accountability"
+          or "evaluation structures" or "school accountability" or "school audit"
+          or "school effectiveness" or "school effectiveness" or "school evaluation"
+          or "school excellence" or "school improvement" or "school inspection"
+          or "school inspector" or "school performance" or "school quality"
+          or "school self-assessment" or "school self-evaluation"
+          or "shool oversight" or "special measures"
+          or (school and "educational quality")
+        )
+      )
+      and year is (
+        2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or 2023
+        or 2024 or 2025
+      )
+      and type is (
+        types/book
+        or types/book-chapter
+        or types/dissertation
+        or types/erratum
+        or types/other
+        or types/report
+        or types/retraction
       )
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: review, operator: has},
     {join: or, filters: [{column_id: publication_year, value: 2014}, {column_id: publication_year,
@@ -3435,50 +3382,49 @@ rows:
     Estyn+accountability) -> parenthesized AND pairs. Grey-lit type + year
     tail.
   oql: |-
-    works where all (
-        year is any (
-          2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025
-        ),
-        title/abstract has any (
-          DEPP, EQAO, HGIOS, OFSTED, Onderwijsinspectie,
-          "Conseil de l'Evaluation de l'Ecole",
-          "Direction de l'Evaluation de la Prospective et de l'Evaluation",
-          "Education Scotland", "Educational Quality and Accountability Office",
-          "FINEEC Evaluation*", "General Inspectorate", "How Good is Our School",
-          "Institute for Development of Education", "Instytut Rozwoju Edukacji",
-          "Kurator Oświaty", "Ocena jakości pracy szkoły",
-          "Odpowiedzialność szkoły", "Plany Rozwoju Szkoły",
-          "Samodzielna ocena szkoły", all (Estyn, accountability),
-          all (Estyn, inspection), all (Estyn, inspectors),
-          all (Finland, "Education Evaluation Centre"),
-          all (Ireland, "Department of Education"),
-          all (Ireland, "Education and Training Inspectorate"),
-          all (Irish, "Department of Education"),
-          all (Irish, "Education and Training Inspectorate"),
-          all (Japan, "Ministry of Education"),
-          all (Japanese, "Ministry of Education"),
-          all (Netherlands, "Inspectorate of Education"),
-          all (Ontario, "standard of instruction"),
-          all (Poland, "Ministry of Education"),
-          all (Poland, "regional education authority"),
-          all (Polish, "Ministry of Education"),
-          all (Polish, "regional education authority"), all (SEAB, Singapore),
-          all (Singapore, "MOE"),
-          all (Singapore, "Examinations and Assessment Board"),
-          all (Singapore, "Ministry of Education"),
-          all ("Dutch", "Inspectorate of Education"),
-          all ("Finnish", "Education Evaluation Centre"),
-          all ("Education Review Office", "New Zealand")
-        ),
-        type is any (
-          types/book,
-          types/book-chapter,
-          types/dissertation,
-          types/erratum,
-          types/other,
-          types/report,
-          types/retraction
-        )
+    works where year is (
+        2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or 2023
+        or 2024 or 2025
+      )
+      and title/abstract has (
+        DEPP or EQAO or HGIOS or OFSTED or Onderwijsinspectie
+        or "Conseil de l'Evaluation de l'Ecole"
+        or "Direction de l'Evaluation de la Prospective et de l'Evaluation"
+        or "Education Scotland" or "Educational Quality and Accountability Office"
+        or "FINEEC Evaluation*" or "General Inspectorate"
+        or "How Good is Our School" or "Institute for Development of Education"
+        or "Instytut Rozwoju Edukacji" or "Kurator Oświaty"
+        or "Ocena jakości pracy szkoły" or "Odpowiedzialność szkoły"
+        or "Plany Rozwoju Szkoły" or "Samodzielna ocena szkoły"
+        or (Estyn and accountability) or (Estyn and inspection)
+        or (Estyn and inspectors) or (Finland and "Education Evaluation Centre")
+        or (Ireland and "Department of Education")
+        or (Ireland and "Education and Training Inspectorate")
+        or (Irish and "Department of Education")
+        or (Irish and "Education and Training Inspectorate")
+        or (Japan and "Ministry of Education")
+        or (Japanese and "Ministry of Education")
+        or (Netherlands and "Inspectorate of Education")
+        or (Ontario and "standard of instruction")
+        or (Poland and "Ministry of Education")
+        or (Poland and "regional education authority")
+        or (Polish and "Ministry of Education")
+        or (Polish and "regional education authority") or (SEAB and Singapore)
+        or (Singapore and "MOE")
+        or (Singapore and "Examinations and Assessment Board")
+        or (Singapore and "Ministry of Education")
+        or ("Dutch" and "Inspectorate of Education")
+        or ("Finnish" and "Education Evaluation Centre")
+        or ("Education Review Office" and "New Zealand")
+      )
+      and type is (
+        types/book
+        or types/book-chapter
+        or types/dissertation
+        or types/erratum
+        or types/other
+        or types/report
+        or types/retraction
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: publication_year, value: 2014},
     {column_id: publication_year, value: 2015}, {column_id: publication_year, value: 2016},
@@ -3578,59 +3524,62 @@ rows:
     teacher")`. (See #431 for the OXURL->OQO `!` parser gap; OQL itself
     expresses it fine.)
   oql: |-
-    works where all (
-        year is any (
-          2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025
-        ),
-        title/abstract has all (
-          any (
-            Britain, Dutch, Estonia, Finland, Finnish, Flemish, France, French,
-            Ireland, Irish, Japan, Japanese, Netherlands, Ontarian, Ontario, Poland,
-            Polish, Scotland, Scottish, Singapore, Singaporean, Welsh, "U.K.", "UK",
-            "New Zealand", "United Kingdom", all (British, not "British Columbia"),
-            all (England, not "New England"), all (Wales, not "New South Wales")
-          ),
-          any (
-            HAVO, VWO, atheneum, gymnasium, schooling,
-            (secondary vocational education), "Elementary Education",
-            "Multi Academy Trust", "Multi Academy Trusts", "School Academies",
-            "School Academy", "basic school", "basic school", "basic schools",
-            "basic schools", "comprehensive school", "comprehensive schools",
-            "elementary school", "elementary schools", "grade school",
-            "grade schools", "grammar school", "grammar schools", "high school",
-            "high schools", "intermediate school", "intermediate schools",
-            "middle school", "middle schools", "post primary school",
-            "post primary schools", "post-primary education",
-            "postprimary education", "postprimary education", "postprimary school",
-            "postprimary schools", "school system", "secondary education",
-            "secondary school", "secondary schools", "technical school",
-            "technical schools", "university preparatory education",
-            "vocational school", "vocational schools", all (adolescents, education),
-            all (education, "young people"), all (teacher, not "academic teacher"),
-            all (teachers, not "academic teachers")
-          ),
-          any (
-            "Self-Assessment", "Annual School Review", "Annual School Reviews",
-            "School Assessment", "School Development Plan",
-            "School Development Plans", "School Improvement Plan",
-            "School Improvement Plans", "educational accountability",
-            "evaluation structures", "school accountability", "school audit",
-            "school effectiveness", "school effectiveness", "school evaluation",
-            "school excellence", "school improvement", "school inspection",
-            "school inspector", "school performance", "school quality",
-            "school self-assessment", "school self-evaluation", "shool oversight",
-            "special measures", all (school, "educational quality")
-          )
-        ),
-        type is any (
-          types/book,
-          types/book-chapter,
-          types/dissertation,
-          types/erratum,
-          types/other,
-          types/report,
-          types/retraction
+    works where year is (
+        2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or 2023
+        or 2024 or 2025
+      )
+      and title/abstract has (
+        (
+          Britain or Dutch or Estonia or Finland or Finnish or Flemish or France
+          or French or Ireland or Irish or Japan or Japanese or Netherlands
+          or Ontarian or Ontario or Poland or Polish or Scotland or Scottish
+          or Singapore or Singaporean or Welsh or "U.K." or "UK" or "New Zealand"
+          or "United Kingdom" or (British and not "British Columbia")
+          or (England and not "New England") or (Wales and not "New South Wales")
         )
+        and (
+          HAVO or VWO or atheneum or gymnasium or schooling
+          or (secondary vocational education) or "Elementary Education"
+          or "Multi Academy Trust" or "Multi Academy Trusts" or "School Academies"
+          or "School Academy" or "basic school" or "basic school" or "basic schools"
+          or "basic schools" or "comprehensive school" or "comprehensive schools"
+          or "elementary school" or "elementary schools" or "grade school"
+          or "grade schools" or "grammar school" or "grammar schools"
+          or "high school" or "high schools" or "intermediate school"
+          or "intermediate schools" or "middle school" or "middle schools"
+          or "post primary school" or "post primary schools"
+          or "post-primary education" or "postprimary education"
+          or "postprimary education" or "postprimary school"
+          or "postprimary schools" or "school system" or "secondary education"
+          or "secondary school" or "secondary schools" or "technical school"
+          or "technical schools" or "university preparatory education"
+          or "vocational school" or "vocational schools"
+          or (adolescents and education) or (education and "young people")
+          or (teacher and not "academic teacher")
+          or (teachers and not "academic teachers")
+        )
+        and (
+          "Self-Assessment" or "Annual School Review" or "Annual School Reviews"
+          or "School Assessment" or "School Development Plan"
+          or "School Development Plans" or "School Improvement Plan"
+          or "School Improvement Plans" or "educational accountability"
+          or "evaluation structures" or "school accountability" or "school audit"
+          or "school effectiveness" or "school effectiveness" or "school evaluation"
+          or "school excellence" or "school improvement" or "school inspection"
+          or "school inspector" or "school performance" or "school quality"
+          or "school self-assessment" or "school self-evaluation"
+          or "shool oversight" or "special measures"
+          or (school and "educational quality")
+        )
+      )
+      and type is (
+        types/book
+        or types/book-chapter
+        or types/dissertation
+        or types/erratum
+        or types/other
+        or types/report
+        or types/retraction
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: publication_year, value: 2014},
     {column_id: publication_year, value: 2015}, {column_id: publication_year, value: 2016},
@@ -3767,57 +3716,59 @@ rows:
     text. A clean example of one librarian intent realized two ways (text
     block vs entity filter) in one corpus.
   oql: |-
-    works where all (
-        country is any (
-          CA [Canada], COUNTRIES/GB [United Kingdom], EE [Estonia], FI [Finland],
-          FR [France], IE [Ireland], JP [Japan], NL [Netherlands], NZ [New Zealand],
-          PL [Poland], SG [Singapore]
-        ),
-        year is any (
-          2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025
-        ),
-        title/abstract has all (
-          any (
-            HAVO, VWO, atheneum, gymnasium, schooling,
-            (secondary vocational education), "Elementary Education",
-            "Multi Academy Trust", "Multi Academy Trusts", "School Academies",
-            "School Academy", "basic school", "basic school", "basic schools",
-            "basic schools", "comprehensive school", "comprehensive schools",
-            "elementary school", "elementary schools", "grade school",
-            "grade schools", "grammar school", "grammar schools", "high school",
-            "high schools", "intermediate school", "intermediate schools",
-            "middle school", "middle schools", "post primary school",
-            "post primary schools", "post-primary education",
-            "postprimary education", "postprimary education", "postprimary school",
-            "postprimary schools", "school system", "secondary education",
-            "secondary school", "secondary schools", "technical school",
-            "technical schools", "university preparatory education",
-            "vocational school", "vocational schools", all (adolescents, education),
-            all (education, "young people"), all (teacher, not "academic teacher"),
-            all (teachers, not "academic teachers")
-          ),
-          any (
-            "Self-Assessment", "Annual School Review", "Annual School Reviews",
-            "School Assessment", "School Development Plan",
-            "School Development Plans", "School Improvement Plan",
-            "School Improvement Plans", "educational accountability",
-            "evaluation structures", "school accountability", "school audit",
-            "school effectiveness", "school effectiveness", "school evaluation",
-            "school excellence", "school improvement", "school inspection",
-            "school inspector", "school performance", "school quality",
-            "school self-assessment", "school self-evaluation", "shool oversight",
-            "special measures", all (school, "educational quality")
-          )
-        ),
-        type is any (
-          types/book,
-          types/book-chapter,
-          types/dissertation,
-          types/erratum,
-          types/other,
-          types/report,
-          types/retraction
+    works where country is (
+        CA [Canada] or COUNTRIES/GB [United Kingdom] or EE [Estonia] or FI [Finland]
+        or FR [France] or IE [Ireland] or JP [Japan] or NL [Netherlands]
+        or NZ [New Zealand] or PL [Poland] or SG [Singapore]
+      )
+      and year is (
+        2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or 2023
+        or 2024 or 2025
+      )
+      and title/abstract has (
+        (
+          HAVO or VWO or atheneum or gymnasium or schooling
+          or (secondary vocational education) or "Elementary Education"
+          or "Multi Academy Trust" or "Multi Academy Trusts" or "School Academies"
+          or "School Academy" or "basic school" or "basic school" or "basic schools"
+          or "basic schools" or "comprehensive school" or "comprehensive schools"
+          or "elementary school" or "elementary schools" or "grade school"
+          or "grade schools" or "grammar school" or "grammar schools"
+          or "high school" or "high schools" or "intermediate school"
+          or "intermediate schools" or "middle school" or "middle schools"
+          or "post primary school" or "post primary schools"
+          or "post-primary education" or "postprimary education"
+          or "postprimary education" or "postprimary school"
+          or "postprimary schools" or "school system" or "secondary education"
+          or "secondary school" or "secondary schools" or "technical school"
+          or "technical schools" or "university preparatory education"
+          or "vocational school" or "vocational schools"
+          or (adolescents and education) or (education and "young people")
+          or (teacher and not "academic teacher")
+          or (teachers and not "academic teachers")
         )
+        and (
+          "Self-Assessment" or "Annual School Review" or "Annual School Reviews"
+          or "School Assessment" or "School Development Plan"
+          or "School Development Plans" or "School Improvement Plan"
+          or "School Improvement Plans" or "educational accountability"
+          or "evaluation structures" or "school accountability" or "school audit"
+          or "school effectiveness" or "school effectiveness" or "school evaluation"
+          or "school excellence" or "school improvement" or "school inspection"
+          or "school inspector" or "school performance" or "school quality"
+          or "school self-assessment" or "school self-evaluation"
+          or "shool oversight" or "special measures"
+          or (school and "educational quality")
+        )
+      )
+      and type is (
+        types/book
+        or types/book-chapter
+        or types/dissertation
+        or types/erratum
+        or types/other
+        or types/report
+        or types/retraction
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: authorships.countries, value: CA},
     {column_id: authorships.countries, value: COUNTRIES/GB}, {column_id: authorships.countries,
@@ -3949,7 +3900,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=display_name.search:!cat,display_name.search:!dog'
   status: ok
   note: 'NOT distributes over an OR-group: `not (cat or dog)` canonicalizes to `not cat and not dog` (De Morgan). The OR-group disappears — a structure change, not just a label flip.'
-  oql: 'works where title has all (not cat, not dog)'
+  oql: 'works where title has (not cat and not dog)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: cat, operator: has, is_negated: true}, {column_id: display_name.search, value: dog, operator: has, is_negated: true}]}
 - id: 170
   tags: [negation]
@@ -3982,7 +3933,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=abstract.search:!dog,display_name.search:cat'
   status: ok
   note: 'Negation on a different field than the positive clause: include cat in the title, exclude dog from the abstract.'
-  oql: 'works where all (abstract has not dog, title has cat)'
+  oql: 'works where abstract has not dog and title has cat'
   oqo: {get_rows: works, filter_rows: [{column_id: abstract.search, value: dog, operator: has, is_negated: true}, {column_id: display_name.search, value: cat, operator: has}]}
 - id: 173
   tags: [negation, entity-references]
@@ -4026,7 +3977,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=display_name.search:!c,display_name.search:!d,display_name.search:a|b'
   status: ok
   note: 'The Scopus/WoS `(... ) AND NOT a AND NOT b` shape: an OR-group core followed by trailing exclusions. Canonicalizes with the negated leaves hoisted ahead of the OR-group.'
-  oql: 'works where title has all (not c, not d, any (a, b))'
+  oql: 'works where title has (not c and not d and (a or b))'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: c, operator: has, is_negated: true}, {column_id: display_name.search, value: d, operator: has, is_negated: true}, {join: or, filters: [{column_id: display_name.search, value: a, operator: has}, {column_id: display_name.search, value: b, operator: has}]}]}
 - id: 177
   tags: [negation, wildcard]
@@ -4037,15 +3988,6 @@ rows:
   oql: 'works where title has (not(climat*))'
   diagnostic: OQL_WILDCARD_NEEDS_EXACT
   note: 'A negated bare wildcard is rejected for the same reason as a positive one — wildcards run on exact (no-stem) text. Fix: quote it, `not("climat*")`. Negation does not change the wildcard rule.'
-- id: 178
-  tags: [negation, entity-references]
-  provenance:
-    type: "spec design"
-    label: "any/all can't be operator-negated (#363, decision 31)"
-  status: error
-  oql: 'works where institution is not any (I27837315, I136199984)'
-  diagnostic: OQL_NEGATED_LIST_KEYWORD
-  note: 'An `any`/`all` list cannot be negated as a whole — decision 31 negates leaves, not clauses, so there is no `is not any`/`is not all`. Fix: negate each item, `institution is any (not I27837315, not I136199984)` (= none of them).'
 - id: 180
   tags: [filter]
   provenance:
@@ -4067,7 +4009,7 @@ rows:
 
 # --- Corpus selector (oxjob #481) ---------------------------------------------
 # `corpus` is a top-level OQO field selecting which corpus(es) seed the base set:
-# core (curated, default) / expansion (the expansion corpus alone) / all (both).
+# core (curated, default) / expansion (the expansion corpus alone) / all = both.
 # OQL surface is a parenthetical right after the entity. core is the default and
 # renders omitted; aliases ((all)/(expansion)/(xpac)/(core)/…) normalize to the
 # canonical spelling (covered in tests/oql/test_corpus_selector.py, not here —

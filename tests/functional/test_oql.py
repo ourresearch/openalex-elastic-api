@@ -115,7 +115,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == 'works where title & abstract has machine learning'
+        assert result == 'works where title/abstract has (machine learning)'
 
     def test_null_value(self):
         """Test null values render as 'unknown'."""
@@ -142,10 +142,10 @@ class TestOQLRenderer:
         assert "it's open access" in result
         assert "year >= 2020" in result
         assert "country is ca [Canada]" in result
-        assert "all (" in result   # body wraps in an `all (…)` group (decision 32)
+        assert " and " in result   # body joins clauses with infix `and` (decision 32 revert)
 
     def test_or_branch_filter(self):
-        """A same-column OR factors into a canonical `is any (a, b)` group (#363)."""
+        """A same-column OR factors into a canonical `is (a or b)` group (#363)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -159,7 +159,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "works where type is any (article, book)"
+        assert result == "works where type is (article or book)"
 
     def test_sort_with_display_name(self):
         """Test sort uses display name."""
@@ -171,7 +171,7 @@ class TestOQLRenderer:
             sort_by=[SortBy("cited_by_count", "desc")],
         )
         result = render_oqo_to_oql(oqo)
-        assert "sort by citations desc" in result
+        assert "sort by citation count desc" in result
         assert ";" not in result
 
     def test_multi_column_sort_render_oql(self):
@@ -184,7 +184,7 @@ class TestOQLRenderer:
             ],
         )
         result = render_oqo_to_oql(oqo)
-        assert "sort by year desc, citations desc" in result
+        assert "sort by year desc, citation count desc" in result
         assert ";" not in result
 
     def test_sample(self):
@@ -269,7 +269,7 @@ class TestOQLParser:
         oqo = parse_oql_to_oqo(oql)
         
         f = oqo.filter_rows[0]
-        assert f.column_id == "institutions.is_global_south"
+        assert f.column_id == "authorships.institutions.is_global_south"
         assert f.value is True
     
     def test_parse_bracketed_id_only_rejected(self):
@@ -436,7 +436,7 @@ class TestOQLParser:
         assert "open_access.is_oa" in column_ids
         assert "sustainable_development_goals.id" in column_ids
         assert "authorships.countries" in column_ids
-        assert "institutions.is_global_south" in column_ids
+        assert "authorships.institutions.is_global_south" in column_ids
         assert "publication_year" in column_ids
     
     def test_parse_short_id_country(self):

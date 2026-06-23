@@ -215,14 +215,13 @@ def _flat_tokens(tree: dict) -> list:
                 tok["entity"] = v["entity"]
             toks.append(tok)
             return
-        # decision 32: a value group renders as the keyword form `any (a, b)` /
-        # `all (a, b)` (comma-separated; the keyword fixes the join).
-        kw = "any" if v["join"] == "or" else "all"
-        toks.append({"t": "groupkw", "id": v["id"], "text": f"{kw} (",
-                     "label": v["join"]})
+        # a value group renders as `(a or b)` / `(a and b)`: parens + an infix
+        # `or`/`and` connector between children.
+        toks.append({"t": "paren", "id": v["id"], "text": "("})
         for i, c in enumerate(v["children"]):
             if i:
-                toks.append({"t": "comma", "id": v["id"], "text": ", "})
+                toks.append({"t": "conn", "id": v["id"],
+                             "text": f" {v['join']} ", "label": v["join"]})
             fv(c)
         toks.append({"t": "paren", "id": v["id"], "text": ")"})
 
@@ -290,18 +289,17 @@ def _flat_tokens(tree: dict) -> list:
             toks.append({"t": "op", "id": n["id"], "text": f" {n['operator']} "})
             fv(v)
             return
-        # plain group: a keyword group `any (`/`all (` with comma-separated
-        # children (charter decision 32 — every boolean group, INCLUDING the
-        # top-level implicit-AND body, wraps in `all (…)`/`any (…)`; bare parens
-        # and infix `and`/`or` are no longer canonical).
-        kw = "any" if n["join"] == "or" else "all"
-        toks.append({"t": "groupkw", "id": n["id"], "text": f"{kw} (",
-                     "label": n["join"]})
+        # plain group: parens iff `paren`; children joined by the connector.
+        paren = n.get("paren")
+        if paren:
+            toks.append({"t": "paren", "id": n["id"], "text": "("})
         for i, c in enumerate(n["children"]):
             if i:
-                toks.append({"t": "comma", "id": n["id"], "text": ", "})
+                toks.append({"t": "conn", "id": n["id"],
+                             "text": f" {n['join']} ", "label": n["join"]})
             fe(c)
-        toks.append({"t": "paren", "id": n["id"], "text": ")"})
+        if paren:
+            toks.append({"t": "paren", "id": n["id"], "text": ")"})
 
     toks.append({"t": "kw", "id": tree["entity"]["id"],
                  "text": tree["entity"]["text"], "label": tree["entity"]["text"]})

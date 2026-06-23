@@ -70,9 +70,9 @@ def test_standalone_negated_leaves_render_bare_prefix():
 
 def test_in_group_not_renders_bare_prefix():
     assert _identity("works where title has (not dog and cat)") \
-        == "works where title has all (not dog, cat)"
+        == "works where title has (not dog and cat)"
     assert _identity("works where country is (not FR and US)") \
-        == "works where country is all (not FR, US)"
+        == "works where country is (not FR and US)"
 
 
 def test_no_parens_around_the_negated_atom():
@@ -85,18 +85,18 @@ def test_no_parens_around_the_negated_atom():
 
 def test_not_of_a_group_demorgans_to_per_atom_nots():
     assert _identity("works where title has not (dog or cat)") \
-        == "works where title has all (not cat, not dog)"
+        == "works where title has (not cat and not dog)"
 
 
 def test_not_group_and_x_flattens_with_no_nested_parens():
     out = _identity("works where title has (not (dog or cat) and wombat)")
-    assert out == "works where title has all (not cat, not dog, wombat)"
+    assert out == "works where title has (not cat and not dog and wombat)"
     assert "not(" not in out and "not (" not in out
 
 
 def test_quoted_phrase_negation_round_trips():
     assert _identity('works where title/abstract has (teacher and not "academic teacher")') \
-        == 'works where title/abstract has all (teacher, not "academic teacher")'
+        == 'works where title/abstract has (teacher and not "academic teacher")'
 
 
 # --- a multi-word search run is ONE value-node that `not` negates whole ----- #
@@ -130,12 +130,12 @@ def test_predicate_input_aliases_renormalize_to_bare_prefix():
     assert _identity("works where country is not FR") \
         == "works where country is not FR"
     assert _identity("works where country is not (FR or US)") \
-        == "works where country is all (not FR, not US)"
+        == "works where country is (not FR and not US)"
 
 
 def test_top_level_not_of_an_or_pushes_to_per_leaf_bare_nots():
     assert _identity("works where not (country is FR or type is article)") \
-        == "works where all (country is not FR, type is not article)"
+        == "works where country is not FR and type is not article"
 
 
 # --- booleans keep the natural verb flip (no value to prefix) --------------- #

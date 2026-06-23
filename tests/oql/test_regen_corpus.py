@@ -44,8 +44,8 @@ _ERROR_BLOCK = (
     "- id: 2\n"
     "  tags: [boolean-logic]\n"
     "  status: error\n"
-    "  oql: 'works where type is any of (article, review)'\n"
-    "  diagnostic: OQL_ANY_OF_RENAMED\n"
+    "  oql: 'works where type is article review'\n"
+    "  diagnostic: OQL_UNDELIMITED_TERM_LIST\n"
     "  note: 'this error row must never be touched by the rewriter'\n"
 )
 
@@ -74,7 +74,7 @@ def test_error_row_between_ok_rows_is_byte_untouched():
     assert out_blocks[1] == in_blocks[1]
     # And specifically: its authored oql survives and no `oqo`/`corpus` leaked in.
     err_text = "".join(out_blocks[1])
-    assert "works where type is any of (article, review)" in err_text
+    assert "works where type is article review" in err_text
     assert "oqo:" not in err_text
     assert "corpus:" not in err_text
 

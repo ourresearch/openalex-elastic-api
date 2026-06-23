@@ -171,25 +171,12 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "e.g. work is in collection col_abc123"),
         _spec("OQL_UNDELIMITED_TERM_LIST", ERROR, PARSE,
               "two or more bare terms/values follow an operator without "
-              "a group (a reserved word could be silently swallowed)",
-              "group the terms, e.g. has any (a, b) / has all (a, b), "
+              "parentheses (a reserved word could be silently swallowed)",
+              "wrap the terms in parentheses, e.g. has (a or b), "
               "or quote a phrase, e.g. has \"a b\""),
-        # (OQL_LIST_KEYWORD_REMOVED removed in decision 31 — `any`/`all` are
-        # back, now as comma-separated group-openers, e.g. `is any (a, b)`.)
-        _spec("OQL_ANY_OF_RENAMED", ERROR, PARSE,
-              "the `any of (…)` / `all of (…)` group openers were shortened to "
-              "`any (…)` / `all (…)` — drop the `of`",
-              "e.g. is any (a, b), has all (a, b)"),
-        _spec("OQL_NEGATED_LIST_KEYWORD", ERROR, PARSE,
-              "an 'any'/'all' list can't be negated as a whole (decision 31 "
-              "negates leaves, not clauses) — there is no 'is not any'/'is not "
-              "all'",
-              "negate each item instead, e.g. is any (not a, not b)"),
         _spec("OQL_COMMA_IN_GROUP", ERROR, PARSE,
-              "wrong separator: a bare (…) group joins items with 'or'/'and', while "
-              "an 'any'/'all' list joins them with commas — the two can't be "
-              "mixed at one level",
-              "use 'or'/'and' inside (…), or commas inside any/all (…)"),
+              "items in a (…) group are separated by 'or'/'and', not commas",
+              "separate items with 'or'/'and', e.g. (a or b)"),
         # (OQL_BARE_NOT removed in decision 23 — `not` is now a bare prefix
         # keyword, so a bare `not foo` is valid, not an error.)
         _spec("OQL_BANG_NOT_SUPPORTED", ERROR, PARSE,

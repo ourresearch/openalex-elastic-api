@@ -104,78 +104,71 @@ OK_ROWS = [r for r in ROWS if r["status"] in ("ok", "hint")]
 # Test 6 — golden fixtures: the documented shapes render to the exact form.
 # ---------------------------------------------------------------------------
 GOLDENS = {
-    # (a) short query stays inline (body wraps in `all (…)`, decision 32)
+    # (a) short query stays inline (implicit-AND infix body, decision 32 revert)
     "works where it's open access and type is article":
-        "works where all (it's open access, type is article)",
+        "works where it's open access and type is article",
 
-    # (b) medium query explodes: the body is an `all (…)` keyword group, one
-    # clause per line, comma after each but the last (decision 32; the entity
-    # head stays on the `where` line, oxjob #363).
+    # (b) medium query explodes: the implicit-AND body lays out one clause per
+    # line with a leading `and ` connective (the entity head stays on the
+    # `where` line, oxjob #363).
     "works where it's open access and publication_year >= 2020 and type is "
     "article and has_doi is true and language is en":
-        "works where all (\n"
-        "    it has a DOI,\n"
-        "    language is en,\n"
-        "    it's open access,\n"
-        "    year >= 2020,\n"
-        "    type is article\n"
-        "  )",
+        "works where it has a DOI\n"
+        "  and language is en\n"
+        "  and it's open access\n"
+        "  and year >= 2020\n"
+        "  and type is article",
 
-    # (c) a nested boolean that fits stays inline (`any (…)`) inside the exploded
-    # `all (…)` parent.
+    # (c) a nested boolean that fits stays inline (infix `( or )`) inside the
+    # exploded implicit-AND parent.
     "works where (institution is I27837315 or type is article) and "
     "publication_year >= 2020 and language is en":
-        "works where all (\n"
-        "    language is en,\n"
-        "    year >= 2020,\n"
-        "    any (institution is I27837315, type is article)\n"
-        "  )",
+        "works where language is en\n"
+        "  and year >= 2020\n"
+        "  and (institution is I27837315 or type is article)",
 
-    # (d) a search group <=8 items -> the `any (…)` keyword group, one per line,
-    # comma-separated (decision 32 retired the decision-25 leading connective).
+    # (d) a search group <=8 items -> the infix `( or )` group, one per line
+    # with leading `or ` connective (decision 32 revert).
     'works where title has ("randomized controlled trial" or '
     '"systematic review" or "meta analysis" or "clinical practice guideline")':
-        "works where title has any (\n"
-        '    "clinical practice guideline",\n'
-        '    "meta analysis",\n'
-        '    "randomized controlled trial",\n'
-        '    "systematic review"\n'
+        "works where title has (\n"
+        '    "clinical practice guideline"\n'
+        '    or "meta analysis"\n'
+        '    or "randomized controlled trial"\n'
+        '    or "systematic review"\n'
         "  )",
 
-    # (e) a value group >8 items -> fill/pack to width, comma-separated
+    # (e) a value group >8 items -> fill/pack to width, `or`-separated
     "works where language is (en or zh or es or fr or de or ja or pt or ru or ko "
     "or it or ar or nl or pl or tr or sv or cs or fa or uk or vi or da)":
-        "works where language is any (\n"
-        "    ar, cs, da, de, en, es, fa, fr, it, ja, ko, nl, pl, pt, ru, sv, tr, uk, vi,\n"
-        "    zh\n"
+        "works where language is (\n"
+        "    ar or cs or da or de or en or es or fa or fr or it or ja or ko or nl or pl\n"
+        "    or pt or ru or sv or tr or uk or vi or zh\n"
         "  )",
 
     # (f) directives on their own lines at col 0. Input keeps the legacy `;`
     # separators to prove the parser still accepts them (back-compat); the
-    # canonical output drops them (oxjob #377). The body is an `all (…)` group.
+    # canonical output drops them (oxjob #377). The body is an implicit-AND list.
     "works where it's open access and publication_year >= 2020 and type is "
     "article and language is en ; group by publication_year ; sort by "
     "cited_by_count desc":
-        "works where all (\n"
-        "    language is en,\n"
-        "    it's open access,\n"
-        "    year >= 2020,\n"
-        "    type is article\n"
-        "  )\n"
+        "works where language is en\n"
+        "  and it's open access\n"
+        "  and year >= 2020\n"
+        "  and type is article\n"
         "group by year\n"
         "sort by citation count desc",
 
-    # (g) a nested boolean group that is too wide -> the `any (…)` group explodes
+    # (g) a nested boolean group that is too wide -> the infix `( or )` group
+    # explodes with leading `or ` connectives.
     "works where publication_year >= 2020 and (institution is I27837315 or "
     "funder is F4320332161 or source is S137773608 or author is A5023888391)":
-        "works where all (\n"
-        "    year >= 2020,\n"
-        "    any (\n"
-        "      author is A5023888391,\n"
-        "      institution is I27837315,\n"
-        "      funder is F4320332161,\n"
-        "      source is S137773608\n"
-        "    )\n"
+        "works where year >= 2020\n"
+        "  and (\n"
+        "    author is A5023888391\n"
+        "    or institution is I27837315\n"
+        "    or funder is F4320332161\n"
+        "    or source is S137773608\n"
         "  )",
 }
 
@@ -233,8 +226,8 @@ def test_long_sr_query_showcase():
     row = max(OK_ROWS, key=lambda r: len(r["oql"]))   # the corpus' widest query
     out = _fmt(row["oql"])
     assert "\n" in out, "the widest corpus query must lay out multi-line"
-    assert ("has any (" in out or "has all (" in out), \
-        "keyword-group search groups must survive (decision 32)"
+    assert ("has (" in out and " or " in out), \
+        "infix parens search groups must survive (decision 32 revert)"
     assert _oqo(out) == _oqo(row["oql"]), "showcase must round-trip"
     assert _fmt(out) == out, "showcase must be idempotent"
     assert max(len(l) for l in out.split("\n")) <= FORMAT_WIDTH, \
@@ -249,8 +242,7 @@ def test_short_query_stays_inline():
 
 # ---------------------------------------------------------------------------
 # Commas don't separate items in a BARE (…) group (#363): that's a loud error.
-# Commas ARE the separator inside an `any`/`all` list (decision 31) — see
-# test_any_all_of.py. The connective is the idempotence anchor.
+# The infix `( or )` / `( and )` parens form is the One Right Way.
 # ---------------------------------------------------------------------------
 def test_commas_in_bare_group_are_rejected():
     from query_translation.oql_lang import OQLError
@@ -259,12 +251,9 @@ def test_commas_in_bare_group_are_rejected():
         with pytest.raises(OQLError) as ei:
             _oqo(q)
         assert ei.value.code == "OQL_COMMA_IN_GROUP", q
-    # the parens-bag form is what works ...
+    # the parens-bag form is what works (order-insensitive, same OQO).
     assert _oqo("works where type is (article or review)") == \
         _oqo("works where type is (review or article)")
-    # ... and so does the comma-separated `any` sugar (same OQO).
-    assert _oqo("works where type is any (article, review)") == \
-        _oqo("works where type is (article or review)")
 
 
 # ---------------------------------------------------------------------------

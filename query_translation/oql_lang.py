@@ -1265,10 +1265,9 @@ def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool]]:
     operator (``is``) or raises.
 
     NOTE: the old value-list openers ``is any of`` / ``is in`` / their negations are
-    GONE (charter decision 31). ``any (…)`` / ``all (…)`` are now group-OPENERS
-    parsed inside the value/search body (sugar for ``(a or b)`` / ``(a and b)``), not
-    operators — so they never reach this matcher. ``is [not] in collection`` (the live
-    Collections operator) is unrelated and preserved below.
+    GONE — value lists use the parenthesized ``is (a or b)`` / ``is (a and b)`` form,
+    parsed inside the value/search body, not via a special operator. ``is [not] in
+    collection`` (the live Collections operator) is unrelated and preserved below.
     """
     if i >= len(toks):
         return None
@@ -1757,19 +1756,6 @@ class _Parser:
             inner = self._parse_operand()     # negate the next operand (clause/group)
             self._last_operand_simple = False  # negated -> not a plain clause (#357)
             return _negate(inner)
-        # `any (…)` / `all (…)` open a CLAUSE-group here (charter decision 32) —
-        # a comma-separated list of clauses with the join fixed by the opener
-        # (`any`→or, `all`→and). This is the canonical render of cross-field
-        # boolean groups; the bare `(…)` form below stays a valid input alias.
-        kind = self._group_opener_kind()
-        if kind in ("or", "and"):
-            self.next(); self.next()          # `any`/`all`, `(`
-            e = self._parse_keyword_group(self._parse_operand,
-                                          "or" if kind == "or" else "and")
-            self._expect_rp()
-            self._last_operand_simple = False  # a group -> not a plain clause (#357)
-            return e
-        self._reject_legacy_any_of()          # `any of (` / `all of (` -> fix-it
         if t.kind == "LP":
             self.next()
             e = self._parse_expr()
@@ -1784,7 +1770,7 @@ class _Parser:
         if t is not None and t.kind == "COMMA":
             raise oql_error("OQL_COMMA_IN_GROUP",
                            "items in a (…) group are separated by 'or'/'and', "
-                           "not commas (use an 'any'/'all' list for commas)",
+                           "not commas",
                            "replace the comma with 'or' (or 'and')", t.pos)
         if t is None or t.kind != "RP":
             raise oql_error("OQL_UNBALANCED_PARENS", "missing a closing parenthesis",
@@ -2008,21 +1994,8 @@ class _Parser:
             return LeafFilter(fld.column, v, op)
         # is / is not
         negated = (op == "isnot")
-        # `is not any (…)` / `is not all (…)` is NOT allowed — decision 31
-        # negates leaves, not lists. (The bare-paren `is not (a or b)` group negation
-        # is unchanged — De Morgan pushes it to leaves; only the keyword form is
-        # blocked, with a fix-it.)
-        if negated and self._group_opener_kind() in ("or", "and"):
-            kw = self.peek().val.lower()
-            raise oql_error("OQL_NEGATED_LIST_KEYWORD",
-                           f'"is not {kw} (…)" is not allowed — '
-                           "negate the items, not the list",
-                           f"e.g. {field} is {kw} (not a, not b)",
-                           self.peek().pos)
         # a parenthesized boolean group of values: `country is (us or uk)`,
-        # `country is not (us or uk)` (the base operator negates the whole group);
-        # OR an `any (…)` / `all (…)` keyword group (sugar for `(a or b)` /
-        # `(a and b)`, charter decision 31) — `_parse_grouped_operand` handles both.
+        # `country is not (us or uk)` (the base operator negates the whole group).
         grp = self._parse_grouped_operand(lambda: self._parse_value_operand(fld))
         if grp is not None:
             return _negate(grp) if negated else grp
@@ -2057,8 +2030,7 @@ class _Parser:
 
     def _parse_value_operand(self, fld: Field) -> FilterType:
         """One operand inside an `is (...)` value group: a `not`-prefixed operand,
-        a nested group (`(...)` or `any (...)` / `all (...)`), or one scalar
-        value (-> an `is` leaf)."""
+        a nested `(...)` group, or one scalar value (-> an `is` leaf)."""
         t = self.peek()
         if t is not None and t.kind == "WORD" and t.val.lower() == "not":
             self._consume_not(t)  # bare prefix `not` (decision 23)
@@ -2069,7 +2041,7 @@ class _Parser:
         if t is not None and t.kind == "COMMA":
             raise oql_error("OQL_COMMA_IN_GROUP",
                            "items in a (…) group are separated by 'or'/'and', "
-                           "not commas (use an 'any'/'all' list for commas)",
+                           "not commas",
                            "replace the comma with 'or' (or 'and')", t.pos)
         v = self._parse_scalar(fld)
         return LeafFilter(fld.column, v, "is")
@@ -2168,8 +2140,7 @@ class _Parser:
             # `title has not dog`. A multi-word run is one value-node, so
             # `not machine learning` negates the whole run.
             return self._parse_search_operand(base)
-        # a `(...)` boolean group OR an `any (…)` / `all (…)` keyword group
-        # (sugar, charter decision 31) — `_parse_grouped_operand` handles both.
+        # a `(...)` boolean group — `_parse_grouped_operand` consumes it.
         grp = self._parse_grouped_operand(lambda: self._parse_search_operand(base))
         if grp is not None:
             return grp
@@ -2184,103 +2155,18 @@ class _Parser:
                            'phrase, e.g. has "a b"', t2.pos if t2 else None)
         return leaf
 
-    def _group_opener_kind(self) -> Optional[str]:
-        """At the cursor, is there a group opener? Returns 'paren' for a bare `(`,
-        'or' for `any (`, 'and' for `all (`, else None. Does not consume.
-
-        `any` / `all` are atomic group-opener keywords — sugar for `(a or b)` /
-        `(a and b)` (charter decision 31). They open a group ONLY when immediately
-        followed by `(`; otherwise `any`/`all` are ordinary value/search words
-        (`title has any cat`, `country is all`). The shorter `any (…)`/`all (…)`
-        form replaced the original `any of (…)`/`all of (…)` (it reads more directly
-        when nesting); the dropped `of` form is caught by `_reject_legacy_any_of`."""
-        t = self.peek()
-        if t is None:
-            return None
-        if t.kind == "LP":
-            return "paren"
-        if t.kind == "WORD" and t.val.lower() in ("any", "all"):
-            t1 = self.peek(1)
-            if t1 is not None and t1.kind == "LP":
-                return "or" if t.val.lower() == "any" else "and"
-        return None
-
-    def _reject_legacy_any_of(self) -> None:
-        """The decision-31 group openers were briefly `any of (…)` / `all of (…)`;
-        they were shortened to `any (…)` / `all (…)`. Catch the dropped-`of` form at
-        a group-opener position with a fix-it instead of letting it fall through to a
-        confusing undelimited-term error. Only the exact `any|all` `of` `(` shape
-        triggers, so ordinary words (`title has all of the above`) are unaffected."""
-        t = self.peek()
-        if (t is not None and t.kind == "WORD" and t.val.lower() in ("any", "all")
-                and self.word_is("of", k=1)):
-            t2 = self.peek(2)
-            if t2 is not None and t2.kind == "LP":
-                kw = t.val.lower()
-                raise oql_error("OQL_ANY_OF_RENAMED",
-                               f'"{kw} of (…)" was shortened to "{kw} (…)" — '
-                               'drop the "of"',
-                               f"e.g. {kw} (a, b)", t.pos)
-
     def _parse_grouped_operand(self, parse_operand) -> Optional[FilterType]:
-        """If the cursor is at a group opener, parse the whole group (consuming its
-        `)`) and return its filter; else return None without consuming. Handles the
-        bare `(…)` group (`or`/`and`-separated — the existing `_parse_bool_expr`
-        machinery) and the `any (…)` / `all (…)` keyword groups (comma-separated,
-        join fixed by the opener — charter decision 31). Groups nest freely in each
-        other via `parse_operand`."""
-        kind = self._group_opener_kind()
-        if kind is None:
-            self._reject_legacy_any_of()
+        """If the cursor is at a bare `(` group opener, parse the whole group
+        (consuming its `)`) and return its filter; else return None without
+        consuming. The group is `or`/`and`-separated (the existing
+        `_parse_bool_expr` machinery); groups nest freely via `parse_operand`."""
+        t = self.peek()
+        if t is None or t.kind != "LP":
             return None
-        if kind == "paren":
-            self.next()                       # (
-            e = self._parse_bool_expr(parse_operand)
-            self._expect_rp()
-            return e
-        self.next(); self.next()              # `any`/`all`, `(`
-        e = self._parse_keyword_group(parse_operand, "or" if kind == "or" else "and")
+        self.next()                       # (
+        e = self._parse_bool_expr(parse_operand)
         self._expect_rp()
         return e
-
-    def _parse_keyword_group(self, parse_operand, join: str) -> FilterType:
-        """Body of an `any (…)` / `all (…)` group: COMMA-separated operands,
-        the join FIXED by the opener (`any`→or, `all`→and). One separator per level —
-        a bare `or`/`and` word here is rejected (OQL_COMMA_IN_GROUP; the opener already
-        fixes the join). No trailing comma; a single item unwraps (`any (a)` → `a`).
-        Operands may nest (`all (a, any (b, c))`). Pure sugar: builds the same
-        `BranchFilter` the parens form does, so it canonicalizes/renders identically
-        (it never round-trips back to `any`)."""
-        outer = self._in_list
-        self._in_list = True
-        try:
-            items = [self._group_operand(parse_operand)]
-            while True:
-                self._skip_annot()
-                t = self.peek()
-                if t is not None and t.kind == "COMMA":
-                    self.next()
-                    self._skip_annot()
-                    nt = self.peek()
-                    if nt is None or nt.kind == "RP":
-                        raise oql_error("OQL_MISSING_VALUE",
-                                       "a trailing comma leaves an empty list item",
-                                       "remove the trailing comma", t.pos)
-                    items.append(self._group_operand(parse_operand))
-                    continue
-                if (t is not None and t.kind == "WORD"
-                        and t.val.lower() in _CONNECTIVES):
-                    raise oql_error("OQL_COMMA_IN_GROUP",
-                                   "items in an 'any'/'all' list are separated "
-                                   "by commas, not 'or'/'and'",
-                                   "use commas, e.g. any (a, b) — or nest a group, "
-                                   "e.g. any (a, (b and c))", t.pos)
-                break
-            if len(items) == 1:
-                return items[0]
-            return BranchFilter(join=join, filters=items)
-        finally:
-            self._in_list = outer
 
     def _parse_bool_expr(self, parse_operand) -> FilterType:
         """A boolean group body inside `(...)`: explicit-connective-separated
@@ -2426,7 +2312,7 @@ class _Parser:
 
     def _parse_search_operand(self, base: str) -> FilterType:
         """One operand inside a `has (...)` group: a `not`-prefixed operand, a nested
-        group (`(...)` or `any (...)` / `all (...)`), or one search atom."""
+        `(...)` group, or one search atom."""
         self._skip_annot()
         # an empty search-term slot at the cursor (`title has |`)
         self._want(CTX_VALUE, fld=self._cur_fld, kind="search")
@@ -2439,8 +2325,7 @@ class _Parser:
         if t.kind == "WORD" and t.val.lower() == "not":
             self._consume_not(t)  # bare prefix `not` (decision 23)
             return _negate(self._parse_search_operand(base))
-        # a `(...)` boolean group OR an `any (…)` / `all (…)` keyword group
-        # (sugar, charter decision 31) — `_parse_grouped_operand` handles both.
+        # a `(...)` boolean group — `_parse_grouped_operand` consumes it.
         grp = self._parse_grouped_operand(lambda: self._parse_search_operand(base))
         if grp is not None:
             return grp
@@ -2508,10 +2393,10 @@ class _Parser:
                     nt = self.peek()
                     if nt is None:
                         break
-                    # `any (` / `all (` mid-run starts a nested keyword group
-                    # (charter decision 31), not more stemmed words — break the run so
-                    # `has (machine learning all (a, b))` reads the run then the group.
-                    if self._group_opener_kind() is not None:
+                    # a `(` mid-run starts a nested group, not more stemmed words —
+                    # break the run so `has (machine learning (a or b))` reads the
+                    # run then the group.
+                    if nt.kind == "LP":
                         break
                     if nt.kind == "WORD" and not self._is_run_break_word(nt.val):
                         _validate_wildcards(nt.val, nt.pos)
@@ -3073,13 +2958,11 @@ def _uniform_eq_column(f: FilterType):
 
 
 def _factored_segments(f: FilterType, render_leaf):
-    """Segments for a factored boolean group in the canonical keyword-group form:
-    `any (a, b)` (OR) / `all (a, b)` (AND) — comma-separated, the keyword fixes the
-    join (charter decision 32). A child sub-branch renders as its own nested
-    keyword group (`all (a, any (b, c))`); no infix `or`/`and` and no bare parens
-    appear in canonical render. `render_leaf(leaf) -> [Segment]` renders one bare
-    atom. A `LeafFilter` argument renders bare (single-item unwrap — the caller
-    only wraps a BranchFilter)."""
+    """Segments for a factored boolean group's INNER text (no outer parens): a
+    boolean of bare atoms with explicit ` or `/` and ` connectives; any child
+    sub-group is wrapped in its own parens (the canonicalizer flattens same-join
+    nesting, so a child branch always has the opposite join and needs them).
+    `render_leaf(leaf) -> [Segment]` renders one bare atom."""
     if isinstance(f, LeafFilter):
         leaf = render_leaf(f)
         # In-group negation renders as a bare `not ` prefix on the atom (charter
@@ -3088,13 +2971,15 @@ def _factored_segments(f: FilterType, render_leaf):
         if f.is_negated:
             return [_seg("text", "not ")] + leaf
         return leaf
-    kw = "any" if f.join == "or" else "all"
-    segs = [_seg("keyword", kw), _seg("text", " (")]
+    segs = []
     for i, c in enumerate(f.filters):
         if i:
-            segs.append(_seg("text", ", "))
-        segs += _factored_segments(c, render_leaf)
-    segs.append(_seg("text", ")"))
+            segs.append(_seg("text", f" {f.join} "))
+        inner = _factored_segments(c, render_leaf)
+        if isinstance(c, BranchFilter):
+            segs = segs + [_seg("text", "(")] + inner + [_seg("text", ")")]
+        else:
+            segs = segs + inner
     return segs
 
 
@@ -3232,39 +3117,42 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
         inner = _filter_node(BranchFilter(f.join, f.filters), top=False, resolver=resolver)
         return GroupNode(join=f.join, children=[inner], prefix="not ", suffix="",
                          joiner="", meta=GroupMeta(implicit=False))
-    # factor a single-base-field search subtree -> `field has any (a, b)`
+    # factor a single-base-field search subtree -> `field has (a or b)`
     scol = _uniform_search_base(f)
     if scol is not None:
         name, _ = _oql_field(scol)
-        group = _factored_segments(
+        inner = _factored_segments(
             f, lambda lf: [_seg("value", _render_term(lf.value, lf.column_id),
                                 value=lf.value)])
-        segs = [_seg("column", name, column_id=scol),
-                _seg("operator", " has ")] + group
+        segs = ([_seg("column", name, column_id=scol),
+                 _seg("operator", " has "), _seg("text", "(")]
+                + inner + [_seg("text", ")")])
         return ClauseNode(segments=segs, clause_kind="text", meta=ClauseMeta(
             column_id=scol, operator="has", value=None,
             column_display_name=name))
-    # factor a single-column equality subtree -> `field is any (a, b)`
+    # factor a single-column equality subtree -> `field is (a or b)`
     ecol = _uniform_eq_column(f)
     if ecol is not None:
         fld = _BY_COLUMN.get(ecol)
         name = fld.oql if fld else ecol
-        group = _factored_segments(
+        inner = _factored_segments(
             f, lambda lf: _value_segments(fld, lf.value, lf.column_id, resolver)[0])
-        segs = [_seg("column", name, column_id=ecol),
-                _seg("operator", " is ")] + group
+        segs = ([_seg("column", name, column_id=ecol),
+                 _seg("operator", " is "), _seg("text", "(")]
+                + inner + [_seg("text", ")")])
         kind = "entity" if (fld and fld.kind == "id") else "other"
         return ClauseNode(segments=segs, clause_kind=kind, meta=ClauseMeta(
             column_id=ecol, operator="is", value=None,
             column_display_name=name))
-    # cross-field boolean group -> `all (clause1, clause2)` / `any (…)` (decision 32)
+    # cross-field boolean group -> `(clause1 or clause2)` / `(… and …)`
     items = _merge_same_field_items(list(f.filters), f.join)  # decision 20
     children = [_filter_node(c, top=False, resolver=resolver) for c in items]
     if len(children) == 1:
         return children[0]
-    kw = "any" if f.join == "or" else "all"
-    return GroupNode(join=f.join, children=children, prefix=f"{kw} (", suffix=")",
-                     joiner=", ", meta=GroupMeta(implicit=False))
+    joiner = f" {f.join} "
+    prefix, suffix = ("", "") if top else ("(", ")")
+    return GroupNode(join=f.join, children=children, prefix=prefix, suffix=suffix,
+                     joiner=joiner, meta=GroupMeta(implicit=False))
 
 
 def _merge_key(item):
@@ -3374,11 +3262,10 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
         if len(rows) == 1:
             where = _row_node(rows[0], top=True, resolver=resolver)
         else:
-            # The implicit-AND body is itself a group -> wrap in `all ( … )`
-            # (charter decision 32; infix `and` is no longer canonical).
+            # The implicit-AND body renders as an infix `and` list (no wrapper).
             children = [_row_node(f, top=False, resolver=resolver) for f in rows]
-            where = GroupNode(join="and", children=children, prefix="all (",
-                              suffix=")", joiner=", ", meta=GroupMeta(implicit=True))
+            where = GroupNode(join="and", children=children, prefix="", suffix="",
+                              joiner=" and ", meta=GroupMeta(implicit=True))
 
     directives = []
     if oqo.group_by:
@@ -3458,78 +3345,62 @@ FORMAT_WIDTH = 80   # soft target; nodes explode to keep flat forms within it
 _INDENT = 2
 
 
+def _leading_conn(group: GroupNode) -> str:
+    """Connective that leads continuation operands of an exploded group
+    (`"and "` / `"or "`); empty for a single-child wrapper (e.g. `not (...)`)."""
+    j = group.joiner.strip()
+    return f"{j} " if j else ""
+
+
 def _split_list_clause(clause: ClauseNode):
-    """If `clause` is a factored keyword-group clause (`… is any (a, b)` /
-    `… has all (a, b)`), return `(head, items, close)` where `head` ends with the
-    opener `… (`, `items` is the list of top-level comma-separated item strings,
-    and `close == ")"`; else None (charter decision 32). Splits on the engine's
-    own `", "` text segments at paren depth 0 only, so a comma inside a nested
-    `any (b, c)` is never mistaken for a top-level separator."""
+    """If `clause` is a factored group clause (`… has (a or b or …)` /
+    `… is (a or b or …)`), return `(head, items, conn, close)` where `head` ends
+    with `"("`, `items` is the list of top-level item strings, `conn` is the
+    group's connective (`"or"`/`"and"`), and `close == ")"`; else None. Splits on
+    the engine's own structural segments (the literal `"("`, `" or "`/`" and "`,
+    `")"` text segments) at paren-depth 0 only, so a connective inside a nested
+    sub-group `(b and c)` is never mistaken for a top-level separator."""
     segs = clause.segments
     open_idx = next((i for i, s in enumerate(segs)
-                     if s.kind == "text" and s.text == " ("), None)
+                     if s.kind == "text" and s.text == "("), None)
     if open_idx is None or not (segs[-1].kind == "text" and segs[-1].text == ")"):
         return None
     head = "".join(s.text for s in segs[:open_idx + 1])
-    items, cur, depth = [], [], 0
+    items, cur, conn, depth = [], [], None, 0
     for s in segs[open_idx + 1:-1]:
-        if s.kind == "text" and s.text == " (":
+        if s.kind == "text" and s.text == "(":
             depth += 1
             cur.append(s.text)
         elif s.kind == "text" and s.text == ")":
             depth -= 1
             cur.append(s.text)
-        elif depth == 0 and s.kind == "text" and s.text == ", ":
+        elif depth == 0 and s.kind == "text" and s.text in (" or ", " and "):
             items.append("".join(cur))
             cur = []
+            conn = s.text.strip()
         else:
             cur.append(s.text)
     items.append("".join(cur))
-    if len(items) < 2:
+    if conn is None or len(items) < 2:
         return None  # a single bare atom / unbreakable clause
-    return head, items, ")"
+    return head, items, conn, ")"
 
 
 def _split_group_text(text: str):
-    """Split a keyword-group item string `[<field> is/has ]any (…)` / `all (…)`
-    into `(head, items, close)` where `head` ends with the opener `… (`, `items`
-    are the top-level comma-separated parts, and `close == ")"`; else None. The
-    string-level twin of `_split_list_clause`, used to recursively explode an
-    over-width *item* (charter decision 32; decision 20 trees nest whole groups).
-    The opener `(` is found at paren depth 0, outside double quotes (quoted
-    phrases can contain `(`) and `[…]` display-name annotations; commas are
-    matched the same way."""
-    # locate the outermost opener `(` (depth 0, outside quotes / [...]).
-    depth = bracket = 0
-    in_q = False
-    open_i = None
-    for i, ch in enumerate(text):
-        if in_q:
-            in_q = ch != '"'
-            continue
-        if ch == '"':
-            in_q = True
-        elif bracket == 0:
-            if ch == "[":
-                bracket += 1
-            elif ch == "(":
-                open_i = i
-                break
-        elif ch == "]":
-            bracket -= 1
-    if open_i is None or not text.endswith(")"):
-        return None
-    head = text[:open_i + 1]
-    # the opener keyword must be `any`/`all` (the only thing that opens a group).
-    if head[:-1].rstrip().split()[-1:] not in (["any"], ["all"]):
-        return None
-    inner = text[open_i + 1:-1]
+    """Split a paren-stripped group body into (top-level item strings,
+    connective), or None if it isn't a splittable boolean. The string-level
+    twin of `_split_list_clause`, used to recursively explode an over-width
+    *item* (decision 20 merged clauses nest whole OR-blocks inside an AND).
+    Connectives are matched only at paren depth 0, outside double quotes
+    (quoted phrases / quoted-word escapes can contain literal `and`/`or`) and
+    outside `[…]` display-name annotations (which can too)."""
     items, cur = [], []
+    conn = None
     depth = bracket = 0
     in_q = False
-    i, n = 0, len(inner)
+    i, n = 0, len(text)
     while i < n:
-        ch = inner[i]
+        ch = text[i]
         if in_q:
             cur.append(ch)
             in_q = ch != '"'
@@ -3544,57 +3415,69 @@ def _split_group_text(text: str):
                 depth -= 1
             elif ch == "[":
                 bracket += 1
-            elif depth == 0 and ch == "," and inner.startswith(", ", i):
-                items.append("".join(cur))
-                cur = []
-                i += 2
+            elif depth == 0 and ch == " ":
+                for word in (" or ", " and "):
+                    if text.startswith(word, i):
+                        items.append("".join(cur))
+                        cur = []
+                        conn = word.strip()
+                        i += len(word)
+                        break
+                else:
+                    cur.append(ch)
+                    i += 1
                 continue
         elif ch == "]":
             bracket -= 1
         cur.append(ch)
         i += 1
     items.append("".join(cur))
-    if len(items) < 2 or in_q or depth or bracket:
+    if conn is None or len(items) < 2 or in_q or depth or bracket:
         return None
-    return head, items, ")"
+    return items, conn
 
 
-def _fmt_group_item(it: str, indent: int, width: int, comma: str) -> str:
-    """Lay out one exploded-group item at `indent`, with a trailing `comma`
-    (`","` for every item but the last — no trailing comma; charter decision 31).
-    An item that fits stays on one line; an over-width nested keyword group
-    explodes recursively (its closing `)` carries the comma)."""
+def _fmt_group_item(it: str, indent: int, width: int, leading: str) -> str:
+    """Lay out one exploded-group item at `indent`, with the parent's leading
+    connective (`"and "` / `"or "` / empty for the first item) prefixed to its
+    first line. An item that fits stays on one line; an over-width parenthesized
+    sub-group explodes recursively (its open paren carries the leading
+    connective, its closing paren sits back at `indent`)."""
     pad = " " * indent
-    if len(pad) + len(it) + len(comma) <= width:
-        return f"{pad}{it}{comma}"
-    parts = _split_group_text(it)
-    if parts is not None:
-        head, sub_items, _close = parts
-        return f"{_fmt_list(f'{pad}{head}', sub_items, indent, width)}{comma}"
-    return f"{pad}{it}{comma}"   # unbreakable (e.g. one long term)
+    if len(pad) + len(leading) + len(it) <= width:
+        return f"{pad}{leading}{it}"
+    if it.startswith("(") and it.endswith(")"):
+        parts = _split_group_text(it[1:-1])
+        if parts is not None:
+            sub_items, sub_conn = parts
+            return _fmt_list(f"{pad}{leading}(", sub_items, sub_conn,
+                             indent, width)
+    return f"{pad}{leading}{it}"   # unbreakable (e.g. one long term)
 
 
-def _fmt_list(head: str, items, indent: int, width: int) -> str:
-    """Lay out an exploded keyword group (`head` ends with the opener `… (`).
-    `indent` is the group's own indent (where the closing `)` sits); items sit at
-    `indent + _INDENT`, comma-separated with a comma after every item but the last
-    (charter decision 32; the comma is terminal-capable, so — unlike the retired
-    decision-25 leading-`and`/`or` layout — items need no leading connective).
-    The parser is whitespace-blind, so the multi-line form re-parses to the
-    identical OQO. >8 items that all fit -> fill/pack to `width`; otherwise one
-    per line, recursively exploding any over-width nested group item."""
+def _fmt_list(head: str, items, conn: str, indent: int, width: int) -> str:
+    """Lay out an exploded factored group. `indent` is the clause's own indent
+    (where the closing `)` sits); items sit at `indent + _INDENT`. The connective
+    LEADS every item but the first — i.e. a wrapped/exploded line begins with
+    `and`/`or` (decision 25; matches the leading-connective `where` body, and
+    `and`/`or` are infix, never terminal, so a trailing form would dirty two
+    lines on append where leading dirties one). The parser is whitespace-blind,
+    so the multi-line form re-parses to the identical OQO. >8 items that all fit
+    -> fill/pack to `width`; otherwise one per line, recursively exploding any
+    over-width sub-group item (decision 20 merged clauses nest whole OR-blocks
+    inside an AND)."""
     pad = " " * (indent + _INDENT)
     out = [head]
     n = len(items)
 
-    def comma(i):
-        return "," if i < n - 1 else ""
+    def piece(i, it):
+        return it if i == 0 else f"{conn} {it}"
 
-    all_fit = all(len(pad) + len(it) + 1 <= width for it in items)
+    all_fit = all(len(pad) + len(conn) + 1 + len(it) <= width for it in items)
     if n > 8 and all_fit:
         line, empty = pad, True
         for i, it in enumerate(items):
-            p = f"{it}{comma(i)}"
+            p = piece(i, it)
             if not empty and len(line) + 1 + len(p) > width:
                 out.append(line)
                 line, empty = pad, True
@@ -3602,7 +3485,9 @@ def _fmt_list(head: str, items, indent: int, width: int) -> str:
             empty = False
         out.append(line)
     else:
-        out.extend(_fmt_group_item(it, indent + _INDENT, width, comma(i))
+        lead = f"{conn} "
+        out.extend(_fmt_group_item(it, indent + _INDENT, width,
+                                   "" if i == 0 else lead)
                    for i, it in enumerate(items))
     out.append(f"{' ' * indent})")
     return "\n".join(out)
@@ -3615,32 +3500,38 @@ def _fmt_clause(clause: ClauseNode, indent: int, col: int, width: int) -> str:
     parts = _split_list_clause(clause)
     if parts is None:
         return flat   # an unbreakable clause (e.g. one long search term)
-    head, items, _close = parts
-    return _fmt_list(head, items, indent, width)
+    head, items, conn, _close = parts
+    return _fmt_list(head, items, conn, indent, width)
 
 
 def _fmt_group(group: GroupNode, indent: int, col: int, width: int) -> str:
     flat = _stringify_group(group)
     if col + len(flat) <= width:
         return flat
-    if group.prefix.endswith("("):
-        # Keyword group (`any (` / `all (` / the top-level body `all (`): opener on
-        # the current line, every child on its own line one level deeper with a
-        # trailing comma (none on the last), closing `)` back at `indent`.
+    conn = _leading_conn(group)
+    if group.prefix:
+        # Parenthesized group: open bracket on the current line, every operand
+        # on its own line one level deeper, closing bracket back at `indent`.
         child_indent = indent + _INDENT
         pad = " " * child_indent
-        n = len(group.children)
         out = [group.prefix]
         for i, ch in enumerate(group.children):
-            comma = "," if i < n - 1 else ""
-            sub = _fmt_expr(ch, child_indent, child_indent, width)
-            out.append(f"{pad}{sub}{comma}")
+            lead = "" if i == 0 else conn
+            sub = _fmt_expr(ch, child_indent, child_indent + len(lead), width)
+            out.append(f"{pad}{lead}{sub}")
         out.append(f"{' ' * indent}{group.suffix}")
         return "\n".join(out)
-    # Single-child wrapper with a non-paren prefix (the `not ` negated-branch
-    # safety net): recurse the child inline.
-    inner = _fmt_expr(group.children[0], indent, col + len(group.prefix), width)
-    return f"{group.prefix}{inner}{group.suffix}"
+    # Bare group (top-level where body / implicit AND): the first operand
+    # continues the current line; each subsequent operand starts a new line at
+    # `indent`, led by the connective.
+    out = []
+    for i, ch in enumerate(group.children):
+        if i == 0:
+            out.append(_fmt_expr(ch, indent, col, width))
+        else:
+            sub = _fmt_expr(ch, indent, indent + len(conn), width)
+            out.append(f"{' ' * indent}{conn}{sub}")
+    return "\n".join(out)
 
 
 def _fmt_expr(node: ExprNode, indent: int, col: int, width: int) -> str:

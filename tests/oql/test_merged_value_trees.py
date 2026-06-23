@@ -39,34 +39,34 @@ def _identity(oql):
 def test_sr_and_of_or_groups_merges_into_one_clause():
     assert _identity(
         "works where title has (vape or vaping) and title has (health or harm)"
-    ) == "works where title has all (any (harm, health), any (vape, vaping))"
+    ) == "works where title has ((harm or health) and (vape or vaping))"
 
 
 def test_positive_and_negated_leaf_merge_with_not_in_tree():
     assert _identity("works where title has cat and title does not have dog") \
-        == "works where title has all (not dog, cat)"
+        == "works where title has (not dog and cat)"
 
 
 def test_demorganed_not_group_stays_in_one_clause():
     # `not (dog or bird)` -> NNF leaves -> merged back as in-tree bare nots
     assert _identity("works where title has (cat and not (dog or bird))") \
-        == "works where title has all (not bird, not dog, cat)"
+        == "works where title has (not bird and not dog and cat)"
 
 
 def test_eq_columns_merge_too_all_filter_kinds():
     assert _identity("works where country is US and country is not FR") \
-        == "works where country is all (not FR, US)"
+        == "works where country is (not FR and US)"
 
 
 def test_is_not_group_renders_merged_not_two_clauses():
     assert _identity("works where country is not (US or FR)") \
-        == "works where country is all (not FR, not US)"
+        == "works where country is (not FR and not US)"
 
 
 def test_search_leaf_merges_with_same_base_or_group():
     assert _identity(
         "works where title has health and title has (vape or vaping)"
-    ) == "works where title has all (health, any (vape, vaping))"
+    ) == "works where title has (health and (vape or vaping))"
 
 
 def test_merge_anchors_at_first_same_field_row():
@@ -74,14 +74,14 @@ def test_merge_anchors_at_first_same_field_row():
     # the first occurrence in canonical row order
     assert _identity(
         "works where title has alpha and country is US and title has beta"
-    ) == "works where all (country is US, title has all (alpha, beta))"
+    ) == "works where country is US and title has (alpha and beta)"
 
 
 def test_stemmed_and_exact_share_one_merged_group():
     # base-field grouping: .search + .search.exact mix in one group (row-78 win)
     assert _identity(
         'works where title has "exact phrase" and title has (stemmed words)'
-    ) == 'works where title has all ((stemmed words), "exact phrase")'
+    ) == 'works where title has ((stemmed words) and "exact phrase")'
 
 
 # --- what does NOT merge ---------------------------------------------------- #
@@ -97,31 +97,31 @@ def test_comparators_excluded_stay_separate_endpoint_clauses():
     # comparison operators never merge into a value tree; with the dash range
     # literal gone (decision 24) they stay as two endpoint clauses, lower first.
     assert _identity("works where year >= 2020 and year < 2024") \
-        == "works where all (year >= 2020, year < 2024)"
+        == "works where year >= 2020 and year < 2024"
 
 
 def test_lone_bounds_do_not_merge_into_a_value_tree():
     # two same-column bounds that do NOT form a closed range stay inequalities
     assert _identity("works where citation count > 100 and year >= 2020") \
-        == "works where all (citation count > 100, year >= 2020)"
+        == "works where citation count > 100 and year >= 2020"
 
 
 def test_cross_field_stays_multi_clause():
     assert _identity("works where title has cat and abstract has dog") \
-        == "works where all (abstract has dog, title has cat)"
+        == "works where abstract has dog and title has cat"
 
 
 def test_mixed_field_or_branches_do_not_merge():
     # OR branches spanning different fields are not uniform -> no merge; the
-    # body wraps in `all (…)` (decision 32) and exceeds 80 cols -> multi-line.
+    # body uses implicit-AND infix joins (decision 32 revert to infix parens).
     out = _identity(
         "works where (title has a or country is US) "
         "and (title has b or country is FR)"
     )
-    assert out == ("works where all (\n"
-                   "    any (country is FR, title has b),\n"
-                   "    any (country is US, title has a)\n"
-                   "  )")
+    assert out == (
+        "works where (country is FR or title has b) "
+        "and (country is US or title has a)"
+    )
 
 
 # --- OQO is untouched (render-direction rule only) -------------------------- #

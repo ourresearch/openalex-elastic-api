@@ -78,10 +78,10 @@ class TestStringifyInvariant:
         oql, tree = render_oqo_to_oql_and_tree(oqo)
         
         assert stringify(tree) == oql
-        assert "all (" in oql   # body wraps in an `all (…)` group (decision 32)
+        assert " and " in oql   # implicit-AND infix body (decision 32 revert)
 
     def test_or_group_filter(self):
-        """A same-column OR factors into a canonical `is any (a, b)` group (#363)."""
+        """A same-column OR factors into a canonical `is (a or b)` group (#363)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -97,7 +97,7 @@ class TestStringifyInvariant:
         oql, tree = render_oqo_to_oql_and_tree(oqo)
 
         assert stringify(tree) == oql
-        assert "type is any (article, book)" in oql
+        assert "type is (article or book)" in oql
     
     def test_sort_directive(self):
         """Test sort directive."""
@@ -355,8 +355,8 @@ class TestTreeStructure:
         assert clause.meta.value == 2020
     
     def test_group_has_joiner(self):
-        """Group nodes are keyword groups: comma joiner + `all (`/`any (` prefix
-        (charter decision 32; infix `and`/`or` is no longer canonical)."""
+        """The top-level implicit-AND body is an unwrapped infix group: ` and `
+        joiner, no parens prefix/suffix (decision 32 revert to infix)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -368,14 +368,15 @@ class TestTreeStructure:
 
         group = tree.where
         assert isinstance(group, GroupNode)
-        assert group.joiner == ", "
-        assert group.prefix == "all (" and group.suffix == ")"
+        assert group.joiner == " and "
+        assert group.prefix == "" and group.suffix == ""
 
-    def test_or_group_has_keyword_opener(self):
-        """A nested OR group renders as an `any (…)` keyword group (decision 32).
+    def test_or_group_has_infix_parens(self):
+        """A nested OR group renders as an infix `( … or … )` group (decision 32
+        revert to infix parens).
 
         Two *different* columns so the OR stays a genuine boolean group (a
-        same-column OR would factor into `is any (...)`), nested under an AND.
+        same-column OR would factor into `is (a or b)`), nested under an AND.
         """
         oqo = OQO(
             get_rows="works",
@@ -395,9 +396,9 @@ class TestTreeStructure:
         and_group = tree.where
         assert isinstance(and_group, GroupNode)
         or_group = next(c for c in and_group.children if isinstance(c, GroupNode))
-        assert or_group.prefix == "any ("
+        assert or_group.prefix == "("
         assert or_group.suffix == ")"
-        assert or_group.joiner == ", "
+        assert or_group.joiner == " or "
 
 
 class TestToDict:
@@ -506,7 +507,7 @@ class TestEdgeCases:
         oql, tree = render_oqo_to_oql_and_tree(oqo)
 
         assert stringify(tree) == oql
-        assert "has machine learning" in oql
+        assert "has (machine learning)" in oql
 
     def test_different_entity_types(self):
         """Test different entity types render correctly (lowercase, canonical)."""

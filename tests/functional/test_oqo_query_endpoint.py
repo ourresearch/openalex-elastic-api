@@ -280,7 +280,7 @@ class TestMetaXQuery:
         res = self._stub_run(client, oqo_body)
         assert res.status_code == 200, res.get_json()
         x_query = res.get_json()["meta"]["x_query"]
-        assert x_query["oql"] == "works where title/abstract has any (c, b, a)"
+        assert x_query["oql"] == "works where title/abstract has (c or b or a)"
         vals = [f["value"] for f in x_query["oqo"]["filter_rows"][0]["filters"]]
         assert vals == ["c", "b", "a"]
         assert x_query["url"].endswith("title_and_abstract.search:c|b|a")
