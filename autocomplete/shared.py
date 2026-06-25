@@ -38,68 +38,102 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
         if filter_params:
             s = filter_records(fields_dict, filter_params, s)
 
+        # Popularity field used both to rank q-matches and as the sort tiebreaker.
+        popularity_field = (
+            "cited_by_count" if index_name.startswith("work") else "works_count"
+        )
+
         if q:
-            # Build the autocomplete query based on index type
-            autocomplete_query = None
+            # Build two queries per entity type:
+            #   autocomplete_query — the full candidate selector (display_name plus
+            #     every alternate field), unchanged from before.
+            #   primary_query — the "primary identifier" fields a user recognises the
+            #     entity by: its display_name plus identifier-style fields (acronyms,
+            #     abbreviated titles). Used to give those matches a higher tier than
+            #     name-variant / description matches below.
             if index_name.startswith("author"):
-                autocomplete_query = (
-                        Q("match_phrase_prefix", display_name__autocomplete=q)
-                        | Q("match_phrase_prefix",
-                            display_name_alternatives__autocomplete=q)
+                primary_query = Q("match_phrase_prefix", display_name__autocomplete=q)
+                autocomplete_query = primary_query | Q(
+                    "match_phrase_prefix", display_name_alternatives__autocomplete=q
                 )
             elif index_name.startswith("institution"):
-                autocomplete_query = (
-                        Q("match_phrase_prefix", display_name__autocomplete=q)
-                        | Q("match_phrase_prefix",
-                            display_name_acronyms__autocomplete=q)
-                        | Q("match_phrase_prefix",
-                            display_name_alternatives__autocomplete=q)
+                primary_query = Q(
+                    "match_phrase_prefix", display_name__autocomplete=q
+                ) | Q("match_phrase_prefix", display_name_acronyms__autocomplete=q)
+                autocomplete_query = primary_query | Q(
+                    "match_phrase_prefix", display_name_alternatives__autocomplete=q
                 )
             elif index_name.startswith("source"):
-                autocomplete_query = (
-                        Q("match_phrase_prefix", display_name__autocomplete=q)
-                        | Q("match_phrase_prefix",
-                            alternate_titles__autocomplete=q)
-                        | Q("match_phrase_prefix",
-                            abbreviated_title__autocomplete=q)
+                # A source's alternate_titles are curated (real journal acronyms
+                # like "JACS"), so all of its match fields count as primary.
+                primary_query = (
+                    Q("match_phrase_prefix", display_name__autocomplete=q)
+                    | Q("match_phrase_prefix", abbreviated_title__autocomplete=q)
+                    | Q("match_phrase_prefix", alternate_titles__autocomplete=q)
                 )
+                autocomplete_query = primary_query
             elif index_name.startswith("topic"):
+                primary_query = Q("match_phrase_prefix", display_name__autocomplete=q)
                 autocomplete_query = (
-                        Q("match_phrase_prefix", display_name__autocomplete=q)
-                        | Q("match_phrase_prefix", description__autocomplete=q)
-                        | Q("match_phrase_prefix", keywords__autocomplete=q)
+                    primary_query
+                    | Q("match_phrase_prefix", description__autocomplete=q)
+                    | Q("match_phrase_prefix", keywords__autocomplete=q)
                 )
             else:
-                autocomplete_query = Q("match_phrase_prefix",
-                                       display_name__autocomplete=q)
+                primary_query = Q("match_phrase_prefix", display_name__autocomplete=q)
+                autocomplete_query = primary_query
 
-            # Create a function score query that boosts exact matches
-            exact_match_query = Q(
+            # Rank the suggestions in three popularity-ordered tiers so the
+            # canonical high-works entity floats to the top (e.g. "nature" -> the
+            # journal Nature, "florida" -> University of Florida, "mit" -> MIT via
+            # its acronym). autocomplete_query only SELECTS candidates;
+            # boost_mode="replace" discards its noisy match_phrase_prefix relevance,
+            # and we score each doc as tier_weight + log1p(popularity), so the order
+            # is:
+            #   1. exact display_name match (case-insensitive),
+            #   2. match on a primary identifier field (display_name / acronym /
+            #      abbreviated title),
+            #   3. match only on another alternate field (name variants, topic
+            #      description/keywords),
+            # and WITHIN each tier by popularity (works_count, or cited_by_count for
+            # works). The exact filter is case-insensitive because users type
+            # lowercase. Keeping identifier matches above name-variant matches stops a
+            # high-works entity that merely has an alternate name containing the query
+            # (e.g. an author whose alt-name contains "jas") from displacing entities
+            # whose visible name actually matches. See oxjob #516.
+            ranked_query = Q(
                 "function_score",
                 query=autocomplete_query,
                 functions=[
-                    # Boost exact matches in display_name
                     {
-                        "filter": Q("term", display_name__keyword=q),
-                        "weight": 1000
+                        "filter": Q(
+                            "term",
+                            display_name__keyword={
+                                "value": q,
+                                "case_insensitive": True,
+                            },
+                        ),
+                        "weight": 2000000,
                     },
-                    # Boost prefix matches at word boundaries
                     {
-                        "filter": Q("prefix", display_name__keyword=q),
-                        "weight": 500
-                    }
+                        "filter": primary_query,
+                        "weight": 1000000,
+                    },
+                    {
+                        "field_value_factor": {
+                            "field": popularity_field,
+                            "modifier": "log1p",
+                            "missing": 0,
+                        }
+                    },
                 ],
-                score_mode="max",
-                boost_mode="multiply"
+                score_mode="sum",
+                boost_mode="replace",
             )
 
-            s = s.query(exact_match_query)
+            s = s.query(ranked_query)
 
-        # Apply secondary sorting based on index type
-        if index_name.startswith("work"):
-            s = s.sort("_score", "-cited_by_count")
-        else:
-            s = s.sort("_score", "-works_count")
+        s = s.sort("_score", f"-{popularity_field}")
 
         s = s.source(AUTOCOMPLETE_SOURCE)
         preference = clean_preference(q)
