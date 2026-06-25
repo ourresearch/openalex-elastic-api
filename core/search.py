@@ -31,6 +31,14 @@ ADJACENT_PHRASE_RE = re.compile(r'^"([^"]*)"$')
 # unordered with max_gaps=N. Built as an ES `intervals` query — see
 # binary_proximity_query() / oxjob #355 (Goal B).
 BINARY_PROXIMITY_RE = re.compile(r'^"([^"]*)"~(\d+)~"([^"]*)"$')
+# K-ary list proximity `"A"~N~"B"~"C"[~...]` (3+ operands) — the generalization of the
+# binary form above to K operands, NEAR each other within one window. Produced ONLY by
+# the OQL `within N (a, b, c)` list surface (oxjob #514); the OXURL `~` surface still
+# parses only the single (`"P"~N`) and binary (`"A"~N~"B"`) shapes, so it never reaches
+# this path and its execution is byte-identical to before. The slop `N` appears once
+# (between the first two operands); each operand may itself be a multi-word phrase.
+# Requires {2,} trailing operands so binary (1 trailing) stays on its own frozen path.
+LIST_PROXIMITY_RE = re.compile(r'^"[^"]*"~\d+(?:~"[^"]*"){2,}$')
 # A quoted SINGLE word (no internal whitespace), not adjacent to a `~` proximity
 # slop on either side. Quotes around one token are a no-op in the OCS search
 # contract -- they only constrain how MULTIPLE words sit relative to each other
@@ -262,6 +270,16 @@ def validate_wildcards(search_terms):
         _validate_wildcard_budget(words)
         return
 
+    # K-ary list proximity `"A"~N~"B"~"C"[...]` (oxjob #514) — same one-intervals-query
+    # treatment as binary: validate every operand token and apply the shared wildcard
+    # budget across ALL operands (handled before the per-phrase loop for the same reason).
+    if LIST_PROXIMITY_RE.match(stripped):
+        words = [w for op in re.findall(r'"([^"]*)"', stripped) for w in op.split()]
+        for word in words:
+            _validate_wildcard_token(word)
+        _validate_wildcard_budget(words)
+        return
+
     for phrase in QUOTED_PHRASE_RE.findall(search_terms):
         if "*" not in phrase and "?" not in phrase:
             continue
@@ -413,6 +431,15 @@ class SearchOpenAlex:
         # No wildcard required, but wildcards in either operand compose fine.
         if self.has_binary_proximity():
             raw_query = self.binary_proximity_query()
+            if skip_citation_boost:
+                return raw_query
+            return self.citation_boost_query(raw_query)
+
+        # K-ary list proximity `"A"~N~"B"~"C"[...]` — the binary path generalized to K
+        # operands NEAR each other in one window (oxjob #514, OQL `within N (a, b, c)`).
+        # Reached only from the OQL list surface; the OXURL `~` surface tops out at binary.
+        if self.has_list_proximity():
+            raw_query = self.list_proximity_query()
             if skip_citation_boost:
                 return raw_query
             return self.citation_boost_query(raw_query)
@@ -596,6 +623,37 @@ class SearchOpenAlex:
                 "ordered": False,
                 "max_gaps": slop,
                 "intervals": [self._operand_rule(left), self._operand_rule(right)],
+            }
+        }
+        return self._intervals_over_fields(rule)
+
+    def has_list_proximity(self):
+        """True for K-ary list proximity `"A"~N~"B"~"C"[...]` (3+ operands, oxjob #514).
+
+        The OQL `within N (a, b, c)` surface generalizes binary NEAR to any number of
+        operands sharing one window. Binary (2 operands) stays on `has_binary_proximity`
+        so the OXURL `~` execution path is untouched; this only fires for 3+ operands,
+        which only the OQL list surface can produce.
+        """
+        return bool(LIST_PROXIMITY_RE.match(self.search_terms.strip()))
+
+    def list_proximity_query(self):
+        """Build an `intervals` query for K-ary list proximity (oxjob #514).
+
+        Each operand is its own (possibly multi-word, adjacent) sub-interval; all K are
+        combined `ordered=false` + `max_gaps=N` — the same shape as `binary_proximity_query`
+        with the operand list extended from 2 to K. The slop `N` is the single window the
+        operands share. The `~`-string is the canonical value; the column carries
+        stem-vs-exact (set by the OQL parser), so execution doesn't branch on stemming.
+        """
+        terms = self.search_terms.strip()
+        slop = int(re.search(r'"~(\d+)~"', terms).group(1))
+        operands = re.findall(r'"([^"]*)"', terms)
+        rule = {
+            "all_of": {
+                "ordered": False,
+                "max_gaps": slop,
+                "intervals": [self._operand_rule(op) for op in operands],
             }
         }
         return self._intervals_over_fields(rule)

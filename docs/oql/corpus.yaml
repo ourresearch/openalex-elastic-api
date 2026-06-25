@@ -366,12 +366,9 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22smart%20phone%22~3'
-  status: ok
-  oql: 'works where title has "smart phone" within 3 words'
-  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart phone"~3', operator: has}]}
-  note: 'Exact proximity (quoted) → up to N positional moves apart, any order.'
+  status: out-of-scope
+  oql: null
+  note: 'Single-phrase slop `"smart phone"~3` (one quoted phrase whose tokens wiggle internally) is OXURL-only now (oxjob #514). The OQL surface ditched the `within N words` suffix form; the same intent is written as the list form `within 3 ("smart", "phone")` (row 28), which compiles to an ES `intervals` query. The bare `~N` single-phrase value still parses/executes on the FROZEN OXURL surface (`?filter=display_name.search.exact:"smart phone"~3`, query_string slop) — untouched — but has no round-tripping OQL form (it renders best-effort to the list form, which re-parses to the binary `~N~` shape).'
 
 - id: 22
   tags: [phrase-exact, wildcard]
@@ -432,12 +429,9 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22smart%20phone*%22~3'
-  status: ok
-  oql: 'works where title has "smart phone*" within 3 words'
-  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart phone*"~3', operator: has}]}
-  note: 'Wildcard inside a quoted proximity phrase — SUPPORTED via an ES `intervals` query (trailing-prefix -> prefix rule, mid-word ? -> wildcard rule); ordered=false + max_gaps=N maps 1:1 to slop N (oxjob #355, pinned live on works-v33). query_string used to silently drop the wildcard. Leading / sub-3-char-prefix wildcards inside the phrase still rejected (#337).'
+  status: out-of-scope
+  oql: null
+  note: 'Wildcard inside a single-phrase slop `"smart phone*"~3` — OXURL-only now (oxjob #514), like row 21. The OQL list surface expresses wildcard proximity as a quoted operand, e.g. `within 3 ("smart", "phone*")` (row 189). The single-phrase wildcard `~N` value still parses/executes on the FROZEN OXURL surface via an ES `intervals` query (oxjob #355), untouched; it just has no round-tripping OQL form.'
 
 - id: 28
   tags: [phrase-exact, proximity]
@@ -447,9 +441,9 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22smart%22~3~%22phone%22'
   status: ok
-  oql: 'works where title has "smart" within 3 words of "phone"'
+  oql: 'works where title has within 3 ("smart", "phone")'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart"~3~"phone"', operator: has}]}
-  note: 'Binary proximity: two SEPARATE quoted operands NEAR each other (WoS `NEAR/N`). SUPPORTED via an ES `intervals` query — each operand is its own (possibly multi-word, adjacent) sub-interval and the two are combined ordered=false + max_gaps=N (oxjob #355 Goal B; live works-v33 = 5,183 hits). `match_phrase`+slop genuinely cannot express it (slop is whole-phrase). Value encoding `"A"~N~"B"` extends the single-phrase `"phrase"~N` form. Exact-only (both operands quoted/no-stem).'
+  note: 'List proximity (the ONE proximity surface, oxjob #514): K operands NEAR each other within an N-word window, unordered. Two quoted (exact, frozen) operands here = WoS `NEAR/N`. SUPPORTED via an ES `intervals` query — each operand is its own (possibly multi-word, adjacent) sub-interval, combined ordered=false + max_gaps=N (oxjob #355 Goal B; live works-v33 = 5,183 hits). Value encoding `"A"~N~"B"` is the K=2 case of `"op1"~N~"op2"~...`; quoted operands route to `.search.exact` (exact). The OXURL `~N~` notation is frozen and unchanged.'
 
 - id: 29
   tags: [proximity, wildcard]
@@ -457,9 +451,9 @@ rows:
     type: "spec design"
     label: "OQL v2 spec spine"
   status: error
-  oql: 'works where title has smart* within 3 words'
-  diagnostic: OQL_WILDCARD_IN_PROXIMITY
-  note: Wildcard + proximity can't compose.
+  oql: 'works where title has within 3 (smart*, phone)'
+  diagnostic: OQL_WILDCARD_NEEDS_EXACT
+  note: 'A bare (stemmed) proximity operand can''t carry a wildcard — stemming strips the literal prefix, so a wildcard on `.search` is silently wrong (#364). Quote the operand to run it exact: `within 3 ("smart*", "phone")` (then the #355 intervals path handles the wildcard). Wildcards compose with proximity fine when the operand is quoted (rows 81/189).'
 
 - id: 79
   tags: [phrase-exact, wildcard]
@@ -481,9 +475,9 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22machine%20learning%22~5~%22neural%20network%22'
   status: ok
-  oql: 'works where title has "machine learning" within 5 words of "neural network"'
+  oql: 'works where title has within 5 ("machine learning", "neural network")'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"machine learning"~5~"neural network"', operator: has}]}
-  note: 'Binary proximity with MULTI-WORD phrase operands on both sides — each phrase stays intact (its own ordered, gap-0 adjacency sub-interval) and the two are combined ordered=false + max_gaps=5. This is the shape only WoS (NEAR/N) and an ES `intervals`/`span` engine can express; `match_phrase`+slop cannot keep two phrases as units (oxjob #355 Goal B; live works-v33 = 1,531 hits).'
+  note: 'List proximity with MULTI-WORD frozen operands on both sides (oxjob #514) — quotes freeze each phrase (its own ordered, gap-0 adjacency sub-interval); the operands are combined ordered=false + max_gaps=5. This is the shape only WoS (NEAR/N) and an ES `intervals`/`span` engine can express; `match_phrase`+slop cannot keep two phrases as units (oxjob #355 Goal B; live works-v33 = 1,531 hits).'
 
 - id: 81
   tags: [phrase-exact, proximity, wildcard]
@@ -491,9 +485,9 @@ rows:
     type: "spec design"
     label: "OQL v2 spec spine"
   status: error
-  oql: 'works where title has "pro*" within 3 words of "pre*"'
+  oql: 'works where title has within 3 ("pro*", "pre*")'
   diagnostic: OQL_MULTI_WILDCARD_SHORT_PREFIX
-  note: 'oxjob #355 perf guard: two wildcards in one intervals query (here a binary proximity) each need a >=4-char prefix — short 3-char prefixes multiply postings expansion (live: "pro* pro*" ~265ms vs ~45ms at 4 chars). "prot*" within 3 words of "pret*" is accepted. A lone wildcard keeps #337''s >=3-char floor.'
+  note: 'oxjob #355 perf guard: two wildcards in one intervals query (here a list proximity) each need a >=4-char prefix — short 3-char prefixes multiply postings expansion (live: "pro* pro*" ~265ms vs ~45ms at 4 chars). `within 3 ("prot*", "pret*")` is accepted. A lone wildcard keeps #337''s >=3-char floor.'
 
 - id: 82
   tags: [phrase-exact, wildcard]
@@ -535,12 +529,77 @@ rows:
   provenance:
     type: "spec design"
     label: "OQL v2 spec spine"
-  oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=display_name.search:%22smart%20phone%22~3'
+  status: out-of-scope
+  oql: null
+  note: 'STEMMED single-phrase slop `"smart phone"~3` on `.search` (the old `near … within N words` form) — OXURL-only now (oxjob #514). The OQL surface writes stemmed proximity as a BARE-operand list: `within 3 (smart, phone)` (row 188, all-bare operands → `.search` stemmed). The single-phrase `~N` value still parses/executes on the FROZEN OXURL `display_name.search:"smart phone"~3` surface, untouched.'
+
+# -- list proximity `within N (...)`: new surface (oxjob #514) -----------------
+- id: 187
+  tags: [proximity]
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_status: oql-only
+  oxurl: null
   status: ok
-  oql: 'works where title has near "smart phone" within 3 words'
-  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"smart phone"~3', operator: has}]}
-  note: 'STEMMED proximity (near + within) → .search column; contrast row 21 (exact proximity).'
+  oql: 'works where title has within 3 ("foo", "bar", "baz")'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"foo"~3~"bar"~"baz"', operator: has}]}
+  note: 'K-ARY list proximity (oxjob #514): THREE operands sharing one N-word window — a capability neither the old single-phrase slop nor binary `of` form could express. Compiles to one ES `intervals` all_of (ordered=false, max_gaps=3) over K sub-intervals. Value `"op1"~N~"op2"~"op3"~...` generalizes the binary `~N~` shape. `oql-only`: the classic URL `~` syntax tops out at binary (two operands), so K>=3 has no URL form (the win — see url_renderer K-ary guard).'
+
+- id: 188
+  tags: [proximity]
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search:%22foo%22~3~%22bar%22'
+  status: ok
+  oql: 'works where title has within 3 (foo, bar)'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"foo"~3~"bar"', operator: has}]}
+  note: 'STEMMED list proximity: all-BARE operands → the `.search` (stemmed) column, so each operand matches with stemming (the stemmed analogue of row 28''s quoted/exact list). Same `intervals` all_of execution; the column carries stem-vs-exact. Replaces the old `near "smart phone" within N words` stemmed single-phrase form (row 32, now OXURL-only).'
+
+- id: 189
+  tags: [proximity, wildcard]
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22smart%22~3~%22phone*%22'
+  status: ok
+  oql: 'works where title has within 3 ("smart", "phone*")'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart"~3~"phone*"', operator: has}]}
+  note: 'Wildcard inside a QUOTED (exact) list-proximity operand — SUPPORTED via the ES `intervals` query (trailing-prefix → prefix rule); the wildcard composes with proximity when the operand is quoted/no-stem (oxjob #355). A BARE operand can''t carry a wildcard (row 29). Leading / sub-3-char-prefix wildcards still rejected (#337); two short prefixes hit the #355 budget guard (row 81).'
+
+- id: 190
+  tags: [proximity]
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  status: error
+  oql: 'works where title has "smart phone" within 3 words'
+  diagnostic: OQL_PROXIMITY_SUFFIX_REMOVED
+  note: 'The old suffix form `"phrase" within N words` was REMOVED from the OQL surface (oxjob #514) — proximity is now the leading list operator `within N (a, b, ...)`. A trailing `within` after a value is rejected with a pointer to the new form. (The OXURL `~N` notation is unaffected — this is the OQL surface only.)'
+
+- id: 191
+  tags: [proximity]
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  status: error
+  oql: 'works where title has within 3 ("only")'
+  diagnostic: OQL_PROXIMITY_NEEDS_OPERANDS
+  note: 'Proximity relates 2+ operands; a one-operand list has nothing to be near. Add an operand, e.g. within 3 ("smart", "phone").'
+
+- id: 192
+  tags: [proximity]
+  provenance:
+    type: "spec design"
+    label: "OQL v2 spec spine"
+  status: error
+  oql: 'works where title has within 3 (foo, "bar")'
+  diagnostic: OQL_PROXIMITY_MIXED_OPERANDS
+  note: 'One leaf, one stemming: operands must be ALL bare (stemmed → `.search`) or ALL quoted (exact → `.search.exact`), not a mix. Quote every operand or none.'
+
 # ---------------------------------------------------------------------------
 # E. #284 worked-examples corpus — Stage A (filter / sort / sample)
 # ---------------------------------------------------------------------------
@@ -866,11 +925,11 @@ rows:
     label: "U. Manitoba Scopus proximity guide"
     url: "https://libguides.lib.umanitoba.ca/scopus/phrases"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:%22smart%20phone%22~3'
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:%22smart%22~3~%22phone%22'
   status: ok
-  oql: 'works where title/abstract has near "smart phone" within 3 words'
-  oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: '"smart phone"~3', operator: has}]}
-  note: 'Stemmed proximity (`near`) → .search, matching the #284 column. Use plain quotes for exact proximity.'
+  oql: 'works where title/abstract has within 3 (smart, phone)'
+  oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: '"smart"~3~"phone"', operator: has}]}
+  note: 'STEMMED list proximity (oxjob #514): all-bare operands → `.search` (stemmed), matching the #284 column. Quote operands for exact proximity. Replaces the old `near "smart phone" within 3 words` stemmed single-phrase form.'
 
 - id: 57
   tags: [phrase-exact, sr-transcription, wildcard]
@@ -892,11 +951,11 @@ rows:
     label: "U. Manitoba Scopus proximity guide"
     url: "https://libguides.lib.umanitoba.ca/scopus/phrases"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:%22smart%20phone*%22~3'
+  oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:%22smart%22~3~%22phone*%22'
   status: ok
-  oql: 'works where title/abstract has "smart phone*" within 3 words'
-  oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"smart phone*"~3', operator: has}]}
-  note: 'Wildcard-in-proximity, now SUPPORTED (oxjob #355): compiles to an ES `intervals` query that keeps the wildcard (query_string used to drop it). WoS/Scopus parity. ordered=false + max_gaps=N == slop N (pinned live on works-v33: 48,583 hits). Leading / sub-3-char-prefix wildcards still rejected (#337).'
+  oql: 'works where title/abstract has within 3 ("smart", "phone*")'
+  oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"smart"~3~"phone*"', operator: has}]}
+  note: 'Wildcard inside a QUOTED (exact) list-proximity operand, SUPPORTED (oxjob #355/#514): compiles to an ES `intervals` query that keeps the wildcard (query_string used to drop it). WoS/Scopus parity. ordered=false + max_gaps=N == slop N. Leading / sub-3-char-prefix wildcards still rejected (#337); a BARE wildcard operand is rejected (row 29).'
 
 - id: 59
   tags: [phrase-exact, sr-transcription]
@@ -1010,11 +1069,11 @@ rows:
     label: "Elsevier Scopus Search Tips"
     url: "https://schema.elsevier.com/dtds/document/bkapi/search/SCOPUSSearchTips.htm"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search:%22london%20hospital%22~5'
+  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search:%22london%22~5~%22hospital%22'
   status: ok
-  oql: 'works where raw affiliation has near "london hospital" within 5 words'
-  oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"london hospital"~5', operator: has}]}
-  note: Quoted phrase scopes to ONE affiliation (position_increment_gap); slop ~5 allows order/gap within it.
+  oql: 'works where raw affiliation has within 5 (london, hospital)'
+  oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"london"~5~"hospital"', operator: has}]}
+  note: 'List proximity on a non-title field (oxjob #514): the position_increment_gap scopes the window to ONE affiliation string; slop ~5 allows order/gap within it. All-bare operands → stemmed `.search`.'
 
 - id: 66
   tags: [sr-transcription]
@@ -1143,10 +1202,10 @@ rows:
     label: "Tufts Web of Science proximity examples"
     url: "https://researchguides.library.tufts.edu/c.php?g=249270&p=1660077"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search:%22tufts%20boston%22~5'
+  oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search:%22tufts%22~5~%22boston%22'
   status: ok
-  oql: 'works where raw affiliation has near "tufts boston" within 5 words'
-  oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"tufts boston"~5', operator: has}]}
+  oql: 'works where raw affiliation has within 5 (tufts, boston)'
+  oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"tufts"~5~"boston"', operator: has}]}
 
 - id: 76
   tags: [sr-transcription]
@@ -1165,11 +1224,11 @@ rows:
     label: "OpenAlex zd#8101 + PR #240 (byline recall)"
     url: "https://openalex.zendesk.com/agent/tickets/8101"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=raw_author_name.search:%22john%20smith%22~2'
+  oxurl: 'https://openalex.org/works?filter=raw_author_name.search:%22john%22~2~%22smith%22'
   status: ok
-  oql: 'works where byline has near "john smith" within 2 words'
-  oqo: {get_rows: works, filter_rows: [{column_id: raw_author_name.search, value: '"john smith"~2', operator: has}]}
-  note: Byline slop ~2 recovers middle-name/initial forms without crossing co-authors.
+  oql: 'works where byline has within 2 (john, smith)'
+  oqo: {get_rows: works, filter_rows: [{column_id: raw_author_name.search, value: '"john"~2~"smith"', operator: has}]}
+  note: 'Byline list proximity, slop ~2 recovers middle-name/initial forms without crossing co-authors (oxjob #514). All-bare operands → stemmed `.search`.'
 
 - id: 78
   addr: |-
@@ -2895,19 +2954,20 @@ rows:
         or "nicotine gummies" or "nicotine inhaler" or "nicotine lozenge"
         or "nicotine microtab" or "nicotine microtablet" or "nicotine microtablets"
         or "nicotine microtabs" or "nicotine pouch" or "nicotine pouches"
-        or "nicotine snus" within 8 words or "nicotine spray" or "nicotine tablet"
-        or "nicotine tablets" or "oral nicotine product" or "vape device"
-        or "vape flavor" within 1 word or "vape flavor" within 1 word
-        or "vape flavored" within 1 word or "vape flavoring" within 1 word
-        or "vape flavour" within 1 word or "vape flavoured" within 1 word
-        or "vape flavouring" within 1 word or "vape free" or "vape product"
-        or "vape use" or "vaping device" or "vaping flavor" within 1 word
-        or "vaping flavor" within 1 word or "vaping flavored" within 1 word
-        or "vaping flavoring" within 1 word or "vaping flavour" within 1 word
-        or "vaping flavoured" within 1 word or "vaping flavouring" within 1 word
-        or "vaping free" or "vaping product" or "evape" or "evapes" or "evaping"
-        or (cigarette and evaping) or (cigarette and vape) or (cigarette and vaper)
-        or (cigarette and vapers) or (cigarette and vaping) or (cigarette and vapor)
+        or "nicotine spray" or "nicotine tablet" or "nicotine tablets"
+        or within 8 ("nicotine", "snus") or "oral nicotine product" or "vape device"
+        or "vape free" or "vape product" or "vape use"
+        or within 1 ("vape", "flavor") or within 1 ("vape", "flavor")
+        or within 1 ("vape", "flavored") or within 1 ("vape", "flavoring")
+        or within 1 ("vape", "flavour") or within 1 ("vape", "flavoured")
+        or within 1 ("vape", "flavouring") or "vaping device" or "vaping free"
+        or "vaping product" or within 1 ("vaping", "flavor")
+        or within 1 ("vaping", "flavor") or within 1 ("vaping", "flavored")
+        or within 1 ("vaping", "flavoring") or within 1 ("vaping", "flavour")
+        or within 1 ("vaping", "flavoured") or within 1 ("vaping", "flavouring")
+        or "evape" or "evapes" or "evaping" or (cigarette and evaping)
+        or (cigarette and vape) or (cigarette and vaper) or (cigarette and vapers)
+        or (cigarette and vaping) or (cigarette and vapor)
         or (cigarette and vaporiser) or (cigarette and vaporizer)
         or (cigarette and vapour) or (cigarette and vapouriser)
         or (cigarette and vapourizer) or (cigarette and "e-vaping")
@@ -2918,108 +2978,105 @@ rows:
         or (nicotine and vapourizer) or (nicotine and "e-vaping")
       )
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true},
-    {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: <=},
-    {column_id: publication_year, value: 2003, operator: '>='}, {column_id: type, value: types/article},
+    {column_id: language, value: en}, {column_id: publication_year, value: 2003, operator: '>='},
+    {column_id: publication_year, value: 2025, operator: <=}, {column_id: type, value: types/article},
     {join: or, filters: [{column_id: title_and_abstract.search, value: vapes, operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"e vape"', operator: has}, {
-    column_id: title_and_abstract.search.exact, value: '"e vapes"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"e vaping"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"e vaping"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"e vapor"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"e vapors"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"e vapour"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"e vapours"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"liquid nicotine"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine aerosol"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine bag"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine bags"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine gum"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine gummies"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine inhaler"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine lozenge"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine microtab"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine microtablet"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine microtablets"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine microtabs"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine pouch"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine pouches"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine snus"~8', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine spray"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine tablet"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"nicotine tablets"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"oral nicotine product"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vape device"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vape flavor"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vape flavor"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vape flavored"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vape flavoring"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vape flavour"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vape flavoured"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vape flavouring"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vape free"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vape product"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vape use"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vaping device"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vaping flavor"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vaping flavor"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vaping flavored"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vaping flavoring"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vaping flavour"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vaping flavoured"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vaping flavouring"~1', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vaping free"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: '"vaping product"', operator: has},
-    {column_id: title_and_abstract.search.exact, value: evape, operator: has}, {column_id: title_and_abstract.search.exact,
-    value: evapes, operator: has}, {column_id: title_and_abstract.search.exact, value: evaping,
-    operator: has}, {join: and, filters: [{column_id: title_and_abstract.search, value: cigarette,
-    operator: has}, {column_id: title_and_abstract.search, value: evaping, operator: has}]},
+    {column_id: title_and_abstract.search.exact, value: '"e vape"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"e vapes"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"e
+    vaping"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"e
+    vaping"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"e
+    vapor"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"e vapors"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"e vapour"', operator: has},
+    {column_id: title_and_abstract.search.exact, value: '"e vapours"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"liquid nicotine"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine aerosol"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine bag"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine bags"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine gum"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine gummies"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine inhaler"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine lozenge"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine microtab"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine microtablet"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine microtablets"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine microtabs"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine pouch"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine pouches"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine spray"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine tablet"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine tablets"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"nicotine"~8~"snus"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"oral nicotine product"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"vape device"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"vape free"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"vape
+    product"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"vape
+    use"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"vape"~1~"flavor"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vape"~1~"flavor"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vape"~1~"flavored"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vape"~1~"flavoring"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vape"~1~"flavour"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vape"~1~"flavoured"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vape"~1~"flavouring"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vaping device"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vaping free"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vaping product"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vaping"~1~"flavor"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vaping"~1~"flavor"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vaping"~1~"flavored"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vaping"~1~"flavoring"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vaping"~1~"flavour"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vaping"~1~"flavoured"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"vaping"~1~"flavouring"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: evape, operator: has},
+    {column_id: title_and_abstract.search.exact, value: evapes, operator: has}, {column_id: title_and_abstract.search.exact,
+    value: evaping, operator: has}, {join: and, filters: [{column_id: title_and_abstract.search,
+    value: cigarette, operator: has}, {column_id: title_and_abstract.search, value: evaping,
+    operator: has}]}, {join: and, filters: [{column_id: title_and_abstract.search, value: cigarette,
+    operator: has}, {column_id: title_and_abstract.search, value: vape, operator: has}]},
     {join: and, filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has},
-    {column_id: title_and_abstract.search, value: vape, operator: has}]}, {join: and,
-    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has},
     {column_id: title_and_abstract.search, value: vaper, operator: has}]}, {join: and,
-    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has},
-    {column_id: title_and_abstract.search, value: vapers, operator: has}]}, {join: and,
-    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has},
-    {column_id: title_and_abstract.search, value: vaping, operator: has}]}, {join: and,
-    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has},
-    {column_id: title_and_abstract.search, value: vapor, operator: has}]}, {join: and,
-    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has},
-    {column_id: title_and_abstract.search, value: vaporiser, operator: has}]}, {
-    join: and, filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has},
-    {column_id: title_and_abstract.search, value: vaporizer, operator: has}]}, {
-    join: and, filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has},
-    {column_id: title_and_abstract.search, value: vapour, operator: has}]}, {join: and,
-    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has},
-    {column_id: title_and_abstract.search, value: vapouriser, operator: has}]}, {
-    join: and, filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has},
-    {column_id: title_and_abstract.search, value: vapourizer, operator: has}]}, {
-    join: and, filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has},
-    {column_id: title_and_abstract.search.exact, value: e-vaping, operator: has}]},
-    {join: and, filters: [{column_id: title_and_abstract.search, value: evaping, operator: has},
+    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has}, {
+    column_id: title_and_abstract.search, value: vapers, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has}, {
+    column_id: title_and_abstract.search, value: vaping, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has}, {
+    column_id: title_and_abstract.search, value: vapor, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has}, {
+    column_id: title_and_abstract.search, value: vaporiser, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has}, {
+    column_id: title_and_abstract.search, value: vaporizer, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has}, {
+    column_id: title_and_abstract.search, value: vapour, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has}, {
+    column_id: title_and_abstract.search, value: vapouriser, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has}, {
+    column_id: title_and_abstract.search, value: vapourizer, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: cigarette, operator: has}, {
+    column_id: title_and_abstract.search.exact, value: e-vaping, operator: has}]}, {
+    join: and, filters: [{column_id: title_and_abstract.search, value: evaping, operator: has},
     {column_id: title_and_abstract.search, value: nicotine, operator: has}]}, {join: and,
-    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has},
-    {column_id: title_and_abstract.search, value: vape, operator: has}]}, {join: and,
-    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has},
-    {column_id: title_and_abstract.search, value: vaper, operator: has}]}, {join: and,
-    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has},
-    {column_id: title_and_abstract.search, value: vapers, operator: has}]}, {join: and,
-    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has},
-    {column_id: title_and_abstract.search, value: vaping, operator: has}]}, {join: and,
-    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has},
-    {column_id: title_and_abstract.search, value: vapor, operator: has}]}, {join: and,
-    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has},
-    {column_id: title_and_abstract.search, value: vaporiser, operator: has}]}, {
-    join: and, filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has},
-    {column_id: title_and_abstract.search, value: vaporizer, operator: has}]}, {
-    join: and, filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has},
-    {column_id: title_and_abstract.search, value: vapour, operator: has}]}, {join: and,
-    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has},
-    {column_id: title_and_abstract.search, value: vapouriser, operator: has}]}, {
-    join: and, filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has},
-    {column_id: title_and_abstract.search, value: vapourizer, operator: has}]}, {
-    join: and, filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has},
-    {column_id: title_and_abstract.search.exact, value: e-vaping, operator: has}]}]}]}
-
+    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has}, {
+    column_id: title_and_abstract.search, value: vape, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has}, {
+    column_id: title_and_abstract.search, value: vaper, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has}, {
+    column_id: title_and_abstract.search, value: vapers, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has}, {
+    column_id: title_and_abstract.search, value: vaping, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has}, {
+    column_id: title_and_abstract.search, value: vapor, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has}, {
+    column_id: title_and_abstract.search, value: vaporiser, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has}, {
+    column_id: title_and_abstract.search, value: vaporizer, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has}, {
+    column_id: title_and_abstract.search, value: vapour, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has}, {
+    column_id: title_and_abstract.search, value: vapouriser, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has}, {
+    column_id: title_and_abstract.search, value: vapourizer, operator: has}]}, {join: and,
+    filters: [{column_id: title_and_abstract.search, value: nicotine, operator: has}, {
+    column_id: title_and_abstract.search.exact, value: e-vaping, operator: has}]}]}]}
 - id: 162
   tags: [phrase-exact, sr-transcription]
   provenance:
@@ -3061,55 +3118,52 @@ rows:
       and type is types/article
       and title/abstract has (
         Juul or "VUSE" or "Vype" or "Geek Bar"
-        or "cigarette" within 4 words of "ultra sonic" or "e Voke" or "e cigar"
+        or within 4 ("cigarette", "ultra sonic") or "e Voke" or "e cigar"
         or "e cigarette" or "e cigarettes" or "e liquid" or "e liquids"
-        or "electric cigarette" within 4 words or "electric nicotine" within 4 words
-        or "electrical cigarette" within 4 words
-        or "electrical nicotine" within 4 words
-        or "electronic cigarette" within 4 words
-        or "electronic nicotine" within 4 words
-        or "nicotine" within 4 words of "delivering system"
-        or "nicotine" within 4 words of "delivery device"
-        or "nicotine" within 4 words of "delivery product"
-        or "nicotine" within 4 words of "delivery system"
-        or "nicotine" within 4 words of "delivery system"
-        or "nicotine" within 4 words of "ultra sonic" or "u cigar" or "u cigarette"
-        or "u cigarettes" or "u cigars" or "ultrasonic cigarette" within 4 words
-        or "ultrasonic nicotine" within 4 words
+        or within 4 ("electric", "cigarette") or within 4 ("electric", "nicotine")
+        or within 4 ("electrical", "cigarette")
+        or within 4 ("electrical", "nicotine")
+        or within 4 ("electronic", "cigarette")
+        or within 4 ("electronic", "nicotine")
+        or within 4 ("nicotine", "delivering system")
+        or within 4 ("nicotine", "delivery device")
+        or within 4 ("nicotine", "delivery product")
+        or within 4 ("nicotine", "delivery system")
+        or within 4 ("nicotine", "delivery system")
+        or within 4 ("nicotine", "ultra sonic") or "u cigar" or "u cigarette"
+        or "u cigarettes" or "u cigars" or within 4 ("ultrasonic", "cigarette")
+        or within 4 ("ultrasonic", "nicotine")
       )
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true},
-    {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: <=},
-    {column_id: publication_year, value: 2003, operator: '>='}, {column_id: type, value: types/article},
-    {join: or, filters: [{column_id: title_and_abstract.search, value: Juul, operator: has},
-    {column_id: title_and_abstract.search.exact, value: VUSE, operator: has}, {column_id: title_and_abstract.search.exact,
+    {column_id: language, value: en}, {column_id: publication_year, value: 2003, operator: '>='},
+    {column_id: publication_year, value: 2025, operator: <=}, {column_id: type, value: types/article},
+    {join: or, filters: [{column_id: title_and_abstract.search, value: Juul, operator: has}, {
+    column_id: title_and_abstract.search.exact, value: VUSE, operator: has}, {column_id: title_and_abstract.search.exact,
     value: Vype, operator: has}, {column_id: title_and_abstract.search.exact, value: '"Geek
     Bar"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"cigarette"~4~"ultra
-    sonic"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"e
-    Voke"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"e
-    cigar"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"e
-    cigarette"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"e
-    cigarettes"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"e
-    liquid"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"e
-    liquids"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"electric
-    cigarette"~4', operator: has}, {column_id: title_and_abstract.search.exact, value: '"electric
-    nicotine"~4', operator: has}, {column_id: title_and_abstract.search.exact, value: '"electrical
-    cigarette"~4', operator: has}, {column_id: title_and_abstract.search.exact, value: '"electrical
-    nicotine"~4', operator: has}, {column_id: title_and_abstract.search.exact, value: '"electronic
-    cigarette"~4', operator: has}, {column_id: title_and_abstract.search.exact, value: '"electronic
-    nicotine"~4', operator: has}, {column_id: title_and_abstract.search.exact, value: '"nicotine"~4~"delivering
+    sonic"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"e Voke"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"e cigar"', operator: has},
+    {column_id: title_and_abstract.search.exact, value: '"e cigarette"', operator: has}, {
+    column_id: title_and_abstract.search.exact, value: '"e cigarettes"', operator: has},
+    {column_id: title_and_abstract.search.exact, value: '"e liquid"', operator: has}, {column_id: title_and_abstract.search.exact,
+    value: '"e liquids"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"electric"~4~"cigarette"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"electric"~4~"nicotine"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"electrical"~4~"cigarette"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"electrical"~4~"nicotine"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"electronic"~4~"cigarette"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"electronic"~4~"nicotine"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"nicotine"~4~"delivering
     system"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"nicotine"~4~"delivery
     device"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"nicotine"~4~"delivery
     product"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"nicotine"~4~"delivery
     system"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"nicotine"~4~"delivery
     system"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"nicotine"~4~"ultra
-    sonic"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"u
-    cigar"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"u
-    cigarette"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"u
-    cigarettes"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"u
-    cigars"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"ultrasonic
-    cigarette"~4', operator: has}, {column_id: title_and_abstract.search.exact, value: '"ultrasonic
-    nicotine"~4', operator: has}]}]}
-
+    sonic"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"u cigar"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"u cigarette"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"u cigarettes"',
+    operator: has}, {column_id: title_and_abstract.search.exact, value: '"u cigars"', operator: has},
+    {column_id: title_and_abstract.search.exact, value: '"ultrasonic"~4~"cigarette"', operator: has},
+    {column_id: title_and_abstract.search.exact, value: '"ultrasonic"~4~"nicotine"', operator: has}]}]}
 - id: 164
   tags: [boolean-nesting, negation, sr-transcription, wildcard]
   provenance:

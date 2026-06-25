@@ -64,12 +64,18 @@ searchExpr   ::= termRun ( connective termRun )*
 termRun      ::= searchOperand+
 
 searchOperand ::= 'not' searchOperand
+               | proximity
                | '(' searchExpr ')'
                | searchAtom
 
-searchAtom   ::= 'near'? term proximity?
+/* Proximity is one leading list operator: K (2+) operands within an N-word
+   window of each other, unordered (oxjob #514). Quotes freeze an operand into
+   an adjacent phrase; bare operands stem. (The legacy `within N words` suffix
+   and `within N words of` binary forms were removed from the OQL surface; the
+   OXURL `~` notation keeps single/binary proximity unchanged.) */
+proximity    ::= 'within' NUMBER '(' term ( ',' term )+ ')'
 
-proximity    ::= 'within' NUMBER ( 'words' | 'word' ) ( 'of' STRING )?
+searchAtom   ::= 'near'? term
 
 term         ::= STRING | word
 

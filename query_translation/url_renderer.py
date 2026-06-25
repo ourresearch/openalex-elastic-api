@@ -5,8 +5,15 @@ Generates the traditional query parameter syntax:
   filter=field1:value1,field2:value2&sort=field:order
 """
 
+import re
 from typing import Dict, List, Optional, Tuple, Any
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, SortBy
+
+# K-ary list proximity `"a"~N~"b"~"c"[...]` (3+ operands, oxjob #514) — an OQL-only
+# capability. The classic URL `~` syntax expresses single (`"P"~N`) and binary
+# (`"A"~N~"B"`) proximity only; a 3+-operand value has no URL form, so it renders as
+# `oql-only` (URLRenderError) rather than a string the frozen URL parser can't read back.
+_KARY_PROXIMITY_RE = re.compile(r'^"[^"]*"~\d+(?:~"[^"]*"){2,}$')
 
 
 class URLRenderError(Exception):
@@ -252,6 +259,13 @@ def render_leaf_filter(f: LeafFilter) -> str:
 
     # Convert value to string
     str_value = str(value).lower() if isinstance(value, bool) else str(value)
+
+    # K-ary list proximity (3+ operands) is OQL-only — no classic URL `~` form (#514).
+    if isinstance(value, str) and _KARY_PROXIMITY_RE.match(value):
+        raise URLRenderError(
+            "K-ary list proximity (3+ operands) has no classic URL form; the `~` "
+            "syntax expresses single and binary proximity only"
+        )
 
     # Negation is the polarity bit: render as bang-prefixed value
     if negated:

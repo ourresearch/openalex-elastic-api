@@ -309,6 +309,9 @@ def test_every_row_has_valid_facets():
         # the "all corpora" row is 186, renumbered from a dup of #363's error id
         # 182 — see #497.)
         183: "oql-only", 184: "oql-only", 186: "oql-only",
+        # K-ary list proximity (oxjob #514): 3+ operands have no classic URL `~` form
+        # (the syntax tops out at binary), so the renderer raises -> oql-only.
+        187: "oql-only",
     }
     assert non_has_oxurl == expected, (
         f"oxurl_status classification drifted: "

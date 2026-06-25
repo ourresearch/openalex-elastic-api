@@ -2115,6 +2115,11 @@ class _Parser:
             # `title has not dog`. A multi-word run is one value-node, so
             # `not machine learning` negates the whole run.
             return self._parse_search_operand(base)
+        # leading list proximity `within N (a, b, ...)` (oxjob #514) — the ONE proximity
+        # surface; intercept before the value group so the trailing `(...)` is read as the
+        # operand list, not a boolean group.
+        if self.word_is("within"):
+            return self._parse_proximity_list(base)
         # a `(...)` boolean group — `_parse_grouped_operand` consumes it.
         grp = self._parse_grouped_operand(lambda: self._parse_search_operand(base))
         if grp is not None:
@@ -2292,6 +2297,9 @@ class _Parser:
         if t.kind == "WORD" and t.val.lower() == "not":
             self._consume_not(t)  # bare prefix `not` (decision 23)
             return _negate(self._parse_search_operand(base))
+        # leading list proximity `within N (a, b, ...)` nested in a group (oxjob #514).
+        if self.word_is("within"):
+            return self._parse_proximity_list(base)
         # a `(...)` boolean group — `_parse_grouped_operand` consumes it.
         grp = self._parse_grouped_operand(lambda: self._parse_search_operand(base))
         if grp is not None:
@@ -2305,6 +2313,98 @@ class _Parser:
         if self.peek() is not None and self.peek().kind == "BANG":
             raise oql_error("OQL_BANG_NOT_SUPPORTED", position=self.peek().pos)
         return operand
+
+    def _parse_proximity_list(self, base: str) -> LeafFilter:
+        """Leading list proximity `within N (op, op, ...)` — the ONE OQL proximity
+        surface (oxjob #514).
+
+        K operands (2+) that must appear within an N-word window of each other,
+        unordered. Quotes FREEZE an operand into an adjacent phrase; listing operands
+        separately lets them move relative to each other. Stemming is per-leaf: all
+        operands bare => stemmed (`.search`); all quoted => exact (`.search.exact`);
+        mixing is rejected (one leaf, one column). Encodes to the canonical `~`-string
+        `"op1"~N~"op2"~...`, which the engine compiles to an ES `intervals` `all_of`
+        query (binary K=2 reuses the #355 binary path byte-for-byte; K>=3 the #514 list
+        path). The OXURL `~` surface is untouched — it still only parses single/binary.
+        """
+        wt = self.peek()                       # `within`
+        self.next()
+        nt = self.peek()
+        if not nt or nt.kind != "WORD" or not nt.val.isdigit():
+            raise oql_error("OQL_BAD_PROXIMITY", 'expected a number after "within"',
+                           'e.g. within 3 ("smart", "phone")', nt.pos if nt else wt.pos)
+        n = int(nt.val)
+        self.next()
+        lp = self.peek()
+        if not lp or lp.kind != "LP":
+            raise oql_error("OQL_BAD_PROXIMITY",
+                           'proximity needs a parenthesized operand list',
+                           'e.g. within 3 ("smart", "phone")', lp.pos if lp else wt.pos)
+        self.next()                            # (
+        operands: List[Tuple[str, bool]] = []  # (text, quoted)
+        while True:
+            self._skip_annot()
+            ot = self.peek()
+            if ot is None:
+                raise oql_error("OQL_BAD_PROXIMITY",
+                               'unterminated proximity list — expected ")"',
+                               'e.g. within 3 ("smart", "phone")', wt.pos)
+            if ot.kind == "RP":
+                break
+            if ot.kind == "STRING":
+                operands.append((ot.val, True))
+                self.next()
+            elif ot.kind == "WORD" and not self._is_run_break_word(ot.val):
+                operands.append((ot.val, False))
+                self.next()
+            else:
+                raise oql_error("OQL_BAD_PROXIMITY",
+                               f'unexpected "{ot.val}" in a proximity operand list',
+                               'list bare words or quoted phrases, '
+                               'e.g. within 3 ("smart", "phone")', ot.pos)
+            self._skip_annot()
+            sep = self.peek()
+            if sep is not None and sep.kind == "COMMA":
+                self.next()
+                continue
+            if sep is not None and sep.kind == "RP":
+                continue                        # loop breaks on the RP next pass
+            raise oql_error("OQL_BAD_PROXIMITY",
+                           'proximity operands must be separated by commas',
+                           'e.g. within 3 ("smart", "phone")', sep.pos if sep else wt.pos)
+        self.next()                            # )
+        if len(operands) < 2:
+            raise oql_error("OQL_PROXIMITY_NEEDS_OPERANDS",
+                           'proximity needs at least two operands',
+                           'e.g. within 3 ("smart", "phone")', wt.pos)
+        if len({q for _, q in operands}) > 1:
+            raise oql_error("OQL_PROXIMITY_MIXED_OPERANDS",
+                           'proximity operands must be all bare (stemmed) or all quoted '
+                           '(exact), not a mix',
+                           'quote every operand or none, e.g. within 3 ("smart", "phone")',
+                           wt.pos)
+        quoted = operands[0][1]
+        col = base + (".search.exact" if quoted else ".search")
+        # Wildcards: a bare (stemmed) operand can't carry one (#364 — stemming strips the
+        # literal prefix); a quoted operand can, validated per-token + a shared expansion
+        # budget across the whole intervals query (#355 guard).
+        all_tokens = [w for text, _ in operands for w in text.split()]
+        has_wild = any("*" in w or "?" in w for w in all_tokens)
+        if has_wild and not quoted:
+            bad = next(w for w in all_tokens if "*" in w or "?" in w)
+            raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
+                           f'wildcards run on exact (no-stem) text: {bad}',
+                           f'quote the operand: "{bad}"', wt.pos)
+        if has_wild:
+            for w in all_tokens:
+                _validate_wildcards(w, wt.pos)
+            _validate_wildcard_budget(all_tokens, wt.pos)
+        # Canonical `~`-string: `"op1"~N~"op2"~"op3"~...` (binary K=2 is `"op1"~N~"op2"`,
+        # byte-identical to the #355 form). Operands are always quoted in the value (the
+        # quotes are structural delimiters); the COLUMN carries stem-vs-exact.
+        parts = [f'"{operands[0][0]}"', f"~{n}~", f'"{operands[1][0]}"']
+        parts += [f'~"{text}"' for text, _ in operands[2:]]
+        return LeafFilter(col, "".join(parts), "has")
 
     def _is_run_break_word(self, val: str) -> bool:
         """A bare word that TERMINATES a multi-word search run (#1) rather than
@@ -2382,67 +2482,17 @@ class _Parser:
         col = base + (".search" if stemmed else ".search.exact")
         has_wildcard = "*" in text or "?" in text
         self._skip_annot()
-        # proximity: within N words [of ...]
+        # `within` is now ONLY the leading list operator `within N (a, b, ...)` (oxjob
+        # #514), intercepted before the atom in _parse_search_value / _parse_search_operand.
+        # A `within` TRAILING an atom is the removed suffix form (`"foo bar" within 3
+        # words`, `"a" within 3 words of "b"`) — reject loudly with a pointer to the new
+        # surface. (The OXURL `~` notation is unaffected; this is the OQL surface only.)
         if self.word_is("within"):
-            self.next()
-            nt = self.peek()
-            if not nt or nt.kind != "WORD" or not nt.val.isdigit():
-                raise oql_error("OQL_BAD_PROXIMITY", 'expected a number after "within"',
-                               'e.g. within 3 words', nt.pos if nt else None)
-            n = int(nt.val)
-            self.next()
-            if not self.word_is("words", "word"):
-                raise oql_error("OQL_BAD_PROXIMITY", 'expected "words" after the number',
-                               'e.g. within 3 words')
-            self.next()
-            if self.word_is("of"):
-                # Binary proximity `"A" within N words of "B"` — two SEPARATE quoted
-                # operands NEAR each other (WoS `NEAR/N`). The engine compiles it to an
-                # ES `intervals` query with one sub-interval per operand (oxjob #355
-                # Goal B); `match_phrase`+slop can't express it (slop is whole-phrase).
-                self.next()
-                bt = self.peek()
-                if bt is None or bt.kind != "STRING":
-                    raise oql_error("OQL_BINARY_PROXIMITY_NEEDS_PHRASES",
-                                   'binary proximity needs a quoted phrase after "of"',
-                                   'e.g. "smart" within 3 words of "phone"',
-                                   bt.pos if bt else None)
-                right = bt.val
-                self.next()
-                # Binary proximity is exact-only (both operands quoted, no-stem). `near`
-                # (stemmed) on operand A is not supported here.
-                if not phrase or stemmed_phrase:
-                    raise oql_error("OQL_BINARY_PROXIMITY_NEEDS_PHRASES",
-                                   'binary proximity needs two quoted phrases',
-                                   'e.g. "smart" within 3 words of "phone"', t.pos)
-                # Validate each wildcard token's shape across BOTH operands (keep #337's
-                # leading/short-prefix rejections), then the shared expansion budget
-                # (#355 guard) across all tokens in the one intervals query.
-                words = text.split() + right.split()
-                for word in words:
-                    _validate_wildcards(word, t.pos)
-                _validate_wildcard_budget(words, t.pos)
-                return LeafFilter(base + ".search.exact",
-                                  f'"{text}"~{n}~"{right}"', "has")
-            # A bare (unquoted) wildcard token can't carry proximity
-            # (e.g. `smart* within 3 words`).
-            if has_wildcard and not phrase:
-                raise oql_error("OQL_WILDCARD_IN_PROXIMITY",
-                               'a wildcard cannot be combined with proximity',
-                               'drop the wildcard, or drop "within N words"', t.pos)
-            if not phrase or len(text.split()) < 2:
-                raise oql_error("OQL_PROXIMITY_NEEDS_PHRASE",
-                               'proximity needs a quoted multi-word phrase',
-                               'e.g. "smart phone" within 3 words', t.pos)
-            # A wildcard inside a quoted proximity phrase IS supported (oxjob #355): the
-            # engine compiles it to an ES `intervals` query (trailing-prefix -> prefix
-            # rule, mid-word `?` -> wildcard rule). Validate each wildcard token's shape
-            # so #337's leading/short-prefix rejections still hold inside the phrase.
-            if has_wildcard:
-                for word in text.split():
-                    _validate_wildcards(word, t.pos)
-                _validate_wildcard_budget(text.split(), t.pos)
-            return LeafFilter(col, f'"{text}"~{n}', "has")
+            raise oql_error("OQL_PROXIMITY_SUFFIX_REMOVED",
+                           'proximity is written `within N (a, b, ...)` BEFORE the terms, '
+                           'not after them',
+                           'e.g. within 3 ("smart", "phone")',
+                           self.peek().pos)
         # #364: outside a proximity phrase, a wildcard must run on exact (no-stem)
         # text — stemming at index time removes the literal prefix, so a wildcard
         # on a stemmed field is silently wrong (`studies*` = 2.4k stemmed vs 2.2M
@@ -2684,22 +2734,30 @@ def _is_search_leaf(f) -> bool:
 
 def _render_term(value: str, column: str) -> str:
     """OQL surface form of one search value, given its column:
-      .search (stemmed):       bare word | near "phrase" | near "phrase" within N words
-      .search.exact (exact):   "word"    | "phrase"      | "phrase" within N words
+      .search (stemmed):       bare word | near "phrase" | within N (a, b, ...)
+      .search.exact (exact):   "word"    | "phrase"      | within N ("a", "b", ...)
     """
     stemmed = not column.endswith(".search.exact")  # .search (and anything else) stems
-    # Binary proximity `"A"~N~"B"` -> `"A" within N words of "B"` (oxjob #355 Goal B).
-    # Check before the single-phrase form below (whose regex won't match a value that
-    # ends in a quote, but keep binary first for clarity). Binary is exact-only.
-    _units = lambda n: "word" if n == "1" else "words"  # noqa: E731 (grammar: 'word'|'words')
-    binp = re.match(r'^"([^"]*)"~(\d+)~"([^"]*)"$', value or "")
-    if binp:
-        return (f'"{binp.group(1)}" within {binp.group(2)} {_units(binp.group(2))} '
-                f'of "{binp.group(3)}"')
+    # List / binary proximity `"a"~N~"b"[~"c"...]` -> `within N (a, b, ...)` (oxjob #514;
+    # the ONE proximity surface, K operands NEAR each other). Operands render bare on a
+    # stemmed column, quoted on an exact column — reconstructing the input quoting. Binary
+    # (K=2) is the same value shape the OXURL `~` surface uses; rendering it as the list
+    # form is intentional (the old `within N words of` suffix surface is gone).
+    lst = re.match(r'^"[^"]*"~(\d+)(?:~"[^"]*")+$', value or "")
+    if lst:
+        slop = lst.group(1)
+        operands = re.findall(r'"([^"]*)"', value)
+        items = [op if stemmed else f'"{op}"' for op in operands]
+        return f'within {slop} ({", ".join(items)})'
+    # Single-phrase slop `"P"~N` is OXURL-only now (the OQL suffix form was removed). It
+    # is reachable only from a URL-authored OQO; render the equivalent list form by
+    # splitting the phrase into operands. This is intentionally lossy (it re-parses to the
+    # binary `~N~` form) — single-phrase slop has no round-tripping OQL surface (#514).
     prox = re.match(r'^"(.+)"~(\d+)$', value or "")
     if prox:
-        body = f'"{prox.group(1)}" within {prox.group(2)} {_units(prox.group(2))}'
-        return f"near {body}" if stemmed else body
+        slop = prox.group(2)
+        items = [w if stemmed else f'"{w}"' for w in prox.group(1).split()]
+        return f'within {slop} ({", ".join(items)})'
     if value.startswith('"') and value.endswith('"') and len(value) >= 2:  # multi-word phrase
         return f"near {value}" if stemmed else value
     if not stemmed:
