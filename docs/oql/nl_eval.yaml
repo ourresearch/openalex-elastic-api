@@ -161,7 +161,7 @@ cases:
 # ---------------------------------------------------------------------------
 # D. Proximity & wildcards  (corpus rows 21–32) — arcane by nature.
 # ---------------------------------------------------------------------------
-- ref: 21  # title has "smart phone" within 3 words  (EXACT proximity)
+- ref: 28  # title has within 3 ("smart", "phone")  (EXACT list proximity; oxjob #514, was ref 21)
   nl:
     - {text: 'title has "smart" and "phone" within 3 words of each other, exact', difficulty: hard}
     - {text: "papers where the exact words smart and phone appear within three words in the title, no stemming", difficulty: hard}
@@ -185,7 +185,7 @@ cases:
     - {text: 'exact phrase "machine learning" in title or abstract', difficulty: hard}
     - {text: "title/abstract: machine learning as an exact phrase, no stemming", difficulty: hard}
 
-- ref: 32 # title has near "smart phone" within 3 words  (STEMMED proximity)
+- ref: 188 # title has within 3 (smart, phone)  (STEMMED list proximity; oxjob #514, was ref 32)
   nl:
     - {text: 'title has "smart phone" within 3 words, allowing stemmed forms', difficulty: hard}
     - {text: "stemmed proximity of smart phone within three words in the title", difficulty: hard}

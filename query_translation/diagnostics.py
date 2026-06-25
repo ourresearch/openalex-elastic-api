@@ -200,18 +200,10 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_PROXIMITY_MIXED_OPERANDS", ERROR, PARSE,
               "proximity operands must be all bare (stemmed) or all quoted (exact)",
               'quote every operand or none, e.g. within 3 ("smart", "phone")'),
-        # Legacy proximity diagnostics (suffix `within N words` / binary `of` forms,
-        # removed from the OQL surface in oxjob #514) — kept registered for any external
-        # reference; no longer raised by the parser.
-        _spec("OQL_BINARY_PROXIMITY_NEEDS_PHRASES", ERROR, PARSE,
-              "binary proximity requires exact-quoted phrases on both sides",
-              'e.g. within 5 ("machine learning", "health")'),
-        _spec("OQL_PROXIMITY_NEEDS_PHRASE", ERROR, PARSE,
-              "proximity needs a phrase (quoted or multi-word)",
-              'quote the phrase, e.g. within 5 ("climate change", "policy")'),
-        _spec("OQL_WILDCARD_IN_PROXIMITY", ERROR, PARSE,
-              "wildcards are not allowed inside a proximity search",
-              "remove the * / ? from the proximity phrase"),
+        # (The legacy suffix-form proximity codes — OQL_BINARY_PROXIMITY_NEEDS_PHRASES,
+        # OQL_PROXIMITY_NEEDS_PHRASE, OQL_WILDCARD_IN_PROXIMITY — were removed with the
+        # `within N words` / `of` surface in oxjob #514; the no-orphan-codes gate requires
+        # every registered PARSE code to be raised, so they are not kept as dead specs.)
         _spec("OQL_WILDCARD_NEEDS_EXACT", ERROR, PARSE,
               "a bare wildcard term needs exact (non-stemmed) matching",
               'quote it, or use "exactly", so the wildcard is not stemmed'),
