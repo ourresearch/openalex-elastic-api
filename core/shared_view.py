@@ -204,8 +204,30 @@ def set_cursor_pagination(params, s):
     return s
 
 
+def citation_boost_needed(params):
+    """Whether the citation boost can affect the response.
+
+    The boost only matters when results are ranked by relevance _score. When the
+    response can't read _score for ordering (aggregation, sample-as-filter, or an
+    explicit non-relevance sort), wrapping the query in citation_boost_query is
+    wasted scoring work — skip it. See oxjob #520.
+    """
+    if params["group_by"]:
+        # aggregation, size=0 → hits not returned, _score never read
+        return False
+    if params["sample"]:
+        # search applied as filter; ordering is random_score
+        return False
+    if params["sort"]:
+        # explicit sort overrides relevance unless it asks for relevance_score
+        return "relevance_score" in params["sort"]
+    # no sort + search → default sort leads with _score
+    return True
+
+
 def add_search_query(params, index_name, s):
     searches = params.get("searches", [])
+    skip_boost = not citation_boost_needed(params)
 
     if len(searches) <= 1:
         # Single search (or no search) — existing behavior unchanged
@@ -234,12 +256,17 @@ def add_search_query(params, index_name, s):
 
             if search_scope:
                 search_query = scoped_search_query(
-                    search_str, search_scope, search_type
+                    search_str, search_scope, search_type,
+                    skip_citation_boost=skip_boost,
                 )
             elif search_type == "exact" and index_name.lower().startswith("works"):
-                search_query = full_search_query_exact(search_str)
+                search_query = full_search_query_exact(
+                    search_str, skip_citation_boost=skip_boost
+                )
             else:
-                search_query = full_search_query(index_name, search_str)
+                search_query = full_search_query(
+                    index_name, search_str, skip_citation_boost=skip_boost
+                )
 
             if params["sample"]:
                 s = s.filter(search_query)
@@ -293,12 +320,13 @@ def add_search_query(params, index_name, s):
         return s
 
     combined = Q("bool", must=sub_queries)
-    boosted = SearchOpenAlex.citation_boost_query(combined)
+    # Only pay for citation scoring when _score actually drives ordering (#520).
+    query = combined if skip_boost else SearchOpenAlex.citation_boost_query(combined)
 
     if params["sample"]:
-        s = s.filter(boosted)
+        s = s.filter(query)
     else:
-        s = s.query(boosted)
+        s = s.query(query)
 
     s = s.params(preference=combine_preferences(preference_parts))
     return s
