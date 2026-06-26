@@ -533,8 +533,10 @@ def add_highlighting(params, index_name, s):
 def execute_search(s, params):
     paginate = get_pagination(params)
 
-    # Add query timeout to prevent long-running queries
-    s = s.params(timeout='10s')
+    # Add query timeout to prevent long-running queries (oxjob #521: 10s -> 5s).
+    # Soft/best-effort ES timeout: returns partial results with timed_out=true rather
+    # than hard-cancelling. Applies to both search and group_by aggregations below.
+    s = s.params(timeout='5s')
 
     if params["group_by"]:
         return s.execute()
@@ -594,6 +596,11 @@ def format_meta(response, params, s):
         if params["group_by"]
         else None,
     }
+
+    # oxjob #521: surface partial results when the 5s ES timeout fires, so callers
+    # don't treat an incomplete result/count as authoritative.
+    if getattr(response, "timed_out", False):
+        meta["timed_out"] = True
 
     if params.get("cursor"):
         meta["next_cursor"] = get_next_cursor(params, response)
