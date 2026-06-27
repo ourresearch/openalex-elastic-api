@@ -60,8 +60,8 @@ TABLE = [
     # after a complete clause -> connective
     ("works where year > 2000 ", None, C.CONNECTIVE, {}),
     ("works where institution is I27837315 ", None, C.CONNECTIVE, {}),
-    # boolean "it's ..." clause
-    ("works where it's ", None, C.VALUE, {"value_kind": "bool"}),
+    # boolean clause: after `<bool> is` the value slot wants true/false (oxjob #363)
+    ("works where retracted is ", None, C.VALUE, {"value_kind": "bool"}),
     # connective then new field
     ("works where year > 2000 and ti", None, C.FIELD, {"prefix": "ti"}),
     # Under the parens-bag grammar (#363) `title has foo` is a complete
@@ -257,7 +257,7 @@ _FUZZ_QUERIES = [
     "works where abstract is similar to \"machine learning\"",
     'works where title has "smart phone" within 3 words',
     "works where (year >= 2020 and is_oa is true) or type is review",
-    "works where it's open access and it has a DOI",
+    "works where open access is true and has DOI is true",
     "authors where works_count > 100",
     "works group by type sample 50",
     "works where title has foo and (climate or warming)",
@@ -342,8 +342,9 @@ def test_post_connective_paren_sibling_value_range_covers_list():
 
 
 def test_post_connective_no_sibling_for_bool_clause():
-    # `it's open access` has no enum value list to extend -> FIELD, but no sibling.
-    c = ctx("works where it's open access or ")
+    # a boolean's value is just true/false — no enum value list to extend, so the
+    # post-connective slot is a plain FIELD with no sibling (oxjob #363).
+    c = ctx("works where open access is true or ")
     assert c["category"] == C.FIELD
     assert c["after_connective"] == "or"
     assert "sibling" not in c

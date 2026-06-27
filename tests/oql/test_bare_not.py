@@ -138,10 +138,13 @@ def test_top_level_not_of_an_or_pushes_to_per_leaf_bare_nots():
         == "works where country is not FR and type is not article"
 
 
-# --- booleans keep the natural verb flip (no value to prefix) --------------- #
+# --- booleans render as `<name> is true|false` (oxjob #363) ----------------- #
 
-def test_booleans_keep_natural_flip():
-    assert _identity("works where it's not open access") \
-        == "works where it's not open access"
-    assert _identity("works where it doesn't have a DOI") \
-        == "works where it doesn't have a DOI"
+def test_booleans_render_as_true_false():
+    # Negation folds into the value, so the canonical form is `is true` / `is false`.
+    assert _identity("works where open access is false") \
+        == "works where open access is false"
+    assert _identity("works where has DOI is false") \
+        == "works where has DOI is false"
+    assert _identity("works where retracted is not true") \
+        == "works where retracted is false"

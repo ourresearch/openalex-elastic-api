@@ -115,7 +115,7 @@ def test_canonical_output_is_lowercase_infix_connectives():
     from tests.oql.oql_v2 import parse as p, render as r
     # decision 32 revert: every boolean group renders in the infix `and`/`or`
     # parens form; the connectives are lowercase regardless of input casing.
-    out = r(canonicalize_oqo(p("works where it's open access AND (institution is I1 OR type is article)")))
+    out = r(canonicalize_oqo(p("works where open access is true AND (institution is I1 OR type is article)")))
     assert " and " in out and " or " in out
     assert "(institution is I1 or type is article)" in out
     assert " AND " not in out and " OR " not in out
@@ -131,12 +131,12 @@ def test_renderer_resolves_display_names_for_id_and_country_columns():
     assert "[SHOULD-NOT-APPEAR]" not in out   # readable slug (article) does NOT
 
 
-def test_search_model_space_quotes_near():
+def test_search_model_space_quotes_stemmed():
     """Lock the v2 search model under the #363 grammar after the D2 reversal
     (oxjob #363, discovery run #3): a maximal run of bare words inside a group is
     ONE stemmed adjacency-boosted node (NOT per-word AND); explicit and/or/not
     build the tree; 2+ bare terms at top level still must be parenthesized;
-    quotes=exact, near=stemmed phrase."""
+    quotes=exact, stemmed="..." phrase."""
     from tests.oql.oql_v2 import parse as p, OQLError
     rows = lambda oql: p(oql).to_dict()["filter_rows"]
 
@@ -157,7 +157,7 @@ def test_search_model_space_quotes_near():
     assert fr == [{"column_id": "display_name.search.exact", "value": '"climate change"', "operator": "has"}]
 
     # NEAR = stemmed adjacent phrase (.search, quoted value) — one atom, bare ok
-    fr = rows('works where title has near "whopper junior"')
+    fr = rows('works where title has stemmed "whopper junior"')
     assert fr == [{"column_id": "display_name.search", "value": '"whopper junior"', "operator": "has"}]
 
     # an embedded QUOTED token is an escape — a literal stemmed word folded into

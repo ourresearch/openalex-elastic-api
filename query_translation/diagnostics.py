@@ -146,9 +146,9 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("OQL_CONTAINS_RENAMED", ERROR, PARSE,
               "the `contains` operator was renamed to `has` (#363 decision 27)",
               "use `has`, e.g. title has machine learning"),
-        _spec("OQL_UNKNOWN_BOOLEAN", ERROR, PARSE,
-              'an "it\'s ..."/"it has ..." phrase names no known boolean property',
-              'e.g. "it\'s open access", "it has a DOI"'),
+        _spec("OQL_BAD_BOOL_VALUE", ERROR, PARSE,
+              "a yes/no (boolean) property takes only `true` or `false`",
+              "e.g. retracted is true, open access is false"),
         # -- values ---------------------------------------------------------------
         _spec("OQL_MISSING_VALUE", ERROR, PARSE,
               "a value is expected after the operator",

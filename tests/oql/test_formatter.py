@@ -105,17 +105,17 @@ OK_ROWS = [r for r in ROWS if r["status"] in ("ok", "hint")]
 # ---------------------------------------------------------------------------
 GOLDENS = {
     # (a) short query stays inline (implicit-AND infix body, decision 32 revert)
-    "works where it's open access and type is article":
-        "works where it's open access and type is article",
+    "works where open access is true and type is article":
+        "works where open access is true and type is article",
 
     # (b) medium query explodes: the implicit-AND body lays out one clause per
     # line with a leading `and ` connective (the entity head stays on the
     # `where` line, oxjob #363).
-    "works where it's open access and publication_year >= 2020 and type is "
+    "works where open access is true and publication_year >= 2020 and type is "
     "article and has_doi is true and language is en":
-        "works where it has a DOI\n"
+        "works where has DOI is true\n"
         "  and language is en\n"
-        "  and it's open access\n"
+        "  and open access is true\n"
         "  and year >= 2020\n"
         "  and type is article",
 
@@ -149,10 +149,10 @@ GOLDENS = {
     # (f) directives on their own lines at col 0. Input keeps the legacy `;`
     # separators to prove the parser still accepts them (back-compat); the
     # canonical output drops them (oxjob #377). The body is an implicit-AND list.
-    "works where it's open access and publication_year >= 2020 and type is "
+    "works where open access is true and publication_year >= 2020 and type is "
     "article and language is en ; group by publication_year ; sample 100":
         "works where language is en\n"
-        "  and it's open access\n"
+        "  and open access is true\n"
         "  and year >= 2020\n"
         "  and type is article\n"
         "group by year\n"

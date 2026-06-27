@@ -56,10 +56,10 @@ NONE = CTX_NONE
 _DIRECTIVE_WORDS = {"where", "group", "sample"}
 
 # Operators offered per field kind, in canonical OQL spelling (mirrors the shapes
-# `match_operator` accepts; `within N words` / `near "..."` are search-value modes).
+# `match_operator` accepts; `within N words` / `stemmed "..."` are search-value modes).
 KIND_OPERATORS: Dict[str, List[str]] = {
-    "search": ["has", "does not have", "near", "is similar to"],
-    "bool":   [],  # surfaced via the "it's ..." phrasings instead
+    "search": ["has", "does not have", "stemmed", "is similar to"],
+    "bool":   ["is", "is not"],  # `<name> is true|false` (oxjob #363)
     "num":    ["is", "is not", ">", ">=", "<", "<=", "is unknown"],
     # lists are written with parentheses now (#363): `is (a or b)` — the `any of`/
     # `is in` list keywords were removed, so they're no longer suggested.
@@ -137,31 +137,20 @@ def _entity_suggestions(prefix: str) -> List[Dict[str, str]]:
 
 
 def _field_suggestions() -> List[Dict[str, str]]:
-    """Canonical field spellings + the bool 'it's ...' openers (from _FIELDS)."""
+    """Canonical field spellings (from _FIELDS). Booleans are plain fields now —
+    `<name> is true|false` — so they need no separate phrase openers (oxjob #363)."""
     out, seen = [], set()
     for _spellings, fld in _FIELDS:
         if fld.oql not in seen:
             seen.add(fld.oql)
             out.append({"value": fld.oql, "kind": "field"})
-    for _spellings, fld in _FIELDS:
-        if fld.kind == "bool" and fld.bool_true:
-            out.append({"value": fld.bool_true, "kind": "bool-phrase"})
     return out
 
 
-def _bool_phrase_suggestions() -> List[Dict[str, str]]:
-    out = []
-    for _spellings, fld in _FIELDS:
-        if fld.kind == "bool":
-            # the phrase tail after "it's"/"it" — e.g. "open access", "retracted"
-            if fld.bool_true:
-                tail = fld.bool_true
-                for pre in ("it's ", "it "):
-                    if tail.startswith(pre):
-                        tail = tail[len(pre):]
-                        break
-                out.append({"value": tail, "kind": "bool-phrase"})
-    return out
+def _bool_value_suggestions() -> List[Dict[str, str]]:
+    """The two values a boolean clause can take (oxjob #363)."""
+    return [{"value": "true", "kind": "bool-value"},
+            {"value": "false", "kind": "bool-value"}]
 
 
 def _value_context(category, fld: Field, in_list=False) -> Dict[str, Any]:
@@ -179,6 +168,8 @@ def _value_context(category, fld: Field, in_list=False) -> Dict[str, Any]:
         ctx["autocomplete_entity"] = _COLUMN_AUTOCOMPLETE_ENTITY.get(fld.column)
     if fld.kind in ("num", "id", "enum", "string"):
         ctx["suggestions"] = [{"value": "unknown", "kind": "value-keyword"}]
+    if fld.kind == "bool":
+        ctx["suggestions"] = _bool_value_suggestions()
     return ctx
 
 
@@ -240,9 +231,9 @@ def _shape(raw: Dict[str, Any]) -> Dict[str, Any]:
             return _value_context(VALUE, fld, in_list=raw.get("in_list", False))
         kind = raw.get("kind")
         if kind == "bool":
-            return {"category": VALUE, "value_kind": "bool", "field": "it's",
+            return {"category": VALUE, "value_kind": "bool", "field": None,
                     "operators": [], "autocomplete_entity": None,
-                    "suggestions": _bool_phrase_suggestions()}
+                    "suggestions": _bool_value_suggestions()}
         # kind-only value slot (e.g. `sample N`)
         return {"category": VALUE, "value_kind": kind, "field": raw.get("field"),
                 "operators": [], "autocomplete_entity": None, "suggestions": []}

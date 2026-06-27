@@ -249,20 +249,15 @@ def _flat_tokens(tree: dict) -> list:
                         tok["column_id"] = m["column_id"]
                     if "value" in m:
                         tok["value"] = m["value"]
-                    # A boolean clause is one human phrase ("it's open access"). Surface
-                    # it as an INTERACTIVE value brick the builder can toggle (a click
-                    # flips negation -> the opposite phrase), not inert keyword chrome
-                    # (oxjob #428 boolean-filter feedback).
-                    if ck == "boolean" and kind == "keyword":
-                        # `negated` reflects the DISPLAYED phrase, not the raw leaf
-                        # bit: the canonicalizer folds `it's not …` into value=false,
-                        # so the effective truth is value XOR is_negated.
-                        effective = bool(leaf.get("value")) != neg
+                    # A boolean clause is now a plain `<name> is true|false` (oxjob
+                    # #363). Surface its true/false value segment as an interactive
+                    # boolean-kind value brick the builder can toggle; negation is
+                    # already folded into the value at render, so the brick is never
+                    # negated and there is no separate `not`.
+                    if ck == "boolean" and kind == "value":
                         tok["t"] = "vbrick"
-                        tok["bool_phrase"] = True
-                        tok["value"] = leaf.get("value")
-                        tok["negated"] = not effective
                         tok["kind"] = "boolean"
+                        tok["value"] = (s.get("meta") or {}).get("value")
                     # Predicate-level negation is no longer part of OQL (decision 23):
                     # the one render still emitting `is not` is the generic entity/other
                     # `is` path. Move the `not` onto the VALUE brick so the builder shows
@@ -392,9 +387,9 @@ def render_v2(oqo: OQO, resolver=None) -> dict:
             # A simple (non-factored) clause's scalar value is its `.1` child, but it
             # rides the clause node — so a value brick there addresses .1, while the
             # field/operator tokens address the clause. Factored values are their own
-            # vleaf nodes (already value-level); a boolean is atomic (no value).
-            if (tok.get("t") == "vbrick" and node["node"] == "clause"
-                    and node.get("clause_kind") != "boolean"):
+            # vleaf nodes (already value-level). A boolean's true/false brick is an
+            # ordinary `.1` value too now (oxjob #363).
+            if tok.get("t") == "vbrick" and node["node"] == "clause":
                 addr = addr + [1]
             tok["addr"] = dotted(addr)
     return tree
@@ -442,9 +437,8 @@ def _addr_field_label(n: dict) -> str:
 
 def _addr_scalar_value(n: dict):
     """The displayed value token of a simple (non-factored) leaf, or None when
-    there is none (a boolean flag — atomic). Null renders its `unknown` token."""
-    if n.get("clause_kind") == "boolean":
-        return None
+    there is none. A boolean is now `<name> is true|false`, so its true/false token
+    is addressable like any other value (oxjob #363). Null renders `unknown`."""
     for s in n.get("segments", []):
         if s["kind"] == "value":
             return s["text"]
@@ -480,10 +474,8 @@ def address_index(tree: dict) -> list:
 
     def walk_expr(n, base):
         if n["node"] == "clause":
-            if n.get("clause_kind") == "boolean":     # atomic — one fused phrase
-                emit(base, "clause",
-                     "".join(s["text"] for s in n.get("segments", [])), n)
-                return
+            # A boolean is an ordinary `<name> is true|false` clause now (oxjob
+            # #363): field at .0, true/false value at .1 — same as any value clause.
             emit(base, "clause",
                  f"{n.get('column')} {n.get('operator') or ''}".strip(), n)
             emit(base + (0,), "field", _addr_field_label(n))

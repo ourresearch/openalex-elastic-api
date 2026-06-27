@@ -53,7 +53,7 @@ def test_corpus_has_required_addr_shapes():
                for r in _ADDR_ROWS
                for e in address_index(build_tree(parse(r["oql"])))
                for seg in e["addr"])
-    assert "it has an ORCID" in joined or "open access" in joined  # a boolean
+    assert "has ORCID is" in joined or "open access is" in joined  # a boolean
 
 
 @pytest.mark.parametrize("row", _ADDR_ROWS, ids=[r["id"] for r in _ADDR_ROWS])
@@ -68,14 +68,14 @@ def test_corpus_addr_reproduces(row):
 # --------------------------------------------------------------------------- #
 
 WORKED_EXAMPLE = (
-    "works where title has animal and it's open access "
+    "works where title has animal and open access is true "
     "and (institution is (I33213144 or I97018004) or type is article) "
     "and full text has ((dog or cat) and (play or jump))"
 )
 WORKED_EXPECTED = [
     "0 and",
     "1 title has", "1.0 title", "1.1 animal",
-    "2 it's open access",                       # boolean: atomic, no .0/.1
+    "2 open access is", "2.0 open access", "2.1 true",   # boolean: ordinary field/value
     "3 ( … )", "3.0 or",
     "3.1 institution is", "3.1.0 institution", "3.1.1 I33213144", "3.1.2 I97018004",
     "3.2 type is", "3.2.0 type", "3.2.1 article",
@@ -89,13 +89,15 @@ def test_worked_example():
     assert _index_lines(WORKED_EXAMPLE) == WORKED_EXPECTED
 
 
-def test_boolean_is_atomic():
-    # Both polarities; each flag is a single fused node with no .0/.1.
-    assert _index_lines("works where it's open access and it doesn't have a DOI") == [
-        "0 and", "1 it's open access", "2 it doesn't have a DOI",
+def test_boolean_is_addressable():
+    # Booleans are ordinary `<name> is true|false` clauses now (oxjob #363): the
+    # field is .0 and the true/false value is .1 — no longer a fused atomic node.
+    assert _index_lines("works where open access is true") == [
+        "1 open access is", "1.0 open access", "1.1 true",
     ]
-    # A single flag has no root conjunction (no `0`).
-    assert _index_lines("works where it's open access") == ["1 it's open access"]
+    assert _index_lines("works where retracted is false") == [
+        "1 retracted is", "1.0 retracted", "1.1 false",
+    ]
 
 
 def test_merged_not_distributed():

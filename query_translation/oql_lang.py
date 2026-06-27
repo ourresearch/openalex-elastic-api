@@ -71,8 +71,6 @@ class Field:
     column: str          # base column (search) or full column_id (non-search)
     kind: str
     oql: str             # canonical OQL spelling for rendering
-    bool_true: str = ""  # human phrasing for value=true   (bool kind)
-    bool_false: str = "" # human phrasing for value=false  (bool kind)
     casing: str = ""     # '' | 'lower' | 'upper'
     resolves_name: bool = False
     is_float: bool = False  # num kind: True = decimals allowed (fwci); False = integer
@@ -97,15 +95,15 @@ class Field:
 _FIELDS: List[Tuple[List[str], Field]] = []  # (alias-spellings, Field)
 
 
-def _f(oql, column, kind, aliases=(), bool_true="", bool_false="",
+def _f(oql, column, kind, aliases=(),
        casing=None, resolves_name=None, is_float=False,
        date_from_col="", date_to_col="", date_axis="", date_bound=""):
     if casing is None:
         casing = "lower" if kind == "enum" else ""
     if resolves_name is None:
         resolves_name = (kind == "id")
-    fld = Field(column=column, kind=kind, oql=oql, bool_true=bool_true,
-                bool_false=bool_false, casing=casing, resolves_name=resolves_name,
+    fld = Field(column=column, kind=kind, oql=oql, casing=casing,
+                resolves_name=resolves_name,
                 is_float=is_float, date_from_col=date_from_col, date_to_col=date_to_col,
                 date_axis=date_axis, date_bound=date_bound)
     spellings = [oql] + list(aliases)
@@ -130,9 +128,10 @@ def _canon_value_case(value, fld: "Field"):
 # `/properties` catalog, docs), which is exactly why it's the right place to fix.
 #
 # `_FIELDS` exists ONLY for OQL's parse/render *mechanics* that the engine registry
-# doesn't model: the `kind` (search/id/enum/num/string), value `casing`,
-# `resolves_name`, the `.search` mode encoding, and the boolean sentence templates
-# (`bool_true`/`bool_false`). The *column a word resolves to per entity* is derived
+# doesn't model: the `kind` (search/id/enum/num/string/bool), value `casing`,
+# `resolves_name`, and the `.search` mode encoding. (Booleans render as a plain
+# `<name> is true|false` clause — no sentence templates.) The *column a word resolves
+# to per entity* is derived
 # from the registry at parse time (`_entity_resolve_field`) and render time
 # (`_augment_by_column_for_homonyms`) — NOT hand-mapped here.
 #
@@ -226,33 +225,21 @@ _f("to_created_date", "to_created_date", "date", date_axis="created date", date_
 _f("from_updated_date", "from_updated_date", "date", date_axis="updated date", date_bound=">=")
 _f("to_updated_date", "to_updated_date", "date", date_axis="updated date", date_bound="<=")
 
-# --- booleans ---
-_f("open access", "open_access.is_oa", "bool",
-   bool_true="it's open access", bool_false="it's not open access")
-_f("from global south", "institutions.is_global_south", "bool",
-   bool_true="it's from the global south", bool_false="it's not from the global south")
-_f("retracted", "is_retracted", "bool",
-   bool_true="it's retracted", bool_false="it's not retracted")
-_f("has a DOI", "has_doi", "bool",
-   bool_true="it has a DOI", bool_false="it doesn't have a DOI")
-_f("has an ORCID", "has_orcid", "bool",
-   bool_true="it has an ORCID", bool_false="it doesn't have an ORCID")
+# --- booleans (oxjob #363) ---
+# Booleans are ordinary subject-predicate-value clauses: `<name> is true|false`
+# (the old "it's …"/"it has …" special case was removed). The render word is the
+# Field.oql below AND the registry display_name (core/display_names.py) — kept in
+# lockstep so OQL, /properties, and the GUI builder all show the same noun.
+_f("open access", "open_access.is_oa", "bool")
+_f("global south", "institutions.is_global_south", "bool")
+_f("retracted", "is_retracted", "bool")
+_f("has DOI", "has_doi", "bool")
+_f("has ORCID", "has_orcid", "bool")
 # Full text available in some open repository (engine open_access.any_repository_has_fulltext).
-# Booleans render via their phrasing (gate-exempt from the registry display_name). (#363 case 6)
-# The bool clause parser maps the phrase AFTER the "it's"/"it has" prefix back to
-# a field via its aliases, so the post-prefix phrasing is registered as an alias
-# (so the rendered bool_true round-trips). Booleans are gate-exempt, so the extra
-# spellings are free.
-_f("has repository fulltext", "open_access.any_repository_has_fulltext", "bool",
-   aliases=["fulltext in a repository"],
-   bool_true="it has fulltext in a repository", bool_false="it doesn't have fulltext in a repository")
+_f("has repository fulltext", "open_access.any_repository_has_fulltext", "bool")
 # Citation-percentile band flags (subfield+year normalized). (#363 case 4 siblings)
-_f("in top 1% by citations", "citation_normalized_percentile.is_in_top_1_percent", "bool",
-   aliases=["in the top 1% by citations"],
-   bool_true="it's in the top 1% by citations", bool_false="it's not in the top 1% by citations")
-_f("in top 10% by citations", "citation_normalized_percentile.is_in_top_10_percent", "bool",
-   aliases=["in the top 10% by citations"],
-   bool_true="it's in the top 10% by citations", bool_false="it's not in the top 10% by citations")
+_f("top 1% cited", "citation_normalized_percentile.is_in_top_1_percent", "bool")
+_f("top 10% cited", "citation_normalized_percentile.is_in_top_10_percent", "bool")
 
 # --- ids (entity references) ---
 _f("institution", "authorships.institutions.lineage", "id")
@@ -385,151 +372,53 @@ _f("authors count", "authors_count", "num")
 _f("locations count", "locations_count", "num")
 
 # --- oxjob #402 booleans (content / identifier / index flags) ---
-# Booleans are GATE-EXEMPT (the registry-consistency gate skips bool fields on all
-# three checks), so they need no core/display_names.py edit and no PROPERTIES_VERSION
-# bump — just a natural OQL phrasing that round-trips via bool_true/bool_false. The
-# OA/location-mirror booleans (primary_location.*/best_oa_location.*/locations.*/
-# is_oa/has_oa_*/has_content.pdf) are deliberately NOT here — they belong to the
-# resolved location/OA matrix batch. The corresponding-author / global-south mirror
-# bools are deferred (naming/ownership call). Phrasings prefer the registry word
-# where it's already curated (e.g. "indexed by PubMed", "in extended index").
-# The bool-clause parser strips a leading "it[']s / it has / a / an / the / from"
-# and then matches the remainder (or "has " + remainder) against _ALIAS, requiring
-# kind=="bool". So each bool_true's post-strip remainder must be a registered bool
-# alias, and must NOT reuse a key already owned by a non-bool field — `abstract`
-# (search), `references` (id), `pmid`/`pmcid` (string ids) are taken, so we register
-# the "has …" form instead of the bare noun for those.
-_f("has an abstract", "has_abstract", "bool", aliases=["has abstract"],
-   bool_true="it has an abstract", bool_false="it doesn't have an abstract")
-_f("has references", "has_references", "bool",
-   bool_true="it has references", bool_false="it doesn't have references")
-_f("indexed by PubMed", "has_pmid", "bool", aliases=["has pmid"],
-   bool_true="it's indexed by PubMed", bool_false="it's not indexed by PubMed")
-_f("has a PMCID", "has_pmcid", "bool", aliases=["has pmcid"],
-   bool_true="it has a PMCID", bool_false="it doesn't have a PMCID")
-_f("indexed by MAG only", "mag_only", "bool",
-   bool_true="it's indexed by MAG only", bool_false="it's not indexed by MAG only")
-_f("in extended index", "is_xpac", "bool", aliases=["in the extended index"],
-   bool_true="it's in the extended index", bool_false="it's not in the extended index")
-_f("paratext", "is_paratext", "bool",
-   bool_true="it's paratext", bool_false="it's not paratext")
+# Plain subject-predicate-value bools: `<name> is true|false` (oxjob #363). The
+# render word (Field.oql) matches the registry display_name (core/display_names.py);
+# input aliases live there too, per the _FIELDS guardrail above.
+_f("has abstract", "has_abstract", "bool")
+_f("has references", "has_references", "bool")
+_f("PubMed", "has_pmid", "bool")
+_f("has PMCID", "has_pmcid", "bool")
+_f("MAG-only", "mag_only", "bool")
+_f("extended index", "is_xpac", "bool")
+_f("paratext", "is_paratext", "bool")
 
 # --- oxjob #402 Tier-1 open-access first-class columns ---
-# These are real-world OA questions, NOT mechanical location/source mirror variants,
-# so they keep clean first-class names (per the resolved "OA filterspace is THREE
-# tiers" decision in PLAN.md), not the "best OA …" / "any location …" scope prefixes.
-# All are gate-exempt (bools) or already carry a clean registry display_name, so this
-# is Front-B only — no core/display_names.py edit, no PROPERTIES_VERSION bump.
-# Folds: the raw `is_oa` / `oa_status` columns are the SAME question as the canonical
-# open_access.* fields (the OX API treats `is_oa` on /works as shorthand for
-# open_access.is_oa), so they join those fields as aliases (added above) rather than
-# minting parallel labels — which also drops them off the #363 raw fallback.
-# Strings with already-clean display_names:
 _f("best open version", "best_open_version", "string")
 _f("indexed in", "indexed_in", "string")
-# OA-version / content bools (gate-exempt — natural phrasing, round-trips via the
-# bool_true remainder). "open access accepted/published" = the work's best OA copy is
-# an accepted / published version.
-_f("linked to a PDF", "has_content.pdf", "bool",
-   bool_true="it's linked to a PDF", bool_false="it's not linked to a PDF")
-_f("open access accepted", "best_oa_location.is_accepted", "bool",
-   bool_true="it's open access accepted", bool_false="it's not open access accepted")
-_f("open access published", "best_oa_location.is_published", "bool",
-   bool_true="it's open access published", bool_false="it's not open access published")
-_f("has full text", "has_fulltext", "bool",
-   bool_true="it has full text", bool_false="it doesn't have full text")
+_f("PDF-linked", "has_content.pdf", "bool")
+_f("OA accepted", "best_oa_location.is_accepted", "bool")
+_f("OA published", "best_oa_location.is_published", "bool")
+# "full text" alone is the broad full-text SEARCH field; the availability flag keeps
+# the "has …" qualifier to avoid the _ALIAS collision (oxjob #363, Jason's call).
+_f("has full text", "has_fulltext", "bool")
 
 # --- oxjob #402 Tier-2 location/source mirror BOOLEANS ---
-# The mechanical mirror set's boolean half (the resolved location/OA matrix in PLAN.md).
-# Bools are GATE-EXEMPT, so each takes its matrix scope-word render label directly with NO
-# core/display_names.py edit and NO PROPERTIES_VERSION bump. Scope words: primary_location
-# unmarked ("primary …"), best_oa_location "best OA …", locations "any location …".
-# The matrix render word (fld.oql, e.g. "primary is OA") is the group-by / column label, but
-# the parser's bool clause is rigid `it's [not] <phrase>` — a noun-led "primary is OA" reads
-# badly there ("it's primary is OA"). So each bool also carries a GRAMMATICAL clause core as
-# an alias (article-free so it survives the parser's leading a/an/the strip and works after
-# both "it's" and "it's not"), and bool_true/bool_false use that core. Round-trips verified
-# (render -> parse -> same column) for every line below. The three DOAJ / two CWTS-core
-# variants get distinct cores so the scope twins don't collide on one _ALIAS key.
-_f("primary is OA", "primary_location.is_oa", "bool",
-   aliases=["open access in its primary location"],
-   bool_true="it's open access in its primary location",
-   bool_false="it's not open access in its primary location")
-_f("primary is published", "primary_location.is_published", "bool",
-   aliases=["published in its primary location"],
-   bool_true="it's published in its primary location",
-   bool_false="it's not published in its primary location")
-_f("primary is accepted", "primary_location.is_accepted", "bool",
-   aliases=["accepted in its primary location"],
-   bool_true="it's accepted in its primary location",
-   bool_false="it's not accepted in its primary location")
-_f("primary source has ISSN", "primary_location.source.has_issn", "bool",
-   aliases=["in a primary source with an ISSN"],
-   bool_true="it's in a primary source with an ISSN",
-   bool_false="it's not in a primary source with an ISSN")
-# primary source flags whose registry display_names are already curated/clean — keep verbatim
-# (matrix bold). Clause cores are grammatical "in a/an …"; the render word stays the canonical
-# matrix word for group-by.
-_f("CWTS core source", "primary_location.source.is_core", "bool",
-   aliases=["in a CWTS core source"],
-   bool_true="it's in a CWTS core source",
-   bool_false="it's not in a CWTS core source")
-_f("indexed by DOAJ", "primary_location.source.is_in_doaj", "bool",
-   bool_true="it's indexed by DOAJ",
-   bool_false="it's not indexed by DOAJ")
-_f("in OA source", "primary_location.source.is_oa", "bool",
-   aliases=["in an OA source"],
-   bool_true="it's in an OA source",
-   bool_false="it's not in an OA source")
-_f("best OA source indexed by DOAJ", "best_oa_location.source.is_in_doaj", "bool",
-   aliases=["indexed by DOAJ in its best OA source"],
-   bool_true="it's indexed by DOAJ in its best OA source",
-   bool_false="it's not indexed by DOAJ in its best OA source")
+# Scope words: primary_location unmarked ("primary …"), best_oa_location "best OA …",
+# locations "any location …". Names match the registry display_name.
+_f("primary OA", "primary_location.is_oa", "bool")
+_f("primary published", "primary_location.is_published", "bool")
+_f("primary accepted", "primary_location.is_accepted", "bool")
+_f("has ISSN", "primary_location.source.has_issn", "bool")
+_f("CWTS core", "primary_location.source.is_core", "bool")
+_f("DOAJ", "primary_location.source.is_in_doaj", "bool")
+_f("OA source", "primary_location.source.is_oa", "bool")
+_f("best OA source DOAJ", "best_oa_location.source.is_in_doaj", "bool")
 # --- non-works entity booleans (oxjob #406 1c) ---
-# GUI-faceted source booleans. These are the ONE legitimate exception to the
-# `_FIELDS` guardrail above: a bool's OQL render is a curated sentence
-# (`bool_true`/`bool_false`) the properties registry doesn't model, so it MUST live
-# here — the render word IS the engine display_name, but the phrasing is OQL's.
-# `is_oa` exists on works too (display_name "is oa"), so "fully open access" filters
-# both works.is_oa and sources.is_oa (sensible: the entity is fully OA); `is_in_doaj`
-# is sources-only, so it validates only there. The third source bool — `is_core`
-# ("CWTS core source") — is a HOMONYM of works' primary_location.source.is_core, so
-# it needs NO entry here: the bool clause parser entity-resolves the existing word to
-# the bare `is_core` column on sources (_entity_resolve_field).
-_f("fully open access", "is_oa", "bool",
-   aliases=["fully open access"],
-   bool_true="it's fully open access",
-   bool_false="it's not fully open access")
-_f("in DOAJ", "is_in_doaj", "bool",
-   aliases=["in DOAJ"],
-   bool_true="it's in DOAJ",
-   bool_false="it's not in DOAJ")
-_f("any location is OA", "locations.is_oa", "bool",
-   aliases=["open access in any location"],
-   bool_true="it's open access in any location",
-   bool_false="it's not open access in any location")
-_f("any location is published", "locations.is_published", "bool",
-   aliases=["published in any location"],
-   bool_true="it's published in any location",
-   bool_false="it's not published in any location")
-_f("any location is accepted", "locations.is_accepted", "bool",
-   aliases=["accepted in any location"],
-   bool_true="it's accepted in any location",
-   bool_false="it's not accepted in any location")
-_f("any location CWTS core source", "locations.source.is_core", "bool",
-   aliases=["in a CWTS core source in any location"],
-   bool_true="it's in a CWTS core source in any location",
-   bool_false="it's not in a CWTS core source in any location")
-_f("any location source indexed by DOAJ", "locations.source.is_in_doaj", "bool",
-   aliases=["indexed by DOAJ in any location"],
-   bool_true="it's indexed by DOAJ in any location",
-   bool_false="it's not indexed by DOAJ in any location")
-# Tier-1 OA-version promote (the or-free sibling of has_oa_accepted_or_published_version,
-# which stays on the fallback pending an or-free label — finding #3). "has X" template: the
-# parser reconstructs "has " + remainder == the field word, so no extra clause-core alias.
-_f("has OA submitted version", "has_oa_submitted_version", "bool",
-   bool_true="it has an OA submitted version",
-   bool_false="it doesn't have an OA submitted version")
+# `is_oa`/`is_in_doaj` are sources columns. "fully OA" (`is_oa`) also filters
+# works.is_oa. The "DOAJ" word is shared with works' primary_location.source.is_in_doaj
+# but on a DIFFERENT column — the entity resolver re-points it per entity (the
+# `_ALIAS["doaj"]` key is order-dependent but every query is entity-scoped). `is_core`
+# ("CWTS core") is a HOMONYM of works' primary_location.source.is_core — no entry
+# needed; the resolver maps the word to bare is_core on sources.
+_f("fully OA", "is_oa", "bool")
+_f("DOAJ", "is_in_doaj", "bool")
+_f("any location OA", "locations.is_oa", "bool")
+_f("any location published", "locations.is_published", "bool")
+_f("any location accepted", "locations.is_accepted", "bool")
+_f("any location CWTS core", "locations.source.is_core", "bool")
+_f("any location DOAJ", "locations.source.is_in_doaj", "bool")
+_f("submitted version OA", "has_oa_submitted_version", "bool")
 
 # --- oxjob #402 Tier-2 location/source mirror STRING / ENUM / ID cols ---
 # The mirror set's non-boolean half. These had raw auto-humanized display_names, so this is a
@@ -622,14 +511,20 @@ ENTITY_TYPES = {
     "source types", "institution types", "awards",
 }
 
-_CONNECTIVES = {"and", "or"}
+# `&` is an accepted INPUT synonym for `and` (oxjob #363). It lexes as its own
+# WORD token when surrounded by spaces (`&` is not a _WORD_BREAK char, so a spaced
+# `&` runs to the next break = a lone "&"); recognizing it here makes every
+# connective check (`.val.lower() in _CONNECTIVES`) treat it as `and`. The captured
+# token never reaches render — `_precedence_tree` folds any non-`or` connective into
+# a `BranchFilter(join="and")`, so canonical output is always the spelled-out `and`.
+_CONNECTIVES = {"and", "or", "&"}
 
 # Words that TERMINATE a multi-word search run (#1, oxjob #363) — a connective,
 # `not`, or a search/directive keyword the grammar reads after the run. When one
 # of these appears as a LITERAL word inside a stemmed search value it must be
 # quoted on render (`… "and" …`) so it folds back as an escaped literal rather
 # than re-parsing as structure. Kept in lockstep with `_Parser._is_run_break_word`.
-_SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "near", "within", "group",
+_SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "stemmed", "within", "group",
                                        "sample"}
 
 # Characters dropped from a STEMMED search value on render (#3, oxjob #363): the
@@ -1070,39 +965,9 @@ _augment_by_column_for_homonyms()
 _augment_by_column_for_alias_canonicals()
 
 
-# --- boolean sentence phrasings for the /properties catalog (oxjob #428) -----
-# The curated bool_true/bool_false sentences ("it's open access" / "it doesn't
-# have a DOI") are OQL render/parse mechanics, so they live on `_FIELDS` per the
-# #406 guardrail — but no-code clients (the GUI builder) need them too, or they
-# can only show a raw true/false toggle. This is the public bridge the catalog
-# render layer (`core.properties._merged_properties`) reads; phrasing stays
-# single-sourced here. Keyed by the entity-resolved column. Two passes: a Field
-# whose RAW column is already one of the entity's columns owns its phrasing
-# (e.g. sources `is_oa` -> "it's fully open access" beats works' word-resolved
-# "it's open access"); word-resolution fills the rest. setdefault keeps pass-1.
-_BOOL_PHRASING_CACHE: Dict[str, Dict[str, Tuple[str, str]]] = {}
-
-
-def entity_bool_phrasings(entity: str) -> Dict[str, Tuple[str, str]]:
-    """{column_id: (bool_true, bool_false)} for one entity's curated booleans."""
-    if entity in _BOOL_PHRASING_CACHE:
-        return _BOOL_PHRASING_CACHE[entity]
-    bools = [fld for _spellings, fld in _FIELDS
-             if fld.kind == "bool" and (fld.bool_true or fld.bool_false)]
-    try:
-        from core.properties import get_entity_properties
-        props = get_entity_properties(entity) or {}
-    except Exception:
-        props = {}
-    out: Dict[str, Tuple[str, str]] = {}
-    for fld in bools:
-        if fld.column in props:
-            out.setdefault(fld.column, (fld.bool_true, fld.bool_false))
-    for fld in bools:
-        resolved = _entity_resolve_field(fld, entity)
-        out.setdefault(resolved.column, (fld.bool_true, fld.bool_false))
-    _BOOL_PHRASING_CACHE[entity] = out
-    return out
+# Boolean sentence phrasings (oxjob #428) were removed in #363: booleans are now
+# ordinary `<name> is true|false` clauses, so there are no curated bool_true/
+# bool_false sentences and nothing for the /properties catalog to copy.
 
 
 # --- entity-aware GUI-faceted registry fallback (oxjob #406, increment 1b) ---
@@ -1760,9 +1625,6 @@ class _Parser:
         # clauses also pass here but leave `_last_value_start_i` None, so the editor
         # gates them out (no enum value list to extend).
         self._last_operand_simple = True
-        # boolean human form: it's / its / it
-        if self.word_is("it's", "its", "it"):
-            return self._parse_boolean_clause()
         field, fld = self._parse_field()
         self._cur_fld = fld
         # a complete field with the cursor right after it -> operator slot
@@ -1879,55 +1741,32 @@ class _Parser:
         raise oql_error("OQL_MISSING_OPERATOR",
                        f'expected an operator, got "{t.val}"', None, t.pos)
 
-    def _parse_boolean_clause(self) -> LeafFilter:
-        # it's [not] <bool-field-phrase>  |  it has a <x> | it doesn't have a <x>
-        self.next()  # consume it's/its/it
-        negate = False
-        if self.word_is("not"):
-            self.next()
-            negate = True
-        if self.word_is("doesn't", "doesnt"):
-            self.next()
-            negate = True
-        if self.word_is("has", "have"):
-            self.next()
-        # consume optional article words
-        while self.word_is("a", "an", "the", "from"):
-            self.next()
-        # the cursor after "it's …" expects a boolean property phrase
+    def _parse_bool_value(self, fld: Field, negated: bool) -> LeafFilter:
+        # A boolean is an ordinary value clause: `<name> is true|false` (oxjob #363,
+        # replacing the old `it's …`/`it has …` special form). `is not` folds into the
+        # value (`is not true` -> false), so a bool leaf never carries is_negated.
+        # A bool has no value LIST to extend (no `is (true or false)`), so clear the
+        # value-start marker the sectioned "add another value" menu reads.
+        self._last_value_start_i = None
         self._want(CTX_VALUE, kind="bool")
-        # read the rest of the phrase words until a connective / end / paren
-        parts = []
-        while True:
-            t = self.peek()
-            if not t or t.kind != "WORD" or t.val.lower() in _CONNECTIVES \
-               or t.val.lower() in ("group", "sample"):
-                break
-            parts.append(t.val)
-            self.next()
-        phrase = " ".join(parts).lower().strip()
-        # map phrase -> bool field
-        # try direct field alias, plus a couple of natural phrasings
-        candidates = [phrase, "has " + phrase, phrase + "", "from " + phrase]
-        fld = None
-        for c in candidates:
-            if c in _ALIAS and _ALIAS[c].kind == "bool":
-                fld = _ALIAS[c]
-                break
-        # special phrasings
-        if fld is None:
-            alt = {
-                "doi": "has a DOI", "orcid": "has an ORCID",
-                "global south": "from global south",
-            }.get(phrase)
-            if alt:
-                fld = _ALIAS[alt.lower()]
-        if fld is None:
-            raise oql_error("OQL_UNKNOWN_BOOLEAN",
-                           f'unknown boolean property "{phrase}"',
-                           'e.g. "it\'s open access", "it has a DOI"')
-        fld = _entity_resolve_field(fld, self._entity)   # bool homonym (#406 1c)
-        return LeafFilter(column_id=fld.column, value=(False if negate else True), operator="is")
+        t = self.peek()
+        if t is None or t.kind != "WORD" or t.val.lower() not in ("true", "false"):
+            raise oql_error("OQL_BAD_BOOL_VALUE",
+                           f'"{fld.oql}" is a yes/no property — its value must be '
+                           f'true or false',
+                           f'e.g. {fld.oql} is true', t.pos if t else None)
+        val = (t.val.lower() == "true")
+        self.next()
+        if negated:
+            val = not val
+        self._skip_annot()
+        if self._continues_value():
+            t2 = self.peek()
+            raise oql_error("OQL_UNDELIMITED_TERM_LIST",
+                           f'"{fld.oql}" got more than one value',
+                           f'a yes/no property takes one value: {fld.oql} is true',
+                           t2.pos if t2 else None)
+        return LeafFilter(fld.column, val, "is")
 
     def _parse_value_clause(self, field: str, fld: Field, op: str) -> FilterType:
         # Record where this clause's value begins (token index) so the post-connective
@@ -1969,6 +1808,9 @@ class _Parser:
             return LeafFilter(fld.column, v, op)
         # is / is not
         negated = (op == "isnot")
+        # boolean flag: `<name> is true|false` (oxjob #363)
+        if fld.kind == "bool":
+            return self._parse_bool_value(fld, negated)
         # a parenthesized boolean group of values: `country is (us or uk)`,
         # `country is not (us or uk)` (the base operator negates the whole group).
         grp = self._parse_grouped_operand(lambda: self._parse_value_operand(fld))
@@ -2232,8 +2074,6 @@ class _Parser:
         self._skip_annot()
         try:
             t = self.peek()
-            if t and t.kind == "WORD" and t.val.lower() in ("it's", "its", "it"):
-                return True
             # try to match a field alias
             parts = []
             matched = False
@@ -2264,10 +2104,8 @@ class _Parser:
         self._skip_annot()
         try:
             t = self.peek()
-            # a `(` opens a clause-group; `it's …` opens a boolean clause
+            # a `(` opens a clause-group
             if t and t.kind == "LP":
-                return True
-            if t and t.kind == "WORD" and t.val.lower() in ("it's", "its", "it"):
                 return True
             for j in range(0, 4):
                 tt = self.peek(j)
@@ -2409,21 +2247,21 @@ class _Parser:
     def _is_run_break_word(self, val: str) -> bool:
         """A bare word that TERMINATES a multi-word search run (#1) rather than
         folding into its stemmed value: a boolean connective, `not`, or a
-        search/directive keyword the grammar handles after the run (`near`,
+        search/directive keyword the grammar handles after the run (`stemmed`,
         `within`, `sort`, `group`, `sample`, `return`)."""
         low = val.lower()
         return (low in _CONNECTIVES or low == "not"
-                or low in ("near", "within", "group", "sample"))
+                or low in ("stemmed", "within", "group", "sample"))
 
     def _parse_search_atom(self, base: str, in_group: bool = False) -> LeafFilter:
-        # Stemming is ON by default; quotes turn it OFF (exact). `near "phrase"`
+        # Stemming is ON by default; quotes turn it OFF (exact). `stemmed "phrase"`
         # is the bridge: an adjacent phrase that STAYS stemmed (recall).
-        #   bare term        -> stemmed          (.search)
-        #   "phrase"         -> exact, adjacent  (.search.exact)
-        #   near "phrase"    -> stemmed, adjacent (.search)
+        #   bare term          -> stemmed          (.search)
+        #   "phrase"           -> exact, adjacent  (.search.exact)
+        #   stemmed "phrase"   -> stemmed, adjacent (.search)
         self._skip_annot()
         stemmed_phrase = False
-        if self.word_is("near") and self.peek(1) and self.peek(1).kind == "STRING":
+        if self.word_is("stemmed") and self.peek(1) and self.peek(1).kind == "STRING":
             self.next()
             stemmed_phrase = True
         t = self.peek()
@@ -2477,7 +2315,7 @@ class _Parser:
                     break
             text = " ".join(words)
             phrase = False
-        # quoted => exact (.exact column) unless `near` keeps it stemmed
+        # quoted => exact (.exact column) unless `stemmed` keeps it stemmed
         stemmed = (not phrase) or stemmed_phrase
         col = base + (".search" if stemmed else ".search.exact")
         has_wildcard = "*" in text or "?" in text
@@ -2496,16 +2334,16 @@ class _Parser:
         # #364: outside a proximity phrase, a wildcard must run on exact (no-stem)
         # text — stemming at index time removes the literal prefix, so a wildcard
         # on a stemmed field is silently wrong (`studies*` = 2.4k stemmed vs 2.2M
-        # no-stem). A bare term and a `near` phrase are stemmed → reject with a
+        # no-stem). A bare term and a `stemmed` phrase are stemmed → reject with a
         # quote-it fix-it. A quoted phrase is exact → the sanctioned wildcard path.
         # (This deliberately REVERSES #337's old OQL_WILDCARD_IN_QUOTES guidance:
         # quotes are now where wildcards belong.)
         if has_wildcard and stemmed:
             if stemmed_phrase:
                 raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
-                               f'wildcards run on exact (no-stem) text, but "near" '
+                               f'wildcards run on exact (no-stem) text, but "stemmed" '
                                f'keeps the phrase stemmed: "{text}"',
-                               'drop "near" so the wildcard runs on exact text', t.pos)
+                               'drop "stemmed" so the wildcard runs on exact text', t.pos)
             raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
                            f'wildcards run on exact (no-stem) text: {text}',
                            f'quote it: "{text}"', t.pos)
@@ -2734,7 +2572,7 @@ def _is_search_leaf(f) -> bool:
 
 def _render_term(value: str, column: str) -> str:
     """OQL surface form of one search value, given its column:
-      .search (stemmed):       bare word | near "phrase" | within N (a, b, ...)
+      .search (stemmed):       bare word | stemmed "phrase" | within N (a, b, ...)
       .search.exact (exact):   "word"    | "phrase"      | within N ("a", "b", ...)
     """
     stemmed = not column.endswith(".search.exact")  # .search (and anything else) stems
@@ -2759,7 +2597,7 @@ def _render_term(value: str, column: str) -> str:
         items = [w if stemmed else f'"{w}"' for w in prox.group(1).split()]
         return f'within {slop} ({", ".join(items)})'
     if value.startswith('"') and value.endswith('"') and len(value) >= 2:  # multi-word phrase
-        return f"near {value}" if stemmed else value
+        return f"stemmed {value}" if stemmed else value
     if not stemmed:
         # exact single word/token => quoted (`.search.exact` carries exactness)
         return f'"{value}"'
@@ -3026,15 +2864,17 @@ def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
         return ClauseNode(segments=segs, clause_kind="comparison", meta=ClauseMeta(
             column_id=f.column_id, operator=fld.date_bound, value=f.value,
             column_display_name=fld.date_axis))
-    # boolean human phrasing (a negated bool flips the value)
+    # boolean flag: a plain `<name> is true|false` clause (oxjob #363). Negation
+    # folds into the value (`is not true` -> false), so the canonical form is always
+    # `is true` / `is false` — never a separate `not`.
     if fld and fld.kind == "bool" and isinstance(f.value, bool):
-        effective = f.value != f.is_negated  # XOR
-        phrase = fld.bool_true if effective else fld.bool_false
-        if phrase:
-            return ClauseNode(segments=[_seg("keyword", phrase)],
-                              clause_kind="boolean", meta=ClauseMeta(
-                                  column_id=f.column_id, operator="is",
-                                  value=f.value, column_display_name=name))
+        effective = f.value != f.is_negated  # XOR: fold any is_negated into the value
+        segs = [_seg("column", name, column_id=f.column_id),
+                _seg("operator", " is "),
+                _seg("value", "true" if effective else "false", value=effective)]
+        return ClauseNode(segments=segs, clause_kind="boolean", meta=ClauseMeta(
+            column_id=f.column_id, operator="is", value=effective,
+            column_display_name=name))
     if f.value is None:
         op_text = f" is {'not ' if f.is_negated else ''}"
         segs = [_seg("column", name, column_id=f.column_id),

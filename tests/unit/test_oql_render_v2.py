@@ -290,17 +290,18 @@ def test_simple_value_carries_kind_hint():
     assert vb["kind"] == "entity"
 
 
-def test_boolean_phrase_is_an_interactive_value_brick():
-    """A boolean clause renders its human phrase as an interactive value brick
-    (toggleable), not inert keyword chrome. (oxjob #428 boolean-filter feedback.)"""
-    toks = _toks("works where it's open access")
-    phrase = next(t for t in toks if t.get("bool_phrase"))
-    assert phrase["t"] == "vbrick"
-    assert phrase["text"] == "it's open access"
-    assert phrase["negated"] is False
-    assert phrase["kind"] == "boolean"
-    # negated bool -> the opposite phrase, still an interactive brick
-    toks_n = _toks("works where it's not open access")
-    phrase_n = next(t for t in toks_n if t.get("bool_phrase"))
-    assert phrase_n["text"] == "it's not open access"
-    assert phrase_n["negated"] is True
+def test_boolean_value_is_an_interactive_boolean_brick():
+    """A boolean clause renders as `<name> is true|false`; the true/false value is
+    an interactive boolean-kind value brick the builder can toggle (oxjob #363)."""
+    toks = _toks("works where open access is true")
+    col = next(t for t in toks if t["t"] == "col")
+    assert col["text"] == "open access"
+    vb = next(t for t in toks if t.get("kind") == "boolean")
+    assert vb["t"] == "vbrick"
+    assert vb["text"] == "true"
+    assert vb["value"] is True
+    # `is false` (and the folded `is not true`) -> the false brick
+    vb_n = next(t for t in _toks("works where open access is false")
+                if t.get("kind") == "boolean")
+    assert vb_n["text"] == "false"
+    assert vb_n["value"] is False

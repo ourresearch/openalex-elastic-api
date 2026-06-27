@@ -270,7 +270,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search:%22whopper%20junior%22'
   status: ok
-  oql: 'works where title has near "whopper junior"'
+  oql: 'works where title has stemmed "whopper junior"'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"whopper junior"', operator: has}]}
   note: 'NEAR = stemmed adjacent phrase (.search) → matches "whoppers junior". The bridge that keeps recall on a phrase.'
 
@@ -556,7 +556,7 @@ rows:
   status: ok
   oql: 'works where title has within 3 (foo, bar)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"foo"~3~"bar"', operator: has}]}
-  note: 'STEMMED list proximity: all-BARE operands → the `.search` (stemmed) column, so each operand matches with stemming (the stemmed analogue of row 28''s quoted/exact list). Same `intervals` all_of execution; the column carries stem-vs-exact. Replaces the old `near "smart phone" within N words` stemmed single-phrase form (row 32, now OXURL-only).'
+  note: 'STEMMED list proximity: all-BARE operands → the `.search` (stemmed) column, so each operand matches with stemming (the stemmed analogue of row 28''s quoted/exact list). Same `intervals` all_of execution; the column carries stem-vs-exact. Replaces the old `stemmed "smart phone" within N words` stemmed single-phrase form (row 32, now OXURL-only).'
 
 - id: 189
   tags: [proximity, wildcard]
@@ -665,7 +665,7 @@ rows:
   oql: |-
     works where institution is I201448701 [UW]
       and funder is F4320332161 [NIH]
-      and it's not open access
+      and open access is false
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I201448701},
         {column_id: funders.id, value: F4320332161},
@@ -683,12 +683,14 @@ rows:
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: climate, operator: has},
         {column_id: title_and_abstract.search, value: change, operator: has}]}
-  note: 'Bare = stemmed AND — exactly what the #284 OXURL did (space = AND on .search). Use `near "climate change"` for an adjacent phrase.'
+  note: 'Bare = stemmed AND — exactly what the #284 OXURL did (space = AND on .search). Use `stemmed "climate change"` for an adjacent phrase.'
 
 - id: 40
   addr: |-
     0 and
-    1 it has an ORCID
+    1 has ORCID is
+    1.0 has ORCID
+    1.1 true
     2 author country is
     2.0 author country
     2.1 BR
@@ -699,7 +701,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/authors?filter=has_orcid:true,last_known_institutions.country_code:BR'
   status: ok
-  oql: 'authors where it has an ORCID and author country is BR [Brazil]'
+  oql: 'authors where has ORCID is true and author country is BR [Brazil]'
   oqo: {get_rows: authors, filter_rows: [
         {column_id: last_known_institutions.country_code, value: BR},
         {column_id: has_orcid, value: true}]}
@@ -786,7 +788,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=fulltext.search:%22Macrocystis%20pyrifera%22&group_by=authorships.author.id'
   status: ok
-  oql: 'works where full text has near "Macrocystis pyrifera" group by author'
+  oql: 'works where full text has stemmed "Macrocystis pyrifera" group by author'
   # "anywhere" is a back-compat alias of the canonical "fulltext" scope and emits
   # fulltext.search (oxjob #374; default.search is deprecated).
   oqo: {get_rows: works, filter_rows: [{column_id: fulltext.search, value: '"Macrocystis pyrifera"', operator: has}],
@@ -831,7 +833,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=is_retracted:true&group_by=authorships.institutions.lineage'
   status: ok
-  oql: 'works where it''s retracted group by institution'
+  oql: 'works where retracted is true group by institution'
   oqo: {get_rows: works, filter_rows: [{column_id: is_retracted, value: true}],
         group_by: [{column_id: authorships.institutions.lineage}]}
 
@@ -844,7 +846,8 @@ rows:
   oxurl: 'https://openalex.org/works?filter=cited_by_count:>100,title_and_abstract.search:%22coral%20bleaching%22&group_by=primary_location.source.id'
   status: ok
   oql: |-
-    works where citation count > 100 and title/abstract has near "coral bleaching"
+    works where citation count > 100
+      and title/abstract has stemmed "coral bleaching"
     group by source
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: '"coral bleaching"', operator: has},
@@ -871,7 +874,9 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I154570441,is_retracted:true&group_by=authorships.author.id'
   status: ok
-  oql: 'works where institution is I154570441 [UCSB] and it''s retracted group by author'
+  oql: |-
+    works where institution is I154570441 [UCSB] and retracted is true
+    group by author
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I154570441},
         {column_id: is_retracted, value: true}],
@@ -904,8 +909,12 @@ rows:
   oql: |-
     works where title/abstract has (
         agile
-        and (near "cycle time" or near "lead time")
-        and (near "demand chain" or near "supply chain" or near "value chain")
+        and (stemmed "cycle time" or stemmed "lead time")
+        and (
+          stemmed "demand chain"
+          or stemmed "supply chain"
+          or stemmed "value chain"
+        )
       )
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: agile, operator: has},
@@ -929,7 +938,7 @@ rows:
   status: ok
   oql: 'works where title/abstract has within 3 (smart, phone)'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: '"smart"~3~"phone"', operator: has}]}
-  note: 'STEMMED list proximity (oxjob #514): all-bare operands → `.search` (stemmed), matching the #284 column. Quote operands for exact proximity. Replaces the old `near "smart phone" within 3 words` stemmed single-phrase form.'
+  note: 'STEMMED list proximity (oxjob #514): all-bare operands → `.search` (stemmed), matching the #284 column. Quote operands for exact proximity. Replaces the old `stemmed "smart phone" within 3 words` stemmed single-phrase form.'
 
 - id: 57
   tags: [phrase-exact, sr-transcription, wildcard]
@@ -996,7 +1005,7 @@ rows:
       and year >= 2015
       and year <= 2024
       and title/abstract has (
-        (ASD or near "autism spectrum disorder" or autism)
+        (ASD or stemmed "autism spectrum disorder" or autism)
         and (intervention or therapy or treatment)
       )
       and type is (article or review)
@@ -1041,7 +1050,7 @@ rows:
   oql: |-
     works where year >= 2018
       and year <= 2023
-      and title/abstract has (CRISPR and near "genome editing")
+      and title/abstract has (CRISPR and stemmed "genome editing")
     sample 500
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: CRISPR, operator: has},
@@ -1808,9 +1817,9 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=open_access.any_repository_has_fulltext:true,type:article'
   status: ok
-  oql: 'works where it has fulltext in a repository and type is article'
+  oql: 'works where has repository fulltext is true and type is article'
   oqo: {get_rows: works, filter_rows: [{column_id: open_access.any_repository_has_fulltext, value: true}, {column_id: type, value: article}]}
-  note: "Full text available in some open repository. Booleans render via their bool_true/bool_false phrasing (gate-exempt from the registry display_name), here 'it has fulltext in a repository'. (oxjob #363 case 6)"
+  note: "Full text available in some open repository. Booleans are plain subject-predicate-value clauses now: `has repository fulltext is true`. (oxjob #363 case 6)"
 
 - id: 107
   tags: [entity-references]
@@ -1838,8 +1847,8 @@ rows:
     works where author is a5018352470 [Kenji Takizawa]
       and full text has (
         simulation
-        and (near "data assimilation" or near "state estimation" or real-time)
-        and (near "reduced order model" or near "surrogate model")
+        and (stemmed "data assimilation" or stemmed "state estimation" or real-time)
+        and (stemmed "reduced order model" or stemmed "surrogate model")
       )
       and year >= 2015
       and year <= 2025
@@ -2017,7 +2026,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:%223xTg-AD%22|%22in%20vivo%22'
   status: ok
-  oql: 'works where title/abstract has (near "3xTg-AD" or near "in vivo")'
+  oql: 'works where title/abstract has (stemmed "3xTg-AD" or stemmed "in vivo")'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: '"3xTg-AD"', operator: has}, {column_id: title_and_abstract.search, value: '"in vivo"', operator: has}]}]}
   note: "Walkthrough batch 3 (W3.3): on the STEMMED .search column a quoted token the analyzer splits into >1 subtoken (hyphen/slash, e.g. '3xTg-AD', 'APP/PS1') is adjacent-subtokens (phrase), NOT the bare AND form — measured live `\"3xTg-AD\"` 2027 vs `3xTg-AD` 2354. So the encoder keeps quotes for multi-subtoken stemmed tokens; atomic tokens (5xFAD) and exact-column wildcards ('foo*bar') stay bare. Rendered as `near \"…\"` (stemmed adjacent phrase)."
 
@@ -2029,9 +2038,9 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/sources?filter=is_oa:true'
   status: ok
-  oql: 'sources where it''s fully open access'
+  oql: 'sources where fully OA is true'
   oqo: {get_rows: sources, filter_rows: [{column_id: is_oa, value: true}]}
-  note: "#406 Part B boolean: render word 'fully open access' == engine display_name; phrasing is the curated OQL sentence (the one legit _FIELDS exception). is_oa exists on works too (filters the work's OA flag)."
+  note: "#406 Part B boolean: render word 'fully OA' == engine display_name; a plain `<name> is true|false` clause (oxjob #363). is_oa exists on works too (filters the work's OA flag)."
 
 - id: 124
   tags: [filter]
@@ -2041,7 +2050,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/sources?filter=is_in_doaj:true'
   status: ok
-  oql: 'sources where it''s in DOAJ'
+  oql: 'sources where DOAJ is true'
   oqo: {get_rows: sources, filter_rows: [{column_id: is_in_doaj, value: true}]}
   note: "#406 Part B boolean: sources-only column → invalid_column on works (which uses primary_location.source.is_in_doaj, 'indexed by DOAJ')."
 
@@ -2053,9 +2062,9 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/sources?filter=is_core:true'
   status: ok
-  oql: 'sources where it''s in a CWTS core source'
+  oql: 'sources where CWTS core is true'
   oqo: {get_rows: sources, filter_rows: [{column_id: is_core, value: true}]}
-  note: "#406 Part B boolean HOMONYM: the word 'CWTS core source' maps to works' primary_location.source.is_core; the bool clause parser entity-resolves it to the bare `is_core` column on sources (no second _f, which would have hijacked the works word). Renders the shared phrasing 'it's in a CWTS core source'."
+  note: "#406 Part B boolean HOMONYM: the word 'CWTS core' maps to works' primary_location.source.is_core; the parser entity-resolves it to the bare `is_core` column on sources (no second _f, which would have hijacked the works word). Renders `CWTS core is true` on both entities (oxjob #363)."
 
 - id: 126
   tags: [search-semantics]
@@ -4020,7 +4029,7 @@ rows:
   oxurl_status: oql-only
   oxurl: null
   status: ok
-  oql: 'works (all corpora) where it''s open access'
+  oql: 'works (all corpora) where open access is true'
   oqo: {get_rows: works, corpus: all, filter_rows: [{column_id: open_access.is_oa, value: true}]}
   note: 'The corpus parenthetical sits between the entity and `where`; filters still narrow WITHIN the selected corpus.'
 - id: 185

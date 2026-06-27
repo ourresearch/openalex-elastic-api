@@ -58,7 +58,7 @@ def test_non_core_round_trips_through_oqo_dict():
 
 
 def test_corpus_with_where_clause():
-    o = parse("works (all corpora) where it's open access")
+    o = parse("works (all corpora) where open access is true")
     assert o.corpus == "all"
     assert len(o.filter_rows) == 1
 

@@ -1,7 +1,7 @@
 # OQL (OpenAlex Query Language) Specification — v2 **(FROZEN)**
 
 > **Status: frozen** (oxjob #330; v2.1, 2026-06-02 — adopted the mainstream
-> search model after a peer review: **space = AND, quotes = exact, `near` =
+> search model after a peer review: **space = AND, quotes = exact, `stemmed` =
 > stemmed phrase**; lowercase connectives). This is a cases-first
 > specification: the normative truth is the worked-example corpus
 > [`docs/oql/corpus.yaml`](./oql/corpus.yaml), machine-checked by
@@ -227,7 +227,7 @@ works where country is (us and uk)                                         (row 
   comma-separated lists. `(a or b)` / `(a and b)` are strictly more expressive
   (they nest; flat keyword lists can't) and lose no capability.
 - `( … )` does **double duty**: a clause-group at the clause level
-  (`(year >= 2020 or it's open access)`) and a value/term group after an operator.
+  (`(year >= 2020 or open access is true)`) and a value/term group after an operator.
   The position disambiguates (a group right after `is`/`has` is a value/term
   group; one where a clause is expected is a clause group).
 
@@ -341,7 +341,11 @@ works where title has FOO and (bar or baz)            (row 10)  ✓ (any case ac
   *always* operators — quote them to search them literally**" removes any ambiguity
   with content words, so the uppercase-for-disambiguation convention scholarly DBs
   rely on buys us nothing. (All keywords are lowercase: `where`, `is`, `has`,
-  `within`, `near`, `and`/`or`/`not`.)
+  `within`, `stemmed`, `and`/`or`/`not`.)
+- **`&` is an accepted input synonym for `and`** (`a & b` ≡ `a and b`, in both the
+  clause body and inside a `has ( … )` search group). It is **input-only**: the
+  canonical render always spells out `and`, never `&`. (Mirrors the long-standing
+  `title & abstract` field-name spelling, which canonicalizes to `title/abstract`.)
 - **Mixed and/or at one grouping level resolves by the standard precedence
   `NOT > AND > OR`** (oxjob #506) — it is **not** an error. `AND` binds tighter than
   `OR`, so `a and b or c` = `(a and b) or c` and `a or b and c` = `a or (b and c)`.
@@ -369,8 +373,8 @@ works where title has FOO and (bar or baz)            (row 10)  ✓ (any case ac
   Explicit `and` + `or` at one level no longer errors — it resolves by precedence
   AND > OR (`(climate and change or warming)` = `(climate and change) or warming`),
   and the canonical render re-parenthesizes it. Between *whole
-  clauses* at the top level a connective is still required (`year >= 2020 and it's
-  open access`); two full clauses jammed together with no `and` is
+  clauses* at the top level a connective is still required (`year >= 2020 and
+  open access is true`); two full clauses jammed together with no `and` is
   `OQL_IMPLICIT_ADJACENCY`. *(Adjacency-as-AND still holds for enum/value groups —
   §3.2 `country is (us and uk)`.)*
 
@@ -416,10 +420,10 @@ clause-level negation can't reach the surface). So:
 - **in-group** negation prefixes each atom: `has (not a and b)`,
   `country is (not FR and US)` (§3.2.2).
 
-**Booleans negate by phrasing, not a `not` prefix** — a boolean flag has no value
-brick to prepend to (the builder toggles it): `it's open access` / `it's not open
-access`, `it has a DOI` / `it doesn't have a DOI` (the `bool_true`/`bool_false`
-registry strings). Negating a *group* value spells the same NNF either way:
+**Booleans negate by flipping the value, not a `not` prefix** — a boolean's value is
+just `true` or `false`, so the two polarities are `open access is true` /
+`open access is false` (the builder toggles the value brick). `is not true` folds to
+`is false` on input (§3.9). Negating a *group* value spells the same NNF either way:
 `title has not (dog or cat)` and `title has (not dog and not cat)` both
 canonicalize to `title has (not cat and not dog)` (two negated leaves on one
 field merge — §3.2.2).
@@ -439,7 +443,7 @@ field merge — §3.2.2).
 > engine matches each word across the field set (cross-field recall, #399) and
 > ranks adjacency higher (`match_phrase` boost). **Explicit `and`/`or`/`not` build
 > the boolean tree between such nodes.** **Quotes = an exact, adjacent phrase** (no
-> stemming) — single word or many. **`near "…"`** is the bridge: an adjacent phrase
+> stemming) — single word or many. **`stemmed "…"`** is the bridge: an adjacent phrase
 > that *stays* stemmed (recall). A **quoted word embedded in a bare run** is an
 > *escape* — a literal stemmed word — so a reserved word can sit inside a value
 > (`road traffic safety "and" Ghana`). Outside quotes = structure; inside quotes =
@@ -462,7 +466,7 @@ vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); 
 > and consistent with the engine; they simply chose different defaults for the quote
 > character. The translator bridges them faithfully: a search-box (stemmed,
 > quoted) URL — `title_and_abstract.search:"climate models"` — renders to OQL as
-> **`near "climate models"`** (stemmed adjacency), *not* `"climate models"` (which
+> **`stemmed "climate models"`** (stemmed adjacency), *not* `"climate models"` (which
 > would be exact and return a different result set). This is intentional, not a
 > translator bug. (oxjob #363, decided 2026-06-09: keep both, document the gap.)
 
@@ -470,7 +474,7 @@ vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); 
 |---|---|---|
 | field scope | the field name (`title`, `title/abstract`, `abstract`, `full text`, `raw affiliation`, `byline`) | column prefix (`display_name.search`, `title_and_abstract.search`, `fulltext.search`, …) |
 | stemming | **default ON**; quotes turn it OFF | column suffix `.search` (stemmed) vs `.search.exact` |
-| stemmed phrase | `near "…"` | `.search` with a quoted value |
+| stemmed phrase | `stemmed "…"` | `.search` with a quoted value |
 | semantic | `is similar to "…"` | column suffix `.search.semantic` (2-phase) |
 | adjacency (phrase) | `" … "` | quotes in the value |
 | proximity | `within N words` | `"phrase"~N` in the value |
@@ -483,7 +487,7 @@ The gauntlet pins the consequences (all are corpus rows):
 |---|---|---|
 | 11 | `(climate change)` | **a bare-word run = ONE stemmed adjacency-boosted node** (D2 reversal, #363; corpus row 126), NOT climate AND change. The everyday default. Use explicit `and` for two separate nodes (row 11 oqo). |
 | 12 | `"climate change"` | **quotes = exact adjacent phrase**, no stemming (`.search.exact`) |
-| 13 | `near "whopper junior"` | **`near` = stemmed adjacent phrase** → matches "whoppers junior" |
+| 13 | `stemmed "whopper junior"` | **`stemmed` = stemmed adjacent phrase** → matches "whoppers junior" |
 | 14 | `"cat"` | quoting a **single** word = exact (no plurals) — quotes always mean exact |
 | 15 | `cat` | bare word = stemmed (matches cats) — a single bare term is fine |
 | 16 | `"rock or roll"` | inside quotes = literal: `or` is a word, one exact phrase |
@@ -508,15 +512,15 @@ Key rules these encode:
 - **Quotes = exact, single word or phrase.** `"cat"` excludes "cats"; `"climate
   change"` is the adjacent, unstemmed phrase. This is the mainstream "quotes = exact
   match" people already expect.
-- **`near "…"` = the stemmed phrase** — adjacent *and* lemmatized (`.search`), for
+- **`stemmed "…"` = the stemmed phrase** — adjacent *and* lemmatized (`.search`), for
   when you want phrase precision without losing recall (corpus rows **13**, **32**).
-  Without quotes you don't need `near`: bare terms are already stemmed.
+  Without quotes you don't need `stemmed`: bare terms are already stemmed.
 - **Booleans are structural, never lexical.** `has "foo or bar"` searches the
   literal phrase; the boolean is the tree (`has (foo or bar)`).
 - **`is similar to "…"` is semantic** vector search (`.search.semantic`, corpus
   row **30**).
 - **A `( … )` group holds a boolean of terms** — canonical `has (a and (b or c))`;
-  items may themselves be `"exact"` or `near "stemmed"` phrases. Groups nest freely
+  items may themselves be `"exact"` or `stemmed "phrase"` phrases. Groups nest freely
   (§3.2).
 - **A search value runs until the next field-clause.** `title has (a or b) and
   year >= 2020` is `(title has (a or b)) and year >= 2020` — the `or` is the
@@ -529,7 +533,7 @@ Key rules these encode:
 
 ```
 works where title has "smart phone" within 3 words      (row 21) ✓ exact proximity → .search.exact "smart phone"~3
-works where title has near "smart phone" within 3 words (row 32) ✓ stemmed proximity → .search "smart phone"~3
+works where title has stemmed "smart phone" within 3 words (row 32) ✓ stemmed proximity → .search "smart phone"~3
 works where title has "foo*bar"                        (row 22) ✓ mid-word * (quoted = no-stem .search.exact)
 works where title has "wom?n"                          (row 23) ✓ ? = exactly one char (quoted = no-stem)
 works where title has bar*                             (row 20) ✗ OQL_WILDCARD_NEEDS_EXACT (bare = stemmed = wrong)
@@ -558,7 +562,7 @@ works where title has smart* within 3 words            (row 29) ✗ OQL_WILDCARD
   and returns near-nothing (`studies*` = 2.4k stemmed vs 2.2M no-stem). So a wildcard
   on a single token must be **quoted** → it runs on `.search.exact`: `"bar*"`,
   `"foo*bar"`, `"wom?n"`. A **bare** wildcard is `OQL_WILDCARD_NEEDS_EXACT` (fix-it:
-  quote it). `near` keeps a phrase stemmed, so a wildcard there is the same error.
+  quote it). `stemmed` keeps a phrase stemmed, so a wildcard there is the same error.
   Leading → `OQL_LEADING_WILDCARD`. Sub-3-char prefix → `OQL_SHORT_WILDCARD_PREFIX`.
   Bare wildcard with proximity → `OQL_WILDCARD_IN_PROXIMITY`. Every unsupported
   combination is a loud error with a fix-it — never a silent literal, never a false
@@ -584,12 +588,21 @@ works where title has smart* within 3 words            (row 29) ✗ OQL_WILDCARD
 `language is unknown` / `language is not unknown` → `value: null` (± `is_negated`).
 Emit `unknown` canonically; accept `null` and `unknown` on input.
 
-### 3.9 Booleans on flags (`it's …`)
+### 3.9 Booleans (`<flag> is true|false`)
 
-Boolean columns get a reads-aloud surface: `it's open access`, `it's not open
-access`, `it's retracted`, `it has a DOI`, `it has an ORCID` (corpus rows **37**,
-**40**, **50**, **53**). These compile to `{column: …, value: true|false}`. The
-technical `<column> is true|false` form is also accepted.
+Boolean (yes/no) columns are ordinary subject-predicate-value clauses, exactly like
+every other filter — the subject is the flag's noun and the only values are `true`
+and `false`: `open access is false`, `retracted is true`, `has DOI is true`,
+`has ORCID is true` (corpus rows **37**, **40**, **50**, **53**). They compile to
+`{column: …, value: true|false}`. `is not true` / `is not false` are accepted on
+input and fold into the value, so the canonical form is always `is true` / `is false`
+(never a separate `not`). The old reads-aloud `it's …` / `it has …` surface was
+removed in #363 — there is now One Right Way, shared with all other clauses.
+
+The flag's noun drops any helper verb (`is_retracted` → `retracted`,
+`open_access.is_oa` → `open access`); where the bare noun would collide with a
+value-bearing field it keeps a short `has` qualifier (`has DOI`, `has ORCID`,
+`has abstract`, `has ISSN`) so `DOI is …` stays the exact-DOI string filter.
 
 ### 3.10 Collection membership: `is in collection`
 
@@ -624,7 +637,7 @@ model clean for the editor and downstream tooling.
 
 ```
 works where year >= 1976 group by topic, year              (row 48)  (multi-dim: spec-level; live API single-dim → #297)
-works where … near "genome editing" … sample 500                (row 63)
+works where … stemmed "genome editing" … sample 500                (row 63)
 ```
 
 - **`group by <dim>[, <dim>]*`** → `group_by` list (order = dimension order).
@@ -750,7 +763,7 @@ resolution, row `76` set-reference).
 **v2 search encoding vs. #284** (noted per row in the corpus): under §3.6's
 mainstream model, a bare multi-word search is **stemmed AND** — exactly what the
 #284 OXURLs did (space = AND on `.search`), so `climate change` (row 38), `quantum
-computing` (row 72) etc. render as bare terms. A genuine adjacent phrase uses `near
+computing` (row 72) etc. render as bare terms. A genuine adjacent phrase uses `stemmed
 "…"` (stemmed: rows 47, 51, 55, 56, 63, 65, 75, 77) or plain quotes when the
 intent is exact/no-lemmatization (`"oyster toadfish"`, row 59).
 

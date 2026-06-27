@@ -122,7 +122,7 @@ cases:
     - {text: 'title has "climate change" as an exact phrase, no word variations', difficulty: hard}
     - {text: "title with climate change as an exact quoted phrase", difficulty: hard}
 
-- ref: 13   # title has near "whopper junior"  (STEMMED adjacent phrase)
+- ref: 13   # title has stemmed "whopper junior"  (STEMMED adjacent phrase)
   nl:
     - {text: 'title contains the phrase "whopper junior", allowing stemmed variants like "whoppers junior"', difficulty: hard}
     - {text: "papers with whopper junior as an adjacent phrase but matching plurals too", difficulty: hard}
@@ -284,7 +284,7 @@ cases:
   nl:
     - {text: "works by Stephen Hawking broken down by co-author", difficulty: hard}
 
-- ref: 47  # anywhere has near "Macrocystis pyrifera" group by author
+- ref: 47  # anywhere has stemmed "Macrocystis pyrifera" group by author
   nl:
     - {text: 'papers mentioning "Macrocystis pyrifera" anywhere, grouped by author', difficulty: hard}
     - {text: "macrocystis pyrifera research counted per author", difficulty: hard}
@@ -311,7 +311,7 @@ cases:
     - {text: "which institutions have the most retractions", difficulty: hard}
     - {text: "count retractions per institution", difficulty: hard}
 
-- ref: 51  # t&a has near "coral bleaching" and citations > 100 group by source
+- ref: 51  # t&a has stemmed "coral bleaching" and citations > 100 group by source
   # NB: the gold uses `near` (stemmed phrase). A bare unquoted "coral bleaching"
   # now maps to that near-phrase (decision 1), so the formulations stay unquoted —
   # quoting it would (correctly) become an exact phrase and mismatch the gold.
@@ -348,7 +348,7 @@ cases:
     - {text: "agile supply-chain or value-chain research that also mentions lead time or cycle time", difficulty: hard}
     - {text: "title/abstract: agile, plus a supply/demand/value chain term, plus a lead/cycle time term", difficulty: hard}
 
-- ref: 56 # t&a has near "smart phone" within 3 words  (stemmed proximity)
+- ref: 56 # t&a has stemmed "smart phone" within 3 words  (stemmed proximity)
   nl:
     - {text: 'title or abstract with "smart phone" within 3 words, stemmed', difficulty: hard}
     - {text: "smart phone within three words in title or abstract, allowing stemming", difficulty: hard}
@@ -384,7 +384,7 @@ cases:
     - {text: "NCI-funded gold OA works", difficulty: hard}
     - {text: "gold OA research with National Cancer Institute funding", difficulty: hard}
 
-- ref: 63  # CRISPR and near "genome editing" and 2018-2023 sample 500
+- ref: 63  # CRISPR and stemmed "genome editing" and 2018-2023 sample 500
   nl:
     - {text: 'papers about CRISPR and "genome editing" from 2018 to 2023, take a sample of 500', difficulty: hard}
     - {text: "500-paper sample of CRISPR genome editing work 2018–2023", difficulty: hard}
@@ -396,7 +396,7 @@ cases:
     - {text: "works with library in the affiliation text", difficulty: hard}
     - {text: "raw affiliation mentions library", difficulty: easy}
 
-- ref: 65  # raw affiliation has near "london hospital" within 5 words
+- ref: 65  # raw affiliation has stemmed "london hospital" within 5 words
   nl:
     - {text: 'papers whose raw affiliation has "london hospital" within 5 words', difficulty: hard}
     - {text: "london hospital within five words in the raw affiliation string", difficulty: hard}
@@ -453,13 +453,13 @@ cases:
     - {text: "which funders support CRISPR research", difficulty: hard}
     - {text: "count CRISPR works per funder", difficulty: hard}
 
-- ref: 75  # raw affiliation has near "tufts boston" within 5 words
+- ref: 75  # raw affiliation has stemmed "tufts boston" within 5 words
   nl:
     - {text: 'papers whose raw affiliation has "tufts boston" within 5 words', difficulty: hard}
     - {text: "tufts boston within five words in the raw affiliation", difficulty: hard}
     - {text: 'raw affiliation proximity: "tufts boston" within 5', difficulty: hard}
 
-- ref: 77  # byline has near "john smith" within 2 words
+- ref: 77  # byline has stemmed "john smith" within 2 words
   nl:
     - {text: 'papers whose byline has "john smith" within 2 words (catching middle names/initials)', difficulty: hard}
     - {text: "john smith within two words in the byline", difficulty: hard}

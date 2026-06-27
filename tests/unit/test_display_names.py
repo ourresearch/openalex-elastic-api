@@ -87,7 +87,7 @@ class TestSeededOverrides:
         # lowercased except acronyms the GUI wrote in caps / mixed
         assert resolve_display_name("works", "authorships.author.orcid")[0] == "ORCID"
         assert resolve_display_name("works", "doi_starts_with")[0] == "DOI prefix"
-        assert resolve_display_name("works", "has_pmid")[0] == "indexed by PubMed"
+        assert resolve_display_name("works", "has_pmid")[0] == "PubMed"
 
     def test_oql_aliases_attached(self):
         _, aliases = resolve_display_name("works", "cited_by_count")
@@ -145,7 +145,7 @@ class TestSeededOverrides:
     def test_phase4_reconciliation(self):
         # de-paren + reconciliation (#381 Phase 4)
         cases = {
-            ("works", "is_xpac"): "in extended index",
+            ("works", "is_xpac"): "extended index",
             ("works", "locations.source.id"): "any location source",
             ("works", "raw_affiliation_strings"): "exact raw affiliation",
             ("works", "apc_paid.value_usd"): "estimated APC paid",

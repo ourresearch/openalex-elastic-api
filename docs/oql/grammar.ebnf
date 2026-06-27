@@ -19,16 +19,13 @@ sample       ::= 'sample' NUMBER ( 'seed' NUMBER )?
    bare parens `(a or b)` / `(a and b)`. */
 conditions   ::= operand ( connective operand )*
 
-connective   ::= 'and' | 'or'
+connective   ::= 'and' | '&' | 'or'   /* '&' is an input synonym for 'and'; canonical render is always 'and' */
 
 operand      ::= 'not' operand
                | '(' conditions ')'
                | clause
 
-clause       ::= booleanClause | valueClause | searchClause
-
-booleanClause ::= ( "it's" | 'its' | 'it' ) 'not'? ( "doesn't" | 'doesnt' )?
-                  ( 'has' | 'have' )? ( 'a' | 'an' | 'the' | 'from' )* word+
+clause       ::= valueClause | searchClause
 
 valueClause  ::= field operator value
 
@@ -41,7 +38,7 @@ operator     ::= 'is' 'not'? 'in' 'collection'
                | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'have'
                | '>=' | '<=' | '>' | '<'
 
-value        ::= valueGroup | 'unknown' | 'null' | scalar
+value        ::= valueGroup | 'unknown' | 'null' | scalar   /* a boolean's value is the scalar 'true' or 'false' (oxjob #363) */
 
 /* A value group is a parenthesized boolean of values: `(a or b)` / `(a and b)`,
    nesting freely. Items are joined by infix 'or'/'and' (one separator per
@@ -75,7 +72,7 @@ searchOperand ::= 'not' searchOperand
    OXURL `~` notation keeps single/binary proximity unchanged.) */
 proximity    ::= 'within' NUMBER '(' term ( ',' term )+ ')'
 
-searchAtom   ::= 'near'? term
+searchAtom   ::= 'stemmed'? term
 
 term         ::= STRING | word
 

@@ -136,7 +136,7 @@ def test_parser_structural_keywords_are_declared_by_the_ebnf():
     structural = {
         "where", "and", "or", "not", "is", "any", "of", "in", "collection",
         "has", "does", "doesn't", "doesnt", "have", "similar", "to",
-        "near", "within", "words", "word", "group", "by",
+        "stemmed", "within", "words", "word", "group", "by",
         "sample", "seed", "it's", "its", "it", "has", "have", "all",
     }
     recognized = _parser_recognized_words()

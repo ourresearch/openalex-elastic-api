@@ -7,8 +7,8 @@ Cases 4-8:
   5. fields / subfields / domains / languages resolve a `[display name]` from
      config/*.yaml (path-style + code IDs ES can't route): `field is 27 [Medicine]`,
      `language is en [English]`.
-  6. `open_access.any_repository_has_fulltext` renders a friendly boolean phrasing
-     (`it has fulltext in a repository`) that round-trips.
+  6. `open_access.any_repository_has_fulltext` renders as a plain boolean clause
+     (`has repository fulltext is true`) that round-trips.
   7. `cited_by` / `cites` are curated id fields ("cited by" / "cites") that resolve
      the referenced work's title; every `[display name]` annotation is truncated to
      a uniform length with an ellipsis.
@@ -95,18 +95,18 @@ def test_case5_language_resolves_name():
 
 
 # --------------------------------------------------------------------------- #
-# Case 6 — friendly boolean phrasing for any_repository_has_fulltext
+# Case 6 — boolean any_repository_has_fulltext renders as a plain SPV clause
 # --------------------------------------------------------------------------- #
-def test_case6_repository_fulltext_phrasing_round_trips():
+def test_case6_repository_fulltext_round_trips():
     out = _render("works where open_access.any_repository_has_fulltext is true")
-    assert out == "works where it has fulltext in a repository"
+    assert out == "works where has repository fulltext is true"
     assert _leaves(out) == [
         {"column_id": "open_access.any_repository_has_fulltext", "value": True}]
 
 
-def test_case6_negated_phrasing():
+def test_case6_negated_renders_is_false():
     out = _render("works where open_access.any_repository_has_fulltext is false")
-    assert out == "works where it doesn't have fulltext in a repository"
+    assert out == "works where has repository fulltext is false"
 
 
 # --------------------------------------------------------------------------- #
@@ -163,10 +163,10 @@ def test_case8a_group_phrase_keeps_quotes_and_round_trips():
     oqo = parse_url_to_oqo(
         "works", search_string='("reduced order model" OR "surrogate model")')
     out = render_tree(canonicalize_oqo(oqo))[0]
-    # each phrase keeps its quotes -> renders as a phrase (near "..."), not a bare
+    # each phrase keeps its quotes -> renders as a phrase (stemmed "..."), not a bare
     # multi-word bag that would re-parse as ambiguous AND/OR
-    assert 'near "reduced order model"' in out
-    assert 'near "surrogate model"' in out
+    assert 'stemmed "reduced order model"' in out
+    assert 'stemmed "surrogate model"' in out
     parse(out)  # the headline guarantee: the rendered OQL re-parses
 
 

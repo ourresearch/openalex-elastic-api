@@ -15,20 +15,6 @@
       "isId": false,
       "hasExport": false
     },
-    "has_abstract": {
-      "key": "has_abstract",
-      "entityToFilter": "works",
-      "entityToSelect": null,
-      "displayName": "Abstract available",
-      "displayNameVerbatim": false,
-      "type": "boolean",
-      "actions": [
-        "filter"
-      ],
-      "actionsPopular": null,
-      "isId": false,
-      "hasExport": false
-    },
     "locations.license": {
       "key": "locations.license",
       "entityToFilter": "works",
@@ -85,7 +71,6 @@
         "column"
       ],
       "actionsPopular": [
-        "filter",
         "column"
       ],
       "isId": false,
@@ -233,7 +218,8 @@
       "actions": [
         "filter",
         "group_by",
-        "edit"
+        "edit",
+        "column"
       ],
       "actionsPopular": null,
       "isId": false,
@@ -248,7 +234,8 @@
       "type": "selectEntity",
       "actions": [
         "filter",
-        "group_by"
+        "group_by",
+        "column"
       ],
       "actionsPopular": null,
       "isId": false,
@@ -300,7 +287,6 @@
         "column"
       ],
       "actionsPopular": [
-        "filter",
         "sort",
         "column"
       ],
@@ -311,7 +297,7 @@
       "key": "primary_location.source.is_core",
       "entityToFilter": "works",
       "entityToSelect": null,
-      "displayName": "CWTS Core source",
+      "displayName": "CWTS core",
       "displayNameVerbatim": false,
       "type": "boolean",
       "actions": [
@@ -331,6 +317,21 @@
       "type": "range",
       "actions": [
         "sort"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.source.is_in_doaj": {
+      "key": "primary_location.source.is_in_doaj",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "DOAJ",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "group_by"
       ],
       "actionsPopular": null,
       "isId": false,
@@ -407,6 +408,21 @@
       "isId": false,
       "hasExport": false
     },
+    "is_xpac": {
+      "key": "is_xpac",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "extended index",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "primary_topic.field.id": {
       "key": "primary_topic.field.id",
       "entityToFilter": "works",
@@ -419,22 +435,6 @@
         "group_by"
       ],
       "actionsPopular": [],
-      "isId": false,
-      "hasExport": false
-    },
-    "institutions.is_global_south": {
-      "key": "institutions.is_global_south",
-      "entityToFilter": "works",
-      "entityToSelect": null,
-      "displayName": "from Global South",
-      "displayNameVerbatim": false,
-      "type": "boolean",
-      "actions": [
-        "filter",
-        "column",
-        "group_by"
-      ],
-      "actionsPopular": null,
       "isId": false,
       "hasExport": false
     },
@@ -464,7 +464,6 @@
         "group_by"
       ],
       "actionsPopular": [
-        "filter",
         "group_by"
       ],
       "isId": false,
@@ -489,11 +488,56 @@
       "isId": false,
       "hasExport": false
     },
+    "institutions.is_global_south": {
+      "key": "institutions.is_global_south",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "global south",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "column",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "has_abstract": {
+      "key": "has_abstract",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "has abstract",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
     "has_doi": {
       "key": "has_doi",
       "entityToFilter": "works",
       "entityToSelect": null,
-      "displayName": "has a DOI",
+      "displayName": "has DOI",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "has_orcid": {
+      "key": "has_orcid",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "has ORCID",
       "displayNameVerbatim": false,
       "type": "boolean",
       "actions": [
@@ -514,99 +558,6 @@
       "actions": [
         "filter",
         "column",
-        "group_by"
-      ],
-      "actionsPopular": null,
-      "isId": false,
-      "hasExport": false
-    },
-    "is_xpac": {
-      "key": "is_xpac",
-      "entityToFilter": "works",
-      "entityToSelect": null,
-      "displayName": "in extended index",
-      "displayNameVerbatim": false,
-      "type": "boolean",
-      "actions": [
-        "filter",
-        "group_by"
-      ],
-      "actionsPopular": [
-        "filter"
-      ],
-      "isId": false,
-      "hasExport": false
-    },
-    "primary_location.source.is_oa": {
-      "key": "primary_location.source.is_oa",
-      "entityToFilter": "works",
-      "entityToSelect": null,
-      "displayName": "in OA source",
-      "displayNameVerbatim": false,
-      "type": "boolean",
-      "actions": [
-        "filter",
-        "column",
-        "group_by"
-      ],
-      "actionsPopular": null,
-      "isId": false,
-      "hasExport": false
-    },
-    "primary_location.source.is_in_doaj": {
-      "key": "primary_location.source.is_in_doaj",
-      "entityToFilter": "works",
-      "entityToSelect": null,
-      "displayName": "indexed by DOAJ",
-      "displayNameVerbatim": false,
-      "type": "boolean",
-      "actions": [
-        "filter",
-        "group_by"
-      ],
-      "actionsPopular": null,
-      "isId": false,
-      "hasExport": false
-    },
-    "mag_only": {
-      "key": "mag_only",
-      "entityToFilter": "works",
-      "entityToSelect": null,
-      "displayName": "indexed by MAG only",
-      "displayNameVerbatim": false,
-      "type": "boolean",
-      "actions": [
-        "filter",
-        "group_by"
-      ],
-      "actionsPopular": null,
-      "isId": false,
-      "hasExport": false
-    },
-    "has_orcid": {
-      "key": "has_orcid",
-      "entityToFilter": "works",
-      "entityToSelect": null,
-      "displayName": "indexed by ORCID",
-      "displayNameVerbatim": false,
-      "type": "boolean",
-      "actions": [
-        "filter",
-        "group_by"
-      ],
-      "actionsPopular": null,
-      "isId": false,
-      "hasExport": false
-    },
-    "has_pmid": {
-      "key": "has_pmid",
-      "entityToFilter": "works",
-      "entityToSelect": null,
-      "displayName": "indexed by PubMed",
-      "displayNameVerbatim": false,
-      "type": "boolean",
-      "actions": [
-        "filter",
         "group_by"
       ],
       "actionsPopular": null,
@@ -724,11 +675,26 @@
       "isId": false,
       "hasExport": true
     },
-    "has_content.pdf": {
-      "key": "has_content.pdf",
+    "mag_only": {
+      "key": "mag_only",
       "entityToFilter": "works",
       "entityToSelect": null,
-      "displayName": "linked to a PDF",
+      "displayName": "MAG-only",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "best_oa_location.is_accepted": {
+      "key": "best_oa_location.is_accepted",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "OA accepted",
       "displayNameVerbatim": false,
       "type": "boolean",
       "actions": [
@@ -736,7 +702,39 @@
         "column",
         "group_by"
       ],
-      "actionsPopular": [],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "best_oa_location.is_published": {
+      "key": "best_oa_location.is_published",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "OA published",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "column",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.source.is_oa": {
+      "key": "primary_location.source.is_oa",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "OA source",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "column",
+        "group_by"
+      ],
+      "actionsPopular": null,
       "isId": false,
       "hasExport": false
     },
@@ -757,38 +755,6 @@
         "column",
         "group_by"
       ],
-      "isId": false,
-      "hasExport": false
-    },
-    "best_oa_location.is_accepted": {
-      "key": "best_oa_location.is_accepted",
-      "entityToFilter": "works",
-      "entityToSelect": null,
-      "displayName": "open access accepted",
-      "displayNameVerbatim": false,
-      "type": "boolean",
-      "actions": [
-        "filter",
-        "column",
-        "group_by"
-      ],
-      "actionsPopular": null,
-      "isId": false,
-      "hasExport": false
-    },
-    "best_oa_location.is_published": {
-      "key": "best_oa_location.is_published",
-      "entityToFilter": "works",
-      "entityToSelect": null,
-      "displayName": "open access published",
-      "displayNameVerbatim": false,
-      "type": "boolean",
-      "actions": [
-        "filter",
-        "column",
-        "group_by"
-      ],
-      "actionsPopular": null,
       "isId": false,
       "hasExport": false
     },
@@ -837,6 +803,22 @@
       "isId": true,
       "hasExport": false
     },
+    "has_content.pdf": {
+      "key": "has_content.pdf",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "PDF-linked",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "column",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "primary_location.source.publisher_lineage": {
       "key": "primary_location.source.publisher_lineage",
       "entityToFilter": "works",
@@ -844,6 +826,21 @@
       "displayName": "publisher",
       "displayNameVerbatim": false,
       "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "has_pmid": {
+      "key": "has_pmid",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "PubMed",
+      "displayNameVerbatim": false,
+      "type": "boolean",
       "actions": [
         "filter",
         "group_by"
@@ -1066,7 +1063,6 @@
         "edit"
       ],
       "actionsPopular": [
-        "filter",
         "group_by"
       ],
       "isId": false,
@@ -1106,7 +1102,6 @@
         "column"
       ],
       "actionsPopular": [
-        "filter",
         "sort",
         "column"
       ],
@@ -1288,9 +1283,7 @@
         "sort",
         "column"
       ],
-      "actionsPopular": [
-        "filter"
-      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -1546,9 +1539,7 @@
         "sort",
         "column"
       ],
-      "actionsPopular": [
-        "filter"
-      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -1670,7 +1661,7 @@
       "key": "has_orcid",
       "entityToFilter": "authors",
       "entityToSelect": "authors",
-      "displayName": "Has an ORCID",
+      "displayName": "has ORCID",
       "displayNameVerbatim": false,
       "type": "boolean",
       "actions": [
@@ -1694,9 +1685,7 @@
       "actions": [
         "filter"
       ],
-      "actionsPopular": [
-        "filter"
-      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -1747,9 +1736,7 @@
         "filter",
         "group_by"
       ],
-      "actionsPopular": [
-        "filter"
-      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -1839,9 +1826,7 @@
         "filter",
         "group_by"
       ],
-      "actionsPopular": [
-        "filter"
-      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -1856,9 +1841,7 @@
         "filter",
         "group_by"
       ],
-      "actionsPopular": [
-        "filter"
-      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -1895,7 +1878,6 @@
         "sort"
       ],
       "actionsPopular": [
-        "filter",
         "sort"
       ],
       "isId": false,
@@ -1926,9 +1908,7 @@
         "filter",
         "edit"
       ],
-      "actionsPopular": [
-        "filter"
-      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -1969,12 +1949,27 @@
       "key": "is_core",
       "entityToFilter": "sources",
       "entityToSelect": null,
-      "displayName": "CWTS Core source",
+      "displayName": "CWTS core",
       "displayNameVerbatim": false,
       "type": "boolean",
       "actions": [
         "filter",
         "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "is_in_doaj": {
+      "key": "is_in_doaj",
+      "entityToFilter": "sources",
+      "entityToSelect": null,
+      "displayName": "DOAJ",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter",
+        "edit"
       ],
       "actionsPopular": [
         "filter"
@@ -2000,7 +1995,7 @@
       "key": "is_oa",
       "entityToFilter": "sources",
       "entityToSelect": null,
-      "displayName": "Fully open access",
+      "displayName": "fully OA",
       "displayNameVerbatim": false,
       "type": "boolean",
       "actions": [
@@ -2050,23 +2045,6 @@
         "filter"
       ],
       "actionsPopular": [],
-      "isId": false,
-      "hasExport": false
-    },
-    "is_in_doaj": {
-      "key": "is_in_doaj",
-      "entityToFilter": "sources",
-      "entityToSelect": null,
-      "displayName": "In DOAJ",
-      "displayNameVerbatim": false,
-      "type": "boolean",
-      "actions": [
-        "filter",
-        "edit"
-      ],
-      "actionsPopular": [
-        "filter"
-      ],
       "isId": false,
       "hasExport": false
     },

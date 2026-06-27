@@ -80,8 +80,8 @@ def test_merge_anchors_at_first_same_field_row():
 def test_stemmed_and_exact_share_one_merged_group():
     # base-field grouping: .search + .search.exact mix in one group (row-78 win)
     assert _identity(
-        'works where title has "exact phrase" and title has (stemmed words)'
-    ) == 'works where title has ((stemmed words) and "exact phrase")'
+        'works where title has "exact phrase" and title has (fuzzy words)'
+    ) == 'works where title has ((fuzzy words) and "exact phrase")'
 
 
 # --- what does NOT merge ---------------------------------------------------- #

@@ -18,7 +18,7 @@ search) surfaced three independent translator bugs:
         form on a STEMMED .search column: quoted = adjacent subtokens, bare =
         subtokens AND'd (measured live: `"3xTg-AD"` 2027 vs `3xTg-AD` 2354;
         `"APP/PS1"` 6440 vs 8056). The encoder dropped quotes for any single
-        whitespace-token, so `near "3xTg-AD"` re-parsed to bare `3xTg-AD` (a silent
+        whitespace-token, so `stemmed "3xTg-AD"` re-parsed to bare `3xTg-AD` (a silent
         recall change). Now multi-subtoken stemmed tokens keep their quotes; atomic
         tokens (5xFAD, covid19 — measured equal) and exact-column wildcards
         ("foo*bar") stay bare.
@@ -104,9 +104,9 @@ def test_w32_same_alias_works_in_where_and_group_by():
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("token", ["3xTg-AD", "APP/PS1"])
 def test_w33_multisubtoken_stemmed_token_keeps_quotes(token):
-    # `near "X"` = stemmed adjacent phrase; for a hyphen/slash token it must NOT
+    # `stemmed "X"` = stemmed adjacent phrase; for a hyphen/slash token it must NOT
     # collapse to bare (different result set on the engine).
-    oqo = parse(f'works where title/abstract has (near "{token}")')
+    oqo = parse(f'works where title/abstract has (stemmed "{token}")')
     leaf = oqo.to_dict()["filter_rows"][0]
     leaf = leaf.get("filters", [leaf])[0] if "filters" in leaf else leaf
     assert leaf["value"] == f'"{token}"', leaf
@@ -117,7 +117,7 @@ def test_w33_multisubtoken_stemmed_token_keeps_quotes(token):
 def test_w33_atomic_stemmed_token_stays_bare(token):
     # an atomic alphanumeric token is not split by the analyzer (measured equal),
     # so it stays bare so the common case isn't gratuitously quoted.
-    oqo = parse(f'works where title/abstract has (near "{token}")')
+    oqo = parse(f'works where title/abstract has (stemmed "{token}")')
     leaf = oqo.to_dict()["filter_rows"][0]
     leaf = leaf.get("filters", [leaf])[0] if "filters" in leaf else leaf
     assert leaf["value"] == token, leaf
@@ -150,6 +150,6 @@ def test_w3_full_url_render_is_semantically_stable():
     oql2 = _render(parse(oql1))
     assert oql2 == _render(parse(oql2))  # second render is the fixed point
     # multi-subtoken phrases kept their quotes; the atomic token went bare
-    assert 'near "3xTg-AD"' in oql2
-    assert 'near "APP/PS1"' in oql2
+    assert 'stemmed "3xTg-AD"' in oql2
+    assert 'stemmed "APP/PS1"' in oql2
     assert "5xFAD" in oql2 and '"5xFAD"' not in oql2  # bare, unquoted atom
