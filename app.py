@@ -124,8 +124,13 @@ def register_blueprints(app):
 
 def register_extensions(app):
     sentry_sdk.init(dsn=os.environ.get("SENTRY_DSN"), integrations=[FlaskIntegration()])
-    connections.create_connection('default', hosts=[settings.ES_URL_WALDEN], timeout=15)
-    connections.create_connection('walden', hosts=[settings.ES_URL_WALDEN], timeout=15)
+    # oxjob #521: ES client timeout 15s -> 7s. The query timeout is a soft 5s
+    # (returns partial), so a 15s client wait just pins a Heroku worker on doomed
+    # queries long after the proxy (9s) gave up, exhausting workers -> H12s. 7s lets
+    # the worker return cleanly just after the 5s query budget. (vector left at 15s:
+    # semantic search legitimately runs longer and isn't part of the works-search load.)
+    connections.create_connection('default', hosts=[settings.ES_URL_WALDEN], timeout=7)
+    connections.create_connection('walden', hosts=[settings.ES_URL_WALDEN], timeout=7)
     if settings.ES_VECTOR_SEARCH_URL:
         connections.create_connection('vector', hosts=[settings.ES_VECTOR_SEARCH_URL], timeout=15)
     cache.init_app(app)
