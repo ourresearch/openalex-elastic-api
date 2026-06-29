@@ -5,7 +5,9 @@ in `openalex-gui` but the canonical artifacts live HERE, in `docs/`. To keep the
 pages from drifting from the implementation, the GUI fetches the live artifacts at
 runtime from these endpoints rather than bundling a copy:
 
-  GET /query/spec/oql        -> docs/oql-spec.md            (text/markdown)  human OQL guide (BLUF)
+  GET /query/spec/cheatsheet -> docs/oql-cheatsheet.md      (text/markdown)  one-page OQL cheat sheet
+  GET /query/spec/guide      -> docs/oql-guide.md           (text/markdown)  readable OQL guide (BLUF)
+  GET /query/spec/oql        -> docs/oql-spec.md            (text/markdown)  the frozen normative spec
   GET /query/spec/oqo        -> docs/oqo-schema.json        (application/json) OQO JSON Schema
   GET /query/spec/grammar    -> docs/oql/grammar.ebnf       (text/plain)     derived W3C-EBNF
   GET /query/spec/railroad   -> docs/oql/grammar.railroad.html (XHTML)       rendered railroad
@@ -18,6 +20,8 @@ drift gate. Each artifact is itself kept honest by its own gate:
   * grammar.ebnf      — `tests/oql/test_grammar_ebnf.py` (keyword closure vs the
                         parser + corpus tokenization)
   * oql-spec.md       — cases-first; the corpus round-trip is its conformance net.
+  * oql-cheatsheet.md / oql-guide.md — hand-written user docs (no machine gate);
+                        every example was prod-verified at authoring (oxjob #530).
 
 Kept in a SEPARATE blueprint (not `query_translation/views.py`) to stay out of the
 in-flight execution/translation reorg in that file, exactly like editor_views.py.
@@ -35,6 +39,8 @@ _DOCS = os.path.join(_REPO, "docs")
 # slug -> (relative path under docs/, mimetype). The whole serving surface is this
 # allowlist; nothing else under docs/ is reachable (no path params, no traversal).
 _ARTIFACTS = {
+    "cheatsheet": ("oql-cheatsheet.md", "text/markdown; charset=utf-8"),
+    "guide": ("oql-guide.md", "text/markdown; charset=utf-8"),
     "oql": ("oql-spec.md", "text/markdown; charset=utf-8"),
     "oqo": ("oqo-schema.json", "application/json"),
     "grammar": (os.path.join("oql", "grammar.ebnf"), "text/plain; charset=utf-8"),
