@@ -66,6 +66,7 @@ class SourcesSchema(Schema):
     is_in_jstage_since_year = fields.Int()
     is_in_scielo = fields.Bool()
     is_ojs = fields.Bool()
+    is_preprint_repository = fields.Bool()
     is_indexed_in_scopus = fields.Bool()
     is_core = fields.Bool()
     oa_flip_year = fields.Int()

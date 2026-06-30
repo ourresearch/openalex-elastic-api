@@ -153,6 +153,7 @@ fields = [
     TermField(param="country_code"),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="ids.mag", custom_es_field="ids.mag"),
+    BooleanField(param="is_preprint_repository"),
     TermField(param="issn"),
     TermField(param="issn_l", custom_es_field="issn_l"),
     TermField(param="topics.id"),
