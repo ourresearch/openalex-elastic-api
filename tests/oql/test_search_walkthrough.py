@@ -49,12 +49,12 @@ def test_case1_entity_head_joins_where_line():
     # keeps `works where` on the same line as the first clause — not a bare
     # "works".
     assert len(lines) > 1
-    assert lines[0] == "works where institution is i1295562517"
+    assert lines[0] == "works where institution is (i1295562517)"
     assert lines[1].lstrip().startswith("and source is")
 
 
 def test_case1_short_query_stays_flat():
-    assert _render("works where type is article") == "works where type is article"
+    assert _render("works where type is article") == "works where type is (article)"
 
 
 # --------------------------------------------------------------------------- #
@@ -66,7 +66,7 @@ def test_case1_short_query_stays_flat():
     'works where title has “““hello world”””',      # curly + triple
 ])
 def test_case2_1_weird_quotes_coerce_to_single(src):
-    assert _render(src) == 'works where title has "hello world"'
+    assert _render(src) == 'works where title has ("hello world")'
 
 
 def test_case2_1_url_triple_quote_roundtrips():
@@ -128,7 +128,7 @@ def test_case3_subfield_value_name_resolves():
     oqo = parse("works where subfield is 2712")
     out = render(oqo, resolver=lambda v, c=None: "Bioengineering"
                  if v == "2712" else None)
-    assert out == "works where subfield is 2712 [Bioengineering]"
+    assert out == "works where subfield is (2712 [Bioengineering])"
 
 
 # --------------------------------------------------------------------------- #
@@ -168,7 +168,7 @@ def test_case3_3_raw_key_round_trips():
     # now parses the raw key — which is what un-masked this previously-skipped test
     # (its `_HAS_REGISTRY` probe keyed on ids.pmid, which used to sit in `_ALIAS`).
     out = _render("works where ids.pmid is 12345678")
-    assert out == "works where PMID is 12345678"
+    assert out == "works where PMID is (12345678)"
     assert _leaves(out) == [{"column_id": "ids.pmid", "value": "12345678"}]
 
 

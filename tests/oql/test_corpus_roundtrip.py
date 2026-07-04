@@ -117,7 +117,7 @@ def test_canonical_output_is_lowercase_infix_connectives():
     # parens form; the connectives are lowercase regardless of input casing.
     out = r(canonicalize_oqo(p("works where open access is true AND (institution is I1 OR type is article)")))
     assert " and " in out and " or " in out
-    assert "(institution is I1 or type is article)" in out
+    assert "(institution is (I1) or type is (article))" in out
     assert " AND " not in out and " OR " not in out
 
 

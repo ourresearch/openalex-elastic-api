@@ -242,6 +242,13 @@ def _flat_tokens(tree: dict) -> list:
                 ck = n.get("clause_kind")
                 for s in n["segments"]:
                     kind = s["kind"]
+                    # #554: `_leaf_node` renders a negated entity/other `is` leaf
+                    # as `is (` + `not ` (inert text) + value + `)`. The builder
+                    # carries negation ON the value brick (below), so skip the
+                    # standalone prefix segment — emitting both would double it.
+                    if (kind == "text" and s["text"] == "not "
+                            and neg and ck in ("entity", "other")):
+                        continue
                     tok = {"t": _SEG2TOK.get(kind, "text"), "id": n["id"],
                            "text": s["text"]}
                     m = s.get("meta") or {}
@@ -249,7 +256,7 @@ def _flat_tokens(tree: dict) -> list:
                         tok["column_id"] = m["column_id"]
                     if "value" in m:
                         tok["value"] = m["value"]
-                    # A boolean clause is now a plain `<name> is true|false` (oxjob
+                    # A boolean clause is now a plain `<name> is (true|false)` (oxjob
                     # #363). Surface its true/false value segment as an interactive
                     # boolean-kind value brick the builder can toggle; negation is
                     # already folded into the value at render, so the brick is never
@@ -258,15 +265,13 @@ def _flat_tokens(tree: dict) -> list:
                         tok["t"] = "vbrick"
                         tok["kind"] = "boolean"
                         tok["value"] = (s.get("meta") or {}).get("value")
-                    # Predicate-level negation is no longer part of OQL (decision 23):
-                    # the one render still emitting `is not` is the generic entity/other
-                    # `is` path. Move the `not` onto the VALUE brick so the builder shows
-                    # `is` + a negated value chip, never `is not`. The canonical character
-                    # stream is unchanged (" is "+"not X" reflows identically to
-                    # " is not "+"X"). (oxjob #428 non-mutating-predicate feedback.)
-                    if kind == "operator" and neg and s["text"] == " is not ":
-                        tok["text"] = " is "
-                    elif kind == "value" and neg and ck in ("entity", "other"):
+                    # Predicate-level negation is not part of OQL (decision 23), and
+                    # since #554 the canonical render already puts `not` inside the
+                    # value group. Move it onto the VALUE brick so the builder shows
+                    # `is` + `(` + a negated value chip + `)`, never inert-text `not`.
+                    # The canonical character stream is unchanged (the skipped `not `
+                    # segment above reappears as the brick's `not ` prefix).
+                    if kind == "value" and neg and ck in ("entity", "other"):
                         tok["display"] = s["text"]        # bare value, no prefix
                         tok["text"] = "not " + s["text"]  # keeps the canonical stream
                         tok["negated"] = True

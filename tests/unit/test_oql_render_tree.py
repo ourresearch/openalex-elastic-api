@@ -42,9 +42,9 @@ class TestStringifyInvariant:
         assert "it's open access" in oql
     
     def test_single_comparison_filter(self):
-        """A numeric bound renders as an inequality clause: `year >= 2020` (oxjob
+        """A numeric bound renders as an inequality clause: `year >= (2020)` (oxjob
         #363 — the dash range literal was removed in decision 24; a closed range is
-        two endpoint clauses `year >= 2019 and year <= 2023`)."""
+        two endpoint clauses `year >= (2019) and year <= (2023)`)."""
         oqo = OQO(
             get_rows="works",
             filter_rows=[LeafFilter(column_id="publication_year", value=2020, operator=">=")]
@@ -52,7 +52,7 @@ class TestStringifyInvariant:
         oql, tree = render_oqo_to_oql_and_tree(oqo)
 
         assert stringify(tree) == oql
-        assert "year >= 2020" in oql
+        assert "year >= (2020)" in oql
     
     def test_entity_filter_with_display_name(self):
         """Test entity filter with resolved display name."""
@@ -64,7 +64,7 @@ class TestStringifyInvariant:
         
         assert stringify(tree) == oql
         # Canonical id-first: value first, resolved name in brackets.
-        assert "country is ca [Canada]" in oql
+        assert "country is (ca [Canada])" in oql
     
     def test_multiple_filters_with_and(self):
         """Test multiple filters joined with AND."""
@@ -427,7 +427,7 @@ class TestEntityResolution:
         oql, _ = render_oqo_to_oql_and_tree(oqo)
 
         # Canonical id-first: code first, resolved name in brackets.
-        assert "country is us [United States]" in oql
+        assert "country is (us [United States])" in oql
 
     def test_sdg_resolution(self):
         """Test SDG resolution (id-first)."""
@@ -437,7 +437,7 @@ class TestEntityResolution:
         )
         oql, _ = render_oqo_to_oql_and_tree(oqo)
 
-        assert "SDG is 4 [Quality education]" in oql  # name from config/sdgs.yaml (#363)
+        assert "SDG is (4 [Quality education])" in oql  # name from config/sdgs.yaml (#363)
 
     def test_language_name_resolved(self):
         """Language resolves a [display name] from config/languages.yaml — it's a
@@ -448,7 +448,7 @@ class TestEntityResolution:
         )
         oql, _ = render_oqo_to_oql_and_tree(oqo)
 
-        assert oql == "works where language is en [English]"
+        assert oql == "works where language is (en [English])"
 
     def test_type_rendered_bare(self):
         """Work type is a canonical enum slug — rendered bare, no name annotation."""
@@ -458,7 +458,7 @@ class TestEntityResolution:
         )
         oql, _ = render_oqo_to_oql_and_tree(oqo)
 
-        assert oql == "works where type is book-chapter"
+        assert oql == "works where type is (book-chapter)"
 
 
 class TestEdgeCases:

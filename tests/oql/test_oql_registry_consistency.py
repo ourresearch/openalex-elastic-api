@@ -155,23 +155,23 @@ def _leaf_tuple(row):
 @pytest.mark.parametrize("oql,want_leaf,want_render", [
     # exact day -> base column (ES term)
     ("works where date is 2020-05-17",
-     ("publication_date", "is", "2020-05-17"), "works where date is 2020-05-17"),
+     ("publication_date", "is", "2020-05-17"), "works where date is (2020-05-17)"),
     # inclusive bounds route to from_*/to_* (the ONLY inclusive form at ES: gte/lte)
     ("works where date >= 2020-01-01",
-     ("from_publication_date", "is", "2020-01-01"), "works where date >= 2020-01-01"),
+     ("from_publication_date", "is", "2020-01-01"), "works where date >= (2020-01-01)"),
     ("works where date <= 2020-12-31",
-     ("to_publication_date", "is", "2020-12-31"), "works where date <= 2020-12-31"),
+     ("to_publication_date", "is", "2020-12-31"), "works where date <= (2020-12-31)"),
     # strict comparisons stay on the base column (ES gt/lt)
     ("works where date > 2020-01-01",
-     ("publication_date", ">", "2020-01-01"), "works where date > 2020-01-01"),
+     ("publication_date", ">", "2020-01-01"), "works where date > (2020-01-01)"),
     # the other two axes
     ("works where created date >= 2024-01-01",
-     ("from_created_date", "is", "2024-01-01"), "works where created date >= 2024-01-01"),
+     ("from_created_date", "is", "2024-01-01"), "works where created date >= (2024-01-01)"),
     ("works where updated date <= 2025-06-01",
-     ("to_updated_date", "is", "2025-06-01"), "works where updated date <= 2025-06-01"),
+     ("to_updated_date", "is", "2025-06-01"), "works where updated date <= (2025-06-01)"),
     # raw from_*/to_* key still parses (drops it off the #363 fallback; renders via axis)
     ("works where from_publication_date is 2020-01-01",
-     ("from_publication_date", "is", "2020-01-01"), "works where date >= 2020-01-01"),
+     ("from_publication_date", "is", "2020-01-01"), "works where date >= (2020-01-01)"),
 ])
 def test_date_kind_routing_and_render(oql, want_leaf, want_render):
     """oxjob #407: the `date` kind routes its operator to the right ES param and
@@ -190,7 +190,7 @@ def test_date_kind_round_trips():
     two-leaf OQO (bounds stay two clauses — never collapse to a `lo-hi` dash, which
     would collide with ISO dates)."""
     oql = "works where date >= 2019-01-01 and date <= 2023-12-31"
-    canonical = "works where date >= 2019-01-01 and date <= 2023-12-31"
+    canonical = "works where date >= (2019-01-01) and date <= (2023-12-31)"
     oqo = parse(oql)
     leaves = [_leaf_tuple(r) for r in oqo.filter_rows]
     assert leaves == [("from_publication_date", "is", "2019-01-01"),

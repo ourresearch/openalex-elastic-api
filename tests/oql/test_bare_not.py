@@ -9,7 +9,8 @@ operand only, so `not a or b` = `(not a) or b`. To negate a group, write
 
 This REVERSES the functional `not()` (decision 21) and supersedes Change B
 (decision 22). There is one negation surface and the canonical render is always
-the bare `not <value>` prefix — `is not` / `does not have` /
+the bare `not <value>` prefix, rendered INSIDE the always-parenthesized value
+(#554): `is (not FR)` — `is not` / `does not have` /
 `is not in collection` are accepted as INPUT aliases but never emitted (the OQO
 has no negated-predicate operator; negation only rides the `is_negated` bit).
 Booleans, which have no value brick, keep the natural verb flip.
@@ -59,13 +60,13 @@ def test_bare_not_code_is_gone():
 
 def test_standalone_negated_leaves_render_bare_prefix():
     assert _identity("works where country is not FR") \
-        == "works where country is not FR"
+        == "works where country is (not FR)"
     assert _identity("works where title has not dog") \
-        == "works where title has not dog"
+        == "works where title has (not dog)"
     assert _identity("works where work is in collection not col_abc123") \
-        == "works where work is in collection not col_abc123"
+        == "works where work is in collection (not col_abc123)"
     assert _identity("works where language is not unknown") \
-        == "works where language is not unknown"
+        == "works where language is (not unknown)"
 
 
 def test_in_group_not_renders_bare_prefix():
@@ -102,10 +103,11 @@ def test_quoted_phrase_negation_round_trips():
 # --- a multi-word search run is ONE value-node that `not` negates whole ----- #
 
 def test_not_negates_a_whole_bare_word_run():
-    # `not machine learning` negates the single stemmed run, rendered parenthesized
-    # because a multi-token stemmed value is parenthesized (arity rule, §3.6).
+    # `not machine learning` negates the single stemmed run; the value is always
+    # parenthesized (#554) and the standalone `not` renders inside the group,
+    # with no extra inner parens around the run.
     assert _identity("works where title has not machine learning") \
-        == "works where title has not (machine learning)"
+        == "works where title has (not machine learning)"
 
 
 # --- precedence: `not` binds the next operand only (SR / left-to-right) ----- #
@@ -124,27 +126,27 @@ def test_not_binds_next_operand_only():
 
 def test_predicate_input_aliases_renormalize_to_bare_prefix():
     assert _identity("works where title does not have dog") \
-        == "works where title has not dog"
+        == "works where title has (not dog)"
     assert _identity("works where work is not in collection col_abc123") \
-        == "works where work is in collection not col_abc123"
+        == "works where work is in collection (not col_abc123)"
     assert _identity("works where country is not FR") \
-        == "works where country is not FR"
+        == "works where country is (not FR)"
     assert _identity("works where country is not (FR or US)") \
         == "works where country is (not FR and not US)"
 
 
 def test_top_level_not_of_an_or_pushes_to_per_leaf_bare_nots():
     assert _identity("works where not (country is FR or type is article)") \
-        == "works where country is not FR and type is not article"
+        == "works where country is (not FR) and type is (not article)"
 
 
 # --- booleans render as `<name> is true|false` (oxjob #363) ----------------- #
 
 def test_booleans_render_as_true_false():
-    # Negation folds into the value, so the canonical form is `is true` / `is false`.
+    # Negation folds into the value, so the canonical form is `is (true)` / `is (false)`.
     assert _identity("works where open access is false") \
-        == "works where open access is false"
+        == "works where open access is (false)"
     assert _identity("works where has DOI is false") \
-        == "works where has DOI is false"
+        == "works where has DOI is (false)"
     assert _identity("works where retracted is not true") \
-        == "works where retracted is false"
+        == "works where retracted is (false)"

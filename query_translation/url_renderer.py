@@ -343,10 +343,13 @@ def render_or_branch(f: BranchFilter) -> str:
     values = []
 
     for sub_f in f.filters:
+        # A null-sentinel leaf (`language is (en or unknown)`, #554) renders as
+        # the classic URL's `null` token, same as the standalone-leaf path.
+        val = "null" if sub_f.value is None else str(sub_f.value)
         if getattr(sub_f, "is_negated", False):
-            values.append(f"!{sub_f.value}")
+            values.append(f"!{val}")
         else:
-            values.append(str(sub_f.value))
+            values.append(val)
 
     pipe_joined = "|".join(values)
     return f"{field}:{pipe_joined}"

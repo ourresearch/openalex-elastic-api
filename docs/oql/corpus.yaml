@@ -76,7 +76,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I136199984'
   status: ok
-  oql: 'works where institution is I136199984 [Harvard]'
+  oql: 'works where institution is (I136199984 [Harvard])'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I136199984}]}
   note: ID authoritative; [Harvard] is an ignored annotation, regenerated on output.
 
@@ -88,7 +88,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I136199984'
   status: ok
-  oql: 'works where institution is I136199984 [Harvard]'
+  oql: 'works where institution is (I136199984 [Harvard])'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I136199984}]}
   note: The annotation is free text and is not validated — it cannot lie because nothing reads it.
 
@@ -219,7 +219,7 @@ rows:
   oxurl_status: oql-only
   oxurl: null
   status: ok
-  oql: 'works where abstract has banana or title has apple'
+  oql: 'works where abstract has (banana) or title has (apple)'
   oqo: {get_rows: works, filter_rows: [
         {join: or, filters: [
           {column_id: display_name.search, value: apple, operator: has},
@@ -258,7 +258,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22climate%20change%22'
   status: ok
-  oql: 'works where title has "climate change"'
+  oql: 'works where title has ("climate change")'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"climate change"', operator: has}]}
   note: 'QUOTES = exact adjacent phrase, stemming OFF (.search.exact). The precision lever.'
 
@@ -270,7 +270,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search:%22whopper%20junior%22'
   status: ok
-  oql: 'works where title has stemmed "whopper junior"'
+  oql: 'works where title has (stemmed "whopper junior")'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"whopper junior"', operator: has}]}
   note: 'NEAR = stemmed adjacent phrase (.search) → matches "whoppers junior". The bridge that keeps recall on a phrase.'
 
@@ -282,7 +282,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:cat'
   status: ok
-  oql: 'works where title has "cat"'
+  oql: 'works where title has ("cat")'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: cat, operator: has}]}
   note: 'Quoting a SINGLE word = exact (no plurals). Same rule as a phrase — quotes always mean exact.'
 
@@ -294,7 +294,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search:cat'
   status: ok
-  oql: 'works where title has cat'
+  oql: 'works where title has (cat)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: cat, operator: has}]}
   note: 'Bare word = stemmed (matches cats). Contrast with row 14 "cat" (exact).'
 
@@ -306,7 +306,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22rock%20or%20roll%22'
   status: ok
-  oql: 'works where title has "rock or roll"'
+  oql: 'works where title has ("rock or roll")'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"rock or roll"', operator: has}]}
   note: 'Inside quotes = literal: the `or` is a word, not a connective. One exact phrase.'
 
@@ -344,7 +344,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:bar*'
   status: ok
-  oql: 'works where title has "bar*"'
+  oql: 'works where title has ("bar*")'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'bar*', operator: has}]}
   note: 'Quoted wildcard = the sanctioned path (oxjob #364): runs on the no-stem `.search.exact` column. Reverses #337''s old `OQL_WILDCARD_IN_QUOTES` — quotes are now where wildcards belong (stemming would drop the literal prefix).'
 
@@ -378,7 +378,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:foo*bar'
   status: ok
-  oql: 'works where title has "foo*bar"'
+  oql: 'works where title has ("foo*bar")'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'foo*bar', operator: has}]}
   note: Mid-word `*` (>=3-char prefix, within one token), quoted so it runs on the no-stem `.search.exact` column (oxjob #364). Bare `foo*bar` is now an error (OQL_WILDCARD_NEEDS_EXACT).
 
@@ -390,7 +390,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:wom%3Fn'
   status: ok
-  oql: 'works where title has "wom?n"'
+  oql: 'works where title has ("wom?n")'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: 'wom?n', operator: has}]}
   note: Mid-word `?` = exactly one character, quoted so it runs on the no-stem `.search.exact` column (oxjob #364). Bare `wom?n` is now an error (OQL_WILDCARD_NEEDS_EXACT).
 
@@ -441,7 +441,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22smart%22~3~%22phone%22'
   status: ok
-  oql: 'works where title has within 3 ("smart", "phone")'
+  oql: 'works where title has (within 3 ("smart", "phone"))'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart"~3~"phone"', operator: has}]}
   note: 'List proximity (the ONE proximity surface, oxjob #514): K operands NEAR each other within an N-word window, unordered. Two quoted (exact, frozen) operands here = WoS `NEAR/N`. SUPPORTED via an ES `intervals` query — each operand is its own (possibly multi-word, adjacent) sub-interval, combined ordered=false + max_gaps=N (oxjob #355 Goal B; live works-v33 = 5,183 hits). Value encoding `"A"~N~"B"` is the K=2 case of `"op1"~N~"op2"~...`; quoted operands route to `.search.exact` (exact). The OXURL `~N~` notation is frozen and unchanged.'
 
@@ -463,7 +463,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22smart*%20phone%22'
   status: ok
-  oql: 'works where title has "smart* phone"'
+  oql: 'works where title has ("smart* phone")'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart* phone"', operator: has}]}
   note: 'Multi-token quoted wildcard phrase WITHOUT proximity = adjacency. SUPPORTED via an ES `intervals` query (ordered=true, max_gaps=0; trailing-prefix -> prefix rule, mid-word ? -> wildcard rule) — query_string would silently drop the wildcard. The no-`within` sibling of rows 27/58 (oxjob #355 Goal A; live works-v33 = 4,986 hits vs plain "smart phone" = 4,975). A SINGLE quoted wildcard token ("studies*") is #364''s unquoted no-stem path, not this. Leading / sub-3-char-prefix wildcards inside the phrase still rejected (#337).'
 
@@ -475,7 +475,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22machine%20learning%22~5~%22neural%20network%22'
   status: ok
-  oql: 'works where title has within 5 ("machine learning", "neural network")'
+  oql: 'works where title has (within 5 ("machine learning", "neural network"))'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"machine learning"~5~"neural network"', operator: has}]}
   note: 'List proximity with MULTI-WORD frozen operands on both sides (oxjob #514) — quotes freeze each phrase (its own ordered, gap-0 adjacency sub-interval); the operands are combined ordered=false + max_gaps=5. This is the shape only WoS (NEAR/N) and an ES `intervals`/`span` engine can express; `match_phrase`+slop cannot keep two phrases as units (oxjob #355 Goal B; live works-v33 = 1,531 hits).'
 
@@ -507,7 +507,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?search.semantic=graph%20neural%20networks%20for%20molecular%20property%20prediction'
   status: ok
-  oql: 'works where abstract is similar to "graph neural networks for molecular property prediction"'
+  oql: 'works where abstract is similar to ("graph neural networks for molecular property prediction")'
   oqo: {get_rows: works, filter_rows: [{column_id: abstract.search.semantic,
         value: graph neural networks for molecular property prediction, operator: has}]}
   note: Semantic (search.semantic, 2-phase vector search).
@@ -520,7 +520,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:%22machine%20learning%22'
   status: ok
-  oql: 'works where title/abstract has "machine learning"'
+  oql: 'works where title/abstract has ("machine learning")'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"machine learning"', operator: has}]}
   note: Exact phrase, no stemming (.search.exact).
 
@@ -542,7 +542,7 @@ rows:
   oxurl_status: oql-only
   oxurl: null
   status: ok
-  oql: 'works where title has within 3 ("foo", "bar", "baz")'
+  oql: 'works where title has (within 3 ("foo", "bar", "baz"))'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"foo"~3~"bar"~"baz"', operator: has}]}
   note: 'K-ARY list proximity (oxjob #514): THREE operands sharing one N-word window — a capability neither the old single-phrase slop nor binary `of` form could express. Compiles to one ES `intervals` all_of (ordered=false, max_gaps=3) over K sub-intervals. Value `"op1"~N~"op2"~"op3"~...` generalizes the binary `~N~` shape. `oql-only`: the classic URL `~` syntax tops out at binary (two operands), so K>=3 has no URL form (the win — see url_renderer K-ary guard).'
 
@@ -554,7 +554,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search:%22foo%22~3~%22bar%22'
   status: ok
-  oql: 'works where title has within 3 (foo, bar)'
+  oql: 'works where title has (within 3 (foo, bar))'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"foo"~3~"bar"', operator: has}]}
   note: 'STEMMED list proximity: all-BARE operands → the `.search` (stemmed) column, so each operand matches with stemming (the stemmed analogue of row 28''s quoted/exact list). Same `intervals` all_of execution; the column carries stem-vs-exact. Replaces the old `stemmed "smart phone" within N words` stemmed single-phrase form (row 32, now OXURL-only).'
 
@@ -566,7 +566,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=display_name.search.exact:%22smart%22~3~%22phone*%22'
   status: ok
-  oql: 'works where title has within 3 ("smart", "phone*")'
+  oql: 'works where title has (within 3 ("smart", "phone*"))'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: '"smart"~3~"phone*"', operator: has}]}
   note: 'Wildcard inside a QUOTED (exact) list-proximity operand — SUPPORTED via the ES `intervals` query (trailing-prefix → prefix rule); the wildcard composes with proximity when the operand is quoted/no-stem (oxjob #355). A BARE operand can''t carry a wildcard (row 29). Leading / sub-3-char-prefix wildcards still rejected (#337); two short prefixes hit the #355 budget guard (row 81).'
 
@@ -623,7 +623,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=publication_year:2020'
   status: ok
-  oql: 'works where year is 2020'
+  oql: 'works where year is (2020)'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 2020}]}
 
 - id: 35
@@ -635,7 +635,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=publication_year:2020-,authorships.institutions.lineage:I136199984|I33213144'
   status: ok
   oql: |-
-    works where year >= 2020
+    works where year >= (2020)
       and institution is (I136199984 [Harvard] or I33213144 [Harvard])
   oqo: {get_rows: works, filter_rows: [
         {join: or, filters: [
@@ -651,7 +651,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I130438778'
   status: ok
-  oql: 'works where institution is I130438778 [Memorial University of Newfoundland]'
+  oql: 'works where institution is (I130438778 [Memorial University of Newfoundland])'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I130438778}]}
 
 - id: 37
@@ -663,9 +663,9 @@ rows:
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I201448701,funders.id:F4320332161,open_access.is_oa:false'
   status: ok
   oql: |-
-    works where institution is I201448701 [UW]
-      and funder is F4320332161 [NIH]
-      and open access is false
+    works where institution is (I201448701 [UW])
+      and funder is (F4320332161 [NIH])
+      and open access is (false)
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I201448701},
         {column_id: funders.id, value: F4320332161},
@@ -701,7 +701,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/authors?filter=has_orcid:true,last_known_institutions.country_code:BR'
   status: ok
-  oql: 'authors where has ORCID is true and author country is BR [Brazil]'
+  oql: 'authors where has ORCID is (true) and author country is (BR [Brazil])'
   oqo: {get_rows: authors, filter_rows: [
         {column_id: last_known_institutions.country_code, value: BR},
         {column_id: has_orcid, value: true}]}
@@ -714,7 +714,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/authors?filter=ids.openalex:A5022654839'
   status: ok
-  oql: 'authors where openalex id is A5022654839'
+  oql: 'authors where openalex id is (A5022654839)'
   oqo: {get_rows: authors, filter_rows: [{column_id: ids.openalex, value: A5022654839}]}
 
 - id: 42
@@ -725,7 +725,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/sources?filter=type:journal'
   status: ok
-  oql: 'sources where type is journal'
+  oql: 'sources where type is (journal)'
   oqo: {get_rows: sources, filter_rows: [{column_id: type, value: journal}]}
 
 - id: 43
@@ -736,7 +736,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/institutions?filter=country_code:FR'
   status: ok
-  oql: 'institutions where country code is FR [France]'
+  oql: 'institutions where country code is (FR [France])'
   oqo: {get_rows: institutions, filter_rows: [{column_id: country_code, value: FR}]}
 
 - id: 44
@@ -747,7 +747,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/topics?filter=domain.id:3'
   status: ok
-  oql: 'topics where domain is 3 [Physical Sciences]'
+  oql: 'topics where domain is (3 [Physical Sciences])'
   oqo: {get_rows: topics, filter_rows: [{column_id: domain.id, value: '3'}]}
 
 - id: 45
@@ -759,8 +759,8 @@ rows:
   oxurl: 'https://openalex.org/authors?filter=last_known_institutions.id:I114027177,topics.id:T10895'
   status: ok
   oql: |-
-    authors where last known institution is I114027177 [UNC]
-      and topics is T10895 [climate change]
+    authors where last known institution is (I114027177 [UNC])
+      and topics is (T10895 [climate change])
   oqo: {get_rows: authors, filter_rows: [
         {column_id: last_known_institutions.id, value: I114027177},
         {column_id: topics.id, value: T10895}]}
@@ -776,7 +776,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.author.id:A5066175077&group_by=authorships.author.id'
   status: ok
-  oql: 'works where author is A5066175077 [Stephen Hawking] group by author'
+  oql: 'works where author is (A5066175077 [Stephen Hawking]) group by author'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.id, value: A5066175077}],
         group_by: [{column_id: authorships.author.id}]}
 
@@ -788,7 +788,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=fulltext.search:%22Macrocystis%20pyrifera%22&group_by=authorships.author.id'
   status: ok
-  oql: 'works where full text has stemmed "Macrocystis pyrifera" group by author'
+  oql: 'works where full text has (stemmed "Macrocystis pyrifera") group by author'
   # "anywhere" is a back-compat alias of the canonical "fulltext" scope and emits
   # fulltext.search (oxjob #374; default.search is deprecated).
   oqo: {get_rows: works, filter_rows: [{column_id: fulltext.search, value: '"Macrocystis pyrifera"', operator: has}],
@@ -803,7 +803,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=publication_year:1976-&group_by=primary_topic.id,publication_year'
   status: ok
-  oql: 'works where year >= 1976 group by topic, year'
+  oql: 'works where year >= (1976) group by topic, year'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 1976, operator: '>='}],
         group_by: [{column_id: primary_topic.id}, {column_id: publication_year}]}
   note: 'Multi-dim group_by, now SUPPORTED (oxjob #387): the live API nests the ES terms aggs (groups within groups). Was server-unsupported (single-dim only -> #297).'
@@ -817,7 +817,8 @@ rows:
   oxurl: 'https://openalex.org/works?filter=authorships.countries:col_eu27,authorships.countries:US&group_by=primary_topic.id'
   status: ok
   oql: |-
-    works where country is in collection col_eu27 and country is US [United States]
+    works where country is in collection (col_eu27)
+      and country is (US [United States])
     group by topic
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.countries, value: col_eu27, operator: in collection},
@@ -833,7 +834,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=is_retracted:true&group_by=authorships.institutions.lineage'
   status: ok
-  oql: 'works where retracted is true group by institution'
+  oql: 'works where retracted is (true) group by institution'
   oqo: {get_rows: works, filter_rows: [{column_id: is_retracted, value: true}],
         group_by: [{column_id: authorships.institutions.lineage}]}
 
@@ -846,8 +847,8 @@ rows:
   oxurl: 'https://openalex.org/works?filter=cited_by_count:>100,title_and_abstract.search:%22coral%20bleaching%22&group_by=primary_location.source.id'
   status: ok
   oql: |-
-    works where citation count > 100
-      and title/abstract has stemmed "coral bleaching"
+    works where citation count > (100)
+      and title/abstract has (stemmed "coral bleaching")
     group by source
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: '"coral bleaching"', operator: has},
@@ -862,7 +863,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=type:book&group_by=primary_topic.field.id'
   status: ok
-  oql: 'works where type is book group by field'
+  oql: 'works where type is (book) group by field'
   oqo: {get_rows: works, filter_rows: [{column_id: type, value: book}],
         group_by: [{column_id: primary_topic.field.id}]}
 
@@ -875,7 +876,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I154570441,is_retracted:true&group_by=authorships.author.id'
   status: ok
   oql: |-
-    works where institution is I154570441 [UCSB] and retracted is true
+    works where institution is (I154570441 [UCSB]) and retracted is (true)
     group by author
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.institutions.lineage, value: I154570441},
@@ -890,7 +891,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.institutions.lineage:I107639228&group_by=sustainable_development_goals.id'
   status: ok
-  oql: 'works where institution is I107639228 [Notre Dame] group by SDG'
+  oql: 'works where institution is (I107639228 [Notre Dame]) group by SDG'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.institutions.lineage, value: I107639228}],
         group_by: [{column_id: sustainable_development_goals.id}]}
 
@@ -936,7 +937,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:%22smart%22~3~%22phone%22'
   status: ok
-  oql: 'works where title/abstract has within 3 (smart, phone)'
+  oql: 'works where title/abstract has (within 3 (smart, phone))'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: '"smart"~3~"phone"', operator: has}]}
   note: 'STEMMED list proximity (oxjob #514): all-bare operands → `.search` (stemmed), matching the #284 column. Quote operands for exact proximity. Replaces the old `stemmed "smart phone" within 3 words` stemmed single-phrase form.'
 
@@ -949,7 +950,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:phone*'
   status: ok
-  oql: 'works where title/abstract has "phone*"'
+  oql: 'works where title/abstract has ("phone*")'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: 'phone*', operator: has}]}
   note: 'Trailing wildcard, quoted so it runs on the no-stem `title_and_abstract.search.exact` column (oxjob #364). Bare `phone*` is now an error (OQL_WILDCARD_NEEDS_EXACT) — stemming would drop the literal prefix.'
 
@@ -962,7 +963,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:%22smart%22~3~%22phone*%22'
   status: ok
-  oql: 'works where title/abstract has within 3 ("smart", "phone*")'
+  oql: 'works where title/abstract has (within 3 ("smart", "phone*"))'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"smart"~3~"phone*"', operator: has}]}
   note: 'Wildcard inside a QUOTED (exact) list-proximity operand, SUPPORTED (oxjob #355/#514): compiles to an ES `intervals` query that keeps the wildcard (query_string used to drop it). WoS/Scopus parity. ordered=false + max_gaps=N == slop N. Leading / sub-3-char-prefix wildcards still rejected (#337); a BARE wildcard operand is rejected (row 29).'
 
@@ -975,7 +976,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:%22oyster%20toadfish%22'
   status: ok
-  oql: 'works where title/abstract has "oyster toadfish"'
+  oql: 'works where title/abstract has ("oyster toadfish")'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"oyster toadfish"', operator: has}]}
   note: 'NL says "exact phrase only, no lemmatization" → plain quotes (exact, .search.exact). The textbook quotes-mean-exact case.'
 
@@ -987,7 +988,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:behavio*r'
   status: ok
-  oql: 'works where title/abstract has "behavio*r"'
+  oql: 'works where title/abstract has ("behavio*r")'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: 'behavio*r', operator: has}]}
   note: Mid-word wildcard (UK/US spellings in one query), quoted so it runs on the no-stem `title_and_abstract.search.exact` column (oxjob #364). Bare `behavio*r` is now an error (OQL_WILDCARD_NEEDS_EXACT).
 
@@ -1001,9 +1002,9 @@ rows:
   oxurl: 'https://openalex.org/works?filter=language:en,publication_year:2015-2024,title_and_abstract.search:ASD|%22autism%20spectrum%20disorder%22|autism,title_and_abstract.search:intervention|therapy|treatment,type:article|review'
   status: ok
   oql: |-
-    works where language is en [English]
-      and year >= 2015
-      and year <= 2024
+    works where language is (en [English])
+      and year >= (2015)
+      and year <= (2024)
       and title/abstract has (
         (ASD or stemmed "autism spectrum disorder" or autism)
         and (intervention or therapy or treatment)
@@ -1033,7 +1034,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=funders.id:F4320337351,open_access.oa_status:gold'
   status: ok
-  oql: 'works where funder is F4320337351 [NCI] and open access status is gold'
+  oql: 'works where funder is (F4320337351 [NCI]) and open access status is (gold)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: open_access.oa_status, value: gold},
         {column_id: funders.id, value: F4320337351}]}
@@ -1048,8 +1049,8 @@ rows:
   oxurl: 'https://openalex.org/works?filter=publication_year:2018-2023,title_and_abstract.search:CRISPR,title_and_abstract.search:%22genome%20editing%22&sample=500'
   status: ok
   oql: |-
-    works where year >= 2018
-      and year <= 2023
+    works where year >= (2018)
+      and year <= (2023)
       and title/abstract has (CRISPR and stemmed "genome editing")
     sample 500
   oqo: {get_rows: works, filter_rows: [
@@ -1068,7 +1069,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search:library'
   status: ok
-  oql: 'works where raw affiliation has library'
+  oql: 'works where raw affiliation has (library)'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: library, operator: has}]}
 
 - id: 65
@@ -1080,7 +1081,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search:%22london%22~5~%22hospital%22'
   status: ok
-  oql: 'works where raw affiliation has within 5 (london, hospital)'
+  oql: 'works where raw affiliation has (within 5 (london, hospital))'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"london"~5~"hospital"', operator: has}]}
   note: 'List proximity on a non-title field (oxjob #514): the position_increment_gap scopes the window to ONE affiliation string; slop ~5 allows order/gap within it. All-bare operands → stemmed `.search`.'
 
@@ -1093,7 +1094,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=doi:10.1021/es052595%2B'
   status: ok
-  oql: 'works where DOI is 10.1021/es052595+'
+  oql: 'works where DOI is (10.1021/es052595+)'
   oqo: {get_rows: works, filter_rows: [{column_id: doi, value: '10.1021/es052595+'}]}
   note: 'Reserved chars (+, /) are ordinary inside a bare value; no escaping in OQL.'
 
@@ -1106,7 +1107,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.author.orcid:0000-0002-1838-9363'
   status: ok
-  oql: 'works where ORCID is 0000-0002-1838-9363'
+  oql: 'works where ORCID is (0000-0002-1838-9363)'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.orcid, value: '0000-0002-1838-9363'}]}
 
 - id: 68
@@ -1141,7 +1142,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=language:es'
   status: ok
-  oql: 'works where language is es [Spanish]'
+  oql: 'works where language is (es [Spanish])'
   oqo: {get_rows: works, filter_rows: [{column_id: language, value: es}]}
 
 - id: 71
@@ -1199,7 +1200,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:CRISPR&group_by=funders.id'
   status: ok
-  oql: 'works where title/abstract has CRISPR group by funder'
+  oql: 'works where title/abstract has (CRISPR) group by funder'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: CRISPR, operator: has}],
         group_by: [{column_id: funders.id}]}
   note: 'Only the group-by-COUNT form is in scope. Ranking groups by mean citation impact is sort-by-aggregate -> #297.'
@@ -1213,7 +1214,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=raw_affiliation_strings.search:%22tufts%22~5~%22boston%22'
   status: ok
-  oql: 'works where raw affiliation has within 5 (tufts, boston)'
+  oql: 'works where raw affiliation has (within 5 (tufts, boston))'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_affiliation_strings.search, value: '"tufts"~5~"boston"', operator: has}]}
 
 - id: 76
@@ -1235,7 +1236,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=raw_author_name.search:%22john%22~2~%22smith%22'
   status: ok
-  oql: 'works where byline has within 2 (john, smith)'
+  oql: 'works where byline has (within 2 (john, smith))'
   oqo: {get_rows: works, filter_rows: [{column_id: raw_author_name.search, value: '"john"~2~"smith"', operator: has}]}
   note: 'Byline list proximity, slop ~2 recovers middle-name/initial forms without crossing co-authors (oxjob #514). All-bare operands → stemmed `.search`.'
 
@@ -1537,7 +1538,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=collection:col_abc123'
   status: ok
-  oql: 'works where work is in collection col_abc123'
+  oql: 'works where work is in collection (col_abc123)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: collection, value: col_abc123, operator: in collection}]}
   note: 'Same-type membership: works that are members of a Collection of works. Renders to the dedicated `filter=collection:col_…` API param (CollectionField).'
@@ -1550,7 +1551,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=collection:!col_abc123'
   status: ok
-  oql: 'works where work is in collection not col_abc123'
+  oql: 'works where work is in collection (not col_abc123)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: collection, value: col_abc123, operator: in collection, is_negated: true}]}
   note: 'Negated membership rides the single `is_negated` bit (§3.5) → URL `collection:!col_…`.'
@@ -1563,7 +1564,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=authorships.author.id:col_xyz789'
   status: ok
-  oql: 'works where author is in collection col_xyz789'
+  oql: 'works where author is in collection (col_xyz789)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: authorships.author.id, value: col_xyz789, operator: in collection}]}
   note: 'Cross-type membership: works by authors in a Collection of authors. OQO keeps the referenced entity column; URL surface is the bare `<field>:col_…` (resolved by the cross-type pre-pass).'
@@ -1591,7 +1592,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=primary_location.source.issn:0140-6736'
   status: ok
-  oql: 'works where ISSN is 0140-6736'
+  oql: 'works where ISSN is (0140-6736)'
   oqo: {get_rows: works, filter_rows: [{column_id: primary_location.source.issn, value: '0140-6736'}]}
   note: 'The work''s journal, by ISSN (matches ISSN-L or any of a source''s ISSNs). Literal string like DOI/ORCID — no name resolution. WoS IS=, Scopus ISSN().'
 
@@ -1604,7 +1605,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=primary_location.source.host_organization_lineage:P4310320990'
   status: ok
-  oql: 'works where publisher is P4310320990 [Elsevier BV]'
+  oql: 'works where publisher is (P4310320990 [Elsevier BV])'
   oqo: {get_rows: works, filter_rows: [{column_id: primary_location.source.publisher_lineage, value: P4310320990}]}
   note: 'Publisher of the work''s primary source, by P-id (lineage → a parent publisher matches its imprints). Mirrors `funder`: an entity-id reference, name-resolved via the publishers namespace. WoS PUBL=.'
 
@@ -1687,7 +1688,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=publication_year:2019-2023'
   status: ok
-  oql: 'works where year >= 2019 and year <= 2023'
+  oql: 'works where year >= (2019) and year <= (2023)'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 2019, operator: '>='}, {column_id: publication_year, value: 2023, operator: '<='}]}
   note: 'A closed numeric range is written as the two-bound implicit-AND `year >= 2019 and year <= 2023` — the dash range literal `year is 2019-2023` was REMOVED as OQL surface syntax (charter decision 24; typing it now errors OQL_RANGE_LITERAL_REMOVED, see the dash-rejected error row). It parses to two bound leaves and the canonical render is the endpoint form. The OpenAlex URL range form `publication_year:2019-2023` is unaffected — the URL parser still builds the same OQO, so URL round-trip survives (oxjob #363).'
 
@@ -1699,7 +1700,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=publication_year:-2023'
   status: ok
-  oql: 'works where year <= 2023'
+  oql: 'works where year <= (2023)'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 2023, operator: '<='}]}
   note: 'The URL open-upper form `publication_year:-2023` (== `year <= 2023`) maps to the inequality. A single-ended bound is written as a plain inequality (`year <= 2023`); the open-ended dash spellings `year is -2023` / `year is 2019-` were REMOVED with the rest of the range literal (charter decision 24) and now error OQL_RANGE_LITERAL_REMOVED on input. The URL open forms still parse.'
 
@@ -1711,7 +1712,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=fwci:1.5-3.0'
   status: ok
-  oql: 'works where FWCI >= 1.5 and FWCI <= 3.0'
+  oql: 'works where FWCI >= (1.5) and FWCI <= (3.0)'
   oqo: {get_rows: works, filter_rows: [{column_id: fwci, value: 1.5, operator: '>='}, {column_id: fwci, value: 3.0, operator: '<='}]}
   note: 'FWCI is a float field, so endpoint values accept decimals: `FWCI >= 1.5 and FWCI <= 3.0`. The dash literal `FWCI is 1.5-3.0` was removed with the rest of the range syntax (decision 24). The URL range form `fwci:1.5-3.0` is unaffected.'
 
@@ -1723,7 +1724,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=publication_year:>42,publication_year:<100'
   status: ok
-  oql: 'works where year > 42 and year < 100'
+  oql: 'works where year > (42) and year < (100)'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_year, value: 42, operator: '>'}, {column_id: publication_year, value: 100, operator: '<'}]}
   note: 'Strict bounds stay exactly as written — `year > 42 and year < 100` is NOT rewritten to the inclusive `>= 43 and <= 99`. The ±1 strict-integer-pair collapse (which fed the removed dash range) was dropped with the range literal (charter decision 24): more faithful, no inference. Renders as two strict endpoint clauses / `publication_year:>42,publication_year:<100` (oxjob #363).'
 
@@ -1768,8 +1769,8 @@ rows:
   oxurl: 'https://openalex.org/works?filter=primary_topic.subfield.id:2712,type:article'
   status: ok
   oql: |-
-    works where subfield is 2712 [Endocrinology, Diabetes and Metabolism]
-      and type is article
+    works where subfield is (2712 [Endocrinology, Diabetes and Metabolism])
+      and type is (article)
   oqo: {get_rows: works, filter_rows: [{column_id: primary_topic.subfield.id, value: '2712'}, {column_id: type, value: article}]}
   note: 'The subfield of a work''s primary topic (topic hierarchy domain > field > subfield > topic). Render word = registry display_name "subfield"; the value resolves a `[display name]` via the native subfields namespace. Was an "unknown field" before oxjob #363 (only field/domain/topic were registered).'
 
@@ -1781,7 +1782,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=ids.pmid:12345678'
   status: ok
-  oql: 'works where PMID is 12345678'
+  oql: 'works where PMID is (12345678)'
   oqo: {get_rows: works, filter_rows: [{column_id: ids.pmid, value: '12345678'}]}
   note: 'Any works-registry column_id is accepted as an OQL input alias even with no curated friendly name — valuable for oxurl-fluent users, language-independence, and testing. The raw key is NOT canonical (it renders back as the raw id, round-tripping). Synthesized from the registry operator metadata. (oxjob #363; search columns are the one excluded family — expressed via the curated fields + quoting.)'
 
@@ -1793,7 +1794,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=citation_normalized_percentile.value:99,type:article'
   status: ok
-  oql: 'works where citation percentile by subfield is 99 and type is article'
+  oql: 'works where citation percentile by subfield is (99) and type is (article)'
   oqo: {get_rows: works, filter_rows: [{column_id: citation_normalized_percentile.value, value: 99}, {column_id: type, value: article}]}
   note: "The work's citation count normalized by subfield + year, as a percentile (0-100). Render word = registry display_name 'citation percentile by subfield'. The is_in_top_1_percent / is_in_top_10_percent siblings are curated bools. (oxjob #363 case 4)"
 
@@ -1805,7 +1806,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=language:en'
   status: ok
-  oql: 'works where language is en [English]'
+  oql: 'works where language is (en [English])'
   oqo: {get_rows: works, filter_rows: [{column_id: language, value: en}]}
   note: "Language is a closed code vocabulary (not a 'super obvious' enum like work-type), so it resolves a [display name] (English, not en) from config/languages.yaml. fields/subfields/domains resolve the same way — their numeric path-style IDs (fields/27) can't be routed by get_display_name, so they never resolved via ES before. (oxjob #363 case 5)"
 
@@ -1817,7 +1818,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=open_access.any_repository_has_fulltext:true,type:article'
   status: ok
-  oql: 'works where has repository fulltext is true and type is article'
+  oql: 'works where has repository fulltext is (true) and type is (article)'
   oqo: {get_rows: works, filter_rows: [{column_id: open_access.any_repository_has_fulltext, value: true}, {column_id: type, value: article}]}
   note: "Full text available in some open repository. Booleans are plain subject-predicate-value clauses now: `has repository fulltext is true`. (oxjob #363 case 6)"
 
@@ -1830,8 +1831,8 @@ rows:
   oxurl: 'https://openalex.org/works?filter=cited_by:w1984893742,type:article'
   status: ok
   oql: |-
-    works where cited by is w1984893742 [Uncertainty and Pension Systems Reforms]
-      and type is article
+    works where cited by is (w1984893742 [Uncertainty and Pension Systems Reforms])
+      and type is (article)
   oqo: {get_rows: works, filter_rows: [{column_id: cited_by, value: w1984893742}, {column_id: type, value: article}]}
   note: "cited_by:W = the works in W's reference list ('cited by' W); cites:W = works citing W. Render words = registry display_names 'cited by' / 'cites'. The W-id value resolves the referenced work's title, truncated with an ellipsis at a uniform length (works added to NATIVE_ENTITY_TYPES). (oxjob #363 case 7)"
 
@@ -1844,15 +1845,15 @@ rows:
   oxurl: 'https://openalex.org/works?filter=authorships.author.id:a5018352470,fulltext.search:simulation,publication_year:2015-2025,type:article,fulltext.search:%22data%20assimilation%22|%22state%20estimation%22|real-time,fulltext.search:%22reduced%20order%20model%22|%22surrogate%20model%22,primary_topic.field.id:15|16|17|19|21|22|23|25|26|31'
   status: ok
   oql: |-
-    works where author is a5018352470 [Kenji Takizawa]
+    works where author is (a5018352470 [Kenji Takizawa])
       and full text has (
         simulation
         and (stemmed "data assimilation" or stemmed "state estimation" or real-time)
         and (stemmed "reduced order model" or stemmed "surrogate model")
       )
-      and year >= 2015
-      and year <= 2025
-      and type is article
+      and year >= (2015)
+      and year <= (2025)
+      and type is (article)
       and field is (
         15 [Chemical Engineering] or 16 [Chemistry] or 17 [Computer Science]
         or 19 [Earth and Planetary Sciences] or 21 [Energy] or 22 [Engineering]
@@ -1870,7 +1871,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=publication_date:2020-05-17'
   status: ok
-  oql: 'works where date is 2020-05-17'
+  oql: 'works where date is (2020-05-17)'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_date, value: '2020-05-17'}]}
   note: "The `date` kind (oxjob #407). `date is YYYY-MM-DD` is an exact-day match on the base `publication_date` param (ES term). Literals are full ISO only — bare `2020` is rejected (it lives at `year is 2020`, the publication_year num field). Render word 'date' = the registry display_name."
 
@@ -1882,7 +1883,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=from_publication_date:2020-01-01,to_publication_date:2020-12-31'
   status: ok
-  oql: 'works where date >= 2020-01-01 and date <= 2020-12-31'
+  oql: 'works where date >= (2020-01-01) and date <= (2020-12-31)'
   oqo: {get_rows: works, filter_rows: [{column_id: from_publication_date, value: '2020-01-01'}, {column_id: to_publication_date, value: '2020-12-31'}]}
   note: "Inclusive date bounds (Jason 2026-06-09: range form = comparison operators, not a dash range — the dash collides with ISO dates). `>=` routes to `from_publication_date` (ES gte), `<=` to `to_publication_date` (ES lte) — the ONLY inclusive forms at ES; the base param has only exact-day + strict >/<. The two bound leaves stay two clauses (never collapse to a `lo-hi` dash) and round-trip to the same OQO the URL `from_publication_date:…,to_publication_date:…` builds."
 
@@ -1894,7 +1895,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=publication_date:>2020-01-01'
   status: ok
-  oql: 'works where date > 2020-01-01'
+  oql: 'works where date > (2020-01-01)'
   oqo: {get_rows: works, filter_rows: [{column_id: publication_date, value: '2020-01-01', operator: '>'}]}
   note: "Strict `>`/`<` map to the base `publication_date` param (ES gt/lt), distinct from the inclusive `>=`/`<=` which route to from_/to_ (gte/lte). Mirrors the classic URL `publication_date:>2020-01-01`."
 
@@ -1906,7 +1907,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=from_created_date:2024-01-01'
   status: ok
-  oql: 'works where created date >= 2024-01-01'
+  oql: 'works where created date >= (2024-01-01)'
   oqo: {get_rows: works, filter_rows: [{column_id: from_created_date, value: '2024-01-01'}]}
   note: "The created/updated axes parse exactly like publication `date` (render words 'created date'/'updated date' = registry display_names). NOTE: created/updated are Premium/Institutional/Partner only — free/personal/anon keys get HTTP 200 {\"error\":\"Plan upgrade required\"} at query time (sort=created_date is gated too). OQL surfaces the field; the engine enforces the plan gate. Do NOT use this axis in free-tier example links — `date` (publication) is the free axis."
 
@@ -1918,7 +1919,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=primary_topic.domain.id:3'
   status: ok
-  oql: 'works where domain is 3 [Physical Sciences]'
+  oql: 'works where domain is (3 [Physical Sciences])'
   oqo: {get_rows: works, filter_rows: [{column_id: primary_topic.domain.id, value: '3'}]}
   note: "#406 Part A: the friendly word resolves to the column that exists ON THE QUERIED ENTITY. On works `domain` is primary_topic.domain.id (the GUI domain param); on topics it's the bare domain.id (row 44). Both round-trip."
 
@@ -1930,7 +1931,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/topics?filter=field.id:27'
   status: ok
-  oql: 'topics where field is 27 [Medicine]'
+  oql: 'topics where field is (27 [Medicine])'
   oqo: {get_rows: topics, filter_rows: [{column_id: field.id, value: '27'}]}
   note: "#406 Part A: symmetric to row 113 — `field`/`subfield` are correct on works as primary_topic.* but on topics resolve to the bare field.id / subfield.id."
 
@@ -1942,7 +1943,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/topics?filter=subfield.id:2712'
   status: ok
-  oql: 'topics where subfield is 2712 [Endocrinology, Diabetes and Metabolism]'
+  oql: 'topics where subfield is (2712 [Endocrinology, Diabetes and Metabolism])'
   oqo: {get_rows: topics, filter_rows: [{column_id: subfield.id, value: '2712'}]}
   note: "#406 Part A: topics `subfield.id` registry display_name is 'parent subfield'; the friendly word 'subfield' is added as a parse alias so the topic-hierarchy word resolves on topics too."
 
@@ -1954,7 +1955,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/authors?filter=orcid:0000-0002-1825-0097'
   status: ok
-  oql: 'authors where ORCID is 0000-0002-1825-0097'
+  oql: 'authors where ORCID is (0000-0002-1825-0097)'
   oqo: {get_rows: authors, filter_rows: [{column_id: orcid, value: '0000-0002-1825-0097'}]}
   note: "#406 Part B: a vendor-ID homonym — the curated word ORCID maps to works' authorships.author.orcid, but on authors the column is bare `orcid`. Entity-aware resolution (registry display_name 'ORCID') picks the entity-correct column. Literal string, no name resolution."
 
@@ -1966,7 +1967,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/sources?filter=issn:2041-1723'
   status: ok
-  oql: 'sources where ISSN is 2041-1723'
+  oql: 'sources where ISSN is (2041-1723)'
   oqo: {get_rows: sources, filter_rows: [{column_id: issn, value: '2041-1723'}]}
   note: "#406 Part B: ISSN homonym — works primary_location.source.issn vs sources' bare `issn` (registry display_name 'ISSN'). Literal string."
 
@@ -1978,7 +1979,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/sources?filter=issn_l:2041-1723'
   status: ok
-  oql: 'sources where ISSN-L is 2041-1723'
+  oql: 'sources where ISSN-L is (2041-1723)'
   oqo: {get_rows: sources, filter_rows: [{column_id: issn_l, value: '2041-1723'}]}
   note: "#406 Part B: the entity-aware GUI-faceted registry fallback gives non-works columns an OQL surface. Friendly word == engine display_name 'ISSN-L'. Literal string."
 
@@ -1990,7 +1991,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/authors?filter=summary_stats.h_index:>49'
   status: ok
-  oql: 'authors where h-index > 49'
+  oql: 'authors where h-index > (49)'
   oqo: {get_rows: authors, filter_rows: [{column_id: summary_stats.h_index, value: 49, operator: '>'}]}
   note: "#406 Part B: numeric registry field; render word == display_name 'h-index'. summary_stats.h_index is GUI-faceted on every entity that has it, so it renders friendly."
 
@@ -2002,7 +2003,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/funders?filter=works_count:>1000'
   status: ok
-  oql: 'funders where works_count > 1000'
+  oql: 'funders where works_count > (1000)'
   oqo: {get_rows: funders, filter_rows: [{column_id: works_count, value: 1000, operator: '>'}]}
   note: "#406 Part B safety gate: `works_count` exists on authors/sources/institutions/funders/publishers but is GUI-faceted only on funders. Parsing 'works count' is funders-scoped, but the GLOBAL render map can't tell which entity, so it renders the RAW column_id (round-trips on every entity) rather than a friendly word that would break re-parse on authors etc."
 
@@ -2014,7 +2015,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/sources?filter=apc_usd:<2000'
   status: ok
-  oql: 'sources where article processing charge < 2000'
+  oql: 'sources where article processing charge < (2000)'
   oqo: {get_rows: sources, filter_rows: [{column_id: apc_usd, value: 2000, operator: '<'}]}
   note: "#406 Part B: multi-word friendly word ('article processing charge' = display_name) parses greedily and round-trips. sources-only column → renders friendly."
 
@@ -2038,7 +2039,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/sources?filter=is_oa:true'
   status: ok
-  oql: 'sources where fully OA is true'
+  oql: 'sources where fully OA is (true)'
   oqo: {get_rows: sources, filter_rows: [{column_id: is_oa, value: true}]}
   note: "#406 Part B boolean: render word 'fully OA' == engine display_name; a plain `<name> is true|false` clause (oxjob #363). is_oa exists on works too (filters the work's OA flag)."
 
@@ -2050,7 +2051,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/sources?filter=is_in_doaj:true'
   status: ok
-  oql: 'sources where DOAJ is true'
+  oql: 'sources where DOAJ is (true)'
   oqo: {get_rows: sources, filter_rows: [{column_id: is_in_doaj, value: true}]}
   note: "#406 Part B boolean: sources-only column → invalid_column on works (which uses primary_location.source.is_in_doaj, 'indexed by DOAJ')."
 
@@ -2062,7 +2063,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/sources?filter=is_core:true'
   status: ok
-  oql: 'sources where CWTS core is true'
+  oql: 'sources where CWTS core is (true)'
   oqo: {get_rows: sources, filter_rows: [{column_id: is_core, value: true}]}
   note: "#406 Part B boolean HOMONYM: the word 'CWTS core' maps to works' primary_location.source.is_core; the parser entity-resolves it to the bare `is_core` column on sources (no second _f, which would have hijacked the works word). Renders `CWTS core is true` on both entities (oxjob #363)."
 
@@ -2104,10 +2105,10 @@ rows:
         not keywords/animal-model [Animal model]
         and keywords/electronic-cigarette [Electronic cigarette]
       )
-      and language is en [English]
-      and year >= 2003
-      and year <= 2025
-      and type is types/article
+      and language is (en [English])
+      and year >= (2003)
+      and year <= (2025)
+      and type is (types/article)
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true}, {column_id: keywords.id, value: keywords/electronic-cigarette}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: types/article}]}
   note: |-
     zd#8101 "Vaping & Health Living Map" (Claire Stansfield, UCL EPPI-Centre),
@@ -2135,11 +2136,11 @@ rows:
   oxurl: 'https://openalex.org/works?filter=keywords.id:!keywords/animal-model,language:en,publication_year:2003-2025,type:types/article,display_name.search:vape|vaper|vapers|vapes|vaping'
   status: ok
   oql: |-
-    works where keyword is not keywords/animal-model [Animal model]
-      and language is en [English]
-      and year >= 2003
-      and year <= 2025
-      and type is types/article
+    works where keyword is (not keywords/animal-model [Animal model])
+      and language is (en [English])
+      and year >= (2003)
+      and year <= (2025)
+      and type is (types/article)
       and title has (vape or vaper or vapers or vapes or vaping)
   oqo: {get_rows: works, filter_rows: [{column_id: keywords.id, value: keywords/animal-model, is_negated: true}, {column_id: language, value: en}, {column_id: publication_year, value: 2025, operator: "<="}, {column_id: publication_year, value: 2003, operator: ">="}, {column_id: type, value: types/article}, {join: or, filters: [{column_id: display_name.search, value: vape, operator: has}, {column_id: display_name.search, value: vaper, operator: has}, {column_id: display_name.search, value: vapers, operator: has}, {column_id: display_name.search, value: vapes, operator: has}, {column_id: display_name.search, value: vaping, operator: has}]}]}
   note: |-
@@ -2772,7 +2773,7 @@ rows:
     PubMed [Title] block scoped to title; the untagged block defaults to
     title/abstract — two different fields in one query. (source DB: PubMed).
   oql: |-
-    works where title/abstract has "neuropsychological test"
+    works where title/abstract has ("neuropsychological test")
       and title has (normative or norms or "normative data")
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"neuropsychological
     test"', operator: has}, {join: or, filters: [{column_id: display_name.search, value: normative,
@@ -2907,7 +2908,7 @@ rows:
     title/abstract search.
   oql: |-
     works where (
-        keyword is keywords/anticoagulant [Anticoagulant]
+        keyword is (keywords/anticoagulant [Anticoagulant])
         or title/abstract has (
           INR
           or aPTT
@@ -2918,7 +2919,7 @@ rows:
         )
       )
       and (
-        keyword is keywords/central-venous-catheter [Central venous catheter]
+        keyword is (keywords/central-venous-catheter [Central venous catheter])
         or title/abstract has (CVC or "central line" or "central venous catheter")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: keywords.id, value: keywords/anticoagulant},
@@ -2951,11 +2952,11 @@ rows:
     b). Plus year/type/language scalars and a negated keyword filter. oql-only
     (mixes proximity/exact and stemmed match modes).
   oql: |-
-    works where keyword is not keywords/animal-model [Animal model]
-      and language is en [English]
-      and year >= 2003
-      and year <= 2025
-      and type is types/article
+    works where keyword is (not keywords/animal-model [Animal model])
+      and language is (en [English])
+      and year >= (2003)
+      and year <= (2025)
+      and type is (types/article)
       and title/abstract has (
         vapes or "e vape" or "e vapes" or "e vaping" or "e vaping" or "e vapor"
         or "e vapors" or "e vapour" or "e vapours" or "liquid nicotine"
@@ -3120,11 +3121,11 @@ rows:
     scalar + negated-keyword tail as row 161. (Fixes the mis-quoted line 8 =
     row 162.)
   oql: |-
-    works where keyword is not keywords/animal-model [Animal model]
-      and language is en [English]
-      and year >= 2003
-      and year <= 2025
-      and type is types/article
+    works where keyword is (not keywords/animal-model [Animal model])
+      and language is (en [English])
+      and year >= (2003)
+      and year <= (2025)
+      and type is (types/article)
       and title/abstract has (
         Juul or "VUSE" or "Vype" or "Geek Bar"
         or within 4 ("cigarette", "ultra sonic") or "e Voke" or "e cigar"
@@ -3194,7 +3195,7 @@ rows:
         review
         and (
           HAVO or VWO or atheneum or gymnasium or schooling
-          or (secondary vocational education) or "Elementary Education"
+          or secondary vocational education or "Elementary Education"
           or "Multi Academy Trust" or "Multi Academy Trusts" or "School Academies"
           or "School Academy" or "basic school" or "basic school" or "basic schools"
           or "basic schools" or "comprehensive school" or "comprehensive schools"
@@ -3522,7 +3523,7 @@ rows:
         )
         and (
           HAVO or VWO or atheneum or gymnasium or schooling
-          or (secondary vocational education) or "Elementary Education"
+          or secondary vocational education or "Elementary Education"
           or "Multi Academy Trust" or "Multi Academy Trusts" or "School Academies"
           or "School Academy" or "basic school" or "basic school" or "basic schools"
           or "basic schools" or "comprehensive school" or "comprehensive schools"
@@ -3711,7 +3712,7 @@ rows:
       and title/abstract has (
         (
           HAVO or VWO or atheneum or gymnasium or schooling
-          or (secondary vocational education) or "Elementary Education"
+          or secondary vocational education or "Elementary Education"
           or "Multi Academy Trust" or "Multi Academy Trusts" or "School Academies"
           or "School Academy" or "basic school" or "basic school" or "basic schools"
           or "basic schools" or "comprehensive school" or "comprehensive schools"
@@ -3872,7 +3873,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=display_name.search:!dog'
   status: ok
   note: 'Standalone predicate negation — a lone negated leaf with no positive clause. Renders with the `does not have` predicate, not a `not …` value-group.'
-  oql: 'works where title has not dog'
+  oql: 'works where title has (not dog)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: dog, operator: has, is_negated: true}]}
 - id: 169
   tags: [negation, boolean-nesting]
@@ -3894,7 +3895,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=display_name.search:dog'
   status: ok
   note: 'Double negation collapses: `not not dog` == `dog`. Input is accepted and silently simplified to the positive form.'
-  oql: 'works where title has dog'
+  oql: 'works where title has (dog)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: dog, operator: has}]}
 - id: 171
   tags: [negation]
@@ -3905,7 +3906,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=display_name.search:!dog'
   status: ok
   note: 'A group with ONLY an exclusion and no positive clause — "everything except dog". Parses fine and equals the standalone predicate (168). OPEN QUESTION (#432): does the live API actually run a pure-negative query, or does it need a positive anchor? See work/NEGATION_PROBLEM_SPACE.md.'
-  oql: 'works where title has not dog'
+  oql: 'works where title has (not dog)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: dog, operator: has, is_negated: true}]}
 - id: 172
   tags: [negation]
@@ -3916,7 +3917,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=abstract.search:!dog,display_name.search:cat'
   status: ok
   note: 'Negation on a different field than the positive clause: include cat in the title, exclude dog from the abstract.'
-  oql: 'works where abstract has not dog and title has cat'
+  oql: 'works where abstract has (not dog) and title has (cat)'
   oqo: {get_rows: works, filter_rows: [{column_id: abstract.search, value: dog, operator: has, is_negated: true}, {column_id: display_name.search, value: cat, operator: has}]}
 - id: 173
   tags: [negation, entity-references]
@@ -3927,7 +3928,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=authorships.author.id:!A5066175077'
   status: ok
   note: 'Negation on an entity-id leaf: exclude works by a specific author. The `is not` predicate on an entity column.'
-  oql: 'works where author is not A5066175077 [Stephen Hawking]'
+  oql: 'works where author is (not A5066175077 [Stephen Hawking])'
   oqo: {get_rows: works, filter_rows: [{column_id: authorships.author.id, value: A5066175077, is_negated: true}]}
 - id: 174
   tags: [negation, filter]
@@ -3938,7 +3939,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=type:!article'
   status: ok
   note: 'Negation on a closed-vocabulary scalar column: exclude a work type.'
-  oql: 'works where type is not article'
+  oql: 'works where type is (not article)'
   oqo: {get_rows: works, filter_rows: [{column_id: type, value: article, is_negated: true}]}
 - id: 175
   tags: [negation, proximity]
@@ -3949,7 +3950,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=display_name.search:!climate%20%2B%20change'
   status: ok
   note: 'Negating a `+` co-occurrence group: exclude documents where climate and change co-occur. The negation wraps the whole adjacency group as one negated phrase leaf.'
-  oql: 'works where title has not (climate + change)'
+  oql: 'works where title has (not climate + change)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: 'climate + change', operator: has, is_negated: true}]}
 - id: 176
   tags: [negation, boolean-nesting]
@@ -4029,7 +4030,7 @@ rows:
   oxurl_status: oql-only
   oxurl: null
   status: ok
-  oql: 'works (all corpora) where open access is true'
+  oql: 'works (all corpora) where open access is (true)'
   oqo: {get_rows: works, corpus: all, filter_rows: [{column_id: open_access.is_oa, value: true}]}
   note: 'The corpus parenthetical sits between the entity and `where`; filters still narrow WITHIN the selected corpus.'
 - id: 185
@@ -4041,3 +4042,67 @@ rows:
   oql: 'works (banana) where year is 2020'
   diagnostic: OQL_BAD_CORPUS
   note: 'A parenthetical after the entity that is not a known corpus hard-errors OQL_BAD_CORPUS with a fix-it naming core / expansion / all. (core is the default, so a bare `works` needs no parenthetical.)'
+
+# ---------------------------------------------------------------------------
+# N. Always-parenthesized values + explicit connectives in value groups (#554)
+# ---------------------------------------------------------------------------
+- id: 193
+  tags: [filter, boolean-logic]
+  provenance:
+    type: "spec design"
+    label: "Bare adjacency between is-group values is a loud error (#554)"
+  status: error
+  oql: 'works where type is (article review)'
+  diagnostic: OQL_GROUP_VALUES_NEED_CONNECTIVE
+  note: 'Two values in an `is (…)` group with no connective is a hard error with a "did you mean or?" fix-it — NEVER a silent implicit AND (pre-#554 this parsed as `(article and review)` → count 0 for a single-valued field, the exact silent-misparse species the language forbids). The `has (…)` search side is the one deliberate adjacency exception (a bare-word run is ONE stemmed node, D2 reversal).'
+- id: 194
+  tags: [filter]
+  provenance:
+    type: "spec design"
+    label: "unknown inside a value group is the null sentinel (#554)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=language:null'
+  status: ok
+  oql: 'works where language is (unknown)'
+  oqo: {get_rows: works, filter_rows: [{column_id: language, value: null}]}
+  note: 'The parenthesized group is the canonical null test (bare `language is unknown` stays accepted input). Pre-#554 an in-group `unknown` misparsed as the literal string "unknown" → invalid_value.'
+- id: 195
+  tags: [filter, boolean-logic]
+  provenance:
+    type: "spec design"
+    label: "Mixed value group with the null sentinel (#554)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=language:en|null'
+  status: ok
+  oql: 'works where language is (en [English] or unknown)'
+  oqo: {get_rows: works, filter_rows: [{join: or, filters: [
+        {column_id: language, value: en},
+        {column_id: language, value: null}]}]}
+  note: 'Newly expressible with #554: `unknown` is an ordinary group member (the null sentinel), so language-is-English OR language-unknown is one clause.'
+- id: 196
+  tags: [filter]
+  provenance:
+    type: "spec design"
+    label: "A comparison group takes exactly one bound (#554)"
+  status: error
+  oql: 'works where year >= (2019 or 2020)'
+  diagnostic: OQL_GROUP_NEEDS_ONE_VALUE
+  note: 'Scalar-domain operators take exactly ONE atom in their (always-parenthesized) group — never a distribution. `year is (2019 or 2020)` is fine (an `is` set); the COMPARISON is the scalar surface.'
+- id: 197
+  tags: [filter]
+  provenance:
+    type: "spec design"
+    label: "A boolean group takes exactly one value (#554)"
+  status: error
+  oql: 'works where retracted is (true or false)'
+  diagnostic: OQL_GROUP_NEEDS_ONE_VALUE
+  note: 'A yes/no property takes one value; `is (not true)` folds to `is (false)` on input like `is not true` always has.'
+- id: 198
+  tags: [filter]
+  provenance:
+    type: "spec design"
+    label: "A collection group takes exactly one col_ ref (#554)"
+  status: error
+  oql: 'works where work is in collection (col_abc123 or col_def456)'
+  diagnostic: OQL_GROUP_NEEDS_ONE_VALUE
+  note: 'One collection per clause (v1 rule, §3.10) — union several with or-clauses: (work is in collection (col_a) or work is in collection (col_b)).'

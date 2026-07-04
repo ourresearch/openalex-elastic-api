@@ -71,7 +71,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "works where country is ca [Canada]"
+        assert result == "works where country is (ca [Canada])"
 
     def test_entity_value_sdg(self):
         """SDG: bare id first, resolved name in brackets."""
@@ -82,7 +82,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "works where SDG is 2 [Zero hunger]"
+        assert result == "works where SDG is (2 [Zero hunger])"
 
     def test_entity_value_type(self):
         """Enum slugs (type) render bare — no name annotation (canonical)."""
@@ -93,7 +93,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "works where type is article"
+        assert result == "works where type is (article)"
 
     def test_comparison_filter(self):
         """Test comparison filters use display names."""
@@ -104,7 +104,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "works where year >= 2020"
+        assert result == "works where year >= (2020)"
 
     def test_search_filter(self):
         """A stemmed search value renders bare (no quotes) in canonical form."""
@@ -126,7 +126,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == "works where language is unknown"
+        assert result == "works where language is (unknown)"
 
     def test_multiple_filters(self):
         """Test multiple filters joined by 'and'."""
@@ -197,7 +197,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert "type is not article" in result
+        assert "type is (not article)" in result
 
     def test_complex_query(self):
         """Test the example from the user's request (canonical forms)."""

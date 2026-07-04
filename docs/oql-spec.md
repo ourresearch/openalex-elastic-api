@@ -2,7 +2,12 @@
 
 > **Status: frozen** (oxjob #330; v2.1, 2026-06-02 — adopted the mainstream
 > search model after a peer review: **space = AND, quotes = exact, `stemmed` =
-> stemmed phrase**; lowercase connectives). This is a cases-first
+> stemmed phrase**; lowercase connectives. v2.2, 2026-07-04, oxjob #554 —
+> **a condition's value is always a parenthesized group** in canonical form
+> (`type is (article)`, `year >= (2019)`; bare singletons stay accepted on
+> input), **bare adjacency between values in an `is ( … )` group is a loud
+> error** (never implicit AND), and **`unknown` inside a group is the null
+> sentinel**). This is a cases-first
 > specification: the normative truth is the worked-example corpus
 > [`docs/oql/corpus.yaml`](./oql/corpus.yaml), machine-checked by
 > [`tests/oql/test_corpus_roundtrip.py`](../tests/oql/test_corpus_roundtrip.py).
@@ -133,7 +138,7 @@ Implemented in [`query_translation/oql_lang.py`](../query_translation/oql_lang.p
   with an internal ` or `/` and ` break point ever does.
 
 ```
-works where year >= 2020
+works where year >= (2020)
   and title has (
     fat or obese or obesity or overweight or thin or "anti fat" or "being fat"
     or "body esteem" or "body image" or "fat ideal" or "thin ideal"
@@ -146,8 +151,8 @@ works where year >= 2020
 ### 3.1 Entity references: the ID is authoritative, `[…]` is ignored decoration
 
 ```
-works where institution is I136199984 [Harvard]                         (row 1)
-works where institution is I136199984 [those Harvard bastards, go Yale] (row 2)
+works where institution is (I136199984 [Harvard])                         (row 1)
+works where institution is (I136199984 [those Harvard bastards, go Yale]) (row 2)
 ```
 Both produce `{column_id: authorships.institutions.lineage, value: I136199984}`.
 
@@ -181,30 +186,57 @@ OpenAlex ID's uppercase prefix is conventional; search text is the user's litera
 words). `col_…` references are always preserved. (Per-column canonical case is a
 registry property.)
 
-### 3.2 Sets / value groups: `is ( … )`  (parens-bag, #363)
+### 3.2 Value groups: `is ( … )` — a condition's value is ALWAYS a parenthesized group (#363, #554)
 
 ```
 works where institution is (I33213144 [Harvard] or I97018004 [Stanford])   (row 3)
 works where type is (article or review)                                    (row 5)
-works where institution is not (I33213144 or I97018004)                    (row 4)
+works where type is (article)                                              (singleton — same shape)
 works where country is (us and uk)                                         (row 92, D7)
+works where institution is (not I33213144 and not I97018004)               (row 4)
 ```
 
-- **The arity rule (one rule, both `is` and `has`):** a list of **2+
-  values/terms must be parenthesized**; a **single** value/term may be bare
-  (`type is article`, `title has cancer`). An *atom* is one bare word, one
-  quoted phrase, or one parenthesized sub-group, so `"systematic review"` is a
-  single atom and stays bare. `type is article review` → `OQL_UNDELIMITED_TERM_LIST`.
-- This is the rule that **kills the silent keyword-truncation footgun**: a reserved
-  word (`group by`, `and`, …) can only "float" inside unquoted free text when there
-  are 2+ unparenthesized terms — which the rule forbids.
-- **Inside `( … )` is a boolean of atoms**: `or` / `and` / `not`, nesting
-  allowed; the field + operator distribute over every atom. `country is (us or uk)`
-  is an OR-branch of equality leaves; `country is (us and uk)` means works with
-  **both** a US and a UK authorship (corpus row 92 — D7; for a single-valued field
-  it is the empty set, which is coherent, not a footgun). Negation inside a group is
+- **The parens rule (one rule, every condition operator — #554, zero
+  exceptions):** in canonical OQL a condition's **value slot is always a
+  parenthesized group**, whether it holds one atom or many: `type is (article)`,
+  `title has (cancer)`, `year >= (2019)`, `open access is (true)`,
+  `language is (unknown)`, `work is in collection (col_abc123)`,
+  `abstract is similar to ("…")`. An *atom* is one bare word, one quoted
+  phrase, or one parenthesized sub-group. This replaces the old conditional
+  arity rule ("parens when 2+, bare when single") — one shape, no exception for
+  the grammar, the editor, or the reader to carry. **Directives are not
+  condition values** and keep their own shapes (`group by topic, year`,
+  `sample 500 seed 7`).
+- **Bare singletons are accepted input only** (`type is article`,
+  `year >= 2019`, `title has cancer` all parse) and canonicalize to the
+  parenthesized form. They are part of the lenient input layer — normative in
+  the corpus, absent from user-facing teaching docs. **2+ bare values/terms
+  with no parens stay a loud error** (`type is article review` →
+  `OQL_UNDELIMITED_TERM_LIST`) — that is the rule that **kills the silent
+  keyword-truncation footgun**: a reserved word (`group by`, `and`, …) can only
+  "float" inside unquoted free text when there are 2+ unparenthesized terms.
+- **Inside an `is ( … )` group the join is ALWAYS explicit (#554):** `or` /
+  `and` / `not`, nesting allowed; the field + operator distribute over every
+  atom. **Bare space-adjacency between two values is a loud error**
+  (`type is (article review)` → `OQL_GROUP_VALUES_NEED_CONNECTIVE`, fix-it:
+  "add `or` between the values — or `and` if you mean both"), never a silent
+  implicit AND. (It used to silently parse as AND — for a single-valued field
+  like `type` that is the empty set: count 0, no error, the exact species of
+  silent misparse this language forbids. The `has ( … )` search side is the
+  one deliberate adjacency exception — a bare-word run there is ONE stemmed
+  node, §3.6.) `country is (us or uk)` is an OR-branch of equality leaves;
+  `country is (us and uk)` (explicit `and`) means works with **both** a US and
+  a UK authorship (corpus row 92 — D7; for a single-valued field it is the
+  empty set, which is coherent, not a footgun). Negation inside a group is
   the bare prefix `not` binding the next atom (`has (cancer and not mouse)`,
   §3.5).
+- **Scalar-domain operators take exactly ONE atom in their group:** a
+  comparison bound, a boolean, a collection ref, a semantic passage.
+  `year >= (2019 or 2020)`, `retracted is (true or false)`,
+  `work is in collection (col_a or col_b)` → `OQL_GROUP_NEEDS_ONE_VALUE` —
+  the syntax shape is uniform (always parens); what may go INSIDE the group
+  stays per-operator/domain. (`year is (2019 or 2020)` is fine — `is` on a
+  numeric column is an ordinary set.)
 - **Search values are the exception (D2 reversal, #363):** for a `has ( … )`
   search group, a **maximal run of bare connective-free words is ONE value node**
   (stemmed, adjacency-boosted), not a distributed AND of per-word leaves —
@@ -221,13 +253,20 @@ works where country is (us and uk)                                         (row 
   render keeps the group together with the `not`s inside: `x is (not a and not b)`
   (corpus row **4**; see §3.2.2 and §3.5). (`is not (a or b)` is an accepted input
   spelling for the same thing.)
+- **`unknown` / `null` inside a group is the null sentinel (#554)** — exactly as
+  in the bare-scalar position (§3.8), so `language is (unknown)` is the
+  canonical null test and mixed groups are expressible:
+  `language is (en or unknown)` = language-is-English OR language-unknown.
+  (Before #554 an in-group `unknown` misparsed as a literal string.) A literal
+  value spelled "unknown" is written quoted (`is ("unknown")`), which is also
+  how the canonical render emits it.
   - **One separator per level** — `or`/`and` inside a `( … )` group, not commas;
     a comma in a group is `OQL_COMMA_IN_GROUP`.
 - **Removed:** the `any (…)` / `all (…)` / `any of` / `is in` list keywords and
   comma-separated lists. `(a or b)` / `(a and b)` are strictly more expressive
   (they nest; flat keyword lists can't) and lose no capability.
 - `( … )` does **double duty**: a clause-group at the clause level
-  (`(year >= 2020 or open access is true)`) and a value/term group after an operator.
+  (`(year >= (2020) or open access is (true))`) and a value/term group after an operator.
   The position disambiguates (a group right after `is`/`has` is a value/term
   group; one where a clause is expected is a clause group).
 
@@ -237,11 +276,15 @@ A numeric field (`year`, `citation count`, `FWCI`) takes a single number, or a r
 written as **explicit endpoint clauses** with the comparison operators:
 
 ```
-works where year >= 2019 and year <= 2023        (closed range — two endpoint clauses)   (row 97)
-works where FWCI >= 1.5 and FWCI <= 3.0          (floats allowed)                          (row 99)
-works where year >= 2019                          (single-ended bound)
-works where year > 42 and year < 100              (strict bounds — stay strict)             (row 100)
+works where year >= (2019) and year <= (2023)     (closed range — two endpoint clauses)   (row 97)
+works where FWCI >= (1.5) and FWCI <= (3.0)       (floats allowed)                          (row 99)
+works where year >= (2019)                         (single-ended bound)
+works where year > (42) and year < (100)           (strict bounds — stay strict)             (row 100)
 ```
+
+A comparison's group takes **exactly one bound** (#554 — `year >= (2019 or
+2020)` is `OQL_GROUP_NEEDS_ONE_VALUE`, never a distribution); the bare form
+(`year >= 2019`) stays accepted input.
 
 - **There is no dash range literal.** The `year is 2019-2023` / open-ended `year is
   2019-` / `year is -2023` spellings were **removed** as OQL surface syntax (decision
@@ -250,7 +293,7 @@ works where year > 42 and year < 100              (strict bounds — stay strict
   fits OQL's picky/precise philosophy. Typing a dash range on a num field is a **hard
   error** (`OQL_RANGE_LITERAL_REMOVED`, row 179) with a fix-it echoing the endpoint
   form — *not* a lenient parse, and *not* a generic "not a number".
-- **A closed range is the two-bound implicit-AND** `year >= 2019 and year <= 2023`.
+- **A closed range is the two-bound implicit-AND** `year >= (2019) and year <= (2023)`.
   Because `filter_rows` is an implicit AND, the two clauses round-trip as two bound
   leaves; the canonical render is lower-bound-then-upper-bound.
 - **Strict bounds stay strict — no inference.** `year > 42 and year < 100` renders
@@ -280,8 +323,10 @@ works where institution is (not I33213144 [Harvard] and not I97018004 [Stanford]
   top-level AND of the filter rows — the items sharing one **(field,
   base-operator)** pair merge into a single `field op ( tree )` clause, the boolean
   structure preserved inside the parens. A negated leaf renders as a bare `not
-  <atom>` prefix (§3.5), merged or standalone alike (`title has not dog`,
-  `country is not FR`, `title has (not dog and cat)`).
+  <atom>` prefix (§3.5), merged or standalone alike — and since #554 the prefix
+  always sits INSIDE the value group (`title has (not dog)`,
+  `country is (not FR)`, `title has (not dog and cat)`), one position for both
+  the singleton and merged cases.
 - **All filter kinds**, not just search: `country is (not FR and US)` is canonical
   exactly like its `has` twin. Search groups merge by **base field** (a
   stemmed `.search` leaf and an exact `.search.exact` leaf share one group — that
@@ -327,7 +372,7 @@ punctuation away, so it is meaningless anyway) and documented, not escaped.
 ### 3.4 Booleans, casing, precedence
 
 ```
-works where title has apple and title has (banana or cherry)  (row 7)  ✓
+works where title has (apple) and title has (banana or cherry)  (row 7)  ✓
 works where title has apple and banana or cherry      (row 8)   ✗ OQL_UNDELIMITED_TERM_LIST
 works where title has ("a" and "b" and "c")           (row 9)   ✓ (pure-AND, associative)
 works where title has FOO and (bar or baz)            (row 10)  ✓ (any case accepted on input)
@@ -373,8 +418,8 @@ works where title has FOO and (bar or baz)            (row 10)  ✓ (any case ac
   Explicit `and` + `or` at one level no longer errors — it resolves by precedence
   AND > OR (`(climate and change or warming)` = `(climate and change) or warming`),
   and the canonical render re-parenthesizes it. Between *whole
-  clauses* at the top level a connective is still required (`year >= 2020 and
-  open access is true`); two full clauses jammed together with no `and` is
+  clauses* at the top level a connective is still required (`year >= (2020) and
+  open access is (true)`); two full clauses jammed together with no `and` is
   `OQL_IMPLICIT_ADJACENCY`. *(Adjacency-as-AND still holds for enum/value groups —
   §3.2 `country is (us and uk)`.)*
 
@@ -415,22 +460,25 @@ Canonical output pushes negation **down to the leaf/value** (NNF) and renders it
 a bare `not <value>` prefix — it **never** emits `not <whole clause>` (`not (country
 is FR)` is a readability trainwreck, and the canonicalizer's NNF guarantees a
 clause-level negation can't reach the surface). So:
-- a **standalone** negated leaf: `country is not FR`, `title has not dog`,
-  `work is in collection not col_abc`, `language is not unknown`;
+- a **standalone** negated leaf: `country is (not FR)`, `title has (not dog)`,
+  `work is in collection (not col_abc)`, `language is (not unknown)` — the
+  `not` sits inside the always-parenthesized value group (#554; the predicate
+  spellings `is not FR` / `has not dog` remain accepted input);
 - **in-group** negation prefixes each atom: `has (not a and b)`,
-  `country is (not FR and US)` (§3.2.2).
+  `country is (not FR and US)` (§3.2.2) — the same position as the standalone
+  case, one rule.
 
 **Booleans negate by flipping the value, not a `not` prefix** — a boolean's value is
-just `true` or `false`, so the two polarities are `open access is true` /
-`open access is false` (the builder toggles the value brick). `is not true` folds to
-`is false` on input (§3.9). Negating a *group* value spells the same NNF either way:
+just `true` or `false`, so the two polarities are `open access is (true)` /
+`open access is (false)` (the builder toggles the value brick). `is not true` folds to
+`is (false)` on input (§3.9). Negating a *group* value spells the same NNF either way:
 `title has not (dog or cat)` and `title has (not dog and not cat)` both
 canonicalize to `title has (not cat and not dog)` (two negated leaves on one
 field merge — §3.2.2).
 
 ### 3.6 Search — the governing law
 
-> **The search operator is `has`** (`title has cancer`). It was renamed from
+> **The search operator is `has`** (`title has (cancer)`). It was renamed from
 > `contains` in #363 (charter decision 27 — shorter, friendlier, fits a monitor
 > better) for both the OQL surface keyword **and** the OQO `operator` value, in
 > lockstep. The old `contains` / `does not contain` spellings are a **hard error**
@@ -475,7 +523,7 @@ vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); 
 | field scope | the field name (`title`, `title/abstract`, `abstract`, `full text`, `raw affiliation`, `byline`) | column prefix (`display_name.search`, `title_and_abstract.search`, `fulltext.search`, …) |
 | stemming | **default ON**; quotes turn it OFF | column suffix `.search` (stemmed) vs `.search.exact` |
 | stemmed phrase | `stemmed "…"` | `.search` with a quoted value |
-| semantic | `is similar to "…"` | column suffix `.search.semantic` (2-phase) |
+| semantic | `is similar to ("…")` | column suffix `.search.semantic` (2-phase) |
 | adjacency (phrase) | `" … "` | quotes in the value |
 | proximity | `within N words` | `"phrase"~N` in the value |
 | wildcard | bare `*` / `?` | `*` / `?` in the value |
@@ -498,9 +546,11 @@ The gauntlet pins the consequences (all are corpus rows):
 
 Key rules these encode:
 
-- **A single bare term is fine; a 2+ word value must be parenthesized at top level**
-  (the arity rule, §3.2). `title has cancer` ✓; `title has climate change` →
-  `OQL_UNDELIMITED_TERM_LIST` (row 17) — this is the rule that kills the silent
+- **The canonical value is always the parenthesized group (#554)** — `title has
+  (cancer)`, `title has (climate change)`. A single bare term is accepted input
+  (`title has cancer` ✓ → canonicalizes to `has (cancer)`); a 2+ word value must
+  be parenthesized (`title has climate change` → `OQL_UNDELIMITED_TERM_LIST`,
+  row 17) — this is the rule that kills the silent
   keyword-truncation footgun. **Inside a `( … )` group** a bare-word run is ONE node
   (D2 reversal, #363), so `(climate change or warming)` = `node("climate change") OR
   node("warming")`. **Mixing explicit `and` and `or` at one level resolves by the
@@ -517,13 +567,13 @@ Key rules these encode:
   Without quotes you don't need `stemmed`: bare terms are already stemmed.
 - **Booleans are structural, never lexical.** `has "foo or bar"` searches the
   literal phrase; the boolean is the tree (`has (foo or bar)`).
-- **`is similar to "…"` is semantic** vector search (`.search.semantic`, corpus
-  row **30**).
+- **`is similar to ("…")` is semantic** vector search (`.search.semantic`, corpus
+  row **30**); exactly one quoted passage in the group.
 - **A `( … )` group holds a boolean of terms** — canonical `has (a and (b or c))`;
   items may themselves be `"exact"` or `stemmed "phrase"` phrases. Groups nest freely
   (§3.2).
 - **A search value runs until the next field-clause.** `title has (a or b) and
-  year >= 2020` is `(title has (a or b)) and year >= 2020` — the `or` is the
+  year >= (2020)` is `(title has (a or b)) and year >= (2020)` — the `or` is the
   has-group's, the `and` joins clauses. This is deterministic, not a precedence
   choice: a `year >= …` clause can't live *inside* a `has`, so the value
   boundary is forced. A genuinely mixed and/or *between clauses* resolves by
@@ -585,18 +635,23 @@ works where title has smart* within 3 words            (row 29) ✗ OQL_WILDCARD
 
 ### 3.8 `null` / `unknown`
 
-`language is unknown` / `language is not unknown` → `value: null` (± `is_negated`).
-Emit `unknown` canonically; accept `null` and `unknown` on input.
+`language is (unknown)` / `language is (not unknown)` → `value: null`
+(± `is_negated`). Emit `unknown` canonically; accept `null` and `unknown` on
+input, bare or parenthesized. Since #554 `unknown` is also the null sentinel
+**inside** a value group, so mixed groups work: `language is (en or unknown)`
+= English OR language-unknown (§3.2). A column value literally spelled
+"unknown" is quoted (`is ("unknown")`), on input and output alike.
 
-### 3.9 Booleans (`<flag> is true|false`)
+### 3.9 Booleans (`<flag> is (true|false)`)
 
 Boolean (yes/no) columns are ordinary subject-predicate-value clauses, exactly like
 every other filter — the subject is the flag's noun and the only values are `true`
-and `false`: `open access is false`, `retracted is true`, `has DOI is true`,
-`has ORCID is true` (corpus rows **37**, **40**, **50**, **53**). They compile to
-`{column: …, value: true|false}`. `is not true` / `is not false` are accepted on
-input and fold into the value, so the canonical form is always `is true` / `is false`
-(never a separate `not`). The old reads-aloud `it's …` / `it has …` surface was
+and `false`: `open access is (false)`, `retracted is (true)`, `has DOI is (true)`,
+`has ORCID is (true)` (corpus rows **37**, **40**, **50**, **53**). They compile to
+`{column: …, value: true|false}`. `is not true` / `is not false` / `is (not true)`
+are accepted on input and fold into the value, so the canonical form is always
+`is (true)` / `is (false)` (never a separate `not`). The group takes exactly one
+value — `is (true or false)` is `OQL_GROUP_NEEDS_ONE_VALUE` (#554). The old reads-aloud `it's …` / `it has …` surface was
 removed in #363 — there is now One Right Way, shared with all other clauses.
 
 The flag's noun drops any helper verb (`is_retracted` → `retracted`,
@@ -607,10 +662,10 @@ value-bearing field it keeps a short `has` qualifier (`has DOI`, `has ORCID`,
 ### 3.10 Collection membership: `is in collection`
 
 ```
-works where work is in collection col_abc123                       (same-type: works in a Collection of works)
-works where author is in collection col_xyz789                     (cross-type: works by authors in a Collection of authors)
-works where country is in collection col_eu27                      (row 5x — predefined country set)
-works where work is in collection not col_abc123                   (negation: bare not prefix on the value, §3.5; is not in collection accepted on input)
+works where work is in collection (col_abc123)                     (same-type: works in a Collection of works)
+works where author is in collection (col_xyz789)                   (cross-type: works by authors in a Collection of authors)
+works where country is in collection (col_eu27)                    (row 5x — predefined country set)
+works where work is in collection (not col_abc123)                 (negation: bare not prefix on the value, §3.5; is not in collection accepted on input)
 ```
 
 A **Collection** is a named, predefined or user-saved set of entities, addressed by a
@@ -619,7 +674,10 @@ from `is` / `is (…)` — because the intent ("is a member of this named set") 
 value space (a Collection picker) differ from value equality; this keeps the operator→value
 model clean for the editor and downstream tooling.
 
-- **Surface:** `<subject> is [not] in collection <col_id>`. `not` negates via the single
+- **Surface:** `<subject> is [not] in collection (<col_id>)` — exactly one
+  `col_…` ref in the group (`(col_a or col_b)` is `OQL_GROUP_NEEDS_ONE_VALUE`,
+  #554; the bare `… in collection col_id` form stays accepted input). `not`
+  negates via the single
   `is_negated` mechanism (§3.5), never a separate operator.
 - **OQO:** `operator: "in collection"`, `value: <col_id>`, on a leaf. One collection per
   clause (v1); union several via `or` clauses.
@@ -664,6 +722,8 @@ NL) share codes and only localize prose. Every `✗` corpus row asserts its code
 | `OQL_SHORT_WILDCARD_PREFIX` | `<3` chars before `*` | add characters: `abc*` |
 | `OQL_WILDCARD_IN_PROXIMITY` | wildcard + `within N words` | drop one of them |
 | `OQL_BINARY_PROXIMITY` | `X within N words of Y` | one phrase: `"x y" within N words` |
+| `OQL_GROUP_VALUES_NEED_CONNECTIVE` | two values in an `is ( … )` group with no connective (`is (article review)`) | add `or` between the values (or `and` if you mean both) |
+| `OQL_GROUP_NEEDS_ONE_VALUE` | 2+ atoms in a scalar-domain group (`year >= (2019 or 2020)`, `is (true or false)`, `in collection (col_a or col_b)`) | keep one value in the parens; combine with or-clauses |
 | `OQL_UNTERMINATED_STRING` / `OQL_UNTERMINATED_ANNOTATION` | missing `"` / `]` | close it |
 | `OQL_UNKNOWN_FIELD` / `OQL_UNKNOWN_ENTITY` / `OQL_UNKNOWN_BOOLEAN` | not in the registry | check the properties registry |
 | `OQL_MISSING_OPERATOR` / `OQL_MISSING_VALUE` / `OQL_BAD_NUMBER` | malformed clause | — |

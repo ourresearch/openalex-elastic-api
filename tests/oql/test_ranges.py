@@ -8,7 +8,8 @@ Behaviors locked here:
      open-ended `2019-` / `-2023`) is a hard `OQL_RANGE_LITERAL_REMOVED` error;
      a non-numeric dash term still falls through to `OQL_BAD_NUMBER`.
   2. A bound pair renders as two endpoint clauses, lower bound first
-     (`year >= 2019 and year <= 2023`); strict bounds stay strict — `> 42 and
+     (`year >= (2019) and year <= (2023)` — values always parenthesized, #554);
+     strict bounds stay strict — `> 42 and
      < 100` is NOT rewritten to the inclusive `43-99` (the ±1 collapse was
      dropped with the literal). The OpenAlex URL range form still parses and
      still renders endpoints, so URL round-trip survives.
@@ -95,7 +96,7 @@ def test_closed_range_matches_url_form():
 def test_url_range_renders_endpoint_clauses_not_dash():
     out = render(canonicalize_oqo(parse_url_to_oqo(
         "works", filter_string="publication_year:2019-2023")))
-    assert out == "works where year >= 2019 and year <= 2023"
+    assert out == "works where year >= (2019) and year <= (2023)"
     assert "-" not in out.split("where", 1)[1]  # no dash range anywhere
 
 
@@ -103,11 +104,11 @@ def test_url_range_renders_endpoint_clauses_not_dash():
 # 3. endpoint rendering (lower-first; strict stays strict — no collapse)
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("src,want", [
-    ("works where year >= 2019 and year <= 2023", "works where year >= 2019 and year <= 2023"),
-    ("works where year <= 2023 and year >= 2019", "works where year >= 2019 and year <= 2023"),
-    ("works where FWCI >= 1.5 and FWCI <= 3.0", "works where FWCI >= 1.5 and FWCI <= 3.0"),
-    ("works where year >= 2019", "works where year >= 2019"),
-    ("works where year <= 2023", "works where year <= 2023"),
+    ("works where year >= 2019 and year <= 2023", "works where year >= (2019) and year <= (2023)"),
+    ("works where year <= 2023 and year >= 2019", "works where year >= (2019) and year <= (2023)"),
+    ("works where FWCI >= 1.5 and FWCI <= 3.0", "works where FWCI >= (1.5) and FWCI <= (3.0)"),
+    ("works where year >= 2019", "works where year >= (2019)"),
+    ("works where year <= 2023", "works where year <= (2023)"),
 ])
 def test_render_endpoint_form(src, want):
     assert render(canonicalize_oqo(parse(src))) == want
@@ -116,21 +117,21 @@ def test_render_endpoint_form(src, want):
 def test_strict_integer_pair_stays_strict_no_collapse():
     # decision 24: > 42 and < 100 is NOT rewritten to the inclusive 43-99
     assert render(canonicalize_oqo(parse(
-        "works where year > 42 and year < 100"))) == "works where year > 42 and year < 100"
+        "works where year > 42 and year < 100"))) == "works where year > (42) and year < (100)"
     assert render(canonicalize_oqo(parse(
         "works where citation count > 42 and citation count < 100"
-    ))) == "works where citation count > 42 and citation count < 100"
+    ))) == "works where citation count > (42) and citation count < (100)"
 
 
 def test_lone_strict_bound_stays_inequality():
     assert render(canonicalize_oqo(parse(
-        "works where citation count > 100"))) == "works where citation count > 100"
+        "works where citation count > 100"))) == "works where citation count > (100)"
 
 
 def test_float_strict_pair_stays_inequalities():
     out = render(canonicalize_oqo(parse("works where FWCI > 1.5 and FWCI < 3.0")))
     assert "1.5-" not in out and "is 1.5" not in out
-    assert "FWCI > 1.5" in out and "FWCI < 3.0" in out
+    assert "FWCI > (1.5)" in out and "FWCI < (3.0)" in out
 
 
 @pytest.mark.parametrize("oql", [
@@ -186,7 +187,7 @@ def test_full_user_case_round_trips():
     o = canonicalize_oqo(parse_url_to_oqo("works", filter_string=filt)).to_dict()
     oql = render(canonicalize_oqo(parse_url_to_oqo("works", filter_string=filt)))
     # endpoint clauses, not a dash range (the render is width-wrapped to lines)
-    assert "year >= 2019" in oql and "year <= 2023" in oql
+    assert "year >= (2019)" in oql and "year <= (2023)" in oql
     assert "2019-2023" not in oql
     assert "source type is" in oql                 # display name, not raw column id
     assert canonicalize_oqo(parse(oql)).to_dict() == o

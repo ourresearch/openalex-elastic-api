@@ -8,7 +8,7 @@ Cases 4-8:
      config/*.yaml (path-style + code IDs ES can't route): `field is 27 [Medicine]`,
      `language is en [English]`.
   6. `open_access.any_repository_has_fulltext` renders as a plain boolean clause
-     (`has repository fulltext is true`) that round-trips.
+     (`has repository fulltext is (true)`) that round-trips.
   7. `cited_by` / `cites` are curated id fields ("cited by" / "cites") that resolve
      the referenced work's title; every `[display name]` annotation is truncated to
      a uniform length with an ellipsis.
@@ -65,7 +65,7 @@ def test_case4_citation_percentile_curated():
 
 def test_case4_render_word_round_trips():
     out = _render("works where citation percentile by subfield is 99")
-    assert "citation percentile by subfield is 99" in out
+    assert "citation percentile by subfield is (99)" in out
     assert _roundtrips(out)
 
 
@@ -99,21 +99,21 @@ def test_case5_language_resolves_name():
 # --------------------------------------------------------------------------- #
 def test_case6_repository_fulltext_round_trips():
     out = _render("works where open_access.any_repository_has_fulltext is true")
-    assert out == "works where has repository fulltext is true"
+    assert out == "works where has repository fulltext is (true)"
     assert _leaves(out) == [
         {"column_id": "open_access.any_repository_has_fulltext", "value": True}]
 
 
 def test_case6_negated_renders_is_false():
     out = _render("works where open_access.any_repository_has_fulltext is false")
-    assert out == "works where has repository fulltext is false"
+    assert out == "works where has repository fulltext is (false)"
 
 
 # --------------------------------------------------------------------------- #
 # Case 7 — cited_by / cites + uniform name truncation
 # --------------------------------------------------------------------------- #
 def test_case7_cited_by_render_word():
-    assert _render("works where cited_by is w1984893742") == "works where cited by is w1984893742"
+    assert _render("works where cited_by is w1984893742") == "works where cited by is (w1984893742)"
 
 
 def test_case7_cites_render_word():
@@ -122,8 +122,8 @@ def test_case7_cites_render_word():
     # input word `cites` resolves to `referenced_works` and renders the canonical's
     # friendly word "references" (a non-lossy flip — the canonical carries a curated
     # word). Both spellings now render identically.
-    assert _render("works where cites is w1984893742") == "works where references is w1984893742"
-    assert _render("works where references is w1984893742") == "works where references is w1984893742"
+    assert _render("works where cites is w1984893742") == "works where references is (w1984893742)"
+    assert _render("works where references is w1984893742") == "works where references is (w1984893742)"
 
 
 def _work_title_resolver():
@@ -211,7 +211,9 @@ def test_multiword_search_value_renders_parenthesized_and_reparses(filter_string
 
 
 def test_singleword_search_value_stays_bare():
-    # a single stemmed term must NOT gain parens (regression guard on the fix)
+    # a single stemmed term renders as one parenthesized value — `has (single)`,
+    # never double-wrapped `has ((single))` (#554 always-parens canonical;
+    # regression guard on the fix)
     out = render_tree(canonicalize_oqo(parse_url_to_oqo("works", filter_string="title.search:single")))[0]
-    assert "has single" in out and "(" not in out, out
+    assert out == "works where title has (single)", out
     parse(out)

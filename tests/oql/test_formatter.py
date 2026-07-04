@@ -106,26 +106,26 @@ OK_ROWS = [r for r in ROWS if r["status"] in ("ok", "hint")]
 GOLDENS = {
     # (a) short query stays inline (implicit-AND infix body, decision 32 revert)
     "works where open access is true and type is article":
-        "works where open access is true and type is article",
+        "works where open access is (true) and type is (article)",
 
     # (b) medium query explodes: the implicit-AND body lays out one clause per
     # line with a leading `and ` connective (the entity head stays on the
     # `where` line, oxjob #363).
     "works where open access is true and publication_year >= 2020 and type is "
     "article and has_doi is true and language is en":
-        "works where has DOI is true\n"
-        "  and language is en\n"
-        "  and open access is true\n"
-        "  and year >= 2020\n"
-        "  and type is article",
+        "works where has DOI is (true)\n"
+        "  and language is (en)\n"
+        "  and open access is (true)\n"
+        "  and year >= (2020)\n"
+        "  and type is (article)",
 
     # (c) a nested boolean that fits stays inline (infix `( or )`) inside the
     # exploded implicit-AND parent.
     "works where (institution is I27837315 or type is article) and "
     "publication_year >= 2020 and language is en":
-        "works where language is en\n"
-        "  and year >= 2020\n"
-        "  and (institution is I27837315 or type is article)",
+        "works where language is (en)\n"
+        "  and year >= (2020)\n"
+        "  and (institution is (I27837315) or type is (article))",
 
     # (d) a search group <=8 items -> the infix `( or )` group, one per line
     # with leading `or ` connective (decision 32 revert).
@@ -151,10 +151,10 @@ GOLDENS = {
     # canonical output drops them (oxjob #377). The body is an implicit-AND list.
     "works where open access is true and publication_year >= 2020 and type is "
     "article and language is en ; group by publication_year ; sample 100":
-        "works where language is en\n"
-        "  and open access is true\n"
-        "  and year >= 2020\n"
-        "  and type is article\n"
+        "works where language is (en)\n"
+        "  and open access is (true)\n"
+        "  and year >= (2020)\n"
+        "  and type is (article)\n"
         "group by year\n"
         "sample 100",
 
@@ -162,12 +162,12 @@ GOLDENS = {
     # explodes with leading `or ` connectives.
     "works where publication_year >= 2020 and (institution is I27837315 or "
     "funder is F4320332161 or source is S137773608 or author is A5023888391)":
-        "works where year >= 2020\n"
+        "works where year >= (2020)\n"
         "  and (\n"
-        "    author is A5023888391\n"
-        "    or institution is I27837315\n"
-        "    or funder is F4320332161\n"
-        "    or source is S137773608\n"
+        "    author is (A5023888391)\n"
+        "    or institution is (I27837315)\n"
+        "    or funder is (F4320332161)\n"
+        "    or source is (S137773608)\n"
         "  )",
 }
 
@@ -235,7 +235,7 @@ def test_long_sr_query_showcase():
 
 def test_short_query_stays_inline():
     out = _fmt("works where type is article")
-    assert out == "works where type is article"
+    assert out == "works where type is (article)"
     assert "\n" not in out
 
 

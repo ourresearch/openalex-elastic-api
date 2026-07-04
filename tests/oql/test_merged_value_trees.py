@@ -74,41 +74,42 @@ def test_merge_anchors_at_first_same_field_row():
     # the first occurrence in canonical row order
     assert _identity(
         "works where title has alpha and country is US and title has beta"
-    ) == "works where country is US and title has (alpha and beta)"
+    ) == "works where country is (US) and title has (alpha and beta)"
 
 
 def test_stemmed_and_exact_share_one_merged_group():
     # base-field grouping: .search + .search.exact mix in one group (row-78 win)
     assert _identity(
         'works where title has "exact phrase" and title has (fuzzy words)'
-    ) == 'works where title has ((fuzzy words) and "exact phrase")'
+    ) == 'works where title has (fuzzy words and "exact phrase")'
 
 
 # --- what does NOT merge ---------------------------------------------------- #
 
 def test_standalone_negated_leaf_renders_bare_prefix():
+    # standalone negation renders as a bare `not` prefix INSIDE the value group (#554)
     assert _identity("works where title does not have dog") \
-        == "works where title has not dog"
+        == "works where title has (not dog)"
     assert _identity("works where country is not FR") \
-        == "works where country is not FR"
+        == "works where country is (not FR)"
 
 
 def test_comparators_excluded_stay_separate_endpoint_clauses():
     # comparison operators never merge into a value tree; with the dash range
     # literal gone (decision 24) they stay as two endpoint clauses, lower first.
     assert _identity("works where year >= 2020 and year < 2024") \
-        == "works where year >= 2020 and year < 2024"
+        == "works where year >= (2020) and year < (2024)"
 
 
 def test_lone_bounds_do_not_merge_into_a_value_tree():
     # two same-column bounds that do NOT form a closed range stay inequalities
     assert _identity("works where citation count > 100 and year >= 2020") \
-        == "works where citation count > 100 and year >= 2020"
+        == "works where citation count > (100) and year >= (2020)"
 
 
 def test_cross_field_stays_multi_clause():
     assert _identity("works where title has cat and abstract has dog") \
-        == "works where abstract has dog and title has cat"
+        == "works where abstract has (dog) and title has (cat)"
 
 
 def test_mixed_field_or_branches_do_not_merge():
@@ -119,8 +120,8 @@ def test_mixed_field_or_branches_do_not_merge():
         "and (title has b or country is FR)"
     )
     assert out == (
-        "works where (country is FR or title has b) "
-        "and (country is US or title has a)"
+        "works where (country is (FR) or title has (b))\n"
+        "  and (country is (US) or title has (a))"
     )
 
 

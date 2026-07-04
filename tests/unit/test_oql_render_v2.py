@@ -175,7 +175,7 @@ def test_works_where_merged_on_one_line():
     """Entity + where + first clause share line 1 (builder no longer splits
     `works` onto its own row)."""
     lines = _texts(_lines("works where title has bikes"))
-    assert lines == ["works where title has bikes"]
+    assert lines == ["works where title has (bikes)"]
 
 
 def test_example_78_matches_oql_pane():

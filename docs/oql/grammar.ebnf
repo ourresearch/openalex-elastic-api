@@ -1,4 +1,4 @@
-/* OQL (OpenAlex Query Language) v2.1 -- derived reference grammar (W3C-EBNF). */
+/* OQL (OpenAlex Query Language) v2.2 -- derived reference grammar (W3C-EBNF). */
 /* Hand-written from the spec/parser; NOT generated, NOT the parser itself. */
 /* Single source of truth = query_translation/oql_lang.py + docs/oql/corpus.yaml. */
 /* No-drift gate: tests/oql/test_grammar_ebnf.py (oxjob #361). */
@@ -38,21 +38,27 @@ operator     ::= 'is' 'not'? 'in' 'collection'
                | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'have'
                | '>=' | '<=' | '>' | '<'
 
-value        ::= valueGroup | 'unknown' | 'null' | scalar   /* a boolean's value is the scalar 'true' or 'false' (oxjob #363) */
+/* The CANONICAL value form is always the parenthesized group (oxjob #554,
+   spec v2.2) -- `type is (article)`, `year >= (2019)`; the bare scalar /
+   bare 'unknown' alternatives are the accepted-input (lenient) layer only.
+   Scalar-domain operators (comparisons, booleans, collection, similar-to)
+   take exactly ONE item in their group -- a semantic rule, not grammatical. */
+value        ::= valueGroup | 'unknown' | 'null' | scalar   /* a boolean's value is 'true' or 'false' (oxjob #363) */
 
 /* A value group is a parenthesized boolean of values: `(a or b)` / `(a and b)`,
    nesting freely. Items are joined by infix 'or'/'and' (one separator per
-   level). */
+   level); bare adjacency between value items is a loud error (#554), never an
+   implicit AND. 'unknown'/'null' inside a group is the null sentinel (#554). */
 valueGroup   ::= '(' valueExpr ')'
 
 valueExpr    ::= valueItem ( connective valueItem )*
 
-valueItem    ::= 'not'? ( valueGroup | scalar )
+valueItem    ::= 'not'? ( valueGroup | 'unknown' | 'null' | scalar )
 
 scalar       ::= ( WORD | NUMBER | STRING ) ANNOT?
 
 searchClause ::= searchField ( 'has' | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'have' ) searchExpr
-               | searchField 'is' 'similar' 'to' STRING
+               | searchField 'is' 'similar' 'to' ( '(' STRING ')' | STRING )
 
 searchField  ::= word ( ( '&' | 'and' ) word )*
 

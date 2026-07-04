@@ -98,16 +98,16 @@ def test_mixed_bool_never_raises():
 
 def test_canonical_adds_parens_for_the_and_group():
     assert canon("works where year is 2020 and title has cat or type is article") \
-        == "works where (year is 2020 and title has cat) or type is article"
+        == "works where (year is (2020) and title has (cat)) or type is (article)"
     assert canon("works where year is 2020 or title has cat and type is article") \
-        == "works where year is 2020 or (title has cat and type is article)"
+        == "works where year is (2020) or (title has (cat) and type is (article))"
 
 
 def test_canonical_keeps_pure_levels_paren_free():
     assert canon("works where year is 2020 and title has a and type is article") \
-        == "works where year is 2020 and title has a and type is article"
+        == "works where year is (2020) and title has (a) and type is (article)"
     assert canon("works where year is 2020 or title has a or type is article") \
-        == "works where year is 2020 or title has a or type is article"
+        == "works where year is (2020) or title has (a) or type is (article)"
 
 
 # --- round-trip is exact ----------------------------------------------------

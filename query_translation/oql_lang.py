@@ -650,7 +650,7 @@ def _coerce_date(val: str, fld: "Field", pos):
     if not _DATE_RE.match(val):
         raise oql_error("OQL_BAD_DATE",
                        f'"{val}" is not a date (YYYY-MM-DD) for "{fld.oql}"',
-                       "e.g. date is 2020-05-17", pos)
+                       "e.g. date is (2020-05-17)", pos)
     return val
 
 
@@ -1741,6 +1741,31 @@ class _Parser:
         raise oql_error("OQL_MISSING_OPERATOR",
                        f'expected an operator, got "{t.val}"', None, t.pos)
 
+    def _open_scalar_group(self) -> bool:
+        """Consume a `(` opening a SCALAR value group, if present (#554 —
+        canonical form always parenthesizes a condition's value, so every
+        scalar-domain operator accepts an exactly-one-atom group). Returns
+        whether a group was opened; the caller closes it via
+        `_close_scalar_group`."""
+        t = self.peek()
+        if t is None or t.kind != "LP":
+            return False
+        self.next()
+        self._skip_annot()
+        return True
+
+    def _close_scalar_group(self, one_value_msg: str, one_value_fixit: str):
+        """Close an exactly-one-atom scalar group: anything but `)` after the
+        single atom is a loud arity diagnostic (#554 — scalar domains never
+        distribute over a multi-atom group: `year >= (2019 or 2020)` and
+        `retracted is (true or false)` are errors, not unions)."""
+        self._skip_annot()
+        t = self.peek()
+        if t is not None and t.kind != "RP":
+            raise oql_error("OQL_GROUP_NEEDS_ONE_VALUE", one_value_msg,
+                           one_value_fixit, t.pos)
+        self._expect_rp()
+
     def _parse_bool_value(self, fld: Field, negated: bool) -> LeafFilter:
         # A boolean is an ordinary value clause: `<name> is true|false` (oxjob #363,
         # replacing the old `it's …`/`it has …` special form). `is not` folds into the
@@ -1749,22 +1774,35 @@ class _Parser:
         # value-start marker the sectioned "add another value" menu reads.
         self._last_value_start_i = None
         self._want(CTX_VALUE, kind="bool")
+        # canonical parens (#554): `is (true)`; `(not true)` folds like `is not true`.
+        grouped = self._open_scalar_group()
+        if grouped:
+            self._want(CTX_VALUE, kind="bool")
+            while self.word_is("not"):
+                self.next()
+                negated = not negated
+                self._skip_annot()
         t = self.peek()
         if t is None or t.kind != "WORD" or t.val.lower() not in ("true", "false"):
             raise oql_error("OQL_BAD_BOOL_VALUE",
                            f'"{fld.oql}" is a yes/no property — its value must be '
                            f'true or false',
-                           f'e.g. {fld.oql} is true', t.pos if t else None)
+                           f'e.g. {fld.oql} is (true)', t.pos if t else None)
         val = (t.val.lower() == "true")
         self.next()
         if negated:
             val = not val
         self._skip_annot()
+        if grouped:
+            self._close_scalar_group(
+                f'"{fld.oql}" is a yes/no property — it takes exactly one value',
+                f'{fld.oql} is (true) or {fld.oql} is (false), never both in '
+                f'one group')
         if self._continues_value():
             t2 = self.peek()
             raise oql_error("OQL_UNDELIMITED_TERM_LIST",
                            f'"{fld.oql}" got more than one value',
-                           f'a yes/no property takes one value: {fld.oql} is true',
+                           f'a yes/no property takes one value: {fld.oql} is (true)',
                            t2.pos if t2 else None)
         return LeafFilter(fld.column, val, "is")
 
@@ -1775,26 +1813,43 @@ class _Parser:
         self._last_value_start_i = self.i
         # (no _skip_annot here — _parse_scalar must SEE a lone annotation so it
         # can raise OQL_MISSING_ENTITY_ID for "institution is [Harvard]".)
-        # collection membership: is [not] in collection col_… (oxjob #363)
+        # collection membership: is [not] in collection (col_…) (oxjob #363; #554
+        # canonical parens)
         if op in ("incoll", "nincoll"):
             negated = (op == "nincoll")
-            # bare `not` prefix on the value (decision 23): the canonical render is
-            # `work is in collection not col_x`; `is not in collection` is the
+            # bare `not` prefix on the value (decision 23): canonical is
+            # `work is in collection (not col_x)`; `is not in collection` is the
             # accepted input alias (op == "nincoll"). Both land on is_negated.
             if self.word_is("not"):
                 self.next()
                 self._skip_annot()
                 negated = not negated
+            grouped = self._open_scalar_group()
+            if grouped:
+                while self.word_is("not"):     # (not col_x) — not inside the group
+                    self.next()
+                    negated = not negated
+                    self._skip_annot()
             v = self._parse_scalar(fld)
+            if grouped:
+                self._close_scalar_group(
+                    'one collection per clause',
+                    'e.g. work is in collection (col_abc123); union several '
+                    'with or-clauses')
             if not (isinstance(v, str) and v.startswith("col_")):
                 raise oql_error("OQL_BAD_COLLECTION_REF",
                                f'"is in collection" needs a collection id (col_…), got "{v}"',
-                               'e.g. work is in collection col_abc123')
+                               'e.g. work is in collection (col_abc123)')
             return LeafFilter(fld.column, v, "in collection",
                               is_negated=negated)
-        # comparison — always a single bare scalar (D5)
+        # comparison — a single scalar, canonically parenthesized (D5; #554)
         if op in (">", ">=", "<", "<="):
+            grouped = self._open_scalar_group()
             v = self._parse_scalar(fld)
+            if grouped:
+                self._close_scalar_group(
+                    'a comparison takes exactly one bound',
+                    f'e.g. {field} {op} ({v})')
             # date axis fields route inclusive bounds to the from_*/to_* params
             # (the only inclusive form at ES); strict >/< stay on the base column.
             # (oxjob #407 — see the `date` kind notes in the Field dataclass.)
@@ -1813,7 +1868,10 @@ class _Parser:
             return self._parse_bool_value(fld, negated)
         # a parenthesized boolean group of values: `country is (us or uk)`,
         # `country is not (us or uk)` (the base operator negates the whole group).
-        grp = self._parse_grouped_operand(lambda: self._parse_value_operand(fld))
+        # implicit_and=False (#554): `type is (article review)` is a loud error,
+        # never a silent AND.
+        grp = self._parse_grouped_operand(lambda: self._parse_value_operand(fld),
+                                          implicit_and=False)
         if grp is not None:
             return _negate(grp) if negated else grp
         # unknown / null
@@ -1847,12 +1905,14 @@ class _Parser:
 
     def _parse_value_operand(self, fld: Field) -> FilterType:
         """One operand inside an `is (...)` value group: a `not`-prefixed operand,
-        a nested `(...)` group, or one scalar value (-> an `is` leaf)."""
+        a nested `(...)` group, the null sentinel `unknown`/`null`, or one scalar
+        value (-> an `is` leaf)."""
         t = self.peek()
         if t is not None and t.kind == "WORD" and t.val.lower() == "not":
             self._consume_not(t)  # bare prefix `not` (decision 23)
             return _negate(self._parse_value_operand(fld))
-        grp = self._parse_grouped_operand(lambda: self._parse_value_operand(fld))
+        grp = self._parse_grouped_operand(lambda: self._parse_value_operand(fld),
+                                          implicit_and=False)
         if grp is not None:
             return grp
         if t is not None and t.kind == "COMMA":
@@ -1860,6 +1920,15 @@ class _Parser:
                            "items in a (…) group are separated by 'or'/'and', "
                            "not commas",
                            "replace the comma with 'or' (or 'and')", t.pos)
+        # `unknown` / `null` inside a value group is the null sentinel, same as
+        # the top-level `is unknown` (#554 — it previously fell through to
+        # `_parse_scalar` and misparsed as a literal string). This makes mixed
+        # groups expressible: `language is (en or unknown)`. A literal value
+        # spelled "unknown" stays reachable via quotes (the canonical render
+        # quotes it — see `_value_needs_quote`).
+        if self.word_is("unknown", "null"):
+            self.next()
+            return LeafFilter(fld.column, None, "is")
         v = self._parse_scalar(fld)
         return LeafFilter(fld.column, v, "is")
 
@@ -1901,7 +1970,7 @@ class _Parser:
             if t0 is not None and t0.kind == "ANNOT":
                 raise oql_error("OQL_MISSING_ENTITY_ID",
                                f'"{fld.oql}" needs an ID, not just a [display name]',
-                               'put the OpenAlex ID first, e.g. institution is I136199984 [Harvard]',
+                               'put the OpenAlex ID first, e.g. institution is (I136199984 [Harvard])',
                                t0.pos)
         self._skip_annot()
         t = self.peek()
@@ -1934,12 +2003,21 @@ class _Parser:
     def _parse_semantic(self, fld: Field) -> LeafFilter:
         self._skip_annot()
         self._want(CTX_VALUE, fld=fld, kind="search")
+        # canonical parens (#554): `is similar to ("...")`; bare `"..."` accepted.
+        grouped = self._open_scalar_group()
+        if grouped:
+            self._want(CTX_VALUE, fld=fld, kind="search")
         t = self.peek()
         if t is None or t.kind != "STRING":
             raise oql_error("OQL_SEMANTIC_NEEDS_TEXT",
                            '"is similar to" needs a quoted text passage',
-                           'e.g. abstract is similar to "..."', t.pos if t else None)
+                           'e.g. abstract is similar to ("...")',
+                           t.pos if t else None)
         self.next()
+        if grouped:
+            self._close_scalar_group(
+                '"is similar to" takes exactly one quoted passage',
+                'e.g. abstract is similar to ("...")')
         return LeafFilter(fld.column + ".search.semantic", t.val, "has")
 
     def _parse_search_value(self, base: str) -> FilterType:
@@ -1977,31 +2055,40 @@ class _Parser:
                            'phrase, e.g. has "a b"', t2.pos if t2 else None)
         return leaf
 
-    def _parse_grouped_operand(self, parse_operand) -> Optional[FilterType]:
+    def _parse_grouped_operand(self, parse_operand,
+                               implicit_and=True) -> Optional[FilterType]:
         """If the cursor is at a bare `(` group opener, parse the whole group
         (consuming its `)`) and return its filter; else return None without
         consuming. The group is `or`/`and`-separated (the existing
-        `_parse_bool_expr` machinery); groups nest freely via `parse_operand`."""
+        `_parse_bool_expr` machinery); groups nest freely via `parse_operand`.
+        `implicit_and=False` (the `is (...)` value side, #554) makes bare
+        space-adjacency between operands a loud error instead of a silent AND."""
         t = self.peek()
         if t is None or t.kind != "LP":
             return None
         self.next()                       # (
-        e = self._parse_bool_expr(parse_operand)
+        e = self._parse_bool_expr(parse_operand, implicit_and=implicit_and)
         self._expect_rp()
         return e
 
-    def _parse_bool_expr(self, parse_operand) -> FilterType:
+    def _parse_bool_expr(self, parse_operand, implicit_and=True) -> FilterType:
         """A boolean group body inside `(...)`: explicit-connective-separated
         *runs* of space-adjacent operands (implicit AND). Mixing a space-run or an
         explicit `and` with an explicit `or` at one level is resolved by the
         standard precedence AND > OR (not an error) — each implicit/explicit AND
         run becomes one OR-operand. `parse_operand` reads one operand (search term
         or value, per the caller). Shared by the search side (`has (...)`) and the
-        value side (`is (...)`) so they can't drift."""
+        value side (`is (...)`) so they can't drift — but the value side passes
+        `implicit_and=False`: between VALUES a bare space is never a silent join
+        (#554; a user who pastes `type is (article review)` almost certainly means
+        `or`, and implicit AND gave a silent count-0). The `has` side keeps its
+        run-merge (D2 reversal, #363) — a bare-word run there is ONE stemmed node
+        consumed by `_parse_search_atom` before this machinery sees a second
+        operand, so `implicit_and` only bites mixed-operand adjacency."""
         outer = self._in_list
         self._in_list = True
         try:
-            unit, n = self._parse_bool_run(parse_operand)
+            unit, n = self._parse_bool_run(parse_operand, implicit_and=implicit_and)
             units = [unit]
             conns: List[str] = []
             while True:
@@ -2016,7 +2103,8 @@ class _Parser:
                     # for the `it's …` boolean-phrase clause-start).
                     conns.append(t.val.lower())
                     self.next()
-                    unit, n = self._parse_bool_run(parse_operand)
+                    unit, n = self._parse_bool_run(parse_operand,
+                                                   implicit_and=implicit_and)
                     units.append(unit)
                     continue
                 break
@@ -2047,10 +2135,17 @@ class _Parser:
                     self.next()  # guarantee forward progress
             return self._recovery_placeholder()
 
-    def _parse_bool_run(self, parse_operand) -> Tuple[FilterType, int]:
+    def _parse_bool_run(self, parse_operand,
+                        implicit_and=True) -> Tuple[FilterType, int]:
         """One or more space-adjacent operands = implicit AND (one AND-precedence
         unit). Returns (filter, n_operands); the caller treats the unit as a single
-        operand when building the AND > OR precedence tree."""
+        operand when building the AND > OR precedence tree.
+
+        With `implicit_and=False` (the `is (...)` value side, #554) a second
+        space-adjacent operand is a LOUD error — between values the join must be
+        explicit ("did you mean or?"). In recover mode the error is collected and
+        parsing continues (so the editor squiggles every gap); in editor-context
+        mode we stay lenient so completion still works mid-typing."""
         atoms = [self._group_operand(parse_operand)]
         while True:
             self._skip_annot()
@@ -2061,6 +2156,16 @@ class _Parser:
                 break  # explicit connective -> handled by _parse_bool_expr
             if t.kind == "WORD" and t.val.lower() in ("group", "sample"):
                 break
+            if not implicit_and and not self._ctx_mode:
+                err = oql_error("OQL_GROUP_VALUES_NEED_CONNECTIVE",
+                               f'two values with no connective between them '
+                               f'(before "{t.val}")',
+                               "add 'or' between the values (or 'and' if you "
+                               "mean both)", t.pos)
+                if self._recover_mode:
+                    self._diagnostics.append(err)
+                else:
+                    raise err
             atoms.append(self._group_operand(parse_operand))  # implicit AND
         if len(atoms) == 1:
             return atoms[0], 1
@@ -2517,7 +2622,7 @@ def parse(oql: str) -> OQO:
     """OQL text -> OQO. Raises OQLError (with .code/.fixit) on any error case."""
     toks = lex(oql)
     if not toks:
-        raise oql_error("OQL_EMPTY", "empty query", 'e.g. "works where year >= 2020"')
+        raise oql_error("OQL_EMPTY", "empty query", 'e.g. "works where year >= (2020)"')
     p = _Parser(toks)
     oqo = p.parse()
     return oqo
@@ -2544,7 +2649,7 @@ def parse_collecting(oql: str) -> Tuple[Optional[OQO], List[OQLError]]:
         return None, [e]
     if not toks:
         return None, [oql_error("OQL_EMPTY", "empty query",
-                                'e.g. "works where year >= 2020"')]
+                                'e.g. "works where year >= (2020)"')]
     return _Parser(toks).parse_collecting()
 
 
@@ -2603,22 +2708,11 @@ def _render_term(value: str, column: str) -> str:
         return f'"{value}"'
     # A stemmed value is ONE node (#1 single node, D2 reversal): emit its inner
     # token form, dropping un-reparseable special chars (#3) and quoting embedded
-    # reserved words (#2). A multi-token value must be parenthesized (arity rule);
-    # `(a b)` re-parses to this same single stemmed node. (oxjob #363)
-    inner = _render_stemmed_search_value(value)
-    if " " in inner:
-        return f"({inner})"
-    return inner
-
-
-def _render_search_leaf(f: LeafFilter) -> str:
-    name, mode = _oql_field(f.column_id)
-    if mode == "semantic":
-        v = (f.value or "").strip('"')
-        return f'{name} is similar to "{v}"'
-    # decision 23: negation is a bare `not ` prefix on the value, not a predicate.
-    term = _render_term(f.value, f.column_id)
-    return f"{name} has {('not ' + term) if f.is_negated else term}"
+    # reserved words (#2). No parens of its own (#554): the canonical clause
+    # always wraps the whole value in `( … )`, and inside a group a bare
+    # multi-token run re-parses to this same single stemmed node (the run-merge),
+    # so `title has (machine learning)` round-trips with no inner parens.
+    return _render_stemmed_search_value(value)
 
 
 def _value_needs_quote(value: str) -> bool:
@@ -2743,15 +2837,19 @@ def _uniform_search_base(f: FilterType):
 def _uniform_eq_column(f: FilterType):
     """If every leaf anywhere under `f` is an `is` value leaf (any polarity) on the
     same column, return that column_id; else None. The subtree factors into one
-    `field is (...)` clause. Comparisons, null (`is unknown`) and `in collection`
-    leaves are excluded — they have no bare-value surface inside the parens."""
+    `field is (...)` clause. Comparisons and `in collection` leaves are excluded —
+    they are exactly-one-atom surfaces. Null leaves (`value: None`) are ordinary
+    group members since #554 (`unknown` in a group is the null sentinel), so
+    `language is (en or unknown)` factors like any other value group."""
     cols = set()
 
     def walk(node) -> bool:
         if isinstance(node, LeafFilter):
-            if not (node.operator == "is" and node.value is not None
-                    and not _is_search_leaf(node)):
+            if not (node.operator == "is" and not _is_search_leaf(node)):
                 return False
+            fld = _BY_COLUMN.get(node.column_id)
+            if fld and fld.kind in ("date", "bool"):
+                return False  # bools/dates are exactly-one-atom surfaces
             cols.add(node.column_id)
             return True
         return all(walk(c) for c in node.filters)
@@ -2833,21 +2931,25 @@ def _value_segments(fld, value, column_id, resolver):
 
 
 def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
+    # #554: a condition's value is ALWAYS a parenthesized group in canonical
+    # OQL — every leaf clause below wraps its value in `( … )` (bare singletons
+    # remain accepted on input). Standalone negation moves INSIDE the group
+    # (`country is (not FR)`), uniform with the merged case (`(not FR and US)`).
     if _is_search_leaf(f):
         name, mode = _oql_field(f.column_id)
         if mode == "semantic":
             v = (f.value or "").strip('"')
             segs = [_seg("column", name, column_id=f.column_id),
-                    _seg("operator", " is similar to "),
-                    _seg("value", f'"{v}"', value=f.value)]
+                    _seg("operator", " is similar to "), _seg("text", "("),
+                    _seg("value", f'"{v}"', value=f.value), _seg("text", ")")]
         else:
             # decision 23: negation is a bare `not ` prefix on the value, never a
-            # `does not have` predicate (`title has not pediatric`).
+            # `does not have` predicate (`title has (not pediatric)`).
             term = _render_term(f.value, f.column_id)
             val = f"not {term}" if f.is_negated else term
             segs = [_seg("column", name, column_id=f.column_id),
-                    _seg("operator", " has "),
-                    _seg("value", val, value=f.value)]
+                    _seg("operator", " has "), _seg("text", "("),
+                    _seg("value", val, value=f.value), _seg("text", ")")]
         return ClauseNode(segments=segs, clause_kind="text", meta=ClauseMeta(
             column_id=f.column_id, operator=f.operator or "has",
             value=f.value, column_display_name=name))
@@ -2859,52 +2961,64 @@ def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
     # `<axis> >= <date>` / `<axis> <= <date>` (the inverse of the parse routing).
     if fld and fld.kind == "date" and fld.date_bound and f.value is not None:
         segs = [_seg("column", fld.date_axis, column_id=f.column_id),
-                _seg("operator", f" {fld.date_bound} "),
-                _seg("value", _render_value(fld, f.value), value=f.value)]
+                _seg("operator", f" {fld.date_bound} "), _seg("text", "("),
+                _seg("value", _render_value(fld, f.value), value=f.value),
+                _seg("text", ")")]
         return ClauseNode(segments=segs, clause_kind="comparison", meta=ClauseMeta(
             column_id=f.column_id, operator=fld.date_bound, value=f.value,
             column_display_name=fld.date_axis))
-    # boolean flag: a plain `<name> is true|false` clause (oxjob #363). Negation
+    # boolean flag: a plain `<name> is (true|false)` clause (oxjob #363). Negation
     # folds into the value (`is not true` -> false), so the canonical form is always
-    # `is true` / `is false` — never a separate `not`.
+    # `is (true)` / `is (false)` — never a separate `not`.
     if fld and fld.kind == "bool" and isinstance(f.value, bool):
         effective = f.value != f.is_negated  # XOR: fold any is_negated into the value
         segs = [_seg("column", name, column_id=f.column_id),
-                _seg("operator", " is "),
-                _seg("value", "true" if effective else "false", value=effective)]
+                _seg("operator", " is "), _seg("text", "("),
+                _seg("value", "true" if effective else "false", value=effective),
+                _seg("text", ")")]
         return ClauseNode(segments=segs, clause_kind="boolean", meta=ClauseMeta(
             column_id=f.column_id, operator="is", value=effective,
             column_display_name=name))
     if f.value is None:
-        op_text = f" is {'not ' if f.is_negated else ''}"
+        # `language is (unknown)` / negated `language is (not unknown)` — the
+        # `not` sits inside the group like every other value negation (#554).
+        val = "not unknown" if f.is_negated else "unknown"
         segs = [_seg("column", name, column_id=f.column_id),
-                _seg("operator", op_text), _seg("value", "unknown", value=None)]
+                _seg("operator", " is "), _seg("text", "("),
+                _seg("value", val, value=None), _seg("text", ")")]
         return ClauseNode(segments=segs, clause_kind="null", meta=ClauseMeta(
             column_id=f.column_id, operator="is", value=None,
             column_display_name=name))
     if f.operator in (">", ">=", "<", "<="):
         segs = [_seg("column", name, column_id=f.column_id),
-                _seg("operator", f" {f.operator} "),
-                _seg("value", _render_value(fld, f.value), value=f.value)]
+                _seg("operator", f" {f.operator} "), _seg("text", "("),
+                _seg("value", _render_value(fld, f.value), value=f.value),
+                _seg("text", ")")]
         return ClauseNode(segments=segs, clause_kind="comparison", meta=ClauseMeta(
             column_id=f.column_id, operator=f.operator, value=f.value,
             column_display_name=name))
     if f.operator == "in collection":  # oxjob #363; col_… value, never name-resolved
         # decision 23: negation is a bare `not ` prefix on the value
-        # (`work is in collection not col_x`), never an `is not in collection` predicate.
+        # (`work is in collection (not col_x)`), never an `is not in collection`
+        # predicate.
         col_val = _render_value(fld, f.value)
         if f.is_negated:
             col_val = f"not {col_val}"
         segs = [_seg("column", name, column_id=f.column_id),
-                _seg("operator", " is in collection "),
-                _seg("value", col_val, value=f.value)]
+                _seg("operator", " is in collection "), _seg("text", "("),
+                _seg("value", col_val, value=f.value), _seg("text", ")")]
         return ClauseNode(segments=segs, clause_kind="collection", meta=ClauseMeta(
             column_id=f.column_id, operator="in collection", value=f.value,
             column_display_name=name))
-    verb = "is not" if f.is_negated else "is"
+    # `is` / negated `is`: negation renders INSIDE the value group (#554) —
+    # `country is (not FR)` — uniform with the merged case `(not FR and US)`.
+    # `is not …` stays accepted input only; it never survives canonicalization.
     val_segs, entity = _value_segments(fld, f.value, f.column_id, resolver)
-    segs = [_seg("column", name, column_id=f.column_id),
-            _seg("operator", f" {verb} ")] + val_segs
+    if f.is_negated:
+        val_segs = [_seg("text", "not ")] + val_segs
+    segs = ([_seg("column", name, column_id=f.column_id),
+             _seg("operator", " is "), _seg("text", "(")]
+            + val_segs + [_seg("text", ")")])
     kind = "entity" if (fld and fld.kind == "id") else "other"
     return ClauseNode(segments=segs, clause_kind=kind, meta=ClauseMeta(
         column_id=f.column_id, operator="is", value=f.value,
@@ -2989,8 +3103,9 @@ def _merge_key(item):
         if mode == "semantic":
             return None
         return ("search", name)
-    if (item.operator == "is" and item.value is not None
-            and _eq_mergeable(item.column_id)):
+    if item.operator == "is" and _eq_mergeable(item.column_id):
+        # includes null leaves (value None) — `unknown` is an ordinary group
+        # member since #554, so `language is (en or unknown)` merges/factors.
         return ("eq", item.column_id)
     return None
 

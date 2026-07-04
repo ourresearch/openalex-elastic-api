@@ -31,7 +31,7 @@ def _oqo(value="a9999999999", col=_AUTHOR_COL):
 
 def test_resolver_miss_annotates_no_entity_found():
     out = oql_lang.render_tree(_oqo(), resolver=_MISS)[0]
-    assert out == "works where author is a9999999999 [no entity found]"
+    assert out == "works where author is (a9999999999 [no entity found])"
 
 
 def test_self_id_column_stays_bare_on_miss():
@@ -42,7 +42,7 @@ def test_self_id_column_stays_bare_on_miss():
     oqo = OQO(get_rows="authors",
               filter_rows=[LeafFilter("ids.openalex", "A9999999999", "is")])
     out = oql_lang.render_tree(oqo, resolver=_MISS)[0]
-    assert out == "authors where openalex id is A9999999999"
+    assert out == "authors where openalex id is (A9999999999)"
     assert "[" not in out
 
 
@@ -50,13 +50,13 @@ def test_no_resolver_stays_bare():
     # The whole subtlety: a resolverless render must NOT stamp [no entity found]
     # on every ID (nothing was looked up).
     out = oql_lang.render_tree(_oqo())[0]
-    assert out == "works where author is a9999999999"
+    assert out == "works where author is (a9999999999)"
     assert "[" not in out
 
 
 def test_resolver_hit_renders_name_unchanged():
     out = oql_lang.render_tree(_oqo(), resolver=_HIT)[0]
-    assert out == "works where author is a9999999999 [Jane Doe]"
+    assert out == "works where author is (a9999999999 [Jane Doe])"
 
 
 def test_string_render_matches_tree_render():
@@ -96,7 +96,7 @@ def test_wired_homonym_id_columns_are_name_resolvable(entity, column):
     from query_translation.oql_lang import _column_resolves_name
     assert _column_resolves_name(column)
     oqo = OQO(get_rows=entity, filter_rows=[LeafFilter(column, "I999", "is")])
-    assert oql_lang.render_tree(oqo, resolver=_MISS)[0].endswith("[no entity found]")
+    assert oql_lang.render_tree(oqo, resolver=_MISS)[0].endswith("[no entity found])")
 
 
 def test_value_segments_concatenate_to_value_with_name():

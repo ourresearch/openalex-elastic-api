@@ -81,7 +81,7 @@ def test_build_x_query_no_resolver_never_stamps_no_entity_found():
         filter_string="authorships.institutions.lineage:I136199984",
     )
     xq = build_x_query(oqo)
-    assert xq["oql"] == "works where institution is I136199984"
+    assert xq["oql"] == "works where institution is (I136199984)"
     assert "[no entity found]" not in xq["oql"]
 
 
@@ -90,7 +90,7 @@ def test_build_x_query_no_resolver_skips_builtin_name_tables():
     local config/*.yaml builtin names (`country is US [United States]`)."""
     oqo = parse_url_to_oqo(entity_type="works", filter_string="authorships.countries:US")
     xq = build_x_query(oqo)
-    assert xq["oql"] == "works where country is US"
+    assert xq["oql"] == "works where country is (US)"
 
 
 def test_build_x_query_with_resolver_annotates_hits_and_misses():

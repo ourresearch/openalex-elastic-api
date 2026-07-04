@@ -33,8 +33,8 @@ def test_clause_order_preserved_both_ways():
     an implicit-AND infix list per decision 32, preserving the authored order)."""
     a = "works where year is 2020 and type is article"
     b = "works where type is article and year is 2020"
-    assert _preserve(a) == "works where year is 2020 and type is article"
-    assert _preserve(b) == "works where type is article and year is 2020"
+    assert _preserve(a) == "works where year is (2020) and type is (article)"
+    assert _preserve(b) == "works where type is (article) and year is (2020)"
 
 
 def test_clause_order_sorted_by_default():
