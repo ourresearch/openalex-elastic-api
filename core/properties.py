@@ -187,7 +187,8 @@ CAP_COLUMN = "column"
 # chip and the oxurl input alias `cites:`; OQL filter leaves render as the row-subject
 # verb form `it cites (…)`), with "references" demoted to an accepted input alias.
 # display_name tweak + alias addition = MINOR per the versioning table. Word
-# unification approved by Jason in the #557 design conversation 2026-07-04.
+# unification approved by Jason in the #557 design conversation 2026-07-04;
+# MINOR class confirmed by Jason 2026-07-05.
 PROPERTIES_VERSION = "6.2.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
