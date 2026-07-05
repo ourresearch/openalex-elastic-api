@@ -31,8 +31,8 @@ from typing import List, Optional, Dict, Any
 from query_translation.oql_lang import (
     lex, Tok, OQLError, Field, _Parser,
     _ALIAS, _FIELDS, ENTITY_TYPES, _CONNECTIVES,
-    match_field, match_operator,
-    CTX_ENTITY, CTX_FIELD, CTX_OPERATOR, CTX_VALUE, CTX_CONNECTIVE,
+    match_field, match_operator, match_row_subject,
+    CTX_ENTITY, CTX_FIELD, CTX_OPERATOR, CTX_VERB, CTX_VALUE, CTX_CONNECTIVE,
     CTX_DIRECTIVE, CTX_END, CTX_NONE,
 )
 
@@ -45,11 +45,21 @@ _match_operator = match_operator
 ENTITY = CTX_ENTITY
 FIELD = CTX_FIELD
 OPERATOR = CTX_OPERATOR
+VERB = CTX_VERB
 VALUE = CTX_VALUE
 CONNECTIVE = CTX_CONNECTIVE
 DIRECTIVE = CTX_DIRECTIVE
 END = CTX_END
 NONE = CTX_NONE
+
+# Row-subject verb phrases offered after each pronoun spelling (oxjob #557).
+# After bare `it` the copula is part of the suggestion (`is cited by`); after
+# `it's`/`its` it's already in the contraction.
+_VERB_SUGGESTIONS = {
+    "it": ["cites", "is cited by", "is related to"],
+    "it's": ["cited by", "related to"],
+    "its": ["cited by", "related to"],
+}
 
 # Directive words that bound a partially-typed multi-word field alias when widening
 # the replace-range backwards.
@@ -84,6 +94,10 @@ _COLUMN_AUTOCOMPLETE_ENTITY: Dict[str, str] = {
     "sustainable_development_goals.id": "sdgs",
     "domain.id": "domains",
     "primary_topic.field.id": "fields",
+    # citation/relation edges take W-ids — resolve via the works namespace (#557)
+    "referenced_works": "works",
+    "cited_by": "works",
+    "related_to": "works",
     # ids.openalex (the work's own id) intentionally absent -> null (free text).
 }
 
@@ -144,6 +158,9 @@ def _field_suggestions() -> List[Dict[str, str]]:
         if fld.oql not in seen:
             seen.add(fld.oql)
             out.append({"value": fld.oql, "kind": "field"})
+    # the row-subject pronoun opens a verb-phrase leaf (`it cites (…)` — #557);
+    # offered alongside fields wherever a field can start.
+    out.append({"value": "it", "kind": "subject"})
     return out
 
 
@@ -225,6 +242,12 @@ def _shape(raw: Dict[str, Any]) -> Dict[str, Any]:
         return {"category": OPERATOR, "field": fld.oql if fld is not None else None,
                 "value_kind": kind, "operators": ops,
                 "suggestions": [{"value": o, "kind": "operator"} for o in ops]}
+    if cat == VERB:
+        # after the row-subject pronoun: offer the relation verb phrases (#557)
+        subj = raw.get("subject", "it")
+        verbs = _VERB_SUGGESTIONS.get(subj, _VERB_SUGGESTIONS["it"])
+        return {"category": VERB, "subject": subj,
+                "suggestions": [{"value": v, "kind": "verb-phrase"} for v in verbs]}
     if cat == VALUE:
         fld = raw.get("fld")
         if fld is not None:
@@ -347,6 +370,14 @@ def parse_context(q: str, pos: Optional[int] = None) -> Dict[str, Any]:
         # widen the replace range backwards across a partially-typed multi-word field
         if ctx["category"] == FIELD and prefix:
             _extend_multiword_prefix(prior, ctx, replace)
+        # widen across a partially-typed verb phrase (`it is cit|` — the phrase
+        # starts right after the pronoun; oxjob #557)
+        if ctx["category"] == VERB:
+            ps = raw.get("phrase_start_i")
+            if ps is not None and ps < len(prior):
+                joined = " ".join(t.val for t in prior[ps:])
+                ctx["prefix"] = joined + (" " + prefix if prefix else " ")
+                replace["start"] = prior[ps].pos
     # resolve the sibling clause's token-index spans into char offsets (#357)
     if ctx.get("sibling"):
         _resolve_sibling_ranges(prior, ctx["sibling"])

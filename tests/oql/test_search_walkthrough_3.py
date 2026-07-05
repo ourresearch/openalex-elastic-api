@@ -113,17 +113,20 @@ def test_case6_negated_renders_is_false():
 # Case 7 — cited_by / cites + uniform name truncation
 # --------------------------------------------------------------------------- #
 def test_case7_cited_by_render_word():
-    assert _render("works where cited_by is w1984893742") == "works where cited by is (w1984893742)"
+    # #557: the citation edge renders as a row-subject verb-phrase leaf —
+    # `it's cited by (…)` — with the legacy field-word form kept as input.
+    assert _render("works where cited_by is w1984893742") == "works where it's cited by (w1984893742)"
+    assert _render("works where it's cited by (w1984893742)") == "works where it's cited by (w1984893742)"
 
 
 def test_case7_cites_render_word():
-    # `cites` is an alias of the canonical `referenced_works` (#446). Since #455
-    # canonicalizes alias column_ids to one identity at the parse boundary, the
-    # input word `cites` resolves to `referenced_works` and renders the canonical's
-    # friendly word "references" (a non-lossy flip — the canonical carries a curated
-    # word). Both spellings now render identically.
-    assert _render("works where cites is w1984893742") == "works where references is (w1984893742)"
-    assert _render("works where references is w1984893742") == "works where references is (w1984893742)"
+    # `cites` is an alias of the canonical `referenced_works` (#446, canonicalized
+    # at the parse boundary since #455). #557: the canonical render is the
+    # row-subject verb form `it cites (…)`; every legacy spelling (`cites is`,
+    # `references is`) converges on it.
+    assert _render("works where cites is w1984893742") == "works where it cites (w1984893742)"
+    assert _render("works where references is w1984893742") == "works where it cites (w1984893742)"
+    assert _render("works where it cites (w1984893742)") == "works where it cites (w1984893742)"
 
 
 def _work_title_resolver():

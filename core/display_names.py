@@ -567,7 +567,11 @@ for _ent, _ov in _THREAD_B_OVERRIDES.items():
 #     Count"). Old spellings are kept as OQL-parse aliases for back-compat.
 GLOBAL_DISPLAY_NAME_OVERRIDES: Dict[str, dict] = {
     'cited_by_count': {"display_name": 'citation count', "aliases": ['citations', 'cited by count']},
-    'referenced_works': {"display_name": 'references', "aliases": ['referenced works']},
+    # #557 word unification: the outgoing citation edge displays as "cites"
+    # everywhere (filter verb, column header, sort) — matching the GUI chips and
+    # the oxurl input alias `cites:`. "references" is demoted to an accepted
+    # input alias; `reference count` (the count column) keeps its word.
+    'referenced_works': {"display_name": 'cites', "aliases": ['referenced works', 'references']},
     'referenced_works_count': {"display_name": 'reference count', "aliases": ['references count']},
     # oxjob #430 — text.search is the honest non-works canonical for the broad
     # per-entity search (name + alternate names + description/keywords). Same label

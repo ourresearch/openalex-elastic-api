@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "1540ad9e029c791994ba217cf075512fa505a3127ae3b94516b226cfa780fd64",
-    "property_count": 781,
-    "version": "6.1.0"
+    "fingerprint": "a8c22a51044267f34ea069ec07ca226089819bb020853dfb7811c160203820e3",
+    "property_count": 782,
+    "version": "6.2.0"
   },
   "properties": {
     "authors": {
@@ -9459,6 +9459,27 @@
         ],
         "type": "boolean"
       },
+      "is_preprint_repository": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "is preprint repository",
+        "entity_type": null,
+        "name": "is_preprint_repository",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "type": "boolean"
+      },
       "issn": {
         "actions": [
           "column",
@@ -14836,7 +14857,8 @@
           "sort"
         ],
         "aliases": [
-          "referenced works"
+          "referenced works",
+          "references"
         ],
         "alternate_keys": [
           "cites"
@@ -14844,7 +14866,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "references",
+        "display_name": "cites",
         "entity_type": null,
         "name": "referenced_works",
         "operators": [

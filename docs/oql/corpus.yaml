@@ -1831,10 +1831,10 @@ rows:
   oxurl: 'https://openalex.org/works?filter=cited_by:w1984893742,type:article'
   status: ok
   oql: |-
-    works where cited by is (w1984893742 [Uncertainty and Pension Systems Reforms])
+    works where it's cited by (w1984893742 [Uncertainty and Pension Systems Reforms])
       and type is (article)
   oqo: {get_rows: works, filter_rows: [{column_id: cited_by, value: w1984893742}, {column_id: type, value: article}]}
-  note: "cited_by:W = the works in W's reference list ('cited by' W); cites:W = works citing W. Render words = registry display_names 'cited by' / 'cites'. The W-id value resolves the referenced work's title, truncated with an ellipsis at a uniform length (works added to NATIVE_ENTITY_TYPES). (oxjob #363 case 7)"
+  note: "cited_by:W = the works in W's reference list; cites:W/referenced_works:W = works citing W. #557: the citation edge renders as row-subject verb-phrase leaves — `it's cited by (…)` / `it cites (…)` — mirror forms of one edge; legacy field-word spellings (`cited by is`, `cites is`, `references is`) stay accepted input. The W-id value resolves the referenced work's title, truncated with an ellipsis at a uniform length. (oxjob #363 case 7; #557)"
 
 - id: 108
   tags: [boolean-nesting, proximity, search-semantics]

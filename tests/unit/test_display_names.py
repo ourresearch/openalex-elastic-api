@@ -104,10 +104,11 @@ class TestSeededOverrides:
             assert "cited by count" in aliases, entity
 
     def test_references_family_labels(self):
-        # outgoing references use the field-standard words; old spellings stay as
-        # back-compat OQL-parse aliases.
+        # #557 word unification: the outgoing citation edge is "cites" everywhere
+        # (matches the GUI chip and the oxurl input alias `cites:`); "references"
+        # is demoted to a back-compat input alias. The COUNT keeps its own word.
         assert resolve_display_name("works", "referenced_works") == (
-            "references", ["referenced works"])
+            "cites", ["referenced works", "references"])
         assert resolve_display_name("works", "referenced_works_count") == (
             "reference count", ["references count"])
 

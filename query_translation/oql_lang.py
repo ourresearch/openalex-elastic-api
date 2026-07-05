@@ -269,10 +269,14 @@ _f("field", "primary_topic.field.id", "id")
 _f("subfield", "primary_topic.subfield.id", "id")
 _f("openalex id", "ids.openalex", "id")
 # Citation relationships to a specific work (W-id; resolves the work's title).
-# Render words = registry display_names "cited by" / "cites" (#363 case 7).
-# cited_by:W = works in W's reference list ("cited by" W); cites:W = works citing W.
+# cited_by:W = works in W's reference list; referenced_works:W (input alias
+# cites:W) = works citing W. Since #557 the FILTER leaves render as row-subject
+# verb phrases (`it cites (…)` / `it's cited by (…)` — see _ROW_SUBJECT_RENDER);
+# these words surface only on column/sort. The outgoing edge's word is "cites"
+# everywhere (word unification, #557) — its row is registered with the other
+# work-relationship ids below; the old alias `_f("cites","cites")` row is gone
+# (the input word "cites" is now the canonical word itself).
 _f("cited by", "cited_by", "id")
-_f("cites", "cites", "id", aliases=["cites"])
 
 # --- collection (same-type membership) ---
 # The same-type `collection:` filter: "this row's entity is a member of Collection
@@ -361,10 +365,16 @@ _f("estimated APC paid", "apc_paid.value_usd", "num", is_float=True)
 # ROR id of an affiliated institution (literal string, no name resolution — the
 # ROR *is* the identifier the user types). Engine param authorships.institutions.ror.
 _f("ROR ID", "authorships.institutions.ror", "string")
-# Work-relationship id filters, mirroring cited_by/cites: each references a WORK, so
+# Work-relationship id filters, mirroring cited_by: each references a WORK, so
 # they name-resolve via the `works` namespace (see oql_renderer._RESOLVE_NAMESPACE).
 # referenced_works = this work's reference list; related_to = OpenAlex "related works".
-_f("references", "referenced_works", "id")
+# #557 word unification: referenced_works's word is "cites" everywhere (filter
+# verb, column header, sort) — matching the prod GUI chips and the oxurl input
+# alias `cites:`. "references" survives as an accepted input alias (registry
+# aliases in core/display_names.py); `reference count` (referenced_works_count)
+# keeps its own word. Registration ORDER is load-bearing: this row must be the
+# first `referenced_works` registration so _BY_COLUMN.setdefault binds "cites".
+_f("cites", "referenced_works", "id")
 _f("related to", "related_to", "id")
 # "raw-but-good" distinct-count metrics (kind num, integer counts; display_names
 # are auto-humanized but already read cleanly, so Front-B with the existing word).
@@ -1172,6 +1182,82 @@ def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool]]:
 
 
 # ---------------------------------------------------------------------------
+# Row-subject verb-phrase leaves (oxjob #557).
+# A grammar CATEGORY, not a one-off: the subject is the queried row itself —
+# the pronoun `it` — and a verb phrase names a relation column; the value is
+# the usual parenthesized group. Canonical renders (contraction included):
+#     it cites (W…)          -> referenced_works   (this work cites W)
+#     it's cited by (W…)     -> cited_by           (this work is cited by W)
+#     it's related to (W…)   -> related_to
+# Negation is VALUE-LEVEL ONLY (charter decision 23): `it cites (not W…)` —
+# there is no `doesn't cite`/`isn't cited by` verb form; leaves stay
+# affirmative. Input is forgiving: `it is cited by`, `its cited by` (dropped
+# apostrophe), and the legacy field-word forms (`cites is`, `references is`,
+# `cited by is`, `related to is`) all still parse; everything converges on the
+# canonical renders above. Existing cousin: `work is in collection (col_…)` —
+# a noun-subject predicate; migrating it to `it's in collection (…)` is a
+# separate decision (EXPLORE.md decision 2), deliberately not bundled here.
+# ---------------------------------------------------------------------------
+_ROW_SUBJECT_PRONOUNS = ("it", "it's", "its")
+
+# (verb-phrase words, column, needs_copula): after bare `it` the copula is a
+# separate token (`it is cited by`); `it's`/`its` embed it. `cites` never
+# takes one (`it's cites` is rejected).
+_ROW_SUBJECT_VERBS = (
+    (("cites",), "referenced_works", False),
+    (("cited", "by"), "cited_by", True),
+    (("related", "to"), "related_to", True),
+)
+
+# column -> (subject seg, verb/operator seg, bare chip word). The first two
+# concatenate (+ the parenthesized value group) to the canonical clause text;
+# the bare word is the GUI-chip label carried in ClauseMeta.column_display_name.
+_ROW_SUBJECT_RENDER = {
+    "referenced_works": ("it", " cites ", "cites"),
+    "cited_by": ("it's", " cited by ", "cited by"),
+    "related_to": ("it's", " related to ", "related to"),
+}
+
+
+def match_row_subject(toks: List[Tok], i: int
+                      ) -> Optional[Tuple[Optional[str], int, bool]]:
+    """Greedy row-subject verb-phrase match at ``toks[i]`` (oxjob #557).
+
+    Returns ``(column, n_tokens, complete)``, or ``None`` when ``toks[i]`` is
+    not a row-subject pronoun at all. ``complete=False`` means the pronoun is
+    there but the verb phrase is absent or partial (still being typed): the
+    editor offers verb-phrase completions (CTX_VERB); the strict parser raises
+    OQL_BAD_VERB_PHRASE. Mirrors ``match_operator``'s contract so the parser,
+    the clause-boundary heuristics, and the editor share ONE matcher.
+    """
+    t = toks[i] if i < len(toks) else None
+    if t is None or t.kind != "WORD":
+        return None
+    subj = t.val.lower()
+    if subj not in _ROW_SUBJECT_PRONOUNS:
+        return None
+
+    def w(k: int) -> Optional[str]:
+        tk = toks[i + k] if i + k < len(toks) else None
+        return tk.val.lower() if tk is not None and tk.kind == "WORD" else None
+
+    has_copula = subj in ("it's", "its")
+    j = 1
+    if not has_copula and w(1) == "is":
+        j = 2                       # `it is cited by` — copula as its own token
+        has_copula = True
+    for words, column, needs_copula in _ROW_SUBJECT_VERBS:
+        if needs_copula != has_copula:
+            continue
+        k = 0
+        while k < len(words) and w(j + k) == words[k]:
+            k += 1
+        if k == len(words):
+            return column, j + k, True
+    return None, j, False           # pronoun seen, verb phrase absent/partial
+
+
+# ---------------------------------------------------------------------------
 # Editor-context grammar-state categories (oxjob #363, charter decision 15).
 # These are the canonical strings the dual-mode parser reports at a cursor; the
 # editor presentation layer (`oql_context.py`) re-exports them and maps them to
@@ -1180,6 +1266,7 @@ def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool]]:
 CTX_ENTITY = "entity"
 CTX_FIELD = "field"
 CTX_OPERATOR = "operator"
+CTX_VERB = "verb-phrase"   # after the row-subject pronoun `it`/`it's` (oxjob #557)
 CTX_VALUE = "value"
 CTX_CONNECTIVE = "connective"
 CTX_DIRECTIVE = "directive-keyword"
@@ -1625,6 +1712,11 @@ class _Parser:
         # clauses also pass here but leave `_last_value_start_i` None, so the editor
         # gates them out (no enum value list to extend).
         self._last_operand_simple = True
+        # row-subject leaf: `it cites (…)` / `it's cited by (…)` / `it's related
+        # to (…)` — the pronoun claims the field slot (oxjob #557).
+        rs = match_row_subject(self.toks, self.i)
+        if rs is not None:
+            return self._parse_row_subject_clause(rs)
         field, fld = self._parse_field()
         self._cur_fld = fld
         # a complete field with the cursor right after it -> operator slot
@@ -1647,6 +1739,34 @@ class _Parser:
                            f'field "{field}" does not support "{op}"',
                            'use "is" / a comparison')
         return self._parse_value_clause(field, fld, op)
+
+    def _parse_row_subject_clause(self, m) -> FilterType:
+        """One row-subject verb-phrase leaf (oxjob #557): the pronoun + verb
+        phrase select a relation column; the value clause is the ordinary `is`
+        machinery (parenthesized groups, value-level `not`, `unknown`)."""
+        column, n, complete = m
+        t = self.peek()
+        if not complete:
+            # The pronoun is there but the verb phrase is absent/partial. Editor:
+            # if everything from the pronoun to the cursor is still (partial)
+            # phrase words — nothing but WORDs, within the longest phrase's span —
+            # this is the verb-phrase slot (mirrors the incomplete-operator
+            # special case in `_parse_operator`). Strict: a targeted error.
+            rest = self.toks[self.i + 1:]
+            if (self._ctx_mode and len(rest) <= 3
+                    and all(tk.kind == "WORD" for tk in rest)):
+                self._ctx = (CTX_VERB, {"subject": t.val.lower(),
+                                        "phrase_start_i": self.i + 1})
+                raise _CtxFound()
+            raise oql_error("OQL_BAD_VERB_PHRASE",
+                           f'expected a relation verb phrase after "{t.val}"',
+                           None, t.pos)
+        fld = _BY_COLUMN.get(column)
+        fld = _entity_resolve_field(fld, self._entity)
+        self._cur_fld = fld
+        self.i += n
+        subj, verb, _bare = _ROW_SUBJECT_RENDER[column]
+        return self._parse_value_clause(f"{subj}{verb.rstrip()}", fld, "is")
 
     def _parse_field(self) -> Tuple[str, Field]:
         # an empty / partially-typed field slot at the cursor
@@ -2178,6 +2298,12 @@ class _Parser:
         self.i += k
         self._skip_annot()
         try:
+            # a COMPLETE row-subject verb phrase (`it cites …`) opens a clause
+            # (oxjob #557); an incomplete one (`… and it`) does not — inside a
+            # bare search run, a lone `it` stays an ordinary search term.
+            mrs = match_row_subject(self.toks, self.i)
+            if mrs is not None and mrs[2]:
+                return True
             t = self.peek()
             # try to match a field alias
             parts = []
@@ -2211,6 +2337,10 @@ class _Parser:
             t = self.peek()
             # a `(` opens a clause-group
             if t and t.kind == "LP":
+                return True
+            # a COMPLETE row-subject verb phrase looks like a new clause (#557)
+            mrs = match_row_subject(self.toks, self.i)
+            if mrs is not None and mrs[2]:
                 return True
             for j in range(0, 4):
                 tt = self.peek(j)
@@ -2979,6 +3109,30 @@ def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
         return ClauseNode(segments=segs, clause_kind="boolean", meta=ClauseMeta(
             column_id=f.column_id, operator="is", value=effective,
             column_display_name=name))
+    # row-subject verb-phrase leaf (oxjob #557): `it cites (…)` / `it's cited by
+    # (…)` / `it's related to (…)`. The subject seg carries the column_id; the
+    # verb phrase is the operator slot; negation and `unknown` sit inside the
+    # value group like every other leaf. column_display_name is the BARE verb
+    # ("cites"/"cited by"/"related to") — the GUI-chip label.
+    rs = _ROW_SUBJECT_RENDER.get(f.column_id)
+    if rs is not None and f.operator == "is":
+        subj, verb, bare = rs
+        entity = None
+        if f.value is None:
+            val_segs = [_seg("value", "not unknown" if f.is_negated else "unknown",
+                             value=None)]
+            kind = "null"
+        else:
+            val_segs, entity = _value_segments(fld, f.value, f.column_id, resolver)
+            if f.is_negated:
+                val_segs = [_seg("text", "not ")] + val_segs
+            kind = "entity"
+        segs = ([_seg("column", subj, column_id=f.column_id),
+                 _seg("operator", verb), _seg("text", "(")]
+                + val_segs + [_seg("text", ")")])
+        return ClauseNode(segments=segs, clause_kind=kind, meta=ClauseMeta(
+            column_id=f.column_id, operator="is", value=f.value,
+            column_display_name=bare, value_entity=entity))
     if f.value is None:
         # `language is (unknown)` / negated `language is (not unknown)` — the
         # `not` sits inside the group like every other value negation (#554).
@@ -3049,16 +3203,23 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
         return ClauseNode(segments=segs, clause_kind="text", meta=ClauseMeta(
             column_id=scol, operator="has", value=None,
             column_display_name=name))
-    # factor a single-column equality subtree -> `field is (a or b)`
+    # factor a single-column equality subtree -> `field is (a or b)` — or the
+    # row-subject verb form `it cites (a or b)` for relation columns (#557).
     ecol = _uniform_eq_column(f)
     if ecol is not None:
         fld = _BY_COLUMN.get(ecol)
-        name = fld.oql if fld else ecol
         inner = _factored_segments(
             f, lambda lf: _value_segments(fld, lf.value, lf.column_id, resolver)[0])
-        segs = ([_seg("column", name, column_id=ecol),
-                 _seg("operator", " is "), _seg("text", "(")]
-                + inner + [_seg("text", ")")])
+        rs = _ROW_SUBJECT_RENDER.get(ecol)
+        if rs is not None:
+            subj, verb, name = rs
+            head = [_seg("column", subj, column_id=ecol),
+                    _seg("operator", verb), _seg("text", "(")]
+        else:
+            name = fld.oql if fld else ecol
+            head = [_seg("column", name, column_id=ecol),
+                    _seg("operator", " is "), _seg("text", "(")]
+        segs = head + inner + [_seg("text", ")")]
         kind = "entity" if (fld and fld.kind == "id") else "other"
         return ClauseNode(segments=segs, clause_kind=kind, meta=ClauseMeta(
             column_id=ecol, operator="is", value=None,

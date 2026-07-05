@@ -182,7 +182,13 @@ CAP_COLUMN = "column"
 # "indexed by DOAJ"->"DOAJ", sources is_oa "fully open access"->"fully OA". Label edits only (no
 # property added/removed; the always-null bool_true/bool_false fields are retained) = MINOR.
 # Jason approved the rename + bump 2026-06-26 (oxjob #363).
-PROPERTIES_VERSION = "6.1.0"
+# 6.2.0 (#557): citation-vocabulary unification — referenced_works display_name
+# "references"->"cites" (the outgoing citation edge now wears the same word as the GUI
+# chip and the oxurl input alias `cites:`; OQL filter leaves render as the row-subject
+# verb form `it cites (…)`), with "references" demoted to an accepted input alias.
+# display_name tweak + alias addition = MINOR per the versioning table. Word
+# unification approved by Jason in the #557 design conversation 2026-07-04.
+PROPERTIES_VERSION = "6.2.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
