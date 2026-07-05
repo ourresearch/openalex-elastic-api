@@ -55,7 +55,24 @@ CONVERGE = [
     ("works where it is related to (W123)", "works where it's related to (W123)"),
     ("works where related to is (W123)", "works where it's related to (W123)"),
     ("works where related_to is (W123)", "works where it's related to (W123)"),
+    # bare verb forms (EXPLORE decision 6): the field word IS the verb, so a
+    # value group directly after it implies `is` — row-subject columns only.
+    ("works where cites (W123)", "works where it cites (W123)"),
+    ("works where cited by (W123)", "works where it's cited by (W123)"),
+    ("works where related to (W123)", "works where it's related to (W123)"),
+    ("works where references (W123)", "works where it cites (W123)"),
+    ("works where cites (not W123)", "works where it cites (not W123)"),
+    # curly apostrophe (U+2019) — macOS/iOS smart punctuation auto-curls `it's`
+    ("works where it’s cited by (W123)", "works where it's cited by (W123)"),
+    ("works where it’s related to (W123)", "works where it's related to (W123)"),
 ]
+
+
+def test_bare_verb_form_is_row_subject_only():
+    # the implied-`is` allowance must not leak to ordinary fields
+    with pytest.raises(OQLError) as e:
+        parse("works where year (2020)")
+    assert e.value.code == "OQL_MISSING_OPERATOR"
 
 
 @pytest.mark.parametrize("inp,want", CONVERGE, ids=[c[0] for c in CONVERGE])
@@ -112,6 +129,14 @@ def test_row_subject_breaks_a_bare_value_run():
     # undelimited value (the D1 arity guard must see through it)
     out = _render("works where year is 2020 and it cites (W123)")
     assert out == "works where year is (2020) and it cites (W123)"
+
+
+def test_verb_phrase_in_prose_stays_a_loud_undelimited_error():
+    # a verb phrase NOT followed by `(` inside a bare term run must not
+    # silently manufacture an id filter from prose — the D1 loud error wins
+    with pytest.raises(OQLError) as e:
+        parse("works where title has rain and it cites wonder")
+    assert e.value.code == "OQL_UNDELIMITED_TERM_LIST"
 
 
 # ---------------------------------------------------------------------------

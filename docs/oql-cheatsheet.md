@@ -104,13 +104,14 @@ works where retracted is (true)
 ## Citation links — `it cites`, `it's cited by`
 
 Follow the citation edge in either direction — the subject `it` is each work in your
-results. Takes `not` and `or` in the value like any other condition.
+results. Takes `not` and `or` in the value like any other condition. The bare verb
+also works as input (`cites (W…)`, `cited by (W…)`); it canonicalizes to the `it` form.
 
 ```
 works where it cites (W2741809807)                 works whose reference list includes W…
 works where it's cited by (W2741809807)            works in W…'s reference list
 works where it's related to (W2741809807)          OpenAlex "related works"
-works where title has (climate) and it cites (W2741809807 or W1767272795)
+works where title has (climate) and it cites (W1767272795 or W2741809807)
 ```
 
 ---

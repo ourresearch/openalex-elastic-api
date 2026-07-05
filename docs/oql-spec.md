@@ -652,7 +652,10 @@ and `false`: `open access is (false)`, `retracted is (true)`, `has DOI is (true)
 are accepted on input and fold into the value, so the canonical form is always
 `is (true)` / `is (false)` (never a separate `not`). The group takes exactly one
 value — `is (true or false)` is `OQL_GROUP_NEEDS_ONE_VALUE` (#554). The old reads-aloud `it's …` / `it has …` surface was
-removed in #363 — there is now One Right Way, shared with all other clauses.
+removed in #363 for BOOLEAN flags — there is now One Right Way, shared with all other
+clauses. (The row-subject pronoun forms `it cites (…)` / `it's cited by (…)` in §3.11
+are a different, later category — #557 — and are canonical for the relation columns
+only; they don't reintroduce a boolean `it's retracted` surface.)
 
 The flag's noun drops any helper verb (`is_retracted` → `retracted`,
 `open_access.is_oa` → `open access`); where the bare noun would collide with a
@@ -713,15 +716,18 @@ migrating it to `it's in collection …` is an open, separate decision.)
   `it's cited by (…)` → `cited_by`; `it's related to (…)` → `related_to`. In OQO these
   are ordinary `is` leaves on those columns — nothing new at the OQO layer.
 - **Forgiving input, one render:** `it is cited by`, `its cited by` (dropped apostrophe),
-  and the legacy field-word forms (`cites is`, `references is`, `cited by is`,
-  `related to is`, plus the raw column ids) all parse and converge on the renders above.
+  the legacy field-word forms (`cites is`, `references is`, `cited by is`,
+  `related to is`, plus the raw column ids), and the bare verb forms (`cites (W…)`,
+  `cited by (W…)`, `related to (W…)` — for these relation columns the field word IS
+  the verb, so a value group directly after it implies `is`) all parse and converge
+  on the renders above.
 - **Negation is value-level ONLY** (§3.5, decision 23): `it cites (not W123)`. There is
   no `doesn't cite` / `isn't cited by` verb form — leaves stay affirmative;
   `it doesn't …` is `OQL_BAD_VERB_PHRASE` with a fix-it.
 - **Word unification (#557):** `referenced_works`'s display word is **"cites"**
   everywhere — filter verb, column header, sort ("references" survives as an accepted
   input alias; `reference count` = `referenced_works_count` keeps its own word). GUI
-  chips stay bare: `cites` / `cited by`.
+  chips stay bare: `cites` / `cited by` / `related to`.
 - **oxurl frozen:** rendered URLs keep `filter=referenced_works:` / `cited_by:` /
   `related_to:` exactly — `filter=cites:` is never emitted (it stays a classic-REST
   input alias only).

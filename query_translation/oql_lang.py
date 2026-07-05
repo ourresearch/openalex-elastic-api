@@ -1233,7 +1233,9 @@ def match_row_subject(toks: List[Tok], i: int
     t = toks[i] if i < len(toks) else None
     if t is None or t.kind != "WORD":
         return None
-    subj = t.val.lower()
+    # normalize the curly apostrophe (U+2019) — macOS/iOS smart punctuation
+    # auto-curls `it's` on retype, and the canonical render contains one
+    subj = t.val.lower().replace("’", "'")
     if subj not in _ROW_SUBJECT_PRONOUNS:
         return None
 
@@ -1755,14 +1757,16 @@ class _Parser:
             rest = self.toks[self.i + 1:]
             if (self._ctx_mode and len(rest) <= 3
                     and all(tk.kind == "WORD" for tk in rest)):
-                self._ctx = (CTX_VERB, {"subject": t.val.lower(),
-                                        "phrase_start_i": self.i + 1})
+                # same curly-apostrophe normalization as match_row_subject, so
+                # the editor's per-subject verb suggestions match `it’s` too
+                self._ctx = (CTX_VERB,
+                             {"subject": t.val.lower().replace("’", "'"),
+                              "phrase_start_i": self.i + 1})
                 raise _CtxFound()
             raise oql_error("OQL_BAD_VERB_PHRASE",
                            f'expected a relation verb phrase after "{t.val}"',
                            None, t.pos)
-        fld = _BY_COLUMN.get(column)
-        fld = _entity_resolve_field(fld, self._entity)
+        fld = _entity_resolve_field(_BY_COLUMN[column], self._entity)
         self._cur_fld = fld
         self.i += n
         subj, verb, _bare = _ROW_SUBJECT_RENDER[column]
@@ -1858,6 +1862,14 @@ class _Parser:
                                "`does not contain` was renamed to `does not have`",
                                "use: <field> does not have <terms>", t.pos)
             raise oql_error("OQL_MISSING_OPERATOR", 'expected "does not have"')
+        # Bare row-subject verb form (#557, EXPLORE decision 6): for the relation
+        # columns the field word IS the verb — `cites (W…)`, `cited by (W…)`,
+        # `related to (W…)` — so a value group directly after the field word
+        # implies `is`. Render restores the canonical pronoun form (`it cites
+        # (…)`). Row-subject columns ONLY; `year (2020)` stays an error.
+        if (t.kind == "LP" and self._cur_fld is not None
+                and self._cur_fld.column in _ROW_SUBJECT_RENDER):
+            return "is"
         raise oql_error("OQL_MISSING_OPERATOR",
                        f'expected an operator, got "{t.val}"', None, t.pos)
 
@@ -2298,12 +2310,17 @@ class _Parser:
         self.i += k
         self._skip_annot()
         try:
-            # a COMPLETE row-subject verb phrase (`it cites …`) opens a clause
-            # (oxjob #557); an incomplete one (`… and it`) does not — inside a
-            # bare search run, a lone `it` stays an ordinary search term.
+            # a COMPLETE row-subject verb phrase followed by `(` (`it cites (…`)
+            # opens a clause (oxjob #557); an incomplete one (`… and it`) does
+            # not — inside a bare search run, a lone `it` stays an ordinary
+            # search term. The `(` requirement keeps prose like `… and it cites
+            # wonder` a loud D1 undelimited-run error instead of silently
+            # manufacturing a garbage id filter.
             mrs = match_row_subject(self.toks, self.i)
             if mrs is not None and mrs[2]:
-                return True
+                after = self.peek(mrs[1])
+                if after is not None and after.kind == "LP":
+                    return True
             t = self.peek()
             # try to match a field alias
             parts = []
@@ -2338,10 +2355,13 @@ class _Parser:
             # a `(` opens a clause-group
             if t and t.kind == "LP":
                 return True
-            # a COMPLETE row-subject verb phrase looks like a new clause (#557)
+            # a COMPLETE row-subject verb phrase followed by `(` looks like a
+            # new clause (#557) — same LP requirement as `_starts_new_clause`
             mrs = match_row_subject(self.toks, self.i)
             if mrs is not None and mrs[2]:
-                return True
+                after = self.peek(mrs[1])
+                if after is not None and after.kind == "LP":
+                    return True
             for j in range(0, 4):
                 tt = self.peek(j)
                 if not tt or tt.kind != "WORD":
