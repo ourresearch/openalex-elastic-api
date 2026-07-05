@@ -50,7 +50,7 @@ from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
 from query_translation.oql_lang import (
     _merge_same_field_items, _uniform_search_base, _uniform_eq_column,
     _oql_field, _render_term, _value_segments, _is_search_leaf, _leaf_node,
-    _BY_COLUMN, _build_tree, format_oql,
+    _BY_COLUMN, _build_tree, format_oql, _ROW_SUBJECT_RENDER,
 )
 from query_translation.oql_render_tree import _stringify_directive
 
@@ -118,14 +118,24 @@ def _expr_node(f: FilterType, top: bool, resolver, idg, origins=None) -> dict:
         ecol = _uniform_eq_column(f)
         if ecol is not None:
             fld = _BY_COLUMN.get(ecol)
-            name = fld.oql if fld else ecol
             val = _value_node(
                 f, lambda lf: _value_segments(fld, lf.value, lf.column_id,
                                               resolver)[0], idg, origins)
             kind = "entity" if (fld and fld.kind == "id") else "other"
-            return _origin(origins, f, {"node": "clause", "id": idg(),
-                    "clause_kind": kind, "column_id": ecol, "column": name,
-                    "operator": "is", "value": val})
+            node = {"node": "clause", "id": idg(),
+                    "clause_kind": kind, "column_id": ecol,
+                    "operator": "is", "value": val}
+            # row-subject verb clause (#557): the canonical text is
+            # `it cites (…)` / `it's cited by (…)` — carry the subject + verb so
+            # _flat_tokens matches format_oql; `column` stays the BARE verb (the
+            # builder chip label).
+            rs = _ROW_SUBJECT_RENDER.get(ecol)
+            if rs is not None:
+                subj, verb, bare = rs
+                node.update({"column": bare, "subject": subj, "verb": verb})
+            else:
+                node["column"] = fld.oql if fld else ecol
+            return _origin(origins, f, node)
         # generic boolean group of (possibly mixed-column) children
         items = _merge_same_field_items(list(f.filters), f.join)
         children = [_expr_node(c, False, resolver, idg, origins) for c in items]
@@ -284,9 +294,18 @@ def _flat_tokens(tree: dict) -> list:
                         tok["kind"] = ck
                     toks.append(tok)
                 return
-            toks.append({"t": "col", "id": n["id"], "text": n["column"],
-                         "column_id": n["column_id"]})
-            toks.append({"t": "op", "id": n["id"], "text": f" {n['operator']} "})
+            if n.get("subject"):
+                # row-subject verb clause (#557): `it` + ` cites ` / `'s cited
+                # by ` … concatenates to the canonical text; the chip label is
+                # n["column"] (the bare verb), same as the simple-leaf path.
+                toks.append({"t": "col", "id": n["id"], "text": n["subject"],
+                             "column_id": n["column_id"]})
+                toks.append({"t": "op", "id": n["id"], "text": n["verb"]})
+            else:
+                toks.append({"t": "col", "id": n["id"], "text": n["column"],
+                             "column_id": n["column_id"]})
+                toks.append({"t": "op", "id": n["id"],
+                             "text": f" {n['operator']} "})
             fv(v)
             return
         # plain group: parens iff `paren`; children joined by the connector.

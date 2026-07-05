@@ -118,9 +118,9 @@ All entity IDs in OQO use a normalized format: `entityName/id`
 | `open_access.oa_status` | oa-statuses | OA status (gold, green, etc.) |
 | `awards.id` | awards | Grant/award ID |
 | `awards.funder.id` | funders | Funder of awards |
-| `cites` | works | Works this cites |
-| `cited_by` | works | Works citing this |
-| `related_to` | works | Related works |
+| `referenced_works` | works | The work cites W — OQL `it cites (W)`; input aliases `cites`, `references` (#557) |
+| `cited_by` | works | The work is in W's reference list — OQL `it's cited by (W)` |
+| `related_to` | works | Related works — OQL `it's related to (W)` |
 | `ids.openalex` | works | OpenAlex ID |
 | `corresponding_author_ids` | authors | Corresponding author |
 | `corresponding_institution_ids` | institutions | Corresponding institution |

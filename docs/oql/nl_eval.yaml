@@ -617,7 +617,7 @@ cases:
     - {text: "journal articles with repository fulltext", difficulty: hard}
     - {text: "articles where some open repository has the full text", difficulty: hard}
 
-- ref: 107  # cited by is W1984893742 and type is article
+- ref: 107  # it's cited by (W1984893742) and type is (article)  (#557 vocabulary)
   nl:
     - {text: "articles in the reference list of work W1984893742", difficulty: easy}
     - {text: "articles cited by W1984893742", difficulty: easy}
