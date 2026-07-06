@@ -2929,6 +2929,33 @@ def _render_term(value: str, column: str) -> str:
     return _render_stemmed_search_value(value)
 
 
+def canonical_exact_search_value(value: str) -> str:
+    """Normalize a raw `.search.exact` value to the ENGINE's canonical OQO
+    spelling (oxjob #568): a single token is BARE (`machin*`, `teacher` — the
+    parser strips singleton quotes, mirroring the raw API's
+    strip_singleton_wildcard_quotes), a multi-word phrase is QUOTED
+    (`"smart phone"`), and proximity forms (`"a b"~3`, `"a"~3~"b"`) pass
+    through untouched. The URL parser routes `.search.exact:` values through
+    this so every entry door produces ONE canonical OQO for the same intent.
+    Defensive: a value with interior quotes that isn't a recognized
+    quoted/proximity shape passes through unchanged (never corrupt input)."""
+    v = (value or "").strip()
+    if not v:
+        return value
+    if re.search(r'"~\d', v):
+        return v                                # proximity forms — as-is
+    if v.startswith('"') and v.endswith('"') and len(v) >= 2:
+        inner = v[1:-1]
+        if '"' in inner:
+            return v                            # nested quotes — don't touch
+        return inner if inner and not any(c.isspace() for c in inner) else v
+    if '"' in v:
+        return v                                # unrecognized quoting — as-is
+    if any(c.isspace() for c in v):
+        return f'"{v}"'                         # bare multi-word -> phrase
+    return v                                    # bare single token
+
+
 def _value_needs_quote(value: str) -> bool:
     """A bare value atom is one token: it must be quoted if it contains whitespace
     (else `ebook platform` re-parses as the adjacency-AND of two atoms) or collides

@@ -70,10 +70,13 @@ def test_exact_fold_validates_and_renders_exact_phrase():
     oqo, vr = _fold_and_validate({"search.title_and_abstract.exact": "Windows AND (DLL OR DLLs)"})
     assert vr.valid, [getattr(e, "message", e) for e in vr.errors]
     leaf = oqo.to_dict()["filter_rows"][0]
-    # canonical column (NOT title_and_abstract.exact.search), exact-phrase value
-    assert leaf["column_id"] == "title_and_abstract.search"
+    # canonical column (NOT title_and_abstract.exact.search): since #568 the
+    # exact encoding IS the column suffix (engine convention) — no more
+    # quoted-value-on-.search rewrite, so the render is the exact-phrase
+    # `"…"` form, not `stemmed "…"`.
+    assert leaf["column_id"] == "title_and_abstract.search.exact"
     assert leaf["value"] == '"Windows AND (DLL OR DLLs)"'
-    assert "has (stemmed " in render(oqo)
+    assert 'has ("Windows AND (DLL OR DLLs)")' in render(oqo)
 
 
 @pytest.mark.parametrize("field", ["title", "abstract", "title_and_abstract"])

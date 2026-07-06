@@ -8,6 +8,7 @@ Handles the traditional query parameter syntax:
 import re
 from typing import Dict, List, Optional, Tuple, Any
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP, VALID_SORT_AGGREGATES, canonicalize_oqo_column_ids
+from query_translation.oql_lang import canonical_exact_search_value
 
 # A Collection membership ref: `col_<base58>` (mirrors core/fields.py
 # CollectionField.COLLECTION_ID_RE, `!` stripped before matching). A value of this
@@ -256,16 +257,12 @@ def parse_filter_string(
         field = part[:colon_idx]
         value = part[colon_idx + 1:]
 
-        # `.search.exact:<v>` is the legacy URL surface for the spec's inline
-        # quoted-phrase form (§3.1): rewrite to `.search` column with the
-        # value double-quoted, which the parser treats as a phrase containment.
-        # A value that ALREADY starts with a quote is itself the inline quoted form
-        # (a phrase, single-phrase proximity `"a b"~3`, or binary `"a"~3~"b"`) — don't
-        # re-wrap it, which would double-quote and corrupt it (oxjob #355).
-        if field.endswith(".search.exact"):
-            field = field[: -len(".exact")]
-            if not value.startswith('"'):
-                value = f'"{value}"'
+        # `.search.exact:<v>` keeps its column — exactness is encoded on the
+        # COLUMN, matching the OQL engine (oxjob #568; this used to rewrite to
+        # a quoted value on the `.search` column, which is the engine's
+        # STEMMED-phrase encoding — wrong field at ES, `stemmed "…"` render).
+        # The VALUE is normalized to the engine's canonical spelling at leaf
+        # construction (parse_single_filter / parse_or_values).
 
         if field not in field_groups:
             field_groups[field] = []
@@ -406,6 +403,8 @@ def parse_single_filter(
     # Handle negation
     if value.startswith("!"):
         actual_value = value[1:]
+        if field.endswith(".search.exact"):
+            actual_value = canonical_exact_search_value(actual_value)
         return LeafFilter(column_id=field, value=actual_value, operator=default_op, is_negated=True)
 
     # Handle inline comparison-operator prefixes. Order matters: `>=` / `<=`
@@ -419,13 +418,19 @@ def parse_single_filter(
     if range_filter:
         return range_filter
 
-    # Simple value
+    # Simple value. Exact-search values normalize to the engine's canonical
+    # spelling (single token bare, phrase quoted) so every door yields ONE
+    # canonical OQO (#568).
+    if field.endswith(".search.exact"):
+        value = canonical_exact_search_value(value)
     return LeafFilter(column_id=field, value=value, operator=default_op)
 
 
 def _default_operator_for(field: str) -> str:
-    """`.search`-suffix columns default to `has`; everything else to `is`."""
-    return "has" if field.endswith(".search") else "is"
+    """Search-mode columns (`.search`, `.search.exact`, `.search.semantic`)
+    default to `has` (free-text matching); everything else to `is`."""
+    return ("has" if field.endswith((".search", ".search.exact", ".search.semantic"))
+            else "is")
 
 
 def parse_or_values(field: str, value: str) -> FilterType:
@@ -435,6 +440,8 @@ def parse_or_values(field: str, value: str) -> FilterType:
     Example: type:article|book -> BranchFilter(join="or", filters=[...])
     """
     parts = value.split("|")
+    if field.endswith(".search.exact"):
+        parts = [canonical_exact_search_value(p) for p in parts]
 
     default_op = _default_operator_for(field)
 
@@ -512,13 +519,13 @@ def _has_within_field_not(value: str) -> bool:
 def _search_not_leaf(field: str, operand: str, is_negated: bool) -> LeafFilter:
     """Build one `.search` leaf for a within-field-NOT operand. A quoted operand
     is an exact phrase → route to the `.search.exact` column (matching the live
-    API, where the subtracted set size equals the exact-phrase count); a bare
-    operand stays on the stemmed `.search` column. Operator is always `has`
-    (note `.search.exact` does not end in `.search`, so the default-operator
-    helper would wrongly pick `is` — set it explicitly)."""
+    API, where the subtracted set size equals the exact-phrase count) in the
+    engine's canonical value spelling (#568); a bare operand stays on the
+    stemmed `.search` column."""
     operand = operand.strip()
     if len(operand) >= 2 and operand.startswith('"') and operand.endswith('"'):
-        return LeafFilter(column_id=field + ".exact", value=operand,
+        return LeafFilter(column_id=field + ".exact",
+                          value=canonical_exact_search_value(operand),
                           operator="has", is_negated=is_negated)
     return LeafFilter(column_id=field, value=operand,
                       operator="has", is_negated=is_negated)
