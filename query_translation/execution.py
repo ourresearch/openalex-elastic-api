@@ -15,6 +15,7 @@ formats and NEVER touches ES. Execution was split out of `views.py` (oxjob #384)
 the translation module no longer cohabits with the ES-executing machinery — a
 recurring source of "does /query run the query?" confusion.
 """
+import importlib
 import json
 
 from elasticsearch_dsl import Q, Search
@@ -35,7 +36,7 @@ from core.shared_view import (
 )
 from core.utils import get_data_version_connection, map_filter_params
 from core.vector_index import vector_semantic_search
-from query_translation.oqo import OQO, VALID_OPERATORS
+from query_translation.oqo import OQO
 from query_translation.oqo_to_es import (
     OQOTranslationError,
     oqo_to_search_and_filter_q,
@@ -60,6 +61,40 @@ from query_translation.views import _error_response
 # Kept as a function (not a static dict) so we can lazily import per-entity
 # modules and pick walden vs legacy indexes based on request data version.
 # ---------------------------------------------------------------------------
+
+
+# get_rows -> (entity module, settings index constant). Every entity here uses
+# the standard ["-works_count", "id"] default sort unless listed in
+# _DEFAULT_SORT_OVERRIDES. works / authors / locations need bespoke handling
+# (walden-vs-legacy index split, index constant outside settings) and stay
+# spelled out in _resolve_entity.
+_ENTITY_DISPATCH = {
+    "institutions": ("institutions", "INSTITUTIONS_INDEX"),
+    "sources": ("sources", "SOURCES_INDEX"),
+    "publishers": ("publishers", "PUBLISHERS_INDEX"),
+    "funders": ("funders", "FUNDERS_INDEX"),
+    "topics": ("topics", "TOPICS_INDEX"),
+    "keywords": ("keywords", "KEYWORDS_INDEX"),
+    "concepts": ("concepts", "CONCEPTS_INDEX"),
+    "sdgs": ("sdgs", "SDGS_INDEX"),
+    "domains": ("domains", "DOMAINS_INDEX"),
+    "fields": ("fields", "FIELDS_INDEX"),
+    "subfields": ("subfields", "SUBFIELDS_INDEX"),
+    "countries": ("countries", "COUNTRIES_INDEX"),
+    "continents": ("continents", "CONTINENTS_INDEX"),
+    "languages": ("languages", "LANGUAGES_INDEX"),
+    "licenses": ("licenses", "LICENSES_INDEX"),
+    "oa-statuses": ("oa_statuses", "OA_STATUSES_INDEX"),
+    "source-types": ("source_types", "SOURCE_TYPES_INDEX"),
+    "institution-types": ("institution_types", "INSTITUTION_TYPES_INDEX"),
+    "work-types": ("work_types", "WORK_TYPES_INDEX"),
+    "types": ("work_types", "WORK_TYPES_INDEX"),
+    "awards": ("awards", "AWARDS_INDEX"),
+}
+
+_DEFAULT_SORT_OVERRIDES = {
+    "awards": ["-funded_outputs_count", "id"],
+}
 
 
 def _resolve_entity(entity_type: str, connection: str):
@@ -92,131 +127,6 @@ def _resolve_entity(entity_type: str, connection: str):
             else AUTHORS_INDEX_LEGACY
         )
         return fields_dict, index_name, ["-works_count", "id"], MessageSchema
-    if et == "institutions":
-        from institutions.fields import fields_dict
-        from institutions.schemas import MessageSchema
-        from settings import INSTITUTIONS_INDEX
-
-        return fields_dict, INSTITUTIONS_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "sources":
-        from sources.fields import fields_dict
-        from sources.schemas import MessageSchema
-        from settings import SOURCES_INDEX
-
-        return fields_dict, SOURCES_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "publishers":
-        from publishers.fields import fields_dict
-        from publishers.schemas import MessageSchema
-        from settings import PUBLISHERS_INDEX
-
-        return fields_dict, PUBLISHERS_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "funders":
-        from funders.fields import fields_dict
-        from funders.schemas import MessageSchema
-        from settings import FUNDERS_INDEX
-
-        return fields_dict, FUNDERS_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "topics":
-        from topics.fields import fields_dict
-        from topics.schemas import MessageSchema
-        from settings import TOPICS_INDEX
-
-        return fields_dict, TOPICS_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "keywords":
-        from keywords.fields import fields_dict
-        from keywords.schemas import MessageSchema
-        from settings import KEYWORDS_INDEX
-
-        return fields_dict, KEYWORDS_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "concepts":
-        from concepts.fields import fields_dict
-        from concepts.schemas import MessageSchema
-        from settings import CONCEPTS_INDEX
-
-        return fields_dict, CONCEPTS_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "sdgs":
-        from sdgs.fields import fields_dict
-        from sdgs.schemas import MessageSchema
-        from settings import SDGS_INDEX
-
-        return fields_dict, SDGS_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "domains":
-        from domains.fields import fields_dict
-        from domains.schemas import MessageSchema
-        from settings import DOMAINS_INDEX
-
-        return fields_dict, DOMAINS_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "fields":
-        from fields.fields import fields_dict
-        from fields.schemas import MessageSchema
-        from settings import FIELDS_INDEX
-
-        return fields_dict, FIELDS_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "subfields":
-        from subfields.fields import fields_dict
-        from subfields.schemas import MessageSchema
-        from settings import SUBFIELDS_INDEX
-
-        return fields_dict, SUBFIELDS_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "countries":
-        from countries.fields import fields_dict
-        from countries.schemas import MessageSchema
-        from settings import COUNTRIES_INDEX
-
-        return fields_dict, COUNTRIES_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "continents":
-        from continents.fields import fields_dict
-        from continents.schemas import MessageSchema
-        from settings import CONTINENTS_INDEX
-
-        return fields_dict, CONTINENTS_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "languages":
-        from languages.fields import fields_dict
-        from languages.schemas import MessageSchema
-        from settings import LANGUAGES_INDEX
-
-        return fields_dict, LANGUAGES_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "licenses":
-        from licenses.fields import fields_dict
-        from licenses.schemas import MessageSchema
-        from settings import LICENSES_INDEX
-
-        return fields_dict, LICENSES_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "oa-statuses":
-        from oa_statuses.fields import fields_dict
-        from oa_statuses.schemas import MessageSchema
-        from settings import OA_STATUSES_INDEX
-
-        return fields_dict, OA_STATUSES_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "source-types":
-        from source_types.fields import fields_dict
-        from source_types.schemas import MessageSchema
-        from settings import SOURCE_TYPES_INDEX
-
-        return fields_dict, SOURCE_TYPES_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "institution-types":
-        from institution_types.fields import fields_dict
-        from institution_types.schemas import MessageSchema
-        from settings import INSTITUTION_TYPES_INDEX
-
-        return (
-            fields_dict,
-            INSTITUTION_TYPES_INDEX,
-            ["-works_count", "id"],
-            MessageSchema,
-        )
-    if et in ("work-types", "types"):
-        from work_types.fields import fields_dict
-        from work_types.schemas import MessageSchema
-        from settings import WORK_TYPES_INDEX
-
-        return fields_dict, WORK_TYPES_INDEX, ["-works_count", "id"], MessageSchema
-    if et == "awards":
-        from awards.fields import fields_dict
-        from awards.schemas import MessageSchema
-        from settings import AWARDS_INDEX
-
-        return fields_dict, AWARDS_INDEX, ["-funded_outputs_count", "id"], MessageSchema
     if et == "locations":
         # locations live only in walden; the legacy view hardcodes connection='walden'
         # and its index constant lives in the view, not settings.py. Mirror both,
@@ -227,8 +137,20 @@ def _resolve_entity(entity_type: str, connection: str):
 
         return fields_dict, LOCATIONS_INDEX, ["work_id", "native_id"], MessageSchema
 
-    raise APIQueryParamsError(
-        f"OQO get_rows='{entity_type}' is not a supported entity type."
+    entry = _ENTITY_DISPATCH.get(et)
+    if entry is None:
+        raise APIQueryParamsError(
+            f"OQO get_rows='{entity_type}' is not a supported entity type."
+        )
+    module_name, index_attr = entry
+    fields_mod = importlib.import_module(f"{module_name}.fields")
+    schemas_mod = importlib.import_module(f"{module_name}.schemas")
+    default_sort = _DEFAULT_SORT_OVERRIDES.get(et, ["-works_count", "id"])
+    return (
+        fields_mod.fields_dict,
+        getattr(settings, index_attr),
+        default_sort,
+        schemas_mod.MessageSchema,
     )
 
 
@@ -377,56 +299,35 @@ def execute_oql_string(oql_str):
         return _error_response(
             f"Failed to parse OQL: {e}", "parse_error", status=400
         )
-    return _execute_oqo(oqo.to_dict())
+    return _execute_oqo(oqo)
 
 
-def _execute_oqo(oqo_dict: dict):
-    """Shared body for the POST and GET-path-form handlers."""
-    # Parse the OQO from the raw dict. KeyError / TypeError / ValueError here
-    # are surface-level shape errors — return 400, not 500.
-    try:
-        oqo = OQO.from_dict(oqo_dict)
-    except (KeyError, TypeError, ValueError) as e:
-        return _error_response(
-            f"Could not parse OQO: {e}",
-            "invalid_oqo",
-            status=400,
-        )
+def _execute_oqo(oqo_or_dict):
+    """Shared body for the POST and GET-path-form handlers. Accepts a parsed
+    OQO (the OQL path — already canonicalized at the parse boundary) or a raw
+    dict (the OQO-JSON paths)."""
+    if isinstance(oqo_or_dict, OQO):
+        oqo = oqo_or_dict
+    else:
+        # Parse the OQO from the raw dict. KeyError / TypeError / ValueError
+        # here are surface-level shape errors — return 400, not 500.
+        try:
+            oqo = OQO.from_dict(oqo_or_dict)
+        except (KeyError, TypeError, ValueError) as e:
+            return _error_response(
+                f"Could not parse OQO: {e}",
+                "invalid_oqo",
+                status=400,
+            )
 
-    # Validate the OQO against the field registry. Returns structured errors.
+    # Validate the OQO against the field registry (including per-leaf operator
+    # validity). Returns structured errors.
     validation = validate_oqo(oqo)
     if not validation.valid:
         return jsonify(
             {
                 "oqo": oqo.to_dict(),
                 "validation": validation.to_dict(),
-            }
-        ), 400
-
-    # Validate leaf operators explicitly (the validator already does this, but
-    # the schema-level check is "valid operator string" — we want to surface a
-    # 400 for any operator not in VALID_OPERATORS so we never trip a 500 down
-    # in the translator).
-    invalid_ops = _collect_invalid_operators(oqo.filter_rows)
-    if invalid_ops:
-        return jsonify(
-            {
-                "oqo": oqo.to_dict(),
-                "validation": {
-                    "valid": False,
-                    "errors": [
-                        {
-                            "type": "invalid_operator",
-                            "message": (
-                                f"Operator '{op}' is not valid. "
-                                f"Valid operators: {sorted(VALID_OPERATORS)}"
-                            ),
-                            "location": loc,
-                        }
-                        for (op, loc) in invalid_ops
-                    ],
-                    "warnings": [],
-                },
             }
         ), 400
 
@@ -490,30 +391,11 @@ def _execute_oqo(oqo_dict: dict):
     #   core      → is_xpac:false (curated only — the historical default)
     #   expansion → is_xpac:true  (the expansion corpus alone)
     #   all       → no constraint (core + expansion)
-    # Precedence (transitional back-compat): an explicit is_xpac filter still in
-    # the OQO wins (legacy escape hatch); else a non-default `corpus` wins; else
-    # the legacy `include_xpac=true` URL param maps to "all" until #464 drops it;
-    # else "core".
+    # Precedence lives in _effective_corpus (shared with the semantic path).
     extra_qs = []
-    if oqo.get_rows == "works" and connection == "walden":
-        include_xpac = (
-            request.args.get("include_xpac") == "true"
-            or request.args.get("include-xpac") == "true"
-        )
-        oqo_mentions_xpac = _oqo_mentions_column(oqo.filter_rows, "is_xpac")
-        if oqo_mentions_xpac:
-            effective_corpus = None  # explicit filter stands; inject nothing
-        elif oqo.corpus and oqo.corpus != "core":
-            effective_corpus = oqo.corpus
-        elif include_xpac:
-            effective_corpus = "all"
-        else:
-            effective_corpus = "core"
-        if effective_corpus == "core":
-            extra_qs.append(Q("term", is_xpac="false"))
-        elif effective_corpus == "expansion":
-            extra_qs.append(Q("term", is_xpac="true"))
-        # "all" / None ⇒ no is_xpac constraint
+    corpus = _effective_corpus(oqo, connection)
+    if corpus is not None:
+        extra_qs.append(Q("term", is_xpac="false" if corpus == "core" else "true"))
 
     # Mirror the /authors works_count>0 default (authors/views.py, #287): hide
     # curation-emptied (0-works) authors unless the OQO explicitly references
@@ -640,30 +522,15 @@ def _execute_semantic_oqo(
     if filters is None:
         filters = []
 
-    # Corpus selection on the semantic path (#481), mirroring the normal path's
-    # precedence (explicit filter > non-default corpus > legacy include_xpac >
-    # core). core → is_xpac:false, expansion → is_xpac:true, all → no constraint.
+    # Corpus selection on the semantic path (#481) — same _effective_corpus
+    # precedence as the normal path, rendered to the params filter-dict form.
     # Caveat: the vector index holds only non-xpac works, so the prod vector path
     # can't surface the expansion corpus regardless — that's a known index
     # limitation, not this selector's concern; the single-index fallback honors
     # the kNN pre-filter correctly.
-    if oqo.get_rows == "works" and connection == "walden":
-        include_xpac = (
-            request.args.get("include_xpac") == "true"
-            or request.args.get("include-xpac") == "true"
-        )
-        if _oqo_mentions_column(oqo.filter_rows, "is_xpac"):
-            effective_corpus = None
-        elif oqo.corpus and oqo.corpus != "core":
-            effective_corpus = oqo.corpus
-        elif include_xpac:
-            effective_corpus = "all"
-        else:
-            effective_corpus = "core"
-        if effective_corpus == "core":
-            filters = filters + [{"is_xpac": "false"}]
-        elif effective_corpus == "expansion":
-            filters = filters + [{"is_xpac": "true"}]
+    corpus = _effective_corpus(oqo, connection)
+    if corpus is not None:
+        filters = filters + [{"is_xpac": "false" if corpus == "core" else "true"}]
     params["filters"] = filters or None
 
     # Two-phase vector index (the prod path: USE_VECTOR_INDEX=true). Builds and
@@ -728,18 +595,6 @@ def _oql_parse_error_response(exc: OQLParseError):
     ), 400
 
 
-def _collect_invalid_operators(filter_rows, prefix="filter_rows"):
-    bad = []
-    for i, f in enumerate(filter_rows):
-        loc = f"{prefix}[{i}]"
-        if hasattr(f, "operator"):
-            if f.operator not in VALID_OPERATORS:
-                bad.append((f.operator, loc))
-        if hasattr(f, "filters"):
-            bad.extend(_collect_invalid_operators(f.filters, loc + ".filters"))
-    return bad
-
-
 # The search clauses legacy pins ES shard routing on (#323 Pattern C). Legacy sets
 # preference=clean_preference(<value>) for a `?search=` query (which lands in the
 # OQO as a `default.search` filter) and for the four `*.search` filters that
@@ -793,6 +648,33 @@ def _oqo_mentions_column(filter_rows, column_id):
         if hasattr(f, "filters") and _oqo_mentions_column(f.filters, column_id):
             return True
     return False
+
+
+def _effective_corpus(oqo, connection):
+    """The corpus constraint to enforce for this execution: "core", "expansion",
+    or None for no is_xpac constraint. Shared by the normal and semantic paths
+    so their precedence can't diverge.
+
+    Only works-on-walden has a corpus split (#481). Precedence (transitional
+    back-compat): an explicit is_xpac filter still in the OQO wins (legacy
+    escape hatch — inject nothing); else a non-default `corpus`; else the legacy
+    `include_xpac=true` URL param maps to "all" until #464 drops it; else "core".
+    "all" (core + expansion) needs no constraint, so it also returns None.
+    """
+    if oqo.get_rows != "works" or connection != "walden":
+        return None
+    if _oqo_mentions_column(oqo.filter_rows, "is_xpac"):
+        return None
+    if oqo.corpus and oqo.corpus != "core":
+        corpus = oqo.corpus
+    elif (
+        request.args.get("include_xpac") == "true"
+        or request.args.get("include-xpac") == "true"
+    ):
+        corpus = "all"
+    else:
+        corpus = "core"
+    return corpus if corpus in ("core", "expansion") else None
 
 
 def _set_size(params, s):

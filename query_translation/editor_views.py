@@ -143,7 +143,9 @@ def validate_oql_route():
     from query_translation.oql_render_v2 import (  # lazy: avoid import cycle
         oqo_location_addresses, address_for_location,
     )
-    loc_addr = oqo_location_addresses(oqo)
+    # The addressing tree only annotates diagnostics — skip the build on a clean
+    # document (the common lint case).
+    loc_addr = oqo_location_addresses(oqo) if (vr.errors or vr.warnings) else {}
     diagnostics = [
         validation_diagnostic(er.type, er.message, er.location,
                               address_for_location(loc_addr, er.location)).to_dict()

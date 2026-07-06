@@ -23,11 +23,11 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, replace
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 # Load the OQO data model without triggering the Flask-heavy package __init__.
 from query_translation.oqo import (  # noqa: E402
-    OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP,
+    OQO, LeafFilter, BranchFilter, FilterType, GroupBy, CURLY_DQUOTE_MAP,
     canonicalize_oqo_column_ids, normalize_corpus, CORPUS_CANONICAL_PHRASE)
 
 
@@ -508,6 +508,13 @@ def is_integer_column(column_id) -> bool:
     return bool(fld and fld.kind == "num" and not fld.is_float)
 
 
+def is_numeric_column(column_id) -> bool:
+    """True for any num-kind column (integer or float). The type authority for
+    the OQO canonicalizer's string→number value coercion."""
+    fld = _BY_COLUMN.get(column_id)
+    return bool(fld and fld.kind == "num")
+
+
 # alias-string -> Field, and the max alias word-length for greedy matching
 _ALIAS = {}
 for _spellings, _fld in _FIELDS:
@@ -533,7 +540,7 @@ _CONNECTIVES = {"and", "or", "&"}
 # `not`, or a search/directive keyword the grammar reads after the run. When one
 # of these appears as a LITERAL word inside a stemmed search value it must be
 # quoted on render (`… "and" …`) so it folds back as an escaped literal rather
-# than re-parsing as structure. Kept in lockstep with `_Parser._is_run_break_word`.
+# than re-parsing as structure. `_Parser._is_run_break_word` reads this set.
 _SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "stemmed", "within", "group",
                                        "sample"}
 
@@ -826,64 +833,6 @@ def _entity_word_index(entity: str) -> Dict[str, str]:
                 idx.setdefault(name.lower(), cid)
     _ENTITY_WORD_INDEX_CACHE[entity] = idx
     return idx
-
-
-# --- column-namespace resolution for the `return` clause (oxjob #450) -------
-# `return` names RESULT COLUMNS (the `column` capability — `?select=`-able result
-# fields), a mostly-disjoint namespace from the filter columns `_parse_field`
-# resolves (works: 58 columns vs 207 filter predicates, 25 overlap). So `return`
-# gets its own word index over `get_entity_column_catalog` — the same public
-# display_name/alias annotations the /properties catalog carries. RAW column
-# names are seeded FIRST and never shadowed, so a raw id always resolves to
-# itself; a display_name/alias that collides across columns (e.g. sources
-# "country" naming both `country` and `country_code`) resolves to its
-# first-seeded owner, and the RENDER map below only uses a friendly word whose
-# parse maps back to the same column — round-trip safe by construction.
-_COLUMN_MAPS_CACHE: Dict[str, Tuple[Dict[str, str], Dict[str, str], int]] = {}
-
-
-def _entity_column_maps(entity: Optional[str]) -> Tuple[Dict[str, str], Dict[str, str], int]:
-    """(word_index, render_map, max_words) for one entity's column namespace.
-    word_index: {word (lower) -> column name}; render_map: {column name ->
-    canonical render word (friendly when round-trip-safe, else the raw name)};
-    max_words: longest word_index key in words (greedy-match bound). Empty maps
-    when the entity/registry/result-schema is unavailable (keeps oql_lang
-    importable in lightweight contexts)."""
-    if not entity:
-        return {}, {}, 1
-    if entity in _COLUMN_MAPS_CACHE:
-        return _COLUMN_MAPS_CACHE[entity]
-    try:
-        from core.properties import get_entity_column_catalog
-        catalog = get_entity_column_catalog(entity)
-    except Exception:
-        catalog = {}
-    idx: Dict[str, str] = {}
-    for name in sorted(catalog):
-        idx.setdefault(name.lower(), name)
-    max_words = 1
-    for name in sorted(catalog):
-        prop = catalog[name]
-        names = [getattr(prop, "display_name", "")] + list(getattr(prop, "aliases", []) or [])
-        for nm in names:
-            if not nm:
-                continue
-            idx.setdefault(nm.lower(), name)
-            max_words = max(max_words, len(nm.split()))
-    render: Dict[str, str] = {}
-    for name in sorted(catalog):
-        friendly = getattr(catalog[name], "display_name", "") or ""
-        render[name] = friendly if idx.get(friendly.lower()) == name else name
-    _COLUMN_MAPS_CACHE[entity] = (idx, render, max_words)
-    return idx, render, max_words
-
-
-def _column_render_word(entity: str, column_id: str) -> str:
-    """Canonical `return` render word for a column: its friendly display_name when
-    that word parses back to this exact column, else the raw column name (which
-    always round-trips through the raw-name seeding above)."""
-    _, render, _ = _entity_column_maps(entity)
-    return render.get(column_id, column_id)
 
 
 def _entity_resolve_field(fld: "Field", entity: Optional[str]) -> "Field":
@@ -1289,7 +1238,6 @@ class _Parser:
     def __init__(self, toks: List[Tok]):
         self.toks = toks
         self.i = 0
-        self.hints: List[OQLHint] = []
         # --- dual-mode (editor-context) state (oxjob #363, decision 15) ---
         # `_ctx_mode` is False for all production parsing, so every `_want(...)`
         # call and every `if self._ctx_mode` branch below is an inert no-op on the
@@ -1548,7 +1496,7 @@ class _Parser:
             two = f"{t.val} {self.peek(1).val}".lower()
         if two in ENTITY_TYPES:
             self.i += 2
-            return two.replace(" types", "-types").replace(" ", "-") if two not in ("source types", "institution types") else two.replace(" ", "-")
+            return two.replace(" ", "-")
         one = t.val.lower()
         if one in ENTITY_TYPES:
             self.next()
@@ -2306,10 +2254,27 @@ class _Parser:
     def _starts_new_clause(self, k: int) -> bool:
         """After a connective at offset k, do the tokens begin a new field clause?
         (a known field/boolean phrase followed by an operator)."""
+        return self._clause_lookahead(k, require_known_field=True)
+
+    def _looks_like_new_clause(self, k: int) -> bool:
+        """Like `_starts_new_clause`, but does NOT require the field to be a known
+        alias — any word (or `it's …`) followed within a few tokens by an operator
+        looks like a new clause (a bare `(` counts too). Used by the arity guard
+        (`_continues_value`) so a misspelled/unknown next field (`year is 2020 and
+        bogus is 5`) is treated as a new (bad) clause to report, not as a second
+        undelimited value."""
+        return self._clause_lookahead(k, require_known_field=False)
+
+    def _clause_lookahead(self, k: int, require_known_field: bool) -> bool:
+        """Shared body of the two clause-boundary probes above."""
         save = self.i
         self.i += k
         self._skip_annot()
         try:
+            t = self.peek()
+            # a `(` opens a clause-group (only the relaxed probe accepts this)
+            if not require_known_field and t and t.kind == "LP":
+                return True
             # a COMPLETE row-subject verb phrase followed by `(` (`it cites (…`)
             # opens a clause (oxjob #557); an incomplete one (`… and it`) does
             # not — inside a bare search run, a lone `it` stays an ordinary
@@ -2321,51 +2286,15 @@ class _Parser:
                 after = self.peek(mrs[1])
                 if after is not None and after.kind == "LP":
                     return True
-            t = self.peek()
-            # try to match a field alias
+            # a (known, when required) field word-run followed by an operator
             parts = []
-            matched = False
             for j in range(0, 4):
                 tt = self.peek(j)
                 if not tt or tt.kind != "WORD":
                     break
                 parts.append(tt.val)
-                if " ".join(parts).lower() in _ALIAS:
-                    matched = True
-                    after = self.peek(j + 1)
-                    if after and (after.kind == "OP" or
-                                  (after.kind == "WORD" and after.val.lower() in
-                                   ("is", "has", "does", "doesn't", "doesnt"))):
-                        return True
-            return False
-        finally:
-            self.i = save
-
-    def _looks_like_new_clause(self, k: int) -> bool:
-        """Like `_starts_new_clause`, but does NOT require the field to be a known
-        alias — any word (or `it's …`) followed within a few tokens by an operator
-        looks like a new clause. Used by the arity guard (`_continues_value`) so a
-        misspelled/unknown next field (`year is 2020 and bogus is 5`) is treated as
-        a new (bad) clause to report, not as a second undelimited value."""
-        save = self.i
-        self.i += k
-        self._skip_annot()
-        try:
-            t = self.peek()
-            # a `(` opens a clause-group
-            if t and t.kind == "LP":
-                return True
-            # a COMPLETE row-subject verb phrase followed by `(` looks like a
-            # new clause (#557) — same LP requirement as `_starts_new_clause`
-            mrs = match_row_subject(self.toks, self.i)
-            if mrs is not None and mrs[2]:
-                after = self.peek(mrs[1])
-                if after is not None and after.kind == "LP":
-                    return True
-            for j in range(0, 4):
-                tt = self.peek(j)
-                if not tt or tt.kind != "WORD":
-                    break
+                if require_known_field and " ".join(parts).lower() not in _ALIAS:
+                    continue
                 after = self.peek(j + 1)
                 if after and (after.kind == "OP" or
                               (after.kind == "WORD" and after.val.lower() in
@@ -2502,11 +2431,8 @@ class _Parser:
     def _is_run_break_word(self, val: str) -> bool:
         """A bare word that TERMINATES a multi-word search run (#1) rather than
         folding into its stemmed value: a boolean connective, `not`, or a
-        search/directive keyword the grammar handles after the run (`stemmed`,
-        `within`, `sort`, `group`, `sample`, `return`)."""
-        low = val.lower()
-        return (low in _CONNECTIVES or low == "not"
-                or low in ("stemmed", "within", "group", "sample"))
+        search/directive keyword the grammar handles after the run."""
+        return val.lower() in _SEARCH_RUN_RESERVED
 
     def _parse_search_atom(self, base: str, in_group: bool = False) -> LeafFilter:
         # Stemming is ON by default; quotes turn it OFF (exact). `stemmed "phrase"`
@@ -2778,12 +2704,6 @@ def parse(oql: str) -> OQO:
     return oqo
 
 
-def parse_with_hints(oql: str):
-    toks = lex(oql)
-    p = _Parser(toks)
-    return p.parse(), p.hints
-
-
 def parse_collecting(oql: str) -> Tuple[Optional[OQO], List[OQLError]]:
     """OQL text -> (OQO_or_None, [OQLError, ...]) collecting EVERY clause-level parse
     error instead of failing on the first (the editor `/validate` path; oxjob #363).
@@ -2912,16 +2832,22 @@ _NAME_ANNOTATION_MAX = 50
 _NO_ENTITY_ANNOTATION = "[no entity found]"
 
 
+_RESOLVE_NAMESPACE_MAP = None  # set on first use (lazy — see below)
+
+
 def _column_resolves_name(column_id) -> bool:
     """True if this column is name-resolvable in production — i.e. the engine
     resolver (`oql_renderer._RESOLVE_NAMESPACE`) maps it to a real namespace.
     A `None`/absent mapping means the column never shows a name (entity self-ids
     like `ids.openalex`, bare work ids), so a resolver miss there is "no name for
     this kind of column", NOT "entity not found" — those stay bare (oxjob #418).
-    Lazy import: `oql_renderer` imports this module at load, so a top-level import
-    would deadlock the package init cycle."""
-    from query_translation.oql_renderer import _RESOLVE_NAMESPACE  # lazy (cycle)
-    return _RESOLVE_NAMESPACE.get(column_id) is not None
+    Lazy import, cached in a module global: `oql_renderer` imports this module at
+    load, so a top-level import would deadlock the package init cycle."""
+    global _RESOLVE_NAMESPACE_MAP
+    if _RESOLVE_NAMESPACE_MAP is None:
+        from query_translation.oql_renderer import _RESOLVE_NAMESPACE  # lazy (cycle)
+        _RESOLVE_NAMESPACE_MAP = _RESOLVE_NAMESPACE
+    return _RESOLVE_NAMESPACE_MAP.get(column_id) is not None
 
 
 def _truncate_name(name: str) -> str:
@@ -2930,29 +2856,6 @@ def _truncate_name(name: str) -> str:
     if len(name) > _NAME_ANNOTATION_MAX:
         return name[: _NAME_ANNOTATION_MAX - 1].rstrip() + "…"
     return name
-
-
-def _value_with_name(fld, value, column_id, resolver) -> str:
-    """Render a value, appending ` [display name]` when the column resolves names
-    and a resolver is supplied (institutions, authors, …, country codes). The name
-    is truncated to a uniform length with an ellipsis."""
-    rendered = _render_value(fld, value)
-    if (resolver and fld and fld.resolves_name and isinstance(value, str)
-            and not value.startswith("col_")):
-        name = _call_resolver(resolver, value, column_id)
-        if name:
-            return f"{rendered} [{_truncate_name(name)}]"
-        # Resolver was consulted but found nothing → a shape-valid ID that doesn't
-        # exist (deleted / merged-not-followed / typo). Mark it so a reader can't
-        # confuse it with the resolverless case (no resolver → bare ID, nothing
-        # was looked up). The ID stays valid + queryable; this is display-only,
-        # and the `[...]` annotation is discarded on re-parse. (oxjob #418)
-        # Only for columns production actually name-resolves — a miss on a
-        # self-id / non-resolvable column means "no name for this kind", not
-        # "entity not found", so those stay bare.
-        if _column_resolves_name(column_id):
-            return f"{rendered} {_NO_ENTITY_ANNOTATION}"
-    return rendered
 
 
 def _uniform_search_base(f: FilterType):
@@ -3056,9 +2959,8 @@ def _seg(kind, text, **meta):
 
 
 def _value_segments(fld, value, column_id, resolver):
-    """Segments for one value, mirroring `_value_with_name`: the bare value, then
-    ` [name]` when the column resolves a display name. Concatenates to exactly
-    what `_value_with_name` returns."""
+    """Segments for one value: the bare value, then ` [name]` when the column
+    resolves a display name (truncated to a uniform length with an ellipsis)."""
     rendered = _render_value(fld, value)
     segs = [_seg("value", rendered, value=value, column_id=column_id)]
     entity = None
@@ -3066,15 +2968,19 @@ def _value_segments(fld, value, column_id, resolver):
             and not value.startswith("col_")):
         name = _call_resolver(resolver, value, column_id)
         if name:
-            shown = _truncate_name(name)  # uniform clip — must match _value_with_name
+            shown = _truncate_name(name)
             segs.append(_seg("text", " "))
             segs.append(_seg("id", f"[{shown}]", entity_display_name=shown,
                              entity_display_id=f"[{shown}]"))
             entity = EntityValue(id=value, short_id=value, display_name=name)
         elif _column_resolves_name(column_id):
-            # Resolver consulted, no match — mark the unresolvable ID (oxjob #418).
-            # Gated + mirrors _value_with_name so it concatenates to exactly its
-            # string (only for production-name-resolvable columns; see there).
+            # Resolver consulted, no match → a shape-valid ID that doesn't exist
+            # (deleted / merged-not-followed / typo). Mark it so a reader can't
+            # confuse it with the resolverless case (no resolver → bare ID,
+            # nothing was looked up). Display-only; the `[...]` annotation is
+            # discarded on re-parse. Only for production-name-resolvable columns
+            # — a miss on a self-id column means "no name for this kind of
+            # column", not "entity not found", so those stay bare. (oxjob #418)
             segs.append(_seg("text", " "))
             segs.append(_seg("id", _NO_ENTITY_ANNOTATION))
     return segs, entity
@@ -3340,10 +3246,6 @@ def _merge_same_field_items(items, join):
     return out
 
 
-def _row_node(item, top, resolver):
-    return _filter_node(item, top=top, resolver=resolver)
-
-
 def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
     """OQO -> canonical `oql_render` tree. `render()` stringifies this; the two
     never drift (Invariant A by construction)."""
@@ -3361,10 +3263,10 @@ def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
         # endpoint clauses — the dash range render was removed (decision 24).
         rows = _merge_same_field_items(oqo.filter_rows, "and")  # decision 20
         if len(rows) == 1:
-            where = _row_node(rows[0], top=True, resolver=resolver)
+            where = _filter_node(rows[0], top=True, resolver=resolver)
         else:
             # The implicit-AND body renders as an infix `and` list (no wrapper).
-            children = [_row_node(f, top=False, resolver=resolver) for f in rows]
+            children = [_filter_node(f, top=False, resolver=resolver) for f in rows]
             where = GroupNode(join="and", children=children, prefix="", suffix="",
                               joiner=" and ", meta=GroupMeta(implicit=True))
 
@@ -3423,8 +3325,8 @@ def _leading_conn(group: GroupNode) -> str:
 def _split_list_clause(clause: ClauseNode):
     """If `clause` is a factored group clause (`… has (a or b or …)` /
     `… is (a or b or …)`), return `(head, items, conn, close)` where `head` ends
-    with `"("`, `items` is the list of top-level item strings, `conn` is the
-    group's connective (`"or"`/`"and"`), and `close == ")"`; else None. Splits on
+    with `"("`, `items` is the list of top-level item strings, and `conn` is the
+    group's connective (`"or"`/`"and"`); else None. Splits on
     the engine's own structural segments (the literal `"("`, `" or "`/`" and "`,
     `")"` text segments) at paren-depth 0 only, so a connective inside a nested
     sub-group `(b and c)` is never mistaken for a top-level separator."""
@@ -3451,7 +3353,7 @@ def _split_list_clause(clause: ClauseNode):
     items.append("".join(cur))
     if conn is None or len(items) < 2:
         return None  # a single bare atom / unbreakable clause
-    return head, items, conn, ")"
+    return head, items, conn
 
 
 def _split_group_text(text: str):
@@ -3568,7 +3470,7 @@ def _fmt_clause(clause: ClauseNode, indent: int, col: int, width: int) -> str:
     parts = _split_list_clause(clause)
     if parts is None:
         return flat   # an unbreakable clause (e.g. one long search term)
-    head, items, conn, _close = parts
+    head, items, conn = parts
     return _fmt_list(head, items, conn, indent, width)
 
 
@@ -3648,4 +3550,4 @@ def render(oqo: OQO, resolver=None) -> str:
     `resolver(value, column_id) -> name|None` (a 1-arg `resolver(value)` is also
     accepted) synthesizes `[display name]` annotations for opaque-ID / country
     columns."""
-    return format_oql(_build_tree(oqo, resolver))
+    return render_tree(oqo, resolver)[0]

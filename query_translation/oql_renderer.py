@@ -12,30 +12,9 @@ See docs/oql-spec.md and query_translation/oql_lang.py.
 """
 
 from typing import Optional, Dict, Any, Callable
-import re
 
 from query_translation.oqo import OQO
 from query_translation import oql_lang
-
-
-def _render_search_proximity(value: Any) -> Optional[str]:
-    """Render a search proximity value back to its OQL surface (oxjob #355).
-
-    `"phrase"~N` -> `"phrase" within N words`; binary `"A"~N~"B"` ->
-    `"A" within N words of "B"`. Returns None for any non-proximity value.
-
-    Retained for back-compat (the engine now renders proximity itself via
-    `oql_lang._render_term`); kept because other modules import it.
-    """
-    if not isinstance(value, str):
-        return None
-    m = re.match(r'^"([^"]*)"~(\d+)~"([^"]*)"$', value)
-    if m:
-        return f'"{m.group(1)}" within {m.group(2)} words of "{m.group(3)}"'
-    m = re.match(r'^"([^"]*)"~(\d+)$', value)
-    if m:
-        return f'"{m.group(1)}" within {m.group(2)} words'
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -123,54 +102,36 @@ _RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
 #     with no `[Medicine]` annotation (oxjob #363 case 5).
 #   - languages / countries / continents / sdgs / types / oa-statuses: closed
 #     code vocabularies ES doesn't index for name lookup.
-# All of these have a complete `values` list in the repo `config/*.yaml`, so we
-# read the display names straight from there — full coverage, no ES, no network.
-import os
-try:
-    import yaml as _yaml
-except Exception:  # pragma: no cover - yaml is a prod dep, but stay defensive
-    _yaml = None
+# All of these have a complete `values` list in `config/*.yaml`, already loaded
+# by THE entity registry (`core.entities`, oxjob #405) — read the display names
+# from there rather than keeping a second yaml loader in sync.
 
-_CONFIG_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config"
-)
-# resolver namespace -> config/<file>.yaml
-_CONFIG_YAML_BY_NS: Dict[str, str] = {
-    "fields": "fields.yaml",
-    "subfields": "subfields.yaml",
-    "domains": "domains.yaml",
-    "languages": "languages.yaml",
-    "countries": "countries.yaml",
-    "continents": "continents.yaml",
-    "sdgs": "sdgs.yaml",
-    "types": "work-types.yaml",
-    "oa-statuses": "oa-statuses.yaml",
-}
-# namespace -> {short_id.lower(): display_name}, loaded lazily + cached.
-_CONFIG_TABLES: Dict[str, Dict[str, str]] = {}
+# renderer namespace -> registry entity name, where they differ.
+_REGISTRY_NS_ALIAS: Dict[str, str] = {"types": "work-types"}
+# namespace -> {short_id.lower(): display_name}, built lazily + cached.
+_CONFIG_TABLES: Dict[str, Optional[Dict[str, str]]] = {}
 
 
 def _config_table(entity_type: Optional[str]) -> Optional[Dict[str, str]]:
-    """Load (once) the `config/<entity_type>.yaml` `values` list into a
-    {short_id.lower(): display_name} table. Returns None for namespaces with no
-    config file (native ES entities, or `works`). Defensive: any load failure
-    yields an empty table rather than raising into a render."""
-    if entity_type not in _CONFIG_YAML_BY_NS:
-        return None
+    """The closed-vocab `values` of `entity_type` as a {short_id.lower():
+    display_name} table, from the core entity registry. Returns None for
+    open/native namespaces (no `values` list). Defensive: any registry failure
+    yields None rather than raising into a render."""
     if entity_type not in _CONFIG_TABLES:
-        table: Dict[str, str] = {}
-        path = os.path.join(_CONFIG_DIR, _CONFIG_YAML_BY_NS[entity_type])
+        table: Optional[Dict[str, str]] = None
         try:
-            if _yaml is not None:
-                with open(path) as fh:
-                    for row in (_yaml.safe_load(fh) or {}).get("values", []):
-                        rid = str(row.get("id", ""))
-                        short = rid.split("/", 1)[1] if "/" in rid else rid
-                        name = row.get("display_name")
-                        if short and name:
-                            table[short.lower()] = name
-        except Exception:  # pragma: no cover - missing/corrupt config
-            table = {}
+            from core.entities import get_entity_type
+            ent = get_entity_type(_REGISTRY_NS_ALIAS.get(entity_type, entity_type))
+            if ent is not None and ent.values:
+                table = {}
+                for row in ent.values:
+                    rid = str(row.get("id", ""))
+                    short = rid.split("/", 1)[1] if "/" in rid else rid
+                    name = row.get("display_name")
+                    if short and name:
+                        table[short.lower()] = name
+        except Exception:  # pragma: no cover - registry unavailable/corrupt
+            table = None
         _CONFIG_TABLES[entity_type] = table
     return _CONFIG_TABLES[entity_type]
 
@@ -192,21 +153,13 @@ def _normalize_code(value: Any) -> Optional[str]:
     return short.lower()
 
 
-def is_closed_config_vocab(namespace: Optional[str]) -> bool:
-    """True if `namespace` is a closed code-vocabulary backed by a `config/*.yaml`
-    `values` list (countries, languages, sdgs, types, oa-statuses, …). The
-    single source of truth for closed-vocab membership — the validator's
-    value-domain check keys off the SAME tables this renderer resolves names
-    from, so a value validates iff it can also be rendered with a name."""
-    return namespace in _CONFIG_YAML_BY_NS
-
-
 def is_vocab_member(namespace: Optional[str], value: Any) -> bool:
     """True if `value` is a member of the closed config vocab `namespace`.
     Normalizes exactly like `_builtin_name` (URL-prefix strip + casefold), so
-    membership and name-resolution can never disagree. Callers should gate on
-    `is_closed_config_vocab(namespace)` first — a non-vocab namespace returns
-    False here (its table is None), which is not the same as "not a member"."""
+    membership and name-resolution can never disagree. A non-vocab namespace
+    returns False here (its table is None), which is not the same as "not a
+    member" — callers deciding *whether* to domain-check should key off their
+    own namespace map (see validator.CLOSED_VOCAB_NAMESPACE)."""
     table = _config_table(namespace)
     if table is None:
         return False

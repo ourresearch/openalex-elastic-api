@@ -525,7 +525,7 @@ vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); 
 | stemmed phrase | `stemmed "…"` | `.search` with a quoted value |
 | semantic | `is similar to ("…")` | column suffix `.search.semantic` (2-phase) |
 | adjacency (phrase) | `" … "` | quotes in the value |
-| proximity | `within N words` | `"phrase"~N` in the value |
+| proximity | leading list form `within N (a, b, …)` | `"op1"~N~"op2"[~"op3"…]` in the value |
 | wildcard | bare `*` / `?` | `*` / `?` in the value |
 | boolean | infix `and`/`or`/`not` inside `( … )` (a bare-word run is ONE node, not AND) | the BranchFilter tree |
 
@@ -563,7 +563,7 @@ Key rules these encode:
   change"` is the adjacent, unstemmed phrase. This is the mainstream "quotes = exact
   match" people already expect.
 - **`stemmed "…"` = the stemmed phrase** — adjacent *and* lemmatized (`.search`), for
-  when you want phrase precision without losing recall (corpus rows **13**, **32**).
+  when you want phrase precision without losing recall (corpus row **13**).
   Without quotes you don't need `stemmed`: bare terms are already stemmed.
 - **Booleans are structural, never lexical.** `has "foo or bar"` searches the
   literal phrase; the boolean is the tree (`has (foo or bar)`).
@@ -582,30 +582,40 @@ Key rules these encode:
 ### 3.7 Proximity and wildcards — the edge matrix
 
 ```
-works where title has "smart phone" within 3 words      (row 21) ✓ exact proximity → .search.exact "smart phone"~3
-works where title has stemmed "smart phone" within 3 words (row 32) ✓ stemmed proximity → .search "smart phone"~3
-works where title has "foo*bar"                        (row 22) ✓ mid-word * (quoted = no-stem .search.exact)
-works where title has "wom?n"                          (row 23) ✓ ? = exactly one char (quoted = no-stem)
-works where title has bar*                             (row 20) ✗ OQL_WILDCARD_NEEDS_EXACT (bare = stemmed = wrong)
-works where title has *cycle                           (row 24) ✗ OQL_LEADING_WILDCARD
-works where title has ?cycle                           (row 25) ✗ OQL_LEADING_WILDCARD
-works where title has ab*                              (row 26) ✗ OQL_SHORT_WILDCARD_PREFIX (need ≥3)
-works where title has "smart phone*" within 3 words    (row 27) ✓ wildcard-in-proximity → ES intervals (oxjob #355)
-works where title has "smart" within 3 words of "phone"(row 28) ✗ OQL_BINARY_PROXIMITY
-works where title has smart* within 3 words            (row 29) ✗ OQL_WILDCARD_IN_PROXIMITY
+works where title has (within 3 ("smart", "phone"))     (row 28)  ✓ exact list proximity → .search.exact, value "smart"~3~"phone"
+works where title has (within 3 (smart, phone))         (row 188) ✓ stemmed list proximity → .search
+works where title has (within 3 ("foo", "bar", "baz"))  (row 187) ✓ K-ary proximity (3+ operands)
+works where title has (within 3 ("smart", "phone*"))    (row 189) ✓ wildcard in a quoted operand → ES intervals (oxjob #355)
+works where title has ("foo*bar")                       (row 22)  ✓ mid-word * (quoted = no-stem .search.exact)
+works where title has ("wom?n")                         (row 23)  ✓ ? = exactly one char (quoted = no-stem)
+works where title has bar*                              (row 20)  ✗ OQL_WILDCARD_NEEDS_EXACT (bare = stemmed = wrong)
+works where title has *cycle                            (row 24)  ✗ OQL_LEADING_WILDCARD
+works where title has ab*                               (row 26)  ✗ OQL_SHORT_WILDCARD_PREFIX (need ≥3)
+works where title has "smart phone" within 3 words      (row 190) ✗ OQL_PROXIMITY_SUFFIX_REMOVED (write it BEFORE the terms)
+works where title has within 3 (smart*, phone)          (row 29)  ✗ OQL_WILDCARD_NEEDS_EXACT (quote a wildcard operand)
+works where title has within 3 ("only")                 (row 191) ✗ OQL_PROXIMITY_NEEDS_OPERANDS (need 2+)
+works where title has within 3 (foo, "bar")             (row 192) ✗ OQL_PROXIMITY_MIXED_OPERANDS (all bare or all quoted)
 ```
 
-- **Proximity is a whole-phrase modifier**, not a binary `X within N of Y`. ES slop
-  is the total positional moves over one quoted phrase — it conflates gap *and*
-  reordering (reversal alone costs 2). So `"smart phone" within 3 words` →
-  `"smart phone"~3`, documented as "up to N positional moves apart, **in any
-  order**." A binary form would lie about the semantics and not generalize to 3+
-  terms → `OQL_BINARY_PROXIMITY`.
+- **Proximity is the leading list form `within N (a, b, …)` — the ONE proximity
+  surface (oxjob #514):** K operands NEAR each other within an N-word window,
+  **unordered**. An operand may itself be a multi-word phrase (`within 5
+  ("machine learning", "neural network")`, row 80) — each operand is its own
+  adjacent sub-phrase. Operands are **all bare (stemmed, `.search`) or all
+  quoted (exact, `.search.exact`)** — mixing is `OQL_PROXIMITY_MIXED_OPERANDS`.
+  Compiles to an ES `intervals` query (ordered=false, max_gaps=N); the OQO value
+  encoding is `"op1"~N~"op2"[~"op3"…]`. The v2.0 *suffix* forms — `"smart
+  phone" within 3 words` and the binary `"a" within N words of "b"` — were
+  REMOVED with #514 and reject loudly (`OQL_PROXIMITY_SUFFIX_REMOVED`) with a
+  pointer to the list form. (The OXURL `~` notation is frozen and untouched: a
+  single-phrase slop value `"smart phone"~3` still parses/executes via
+  `?filter=`, it just has no round-tripping OQL form.)
 - On the multi-valued per-record search fields (`raw affiliation` /
-  `byline`), a **quoted phrase scopes to one sub-record** (one affiliation / one
-  byline) via ES `position_increment_gap`; slop widens within it. This is how a
-  single `has` leaf expresses intra-affiliation co-occurrence (corpus rows **65**,
-  **75**, **77**).
+  `byline`), a quoted phrase — and each proximity window — **scopes to one
+  sub-record** (one affiliation / one byline) via ES `position_increment_gap`.
+  This is how a single `has` leaf expresses intra-affiliation co-occurrence
+  (corpus rows **65**, **75**, **77**, e.g. `raw affiliation has (within 5
+  (london, hospital))`).
 - **Wildcards require the no-stem (exact) field — quote them (oxjob #364).** A
   wildcard matches indexed tokens literally, but the default search is *stemmed*
   at index time, so a bare wildcard hunts for a prefix the index no longer holds
@@ -614,24 +624,23 @@ works where title has smart* within 3 words            (row 29) ✗ OQL_WILDCARD
   `"foo*bar"`, `"wom?n"`. A **bare** wildcard is `OQL_WILDCARD_NEEDS_EXACT` (fix-it:
   quote it). `stemmed` keeps a phrase stemmed, so a wildcard there is the same error.
   Leading → `OQL_LEADING_WILDCARD`. Sub-3-char prefix → `OQL_SHORT_WILDCARD_PREFIX`.
-  Bare wildcard with proximity → `OQL_WILDCARD_IN_PROXIMITY`. Every unsupported
-  combination is a loud error with a fix-it — never a silent literal, never a false
-  promise. (This **reverses** #337's old `OQL_WILDCARD_IN_QUOTES` "move it out of the
-  quotes" guidance: quotes are now exactly where wildcards belong.) See
+  In a proximity list the same rule applies per operand: a wildcard needs a
+  *quoted* operand (row 189 ✓, row 29 ✗). Wildcard-heavy queries share an
+  expansion budget (#355): two-plus wildcards each need a ≥4-char prefix
+  (`OQL_MULTI_WILDCARD_SHORT_PREFIX`, row 81), and past the budget it's
+  `OQL_TOO_MANY_WILDCARDS` (row 82). Every unsupported combination is a loud
+  error with a fix-it — never a silent literal, never a false promise. (This
+  **reverses** #337's old `OQL_WILDCARD_IN_QUOTES` "move it out of the quotes"
+  guidance: quotes are now exactly where wildcards belong.) See
   [`docs/oql/engine_findings.md`](./oql/engine_findings.md) for the engine behavior.
 
-> **⚠ Acknowledged limitation (to be fixed, not a permanent boundary):**
-> **wildcard-in-a-phrase / wildcard-near-another-word** — `"unusual behavi*or"`,
-> `"smart phone*" within 3 words` — is rejected today (rows 27, 29, corpus row 58)
-> because our ES `query_string` path drops the wildcard (verified live: row 58
-> silently dropped it). **WoS and Scopus support this**, so it is a real
-> capability gap, not a design choice. ES *can* express it with heavier query
-> types (intervals / span queries); reaching it is future engine work — exactly
-> what the "lift proximity/wildcard into OQO **structure**" recommendation enables
-> (charter §4; adjacent to #298 / #337). Note: a wildcard **on its own word** —
-> `behavi*or` (UK/US spelling) — works fine today; only the *combination with a
-> phrase/proximity* is gapped, and you can often sidestep it with `has x and
-> y*` when the words needn't be adjacent.
+> **Resolved (was an acknowledged limitation):** wildcard-in-a-phrase and
+> wildcard-in-proximity — `"smart* phone"` (row 79), `within 3 ("smart",
+> "phone*")` (rows 189, 58) — are now SUPPORTED via ES `intervals` queries
+> (oxjob #355; the old `query_string` path silently dropped the wildcard).
+> The remaining floors are deliberate guards, not gaps: no leading wildcards,
+> ≥3-char single-wildcard prefixes, and the multi-wildcard expansion budget
+> above.
 
 ### 3.8 `null` / `unknown`
 
@@ -758,20 +767,24 @@ NL) share codes and only localize prose. Every `✗` corpus row asserts its code
 |---|---|---|
 | `OQL_IMPLICIT_ADJACENCY` | two operands, no connective | insert an `and` or `or` |
 | `OQL_MISSING_ENTITY_ID` | entity ref with only a `[name]` | put the ID first: `institution is I136199984 [Harvard]` |
-| `OQL_WILDCARD_NEEDS_EXACT` | bare (stemmed) `*`/`?` wildcard | quote it: `"bar*"` (runs on no-stem `.search.exact`) |
+| `OQL_WILDCARD_NEEDS_EXACT` | bare (stemmed) `*`/`?` wildcard — standalone or as a proximity operand | quote it: `"bar*"` (runs on no-stem `.search.exact`) |
 | `OQL_LEADING_WILDCARD` | leading `*`/`?` | anchor it: `cycle*` |
 | `OQL_SHORT_WILDCARD_PREFIX` | `<3` chars before `*` | add characters: `abc*` |
-| `OQL_WILDCARD_IN_PROXIMITY` | wildcard + `within N words` | drop one of them |
-| `OQL_BINARY_PROXIMITY` | `X within N words of Y` | one phrase: `"x y" within N words` |
+| `OQL_MULTI_WILDCARD_SHORT_PREFIX` | 2+ wildcards with a `<4`-char prefix | lengthen the prefixes (expansion budget, #355) |
+| `OQL_TOO_MANY_WILDCARDS` | too many wildcards in one query | drop some |
+| `OQL_PROXIMITY_SUFFIX_REMOVED` | the removed suffix form `X within N words [of Y]` | write it before the terms: `within N (a, b, …)` |
+| `OQL_PROXIMITY_NEEDS_OPERANDS` | proximity list with `<2` operands | e.g. `within 3 ("smart", "phone")` |
+| `OQL_PROXIMITY_MIXED_OPERANDS` | mixed bare + quoted proximity operands | quote every operand or none |
 | `OQL_GROUP_VALUES_NEED_CONNECTIVE` | two values in an `is ( … )` group with no connective (`is (article review)`) | add `or` between the values (or `and` if you mean both) |
 | `OQL_GROUP_NEEDS_ONE_VALUE` | 2+ atoms in a scalar-domain group (`year >= (2019 or 2020)`, `is (true or false)`, `in collection (col_a or col_b)`) | keep one value in the parens; combine with or-clauses |
 | `OQL_UNTERMINATED_STRING` / `OQL_UNTERMINATED_ANNOTATION` | missing `"` / `]` | close it |
-| `OQL_UNKNOWN_FIELD` / `OQL_UNKNOWN_ENTITY` / `OQL_UNKNOWN_BOOLEAN` | not in the registry | check the properties registry |
+| `OQL_UNKNOWN_FIELD` / `OQL_UNKNOWN_ENTITY` | not in the registry | check the properties registry |
 | `OQL_MISSING_OPERATOR` / `OQL_MISSING_VALUE` / `OQL_BAD_NUMBER` | malformed clause | — |
 | `OQL_UNBALANCED_PARENS` | missing `)` | add `)` |
-| `OQL_BAD_SAMPLE` / `OQL_BAD_PROXIMITY` / `OQL_PROXIMITY_NEEDS_PHRASE` / `OQL_SEMANTIC_NEEDS_TEXT` / `OQL_TRAILING_TOKENS` | malformed directive/clause | — |
+| `OQL_BAD_SAMPLE` / `OQL_BAD_PROXIMITY` / `OQL_SEMANTIC_NEEDS_TEXT` / `OQL_TRAILING_TOKENS` | malformed directive/clause | — |
 
-(The reference implementation `tests/oql/oql_v2.py` is the authoritative code list.)
+(The diagnostics registry — `query_translation/diagnostics.py` — is the
+authoritative code list; every `✗` corpus row asserts its code against it.)
 
 ## 6. Fields & values (the registry)
 

@@ -5,7 +5,7 @@ The canonical JSON representation for query format translation.
 All translations go through OQO as the intermediate format.
 """
 
-from dataclasses import dataclass, field, asdict, replace
+from dataclasses import dataclass, field, replace
 from typing import List, Optional, Union, Literal, Any, Dict
 
 # Smart/curly DOUBLE-quote characters coerced to a plain ASCII double-quote
@@ -409,6 +409,13 @@ VALID_OPERATORS = {
     # value is always a `col_…` id. See oql-spec §3.10. (oxjob #363)
     "in collection",
 }
+
+# Metric-aggregate group sort (oxjob #389): a `SortBy.aggregate` orders group_by
+# buckets by a metric sub-aggregation of its (numeric) column. Mirrors
+# core.group_by.buckets.GROUP_BY_METRICS keys; kept here (the subsystem's shared
+# data-model module) so neither the validator nor the URL parser imports the
+# elasticsearch-heavy buckets module — and so they can't drift from each other.
+VALID_SORT_AGGREGATES = frozenset({"mean", "sum", "min", "max"})
 
 # Valid corpus selections (#481). "core" is the default; "expansion" is the
 # expansion corpus alone (subsumes the retired `is_xpac` filter); "all" is both.

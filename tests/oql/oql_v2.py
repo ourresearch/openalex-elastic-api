@@ -26,7 +26,6 @@ from query_translation.oql_lang import (  # noqa: E402  (explicit names for tool
     OQLError,
     OQLHint,
     parse,
-    parse_with_hints,
     render,
     lex,
 )

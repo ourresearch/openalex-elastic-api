@@ -49,7 +49,7 @@ canonical `oql` — verified in the offline tests.
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
 from query_translation.oql_lang import (
     _merge_same_field_items, _uniform_search_base, _uniform_eq_column,
-    _oql_field, _render_term, _value_segments, _is_search_leaf, _leaf_node,
+    _oql_field, _render_term, _value_segments, _leaf_node,
     _BY_COLUMN, _build_tree, format_oql, _ROW_SUBJECT_RENDER,
 )
 from query_translation.oql_render_tree import _stringify_directive
@@ -169,6 +169,13 @@ def build_tree(oqo: OQO, resolver=None, origins=None) -> dict:
     `origins` (optional, #474): a dict populated with `id(OQO filter) -> v2 node`
     for every filter object reached, so addressing can map a validator's OQO-path
     diagnostic back to a decimal address. Default None keeps the render path inert."""
+    return _build_tree_v2(oqo, resolver, origins)[0]
+
+
+def _build_tree_v2(oqo: OQO, resolver=None, origins=None):
+    """(v2 tree, v1 tree) — the v1 tree is built once here (for directives +
+    corpus phrase) and returned so callers that also need the canonical string
+    (`render_v2`) don't build it a second time."""
     idg = _IdGen()
     head = {"id": oqo.get_rows, "text": oqo.get_rows.lower()}
     where = None
@@ -190,7 +197,7 @@ def build_tree(oqo: OQO, resolver=None, origins=None) -> dict:
             # for the default core corpus. Reuses the v1 tree's computed phrase.
             "corpus_phrase": v1.corpus_phrase,
             "where_keyword": " where " if where else "", "where": where,
-            "directives": directives}
+            "directives": directives}, v1
 
 
 # ---------------------------------------------------------------------------
@@ -393,8 +400,8 @@ def layout(tree: dict, canonical: str):
 
 
 def render_v2(oqo: OQO, resolver=None) -> dict:
-    tree = build_tree(oqo, resolver)
-    canonical = format_oql(_build_tree(oqo, resolver))
+    tree, v1 = _build_tree_v2(oqo, resolver)
+    canonical = format_oql(v1)
     tree["lines"] = layout(tree, canonical)
     # #474: decimal addresses for the builder footer/gutter. Stamp every structural
     # node with `addr` (list of ints), then tag each rendered token with the address

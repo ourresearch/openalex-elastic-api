@@ -25,7 +25,7 @@ registry) — there is no entity-id prefix normalization. See docs/oql-spec.md.
 import json
 from typing import List, Union, Any
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, SortBy, canonicalize_oqo_column_ids
-from query_translation.oql_lang import canon_value_for_column, _is_search_leaf
+from query_translation.oql_lang import canon_value_for_column, _is_search_leaf, is_numeric_column
 
 
 def canonicalize_oqo(oqo: OQO, sort_operands: bool = True) -> OQO:
@@ -236,8 +236,8 @@ def canonicalize_value(value: Any, column_id: str) -> Any:
     Values are *bare* — there is NO entity-id prefix normalization (the namespace
     is the column_id, resolved via the column registry). This also means values
     that legitimately contain "/" (e.g. a DOI like "10.1021/es052595+") pass
-    through untouched. Type coercion here is a stopgap keyed off a hardcoded
-    NUMERIC_COLUMNS set; the column registry (#294) is the eventual type authority.
+    through untouched. Type coercion is keyed off the engine's column kinds
+    (`is_numeric_column`), so it can't drift from the field registry.
     """
     if value is None:
         return None
@@ -250,8 +250,8 @@ def canonicalize_value(value: Any, column_id: str) -> Any:
         if lower_val == "false":
             return False
 
-    # Integer normalization for known numeric columns
-    if isinstance(value, str) and column_id in NUMERIC_COLUMNS:
+    # Integer normalization for numeric columns
+    if isinstance(value, str) and is_numeric_column(column_id):
         try:
             # Check if it's an integer
             if "." not in value:
@@ -320,16 +320,3 @@ def canonicalize_branch_filter(f: BranchFilter, sort_operands: bool = True) -> U
         filters=canonical_children,
     )
 
-
-# Columns that should have numeric values
-NUMERIC_COLUMNS = {
-    "publication_year",
-    "cited_by_count",
-    "fwci",
-    "cited_by_percentile_year.min",
-    "cited_by_percentile_year.max",
-    "works_count",
-    "h_index",
-    "i10_index",
-    "2yr_mean_citedness",
-}

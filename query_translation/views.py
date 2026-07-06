@@ -19,37 +19,22 @@ it doesn't — see `execution.py`.
 import json
 import time
 import urllib.parse
-import concurrent.futures
-from collections import OrderedDict
 
-import requests
-from elasticsearch_dsl import Search
 from flask import Blueprint, jsonify, request
 
-import settings
-from core.cursor import handle_cursor
-from core.exceptions import APIError, APIQueryParamsError
-from core.paginate import get_pagination, get_per_page
-from core.shared_view import (
-    apply_grouping, apply_sorting, execute_search, format_response, set_source, )
-from core.preference import clean_preference, combine_preferences
 from core.properties import get_entity_properties, render_properties
-from core.utils import get_data_version_connection
-from query_translation.oqo import OQO, VALID_OPERATORS, filter_from_dict
+from query_translation.oqo import OQO
 from query_translation.oqo_canonicalizer import canonicalize_oqo
-from query_translation.oqo_to_es import (
-    OQOTranslationError, oqo_to_search_and_filter_q, )
-from query_translation.oql_parser import OQLParseError, parse_oql_to_oqo
-from query_translation.oql_renderer import render_oqo_to_oql, make_engine_resolver
+from query_translation.oql_parser import parse_oql_to_oqo
+from query_translation.oql_renderer import make_engine_resolver
 from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
 from query_translation.oql_render_v2 import render_v2
 from query_translation.url_parser import fold_scoped_search_params, parse_url_to_oqo
-from query_translation.url_renderer import (
-    URLRenderError, can_render_to_url, render_oqo_to_url, )
+from query_translation.url_renderer import URLRenderError, render_oqo_to_url
 from query_translation.x_query import (
     _components_to_oxurl, safe_get_display_name, )
 from query_translation.validator import (
-    ValidationError, ValidationResult, validate_oqo, _has_search_clause, )
+    ValidationError, ValidationResult, validate_oqo, )
 
 
 blueprint = Blueprint("query_translation", __name__)
@@ -367,7 +352,6 @@ def parse_oqo_input(entity_type: str, input_data):
     """Parse OQO format input."""
     try:
         if isinstance(input_data, str):
-            import json
             input_data = json.loads(input_data)
         
         # Ensure entity_type matches
@@ -403,19 +387,20 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
             type="url_not_representable", message=str(e)
         ))
 
-    # Render to OQL and oql_render tree
-    # Pass safe_get_display_name as entity resolver to include display names in oql_render
+    # One engine resolver shared by both renders below, so each (namespace, id)
+    # display-name lookup hits ES at most once per request (the cache lives in
+    # the resolver closure).
+    resolver = make_engine_resolver(safe_get_display_name)
+
+    # Render to OQL and oql_render tree (display names included via the resolver)
     oql_output, oql_render_tree = render_oqo_to_oql_and_tree(
-        canonical_oqo, entity_resolver=safe_get_display_name
+        canonical_oqo, engine_resolver=resolver
     )
 
     # oql_render v2 (oxjob #428): OQO-faithful, layout-bearing tree + logical
     # `lines` projection — drives the no-code builder rows + #463 view-code
     # gutter from the canonicalizer (one source of layout truth).
-    # Wrap the 1-arg prod resolver in make_engine_resolver (same as the OQL/tree
-    # path above) so it normalizes the id form before lookup — otherwise entity
-    # names render as "[no entity found]" in the v2 tree + #463's gutter (#428).
-    oql_render_v2 = render_v2(canonical_oqo, resolver=make_engine_resolver(safe_get_display_name))
+    oql_render_v2 = render_v2(canonical_oqo, resolver=resolver)
 
     # Build response
     return {

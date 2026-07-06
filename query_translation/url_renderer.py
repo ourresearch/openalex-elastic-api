@@ -196,15 +196,13 @@ def _bounded_range_collapse(filters: List[FilterType]):
     so `col:a-b` keeps its exact oxurl meaning (`>=a AND <=b`). Round-trips faithfully:
     `a-b` parses back to the same two leaves.
     """
-    GE_OPS = (">=", "is greater than or equal to")
-    LE_OPS = ("<=", "is less than or equal to")
     ge, le = {}, {}
     for i, f in enumerate(filters):
         if not isinstance(f, LeafFilter) or f.is_negated or f.value is None:
             continue
-        if f.operator in GE_OPS:
+        if f.operator == ">=":
             ge.setdefault(f.column_id, (i, f.value))
-        elif f.operator in LE_OPS:
+        elif f.operator == "<=":
             le.setdefault(f.column_id, (i, f.value))
 
     collapsed_range_at, consumed = {}, set()
@@ -271,20 +269,17 @@ def render_leaf_filter(f: LeafFilter) -> str:
     if negated:
         return f"{field}:!{str_value}"
 
-    # Handle operators
-    if operator in (">=", "is greater than or equal to"):
+    # Handle operators (symbolic forms only — see oqo.VALID_OPERATORS)
+    if operator == ">=":
         return f"{field}:{str_value}-"
-    elif operator in ("<=", "is less than or equal to"):
+    elif operator == "<=":
         return f"{field}:-{str_value}"
-    elif operator in (">", "is greater than"):
+    elif operator == ">":
         return f"{field}:>{str_value}"
-    elif operator in ("<", "is less than"):
+    elif operator == "<":
         return f"{field}:<{str_value}"
-    elif operator in ("has", "includes"):
-        # For search fields, just use the value
-        return f"{field}:{str_value}"
     else:
-        # Default: exact match
+        # Everything else (is, has, search): plain field:value
         return f"{field}:{str_value}"
 
 
@@ -375,61 +370,3 @@ def render_sort(sort_by: List[SortBy]) -> Optional[str]:
         return f"{column}:{s.direction or 'asc'}"
 
     return ",".join(_render_one(s) for s in sort_by)
-
-
-def can_render_to_url(oqo: OQO) -> Tuple[bool, Optional[str]]:
-    """
-    Check if an OQO can be rendered to URL format.
-    
-    Returns:
-        Tuple of (can_render, error_message)
-    """
-    try:
-        # Try to detect issues without full rendering
-        for f in oqo.filter_rows:
-            check_filter_expressible(f, depth=0)
-        return True, None
-    except URLRenderError as e:
-        return False, str(e)
-
-
-def check_filter_expressible(f: FilterType, depth: int = 0):
-    """Check if a filter can be expressed in URL format."""
-    if isinstance(f, LeafFilter):
-        # A semantic leaf becomes the top-level `search.semantic=` param, which
-        # has no negated form (see _extract_semantic). Negated is the only leaf
-        # shape that can't render; a plain semantic leaf is fine.
-        if _is_semantic_leaf(f) and getattr(f, "is_negated", False):
-            raise URLRenderError(
-                "Negated semantic search cannot be expressed in URL format"
-            )
-        return  # other leaf filters are always expressible
-
-    if isinstance(f, BranchFilter):
-        # A semantic clause must stand alone as the top-level param; nested in a
-        # boolean branch it can't be expressed.
-        _reject_nested_semantic(f)
-
-        if f.join == "and" and depth > 0:
-            raise URLRenderError(
-                "Nested AND logic cannot be expressed in URL format"
-            )
-        
-        if f.join == "or":
-            # Check all sub-filters are same field
-            fields = set()
-            for sub_f in f.filters:
-                if isinstance(sub_f, BranchFilter):
-                    raise URLRenderError(
-                        "Nested boolean logic cannot be expressed in URL format"
-                    )
-                fields.add(sub_f.column_id)
-            
-            if len(fields) > 1:
-                raise URLRenderError(
-                    "OR across different fields cannot be expressed in URL format"
-                )
-        
-        # Recursively check sub-filters
-        for sub_f in f.filters:
-            check_filter_expressible(sub_f, depth + 1)

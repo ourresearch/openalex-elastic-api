@@ -22,14 +22,19 @@ from query_translation.oql_renderer import make_engine_resolver
 def render_oqo_to_oql_and_tree(
     oqo: OQO,
     entity_resolver: Optional[Callable[[str], Optional[str]]] = None,
+    engine_resolver: Optional[Callable[[str, str], Optional[str]]] = None,
 ) -> Tuple[str, OQLRenderTree]:
     """Render an OQO to both canonical OQL and its oql_render tree.
 
     Args:
         oqo: the OQO to render
         entity_resolver: optional `entity_id -> display name` callable
+        engine_resolver: optional pre-built `(value, column_id) -> name` engine
+            resolver; pass this to share one lookup cache across several renders
+            of the same request (takes precedence over `entity_resolver`)
 
     Returns:
         (oql_string, oql_render_tree) — `stringify(tree) == oql_string`.
     """
-    return oql_lang.render_tree(oqo, resolver=make_engine_resolver(entity_resolver))
+    resolver = engine_resolver or make_engine_resolver(entity_resolver)
+    return oql_lang.render_tree(oqo, resolver=resolver)

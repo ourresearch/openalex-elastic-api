@@ -7,7 +7,7 @@ Handles the traditional query parameter syntax:
 
 import re
 from typing import Dict, List, Optional, Tuple, Any
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP, canonicalize_oqo_column_ids
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP, VALID_SORT_AGGREGATES, canonicalize_oqo_column_ids
 
 # A Collection membership ref: `col_<base58>` (mirrors core/fields.py
 # CollectionField.COLLECTION_ID_RE, `!` stripped before matching). A value of this
@@ -637,44 +637,22 @@ def is_range_pattern(value: str) -> bool:
     # ISO date - not a range
     if re.match(r"^\d{4}-\d{2}-\d{2}$", value):
         return False
-    
-    # Simple number range: digits-digits
-    if re.match(r"^\d+\.?\d*-\d+\.?\d*$", value):
-        return True
-    
-    # Year range (4-digit years)
-    if re.match(r"^\d{4}-\d{4}$", value):
-        return True
-    
-    return False
+
+    # Number range: digits-digits (covers year ranges too)
+    return bool(re.match(r"^\d+\.?\d*-\d+\.?\d*$", value))
 
 
 def parse_bounded_range(field: str, value: str) -> List[LeafFilter]:
     """
     Parse a bounded range (e.g., 2020-2024) into two filters.
     Returns a list because this is AND logic (>= start AND <= end).
+    The caller gates on `is_range_pattern`, so the split always yields two bounds.
     """
-    # For simple numeric ranges
-    if re.match(r"^\d+\.?\d*-\d+\.?\d*$", value):
-        parts = value.split("-")
-        start_value = parts[0]
-        end_value = parts[1]
-        
-        return [
-            LeafFilter(column_id=field, value=start_value, operator=">="),
-            LeafFilter(column_id=field, value=end_value, operator="<=")
-        ]
-    
-    # For year ranges
-    if re.match(r"^\d{4}-\d{4}$", value):
-        parts = value.split("-")
-        return [
-            LeafFilter(column_id=field, value=parts[0], operator=">="),
-            LeafFilter(column_id=field, value=parts[1], operator="<=")
-        ]
-    
-    # Default: treat as exact match
-    return [LeafFilter(column_id=field, value=value, operator="is")]
+    start_value, end_value = value.split("-")
+    return [
+        LeafFilter(column_id=field, value=start_value, operator=">="),
+        LeafFilter(column_id=field, value=end_value, operator="<=")
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -896,15 +874,12 @@ def parse_sort_string(sort_string: str) -> List[SortBy]:
 # Public metric names valid in the dotted `<column>.<metric>` group-sort form
 # (oxjob #389). Mirrors core.group_by.buckets.GROUP_BY_METRICS keys; kept local so
 # the pure URL parser stays free of the elasticsearch-importing buckets module.
-_METRIC_SORT_AGGREGATES = ("mean", "sum", "min", "max")
-
-
 def _split_metric_sort_column(column):
     """Peel a trailing `.<metric>` off a sort column, returning
     `(column_id, aggregate)`. `(column, None)` when there is no metric suffix.
     Only the LAST dotted segment is considered the metric, so a column like
     `apc_paid.value_usd` (no metric tail) is returned unchanged."""
     field_part, _, last = column.rpartition(".")
-    if field_part and last in _METRIC_SORT_AGGREGATES:
+    if field_part and last in VALID_SORT_AGGREGATES:
         return field_part, last
     return column, None

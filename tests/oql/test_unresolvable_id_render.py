@@ -99,11 +99,9 @@ def test_wired_homonym_id_columns_are_name_resolvable(entity, column):
     assert oql_lang.render_tree(oqo, resolver=_MISS)[0].endswith("[no entity found])")
 
 
-def test_value_segments_concatenate_to_value_with_name():
-    # The documented contract: _value_segments must concatenate to exactly what
-    # _value_with_name returns (here, the miss branch).
+def test_value_segments_concatenate_to_annotated_value():
+    # The segments of an annotated value concatenate to the exact rendered
+    # string (here, the miss branch).
     fld = oql_lang._BY_COLUMN[_AUTHOR_COL]
-    s = oql_lang._value_with_name(fld, "a9999999999", _AUTHOR_COL, _MISS)
     segs, _ = oql_lang._value_segments(fld, "a9999999999", _AUTHOR_COL, _MISS)
-    assert "".join(seg.text for seg in segs) == s
-    assert s == "a9999999999 [no entity found]"
+    assert "".join(seg.text for seg in segs) == "a9999999999 [no entity found]"

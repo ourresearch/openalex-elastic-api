@@ -31,7 +31,7 @@ from typing import List, Optional, Dict, Any
 from query_translation.oql_lang import (
     lex, Tok, OQLError, Field, _Parser,
     _ALIAS, _FIELDS, ENTITY_TYPES, _CONNECTIVES,
-    match_field, match_operator, match_row_subject,
+    match_field, match_operator,
     CTX_ENTITY, CTX_FIELD, CTX_OPERATOR, CTX_VERB, CTX_VALUE, CTX_CONNECTIVE,
     CTX_DIRECTIVE, CTX_END, CTX_NONE,
 )
@@ -146,7 +146,7 @@ def _diag(e: OQLError) -> Dict[str, Any]:
             "position": e.position}
 
 
-def _entity_suggestions(prefix: str) -> List[Dict[str, str]]:
+def _entity_suggestions() -> List[Dict[str, str]]:
     return [{"value": e, "kind": "entity"} for e in sorted(ENTITY_TYPES)]
 
 
@@ -200,7 +200,7 @@ def _shape(raw: Dict[str, Any]) -> Dict[str, Any]:
     context dict (concrete suggestion lists, value_kind, autocomplete_entity)."""
     cat = raw["category"]
     if cat == ENTITY:
-        return {"category": ENTITY, "suggestions": _entity_suggestions("")}
+        return {"category": ENTITY, "suggestions": _entity_suggestions()}
     if cat == FIELD:
         out = {"category": FIELD, "suggestions": _field_suggestions()}
         if raw.get("directive"):

@@ -385,6 +385,11 @@ def canonicalize_column_id(column_id, entity_type):
 # ---------------------------------------------------------------------------
 
 
+# Boot-static per-entity caches (ENTITY_PROPERTIES is immutable after boot):
+# get_entity_capabilities runs on every OQO validation.
+_CAPABILITIES_CACHE = {}
+
+
 def get_entity_capabilities(entity_type):
     """{property_name: frozenset(capabilities)} for an entity, or None if the entity
     is unknown (no filter registry AND no result schema). The single source of truth
@@ -393,14 +398,19 @@ def get_entity_capabilities(entity_type):
     which keep the same capabilities as their canonical so a raw-URL-accepted alias
     sort/group key never rejects — and unions the `column` capability from the
     result schema."""
+    if entity_type in _CAPABILITIES_CACHE:
+        return _CAPABILITIES_CACHE[entity_type]
     base = ENTITY_PROPERTIES.get(entity_type)
     selectable = get_selectable_fields(entity_type)
     if base is None and selectable is None:
-        return None
-    caps = {name: set(prop.actions) for name, prop in (base or {}).items()}
-    for name in (selectable or set()):
-        caps.setdefault(name, set()).add(CAP_COLUMN)
-    return {name: frozenset(affordances) for name, affordances in caps.items()}
+        result = None
+    else:
+        caps = {name: set(prop.actions) for name, prop in (base or {}).items()}
+        for name in (selectable or set()):
+            caps.setdefault(name, set()).add(CAP_COLUMN)
+        result = {name: frozenset(affordances) for name, affordances in caps.items()}
+    _CAPABILITIES_CACHE[entity_type] = result
+    return result
 
 
 def get_entity_columns(entity_type):
@@ -502,6 +512,11 @@ def _merged_properties(entity_type):
     return merged
 
 
+# Built once per process (the catalog is boot-static); /properties serves it on
+# every request. Treat the cached object as immutable.
+_CANONICAL_CATALOG_CACHE = None
+
+
 def _canonical_catalog():
     """The full {entity: {property_name: serialized}} catalog, fully sorted.
 
@@ -509,13 +524,16 @@ def _canonical_catalog():
     union (`_merged_properties`). Entities and property names sorted here;
     operators/actions sorted inside `Property.serialize()`. This is the exact
     object the fingerprint hashes."""
-    return {
-        entity: {
-            name: merged[name].serialize() for name in sorted(merged)
+    global _CANONICAL_CATALOG_CACHE
+    if _CANONICAL_CATALOG_CACHE is None:
+        _CANONICAL_CATALOG_CACHE = {
+            entity: {
+                name: merged[name].serialize() for name in sorted(merged)
+            }
+            for entity in sorted(ENTITY_PROPERTIES)
+            for merged in (_merged_properties(entity),)
         }
-        for entity in sorted(ENTITY_PROPERTIES)
-        for merged in (_merged_properties(entity),)
-    }
+    return _CANONICAL_CATALOG_CACHE
 
 
 def canonical_bytes(catalog):
@@ -525,12 +543,20 @@ def canonical_bytes(catalog):
     return json.dumps(catalog, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
+_FINGERPRINT_CACHE = None
+
+
 def properties_fingerprint(catalog=None):
     """sha256 hex of the canonical catalog bytes. Hashes ONLY the properties
     (not `meta`) so the fingerprint moves iff the contract content moves —
-    `PROPERTIES_VERSION` is independent (human-curated)."""
-    if catalog is None:
-        catalog = _canonical_catalog()
+    `PROPERTIES_VERSION` is independent (human-curated). The default (whole
+    canonical catalog) is boot-static, so its hash is computed once."""
+    global _FINGERPRINT_CACHE
+    if catalog is None or catalog is _CANONICAL_CATALOG_CACHE:
+        if _FINGERPRINT_CACHE is None:
+            _FINGERPRINT_CACHE = hashlib.sha256(
+                canonical_bytes(_canonical_catalog())).hexdigest()
+        return _FINGERPRINT_CACHE
     return hashlib.sha256(canonical_bytes(catalog)).hexdigest()
 
 

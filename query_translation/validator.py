@@ -24,7 +24,6 @@ from typing import Any, Dict, List, Optional
 from core.entities import entity_for_id_prefix, get_entity_type
 from core.fields import Property
 from core.properties import (
-    CAP_COLUMN,
     CAP_GROUP_BY,
     CAP_SORT,
     ENTITY_PROPERTIES,
@@ -40,6 +39,7 @@ from query_translation.oqo import (
     FilterType,
     SortBy,
     VALID_OPERATORS,
+    VALID_SORT_AGGREGATES,
     VALID_CORPORA,
 )
 
@@ -197,14 +197,6 @@ RELEVANCE_SORT_COLUMN = "relevance_score"
 # not entity columns, so they get their own allow-rule below, gated on group_by
 # (#323 Pattern G1 — without it `?group_by=type&sort=count:desc` 400s `invalid_column`).
 GROUP_BY_SORT_KEYS = {"count", "key"}
-
-# Metric-aggregate group sort (oxjob #389): a `SortBy` may carry an `aggregate`
-# (mean/sum/min/max) to order the group_by buckets by a metric sub-aggregation of
-# its (numeric) `column_id`, e.g. funders ranked by mean(cited_by_count). Mirrors
-# core.group_by.buckets.GROUP_BY_METRICS keys; kept local so the validator doesn't
-# import the elasticsearch-heavy buckets module.
-VALID_SORT_AGGREGATES = {"mean", "sum", "min", "max"}
-
 
 def _has_search_clause(filter_rows: List["FilterType"]) -> bool:
     """True if any leaf in the filter tree is a `*.search` (free-text) clause.
