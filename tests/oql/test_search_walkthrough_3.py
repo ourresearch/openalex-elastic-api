@@ -90,8 +90,10 @@ def test_case5_field_resolution_round_trips():
 
 
 def test_case5_language_resolves_name():
-    from query_translation.oql_lang import _ALIAS
-    assert _ALIAS["language"].resolves_name is True
+    # #565: name-resolvability derives from the registry entity_type
+    # (languages is a closed code vocab, not a "super obvious" enum).
+    from query_translation.oql_lang import namespace_for_column
+    assert namespace_for_column("language") == "languages"
 
 
 # --------------------------------------------------------------------------- #

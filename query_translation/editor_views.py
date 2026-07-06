@@ -21,32 +21,31 @@ from query_translation.diagnostics import (
 from query_translation.oql_context import parse_context as _parse_context
 from query_translation.oql_lang import (
     parse as _engine_parse, parse_collecting as _engine_parse_collecting,
+    entity_type_for_column,
 )
 from query_translation.oql_renderer import config_vocab_items
-from query_translation.validator import validate_oqo
+from query_translation.validator import validate_oqo, CLOSED_VOCAB_NAMESPACE
 
 blueprint = Blueprint("oql_editor", __name__)
 
-# enum-value autocomplete (#357): OQL field column -> the closed-vocab config namespace
-# whose values populate the dropdown. Only columns backed by a `config/*.yaml` values
-# list are here (countries/languages/types/oa-statuses); source-type / institution-type
-# have no closed config vocab yet, so they keep the bare "unknown" suggestion.
-_ENUM_COLUMN_NAMESPACE = {
-    "type": "types",
-    "open_access.oa_status": "oa-statuses",
-    "language": "languages",
-    "authorships.countries": "countries",
-    "country_code": "countries",
-    "last_known_institutions.country_code": "countries",
-}
+# Closed-vocab value autocomplete (#357): a column's dropdown namespace derives
+# from the registry — `entity_type_for_column` composed with the validator's
+# CLOSED_VOCAB_NAMESPACE (oxjob #565; formerly a 6-entry hand map here that
+# silently missed every closed-vocab column outside it). Only entity_types with
+# a `config/*.yaml` values list produce suggestions; source-type /
+# institution-type / licenses have no closed config vocab yet, so they keep the
+# bare "unknown" suggestion. Covers id-kind closed vocabs too (SDGs,
+# continents, domains/fields/subfields) — their /autocomplete route 404s, so
+# the static vocab IS the dropdown; open id namespaces (institutions, authors)
+# have no config table and contribute nothing here (the live route serves them).
 
 
-def _enum_slugs(column):
+def _enum_slugs(column, entity=None):
     """The closed-vocab slug suggestions for an OQL field column, or [] if the column
     has no `config/*.yaml` values list. Each entry carries a display-name `detail`
     only when it adds information beyond the slug (countries/languages), so the editor
     can match by name and insert the code."""
-    namespace = _ENUM_COLUMN_NAMESPACE.get(column)
+    namespace = CLOSED_VOCAB_NAMESPACE.get(entity_type_for_column(column, entity))
     if not namespace:
         return []
     return [
@@ -57,21 +56,22 @@ def _enum_slugs(column):
 
 
 def _enrich_enum_suggestions(result):
-    """Attach closed-vocab enum slugs in two places (mutates + returns `result`; pure,
+    """Attach closed-vocab value slugs in two places (mutates + returns `result`; pure,
     safe on every /parse-context response):
 
     1. **Value slot** — `type is ▮` offers article/dataset/… instead of only "unknown".
     2. **Sectioned-menu sibling** (#357) — after `type is article or ▮`, the post-
        connective FIELD context's `sibling` gets `sibling.values` so the editor's
        "add another <field> value" section can list them for the auto-paren rewrite."""
+    entity = result.get("entity")
     ctx = result.get("context") or {}
-    if ctx.get("value_kind") == "enum":
-        slugs = _enum_slugs(ctx.get("column"))
+    if ctx.get("value_kind") in ("enum", "id"):
+        slugs = _enum_slugs(ctx.get("column"), entity)
         if slugs:
             ctx["suggestions"] = slugs + (ctx.get("suggestions") or [])
     sib = ctx.get("sibling")
-    if sib and sib.get("value_kind") == "enum":
-        sib_slugs = _enum_slugs(sib.get("column"))
+    if sib and sib.get("value_kind") in ("enum", "id"):
+        sib_slugs = _enum_slugs(sib.get("column"), entity)
         if sib_slugs:
             sib["values"] = sib_slugs
     return result

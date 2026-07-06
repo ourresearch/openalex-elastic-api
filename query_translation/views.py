@@ -390,7 +390,8 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
     # One engine resolver shared by both renders below, so each (namespace, id)
     # display-name lookup hits ES at most once per request (the cache lives in
     # the resolver closure).
-    resolver = make_engine_resolver(safe_get_display_name)
+    resolver = make_engine_resolver(safe_get_display_name,
+                                    entity=canonical_oqo.get_rows)
 
     # Render to OQL and oql_render tree (display names included via the resolver)
     oql_output, oql_render_tree = render_oqo_to_oql_and_tree(

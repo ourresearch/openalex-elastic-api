@@ -36,5 +36,6 @@ def render_oqo_to_oql_and_tree(
     Returns:
         (oql_string, oql_render_tree) — `stringify(tree) == oql_string`.
     """
-    resolver = engine_resolver or make_engine_resolver(entity_resolver)
+    resolver = engine_resolver or make_engine_resolver(
+        entity_resolver, entity=oqo.get_rows)
     return oql_lang.render_tree(oqo, resolver=resolver)

@@ -63,16 +63,16 @@ from query_translation.diagnostics import OQLError, OQLHint, oql_error  # noqa: 
 #                      OpenAlex ID's uppercase prefix is its conventional form;
 #                      search text is the user's literal text). col_… refs are
 #                      ALWAYS preserved regardless of casing (they self-identify).
-# resolves_name: the renderer synthesizes a `[display name]` for this column's
-# values (opaque IDs + country codes), via an entity resolver. Human-readable
-# slugs (article, gold, en) don't — `article [article]` is noise.
+# Whether the renderer synthesizes a `[display name]` for a column's values
+# (opaque IDs + country codes — human-readable slugs like article/gold don't;
+# `article [article]` is noise) is NOT stored here: it derives from the
+# registry's `entity_type` via `namespace_for_column` (oxjob #565).
 @dataclass
 class Field:
     column: str          # base column (search) or full column_id (non-search)
     kind: str
     oql: str             # canonical OQL spelling for rendering
     casing: str = ""     # '' | 'lower' | 'upper'
-    resolves_name: bool = False
     is_float: bool = False  # num kind: True = decimals allowed (fwci); False = integer
                             # (year, count). Integer fields collapse a strict bound
                             # PAIR to an inclusive range via ±1 (`>42 and <100` -> 43-99).
@@ -96,14 +96,11 @@ _FIELDS: List[Tuple[List[str], Field]] = []  # (alias-spellings, Field)
 
 
 def _f(oql, column, kind, aliases=(),
-       casing=None, resolves_name=None, is_float=False,
+       casing=None, is_float=False,
        date_from_col="", date_to_col="", date_axis="", date_bound=""):
     if casing is None:
         casing = "lower" if kind == "enum" else ""
-    if resolves_name is None:
-        resolves_name = (kind == "id")
     fld = Field(column=column, kind=kind, oql=oql, casing=casing,
-                resolves_name=resolves_name,
                 is_float=is_float, date_from_col=date_from_col, date_to_col=date_to_col,
                 date_axis=date_axis, date_bound=date_bound)
     spellings = [oql] + list(aliases)
@@ -129,7 +126,7 @@ def _canon_value_case(value, fld: "Field"):
 #
 # `_FIELDS` exists ONLY for OQL's parse/render *mechanics* that the engine registry
 # doesn't model: the `kind` (search/id/enum/num/string/bool), value `casing`,
-# `resolves_name`, and the `.search` mode encoding. (Booleans render as a plain
+# and the `.search` mode encoding. (Booleans render as a plain
 # `<name> is true|false` clause — no sentence templates.) The *column a word resolves
 # to per entity* is derived
 # from the registry at parse time (`_entity_resolve_field`) and render time
@@ -284,7 +281,7 @@ _f("cited by", "cited_by", "id")
 # queried entity (works-centric registry → "work"). Cross-type membership reuses the
 # referenced entity's own column (e.g. `country`/`institution`/`author`) — no separate
 # field. kind "collection" parses a bare col_… scalar (no name resolution). (oxjob #363)
-_f("work", "collection", "collection", aliases=["works"], resolves_name=False)
+_f("work", "collection", "collection", aliases=["works"])
 
 # --- enums (slug values) ---
 _f("type", "type", "enum")
@@ -294,14 +291,12 @@ _f("type", "type", "enum")
 # "OA status" input alias lives in the registry (#406 1c).
 _f("open access status", "open_access.oa_status", "enum", aliases=["oa_status"])
 # Country codes: ISO uppercase canonical + resolve a [display name] (Germany, not de).
-_f("country", "authorships.countries", "enum",
-   casing="upper", resolves_name=True)
-_f("country code", "country_code", "enum",
-   casing="upper", resolves_name=True)
-_f("author country", "last_known_institutions.country_code", "enum", casing="upper", resolves_name=True)
+_f("country", "authorships.countries", "enum", casing="upper")
+_f("country code", "country_code", "enum", casing="upper")
+_f("author country", "last_known_institutions.country_code", "enum", casing="upper")
 # Languages resolve a [display name] (English, not en) from config/languages.yaml,
 # like countries — a closed code vocabulary, not a "super obvious" enum. (oxjob #363 case 5)
-_f("language", "language", "enum", resolves_name=True)
+_f("language", "language", "enum")
 # The source's type (journal / conference / repository / ebook platform / book series /
 # metadata / other). Render word = the engine registry display_name `source type`
 # (`core/display_names.py`). Slug enum; multi-word values like "ebook platform" are
@@ -366,7 +361,7 @@ _f("estimated APC paid", "apc_paid.value_usd", "num", is_float=True)
 # ROR *is* the identifier the user types). Engine param authorships.institutions.ror.
 _f("ROR ID", "authorships.institutions.ror", "string")
 # Work-relationship id filters, mirroring cited_by: each references a WORK, so
-# they name-resolve via the `works` namespace (see oql_renderer._RESOLVE_NAMESPACE).
+# they name-resolve via the `works` namespace (edge overrides in namespace_for_column).
 # referenced_works = this work's reference list; related_to = OpenAlex "related works".
 # #557 word unification: referenced_works's word is "cites" everywhere (filter
 # verb, column header, sort) — matching the prod GUI chips and the oxurl input
@@ -452,7 +447,7 @@ _f("any location version", "locations.version", "string")
 _f("best OA source type", "best_oa_location.source.type", "enum")
 _f("any location source type", "locations.source.type", "enum")
 # source id: entity-id reference, name-resolved via the sources namespace (mirrors primary's
-# "source"). _RESOLVE_NAMESPACE entries added in oql_renderer.py.
+# "source"). Name resolution derives from registry entity_type (#565).
 _f("best OA source", "best_oa_location.source.id", "id")
 _f("any location source", "locations.source.id", "id")
 
@@ -463,7 +458,7 @@ _f("any location source", "locations.source.id", "id")
 # slug enum, mirrors source type. GUI displayName "institution type".
 _f("institution type", "authorships.institutions.type", "enum")
 # awards: grant/award entity-id, name-resolved via the awards namespace. GUI displayName
-# "awards" (entityToSelect awards). _RESOLVE_NAMESPACE entry in oql_renderer.py.
+# "awards" (entityToSelect awards). Name resolution derives from entity_type (#565).
 _f("awards", "awards.id", "id")
 # continent of an affiliated institution. GUI facet "Continent" (entityToSelect continents);
 # values are `continents/Q15`-style ids that resolve to a name (Africa, Europe, …) via the
@@ -805,7 +800,7 @@ def _build_registry_fallback() -> Dict[str, "Field"]:
             continue
         kind = _registry_kind(prop, surface_rich_kinds=False)
         out[key] = Field(column=cid, kind=kind, oql=cid, casing="",
-                         resolves_name=False, is_float=(kind == "num"))
+                         is_float=(kind == "num"))
     return out
 
 
@@ -829,8 +824,8 @@ def _registry_fallback_field(word: str) -> Optional["Field"]:
 # `display_name`/`aliases` (the gate `test_oql_render_word_equals_registry_
 # display_name` keeps the OQL word == the works display_name, so the same friendly
 # word indexes the entity-correct column on every entity). So: after the curated
-# `match_field` gives us a Field's OQL render/parse *mechanics* (kind, casing,
-# resolves_name), we re-point its *column* at the entity-correct one. Drift-proof:
+# `match_field` gives us a Field's OQL render/parse *mechanics* (kind, casing),
+# we re-point its *column* at the entity-correct one. Drift-proof:
 # no hand-kept per-field override table — the registry's own display_names drive it.
 _ENTITY_WORD_INDEX_CACHE: Dict[str, Dict[str, str]] = {}
 
@@ -929,7 +924,7 @@ def _build_entity_fallback(entity: str) -> Dict[str, "Field"]:
         if "search" in ops or "collection" in ops:
             continue
         # Reuse the curated Field when one exists — full fidelity (kind, casing,
-        # resolves_name, and for booleans the sentence phrasing), so a removed alias
+        # and for booleans the sentence phrasing), so a removed alias
         # re-resolves to EXACTLY the curated behavior.
         curated = _BY_COLUMN.get(cid)
         if curated is not None and curated.kind not in ("search", "collection"):
@@ -944,7 +939,6 @@ def _build_entity_fallback(entity: str) -> Dict[str, "Field"]:
             if not dn0:
                 continue
             fld = Field(column=cid, kind=kind, oql=dn0, casing="",
-                        resolves_name=(kind == "id"),
                         is_float=(kind == "num" and "mean_citedness" in cid))
         # parse by display_name, registry aliases, and the raw column_id
         for key in [getattr(prop, "display_name", "")] + list(getattr(prop, "aliases", []) or []) + [cid]:
@@ -1106,6 +1100,126 @@ def _build_by_column() -> None:
 
 
 _build_by_column()
+
+
+# --- registry-derived namespace resolution (oxjob #565) ----------------------
+# "Which entity namespace does this column's value belong to" used to live in
+# THREE hand-maintained maps (renderer `_RESOLVE_NAMESPACE`, editor
+# `_COLUMN_AUTOCOMPLETE_ENTITY`, enum `_ENUM_COLUMN_NAMESPACE`) plus a fourth
+# boolean copy (`Field.resolves_name`) — the #418/#455 silent-drift class
+# (every new id column rendered bare / got no autocomplete until someone
+# updated all four). The registry already knows the answer:
+# `Property.entity_type` — exactly how the validator resolves namespaces.
+# Derivation, strongest first:
+#   1. override — the relation-edge oddballs the registry can't carry (below)
+#   2. direct   — `ENTITY_PROPERTIES[entity][column_id].entity_type`,
+#                 checking the preferred `entity` first, then works, then
+#                 every entity (spellings are disjoint across entities in
+#                 practice — the #406 exceptions are all overridden/excluded)
+#   3. homonym  — a column with no direct entity_type whose `_BY_COLUMN`
+#                 Field is the entity-correct spelling of a curated word
+#                 (#406): resolve the word per entity and read the resolved
+#                 column's entity_type (topics' `domain.id` -> works'
+#                 `primary_topic.domain.id` -> "domains"; locations'
+#                 `source_id` -> `primary_location.source.id` -> "sources").
+
+_ENTITY_TYPE_OVERRIDES: Dict[str, Optional[str]] = {
+    # Citation/relation edges reference a WORK. The registry deliberately
+    # carries no entity_type on them — entity_type also grants collection
+    # resolution (#394), a semantic decision not (yet) taken for edges.
+    "cited_by": "works",
+    "cites": "works",
+    "referenced_works": "works",
+    "related_to": "works",
+}
+
+# A row's OWN id never name-annotates: a resolver miss there means "no name
+# for this kind of column", not "entity not found" (#418) — and bare `id`
+# means a different entity on every entity page, so a global answer would lie.
+_SELF_ID_COLUMNS = {"ids.openalex", "id", "openalex", "openalex_id"}
+
+# entity_types whose values are self-describing slugs (`article`, `gold`,
+# `cc-by`): annotating them (`article [article]`) is noise, so they carry NO
+# annotation namespace. They still validate and autocomplete through their
+# closed vocab (validator.CLOSED_VOCAB_NAMESPACE ∘ entity_type_for_column).
+_READABLE_SLUG_TYPES = {"work-types", "oa-statuses", "source-types",
+                        "institution-types", "licenses"}
+
+_ENTITY_TYPE_CACHE: Dict[Tuple[str, Optional[str]], Optional[str]] = {}
+
+
+def entity_type_for_column(column_id: str, entity: Optional[str] = None
+                           ) -> Optional[str]:
+    """The registry `entity_type` of `column_id`'s values (raw: `work-types`,
+    `countries`, `authors`, …), or None. The single derived source behind every
+    column→namespace consumer (renderer annotation, editor autocomplete, enum
+    suggestions). `entity` is a preference, not a scope — a column the given
+    entity doesn't type still resolves via works / the other entities, matching
+    the entity-blind behavior of the hand maps this replaces."""
+    key = (column_id, entity)
+    if key in _ENTITY_TYPE_CACHE:
+        return _ENTITY_TYPE_CACHE[key]
+    _ENTITY_TYPE_CACHE[key] = et = _derive_entity_type(column_id, entity)
+    return et
+
+
+def _derive_entity_type(column_id: str, entity: Optional[str]) -> Optional[str]:
+    if column_id in _ENTITY_TYPE_OVERRIDES:
+        return _ENTITY_TYPE_OVERRIDES[column_id]
+    try:
+        from core.properties import ENTITY_PROPERTIES
+    except Exception:
+        return None
+    order = []
+    for e in ([entity] if entity else []) + ["works"] + list(ENTITY_PROPERTIES):
+        if e in ENTITY_PROPERTIES and e not in order:
+            order.append(e)
+    for e in order:
+        prop = ENTITY_PROPERTIES[e].get(column_id)
+        et = getattr(prop, "entity_type", None) if prop is not None else None
+        if et:
+            return et
+    # Homonym fallback (#406): this column may be the entity-correct spelling
+    # of a curated word — read the entity_type off the column that word
+    # resolves to where it IS typed.
+    fld = _BY_COLUMN.get(column_id)
+    if fld is None or fld.kind in ("search", "collection"):
+        return None
+    candidates = [fld.column] if fld.column != column_id else []
+    for e in order:
+        resolved_col = _entity_resolve_field(fld, e).column
+        if resolved_col != column_id and resolved_col not in candidates:
+            candidates.append(resolved_col)
+    for col in candidates:
+        for e in order:
+            prop = ENTITY_PROPERTIES[e].get(col)
+            et = getattr(prop, "entity_type", None) if prop is not None else None
+            if et:
+                return et
+    return None
+
+
+def namespace_for_column(column_id: str, entity: Optional[str] = None
+                         ) -> Optional[str]:
+    """The name-ANNOTATION namespace for `column_id`, or None when its values
+    never annotate (self-ids, readable slugs, un-namespaced columns). Non-None
+    means: the renderer looks values up as `<namespace>/<short_id>` (native ES
+    entities + the config/*.yaml closed vocabs), annotates hits `[Name]`, and
+    marks misses `[no entity found]` (#418)."""
+    if column_id in _SELF_ID_COLUMNS:
+        return None
+    fld = _BY_COLUMN.get(column_id)
+    if fld is not None and fld.kind in ("search", "collection"):
+        # search terms aren't entity values; a collection column's values are
+        # opaque col_… refs (its entity_type exists for collection RESOLUTION,
+        # not display names).
+        return None
+    et = entity_type_for_column(column_id, entity)
+    if et is None or et in _READABLE_SLUG_TYPES:
+        return None
+    # the one entity_type whose config namespace differs is work-types->types,
+    # and it's slug-excluded above — so namespace == entity_type here.
+    return et
 
 
 def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool]]:
@@ -2862,22 +2976,26 @@ _NAME_ANNOTATION_MAX = 50
 _NO_ENTITY_ANNOTATION = "[no entity found]"
 
 
-_RESOLVE_NAMESPACE_MAP = None  # set on first use (lazy — see below)
-
-
 def _column_resolves_name(column_id) -> bool:
-    """True if this column is name-resolvable in production — i.e. the engine
-    resolver (`oql_renderer._RESOLVE_NAMESPACE`) maps it to a real namespace.
-    A `None`/absent mapping means the column never shows a name (entity self-ids
-    like `ids.openalex`, bare work ids), so a resolver miss there is "no name for
-    this kind of column", NOT "entity not found" — those stay bare (oxjob #418).
-    Lazy import, cached in a module global: `oql_renderer` imports this module at
-    load, so a top-level import would deadlock the package init cycle."""
-    global _RESOLVE_NAMESPACE_MAP
-    if _RESOLVE_NAMESPACE_MAP is None:
-        from query_translation.oql_renderer import _RESOLVE_NAMESPACE  # lazy (cycle)
-        _RESOLVE_NAMESPACE_MAP = _RESOLVE_NAMESPACE
-    return _RESOLVE_NAMESPACE_MAP.get(column_id) is not None
+    """True if this column is name-resolvable in production — i.e. it derives
+    an annotation namespace from the registry (`namespace_for_column`, #565).
+    A None namespace means the column never shows a name (entity self-ids like
+    `ids.openalex`, readable slugs), so a resolver miss there is "no name for
+    this kind of column", NOT "entity not found" — those stay bare (oxjob #418)."""
+    return namespace_for_column(column_id) is not None
+
+
+def _resolver_covers(resolver, column_id) -> bool:
+    """Whether the render should consult `resolver` for this column's display
+    names — and, on a miss, mark the value `[no entity found]` (#418). An
+    entity-aware engine resolver (oql_renderer.make_engine_resolver) exposes
+    its own coverage as `.covers`, guaranteeing the gate and the lookup can
+    never disagree; plain callables (corpus/test lambdas) fall back to the
+    entity-blind registry derivation."""
+    covers = getattr(resolver, "covers", None)
+    if covers is not None:
+        return bool(covers(column_id))
+    return _column_resolves_name(column_id)
 
 
 def _truncate_name(name: str) -> str:
@@ -2990,12 +3108,17 @@ def _seg(kind, text, **meta):
 
 def _value_segments(fld, value, column_id, resolver):
     """Segments for one value: the bare value, then ` [name]` when the column
-    resolves a display name (truncated to a uniform length with an ellipsis)."""
+    resolves a display name (truncated to a uniform length with an ellipsis).
+    Whether a column resolves names at all derives from the registry
+    (`_resolver_covers` -> `namespace_for_column`, #565) — a non-covered column
+    (self-id, readable slug, no entity_type) never consults the resolver and
+    stays bare."""
     rendered = _render_value(fld, value)
     segs = [_seg("value", rendered, value=value, column_id=column_id)]
     entity = None
-    if (resolver and fld and fld.resolves_name and isinstance(value, str)
-            and not value.startswith("col_")):
+    if (resolver and fld and fld.kind not in ("search", "collection")
+            and isinstance(value, str) and not value.startswith("col_")
+            and _resolver_covers(resolver, column_id)):
         name = _call_resolver(resolver, value, column_id)
         if name:
             shown = _truncate_name(name)
@@ -3003,14 +3126,14 @@ def _value_segments(fld, value, column_id, resolver):
             segs.append(_seg("id", f"[{shown}]", entity_display_name=shown,
                              entity_display_id=f"[{shown}]"))
             entity = EntityValue(id=value, short_id=value, display_name=name)
-        elif _column_resolves_name(column_id):
+        else:
             # Resolver consulted, no match → a shape-valid ID that doesn't exist
             # (deleted / merged-not-followed / typo). Mark it so a reader can't
             # confuse it with the resolverless case (no resolver → bare ID,
             # nothing was looked up). Display-only; the `[...]` annotation is
-            # discarded on re-parse. Only for production-name-resolvable columns
-            # — a miss on a self-id column means "no name for this kind of
-            # column", not "entity not found", so those stay bare. (oxjob #418)
+            # discarded on re-parse. Only covered columns reach here — a miss
+            # on a self-id column means "no name for this kind of column", not
+            # "entity not found", so those stay bare. (oxjob #418)
             segs.append(_seg("text", " "))
             segs.append(_seg("id", _NO_ENTITY_ANNOTATION))
     return segs, entity

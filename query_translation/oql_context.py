@@ -31,7 +31,7 @@ from typing import List, Optional, Dict, Any
 from query_translation.oql_lang import (
     lex, Tok, OQLError, Field, _Parser,
     _ALIAS, _FIELDS, ENTITY_TYPES, _CONNECTIVES,
-    match_field, match_operator,
+    match_field, match_operator, namespace_for_column,
     CTX_ENTITY, CTX_FIELD, CTX_OPERATOR, CTX_VERB, CTX_VALUE, CTX_CONNECTIVE,
     CTX_DIRECTIVE, CTX_END, CTX_NONE,
 )
@@ -78,28 +78,15 @@ KIND_OPERATORS: Dict[str, List[str]] = {
     "string": ["is", "is not", "is unknown"],
 }
 
-# id-kind column_id -> the entity type whose /autocomplete/{entity} resolves its values.
-# Subset of core/fields.py:ENTITY_ID_PARAM_TYPES covering the columns the OQL grammar
-# exposes (hardcoded here to keep this module pure / Flask-free). Columns with no live
-# /autocomplete route (sdgs/domains/fields) still return the semantic entity; the editor
-# falls back to enum/free-text when the route 404s or is empty.
-_COLUMN_AUTOCOMPLETE_ENTITY: Dict[str, str] = {
-    "authorships.institutions.lineage": "institutions",
-    "last_known_institutions.id": "institutions",
-    "authorships.author.id": "authors",
-    "primary_location.source.id": "sources",
-    "primary_topic.id": "topics",
-    "topics.id": "topics",
-    "funders.id": "funders",
-    "sustainable_development_goals.id": "sdgs",
-    "domain.id": "domains",
-    "primary_topic.field.id": "fields",
-    # citation/relation edges take W-ids — resolve via the works namespace (#557)
-    "referenced_works": "works",
-    "cited_by": "works",
-    "related_to": "works",
-    # ids.openalex (the work's own id) intentionally absent -> null (free text).
-}
+# An id-kind column's value-autocomplete entity (the `/autocomplete/{entity}`
+# route) is the column's registry-derived namespace — `namespace_for_column`
+# (oxjob #565; formerly a hand-maintained `_COLUMN_AUTOCOMPLETE_ENTITY` map
+# here, which had silently drifted ~10 columns behind the renderer's map).
+# Self-ids (ids.openalex) derive None -> free text. Columns with no live
+# /autocomplete route (sdgs/domains/fields) still return the semantic entity;
+# the editor falls back to enum/free-text when the route 404s or is empty.
+# Module purity is preserved: the derivation lives in oql_lang and degrades to
+# None without the engine registry.
 
 
 # --- token-span helpers (cursor geometry) ------------------------------------
@@ -182,7 +169,7 @@ def _value_context(category, fld: Field, in_list=False) -> Dict[str, Any]:
         "suggestions": [],
     }
     if fld.kind == "id":
-        ctx["autocomplete_entity"] = _COLUMN_AUTOCOMPLETE_ENTITY.get(fld.column)
+        ctx["autocomplete_entity"] = namespace_for_column(fld.column)
     if fld.kind in ("num", "id", "enum", "string"):
         ctx["suggestions"] = [{"value": "unknown", "kind": "value-keyword"}]
     if fld.kind == "bool":
@@ -232,7 +219,7 @@ def _shape(raw: Dict[str, Any]) -> Dict[str, Any]:
                 # vocab attached by the route's _enrich_enum_suggestions instead.
                 if sfld.kind == "id":
                     sib["autocomplete_entity"] = \
-                        _COLUMN_AUTOCOMPLETE_ENTITY.get(sfld.column)
+                        namespace_for_column(sfld.column)
                 out["sibling"] = sib
         return out
     if cat == OPERATOR:

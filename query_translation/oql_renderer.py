@@ -21,78 +21,13 @@ from query_translation import oql_lang
 # Resolver bridge: engine `resolver(value, column_id)` -> prod name resolution.
 #
 # The engine asks "what's the display name for this value on this column?" only
-# for columns whose Field has resolves_name=True (entity-id columns + country
-# codes). We map the column_id to its entity-type namespace, try the supplied
-# `entity_resolver` (native ES lookup for institutions/authors/…), then fall
-# back to the built-in code->name tables (countries/languages/continents/SDGs).
+# for columns that derive an annotation namespace from the registry
+# (`oql_lang.namespace_for_column`, oxjob #565 — formerly the hand-maintained
+# `_RESOLVE_NAMESPACE` map here, the #418/#455 drift class). We map the
+# column_id to its entity-type namespace, try the supplied `entity_resolver`
+# (native ES lookup for institutions/authors/…), then fall back to the
+# built-in code->name tables (countries/languages/continents/SDGs).
 # ---------------------------------------------------------------------------
-
-# column_id -> entity-type namespace, for the columns the engine resolves
-# (oql_lang._FIELDS where resolves_name is True). `None` = not name-resolvable
-# (e.g. a bare OpenAlex work id).
-_RESOLVE_NAMESPACE: Dict[str, Optional[str]] = {
-    "authorships.institutions.lineage": "institutions",
-    "last_known_institutions.id": "institutions",
-    "authorships.author.id": "authors",
-    "primary_location.source.id": "sources",
-    "primary_topic.id": "topics",
-    "topics.id": "topics",
-    "funders.id": "funders",
-    "primary_location.source.publisher_lineage": "publishers",
-    # #455: `publisher_lineage` is an alias of the canonical `host_organization_lineage`
-    # (#446); since OQOs now carry the canonical column_id, it must name-resolve via the
-    # publishers namespace too (the alias key above is kept for any un-canonicalized input).
-    "primary_location.source.host_organization_lineage": "publishers",
-    "primary_topic.field.id": "fields",
-    "primary_topic.subfield.id": "subfields",
-    "primary_topic.domain.id": "domains",
-    "domain.id": "domains",
-    # Bare topic-hierarchy columns on the `topics` entity (the entity-correct
-    # homonyms of works' `primary_topic.*` — oxjob #406). `domain.id` already above.
-    "field.id": "fields",
-    "subfield.id": "subfields",
-    "sustainable_development_goals.id": "sdgs",
-    "authorships.countries": "countries",
-    "country_code": "countries",
-    "last_known_institutions.country_code": "countries",
-    "language": "languages",
-    # Citation-relationship filters reference a WORK; resolve its title (oxjob #363
-    # case 7). cited_by = the work's references; cites = works citing it.
-    "cited_by": "works",
-    "cites": "works",
-    # oxjob #402 — the other two work-relationship id filters resolve the same way.
-    "referenced_works": "works",
-    "related_to": "works",
-    "ids.openalex": None,
-    # oxjob #402 friendly-name audit — corresponding-author/-institution ids
-    # resolve via the same namespaces as `author` / `institution`.
-    "corresponding_author_ids": "authors",
-    "corresponding_institution_ids": "institutions",
-    # oxjob #402 batch 6 — best_oa_location / locations source-id mirrors resolve via the
-    # sources namespace, like primary_location.source.id ("source").
-    "best_oa_location.source.id": "sources",
-    "locations.source.id": "sources",
-    # oxjob #402 batch 7 — grant/award entity ids resolve via the awards namespace.
-    "awards.id": "awards",
-    # continent ids (continents/Q15) resolve to a name via the continents namespace.
-    "authorships.institutions.continent": "continents",
-    # bare `continent` column on sources/institutions/publishers/funders — the
-    # entity-correct homonym of works' authorships.institutions.continent (#406).
-    "continent": "continents",
-    # `publisher` on sources resolves to the source's host_organization (a P-id),
-    # name-resolved via the publishers namespace, like primary_location...publisher_lineage (#406).
-    "host_organization": "publishers",
-    # keyword entity ids resolve to a name via the keywords namespace (#402, GUI parity).
-    "keywords.id": "keywords",
-    # Entity-homonym ID columns on sub-entities that carried resolves_name=True in the
-    # renderer but had no namespace here — so they rendered bare in prod (and #418's
-    # gate kept them bare). Wire them to their entity namespace so they name-resolve
-    # like their primary-column siblings (oxjob #418 follow-up / #363):
-    "affiliations.institution.id": "institutions",  # institution id on `authors`
-    "source_id": "sources",                          # source id on `locations`
-    "publisher": "publishers",                       # publisher id on `locations`
-    "funder.id": "funders",                          # funder id on `awards`
-}
 
 # Built-in code/id -> display-name tables for the non-native entity types that
 # ES doesn't resolve by `get_display_name` (the `entity_resolver` returns None):
@@ -193,16 +128,23 @@ def vocab_name_to_code(namespace: Optional[str], name: str) -> Optional[str]:
 
 
 def make_engine_resolver(
-    entity_resolver: Optional[Callable[[str], Optional[str]]] = None
+    entity_resolver: Optional[Callable[[str], Optional[str]]] = None,
+    entity: Optional[str] = None,
 ) -> Callable[[str, str], Optional[str]]:
     """Adapt prod's `entity_resolver(entity_id)` + built-in tables to the
-    engine's `resolver(value, column_id)` contract. Caches per (type, id)."""
+    engine's `resolver(value, column_id)` contract. Caches per (type, id).
+
+    `entity` (the OQO's `get_rows`, when the caller has one) is the namespace-
+    derivation preference for homonym columns; omitted, derivation is
+    entity-blind (works-first). The returned callable exposes `.covers` so the
+    engine's annotate/[no entity found] gate uses the SAME derivation as the
+    lookup (oxjob #565)."""
     cache: Dict[str, Optional[str]] = {}
 
     def resolve(value: Any, column_id: str) -> Optional[str]:
         if not isinstance(value, str):
             return None
-        ns = _RESOLVE_NAMESPACE.get(column_id)
+        ns = oql_lang.namespace_for_column(column_id, entity)
         if ns is None:
             return None
         short_id = value.split("/", 1)[1] if "/" in value else value
@@ -220,6 +162,9 @@ def make_engine_resolver(
         cache[key] = name
         return name
 
+    resolve.covers = (
+        lambda column_id: oql_lang.namespace_for_column(column_id, entity) is not None
+    )
     return resolve
 
 
@@ -234,4 +179,5 @@ def render_oqo_to_oql(
         entity_resolver: optional `entity_id -> display name` callable (native
             ES lookup). Built-in code->name tables cover the rest.
     """
-    return oql_lang.render(oqo, resolver=make_engine_resolver(entity_resolver))
+    resolver = make_engine_resolver(entity_resolver, entity=oqo.get_rows)
+    return oql_lang.render(oqo, resolver=resolver)
