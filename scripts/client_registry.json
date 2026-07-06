@@ -15,6 +15,48 @@
       "isId": false,
       "hasExport": false
     },
+    "locations.is_accepted": {
+      "key": "locations.is_accepted",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "any location accepted",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "locations.source.is_core": {
+      "key": "locations.source.is_core",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "any location CWTS core",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "locations.source.is_in_doaj": {
+      "key": "locations.source.is_in_doaj",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "any location DOAJ",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "locations.license": {
       "key": "locations.license",
       "entityToFilter": "works",
@@ -23,9 +65,38 @@
       "displayNameVerbatim": false,
       "type": "selectEntity",
       "actions": [
+        "filter",
         "edit"
       ],
       "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "locations.is_oa": {
+      "key": "locations.is_oa",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "any location OA",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "locations.is_published": {
+      "key": "locations.is_published",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "any location published",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -40,6 +111,48 @@
         "filter"
       ],
       "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "locations.source.issn": {
+      "key": "locations.source.issn",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "any location source ISSN",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "locations.source.type": {
+      "key": "locations.source.type",
+      "entityToFilter": "works",
+      "entityToSelect": "source-types",
+      "displayName": "any location source type",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "locations.version": {
+      "key": "locations.version",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "any location version",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -123,6 +236,76 @@
       "isId": false,
       "hasExport": false
     },
+    "best_oa_location.source.id": {
+      "key": "best_oa_location.source.id",
+      "entityToFilter": "works",
+      "entityToSelect": "sources",
+      "displayName": "best OA source",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "best_oa_location.source.is_in_doaj": {
+      "key": "best_oa_location.source.is_in_doaj",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "best OA source DOAJ",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "best_oa_location.source.issn": {
+      "key": "best_oa_location.source.issn",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "best OA source ISSN",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "best_oa_location.source.type": {
+      "key": "best_oa_location.source.type",
+      "entityToFilter": "works",
+      "entityToSelect": "source-types",
+      "displayName": "best OA source type",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "best_open_version": {
+      "key": "best_open_version",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "best open version",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "cited_by_count": {
       "key": "cited_by_count",
       "entityToFilter": "works",
@@ -139,6 +322,20 @@
         "sort",
         "column"
       ],
+      "isId": false,
+      "hasExport": false
+    },
+    "citation_normalized_percentile.value": {
+      "key": "citation_normalized_percentile.value",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "citation percentile by subfield",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -163,10 +360,26 @@
       "displayName": "cited by",
       "displayNameVerbatim": false,
       "type": "selectEntity",
-      "actions": [],
+      "actions": [
+        "filter"
+      ],
       "actionsPopular": null,
       "isId": false,
       "hasExport": true
+    },
+    "referenced_works": {
+      "key": "referenced_works",
+      "entityToFilter": "works",
+      "entityToSelect": "works",
+      "displayName": "cites",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
     },
     "cites": {
       "key": "cites",
@@ -344,7 +557,9 @@
       "displayName": "DOI",
       "displayNameVerbatim": false,
       "type": "selectEntity",
-      "actions": [],
+      "actions": [
+        "filter"
+      ],
       "actionsPopular": null,
       "isId": true,
       "hasExport": false
@@ -433,6 +648,20 @@
       "actions": [
         "filter",
         "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "biblio.first_page": {
+      "key": "biblio.first_page",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "first page",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
       ],
       "actionsPopular": [],
       "isId": false,
@@ -533,6 +762,48 @@
       "isId": false,
       "hasExport": false
     },
+    "has_fulltext": {
+      "key": "has_fulltext",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "has fulltext",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.source.has_issn": {
+      "key": "primary_location.source.has_issn",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "has ISSN",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "has_oa_submitted_version": {
+      "key": "has_oa_submitted_version",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "has oa submitted version",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "has_orcid": {
       "key": "has_orcid",
       "entityToFilter": "works",
@@ -545,6 +816,34 @@
         "group_by"
       ],
       "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "has_pmcid": {
+      "key": "has_pmcid",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "has PMCID",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "has_references": {
+      "key": "has_references",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "has references",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -628,6 +927,34 @@
       "isId": false,
       "hasExport": false
     },
+    "is_oa": {
+      "key": "is_oa",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "is oa",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "is_paratext": {
+      "key": "is_paratext",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "is paratext",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "primary_location.source.issn": {
       "key": "primary_location.source.issn",
       "entityToFilter": "works",
@@ -635,9 +962,25 @@
       "displayName": "ISSN",
       "displayNameVerbatim": false,
       "type": "selectEntity",
-      "actions": [],
+      "actions": [
+        "filter"
+      ],
       "actionsPopular": null,
       "isId": true,
+      "hasExport": false
+    },
+    "biblio.issue": {
+      "key": "biblio.issue",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "issue",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
       "hasExport": false
     },
     "keywords.id": {
@@ -674,6 +1017,62 @@
       ],
       "isId": false,
       "hasExport": true
+    },
+    "biblio.last_page": {
+      "key": "biblio.last_page",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "last page",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.license": {
+      "key": "primary_location.license",
+      "entityToFilter": "works",
+      "entityToSelect": "licenses",
+      "displayName": "license",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "locations_count": {
+      "key": "locations_count",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "locations count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "ids.mag": {
+      "key": "ids.mag",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "MAG ID",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
     },
     "mag_only": {
       "key": "mag_only",
@@ -797,6 +1196,7 @@
       "displayNameVerbatim": false,
       "type": "selectEntity",
       "actions": [
+        "filter",
         "edit"
       ],
       "actionsPopular": null,
@@ -814,6 +1214,90 @@
         "filter",
         "column",
         "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "ids.pmcid": {
+      "key": "ids.pmcid",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "PMCID",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "ids.pmid": {
+      "key": "ids.pmid",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "PMID",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.is_accepted": {
+      "key": "primary_location.is_accepted",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "primary accepted",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.is_oa": {
+      "key": "primary_location.is_oa",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "primary OA",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.is_published": {
+      "key": "primary_location.is_published",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "primary published",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.version": {
+      "key": "primary_location.version",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "primary version",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
       ],
       "actionsPopular": [],
       "isId": false,
@@ -919,6 +1403,7 @@
       "displayNameVerbatim": false,
       "type": "selectEntity",
       "actions": [
+        "filter",
         "column"
       ],
       "actionsPopular": null,
@@ -1050,6 +1535,34 @@
       "isId": false,
       "hasExport": false
     },
+    "citation_normalized_percentile.is_in_top_1_percent": {
+      "key": "citation_normalized_percentile.is_in_top_1_percent",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "top 1% cited",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "citation_normalized_percentile.is_in_top_10_percent": {
+      "key": "citation_normalized_percentile.is_in_top_10_percent",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "top 10% cited",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "primary_topic.id": {
       "key": "primary_topic.id",
       "entityToFilter": "works",
@@ -1065,6 +1578,20 @@
       "actionsPopular": [
         "group_by"
       ],
+      "isId": false,
+      "hasExport": false
+    },
+    "topics.id": {
+      "key": "topics.id",
+      "entityToFilter": "works",
+      "entityToSelect": "topics",
+      "displayName": "topics",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -1105,6 +1632,20 @@
         "sort",
         "column"
       ],
+      "isId": false,
+      "hasExport": false
+    },
+    "biblio.volume": {
+      "key": "biblio.volume",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "volume",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -1591,6 +2132,20 @@
       ],
       "isId": false,
       "hasExport": false
+    },
+    "topics.id": {
+      "key": "topics.id",
+      "entityToFilter": "awards",
+      "entityToSelect": null,
+      "displayName": "topics id",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
     }
   },
   "authors": {
@@ -1801,6 +2356,20 @@
       "isId": true,
       "hasExport": true
     },
+    "orcid": {
+      "key": "orcid",
+      "entityToFilter": "authors",
+      "entityToSelect": null,
+      "displayName": "ORCID",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "ids.orcid": {
       "key": "ids.orcid",
       "entityToFilter": "authors",
@@ -1840,6 +2409,20 @@
       "actions": [
         "filter",
         "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "topics.id": {
+      "key": "topics.id",
+      "entityToFilter": "authors",
+      "entityToSelect": "topics",
+      "displayName": "topic",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
       ],
       "actionsPopular": [],
       "isId": false,
@@ -1928,6 +2511,20 @@
         "column",
         "sort"
       ],
+      "isId": false,
+      "hasExport": false
+    },
+    "continent": {
+      "key": "continent",
+      "entityToFilter": "sources",
+      "entityToSelect": "continents",
+      "displayName": "continent",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -2022,6 +2619,20 @@
       "isId": false,
       "hasExport": false
     },
+    "has_issn": {
+      "key": "has_issn",
+      "entityToFilter": "sources",
+      "entityToSelect": null,
+      "displayName": "has issn",
+      "displayNameVerbatim": false,
+      "type": "boolean",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "homepage_url": {
       "key": "homepage_url",
       "entityToFilter": "sources",
@@ -2077,6 +2688,20 @@
       "isId": true,
       "hasExport": false
     },
+    "ids.mag": {
+      "key": "ids.mag",
+      "entityToFilter": "sources",
+      "entityToSelect": null,
+      "displayName": "MAG ID",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "display_name": {
       "key": "display_name",
       "entityToFilter": "sources",
@@ -2125,6 +2750,20 @@
       "actionsPopular": null,
       "isId": true,
       "hasExport": true
+    },
+    "host_organization": {
+      "key": "host_organization",
+      "entityToFilter": "sources",
+      "entityToSelect": "publishers",
+      "displayName": "publisher",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
     },
     "publisher": {
       "key": "publisher",
@@ -2264,6 +2903,20 @@
         "column",
         "sort"
       ],
+      "isId": false,
+      "hasExport": false
+    },
+    "continent": {
+      "key": "continent",
+      "entityToFilter": "publishers",
+      "entityToSelect": null,
+      "displayName": "continent",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -2512,6 +3165,20 @@
       "isId": false,
       "hasExport": false
     },
+    "continent": {
+      "key": "continent",
+      "entityToFilter": "funders",
+      "entityToSelect": null,
+      "displayName": "continent",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "country_code": {
       "key": "country_code",
       "entityToFilter": "funders",
@@ -2559,7 +3226,9 @@
       "displayName": "DOI",
       "displayNameVerbatim": false,
       "type": "selectEntity",
-      "actions": [],
+      "actions": [
+        "filter"
+      ],
       "actionsPopular": [],
       "isId": true,
       "hasExport": false
@@ -2841,6 +3510,20 @@
       "isId": false,
       "hasExport": false
     },
+    "continent": {
+      "key": "continent",
+      "entityToFilter": "institutions",
+      "entityToSelect": "continents",
+      "displayName": "continent",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "country_code": {
       "key": "country_code",
       "entityToFilter": "institutions",
@@ -3054,6 +3737,20 @@
       "isId": true,
       "hasExport": false
     },
+    "topics.id": {
+      "key": "topics.id",
+      "entityToFilter": "institutions",
+      "entityToSelect": "topics",
+      "displayName": "topic",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "works_count": {
       "key": "works_count",
       "entityToFilter": "institutions",
@@ -3075,6 +3772,20 @@
     }
   },
   "concepts": {
+    "summary_stats.2yr_mean_citedness": {
+      "key": "summary_stats.2yr_mean_citedness",
+      "entityToFilter": "concepts",
+      "entityToSelect": null,
+      "displayName": "2-year mean citedness",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "cited_by_count": {
       "key": "cited_by_count",
       "entityToFilter": "concepts",
@@ -3119,6 +3830,34 @@
         "column"
       ],
       "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "summary_stats.h_index": {
+      "key": "summary_stats.h_index",
+      "entityToFilter": "concepts",
+      "entityToSelect": null,
+      "displayName": "h-index",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "summary_stats.i10_index": {
+      "key": "summary_stats.i10_index",
+      "entityToFilter": "concepts",
+      "entityToSelect": null,
+      "displayName": "i10 index",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -3547,6 +4286,20 @@
       "isId": false,
       "hasExport": false
     },
+    "topics.id": {
+      "key": "topics.id",
+      "entityToFilter": "subfields",
+      "entityToSelect": null,
+      "displayName": "topic",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "works_count": {
       "key": "works_count",
       "entityToFilter": "subfields",
@@ -3664,6 +4417,20 @@
       "isId": false,
       "hasExport": false
     },
+    "subfields.id": {
+      "key": "subfields.id",
+      "entityToFilter": "fields",
+      "entityToSelect": "subfields",
+      "displayName": "subfield",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "works_count": {
       "key": "works_count",
       "entityToFilter": "fields",
@@ -3717,6 +4484,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "column",
         "sort"
       ],
@@ -3736,6 +4504,20 @@
       "type": "search",
       "actions": [],
       "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "fields.id": {
+      "key": "fields.id",
+      "entityToFilter": "domains",
+      "entityToSelect": "fields",
+      "displayName": "field",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -3773,6 +4555,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "sort",
         "column"
       ],
@@ -3793,6 +4576,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "column",
         "sort"
       ],
@@ -3851,6 +4635,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "sort",
         "column"
       ],
@@ -3973,6 +4758,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "column",
         "sort"
       ],
@@ -4017,6 +4803,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "sort",
         "column"
       ],
@@ -4091,6 +4878,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "column",
         "sort"
       ],
@@ -4147,6 +4935,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "sort",
         "column"
       ],
@@ -4167,6 +4956,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "column",
         "sort"
       ],
@@ -4211,6 +5001,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "sort",
         "column"
       ],
@@ -4231,6 +5022,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "column",
         "sort"
       ],
@@ -4275,6 +5067,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "sort",
         "column"
       ],
@@ -4295,6 +5088,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "column",
         "sort"
       ],
@@ -4339,6 +5133,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "sort",
         "column"
       ],
@@ -4359,6 +5154,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "column",
         "sort"
       ],
@@ -4403,6 +5199,7 @@
       "displayNameVerbatim": false,
       "type": "range",
       "actions": [
+        "filter",
         "sort",
         "column"
       ],

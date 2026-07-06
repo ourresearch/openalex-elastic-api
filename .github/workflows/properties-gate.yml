@@ -57,6 +57,12 @@ jobs:
       - name: Client ⊆ server catalog check
         run: PYTHONPATH=. python scripts/check_client_subset.py
 
+      - name: Curated-core GUI parity check
+        # oxjob #573: every curated OQL word must be GUI-filter-faceted on every
+        # entity where it parses (documented exclusions in the script) — the
+        # other half of the #569 strict-parity pair.
+        run: PYTHONPATH=. python scripts/check_curated_core_parity.py
+
       - name: OQL input-alias allowlist staleness check
         # oxjob #569: query_translation/input_alias_columns.py is generated from
         # the vendored gui facet registry (+ curated extras in the regen script);
