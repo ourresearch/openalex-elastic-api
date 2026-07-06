@@ -3116,7 +3116,10 @@ def _value_segments(fld, value, column_id, resolver):
     rendered = _render_value(fld, value)
     segs = [_seg("value", rendered, value=value, column_id=column_id)]
     entity = None
-    if (resolver and fld and fld.kind not in ("search", "collection")
+    # fld None = an uncurated column rendering its raw column_id — it can still
+    # be covered (registry entity_type), e.g. `authorships.institutions.id`;
+    # pre-#565 those always rendered bare because the hand maps missed them.
+    if (resolver and (fld is None or fld.kind not in ("search", "collection"))
             and isinstance(value, str) and not value.startswith("col_")
             and _resolver_covers(resolver, column_id)):
         name = _call_resolver(resolver, value, column_id)
