@@ -2573,7 +2573,7 @@
       "key": "is_global_south",
       "entityToFilter": "funders",
       "entityToSelect": null,
-      "displayName": "Global South",
+      "displayName": "global south",
       "displayNameVerbatim": false,
       "type": "boolean",
       "actions": [
@@ -3907,7 +3907,7 @@
       "key": "is_global_south",
       "entityToFilter": "countries",
       "entityToSelect": null,
-      "displayName": "Global South",
+      "displayName": "global south",
       "displayNameVerbatim": false,
       "type": "boolean",
       "actions": [],

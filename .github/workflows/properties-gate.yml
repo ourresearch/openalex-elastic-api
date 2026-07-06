@@ -57,6 +57,14 @@ jobs:
       - name: Client ⊆ server catalog check
         run: PYTHONPATH=. python scripts/check_client_subset.py
 
+      - name: OQL input-alias allowlist staleness check
+        # oxjob #569: query_translation/input_alias_columns.py is generated from
+        # the vendored gui facet registry (+ curated extras in the regen script);
+        # this fails when a GUI facet change (arriving via the client_registry.json
+        # refresh) hasn't been propagated — regenerate with
+        # scripts/regen_input_alias_columns.py.
+        run: PYTHONPATH=. python scripts/check_input_alias_columns.py
+
       - name: Label consistency check (gui displayName == registry display_name)
         # oxjob #381 anti-re-drift guard: the registry is the single source of truth
         # for each property's canonical label; this asserts the vendored gui snapshot
