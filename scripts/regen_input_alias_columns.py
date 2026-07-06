@@ -38,13 +38,14 @@ TARGET = os.path.join(_REPO_ROOT, "query_translation", "input_alias_columns.py")
 # differ. (The GUI says "types"; the server catalog says "work-types".)
 ENTITY_ALIAS = {"types": "work-types"}
 
-# Curated works extras (oxjob #569): works input-alias columns that are NOT
-# GUI-filter-faceted today but stay accepted — the documented-API arm of the
-# original allowlist ("(facetConfigs works facets) ∪ (docs filter-works.md) ∩
-# works registry", Jason 2026-06-08) plus columns the GUI has since unfaceted
-# (parse capability is never silently removed on works). The standing
-# friendly-name audit curates these into `oql_lang._FIELDS` over time; once a
-# column is curated its raw id parses via its own alias, so this list shrinks
+# Curated works extras (oxjob #569/#572): NOT user-facing vocabulary — these
+# grant only RAW column_id spellings (never friendly words; the works fallback
+# door deliberately surfaces no uncurated display_names), so they are
+# round-trip plumbing: documented-API params in legacy URLs must translate to
+# OQL that re-parses. The strict GUI==OQL parity rule (#572) applies to the
+# per-entity friendly-word vocabulary below, not to this compat list. The
+# standing friendly-name audit curates these into `oql_lang._FIELDS` over
+# time; once curated, a raw id parses via its own alias, so this list shrinks
 # toward empty. Curated by hand — the generator only sorts it.
 CURATED_EXTRA_WORKS_COLUMNS = frozenset({
     'abstract.search', 'apc_list.currency', 'apc_list.provenance', 'apc_list.value',
@@ -81,42 +82,14 @@ CURATED_EXTRA_WORKS_COLUMNS = frozenset({
     'type_crossref', 'updated_date',
 })
 
-# Per-entity curated extras (oxjob #569): columns the 2026-06-08 snapshot had
-# (then GUI-filter-faceted) that the GUI has since UNFACETED (actions moved to
-# sort/column only). Kept so OQL parse/render capability is never silently
-# removed by a GUI pruning — e.g. `funders where h-index > 20` still parses,
-# and `h-index` still renders friendly everywhere it exists (the
-# `_faceted_everywhere` render gate needs every in-scope entity to accept the
-# word). Jason: prune any of these DELIBERATELY if GUI parity should shrink.
-CURATED_EXTRA_BY_ENTITY = {
-    "funders": frozenset({
-        "awards_count", "cited_by_count", "ids.crossref", "ids.doi", "ids.ror",
-        "ids.wikidata", "summary_stats.2yr_mean_citedness",
-        "summary_stats.h_index", "summary_stats.i10_index", "works_count",
-    }),
-    "institutions": frozenset({
-        "summary_stats.2yr_mean_citedness", "summary_stats.h_index",
-        "summary_stats.i10_index", "x_concepts.id",
-    }),
-    "publishers": frozenset({
-        "country_codes", "hierarchy_level", "ids.ror", "ids.wikidata",
-        "parent_publisher", "summary_stats.2yr_mean_citedness",
-        "summary_stats.h_index", "summary_stats.i10_index",
-    }),
-    "sources": frozenset({
-        "first_publication_year", "issn_l",
-    }),
-    # concepts entered the fallback scope in the #569 regen (the GUI filter-
-    # facets works_count/cited_by_count there); its registry ALSO carries the
-    # summary_stats family unfaceted, which would flip the `h-index` family's
-    # render to raw EVERYWHERE via the `_faceted_everywhere` gate. Accept the
-    # words on concepts too (the registry supports filtering them) so the
-    # pre-#569 friendly renders stand.
-    "concepts": frozenset({
-        "summary_stats.2yr_mean_citedness", "summary_stats.h_index",
-        "summary_stats.i10_index",
-    }),
-}
+# Per-entity extras were DELETED in #572 (Jason, 2026-07-06): strict GUI==OQL
+# filter parity — a column is in OQL's per-entity fallback vocabulary iff the
+# GUI filter-facets it, no exceptions. Reconciliation of the #569 holdovers:
+# the metrics family gained GUI filter actions (openalex-gui #572) and the
+# summary_stats trio became first-class curated OQL fields; the identifier
+# tail (publisher/funder ids, parent_publisher, hierarchy_level, country_codes,
+# x_concepts.id, issn_l, first_publication_year) was scrubbed — still
+# API-filterable, just not OQL/GUI vocabulary.
 
 HEADER = '''"""Input-alias allowlists for raw registry column_ids (oxjob #363 / #569).
 
@@ -159,10 +132,7 @@ def derive(client_registry, entity_properties):
         if ent == "works":
             continue
         server_ent = ENTITY_ALIAS.get(ent, ent)
-        props = entity_properties.get(server_ent) or {}
-        extras = {c for c in CURATED_EXTRA_BY_ENTITY.get(server_ent, ())
-                  if c in props}
-        cols = filter_cols(ent) | extras
+        cols = filter_cols(ent)
         if cols:
             by_entity[server_ent] = cols
     return input_alias, by_entity

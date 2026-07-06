@@ -375,6 +375,16 @@ _f("related to", "related_to", "id")
 # are auto-humanized but already read cleanly, so Front-B with the existing word).
 _f("authors count", "authors_count", "num")
 _f("locations count", "locations_count", "num")
+# --- oxjob #572 cross-entity impact metrics (strict GUI==OQL parity) ---
+# First-class curated fields like `citation count` (footing decided by Jason
+# 2026-07-06): the summary_stats family exists on authors/sources/institutions/
+# funders/publishers/concepts (never works — like `author country`, the column
+# registers non-works and entity-resolves everywhere it exists). Render words ==
+# registry display_names. Curation also frees them from the entity-fallback
+# `_faceted_everywhere` render gate.
+_f("h-index", "summary_stats.h_index", "num")
+_f("i10-index", "summary_stats.i10_index", "num")
+_f("2-year mean citedness", "summary_stats.2yr_mean_citedness", "num", is_float=True)
 
 # --- oxjob #402 booleans (content / identifier / index flags) ---
 # Plain subject-predicate-value bools: `<name> is true|false` (oxjob #363). The
