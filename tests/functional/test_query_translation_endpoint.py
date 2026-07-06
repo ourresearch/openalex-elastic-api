@@ -4,7 +4,7 @@ Translation routes take a query in one representation and return ALL of them:
   GET /query/oxurl/:query
   GET /query/oql/:query
   GET /query/oqo/:query
-→ {oxurl, oql, oql_render, oqo, validation}
+→ {oxurl, oql, oql_render_v2, oqo, validation}
 
 These need no live ES — parsing/validation/rendering are pure (the URL parser
 reads the static field registry in core.properties).
@@ -41,7 +41,9 @@ def _leaf_count(oqo):
 
 
 def _all_formats_present(body):
-    for k in ("oxurl", "oql", "oql_render", "oqo", "validation"):
+    # v1 `oql_render` was dropped from the response (#566) — the GUI reads
+    # only `oql` + `oql_render_v2`.
+    for k in ("oxurl", "oql", "oql_render_v2", "oqo", "validation"):
         assert k in body, f"missing {k} in {body}"
     assert body["validation"]["valid"] is True
 

@@ -27,8 +27,11 @@ Operator = Literal[
     "is", ">", ">=", "<", "<=", "has"
 ]
 
-# Segment kinds for styling
-SegmentKind = Literal["keyword", "column", "operator", "value", "id", "text"]
+# Segment kinds for styling. "negation" is a structural `not ` prefix (#566)
+# — same rendered text as an inert "text" segment, but consumers (the v2
+# builder projection) can recognize negation without matching output strings.
+SegmentKind = Literal["keyword", "column", "operator", "value", "id", "text",
+                      "negation"]
 
 # Clause kinds for UI styling hints
 ClauseKind = Literal["boolean", "entity", "comparison", "text", "null", "other"]
@@ -105,13 +108,23 @@ class EntityValue:
 
 @dataclass
 class ClauseMeta:
-    """Semantic metadata for a clause."""
+    """Semantic metadata for a clause.
+
+    `vtree` (#566) is a factored clause's STRUCTURAL value tree (vleaf/vgroup
+    dicts) — the native representation its flat segments are generated from,
+    and what the v2 render + the width-aware formatter consume instead of
+    re-deriving structure from output text. `oqo_ref` is the OQO filter object
+    this clause renders (origins/addressing). Both are internal (not in
+    to_dict).
+    """
     column_id: str
     operator: str
     value: TypedValue
     column_display_name: Optional[str] = None
     value_entity: Optional[EntityValue] = None
     source_pointer: Optional[str] = None
+    vtree: Optional[dict] = None
+    oqo_ref: Any = None
     
     def to_dict(self) -> Dict[str, Any]:
         result = {
@@ -132,9 +145,13 @@ class ClauseMeta:
 
 @dataclass
 class GroupMeta:
-    """Optional metadata for group nodes."""
+    """Optional metadata for group nodes. `negated` marks a `not (…)` group
+    structurally (#566; the rendered `not ` lives in the node prefix).
+    `oqo_ref` is internal (see ClauseMeta)."""
     implicit: bool = False
     source_pointer: Optional[str] = None
+    negated: bool = False
+    oqo_ref: Any = None
     
     def to_dict(self) -> Dict[str, Any]:
         result = {"implicit": self.implicit}

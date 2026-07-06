@@ -3087,30 +3087,64 @@ def _uniform_eq_column(f: FilterType):
     return cols.pop()
 
 
-def _factored_segments(f: FilterType, render_leaf):
-    """Segments for a factored boolean group's INNER text (no outer parens): a
-    boolean of bare atoms with explicit ` or `/` and ` connectives; any child
-    sub-group is wrapped in its own parens (the canonicalizer flattens same-join
-    nesting, so a child branch always has the opposite join and needs them).
+def _build_value_tree(f: FilterType, render_leaf) -> dict:
+    """A factored clause's value as a STRUCTURAL tree (#566) — the engine's
+    native representation, which the flat segments (`_vtree_segments`), the
+    width-aware formatter, and the v2 builder render all project from (nothing
+    re-derives structure from output text anymore).
+
+    vleaf = one scalar atom: {value, display, negated, entity?}; vgroup = a
+    parenthesized boolean: {join, children}. Internal keys (never serialized;
+    the v2 projection strips/uses them): `_f` = the OQO filter object this node
+    renders (origins/addressing, #474), `_segs` = the atom's display segments.
     `render_leaf(leaf) -> [Segment]` renders one bare atom."""
     if isinstance(f, LeafFilter):
-        leaf = render_leaf(f)
-        # In-group negation renders as a bare `not ` prefix on the atom (charter
-        # decision 23). Canonical OQO is NNF (negation on leaves), so the argument
-        # is always one value-node — `not` binds it with no parens to recall.
-        if f.is_negated:
-            return [_seg("text", "not ")] + leaf
-        return leaf
+        segs = render_leaf(f)
+        node = {"node": "vleaf", "value": f.value,
+                "display": "".join(s.text for s in segs),
+                "negated": bool(f.is_negated), "_f": f, "_segs": segs}
+        ent = next((s.meta for s in segs if s.meta and s.meta.entity_id), None)
+        if ent is not None:
+            node["entity"] = {"id": ent.entity_id,
+                              "short_id": ent.entity_short_id,
+                              "display_name": ent.entity_display_name}
+        return node
+    return {"node": "vgroup", "join": f.join, "_f": f,
+            "children": [_build_value_tree(c, render_leaf) for c in f.filters]}
+
+
+def _vtree_segments(vt: dict) -> List["Segment"]:
+    """Flat segments for a value tree's INNER text (no outer parens): a boolean
+    of bare atoms with explicit ` or `/` and ` connectives; any child vgroup is
+    wrapped in its own parens (the canonicalizer flattens same-join nesting, so
+    a child branch always has the opposite join and needs them). In-group
+    negation renders as a structural `not ` prefix segment (kind="negation") on
+    the atom (charter decision 23; canonical OQO is NNF, so the argument is
+    always one value-node — `not` binds it with no parens to recall)."""
+    if vt["node"] == "vleaf":
+        if vt["negated"]:
+            return [_seg("negation", "not ")] + vt["_segs"]
+        return vt["_segs"]
     segs = []
-    for i, c in enumerate(f.filters):
+    for i, c in enumerate(vt["children"]):
         if i:
-            segs.append(_seg("text", f" {f.join} "))
-        inner = _factored_segments(c, render_leaf)
-        if isinstance(c, BranchFilter):
+            segs.append(_seg("text", f" {vt['join']} "))
+        inner = _vtree_segments(c)
+        if c["node"] == "vgroup":
             segs = segs + [_seg("text", "(")] + inner + [_seg("text", ")")]
         else:
             segs = segs + inner
     return segs
+
+
+def _vnode_text(vt: dict) -> str:
+    """One value node's canonical text: a vleaf's (possibly `not `-prefixed)
+    display; a vgroup parenthesized. Used by the formatter's structural
+    item-split (#566)."""
+    if vt["node"] == "vleaf":
+        return ("not " if vt["negated"] else "") + vt["display"]
+    inner = "".join(s.text for s in _vtree_segments(vt))
+    return f"({inner})"
 
 
 # ---------------------------------------------------------------------------
@@ -3170,6 +3204,14 @@ def _value_segments(fld, value, column_id, resolver):
 
 
 def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
+    cn = _leaf_node_inner(f, resolver)
+    # the OQO leaf this clause renders — the v2 projection reads it for the
+    # client edit model (`leaf`) and origins/addressing (#566/#474).
+    cn.meta.oqo_ref = f
+    return cn
+
+
+def _leaf_node_inner(f: LeafFilter, resolver=None) -> ClauseNode:
     # #554: a condition's value is ALWAYS a parenthesized group in canonical
     # OQL — every leaf clause below wraps its value in `( … )` (bare singletons
     # remain accepted on input). Standalone negation moves INSIDE the group
@@ -3234,7 +3276,7 @@ def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
         else:
             val_segs, entity = _value_segments(fld, f.value, f.column_id, resolver)
             if f.is_negated:
-                val_segs = [_seg("text", "not ")] + val_segs
+                val_segs = [_seg("negation", "not ")] + val_segs
             kind = "entity"
         segs = ([_seg("column", subj, column_id=f.column_id),
                  _seg("operator", verb), _seg("text", "(")]
@@ -3278,7 +3320,7 @@ def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
     # `is not …` stays accepted input only; it never survives canonicalization.
     val_segs, entity = _value_segments(fld, f.value, f.column_id, resolver)
     if f.is_negated:
-        val_segs = [_seg("text", "not ")] + val_segs
+        val_segs = [_seg("negation", "not ")] + val_segs
     segs = ([_seg("column", name, column_id=f.column_id),
              _seg("operator", " is "), _seg("text", "(")]
             + val_segs + [_seg("text", ")")])
@@ -3298,26 +3340,27 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
     if f.is_negated:
         inner = _filter_node(BranchFilter(f.join, f.filters), top=False, resolver=resolver)
         return GroupNode(join=f.join, children=[inner], prefix="not ", suffix="",
-                         joiner="", meta=GroupMeta(implicit=False))
+                         joiner="", meta=GroupMeta(implicit=False, negated=True,
+                                                   oqo_ref=f))
     # factor a single-base-field search subtree -> `field has (a or b)`
     scol = _uniform_search_base(f)
     if scol is not None:
         name, _ = _oql_field(scol)
-        inner = _factored_segments(
+        vtree = _build_value_tree(
             f, lambda lf: [_seg("value", _render_term(lf.value, lf.column_id),
                                 value=lf.value)])
         segs = ([_seg("column", name, column_id=scol),
                  _seg("operator", " has "), _seg("text", "(")]
-                + inner + [_seg("text", ")")])
+                + _vtree_segments(vtree) + [_seg("text", ")")])
         return ClauseNode(segments=segs, clause_kind="text", meta=ClauseMeta(
             column_id=scol, operator="has", value=None,
-            column_display_name=name))
+            column_display_name=name, vtree=vtree, oqo_ref=f))
     # factor a single-column equality subtree -> `field is (a or b)` — or the
     # row-subject verb form `it cites (a or b)` for relation columns (#557).
     ecol = _uniform_eq_column(f)
     if ecol is not None:
         fld = _BY_COLUMN.get(ecol)
-        inner = _factored_segments(
+        vtree = _build_value_tree(
             f, lambda lf: _value_segments(fld, lf.value, lf.column_id, resolver)[0])
         rs = _ROW_SUBJECT_RENDER.get(ecol)
         if rs is not None:
@@ -3328,11 +3371,11 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
             name = fld.oql if fld else ecol
             head = [_seg("column", name, column_id=ecol),
                     _seg("operator", " is "), _seg("text", "(")]
-        segs = head + inner + [_seg("text", ")")]
+        segs = head + _vtree_segments(vtree) + [_seg("text", ")")]
         kind = "entity" if (fld and fld.kind == "id") else "other"
         return ClauseNode(segments=segs, clause_kind=kind, meta=ClauseMeta(
             column_id=ecol, operator="is", value=None,
-            column_display_name=name))
+            column_display_name=name, vtree=vtree, oqo_ref=f))
     # cross-field boolean group -> `(clause1 or clause2)` / `(… and …)`
     items = _merge_same_field_items(list(f.filters), f.join)  # decision 20
     children = [_filter_node(c, top=False, resolver=resolver) for c in items]
@@ -3341,7 +3384,7 @@ def _filter_node(f: FilterType, top=False, resolver=None) -> ExprNode:
     joiner = f" {f.join} "
     prefix, suffix = ("", "") if top else ("(", ")")
     return GroupNode(join=f.join, children=children, prefix=prefix, suffix=suffix,
-                     joiner=joiner, meta=GroupMeta(implicit=False))
+                     joiner=joiner, meta=GroupMeta(implicit=False, oqo_ref=f))
 
 
 def _merge_key(item):
@@ -3507,109 +3550,46 @@ def _leading_conn(group: GroupNode) -> str:
 
 def _split_list_clause(clause: ClauseNode):
     """If `clause` is a factored group clause (`… has (a or b or …)` /
-    `… is (a or b or …)`), return `(head, items, conn, close)` where `head` ends
-    with `"("`, `items` is the list of top-level item strings, and `conn` is the
-    group's connective (`"or"`/`"and"`); else None. Splits on
-    the engine's own structural segments (the literal `"("`, `" or "`/`" and "`,
-    `")"` text segments) at paren-depth 0 only, so a connective inside a nested
-    sub-group `(b and c)` is never mistaken for a top-level separator."""
+    `… is (a or b or …)`), return `(head, items, conn)` where `head` ends with
+    `"("`, `items` is a list of `(text, vnode)` pairs for the group's top-level
+    operands, and `conn` is the connective (`"or"`/`"and"`); else None. Since
+    #566 this reads the clause's STRUCTURAL value tree (`meta.vtree`) — the
+    old segment/string re-lexers (`_split_group_text`) are gone; an over-width
+    item explodes by recursing into its own vnode children."""
+    vt = clause.meta.vtree
+    if vt is None or vt["node"] != "vgroup" or len(vt["children"]) < 2:
+        return None
     segs = clause.segments
     open_idx = next((i for i, s in enumerate(segs)
                      if s.kind == "text" and s.text == "("), None)
-    if open_idx is None or not (segs[-1].kind == "text" and segs[-1].text == ")"):
+    if open_idx is None:
         return None
     head = "".join(s.text for s in segs[:open_idx + 1])
-    items, cur, conn, depth = [], [], None, 0
-    for s in segs[open_idx + 1:-1]:
-        if s.kind == "text" and s.text == "(":
-            depth += 1
-            cur.append(s.text)
-        elif s.kind == "text" and s.text == ")":
-            depth -= 1
-            cur.append(s.text)
-        elif depth == 0 and s.kind == "text" and s.text in (" or ", " and "):
-            items.append("".join(cur))
-            cur = []
-            conn = s.text.strip()
-        else:
-            cur.append(s.text)
-    items.append("".join(cur))
-    if conn is None or len(items) < 2:
-        return None  # a single bare atom / unbreakable clause
-    return head, items, conn
+    items = [(_vnode_text(c), c) for c in vt["children"]]
+    return head, items, vt["join"]
 
 
-def _split_group_text(text: str):
-    """Split a paren-stripped group body into (top-level item strings,
-    connective), or None if it isn't a splittable boolean. The string-level
-    twin of `_split_list_clause`, used to recursively explode an over-width
-    *item* (decision 20 merged clauses nest whole OR-blocks inside an AND).
-    Connectives are matched only at paren depth 0, outside double quotes
-    (quoted phrases / quoted-word escapes can contain literal `and`/`or`) and
-    outside `[…]` display-name annotations (which can too)."""
-    items, cur = [], []
-    conn = None
-    depth = bracket = 0
-    in_q = False
-    i, n = 0, len(text)
-    while i < n:
-        ch = text[i]
-        if in_q:
-            cur.append(ch)
-            in_q = ch != '"'
-            i += 1
-            continue
-        if ch == '"':
-            in_q = True
-        elif bracket == 0:
-            if ch == "(":
-                depth += 1
-            elif ch == ")":
-                depth -= 1
-            elif ch == "[":
-                bracket += 1
-            elif depth == 0 and ch == " ":
-                for word in (" or ", " and "):
-                    if text.startswith(word, i):
-                        items.append("".join(cur))
-                        cur = []
-                        conn = word.strip()
-                        i += len(word)
-                        break
-                else:
-                    cur.append(ch)
-                    i += 1
-                continue
-        elif ch == "]":
-            bracket -= 1
-        cur.append(ch)
-        i += 1
-    items.append("".join(cur))
-    if conn is None or len(items) < 2 or in_q or depth or bracket:
-        return None
-    return items, conn
-
-
-def _fmt_group_item(it: str, indent: int, width: int, leading: str) -> str:
+def _fmt_group_item(item, indent: int, width: int, leading: str) -> str:
     """Lay out one exploded-group item at `indent`, with the parent's leading
     connective (`"and "` / `"or "` / empty for the first item) prefixed to its
-    first line. An item that fits stays on one line; an over-width parenthesized
-    sub-group explodes recursively (its open paren carries the leading
-    connective, its closing paren sits back at `indent`)."""
+    first line. `item` is a `(text, vnode)` pair; an item that fits stays on
+    one line; an over-width sub-group (vgroup) explodes recursively via its own
+    STRUCTURAL children (#566 — no string re-lexing), its open paren carrying
+    the leading connective, its closing paren back at `indent`."""
+    it, vnode = item
     pad = " " * indent
     if len(pad) + len(leading) + len(it) <= width:
         return f"{pad}{leading}{it}"
-    if it.startswith("(") and it.endswith(")"):
-        parts = _split_group_text(it[1:-1])
-        if parts is not None:
-            sub_items, sub_conn = parts
-            return _fmt_list(f"{pad}{leading}(", sub_items, sub_conn,
-                             indent, width)
+    if vnode is not None and vnode["node"] == "vgroup" and len(vnode["children"]) >= 2:
+        sub_items = [(_vnode_text(c), c) for c in vnode["children"]]
+        return _fmt_list(f"{pad}{leading}(", sub_items, vnode["join"],
+                         indent, width)
     return f"{pad}{leading}{it}"   # unbreakable (e.g. one long term)
 
 
 def _fmt_list(head: str, items, conn: str, indent: int, width: int) -> str:
-    """Lay out an exploded factored group. `indent` is the clause's own indent
+    """Lay out an exploded factored group; `items` are `(text, vnode)` pairs
+    (#566 structural). `indent` is the clause's own indent
     (where the closing `)` sits); items sit at `indent + _INDENT`. The connective
     LEADS every item but the first — i.e. a wrapped/exploded line begins with
     `and`/`or` (decision 25; matches the leading-connective `where` body, and
@@ -3626,10 +3606,11 @@ def _fmt_list(head: str, items, conn: str, indent: int, width: int) -> str:
     def piece(i, it):
         return it if i == 0 else f"{conn} {it}"
 
-    all_fit = all(len(pad) + len(conn) + 1 + len(it) <= width for it in items)
+    all_fit = all(len(pad) + len(conn) + 1 + len(it) <= width
+                  for it, _ in items)
     if n > 8 and all_fit:
         line, empty = pad, True
-        for i, it in enumerate(items):
+        for i, (it, _) in enumerate(items):
             p = piece(i, it)
             if not empty and len(line) + 1 + len(p) > width:
                 out.append(line)
@@ -3639,9 +3620,9 @@ def _fmt_list(head: str, items, conn: str, indent: int, width: int) -> str:
         out.append(line)
     else:
         lead = f"{conn} "
-        out.extend(_fmt_group_item(it, indent + _INDENT, width,
+        out.extend(_fmt_group_item(item, indent + _INDENT, width,
                                    "" if i == 0 else lead)
-                   for i, it in enumerate(items))
+                   for i, item in enumerate(items))
     out.append(f"{' ' * indent})")
     return "\n".join(out)
 

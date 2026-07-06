@@ -15,7 +15,15 @@ from query_translation.oql_render_tree import (
     ClauseMeta, GroupMeta, EntityValue, SampleDirective,
     SampleMeta, stringify
 )
-from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
+# #566: the oql_tree_renderer adapter was deleted; reproduce its exact surface
+# (entity_resolver wrapped by make_engine_resolver) over oql_lang.render_tree.
+from query_translation.oql_lang import render_tree as _render_tree
+from query_translation.oql_renderer import make_engine_resolver as _mer
+
+
+def render_oqo_to_oql_and_tree(oqo, entity_resolver=None):
+    return _render_tree(oqo, resolver=_mer(entity_resolver,
+                                           entity=oqo.get_rows))
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 
 

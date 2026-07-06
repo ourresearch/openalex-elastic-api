@@ -46,13 +46,9 @@ INVARIANT: joining `lines` (indent + token text) re-parses to the same OQO as th
 canonical `oql` — verified in the offline tests.
 """
 
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
-from query_translation.oql_lang import (
-    _merge_same_field_items, _uniform_search_base, _uniform_eq_column,
-    _oql_field, _render_term, _value_segments, _leaf_node,
-    _BY_COLUMN, _build_tree, format_oql, _ROW_SUBJECT_RENDER,
-)
-from query_translation.oql_render_tree import _stringify_directive
+from query_translation.oqo import OQO, BranchFilter
+from query_translation.oql_lang import _build_tree, format_oql
+from query_translation.oql_render_tree import GroupNode, _stringify_directive
 
 class _IdGen:
     def __init__(self):
@@ -64,103 +60,89 @@ class _IdGen:
 
 
 # ---------------------------------------------------------------------------
-# OQO -> v2 node tree (dicts). Mirrors _filter_node's factoring decisions but
-# emits value sub-trees as real nodes instead of flat text segments.
+# v1 render tree -> v2 node tree (dicts). Since #566 this is a pure PROJECTION
+# of the engine's ONE render walk (`oql_lang._build_tree`): factoring, merging,
+# and negation decisions are made exactly once, in the engine, and read here
+# structurally — factored clauses carry their value tree on `meta.vtree`,
+# negation is `meta.negated` / vleaf `negated` / kind="negation" segments,
+# and the OQO object each node renders rides `meta.oqo_ref` / the vtree's `_f`.
+# Nothing in this module re-derives structure from OQO or from output text.
 # ---------------------------------------------------------------------------
 
 def _origin(origins, f, node):
     """Record id(OQO filter object) -> v2 node, for #474 addressing (errors[].path).
     No-op unless an `origins` dict is threaded through (default render path)."""
-    if origins is not None:
+    if origins is not None and f is not None:
         origins[id(f)] = node
     return node
 
 
-def _value_node(f: FilterType, render_leaf, idg, origins=None) -> dict:
-    """A factored value as a real tree: vleaf (scalar atom, +negation bit) or
-    vgroup (parenthesized boolean of value nodes)."""
-    if isinstance(f, LeafFilter):
-        segs = render_leaf(f)
-        display = "".join(s.text for s in segs)
-        node = {"node": "vleaf", "id": idg(), "value": f.value,
-                "display": display, "negated": bool(f.is_negated)}
-        ent = next((s.meta for s in segs
-                    if s.meta and s.meta.entity_id), None)
-        if ent is not None:
-            node["entity"] = {"id": ent.entity_id,
-                              "short_id": ent.entity_short_id,
-                              "display_name": ent.entity_display_name}
-        return _origin(origins, f, node)
-    children = [_value_node(c, render_leaf, idg, origins) for c in f.filters]
-    node = {"node": "vgroup", "id": idg(), "join": f.join, "children": children}
-    return _origin(origins, f, node)
+def _value_node(vt: dict, idg, origins=None) -> dict:
+    """Project an engine value-tree node (oql_lang._build_value_tree) to the v2
+    wire shape: strip the internal `_f`/`_segs` keys, stamp an id."""
+    if vt["node"] == "vleaf":
+        node = {"node": "vleaf", "id": idg(), "value": vt["value"],
+                "display": vt["display"], "negated": vt["negated"]}
+        if "entity" in vt:
+            node["entity"] = vt["entity"]
+        return _origin(origins, vt.get("_f"), node)
+    children = [_value_node(c, idg, origins) for c in vt["children"]]
+    node = {"node": "vgroup", "id": idg(), "join": vt["join"],
+            "children": children}
+    return _origin(origins, vt.get("_f"), node)
 
 
-def _expr_node(f: FilterType, top: bool, resolver, idg, origins=None) -> dict:
-    """OQO filter -> v2 expr node (clause | group), mirroring _filter_node."""
-    if isinstance(f, BranchFilter) and f.is_negated:
-        inner = _expr_node(BranchFilter(f.join, f.filters), False, resolver, idg,
-                           origins)
-        return _origin(origins, f, {"node": "group", "id": idg(), "join": f.join,
-                                    "negated": True, "paren": True,
-                                    "children": [inner]})
+def _expr_node(n, top: bool, idg, origins=None) -> dict:
+    """v1 ExprNode (ClauseNode | GroupNode) -> v2 expr node (clause | group)."""
+    if isinstance(n, GroupNode):
+        meta = n.meta
+        if meta is not None and meta.negated:
+            # `not (…)` wrapper: one inner child supplies its own parens.
+            inner = _expr_node(n.children[0], False, idg, origins)
+            return _origin(origins, meta.oqo_ref,
+                           {"node": "group", "id": idg(), "join": n.join,
+                            "negated": True, "paren": True,
+                            "children": [inner]})
+        children = [_expr_node(c, False, idg, origins) for c in n.children]
+        node = {"node": "group", "id": idg(), "join": n.join,
+                "negated": False, "paren": n.prefix == "(",
+                "children": children}
+        if meta is not None and meta.implicit:
+            node["implicit"] = True
+        return _origin(origins, meta.oqo_ref if meta else None, node)
 
-    if isinstance(f, BranchFilter):
-        scol = _uniform_search_base(f)
-        if scol is not None:
-            name, _ = _oql_field(scol)
-            val = _value_node(
-                f, lambda lf: [_seg_val(_render_term(lf.value, lf.column_id),
-                                        lf.value)], idg, origins)
-            return _origin(origins, f, {"node": "clause", "id": idg(),
-                    "clause_kind": "text", "column_id": scol, "column": name,
-                    "operator": "has", "value": val})
-        ecol = _uniform_eq_column(f)
-        if ecol is not None:
-            fld = _BY_COLUMN.get(ecol)
-            val = _value_node(
-                f, lambda lf: _value_segments(fld, lf.value, lf.column_id,
-                                              resolver)[0], idg, origins)
-            kind = "entity" if (fld and fld.kind == "id") else "other"
-            node = {"node": "clause", "id": idg(),
-                    "clause_kind": kind, "column_id": ecol,
-                    "operator": "is", "value": val}
-            # row-subject verb clause (#557): the canonical text is
-            # `it cites (…)` / `it's cited by (…)` — carry the subject + verb so
-            # _flat_tokens matches format_oql; `column` stays the BARE verb (the
-            # builder chip label).
-            rs = _ROW_SUBJECT_RENDER.get(ecol)
-            if rs is not None:
-                subj, verb, bare = rs
-                node.update({"column": bare, "subject": subj, "verb": verb})
-            else:
-                node["column"] = fld.oql if fld else ecol
-            return _origin(origins, f, node)
-        # generic boolean group of (possibly mixed-column) children
-        items = _merge_same_field_items(list(f.filters), f.join)
-        children = [_expr_node(c, False, resolver, idg, origins) for c in items]
-        if len(children) == 1:
-            return _origin(origins, f, children[0])
-        return _origin(origins, f, {"node": "group", "id": idg(), "join": f.join,
-                "negated": False, "paren": not top, "children": children})
+    # ClauseNode. A factored clause carries its structural value tree.
+    vt = n.meta.vtree
+    if vt is not None:
+        val = _value_node(vt, idg, origins)
+        node = {"node": "clause", "id": idg(),
+                "clause_kind": n.clause_kind, "column_id": n.meta.column_id,
+                "operator": n.meta.operator, "value": val}
+        # row-subject verb clause (#557): the canonical text is `it cites (…)`
+        # — subject/verb come straight off the clause's own head segments
+        # (`column`/`operator` kinds), so _flat_tokens matches format_oql;
+        # `column` stays the BARE verb (the builder chip label).
+        subj = next((s.text for s in n.segments if s.kind == "column"), None)
+        verb = next((s.text for s in n.segments if s.kind == "operator"), None)
+        if subj is not None and subj != n.meta.column_display_name:
+            node.update({"column": n.meta.column_display_name,
+                         "subject": subj, "verb": verb})
+        else:
+            node["column"] = n.meta.column_display_name
+        return _origin(origins, n.meta.oqo_ref, node)
 
-    # LeafFilter -> a simple clause (single value / bool phrase / null / comparison
-    # / collection). Reuse _leaf_node for the display segments. `leaf` carries the
-    # raw OQO leaf so the client can reconstruct the OQO from the v2 tree alone
+    # Simple clause (single value / bool phrase / null / comparison /
+    # collection): the display segments ARE the model. `leaf` carries the raw
+    # OQO leaf so the client can reconstruct the OQO from the v2 tree alone
     # (the tree is the edit model — oxjob #428 iter 22, decision B). Factored
     # clauses don't need `leaf`: their value vtree fully describes the branch.
-    cn = _leaf_node(f, resolver)
+    f = n.meta.oqo_ref
     return _origin(origins, f, {"node": "clause", "id": idg(),
-            "clause_kind": cn.clause_kind,
-            "column_id": cn.meta.column_id, "column": cn.meta.column_display_name,
-            "operator": cn.meta.operator,
-            "segments": [s.to_dict() for s in cn.segments],
-            "leaf": f.to_dict()})
-
-
-def _seg_val(text, value):
-    from query_translation.oql_lang import _seg
-    return _seg("value", text, value=value)
+            "clause_kind": n.clause_kind,
+            "column_id": n.meta.column_id, "column": n.meta.column_display_name,
+            "operator": n.meta.operator,
+            "segments": [s.to_dict() for s in n.segments],
+            "leaf": f.to_dict() if f is not None else None})
 
 
 def build_tree(oqo: OQO, resolver=None, origins=None) -> dict:
@@ -173,30 +155,22 @@ def build_tree(oqo: OQO, resolver=None, origins=None) -> dict:
 
 
 def _build_tree_v2(oqo: OQO, resolver=None, origins=None):
-    """(v2 tree, v1 tree) — the v1 tree is built once here (for directives +
-    corpus phrase) and returned so callers that also need the canonical string
-    (`render_v2`) don't build it a second time."""
+    """(v2 tree, v1 tree) — ONE engine walk (`_build_tree`) makes every
+    factoring/negation decision; the v2 tree is projected from its output."""
     idg = _IdGen()
+    v1 = _build_tree(oqo, resolver)
     head = {"id": oqo.get_rows, "text": oqo.get_rows.lower()}
     where = None
-    if oqo.filter_rows:
-        rows = _merge_same_field_items(oqo.filter_rows, "and")
-        if len(rows) == 1:
-            where = _expr_node(rows[0], True, resolver, idg, origins)
-        else:
-            children = [_expr_node(f, False, resolver, idg, origins) for f in rows]
-            where = {"node": "group", "id": idg(), "join": "and",
-                     "negated": False, "paren": False, "implicit": True,
-                     "children": children}
-    # Directives reuse the v1 stringifier (they are always single-line).
-    v1 = _build_tree(oqo, resolver)
+    if v1.where is not None:
+        where = _expr_node(v1.where, True, idg, origins)
     directives = [{"type": d.type, "text": _stringify_directive(d),
                    "meta": d.meta.to_dict()} for d in v1.directives]
     return {"version": "2.0", "entity": head,
             # Corpus selector parenthetical (#481), e.g. " (all corpora)"; ""
             # for the default core corpus. Reuses the v1 tree's computed phrase.
             "corpus_phrase": v1.corpus_phrase,
-            "where_keyword": " where " if where else "", "where": where,
+            "where_keyword": " where " if where is not None else "",
+            "where": where,
             "directives": directives}, v1
 
 
@@ -260,11 +234,12 @@ def _flat_tokens(tree: dict) -> list:
                 for s in n["segments"]:
                     kind = s["kind"]
                     # #554: `_leaf_node` renders a negated entity/other `is` leaf
-                    # as `is (` + `not ` (inert text) + value + `)`. The builder
-                    # carries negation ON the value brick (below), so skip the
-                    # standalone prefix segment — emitting both would double it.
-                    if (kind == "text" and s["text"] == "not "
-                            and neg and ck in ("entity", "other")):
+                    # as `is (` + a structural negation segment + value + `)`.
+                    # The builder carries negation ON the value brick (below), so
+                    # skip the standalone prefix — emitting both would double it.
+                    # (#566: recognized by segment KIND, not by matching output
+                    # text.)
+                    if kind == "negation" and neg and ck in ("entity", "other"):
                         continue
                     tok = {"t": _SEG2TOK.get(kind, "text"), "id": n["id"],
                            "text": s["text"]}
@@ -400,6 +375,13 @@ def layout(tree: dict, canonical: str):
 
 
 def render_v2(oqo: OQO, resolver=None) -> dict:
+    return render_v2_and_oql(oqo, resolver)[0]
+
+
+def render_v2_and_oql(oqo: OQO, resolver=None):
+    """(v2 render tree, canonical OQL string) from the ONE engine walk (#566)
+    — the string is the same `format_oql` output the tree's `lines` were laid
+    out from, so callers (views.render_all_formats) need no second render."""
     tree, v1 = _build_tree_v2(oqo, resolver)
     canonical = format_oql(v1)
     tree["lines"] = layout(tree, canonical)
@@ -423,7 +405,7 @@ def render_v2(oqo: OQO, resolver=None) -> dict:
             if tok.get("t") == "vbrick" and node["node"] == "clause":
                 addr = addr + [1]
             tok["addr"] = dotted(addr)
-    return tree
+    return tree, canonical
 
 
 def lines_to_text(lines) -> str:

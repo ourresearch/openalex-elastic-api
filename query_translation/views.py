@@ -2,7 +2,7 @@
 
 This module is PURE TRANSLATION and metadata — it NEVER touches Elasticsearch:
 
-    GET /query/{oxurl|oql|oqo}/<q>  -> {oxurl, oql, oql_render, oqo, validation}
+    GET /query/{oxurl|oql|oqo}/<q>  -> {oxurl, oql, oql_render_v2, oqo, validation}
     GET /properties[/<entity>]      -> the entity-property catalog (+ /registry alias)
 
 Each `/query/<fmt>/<q>` route parses the query from one representation and renders
@@ -27,8 +27,7 @@ from query_translation.oqo import OQO
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 from query_translation.oql_parser import parse_oql_to_oqo
 from query_translation.oql_renderer import make_engine_resolver
-from query_translation.oql_tree_renderer import render_oqo_to_oql_and_tree
-from query_translation.oql_render_v2 import render_v2
+from query_translation.oql_render_v2 import render_v2_and_oql
 from query_translation.url_parser import fold_scoped_search_params, parse_url_to_oqo
 from query_translation.url_renderer import URLRenderError, render_oqo_to_url
 from query_translation.x_query import (
@@ -129,7 +128,7 @@ def _error_response(message, error_type, status=400):
 
 # ---------------------------------------------------------------------------
 # Translation resource: `/query` addressed by any one representation, returns
-# all of them — {oxurl, oql, oql_render, oqo, validation}. The entity type is
+# all of them — {oxurl, oql, oql_render_v2, oqo, validation}. The entity type is
 # embedded in every format, so no entity_type param is needed.
 #
 #   GET /query/oxurl/:query   (e.g. /query/oxurl/works?filter=type:article)
@@ -147,7 +146,7 @@ def get_query():
         {
             "msg": (
                 "Translate a query: GET /query/{oxurl|oql|oqo}/<query> "
-                "(un-encoded or urlencoded) → {oxurl, oql, oql_render, oqo, "
+                "(un-encoded or urlencoded) → {oxurl, oql, oql_render_v2, oqo, "
                 "validation}. For a query too long for a URL (gunicorn caps the "
                 "request line at 8190 bytes), POST /query with a JSON body "
                 "{\"oql\"|\"oqo\"|\"oxurl\": ...} — the body has no length limit. "
@@ -161,7 +160,7 @@ def get_query():
 def post_query():
     """Translate a query supplied in the JSON body (the POST sibling of the
     `GET /query/{oxurl|oql|oqo}/<value>` routes). Same translation-only contract —
-    parses + renders {oxurl, oql, oql_render, oql_render_v2, oqo, validation}; does
+    parses + renders {oxurl, oql, oql_render_v2, oqo, validation}; does
     NOT execute or touch ES.
 
     Why this exists (oxjob #428): the GET routes carry the whole query in the URL
@@ -266,7 +265,7 @@ def _translate_response(oqo, parse_error, sort_operands: bool = True):
 def translate_oxurl(value: str):
     """Translate an OpenAlex URL (`works?filter=…`) to all formats.
 
-    Translation only — parses + renders {oxurl, oql, oql_render, oqo, validation};
+    Translation only — parses + renders {oxurl, oql, oql_render_v2, oqo, validation};
     does NOT execute the query or touch ES. Execution lives at the root — see
     `query_translation/execution.py`.
     """
@@ -365,7 +364,7 @@ def parse_oqo_input(entity_type: str, input_data):
 
 
 def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_operands: bool = True):
-    """Render OQO to all output formats: {oxurl, oql, oql_render, oqo, validation}.
+    """Render OQO to all output formats: {oxurl, oql, oql_render_v2, oqo, validation}.
 
     `sort_operands=False` preserves the user's given clause/value order in every
     rendered format (decision 30, #363) — used by the OQL-text and direct-OQO routes
@@ -387,25 +386,18 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
             type="url_not_representable", message=str(e)
         ))
 
-    # One engine resolver shared by both renders below, so each (namespace, id)
-    # display-name lookup hits ES at most once per request (the cache lives in
-    # the resolver closure).
     resolver = make_engine_resolver(safe_get_display_name,
                                     entity=canonical_oqo.get_rows)
 
-    # Render to OQL and oql_render tree (display names included via the resolver)
-    oql_output, oql_render_tree = render_oqo_to_oql_and_tree(
-        canonical_oqo, engine_resolver=resolver
-    )
-
-    # oql_render v2 (oxjob #428): OQO-faithful, layout-bearing tree + logical
-    # `lines` projection — drives the no-code builder rows + #463 view-code
-    # gutter from the canonicalizer (one source of layout truth).
-    oql_render_v2 = render_v2(canonical_oqo, resolver=resolver)
+    # ONE render walk (#566): oql_render v2 (oxjob #428) — OQO-faithful,
+    # layout-bearing tree + logical `lines` projection — plus the canonical OQL
+    # string it was laid out from. The v1 `oql_render` key was dropped (#566;
+    # the GUI reads only `oql` + `oql_render_v2`).
+    oql_render_v2, oql_output = render_v2_and_oql(canonical_oqo, resolver=resolver)
 
     # Build response
     return {
-        "oxurl": oxurl_output, "oql": oql_output, "oql_render": oql_render_tree.to_dict(), "oql_render_v2": oql_render_v2, "oqo": canonical_oqo.to_dict(), "validation": {
+        "oxurl": oxurl_output, "oql": oql_output, "oql_render_v2": oql_render_v2, "oqo": canonical_oqo.to_dict(), "validation": {
             "valid": True, "errors": [
                 {"type": e.type, "message": e.message, "location": e.location}
                 for e in validation_result.errors
@@ -423,7 +415,7 @@ def get_natural_language_query(natural_language_query: str):
     all formats — the NL sibling of `/query/{oql,oxurl,oqo}/<q>`.
 
     Like the rest of this resource it is TRANSLATION ONLY (returns
-    {oxurl, oql, oql_render, oqo, validation} + meta); it does not execute. The
+    {oxurl, oql, oql_render_v2, oqo, validation} + meta); it does not execute. The
     client can run the returned `oqo` via the root execution endpoint (`/?oqo=`).
 
     Backed by `query_translation/nl_to_oqo.py` (oxjob #344, Claude Haiku 4.5 +
