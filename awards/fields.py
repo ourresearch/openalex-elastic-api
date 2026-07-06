@@ -8,6 +8,7 @@ from core.fields import (
 fields = [
     OpenAlexIDField(
         param="funder.id",
+        entity_type="funders",
         docstring="The funder's OpenAlex ID",
     ),
     OpenAlexIDField(

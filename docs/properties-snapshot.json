@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "a8c22a51044267f34ea069ec07ca226089819bb020853dfb7811c160203820e3",
+    "fingerprint": "687afa6b363c4dd34de3334c479d663658965b1e4d25ac0d3618faad88589624",
     "property_count": 782,
-    "version": "6.2.0"
+    "version": "7.0.0"
   },
   "properties": {
     "authors": {
@@ -1357,7 +1357,7 @@
         "bool_true": null,
         "category": "funder",
         "display_name": "funder",
-        "entity_type": null,
+        "entity_type": "funders",
         "name": "funder.id",
         "operators": [
           "eq",
@@ -3502,7 +3502,7 @@
         "bool_true": null,
         "category": null,
         "display_name": "field",
-        "entity_type": null,
+        "entity_type": "fields",
         "name": "fields.id",
         "operators": [
           "eq",
@@ -3981,7 +3981,7 @@
         "bool_true": null,
         "category": null,
         "display_name": "subfield",
-        "entity_type": null,
+        "entity_type": "subfields",
         "name": "subfields.id",
         "operators": [
           "eq",
@@ -6864,7 +6864,7 @@
         "bool_true": null,
         "category": "other",
         "display_name": "license",
-        "entity_type": null,
+        "entity_type": "licenses",
         "name": "license",
         "operators": [
           "eq",
@@ -6986,7 +6986,7 @@
         "bool_true": null,
         "category": "other",
         "display_name": "publisher",
-        "entity_type": null,
+        "entity_type": "publishers",
         "name": "publisher",
         "operators": [
           "eq",
@@ -7024,7 +7024,7 @@
         "bool_true": null,
         "category": "other",
         "display_name": "source",
-        "entity_type": null,
+        "entity_type": "sources",
         "name": "source_id",
         "operators": [
           "eq",
@@ -9068,7 +9068,7 @@
         "bool_true": null,
         "category": null,
         "display_name": "publisher",
-        "entity_type": null,
+        "entity_type": "publishers",
         "name": "host_organization",
         "operators": [
           "eq",
@@ -10523,7 +10523,7 @@
         "bool_true": null,
         "category": "other",
         "display_name": "domain",
-        "entity_type": null,
+        "entity_type": "domains",
         "name": "domain.id",
         "operators": [
           "eq",
@@ -10560,7 +10560,7 @@
         "bool_true": null,
         "category": "other",
         "display_name": "field",
-        "entity_type": null,
+        "entity_type": "fields",
         "name": "field.id",
         "operators": [
           "eq",
@@ -10756,7 +10756,7 @@
         "bool_true": null,
         "category": "other",
         "display_name": "parent subfield",
-        "entity_type": null,
+        "entity_type": "subfields",
         "name": "subfield.id",
         "operators": [
           "eq",

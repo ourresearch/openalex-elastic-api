@@ -189,7 +189,18 @@ CAP_COLUMN = "column"
 # display_name tweak + alias addition = MINOR per the versioning table. Word
 # unification approved by Jason in the #557 design conversation 2026-07-04;
 # MINOR class confirmed by Jason 2026-07-05.
-PROPERTIES_VERSION = "6.2.0"
+# 7.0.0 (#565 follow-up): the 10 homonym gap columns gained `entity_type` — topics
+# domain.id/field.id/subfield.id, domains fields.id, fields subfields.id, awards
+# funder.id, sources host_organization, locations publisher/source_id/license. Their values
+# were already name-annotated/autocompleted via #565's homonym word-resolution
+# fallback; carrying the fact in the registry makes the derivation direct AND closes
+# the validator gap (these columns now get the same closed-vocab / ID-shape value
+# checks as their typed siblings — previously-accepted garbage values now reject).
+# The classifier treats ANY entity_type transition as MAJOR ("breaks existing
+# queries"); Jason chose to accept that conservative read over amending the rule
+# (None->value = additive was the 1.8.0/#394 precedent). Jason-approved 2026-07-06.
+# = MAJOR.
+PROPERTIES_VERSION = "7.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

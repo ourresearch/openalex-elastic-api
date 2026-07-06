@@ -22,6 +22,7 @@ fields = [
     OpenAlexIDField(
         param="source_id",
         custom_es_field="source_id",
+        entity_type="sources",
         docstring="The source where this location is found",
     ),
     SearchField(param="text.search", index="locations"),
@@ -38,9 +39,11 @@ fields = [
     TermField(param="type", custom_es_field="type"),
     TermField(param="source_name", custom_es_field="source_name"),
     TermField(param="version", custom_es_field="version"),
-    TermField(param="license", custom_es_field="license"),
+    TermField(param="license", custom_es_field="license",
+              entity_type="licenses"),
     TermField(param="language", custom_es_field="language"),
-    TermField(param="publisher", custom_es_field="publisher"),
+    TermField(param="publisher", custom_es_field="publisher",
+              entity_type="publishers"),
 ]
 
 fields_dict = {f.param: f for f in fields}

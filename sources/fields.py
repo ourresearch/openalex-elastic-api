@@ -90,7 +90,7 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("concept", None),
         alternate_of="x_concepts.id",
     ),
-    OpenAlexIDField(param="host_organization"),
+    OpenAlexIDField(param="host_organization", entity_type="publishers"),
     OpenAlexIDField(
         param="host_organization.id", custom_es_field="host_organization.lower"
     ),

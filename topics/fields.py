@@ -62,9 +62,9 @@ fields = [
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
-    TermField(param="domain.id"),
-    TermField(param="field.id"),
-    TermField(param="subfield.id"),
+    TermField(param="domain.id", entity_type="domains"),
+    TermField(param="field.id", entity_type="fields"),
+    TermField(param="subfield.id", entity_type="subfields"),
     CollectionField(entity_type="topics"),
 ]
 

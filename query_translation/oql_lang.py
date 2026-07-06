@@ -1116,12 +1116,11 @@ _build_by_column()
 #                 checking the preferred `entity` first, then works, then
 #                 every entity (spellings are disjoint across entities in
 #                 practice — the #406 exceptions are all overridden/excluded)
-#   3. homonym  — a column with no direct entity_type whose `_BY_COLUMN`
-#                 Field is the entity-correct spelling of a curated word
-#                 (#406): resolve the word per entity and read the resolved
-#                 column's entity_type (topics' `domain.id` -> works'
-#                 `primary_topic.domain.id` -> "domains"; locations'
-#                 `source_id` -> `primary_location.source.id` -> "sources").
+# (A third tier — resolving a homonym column's curated WORD to a typed sibling
+#  column — was needed at #565 ship time and retired same-day: the registry
+#  now carries entity_type on every homonym column (PROPERTIES_VERSION 7.0.0,
+#  Jason-approved). If a future column derives None here, the fix is teaching
+#  the registry its entity_type, not re-adding a fallback.)
 
 _ENTITY_TYPE_OVERRIDES: Dict[str, Optional[str]] = {
     # Citation/relation edges reference a WORK. The registry deliberately
@@ -1179,23 +1178,6 @@ def _derive_entity_type(column_id: str, entity: Optional[str]) -> Optional[str]:
         et = getattr(prop, "entity_type", None) if prop is not None else None
         if et:
             return et
-    # Homonym fallback (#406): this column may be the entity-correct spelling
-    # of a curated word — read the entity_type off the column that word
-    # resolves to where it IS typed.
-    fld = _BY_COLUMN.get(column_id)
-    if fld is None or fld.kind in ("search", "collection"):
-        return None
-    candidates = [fld.column] if fld.column != column_id else []
-    for e in order:
-        resolved_col = _entity_resolve_field(fld, e).column
-        if resolved_col != column_id and resolved_col not in candidates:
-            candidates.append(resolved_col)
-    for col in candidates:
-        for e in order:
-            prop = ENTITY_PROPERTIES[e].get(col)
-            et = getattr(prop, "entity_type", None) if prop is not None else None
-            if et:
-                return et
     return None
 
 
