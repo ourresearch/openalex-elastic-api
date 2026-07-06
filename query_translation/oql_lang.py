@@ -372,8 +372,8 @@ _f("ROR ID", "authorships.institutions.ror", "string")
 # verb, column header, sort) — matching the prod GUI chips and the oxurl input
 # alias `cites:`. "references" survives as an accepted input alias (registry
 # aliases in core/display_names.py); `reference count` (referenced_works_count)
-# keeps its own word. Registration ORDER is load-bearing: this row must be the
-# first `referenced_works` registration so _BY_COLUMN.setdefault binds "cites".
+# keeps its own word. (Declaration order is NOT load-bearing: since #567 the
+# reverse-map build asserts loudly if two rows ever claim one column.)
 _f("cites", "referenced_works", "id")
 _f("related to", "related_to", "id")
 # "raw-but-good" distinct-count metrics (kind num, integer counts; display_names
@@ -475,18 +475,11 @@ _f("continent", "authorships.institutions.continent", "id")
 # keywords.id is already "keyword" → Front-B. (Jason 2026-06-09, #402)
 _f("keyword", "keywords.id", "id")
 
-# Reverse map: column_id (final, incl. search suffix stripped to base) -> Field
-_BY_COLUMN = {}
-for _spellings, _fld in _FIELDS:
-    _BY_COLUMN.setdefault(_fld.column, _fld)
-# default.search is the deprecated alias of fulltext.search (oxjob #374): render any
-# stray default.search column (e.g. from an external URL→OQO) to the canonical
-# "fulltext" word so it round-trips into fulltext.search.
-_BY_COLUMN.setdefault("default", _BY_COLUMN["fulltext"])
-
-
-# (Render-side entity-awareness — `_augment_by_column_for_homonyms()` — is defined
-#  and invoked AFTER `_entity_resolve_field`, below, since it reuses it.)
+# Reverse map: column_id (final, incl. search suffix stripped to base) -> Field.
+# Populated by `_build_by_column()` — the SINGLE build site, defined below once
+# its helpers (`_entity_resolve_field`, `_entity_fallback`) exist (oxjob #567).
+# Nothing reads this map at import time before that build runs.
+_BY_COLUMN: Dict[str, "Field"] = {}
 
 
 def canon_value_for_column(value, column_id):
@@ -762,6 +755,34 @@ def match_field(toks: List[Tok], i: int) -> Optional[Tuple[str, "Field", int]]:
 _REGISTRY_FALLBACK_CACHE: Optional[Dict[str, "Field"]] = None
 
 
+def _registry_kind(prop, *, surface_rich_kinds: bool) -> Optional[str]:
+    """THE kind-derivation rule for registry-synthesized Fields (oxjob #567) —
+    the single function both fallback doors call. (Curated `_f(...)` rows carry
+    an explicit hand-picked kind and never come through here.)
+
+    surface_rich_kinds=False is the works raw-column_id door's deliberately
+    conservative policy, frozen as-is: a raw column_id renders raw and never
+    name-resolves, so it only distinguishes comparable numbers ('range' in
+    operators) from verbatim strings — never id/enum/bool.
+
+    surface_rich_kinds=True is the entity-fallback door: `id` for entity
+    references (carries `entity_type`), None for booleans (an uncurated bool
+    has no render phrasing, so the caller must skip it), `num` for
+    numbers/ranges, else verbatim `string`.
+    """
+    ops = set(getattr(prop, "operators", []) or [])
+    if not surface_rich_kinds:
+        return "num" if "range" in ops else "string"
+    ptype = getattr(prop, "type", None)
+    if ptype == "boolean":
+        return None
+    if getattr(prop, "entity_type", None):
+        return "id"
+    if ptype == "number" or "range" in ops:
+        return "num"
+    return "string"
+
+
 def _build_registry_fallback() -> Dict[str, "Field"]:
     try:
         from core.properties import get_entity_properties
@@ -782,7 +803,7 @@ def _build_registry_fallback() -> Dict[str, "Field"]:
             # via the curated friendly fields + quoting, not a raw-id leaf; the
             # `collection` column is curated. Skip both.
             continue
-        kind = "num" if "range" in ops else "string"   # 'range' => comparisons/ranges; else verbatim value
+        kind = _registry_kind(prop, surface_rich_kinds=False)
         out[key] = Field(column=cid, kind=kind, oql=cid, casing="",
                          resolves_name=False, is_float=(kind == "num"))
     return out
@@ -860,68 +881,9 @@ def _entity_resolve_field(fld: "Field", entity: Optional[str]) -> "Field":
     return fld
 
 
-def _augment_by_column_for_homonyms() -> None:
-    """Entity-aware RENDER side of #406. The curated reverse map (`_BY_COLUMN`) is
-    keyed only on each curated Field's works-default column, so an entity-correct
-    homonym column renders RAW and won't round-trip — e.g. works
-    `primary_topic.domain.id` (the GUI `domain` param) has no key, `orcid` on authors
-    and `issn` on sources have none. For every curated Field × every entity, compute
-    the column its word entity-resolves to (the parse side, run in reverse) and map
-    THAT column back to the SAME curated Field. Using the curated Field (not a
-    registry-synthesized one) guarantees the render word is one that parses back to
-    this exact column — so the round-trip holds by construction, and columns with no
-    parseable word yet (e.g. `works_count`, pending the Part B fallback) are left to
-    render raw. `setdefault` keeps the curated/works key on any collision, so strict
-    works render stays byte-identical (this only fills MISSING keys)."""
-    try:
-        from core.properties import ENTITY_PROPERTIES
-        entities = list(ENTITY_PROPERTIES.keys())
-    except Exception:
-        return
-    # works first so its homonym columns win any cross-entity collision.
-    order = ["works"] + [e for e in entities if e != "works"]
-    for ent in order:
-        for _spellings, fld in _FIELDS:
-            if fld.kind in ("search", "collection"):
-                continue
-            resolved = _entity_resolve_field(fld, ent)
-            if resolved.column != fld.column:
-                _BY_COLUMN.setdefault(resolved.column, fld)
-
-
-def _augment_by_column_for_alias_canonicals() -> None:
-    """Render-side completion of #455. Since #455 canonicalizes alias column_ids to
-    one identity at parse time, an OQO that the user spelled with a filter ALIAS now
-    carries the CANONICAL column_id — but a curated friendly word lives in `_FIELDS`
-    keyed to the alias spelling (e.g. "publisher" → `…publisher_lineage`, "from
-    global south" → `institutions.is_global_south`). Without this, the canonical
-    renders RAW, losing the curated word (the lossiness #446 thread A deferred on).
-
-    For every curated Field whose column is a filter alias on an entity, map that
-    alias's CANONICAL column back to the SAME curated Field, so the canonical renders
-    with the alias's word and round-trips. `setdefault` keeps any word the canonical
-    already owns (and the works-first order keeps works deterministic), so this only
-    fills MISSING keys — it never changes an existing render. Render-only: it does
-    NOT touch the registry `display_name`, the registry-consistency gate, or
-    `PROPERTIES_VERSION` (that broader friendly-name re-key is the #455 Phase B/C
-    work). Booleans are included (gate-exempt; they render via their phrasing)."""
-    try:
-        from core.properties import ENTITY_PROPERTIES, canonicalize_column_id
-        entities = list(ENTITY_PROPERTIES.keys())
-    except Exception:
-        return
-    order = ["works"] + [e for e in entities if e != "works"]
-    for ent in order:
-        for _spellings, fld in _FIELDS:
-            if fld.kind in ("search", "collection"):
-                continue
-            canon = canonicalize_column_id(fld.column, ent)
-            if canon != fld.column:
-                _BY_COLUMN.setdefault(canon, fld)
-
-
-_augment_by_column_for_homonyms()
-_augment_by_column_for_alias_canonicals()
+# (The entity-homonym (#406) and alias-canonical (#455) render-side mappings
+#  are tiers 1 and 2 of `_build_by_column()`, the single `_BY_COLUMN` build
+#  site below.)
 
 
 # Boolean sentence phrasings (oxjob #428) were removed in #363: booleans are now
@@ -975,18 +937,12 @@ def _build_entity_fallback(entity: str) -> Dict[str, "Field"]:
         elif is_works:
             continue                  # works: don't surface uncurated columns here
         else:
-            ptype = getattr(prop, "type", None)
-            if ptype == "boolean":
+            kind = _registry_kind(prop, surface_rich_kinds=True)
+            if kind is None:
                 continue              # uncurated bool needs phrasing -> not surfaced here
             dn0 = getattr(prop, "display_name", None)
             if not dn0:
                 continue
-            if getattr(prop, "entity_type", None):
-                kind = "id"           # name-resolved reference (institutions, topics, …)
-            elif ptype == "number" or "range" in ops:
-                kind = "num"
-            else:
-                kind = "string"       # verbatim id/string (issn_l, ror, country_code)
             fld = Field(column=cid, kind=kind, oql=dn0, casing="",
                         resolves_name=(kind == "id"),
                         is_float=(kind == "num" and "mean_citedness" in cid))
@@ -1032,50 +988,124 @@ def match_entity_fallback(toks: List[Tok], i: int, entity: Optional[str]
     return spelling, best, best_len
 
 
-def _augment_by_column_for_entity_fallback() -> None:
-    """RENDER side of the Part B fallback: map each GUI-faceted non-works column to
-    its synthesized Field so it renders the friendly `display_name` (and round-trips
-    — the filter path `_parse_field` accepts these words). `setdefault` keeps any
-    curated/works key.
+# --- the ONE `_BY_COLUMN` build (oxjob #567) --------------------------------
+# Every render-side column->Field mapping is claimed HERE, in one pass with an
+# EXPLICIT precedence ladder — nothing else writes `_BY_COLUMN`. Before #567
+# this was a base pass plus three sequential `setdefault` augment passes whose
+# net result silently depended on execution order and on `_FIELDS` declaration
+# order. Now each mapping is a *claim* at a named precedence tier: a stronger
+# (lower) tier always wins, and two DIFFERENT claims at a column's winning
+# tier raise at import instead of resolving by iteration order.
+#
+# The tiers (strongest first):
+#   0 curated         — a `_f(...)` row's own column, plus the deprecated
+#                       `default` -> fulltext alias (#374).
+#   1 homonym         — the entity-correct column a curated word resolves to
+#                       on some entity (#406). `_BY_COLUMN` is a GLOBAL map
+#                       keyed on each curated Field's works-default column, so
+#                       e.g. authors' `orcid` / sources' `issn` would render
+#                       RAW without these claims. Mapping back to the SAME
+#                       curated Field guarantees the render word re-parses to
+#                       this exact column — the round-trip holds by
+#                       construction; columns with no parseable word render
+#                       raw.
+#   2 alias-canonical — the CANONICAL column_id of a curated Field whose
+#                       column spelling is a filter alias (#455): parse-time
+#                       canonicalization means OQOs carry the canonical id,
+#                       which must render the curated word, not raw. Render-
+#                       only — no registry display_name / PROPERTIES_VERSION
+#                       impact.
+#   3 entity-fallback — GUI-faceted non-works columns synthesized from the
+#                       registry (#406 1b), so e.g. sources' `issn_l` renders
+#                       "ISSN-L". SAFETY GATE: parsing a fallback word is
+#                       entity-SCOPED but this map is GLOBAL, so a column only
+#                       renders its friendly word when that word parses back
+#                       on EVERY in-scope entity that has the column
+#                       (`_faceted_everywhere`) — e.g. `works_count` is
+#                       GUI-faceted only on funders, so it renders RAW (the
+#                       column_id, which always round-trips).
+def _build_by_column() -> None:
+    tier_of: Dict[str, int] = {}
 
-    SAFETY GATE: `_BY_COLUMN` is a GLOBAL (entity-blind) reverse map, but parsing a
-    Part-B word is entity-SCOPED. So we only render a column's friendly word if that
-    word parses back on EVERY entity that has the column — i.e. the column is
-    GUI-faceted on all of them. Counter-example: `works_count` exists on
-    authors/sources/institutions/funders/publishers but is GUI-faceted ONLY on
-    funders; rendering an authors OQO's `works_count` as "works count" would not
-    re-parse on authors (it's not surfaced there). Such columns render RAW (their
-    column_id), which always round-trips (the raw id parses via the fallback's
-    column_id key and the sort path's raw-token path)."""
+    def claim(tier: int, column: str, fld: "Field", source: str) -> None:
+        cur = _BY_COLUMN.get(column)
+        if cur is None:
+            _BY_COLUMN[column] = fld
+            tier_of[column] = tier
+        elif tier_of[column] == tier and cur != fld:
+            raise AssertionError(
+                f"_BY_COLUMN conflict: column {column!r} claimed at tier {tier}"
+                f" by both {cur.oql!r} and {fld.oql!r} ({source}). Resolve it"
+                " explicitly (curate one row / split the tier) — never by"
+                " declaration or iteration order.")
+        # else: a stronger (lower) tier already owns the column.
+
+    # Tier 0 — curated rows.
+    for _spellings, fld in _FIELDS:
+        claim(0, fld.column, fld, "curated _FIELDS row")
+    # default.search is the deprecated alias of fulltext.search (oxjob #374):
+    # render any stray `default` column (e.g. from an external URL->OQO) to
+    # the canonical "fulltext" word so it round-trips into fulltext.search.
+    claim(0, "default", _BY_COLUMN["fulltext"], "deprecated default alias")
+
+    # Tiers 1-3 need the engine registry; without it (lightweight contexts)
+    # the curated map alone stands.
     try:
-        from core.properties import ENTITY_PROPERTIES
+        from core.properties import ENTITY_PROPERTIES, canonicalize_column_id
         from query_translation.input_alias_columns import GUI_FACETED_COLUMNS_BY_ENTITY
         entities = list(ENTITY_PROPERTIES.keys())
     except Exception:
         return
+    # works first, so when several entities make the same-tier claim on one
+    # column, works' claim is the one recorded (they must agree anyway —
+    # `claim` raises on a genuine same-tier disagreement).
+    order = ["works"] + [e for e in entities if e != "works"]
+
+    for ent in order:                       # Tier 1 — homonyms (#406)
+        for _spellings, fld in _FIELDS:
+            if fld.kind in ("search", "collection"):
+                continue
+            resolved = _entity_resolve_field(fld, ent)
+            if resolved.column != fld.column:
+                claim(1, resolved.column, fld,
+                      f"homonym of {fld.oql!r} on {ent}")
+
+    for ent in order:                       # Tier 2 — alias canonicals (#455)
+        for _spellings, fld in _FIELDS:
+            if fld.kind in ("search", "collection"):
+                continue
+            canon = canonicalize_column_id(fld.column, ent)
+            if canon != fld.column:
+                claim(2, canon, fld,
+                      f"alias-canonical of {fld.oql!r} on {ent}")
 
     def _faceted_everywhere(cid: str) -> bool:
-        # Only entities in fallback SCOPE (those with a GUI-faceted allowlist) can
-        # parse a Part-B word, so only they constrain whether the friendly render
-        # round-trips. An in-scope entity that HAS the column but doesn't facet it
-        # (e.g. authors has `works_count` but doesn't surface it) forces raw render.
+        # Only entities in fallback SCOPE (those with a GUI-faceted allowlist)
+        # can parse a fallback word, so only they constrain whether a friendly
+        # render round-trips. An in-scope entity that HAS the column but
+        # doesn't facet it (e.g. authors has `works_count` but doesn't
+        # surface it) forces raw render.
         for e in GUI_FACETED_COLUMNS_BY_ENTITY:
             props = ENTITY_PROPERTIES.get(e) or {}
             if cid in props and cid not in GUI_FACETED_COLUMNS_BY_ENTITY[e]:
                 return False
         return True
 
-    for ent in entities:
+    for ent in entities:                    # Tier 3 — entity fallback (#406 1b)
         if ent == "works":
             continue
+        # `_entity_fallback()` builds (and caches) each entity's index against
+        # `_BY_COLUMN` *as of this claim* — curated Fields (including tier-1/2
+        # keys) are reused for full fidelity, so the interleaving of index
+        # builds with claims is deliberate, frozen behavior.
         for cid, fld in _entity_fallback(ent).items():
-            # only the canonical column_id key (fld.column) seeds the reverse map,
-            # and only when the friendly word is safe to render on every entity.
+            # only the canonical column_id key (fld.column) seeds the reverse
+            # map, and only when the friendly word renders safely everywhere.
             if cid == fld.column and _faceted_everywhere(cid):
-                _BY_COLUMN.setdefault(cid, fld)
+                claim(3, cid, fld, f"entity fallback on {ent}")
 
 
-_augment_by_column_for_entity_fallback()
+_build_by_column()
 
 
 def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool]]:
