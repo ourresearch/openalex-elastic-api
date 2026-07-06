@@ -2,8 +2,8 @@
 
 **OQL** is the OpenAlex Query Language — a readable way to write any OpenAlex query.
 A query reads almost like a sentence: `works where title has (cancer) and year >= (2020)`.
-Try one in the **search box on a results page** (paste it in the OQL panel), or hit the
-API directly: `https://api.openalex.org/?oql=<your query>`.
+Try it in the new **OQL tab** at the top of the search page, or hit the API directly:
+`https://api.openalex.org/?oql=<your query>`.
 
 > Every example below runs on production today. Counts are live and will drift.
 
@@ -12,12 +12,12 @@ API directly: `https://api.openalex.org/?oql=<your query>`.
 ## The shape
 
 ```
-<entity> where <conditions> [ group by <dims> ] [ sample <n> ]
+<entity> where <filters> [ group by <dims> ] [ sample <n> ]
 ```
 
 - **entity** — what you get back: `works`, `authors`, `institutions`, `sources`, `funders`, `topics`, …
-- **where** — your conditions (skip it for everything: `works`).
-- A condition is `<field> <operator> (<value>)`: `year >= (2020)`, `type is (review)`, `title has (cancer)`. The value always sits in `( … )`.
+- **where** — your filters (skip it for everything: `works`).
+- A filter is `<field> <operator> (<value>)`: `year >= (2020)`, `type is (review)`, `title has (cancer)`. The value always sits in `( … )`.
 
 ```
 works
@@ -36,7 +36,7 @@ authors where last known institution is (I136199984 [Harvard University])
 | `works where type is (article or review)` | one of several — join values with `or` |
 | `works where citation count >= (100)` | numeric comparison |
 | `works where FWCI >= (2.0)` | floats allowed |
-| `works where year >= (2019) and year <= (2023)` | a range = two endpoint conditions |
+| `works where year >= (2019) and year <= (2023)` | a range = two endpoint filters |
 | `works where institution is (I136199984 [Harvard University])` | entities use their OpenAlex ID; the `[name]` is optional and just for reading |
 | `works where language is (en)` · `works where SDG is (3)` | closed vocabularies use codes/ids |
 
@@ -57,7 +57,7 @@ Search a text field with **`has`**. Bare words are **stemmed** (so `cancer` also
 | `works where title has ("climate change")` | **exact** phrase (no stemming) |
 | `works where title has ("cat")` | exact single word — excludes *cats* |
 | `works where title has (stemmed "genome editing")` | exact-adjacent **but** still stemmed |
-| `works where title has ("psoriat*")` | wildcard — **must be quoted**; `*` = any chars, `?` = one char |
+| `works where title has ("psoriat*")` | wildcard — **must be quoted**; `*` = any chars, `?` = one mid-word char (`"wom?n"`) |
 | `works where title has (within 3 ("smart", "phone"))` | proximity — terms within N words, any order |
 | `works where title/abstract is similar to ("ocean acidification on coral")` | semantic (meaning-based) search |
 
@@ -67,7 +67,7 @@ Search a text field with **`has`**. Bare words are **stemmed** (so `cancer` also
 
 ## Combine & nest — `and`, `or`, `( … )`
 
-Join conditions with `and` / `or`. Use parentheses to group; `and` binds tighter than `or`.
+Join filters with `and` / `or`. Use parentheses to group; `and` binds tighter than `or`.
 
 ```
 works where title has (cancer) and year >= (2020)
@@ -104,7 +104,7 @@ works where retracted is (true)
 ## Citation links — `it cites`, `it's cited by`
 
 Follow the citation edge in either direction — the subject `it` is each work in your
-results. Takes `not` and `or` in the value like any other condition. The bare verb
+results. Takes `not` and `or` in the value like any other filter. The bare verb
 also works as input (`cites (W…)`, `cited by (W…)`); it canonicalizes to the `it` form.
 
 ```
@@ -141,7 +141,7 @@ OQL never guesses — a query that can't do what it looks like it does is a clea
 | `title has bar*` | wildcards need quotes → `title has ("bar*")` |
 | `title has climate change or warming` | wrap the terms → `title has (climate change or warming)` |
 | `type is (article review)` | two values need a connective → add `or` between them (or `and` if you mean both) |
-| `pub_year is 2020` | unknown field → it's `year` |
+| `pub_year is 2020` | unknown field `pub_year` — check the field name (you want `year`) |
 
 ---
 

@@ -15,21 +15,21 @@ and classic URLs already use.
 
 ## The three things to know
 
-1. **A query is `<entity> where <conditions>`.** The entity is what you get back —
-   `works`, `authors`, `institutions`, `sources`, … With no conditions, the bare entity
+1. **A query is `<entity> where <filters>`.** The entity is what you get back —
+   `works`, `authors`, `institutions`, `sources`, … With no filters, the bare entity
    is a valid query: `works`.
 2. **Filter fields with `is` / `>=`; search text with `has` — the value always sits in
    parentheses.** `year is (2020)`, `citation count >= (100)`, `title has (cancer)`.
-3. **Combine with `and` / `or`; group conditions with parentheses.**
+3. **Combine with `and` / `or`; group filters with parentheses.**
    `title has (cancer) and year >= (2020)`.
 
 That's enough to write most queries. Everything below is detail.
 
 ## Where to run it
 
-- **On a results page:** open the OQL panel in the search box and paste a query in. This
-  is the easiest way to experiment — you see results immediately and can flip between the
-  point-and-click builder and the OQL text.
+- **On the search page:** switch to the new **OQL tab** at the top of the page and type
+  your query — valid queries run as you type, and you can flip between the
+  point-and-click builder and the OQL text. This is the easiest way to experiment.
 - **On the API:** `https://api.openalex.org/?oql=<your query>`. Note the query carries its
   own entity (`works where …`), so it goes to the API **root**, not `/works`.
 
@@ -37,7 +37,7 @@ That's enough to write most queries. Everything below is detail.
 
 ## Filtering
 
-A condition is `<field> <operator> (<value>)` — the value always sits in parentheses.
+A filter is `<field> <operator> (<value>)` — the value always sits in parentheses.
 Most filters use `is`, or a numeric comparison:
 
 ```
@@ -53,7 +53,7 @@ works where FWCI >= (2.0)
 works where type is (article or review)
 ```
 
-**Ranges** are just two endpoint conditions joined with `and`:
+**Ranges** are just two endpoint filters joined with `and`:
 
 ```
 works where year >= (2019) and year <= (2023)
@@ -103,8 +103,8 @@ want phrase precision without losing recall:
 works where title has (stemmed "genome editing")
 ```
 
-**Wildcards** (`*` any characters, `?` one character) must be **quoted** — they run on the
-exact, unstemmed text:
+**Wildcards** (`*` any characters, `?` one mid-word character, as in `"wom?n"`) must be
+**quoted** — they run on the exact, unstemmed text:
 
 ```
 works where title has ("psoriat*")
@@ -127,7 +127,7 @@ works where title/abstract is similar to ("ocean acidification effects on coral 
 
 ## Combining and nesting
 
-Join conditions with `and` / `or`, and group with parentheses. `and` binds tighter than
+Join filters with `and` / `or`, and group with parentheses. `and` binds tighter than
 `or`, so `a and b or c` means `(a and b) or c` — but the canonical form always adds the
 parentheses back so nothing is left to guess:
 
@@ -191,7 +191,7 @@ OQL tells you exactly what to change:
 ```
 title contains (cancer)     →  "contains" was renamed; use: title has (cancer)
 title has (bar*)            →  wildcards need quotes: title has ("bar*")
-pub_year is (2020)          →  unknown field; it's "year"
+pub_year is (2020)          →  unknown field "pub_year"; check the field name (it's "year")
 type is (article review)    →  two values need a connective: type is (article or review)
 ```
 
