@@ -57,7 +57,7 @@ Search a text field with **`has`**. Bare words are **stemmed** (so `cancer` also
 | `works where title has ("climate change")` | **exact** phrase (no stemming) |
 | `works where title has ("cat")` | exact single word — excludes *cats* |
 | `works where title has (stemmed "genome editing")` | exact-adjacent **but** still stemmed |
-| `works where title has ("psoriat*")` | wildcard — **must be quoted**; `*` = any chars, `?` = one mid-word char (`"wom?n"`) |
+| `works where title has ("psoriat*")` | wildcard — **must be quoted**; `*` = any chars, `?` = exactly one char (`"wom?n"`, `"wo??n"`) |
 | `works where title has (within 3 ("smart", "phone"))` | proximity — terms within N words, any order |
 | `works where title/abstract is similar to ("ocean acidification on coral")` | semantic (meaning-based) search |
 

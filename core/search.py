@@ -972,8 +972,29 @@ class SearchOpenAlex:
         - ? between two word characters only: wom?n (avoids 'therapy?' false positive)
         - ~ after 3+ word characters: term~2, machine~1 (but NOT a~2)
         - ~ after closing quote: "phrase"~5 (proximity search)
+
+        On the no-stem (exact) path, `?` detection is broader (#570): any `?`
+        preceded by a word character, which adds trailing `?` (`psoriati?`) and
+        adjacent `??` (`wo??n`) — shapes the narrow `\\w\\?\\w` rule misses, which
+        then silently degrade to a plain match with the `?` analyzed away (live:
+        `wo??n` = 12,408 = the token search `wo n`, vs ~5.8M as a wildcard). The
+        narrow rule exists so a pasted natural question ("…therapy?") on a stemmed
+        or non-works search isn't misread as a wildcard; on `.search.exact` a
+        wildcard is the sanctioned reason to be there (#364), and the quoted
+        multi-word intervals paths (#355) already honor any `?`, so this aligns
+        the single-token path with them.
         """
-        return bool(re.search(r'\w{3,}\*|\*\w{3,}|\w\?\w|\w{3,}~|"~', self.search_terms))
+        if re.search(r'\w{3,}\*|\*\w{3,}|\w\?\w|\w{3,}~|"~', self.search_terms):
+            return True
+        return self._is_no_stem() and bool(re.search(r"\w\?", self.search_terms))
+
+    def _is_no_stem(self):
+        """True when this search targets the works no-stem (exact) subfields."""
+        return any(
+            f.endswith(".no_stem")
+            for f in (self.primary_field, self.secondary_field, self.tertiary_field)
+            if f
+        )
 
     def clean_search_terms(self):
         self.search_terms = (

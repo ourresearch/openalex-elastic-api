@@ -103,8 +103,8 @@ want phrase precision without losing recall:
 works where title has (stemmed "genome editing")
 ```
 
-**Wildcards** (`*` any characters, `?` one mid-word character, as in `"wom?n"`) must be
-**quoted** — they run on the exact, unstemmed text:
+**Wildcards** (`*` any characters, `?` exactly one character, as in `"wom?n"` or `"wo??n"`;
+neither may start a word) must be **quoted** — they run on the exact, unstemmed text:
 
 ```
 works where title has ("psoriat*")

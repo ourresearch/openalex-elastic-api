@@ -313,6 +313,47 @@ class TestHasWildcard:
         search_oa = SearchOpenAlex(search_terms=terms)
         assert search_oa.has_wildcard() is False
 
+    # #570: on the no-stem (exact) path, trailing `?` and adjacent `??` are
+    # wildcards too — the narrow \w\?\w rule silently degraded them to a plain
+    # match (live: `wo??n` = 12,408 = the token search `wo n`, vs ~5.8M as a
+    # wildcard; found by alpha tester Rainer Krug).
+    @pytest.mark.parametrize(
+        "terms",
+        [
+            "wo??n",       # adjacent ?? (each ? flanked by the other, misses \w\?\w)
+            "psoriati?",   # trailing ?
+            "cancer?",     # trailing ?
+            "wom?n",       # mid-word ? (already detected; must stay detected)
+        ],
+    )
+    def test_has_wildcard_question_mark_no_stem(self, terms):
+        search_oa = SearchOpenAlex(
+            search_terms=terms,
+            primary_field="display_name.no_stem",
+            secondary_field="abstract.no_stem",
+        )
+        assert search_oa.has_wildcard() is True
+
+    @pytest.mark.parametrize(
+        "terms",
+        [
+            "therapy?",                # natural question — stemmed path stays plain
+            "What is gene therapy?",
+        ],
+    )
+    def test_question_mark_still_ignored_on_stemmed_fields(self, terms):
+        search_oa = SearchOpenAlex(search_terms=terms)  # default: display_name
+        assert search_oa.has_wildcard() is False
+
+    def test_no_stem_question_wildcard_routes_to_query_string(self):
+        """#570: `wo??n` on the exact path must reach ES as a wildcard, not a match."""
+        search_oa = SearchOpenAlex(
+            search_terms="wo??n", primary_field="display_name.no_stem"
+        )
+        q_dict = search_oa.primary_match_query().to_dict()
+        assert "query_string" in q_dict
+        assert q_dict["query_string"]["query"] == "wo??n"
+
 
 class TestWildcardQueryRouting:
     def test_wildcard_produces_query_string(self):
