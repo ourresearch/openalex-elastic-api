@@ -400,7 +400,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'related_to': {"display_name": 'related to'},
         'sustainable_development_goals.id': {"display_name": 'SDG', "aliases": ['sustainable development goal', 'sustainable development goals']},
         'title.search': {"display_name": 'title'},
-        'title_and_abstract.search': {"display_name": 'title/abstract', "aliases": ['title & abstract', 'title and abstract', 'title&abstract', 'title_and_abstract']},
+        'title_and_abstract.search': {"display_name": 'title/abstract', "aliases": ['title/abs', 'title & abstract', 'title and abstract', 'title&abstract', 'title_and_abstract']},
         'topics.id': {"display_name": 'topics'},
         'type': {"display_name": 'type'},
     },

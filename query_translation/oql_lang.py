@@ -149,7 +149,7 @@ _f("title", "display_name", "search", aliases=["display_name.search", "display_n
 # Render word "title/abstract" is the registry's canonical display_name (#381 Phase 5);
 # the old "title & abstract" spelling stays a parse alias for back-compat.
 _f("title/abstract", "title_and_abstract", "search",
-   aliases=["title & abstract", "title and abstract", "title_and_abstract.search", "title_and_abstract", "title&abstract"])
+   aliases=["title/abs", "title & abstract", "title and abstract", "title_and_abstract.search", "title_and_abstract", "title&abstract"])
 _f("abstract", "abstract", "search", aliases=["abstract.search"])
 # "full text" is the canonical broad full-text scope: title + abstract + full text
 # (oxjob #374; render word = the registry display_name, #381 Phase 5). All broad-search

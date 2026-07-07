@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "687afa6b363c4dd34de3334c479d663658965b1e4d25ac0d3618faad88589624",
+    "fingerprint": "14f77bc8b54a773b2e3f25a9e06d8b6822b9012f4bfbb7efc2d2c3e161bd8c95",
     "property_count": 782,
-    "version": "7.0.0"
+    "version": "7.1.0"
   },
   "properties": {
     "authors": {
@@ -15093,6 +15093,7 @@
           "title & abstract",
           "title and abstract",
           "title&abstract",
+          "title/abs",
           "title_and_abstract"
         ],
         "alternate_keys": [],

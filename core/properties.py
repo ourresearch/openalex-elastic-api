@@ -200,7 +200,10 @@ CAP_COLUMN = "column"
 # queries"); Jason chose to accept that conservative read over amending the rule
 # (None->value = additive was the 1.8.0/#394 precedent). Jason-approved 2026-07-06.
 # = MAJOR.
-PROPERTIES_VERSION = "7.0.0"
+# 7.1.0: added "title/abs" as an input alias on works title_and_abstract.search
+# (short form of the canonical "title/abstract"; Scopus's TITLE-ABS shorthand).
+# Alias addition only, display_name unchanged. Jason-requested 2026-07-07. = MINOR.
+PROPERTIES_VERSION = "7.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
