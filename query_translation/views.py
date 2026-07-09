@@ -364,7 +364,11 @@ def parse_oqo_input(entity_type: str, input_data):
 
 
 def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_operands: bool = True):
-    """Render OQO to all output formats: {oxurl, oql, oql_render_v2, oqo, validation}.
+    """Render OQO to all output formats: {oxurl, oql, oql_oneline, oql_render_v2, oqo, validation}.
+
+    `oql` is width-aware (may be multi-line, #376); `oql_oneline` is the same canonical
+    grouping on a single line (no line breaks/indent) — the OQL editor shows it live as you
+    type (oxjob #587).
 
     `sort_operands=False` preserves the user's given clause/value order in every
     rendered format (decision 30, #363) — used by the OQL-text and direct-OQO routes
@@ -393,11 +397,11 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
     # layout-bearing tree + logical `lines` projection — plus the canonical OQL
     # string it was laid out from. The v1 `oql_render` key was dropped (#566;
     # the GUI reads only `oql` + `oql_render_v2`).
-    oql_render_v2, oql_output = render_v2_and_oql(canonical_oqo, resolver=resolver)
+    oql_render_v2, oql_output, oql_oneline = render_v2_and_oql(canonical_oqo, resolver=resolver)
 
     # Build response
     return {
-        "oxurl": oxurl_output, "oql": oql_output, "oql_render_v2": oql_render_v2, "oqo": canonical_oqo.to_dict(), "validation": {
+        "oxurl": oxurl_output, "oql": oql_output, "oql_oneline": oql_oneline, "oql_render_v2": oql_render_v2, "oqo": canonical_oqo.to_dict(), "validation": {
             "valid": True, "errors": [
                 {"type": e.type, "message": e.message, "location": e.location}
                 for e in validation_result.errors

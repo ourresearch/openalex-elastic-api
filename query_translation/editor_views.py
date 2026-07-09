@@ -110,8 +110,10 @@ def validate_oql_route():
     editor text contains `/ ? &` and spaces that don't survive a path segment.
     Always 200; the verdict is in the body.
 
-    Returns {valid, oql (canonical), oqo, oxurl, diagnostics:[{code, message, fixit,
-    severity, start, end, location}]}. Both layers flow through the shared
+    Returns {valid, oql (canonical, width-aware/may be multi-line), oql_oneline (same
+    canonical grouping on one line — the editor's live-regroup source, #587), oqo, oxurl,
+    diagnostics:[{code, message, fixit, severity, start, end, location}]}. Both layers
+    flow through the shared
     `diagnostics` registry: parse errors carry the engine's rich OQLError (code +
     fix-it + byte position); validation errors carry the property-catalog
     ValidationError (code + OQO location) plus the registry's fix-it + severity.
@@ -157,10 +159,19 @@ def validate_oql_route():
     ]
 
     from query_translation.views import render_all_formats  # lazy: avoid import cycle
-    formats = render_all_formats(oqo, vr)
+    # The editor is OQL-TEXT input → preserve the user's given clause/value order
+    # (decision 30; same as the /query/oql + /query/oqo display routes). Sorting here
+    # would reorder terms in the canonical `oql`/`oql_oneline` the editor echoes back —
+    # jarring on the tidy button and, for live regroup (#587), it would scramble what the
+    # user just typed out from under the cursor. Only URL/NL input sorts.
+    formats = render_all_formats(oqo, vr, sort_operands=False)
     return jsonify({
         "valid": vr.valid,
         "oql": formats.get("oql"),
+        # single-line canonical (same grouping/parens as `oql`, no line breaks) — the
+        # editor rewrites the buffer to this live as you type, leaving multi-line layout
+        # to the tidy button (oxjob #587).
+        "oql_oneline": formats.get("oql_oneline"),
         "oqo": formats.get("oqo", oqo.to_dict()),
         "oxurl": formats.get("oxurl"),
         "diagnostics": diagnostics,

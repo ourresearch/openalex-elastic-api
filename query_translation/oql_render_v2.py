@@ -48,7 +48,7 @@ canonical `oql` — verified in the offline tests.
 
 from query_translation.oqo import OQO, BranchFilter
 from query_translation.oql_lang import _build_tree, format_oql
-from query_translation.oql_render_tree import GroupNode, _stringify_directive
+from query_translation.oql_render_tree import GroupNode, _stringify_directive, stringify
 
 class _IdGen:
     def __init__(self):
@@ -379,11 +379,17 @@ def render_v2(oqo: OQO, resolver=None) -> dict:
 
 
 def render_v2_and_oql(oqo: OQO, resolver=None):
-    """(v2 render tree, canonical OQL string) from the ONE engine walk (#566)
-    — the string is the same `format_oql` output the tree's `lines` were laid
-    out from, so callers (views.render_all_formats) need no second render."""
+    """(v2 render tree, canonical OQL string, single-line canonical OQL) from the
+    ONE engine walk (#566) — the multi-line string is the same `format_oql` output
+    the tree's `lines` were laid out from, so callers (views.render_all_formats)
+    need no second render. `oneline` is the always-single-line canonical
+    (`stringify` = `format_oql`'s pre-wrap `flat`, oql_lang.format_oql): identical
+    grouping/parenthesization, NO line breaks/indent — the OQL editor uses it to show
+    canonical grouping live as you type, leaving multi-line layout to the tidy button
+    (oxjob #587)."""
     tree, v1 = _build_tree_v2(oqo, resolver)
     canonical = format_oql(v1)
+    oneline = stringify(v1)
     tree["lines"] = layout(tree, canonical)
     # #474: decimal addresses for the builder footer/gutter. Stamp every structural
     # node with `addr` (list of ints), then tag each rendered token with the address
@@ -405,7 +411,7 @@ def render_v2_and_oql(oqo: OQO, resolver=None):
             if tok.get("t") == "vbrick" and node["node"] == "clause":
                 addr = addr + [1]
             tok["addr"] = dotted(addr)
-    return tree, canonical
+    return tree, canonical, oneline
 
 
 def lines_to_text(lines) -> str:
