@@ -148,6 +148,28 @@ works where year >= (2020)
 
 ## 3. Conditions — the cases
 
+### 3.0 Optional leading `the` — ignorable determiner (input sugar)
+
+A bare `the` immediately before a **field name** is accepted on input and
+**dropped at parse**, so a clause can read like an English sentence:
+
+```
+works where the title has (cancer)     (input)  ->  works where title has (cancer)   (canonical)
+works where the type is (article)       (input)  ->  works where type is (article)     (canonical)
+```
+
+- It is **input-only sugar** — like `[…]` annotations (§3.1) and case, it carries
+  no meaning and **never round-trips**: the canonical `OQO → OQL` render omits it.
+- It is swallowed **only when a known field follows** (curated, faceted, or a raw
+  registry column). This is a semantic guard, not a grammatical one: a search
+  value that happens to open with "the" keeps it — `title has (the great gatsby)`
+  is unchanged, and a stray `the` with no field after it is still an
+  `OQL_UNKNOWN_FIELD` error (it is not silently eaten).
+- Exactly **one** leading determiner is dropped, once per clause, right before the
+  field. It is deliberately narrow (only `the`) — the goal is to let the
+  natural-language reading the #575 builder's leading-`the` chip implies actually
+  be typeable in the OQL pane, not to grow a stop-word list.
+
 ### 3.1 Entity references: the ID is authoritative, `[…]` is ignored decoration
 
 ```

@@ -1856,7 +1856,33 @@ class _Parser:
         subj, verb, _bare = _ROW_SUBJECT_RENDER[column]
         return self._parse_value_clause(f"{subj}{verb.rstrip()}", fld, "is")
 
+    def _at_known_field(self, i: int) -> bool:
+        """True if a known field alias begins at token index ``i``. Mirrors the
+        resolution order of ``_parse_field`` (curated alias, then the two
+        non-ctx fallback doors) so the optional-``the`` guard only fires when
+        what follows really is a field."""
+        if match_field(self.toks, i) is not None:
+            return True
+        if not self._ctx_mode:
+            if match_entity_fallback(self.toks, i, self._entity) is not None:
+                return True
+            t = self.toks[i] if i < len(self.toks) else None
+            if (t is not None and t.kind == "WORD"
+                    and _registry_fallback_field(t.val) is not None):
+                return True
+        return False
+
     def _parse_field(self) -> Tuple[str, Field]:
+        # Optional leading determiner: a bare `the` immediately before a known
+        # field is ignorable input sugar (`works where the title is foo`), so it
+        # reads like a sentence. Dropped at parse — never round-trips; canonical
+        # render stays `title is foo`. Guarded on a real field following, so a
+        # search value that opens with "the" (`title has (the great gatsby)`)
+        # keeps its `the` (that value is parsed elsewhere, but the guard also
+        # keeps the field slot from ever eating a `the` that isn't a determiner).
+        if (self.word_is("the") and self.peek(1) is not None
+                and self._at_known_field(self.i + 1)):
+            self.i += 1
         # an empty / partially-typed field slot at the cursor
         self._want(CTX_FIELD)
         # greedy longest alias match (up to 4 words) — shared with the editor walker

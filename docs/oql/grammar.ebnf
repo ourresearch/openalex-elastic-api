@@ -25,7 +25,15 @@ operand      ::= 'not' operand
                | '(' conditions ')'
                | clause
 
-clause       ::= valueClause | searchClause
+clause       ::= determiner? ( valueClause | searchClause )
+
+/* An optional leading determiner 'the' is ignorable input sugar before a
+   field name (`the title is foo`), so a clause can read like a sentence. It is
+   dropped at parse and never round-trips (the canonical render omits it). It is
+   only swallowed when a known field follows -- a semantic guard, not
+   grammatical -- so a search value that opens with "the"
+   (`title has (the great gatsby)`) keeps it. */
+determiner   ::= 'the'
 
 valueClause  ::= field operator value
 

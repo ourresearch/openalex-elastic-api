@@ -81,6 +81,44 @@ def test_value_case_is_canonicalized():
     assert rows("works where country is col_eu27")[0]["value"] == "col_eu27"        # preserved
 
 
+def test_optional_leading_the_is_dropped_before_a_field():
+    """An optional leading determiner `the` before a *known field* is ignorable
+    input sugar (spec §3.0) — dropped at parse so the query reads like a
+    sentence, never round-tripping into the canonical render.
+
+    Not a corpus row: the corpus `oql` is always the canonical form (regen
+    derives it from the OQO oracle, which never re-emits `the`), so this
+    input-only sugar is asserted directly here, like `test_value_case_is_...`."""
+    from tests.oql.oql_v2 import parse as p, render as r, OQLError
+
+    def canon(oql):
+        return r(canonicalize_oqo(p(oql)))
+
+    # value clause + search clause: `the` is swallowed, canonical omits it, and
+    # `the X` parses identically to `X`.
+    assert canon("works where the type is (article)") == "works where type is (article)"
+    assert canon("works where the title has (cancer)") == "works where title has (cancer)"
+    assert p("works where the type is article").to_dict() == \
+        p("works where type is article").to_dict()
+
+    # works inside groups / on later clauses, not just the first field.
+    assert p("works where the type is article and the open access is true").to_dict() == \
+        p("works where type is article and open access is true").to_dict()
+    assert p("works where (the type is article or the type is review)").to_dict() == \
+        p("works where (type is article or type is review)").to_dict()
+
+    # GUARD: `the` is only a determiner when a real field follows it. A search
+    # value that opens with "the" keeps it verbatim (it's a value, not a field).
+    assert p("works where title has (the great gatsby)").to_dict()["filter_rows"][0]["value"] \
+        == "the great gatsby"
+
+    # GUARD: a stray `the` with no field after it is NOT silently eaten — it is
+    # still a loud unknown-field error.
+    with pytest.raises(OQLError) as exc:
+        p("works where the is (article)")
+    assert exc.value.code == "OQL_UNKNOWN_FIELD"
+
+
 def test_unparenthesized_or_connective_is_not_absorbed_into_value():
     """An `or` connective between two full `field is value` comparisons parses to
     an OR branch — it must NOT be swallowed into the preceding value.
