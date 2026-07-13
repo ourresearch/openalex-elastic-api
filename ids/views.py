@@ -146,9 +146,11 @@ def works_id_get(id):
     else:
         abort(404)
 
-    # oxjob #576: Lakebase-first on the default (legacy) connection; any miss or
-    # error falls through to the unchanged ES path below.
-    if lakebase_lookup and connection != 'walden' and lakebase.should_route(request):
+    # oxjob #576: Lakebase-first for point lookups; any miss or error falls
+    # through to the unchanged ES path below. (get_data_version_connection
+    # returns 'walden' for ALL requests post works-v34 cutover, so it must not
+    # gate this branch.)
+    if lakebase_lookup and lakebase.should_route(request):
         t0 = time.time()
         try:
             if lakebase_lookup[0] == "work_id":
