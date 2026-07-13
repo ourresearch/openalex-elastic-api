@@ -26,7 +26,7 @@ from psycopg2 import pool as pg_pool
 N_DOC_SHARDS = 8  # lakebase.lakebase_works_docs_{work_id % 8}
 
 # Canary dial — ramp by editing this constant and deploying (see module docstring).
-DEFAULT_LOOKUP_PCT = 0
+DEFAULT_LOOKUP_PCT = 1
 
 _pool = None
 _pool_lock = threading.Lock()
