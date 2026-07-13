@@ -1,9 +1,14 @@
+import logging
 import random
+import time
 
 from elasticsearch_dsl import Q, Search
 from flask import Blueprint, abort, redirect, request, url_for, jsonify
 
 import settings
+from works import lakebase
+
+logger = logging.getLogger(__name__)
 from core.utils import get_data_version_connection
 from authors.schemas import AuthorsSchema
 from awards.schemas import AwardsSchema
@@ -100,6 +105,8 @@ def works_id_get(id):
 
     s = Search(index=index_name, using=connection)
     only_fields = process_id_only_fields(request, WorksSchema)
+    # oxjob #576: (kind, key) for the Lakebase point-lookup path; None = ES-only id form
+    lakebase_lookup = None
 
     if is_openalex_id(id):
         clean_id = normalize_openalex_id(id)
@@ -110,6 +117,7 @@ def works_id_get(id):
 
         query = Q("term", ids__openalex=full_openalex_id)
         s = s.filter(query)
+        lakebase_lookup = ("work_id", clean_id)
     elif id.startswith("mag:"):
         clean_id = id.replace("mag:", "")
         clean_id = f"W{clean_id}"
@@ -120,6 +128,7 @@ def works_id_get(id):
         full_pmid = f"https://pubmed.ncbi.nlm.nih.gov/{clean_pmid}"
         query = Q("term", ids__pmid=full_pmid)
         s = s.filter(query)
+        lakebase_lookup = ("ext_id", full_pmid)
     elif id.startswith("pmcid:"):
         id = id.replace("pmcid:", "")
         clean_pmcid = normalize_pmcid(id)
@@ -133,11 +142,36 @@ def works_id_get(id):
         full_doi = f"https://doi.org/{clean_doi}"
         query = Q("term", ids__doi=full_doi)
         s = s.filter(query)
+        lakebase_lookup = ("ext_id", full_doi)
     else:
         abort(404)
 
+    # oxjob #576: Lakebase-first on the default (legacy) connection; any miss or
+    # error falls through to the unchanged ES path below.
+    if lakebase_lookup and connection != 'walden' and lakebase.should_route(request):
+        t0 = time.time()
+        try:
+            if lakebase_lookup[0] == "work_id":
+                doc = lakebase.get_work_doc(lakebase_lookup[1])
+            else:
+                doc = lakebase.get_work_doc_by_ext_id(lakebase_lookup[1])
+        except Exception:
+            logger.exception("lakebase_lookup backend=lakebase outcome=error id_kind=%s; falling back to ES",
+                             lakebase_lookup[0])
+            doc = None
+        if doc is not None:
+            logger.info("lakebase_lookup backend=lakebase outcome=hit id_kind=%s fetch_ms=%.1f",
+                        lakebase_lookup[0], (time.time() - t0) * 1000)
+            works_schema = WorksSchema(
+                context={"display_relevance": False, "single_record": True},
+                only=only_fields,
+            )
+            return works_schema.dump(lakebase.LakebaseHit(doc))
+        logger.info("lakebase_lookup backend=es_fallback outcome=miss id_kind=%s fetch_ms=%.1f",
+                    lakebase_lookup[0], (time.time() - t0) * 1000)
+
     response = s.execute()
-        
+
     if not response:
         abort(404)
     works_schema = WorksSchema(
