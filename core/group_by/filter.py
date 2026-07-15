@@ -1,4 +1,3 @@
-import iso3166
 from elasticsearch_dsl import Q
 
 
@@ -62,14 +61,13 @@ def get_slop(group_by):
 
 
 def country_search(q):
-    country_names = [n for n in iso3166.countries_by_name.keys()]
+    from core.country_names import countries_by_name
+
     matching_country_codes = []
-    for country_name in country_names:
+    for country_name, alpha2 in countries_by_name().items():
         if country_name.startswith(q.upper()):
-            matching_country_codes.append(
-                iso3166.countries_by_name[country_name].alpha2
-            )
-    return matching_country_codes
+            matching_country_codes.append(alpha2)
+    return list(dict.fromkeys(matching_country_codes))
 
 
 def set_year_min_max(q):

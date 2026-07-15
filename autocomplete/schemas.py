@@ -1,4 +1,3 @@
-from iso3166 import countries
 from marshmallow import Schema, fields, pre_dump
 
 from core.schemas import GroupBySchema, MetaSchema
@@ -85,8 +84,9 @@ class AutoCompleteSchema(Schema):
         elif country_code.lower() == "gb":
             country_name = "UK"
         else:
-            c = countries.get(country_code.lower())
-            country_name = c.name
+            from core.country_names import get_country_name
+
+            country_name = get_country_name(country_code, default=country_code)
         return country_name
 
     @staticmethod

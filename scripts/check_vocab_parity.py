@@ -57,30 +57,13 @@ VOCABS = {
 # "name_mismatch": {id, ...}}}. Ids are the yaml-style short form (e.g.
 # "types/article"). EVERY entry needs a why-comment.
 ALLOWLIST = {
-    # countries: the yaml deliberately keeps friendly short names (South Korea,
-    # Ivory Coast, Taiwan) over the live endpoint's ISO-3166 official names
-    # (Korea, Republic of / Côte d'Ivoire / Taiwan, Province of China) — nicer
-    # in OQL renders, autocomplete, and "did you mean" fix-its (Jason's call,
-    # 2026-07-15, oxjob #616). Membership is id-only so validation is
-    # unaffected; these are label-only divergences. If the live names ever get
-    # friendly-ified at the source (walden), drop this allowlist and re-sync.
-    "countries": {
-        "name_mismatch": {
-            "countries/BA", "countries/BN", "countries/BO", "countries/BQ",
-            "countries/CD", "countries/CI", "countries/DO", "countries/FK",
-            "countries/FM", "countries/GB", "countries/GS", "countries/HM",
-            "countries/IR", "countries/KN", "countries/KP", "countries/KR",
-            "countries/LA", "countries/MD", "countries/MF", "countries/MP",
-            "countries/PM", "countries/PS", "countries/RU", "countries/SH",
-            "countries/ST", "countries/SY", "countries/TC", "countries/TT",
-            "countries/TW", "countries/TZ", "countries/US", "countries/VC",
-            "countries/VE", "countries/VG", "countries/VI", "countries/VN",
-            "countries/WF",
-        },
-    },
-    # (work-types was reconciled in #603 r25 / ddf57b4; non-canonical
+    # (empty — the country display names went friendly AT THE SOURCE
+    # (walden openalex.common.countries, 2026-07-15 #616), so the yaml and
+    # the live endpoint agree again and the temporary countries allowlist is
+    # gone. work-types was reconciled in #603 r25 / ddf57b4; non-canonical
     # works-data stragglers like types/grant are NOT served by /work-types so
-    # they never appear in this diff.)
+    # they never appear in this diff. Add entries here only for divergences
+    # Jason has signed off on keeping.)
 }
 
 

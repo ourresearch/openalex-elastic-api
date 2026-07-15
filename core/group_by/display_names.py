@@ -1,4 +1,3 @@
-import iso3166
 import pycountry
 from elasticsearch_dsl import Search, Q
 from iso4217 import Currency
@@ -147,11 +146,9 @@ def get_key_display_name(b, group_by):
         return "unknown"
 
     if group_by.endswith("country_code") or group_by.endswith("countries"):
-        try:
-            country = iso3166.countries.get(b.key.lower())
-            return country.name if country else None
-        except KeyError:
-            return None
+        from core.country_names import get_country_name
+
+        return get_country_name(b.key)
 
     if group_by == "apc_payment.provenance":
         if b.key == "doaj":

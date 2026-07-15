@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-import iso3166
 from elasticsearch_dsl import A, Search
 from flask import Blueprint, request
 
@@ -258,23 +257,29 @@ def autocomplete_institutions_country():
         for h in response.hits.hits
     }
 
-    found_countries = []
-    for country, details in iso3166.countries_by_name.items():
-        country_words = country.split()
-        for word in country_words:
-            # word in the country starts with our query, and the country is in the transform index
-            if word.startswith(q.upper()) and country_sums.get(details.alpha2.lower()):
-                found_countries.append(
-                    OrderedDict(
-                        {
-                            "id": details.alpha2.upper(),
-                            "display_name": details.name,
-                            "cited_by_count": country_sums[details.alpha2.lower()],
-                            "entity_type": "institution",
-                            "external_id": None,
-                        }
-                    )
-                )
+    from core.country_names import countries_by_name, get_country_name
+
+    matched_codes = set()
+    for country, alpha2 in countries_by_name().items():
+        for word in country.split():
+            # word in the country starts with our query (friendly names plus
+            # the ISO official names as aliases), and the country is in the
+            # transform index
+            if word.startswith(q.upper()) and country_sums.get(alpha2.lower()):
+                matched_codes.add(alpha2)
+
+    found_countries = [
+        OrderedDict(
+            {
+                "id": code.upper(),
+                "display_name": get_country_name(code),
+                "cited_by_count": country_sums[code.lower()],
+                "entity_type": "institution",
+                "external_id": None,
+            }
+        )
+        for code in matched_codes
+    ]
 
     found_countries_sorted = sorted(
         found_countries, key=lambda item: item["cited_by_count"], reverse=True

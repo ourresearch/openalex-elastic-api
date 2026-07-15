@@ -1,7 +1,6 @@
 import re
 
 from elasticsearch_dsl import Search
-from iso3166 import countries
 
 import settings
 from core.exceptions import APIQueryParamsError
@@ -207,11 +206,9 @@ def is_cached(request):
 
 
 def get_country_name(country_id):
-    try:
-        country = countries.get(country_id.lower())
-    except KeyError:
-        country = None
-    return country.name if country else country_id
+    from core.country_names import get_country_name as friendly_country_name
+
+    return friendly_country_name(country_id, default=country_id)
 
 
 def process_only_fields(request, schema):
