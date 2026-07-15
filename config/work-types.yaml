@@ -40,9 +40,17 @@ values:
   display_name: erratum
 - id: types/standard
   display_name: standard
-- id: types/grant
-  display_name: grant
 - id: types/supplementary-materials
   display_name: supplementary-materials
 - id: types/retraction
   display_name: retraction
+- id: types/conference-paper
+  display_name: conference-paper
+- id: types/conference-abstract
+  display_name: conference-abstract
+- id: types/software
+  display_name: software
+- id: types/book-review
+  display_name: book-review
+- id: types/data-paper
+  display_name: data-paper
