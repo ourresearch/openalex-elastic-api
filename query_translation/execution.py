@@ -52,7 +52,7 @@ from query_translation.validator import validate_oqo, _has_search_clause
 # Shared response/render helpers. `build_x_query` lives in the dependency-light
 # `x_query` module (shared with `core.shared_view`, #378); `_error_response` stays
 # with the translation resource. No cycle either way.
-from query_translation.x_query import build_x_query, safe_get_display_name
+from query_translation.x_query import build_x_query
 from query_translation.views import _error_response
 
 # ---------------------------------------------------------------------------
@@ -461,21 +461,20 @@ def _finalize_oqo_response(result, oqo: OQO, MessageSchema):
     confirm what we executed and rehydrate from it (#373) — injected after
     marshmallow `.dump()` (which would drop an unknown `meta` key), only on this
     execute path (keeps `x_query` off `/works?filter=` and out of
-    `/properties`/docs). `x_query.oql` is rendered WITH the entity resolver
-    (name-annotated, e.g. `keyword is (machine-learning [Machine learning])`) so
-    it is the SAME canonical string the render endpoints (`/query/*`) produce for
-    this OQO. Decision 14 (#378 S3) originally kept this path bare-ID on the
-    premise that nothing consumes the executed-path `oql` for display — that
-    premise died with #464 Phase 2a: the SERP projects `x_query.oql` into the
-    `?oql=` URL after every store-driven run, and the GUI builder compares it
-    against its render-canonical `oql` to recognize the echo. When the two
-    canonicals diverged (annotations stripped here, present there), the builder
-    treated its own query as an external change and wiped open drafts (oxjob
-    #603 round 26 — the keyword either/or draft-wipe; the GUI now also guards via
-    `lastExecutedOql`, so this alignment is belt-and-braces + keeps the readable
-    annotation in the URL). The per-entity SERP path (`core/shared_view`) stays
-    resolverless: its `oql` is still unconsumed, and annotating there would add
-    ES display-name lookups to every legacy `/works?filter=` response.
+    `/properties`/docs). No entity resolver: `x_query.oql` is canonical bare-ID
+    OQL (decision 14, #378 S3) — this hot path does NO per-submit ES
+    display-name lookups. NB (#603 round 26b→26c, 2026-07-15): this was briefly
+    flipped to annotated (`441b112`) to align with the render canonical after
+    the keyword either/or draft-wipe (the #464 Phase 2a URL projection writes
+    this string, and its divergence from the annotated render canonical made the
+    GUI builder mistake its own query echo for an external change). Jason chose
+    the opposite alignment the same day — URLs are BARE: the GUI strips
+    annotations at its single URL-serialization point (openalex-gui
+    `oqlSerialize.js`), and its `props.oql` watcher recognises the projection
+    via `lastExecutedOql`, so bare-vs-annotated can no longer wipe drafts AND
+    this path stays lookup-free. Don't re-add a resolver here for display
+    reasons; the readable annotated OQL comes from the render endpoints
+    (`/query/*`), which the GUI calls per user action, not per execute.
     """
     only_fields = None
     if oqo.select:
@@ -490,8 +489,7 @@ def _finalize_oqo_response(result, oqo: OQO, MessageSchema):
     # is the OQL/builder execute path, and the SERP rebuilds `?oql=` from x_query, so
     # sorting commutative value-bag members here would silently alphabetize the user's
     # values. Sorting stays on the legacy-URL path (shared_view) and dedup hash-keys.
-    serialized.setdefault("meta", {})["x_query"] = build_x_query(
-        oqo, entity_resolver=safe_get_display_name, sort_operands=False)
+    serialized.setdefault("meta", {})["x_query"] = build_x_query(oqo, sort_operands=False)
     return jsonify(serialized), 200
 
 
