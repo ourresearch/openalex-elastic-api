@@ -189,8 +189,6 @@ values:
   display_name: Manx
 - id: languages/ha
   display_name: Hausa
-- id: languages/ho
-  display_name: Hiri Motu
 - id: languages/ht
   display_name: Haitian
 - id: languages/hy
@@ -205,8 +203,6 @@ values:
   display_name: Igbo
 - id: languages/ii
   display_name: Sichuan Yi
-- id: languages/ik
-  display_name: Inupiaq
 - id: languages/io
   display_name: Ido
 - id: languages/is
@@ -225,8 +221,6 @@ values:
   display_name: Kuanyama
 - id: languages/kk
   display_name: Kazakh
-- id: languages/kl
-  display_name: Kalaallisut
 - id: languages/km
   display_name: Central Khmer
 - id: languages/kr
@@ -327,8 +321,6 @@ values:
   display_name: Shona
 - id: languages/sr
   display_name: Serbian
-- id: languages/ss
-  display_name: Swati
 - id: languages/st
   display_name: Southern Sotho
 - id: languages/su
@@ -347,8 +339,6 @@ values:
   display_name: Tsonga
 - id: languages/tt
   display_name: Tatar
-- id: languages/tw
-  display_name: Twi
 - id: languages/ty
   display_name: Tahitian
 - id: languages/ug
