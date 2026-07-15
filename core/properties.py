@@ -310,10 +310,17 @@ def _fold_alternate_keys(out, entity_type):
 
     A misconfigured `alternate_of` (canonical `param` absent from this entity) is
     left as-is and logged — fail loud rather than silently swallow the alias.
+
+    An alias that is ALSO `unlisted` (#593) still resolves + canonicalizes like
+    any alias, but is NOT folded into the canonical's public `alternate_keys` —
+    unlisted means "accept, never advertise", and that trumps the advertisement
+    this fold exists to produce. Used for the never-valid authors key
+    `last_known_authorships.institutions.lineage`, manufactured by a GUI
+    URL-rewrite bug (2026-01 → 2026-07) and living on in users' bookmarks.
     """
     alt_map = {}  # canonical param -> [alias params]
     for param, prop in out.items():
-        if prop.alternate_of:
+        if prop.alternate_of and not prop.unlisted:
             alt_map.setdefault(prop.alternate_of, []).append(param)
     for canonical, alias_params in alt_map.items():
         target = out.get(canonical)

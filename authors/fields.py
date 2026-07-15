@@ -84,6 +84,19 @@ fields = [
         custom_es_field="last_known_institutions.lineage",
     ),
     OpenAlexIDField(
+        # Un-mangle artifact (Zendesk 22523 / oxjob #593): from 2026-01-15 to
+        # 2026-07-15 an openalex-gui router rewrite corrupted authors URLs by bare
+        # substring replacement, turning `last_known_institutions.id` into this
+        # never-valid key, and users bookmarked/shared/scripted the result. Accept
+        # it forever as an execution alias of `last_known_institutions.id`, but
+        # never advertise it (`unlisted` drops it from the public /properties
+        # catalog — the is_xpac soft-retire mechanism, #498).
+        param="last_known_authorships.institutions.lineage",
+        alias="last_known_institutions.id",
+        alternate_of="last_known_institutions.id",
+        unlisted=True,
+    ),
+    OpenAlexIDField(
         param="ids.openalex",
         docstring=DOCSTRINGS["openalex"],
         documentation_link=DOCUMENTATION_LINKS["openalex"],

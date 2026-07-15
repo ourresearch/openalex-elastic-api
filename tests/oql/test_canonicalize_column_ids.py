@@ -115,3 +115,21 @@ def test_synthetic_sort_keys_pass_through():
     oqo = OQO(get_rows="works", sort_by=[SortBy(column_id="relevance_score", direction="desc")])
     out = canonicalize_oqo_column_ids(oqo)
     assert out.sort_by[0].column_id == "relevance_score"
+
+
+def test_unlisted_alias_canonicalizes_but_is_not_advertised():
+    # #593: `last_known_authorships.institutions.lineage` is a never-valid authors
+    # key manufactured by a GUI URL-rewrite bug (2026-01 → 2026-07) that lives on
+    # in users' bookmarks. It's an `unlisted` alias: it must resolve + canonicalize
+    # like any alias, but must NOT be advertised in the canonical property's public
+    # `alternate_keys` (unlisted = "accept, never advertise").
+    from core.properties import ENTITY_PROPERTIES
+
+    mangled = "last_known_authorships.institutions.lineage"
+    canon = "last_known_institutions.id"
+    assert canonicalize_column_id(mangled, "authors") == canon
+    props = ENTITY_PROPERTIES["authors"]
+    assert mangled in props  # still a live, resolvable column
+    assert mangled not in props[canon].alternate_keys  # never advertised
+    u = parse_url_to_oqo(entity_type="authors", filter_string=f"{mangled}:i90183372")
+    assert u.filter_rows[0].column_id == canon
