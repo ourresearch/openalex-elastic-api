@@ -28,7 +28,8 @@ from typing import Dict, List, Optional, Tuple
 # Load the OQO data model without triggering the Flask-heavy package __init__.
 from query_translation.oqo import (  # noqa: E402
     OQO, LeafFilter, BranchFilter, FilterType, GroupBy, CURLY_DQUOTE_MAP,
-    canonicalize_oqo_column_ids, normalize_corpus, CORPUS_CANONICAL_PHRASE)
+    canonicalize_oqo_column_ids, normalize_corpus, CORPUS_CANONICAL_PHRASE,
+    VALID_ENTITY_TYPES)
 
 
 # ---------------------------------------------------------------------------
@@ -519,11 +520,15 @@ for _spellings, _fld in _FIELDS:
     for s in _spellings:
         _ALIAS[s] = _fld
 
-ENTITY_TYPES = {
-    "works", "authors", "institutions", "sources", "publishers", "funders",
-    "topics", "keywords", "concepts", "countries", "continents", "domains",
-    "fields", "subfields", "sdgs", "languages", "licenses", "types",
-    "source types", "institution types", "awards",
+# Parser entity vocabulary. Single source of truth is the OQO validator's
+# `oqo.VALID_ENTITY_TYPES` (hyphenated canonical forms, e.g. `source-types`,
+# `institution-types`, `oa-statuses`) so the two can't drift again (oxjob #621:
+# the parser list used to be narrower + spelled multi-word entities with a space,
+# so the GUI's hyphenated `source-types` token failed to parse). We ALSO accept
+# the space spelling of each multi-word entity as an input synonym; the greedy
+# two-word match in `_parse_entity` canonicalizes it back to the hyphenated form.
+ENTITY_TYPES = set(VALID_ENTITY_TYPES) | {
+    e.replace("-", " ") for e in VALID_ENTITY_TYPES if "-" in e
 }
 
 # `&` is an accepted INPUT synonym for `and` (oxjob #363). It lexes as its own
