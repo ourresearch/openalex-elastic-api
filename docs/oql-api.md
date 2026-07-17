@@ -35,6 +35,34 @@ errors.
 
 ---
 
+## The three query formats
+
+Every query can be written three ways. They share one meaning but differ in syntax and in
+how much they can express:
+
+| Format | Looks like | Reach for it when |
+|---|---|---|
+| **Classic URL** | `/works?filter=publication_year:2020` | you want backwards compatibility with the API you already know |
+| **OQL** | `works where year is (2020)` | you're writing most applications — it reads and writes like a sentence |
+| **OQO** | `{"get_rows": "works", "filter_rows": […]}` | you're building queries from a program or an agent — it's JSON with a concrete, validatable [schema](https://api.openalex.org/query/spec/schema) |
+
+How they relate:
+
+- **OQL and OQO are two faces of the same thing.** Every OQL query has exactly one OQO and
+  vice versa — same semantics, different syntax. **OQO is the canonical internal
+  representation**: everything you send, in any format, is compiled to an OQO before it runs.
+- **The classic URL is less expressive.** Every URL maps to a corresponding OQL and OQO, but
+  **not the reverse** — there are many OQL/OQO queries (rich boolean nesting, proximity,
+  grouping) that no classic URL can express. That's deliberate: OQL/OQO widen the space of
+  questions you can ask, so you can say exactly what you mean with more power and nuance.
+
+So: use the **classic URL** for legacy compatibility, **OQL** for most applications, and
+**OQO** when an agent or program needs a JSON schema to validate against. The
+[`/query` endpoint](#translating-a-query-the-query-endpoint) converts freely between all
+three, and every result echoes all three back in [`meta.x_query`](#reading-results-meta-x-query).
+
+---
+
 ## Running a query
 
 ### GET /?oql=
@@ -185,17 +213,24 @@ or append `&api_key=YOUR_API_KEY`.
 
 ## Translating a query: the /query endpoint
 
-The same query has three interchangeable forms:
+The same query has three interchangeable forms (see
+[The three query formats](#the-three-query-formats) above for when to use which):
 
 | Form | Looks like | Best for |
 |---|---|---|
 | `oql` | `works where year is (2020)` | humans reading and writing |
-| `oqo` | `{"get_rows": "works", "filter_rows": […]}` | programs building queries |
+| `oqo` | `{"get_rows": "works", "filter_rows": […]}` | programs and agents building queries |
 | `oxurl` | `/works?filter=publication_year:2020` | the classic API you already know |
 
 `/query` converts any form into all the others, and validates it — **without executing
 anything** (it never touches the search index, and costs nothing). It's the machinery
 behind the GUI's OQL tab, and it's how a tool of your own can offer OQL input or output.
+
+Because OQL and OQO are equally expressive, translating between them always round-trips
+cleanly. Translating **into** `oxurl` can fail, though: the classic URL grammar can't
+represent every OQL/OQO query (deeply nested booleans, proximity search, some grouping). When
+that happens `/query` returns the `oql`/`oqo`/`validation` fields and sets `oxurl` to `null`
+with a note — the query is still perfectly valid and runnable, it just has no URL spelling.
 
 ### GET /query/oql, /query/oqo, /query/oxurl
 
