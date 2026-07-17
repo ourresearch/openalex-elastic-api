@@ -44,7 +44,32 @@ def index():
         body = request.get_json(silent=True)
         if not isinstance(body, dict):
             return _error_response(
-                "Request body must be a JSON object with an 'oqo' or 'oql' key.",
+                "Request body must be a JSON object with exactly one 'oql' or "
+                "'oqo' key.",
+                "invalid_body",
+                status=400,
+            )
+        # Strict body (#631): the ONLY permitted top-level keys are `oql` / `oqo`.
+        # We used to silently ignore everything else — so `{"oql": "...",
+        # "per_page": 5}` dropped the `per_page` with no signal (the classic
+        # OQL-adjacent footgun). Paging/sorting/projection go in the URL query
+        # string or INSIDE the OQO, never as sibling body keys. Reject unknown
+        # keys with a message that names them + points at the right home.
+        extra_keys = [k for k in body if k not in ("oql", "oqo")]
+        if extra_keys:
+            return _error_response(
+                "Unexpected top-level key(s) in request body: "
+                f"{', '.join(sorted(extra_keys))}. The body may contain only "
+                "'oql' or 'oqo'. Put paging/sorting/projection in the URL query "
+                "string (e.g. ?per-page=5&sort=…) or inside the OQO "
+                "(per_page/page/cursor/sort_by/select/sample/seed).",
+                "invalid_body",
+                status=400,
+            )
+        if "oql" in body and "oqo" in body:
+            return _error_response(
+                "Request body must contain exactly one of 'oql' or 'oqo', not "
+                "both.",
                 "invalid_body",
                 status=400,
             )
@@ -53,7 +78,7 @@ def index():
         if "oql" in body:
             return execute_oql_string(body["oql"])
         return _error_response(
-            "Request body must contain an 'oqo' or 'oql' key.",
+            "Request body must contain an 'oql' or 'oqo' key.",
             "invalid_body",
             status=400,
         )

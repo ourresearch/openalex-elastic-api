@@ -177,6 +177,111 @@ class TestRootErrors:
         _assert_400(res)
 
 
+class TestStrictPostBody:
+    """The POST body may contain ONLY `oql`/`oqo` — extra top-level keys used to
+    be silently ignored (`{"oql": "...", "per_page": 5}` dropped per_page), the
+    classic OQL-adjacent footgun. Now they're a hard 400 (#631)."""
+
+    def test_extra_top_level_key_is_400(self, client):
+        captured = []
+        oql = _valid_oql(client)
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.post(
+                "/",
+                data=json.dumps({"oql": oql, "per_page": 5}),
+                content_type="application/json",
+            )
+        _assert_400(res)
+        # Never reached execution (the whole point — no silent drop).
+        assert captured == []
+        err = res.get_json()["validation"]["errors"][0]
+        assert err["type"] == "invalid_body"
+        assert "per_page" in err["message"]
+
+    def test_extra_key_alongside_oqo_is_400(self, client):
+        res = client.post(
+            "/",
+            data=json.dumps({"oqo": WORKS_OQO, "sort": "cited_by_count:asc"}),
+            content_type="application/json",
+        )
+        _assert_400(res)
+        assert "sort" in res.get_json()["validation"]["errors"][0]["message"]
+
+    def test_both_oql_and_oqo_is_400(self, client):
+        res = client.post(
+            "/",
+            data=json.dumps({"oql": "works", "oqo": WORKS_OQO}),
+            content_type="application/json",
+        )
+        _assert_400(res)
+        assert "both" in res.get_json()["validation"]["errors"][0]["message"]
+
+    def test_clean_single_key_body_still_executes(self, client):
+        """Regression guard: a well-formed single-key body is unaffected."""
+        captured = []
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.post(
+                "/",
+                data=json.dumps({"oqo": WORKS_OQO}),
+                content_type="application/json",
+            )
+        assert res.status_code == 200, res.get_json()
+        assert len(captured) == 1
+
+
+class TestIntegerSeedCoerced:
+    """An integer `seed` in an OQO used to 500 (preference hashing calls
+    `.encode()` on it). It's now coerced to its string form at ingestion,
+    matching the OQL text path's canonical `"42"` (#631)."""
+
+    def test_integer_seed_does_not_500_and_canonicalizes_to_string(self, client):
+        captured = []
+        oqo = {
+            "get_rows": "works",
+            "filter_rows": [{"column_id": "publication_year", "value": 2020}],
+            "sample": 5,
+            "seed": 42,
+        }
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.post(
+                "/",
+                data=json.dumps({"oqo": oqo}),
+                content_type="application/json",
+            )
+        assert res.status_code == 200, res.get_json()
+        # Canonical echo carries the string form (parity with `sample 5 seed 42`).
+        assert res.get_json()["meta"]["x_query"]["oqo"]["seed"] == "42"
+
+    def test_string_seed_unchanged(self, client):
+        captured = []
+        oqo = {
+            "get_rows": "works",
+            "filter_rows": [{"column_id": "publication_year", "value": 2020}],
+            "sample": 5,
+            "seed": "42",
+        }
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.post(
+                "/",
+                data=json.dumps({"oqo": oqo}),
+                content_type="application/json",
+            )
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["meta"]["x_query"]["oqo"]["seed"] == "42"
+
+
 # ---------------------------------------------------------------------------
 # The old execute form is gone
 # ---------------------------------------------------------------------------

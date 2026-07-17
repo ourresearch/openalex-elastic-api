@@ -385,7 +385,18 @@ class OQO:
             # the vocabularies are string-identical, so pre-#450 dicts parse
             # and validate exactly as before.
             select=list(data.get("select") or []),
-            seed=data.get("seed"),
+            # Coerce an integer `seed` to its string form at the JSON-input
+            # boundary (#631). The seed only routes ES `random_score` /
+            # `preference` (which hashes it via `.encode()`), so a bare int used
+            # to raise AttributeError → HTTP 500 downstream. The OQL text path
+            # already canonicalizes `seed 42` to the string "42"; do the same
+            # here so both input forms yield an identical canonical OQO. bool is
+            # an int subclass but never a valid seed — leave it for the validator.
+            seed=(
+                str(data["seed"])
+                if isinstance(data.get("seed"), int) and not isinstance(data.get("seed"), bool)
+                else data.get("seed")
+            ),
             per_page=data.get("per_page"),
             page=data.get("page"),
             cursor=data.get("cursor"),

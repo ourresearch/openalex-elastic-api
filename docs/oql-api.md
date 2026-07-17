@@ -128,11 +128,12 @@ curl -X POST "https://api.openalex.org/" \
 
 Rules of the road:
 
-- The body is a JSON object with **one** of `"oql"` or `"oqo"`. `Content-Type:
+- The body is a JSON object with **exactly one** of `"oql"` or `"oqo"` — and *nothing else*.
+  Any other top-level key is a **400** (`invalid_body`), and so is sending both. `Content-Type:
   application/json` is required (without it: 400, `invalid_body`).
-- Paging/sorting options go in the **URL query string** (as with GET) or **inside the OQO**
-  — *not* as extra top-level body keys. `{"oql": "…", "per_page": 5}` silently ignores the
-  `per_page`; `{"oqo": {…, "per_page": 5}}` honors it.
+- Paging/sorting/projection go in the **URL query string** (as with GET) or **inside the OQO**
+  — *not* as extra top-level body keys. `{"oql": "…", "per_page": 5}` is **rejected** (put
+  `per_page` in the query string); `{"oqo": {…, "per_page": 5}}` is the right place for it.
 
 ### Errors
 
