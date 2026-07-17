@@ -7,6 +7,7 @@ runtime from these endpoints rather than bundling a copy:
 
   GET /query/spec/cheatsheet -> docs/oql-cheatsheet.md      (text/markdown)  one-page OQL cheat sheet
   GET /query/spec/guide      -> docs/oql-guide.md           (text/markdown)  readable OQL guide (BLUF)
+  GET /query/spec/api        -> docs/oql-api.md             (text/markdown)  the OQL/OQO HTTP API reference
   GET /query/spec/oql        -> docs/oql-spec.md            (text/markdown)  the frozen normative spec
   GET /query/spec/oqo        -> docs/oqo-schema.json        (application/json) OQO JSON Schema
   GET /query/spec/grammar    -> docs/oql/grammar.ebnf       (text/plain)     derived W3C-EBNF
@@ -20,8 +21,9 @@ drift gate. Each artifact is itself kept honest by its own gate:
   * grammar.ebnf      — `tests/oql/test_grammar_ebnf.py` (keyword closure vs the
                         parser + corpus tokenization)
   * oql-spec.md       — cases-first; the corpus round-trip is its conformance net.
-  * oql-cheatsheet.md / oql-guide.md — hand-written user docs (no machine gate);
-                        every example was prod-verified at authoring (oxjob #530).
+  * oql-cheatsheet.md / oql-guide.md / oql-api.md — hand-written user docs (no
+                        machine gate); every example was prod-verified at
+                        authoring (oxjobs #530, #630).
 
 Kept in a SEPARATE blueprint (not `query_translation/views.py`) to stay out of the
 in-flight execution/translation reorg in that file, exactly like editor_views.py.
@@ -41,6 +43,7 @@ _DOCS = os.path.join(_REPO, "docs")
 _ARTIFACTS = {
     "cheatsheet": ("oql-cheatsheet.md", "text/markdown; charset=utf-8"),
     "guide": ("oql-guide.md", "text/markdown; charset=utf-8"),
+    "api": ("oql-api.md", "text/markdown; charset=utf-8"),
     "oql": ("oql-spec.md", "text/markdown; charset=utf-8"),
     "oqo": ("oqo-schema.json", "application/json"),
     "grammar": (os.path.join("oql", "grammar.ebnf"), "text/plain; charset=utf-8"),
