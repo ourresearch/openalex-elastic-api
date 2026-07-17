@@ -17,6 +17,7 @@ recurring source of "does /query run the query?" confusion.
 """
 import importlib
 import json
+from dataclasses import replace
 
 from elasticsearch_dsl import Q, Search
 from flask import jsonify, request
@@ -34,9 +35,9 @@ from core.shared_view import (
     format_response,
     set_source,
 )
-from core.utils import get_data_version_connection, map_filter_params
+from core.utils import get_data_version_connection, map_filter_params, map_sort_params
 from core.vector_index import vector_semantic_search
-from query_translation.oqo import OQO
+from query_translation.oqo import OQO, SortBy, canonicalize_oqo_column_ids
 from query_translation.oqo_to_es import (
     OQOTranslationError,
     oqo_to_search_and_filter_q,
@@ -302,6 +303,61 @@ def execute_oql_string(oql_str):
     return _execute_oqo(oqo)
 
 
+def _merge_classic_sort_select(oqo: OQO, request) -> OQO:
+    """Fold the classic `?sort=` / `?select=` query-string params INTO the OQO.
+
+    Sorting and field selection are the OQO's job (#318) — they were removed from
+    the OQL *language* (#504) and live as `sort_by` / `select` on the object. But
+    for back-compat with the legacy `/works?sort=…&select=…` muscle memory, a
+    client hitting `GET /?oql=…&sort=…&select=…` (or `?oqo=…`) expects those to
+    take effect. They used to be **silently ignored** (execution built params
+    straight off the OQO; the query-string fallback covered only
+    per_page/page/cursor/seed) — the classic OQL-adjacent footgun (#631).
+
+    Folding them into the OQO here (rather than into the synthetic params dict)
+    means they flow through the SAME machinery as OQO-native sort/select:
+    `validate_oqo` (structured 400s on a bad column), `canonicalize_oqo_column_ids`
+    (alias spellings like `is_oa`), the `select` projection in
+    `_finalize_oqo_response`, and the `meta.x_query` echo — one code path, no
+    downstream special-casing, semantic path included.
+
+    Precedence mirrors the per_page/page/cursor/seed fallback: **the OQO wins when
+    it already carries a value**; the query-string param is honored only when the
+    OQO omits it. (An OQL string never carries sort_by/select — both are gone from
+    the language — so `?oql=…&sort=…` always uses the fallback; only an `?oqo=…`
+    that already sets sort_by/select overrides the query string.)
+
+    `map_sort_params` raises `APIQueryParamsError` on a malformed `sort` — the
+    caller wraps this so that surfaces as a clean 400, never a 500.
+    """
+    updates = {}
+
+    if not oqo.sort_by:
+        sort_map = map_sort_params(request.args.get("sort"))  # may raise
+        if sort_map:
+            # Insertion order preserved (Py3.7+ dict) → multi-column tiebreaker
+            # priority survives, exactly like the legacy URL path.
+            updates["sort_by"] = [
+                SortBy(column_id=col, direction=direction)
+                for col, direction in sort_map.items()
+            ]
+
+    if not oqo.select:
+        select_param = request.args.get("select")
+        if select_param:
+            cols = [c.strip() for c in select_param.split(",") if c.strip()]
+            if cols:
+                updates["select"] = cols
+
+    if not updates:
+        return oqo
+
+    # Re-canonicalize the merged OQO so injected sort aliases normalize to one
+    # identity (idempotent for the already-canonical filter tree; `select` is
+    # intentionally left uncanonicalized, matching legacy `?select=`).
+    return canonicalize_oqo_column_ids(replace(oqo, **updates))
+
+
 def _execute_oqo(oqo_or_dict):
     """Shared body for the POST and GET-path-form handlers. Accepts a parsed
     OQO (the OQL path — already canonicalized at the parse boundary) or a raw
@@ -319,6 +375,14 @@ def _execute_oqo(oqo_or_dict):
                 "invalid_oqo",
                 status=400,
             )
+
+    # Back-compat: fold classic ?sort=/?select= query-string params into the OQO
+    # (when it doesn't already carry them) so they're honored, validated, and
+    # echoed like OQO-native sort/select rather than silently ignored (#631).
+    try:
+        oqo = _merge_classic_sort_select(oqo, request)
+    except APIQueryParamsError as e:
+        return _error_response(str(e), "invalid_params", status=400)
 
     # Validate the OQO against the field registry (including per-leaf operator
     # validity). Returns structured errors.

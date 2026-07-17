@@ -66,12 +66,16 @@ The paging parameters work alongside `oql`:
 |---|---|---|
 | `per-page`, `page` | yes | basic paging |
 | `cursor` | yes | deep paging; start with `cursor=*`, follow `meta.next_cursor` |
+| `sort` | yes | classic `sort=column:direction` (comma-separated for tiebreakers), e.g. `sort=cited_by_count:desc` |
+| `select` | yes | classic `select=field,field` to project a subset of fields |
 | `api_key` | yes | or send `Authorization: Bearer <key>` (see Auth below) |
 
-**Sorting and field selection are the OQO's job.** They're not part of the OQL language,
-and the classic `?sort=`/`?select=` parameters are currently ignored next to `?oql=` — to
-sort results or project fields, send the query as an OQO with `sort_by`/`select` inside it
-(examples below).
+**Sorting and field selection are the OQO's job**, but the classic `?sort=`/`?select=`
+parameters still work next to `?oql=`/`?oqo=` for convenience — they're folded into the query
+as `sort_by`/`select`. If the OQO already carries a `sort_by`/`select`, the object wins and the
+matching query-string parameter is ignored (same precedence as `per_page`/`seed`). The
+canonical form is to put `sort_by`/`select` inside the OQO (examples below), and that's what
+`meta.x_query` always echoes back.
 
 Grouping *is* part of the language — write it in the query:
 

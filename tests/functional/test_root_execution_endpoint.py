@@ -373,3 +373,179 @@ class TestSemanticOqoExecution:
         assert res.status_code == 200, res.get_json()
         assert calls["add_semantic"] == 1
         assert len(captured) == 1  # went through execute_search exactly once
+
+
+# ---------------------------------------------------------------------------
+# Classic ?sort= / ?select= are honored next to ?oql=/?oqo= (oxjob #631).
+#
+# Sorting + field selection are the OQO's job (#318, removed from the OQL
+# *language* #504). For back-compat they're folded INTO the OQO before
+# validation, so they run + validate + echo like OQO-native sort_by/select
+# instead of being silently ignored. Precedence mirrors per_page/seed: the OQO
+# wins when it already carries a value.
+# ---------------------------------------------------------------------------
+
+
+class TestClassicSortSelectHonored:
+    def _oql(self, client):
+        return _valid_oql(client)
+
+    def test_query_string_sort_is_honored_with_oql(self, client):
+        """?sort= next to ?oql= reaches ES sort AND the x_query echo (not ignored)."""
+        captured = []
+        oql = self._oql(client)
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.get(
+                "/?oql=" + urllib.parse.quote(oql, safe="") + "&sort=cited_by_count:asc"
+            )
+        assert res.status_code == 200, res.get_json()
+        # Folded into the OQO → shows up in the canonical echo.
+        sort_by = res.get_json()["meta"]["x_query"]["oqo"]["sort_by"]
+        assert sort_by == [{"column_id": "cited_by_count", "direction": "asc"}]
+        # And it actually shaped the ES query. ES renders an ascending sort as
+        # the bare field name (asc is its default); desc becomes {field:{order}}.
+        es_sort = captured[0].get("sort")
+        assert es_sort and es_sort[0] == "cited_by_count"
+
+    def test_query_string_select_is_honored_with_oql(self, client):
+        """?select= next to ?oql= is folded into oqo.select (drives projection)."""
+        captured = []
+        oql = self._oql(client)
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.get(
+                "/?oql="
+                + urllib.parse.quote(oql, safe="")
+                + "&select=id,display_name"
+            )
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["meta"]["x_query"]["oqo"]["select"] == [
+            "id",
+            "display_name",
+        ]
+
+    def test_multi_key_sort_preserves_priority(self, client):
+        """Comma-separated sort keeps primary→secondary order (tiebreaker priority)."""
+        captured = []
+        oql = self._oql(client)
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.get(
+                "/?oql="
+                + urllib.parse.quote(oql, safe="")
+                + "&sort=publication_year:asc,cited_by_count:desc"
+            )
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
+            {"column_id": "publication_year", "direction": "asc"},
+            {"column_id": "cited_by_count", "direction": "desc"},
+        ]
+
+    def test_directionless_sort_defaults_asc(self, client):
+        """A bare `sort=col` defaults to asc, matching the legacy URL path."""
+        captured = []
+        oql = self._oql(client)
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.get(
+                "/?oql=" + urllib.parse.quote(oql, safe="") + "&sort=cited_by_count"
+            )
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
+            {"column_id": "cited_by_count", "direction": "asc"}
+        ]
+
+    def test_oqo_sort_by_wins_over_query_string(self, client):
+        """An OQO that already carries sort_by is NOT overridden by ?sort=."""
+        captured = []
+        oqo = {
+            "get_rows": "works",
+            "filter_rows": [{"column_id": "type", "value": "article"}],
+            "sort_by": [{"column_id": "publication_year", "direction": "desc"}],
+        }
+        encoded = urllib.parse.quote(json.dumps(oqo), safe="")
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.get(f"/?oqo={encoded}&sort=cited_by_count:asc")
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
+            {"column_id": "publication_year", "direction": "desc"}
+        ]
+
+    def test_oqo_select_wins_over_query_string(self, client):
+        """An OQO that already carries select is NOT overridden by ?select=."""
+        captured = []
+        oqo = {
+            "get_rows": "works",
+            "filter_rows": [{"column_id": "type", "value": "article"}],
+            "select": ["id"],
+        }
+        encoded = urllib.parse.quote(json.dumps(oqo), safe="")
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.get(f"/?oqo={encoded}&select=id,display_name,cited_by_count")
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["meta"]["x_query"]["oqo"]["select"] == ["id"]
+
+    def test_query_string_sort_select_honored_on_post_oql(self, client):
+        """The fold works on the POST body form too (args are method-agnostic)."""
+        captured = []
+        oql = self._oql(client)
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.post(
+                "/?sort=cited_by_count:asc&select=id",
+                data=json.dumps({"oql": oql}),
+                content_type="application/json",
+            )
+        assert res.status_code == 200, res.get_json()
+        echo = res.get_json()["meta"]["x_query"]["oqo"]
+        assert echo["sort_by"] == [{"column_id": "cited_by_count", "direction": "asc"}]
+        assert echo["select"] == ["id"]
+
+    def test_malformed_sort_is_400_not_500(self, client):
+        """A malformed ?sort= surfaces as a clean 400, never a raw 500."""
+        oql = self._oql(client)
+        res = client.get(
+            "/?oql=" + urllib.parse.quote(oql, safe="") + "&sort=" +
+            urllib.parse.quote("a:b:c", safe="")
+        )
+        assert res.status_code == 400, res.get_json()
+
+    def test_unknown_select_column_is_structured_400(self, client):
+        """An unknown ?select= column → structured invalid_select_column 400."""
+        oql = self._oql(client)
+        res = client.get(
+            "/?oql=" + urllib.parse.quote(oql, safe="") + "&select=not_a_real_field"
+        )
+        assert res.status_code == 400, res.get_json()
+        body = res.get_json()
+        assert body["validation"]["valid"] is False
+        assert any(
+            e.get("type") == "invalid_select_column"
+            for e in body["validation"]["errors"]
+        )
+
+    def test_unknown_sort_column_is_structured_400(self, client):
+        """An unknown ?sort= column → structured sort validation 400."""
+        oql = self._oql(client)
+        res = client.get(
+            "/?oql=" + urllib.parse.quote(oql, safe="") + "&sort=not_a_real_field:asc"
+        )
+        assert res.status_code == 400, res.get_json()
+        assert res.get_json()["validation"]["valid"] is False
