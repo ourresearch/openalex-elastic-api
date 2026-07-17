@@ -354,15 +354,34 @@ def build_properties():
 # Field objects; it does not touch Elasticsearch.
 ENTITY_PROPERTIES = build_properties()
 
+# OQO entity spellings whose PROPERTY-CATALOG key differs. The one case: OQL/OQO
+# say `types` (the parser + VALID_ENTITY_TYPES spelling) while the catalog is
+# keyed `work-types`. Was private to the validator (`ENTITY_ALIASES`), which
+# left every OTHER registry consumer entity-blind for `types` — oql_lang's
+# fallback parse/render resolved no fields there at all (#611 follow-up fix,
+# 2026-07-17). Now the getters below resolve it, so callers can pass either
+# spelling.
+ENTITY_KEY_ALIASES = {"types": "work-types"}
+
+
+def resolve_entity_key(entity_type):
+    """The ENTITY_PROPERTIES key for an OQO get_rows spelling (identity for all
+    but the aliased spellings, e.g. "types" → "work-types"). Does NOT guarantee
+    the result is a known entity — unknown strings pass through unchanged."""
+    if entity_type in ENTITY_PROPERTIES:
+        return entity_type
+    return ENTITY_KEY_ALIASES.get(entity_type, entity_type)
+
 
 def get_entity_properties(entity_type):
-    """Return {property_name: Property} for an entity type, or None if unknown."""
-    return ENTITY_PROPERTIES.get(entity_type)
+    """Return {property_name: Property} for an entity type, or None if unknown.
+    Accepts OQO spellings ("types") as well as catalog keys ("work-types")."""
+    return ENTITY_PROPERTIES.get(resolve_entity_key(entity_type))
 
 
 def get_property(entity_type, property_name):
     """Return the `Property` for one column, or None if entity/property unknown."""
-    return ENTITY_PROPERTIES.get(entity_type, {}).get(property_name)
+    return ENTITY_PROPERTIES.get(resolve_entity_key(entity_type), {}).get(property_name)
 
 
 def canonicalize_column_id(column_id, entity_type):
@@ -384,7 +403,7 @@ def canonicalize_column_id(column_id, entity_type):
     """
     if not column_id:
         return column_id
-    prop = ENTITY_PROPERTIES.get(entity_type, {}).get(column_id)
+    prop = ENTITY_PROPERTIES.get(resolve_entity_key(entity_type), {}).get(column_id)
     if prop is not None and prop.alternate_of:
         return prop.alternate_of
     return column_id
@@ -423,6 +442,7 @@ def get_entity_capabilities(entity_type):
     which keep the same capabilities as their canonical so a raw-URL-accepted alias
     sort/group key never rejects — and unions the `column` capability from the
     result schema."""
+    entity_type = resolve_entity_key(entity_type)
     if entity_type in _CAPABILITIES_CACHE:
         return _CAPABILITIES_CACHE[entity_type]
     base = ENTITY_PROPERTIES.get(entity_type)
@@ -631,6 +651,7 @@ def get_selectable_fields(entity_type):
 
     `entity_type` is an OQO `get_rows` property-catalog key (e.g. "works", "work-types").
     """
+    entity_type = resolve_entity_key(entity_type)
     if entity_type in _SELECTABLE_CACHE:
         return _SELECTABLE_CACHE[entity_type]
     module_name = ENTITY_FIELDS_MODULES.get(entity_type)

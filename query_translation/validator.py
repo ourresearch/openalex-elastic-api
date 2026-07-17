@@ -73,8 +73,10 @@ class ValidationResult:
         }
 
 
-# OQO get_rows values that name the same property-catalog entity under a different label.
-ENTITY_ALIASES = {"types": "work-types"}
+# OQO get_rows values that name the same property-catalog entity under a different
+# label. Single-sourced from core.properties (#611 follow-up): the getters there
+# are now alias-aware too, so oql_lang's registry fallback resolves `types`.
+from core.properties import ENTITY_KEY_ALIASES as ENTITY_ALIASES  # noqa: E402
 
 # Closed enumerated value vocabularies: a property whose `entity_type` is one of
 # these resolves to a finite code set we can enumerate offline, so a value that

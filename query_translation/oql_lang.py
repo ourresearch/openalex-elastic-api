@@ -930,7 +930,15 @@ def _build_entity_fallback(entity: str) -> Dict[str, "Field"]:
     # (oxjob #406 1c cleanup). It deliberately does NOT surface uncurated works
     # columns (those keep the raw column-id path + raw render) — see the works guard.
     is_works = entity == "works"
-    allow = INPUT_ALIAS_COLUMNS if is_works else GUI_FACETED_COLUMNS_BY_ENTITY.get(entity, frozenset())
+    # The allowlist is keyed by CATALOG entity keys; normalize OQO spellings
+    # ("types" → "work-types") the same way the registry getters do (#611
+    # follow-up — `types` previously resolved NO fallback fields at all).
+    try:
+        from core.properties import resolve_entity_key
+        allow_key = resolve_entity_key(entity)
+    except Exception:
+        allow_key = entity
+    allow = INPUT_ALIAS_COLUMNS if is_works else GUI_FACETED_COLUMNS_BY_ENTITY.get(allow_key, frozenset())
     out: Dict[str, Field] = {}
     for cid in allow:
         prop = props.get(cid)
@@ -2609,12 +2617,19 @@ class _Parser:
                            'quote every operand or none, e.g. within 3 ("smart", "phone")',
                            wt.pos)
         quoted = operands[0][1]
-        col = base + (".search.exact" if quoted else ".search")
+        # exact-column availability degrades quoted operands to the stemmed
+        # column on entities with no `.search.exact` (#611 follow-up).
+        col, prox_degraded = self._effective_search_col(base, exact=quoted)
         # Wildcards: a bare (stemmed) operand can't carry one (#364 — stemming strips the
         # literal prefix); a quoted operand can, validated per-token + a shared expansion
         # budget across the whole intervals query (#355 guard).
         all_tokens = [w for text, _ in operands for w in text.split()]
         has_wild = any("*" in w or "?" in w for w in all_tokens)
+        if has_wild and prox_degraded:
+            raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
+                           f'wildcards need exact (no-stem) search, and '
+                           f'"{self._entity}" has no exact search field',
+                           "remove the wildcard", wt.pos)
         if has_wild and not quoted:
             bad = next(w for w in all_tokens if "*" in w or "?" in w)
             raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
@@ -2636,6 +2651,28 @@ class _Parser:
         folding into its stemmed value: a boolean connective, `not`, or a
         search/directive keyword the grammar handles after the run."""
         return val.lower() in _SEARCH_RUN_RESERVED
+
+    def _effective_search_col(self, base: str, exact: bool) -> Tuple[str, bool]:
+        """The column an exact-vs-stemmed search value runs on, degrading exact →
+        stemmed when the queried entity has no `.search.exact` sibling (#611
+        follow-up: NO non-works entity ships exact search columns, so a quoted
+        value there used to mint an invalid column and hard-error). On such an
+        entity the quoted value stays on `<base>.search` — a stemmed PHRASE, the
+        closest supported semantic (the engine executes quoted values on `.search`
+        as real adjacency queries). Returns ``(column, degraded)``. Entity-less
+        contexts and entities that DO carry the exact column keep the frozen
+        behavior."""
+        col = base + (".search.exact" if exact else ".search")
+        if not exact or not self._entity:
+            return col, False
+        try:
+            from core.properties import get_entity_properties
+            props = get_entity_properties(self._entity)
+        except Exception:
+            return col, False
+        if not props or col in props or (base + ".search") not in props:
+            return col, False
+        return base + ".search", True
 
     def _parse_search_atom(self, base: str, in_group: bool = False) -> LeafFilter:
         # Stemming is ON by default; quotes turn it OFF (exact). `stemmed "phrase"`
@@ -2699,10 +2736,23 @@ class _Parser:
                     break
             text = " ".join(words)
             phrase = False
-        # quoted => exact (.exact column) unless `stemmed` keeps it stemmed
+        # quoted => exact (.exact column) unless `stemmed` keeps it stemmed —
+        # degraded to the stemmed column on entities with no exact sibling
+        # (#611 follow-up; see _effective_search_col).
         stemmed = (not phrase) or stemmed_phrase
-        col = base + (".search" if stemmed else ".search.exact")
+        col, degraded = self._effective_search_col(base, exact=not stemmed)
+        if degraded:
+            stemmed = True
         has_wildcard = "*" in text or "?" in text
+        if has_wildcard and degraded:
+            # Wildcards only run correctly on exact (no-stem) text (#364), and
+            # this entity has none — no column can execute this. Tailored error
+            # (the generic ones below say "quote it", which is exactly what the
+            # user already did).
+            raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
+                           f'wildcards need exact (no-stem) search, and '
+                           f'"{self._entity}" has no exact search field',
+                           "remove the wildcard", t.pos)
         self._skip_annot()
         # `within` is now ONLY the leading list operator `within N (a, b, ...)` (oxjob
         # #514), intercepted before the atom in _parse_search_value / _parse_search_operand.
@@ -3006,6 +3056,30 @@ def _is_search_leaf(f) -> bool:
     return isinstance(f, LeafFilter) and isinstance(f.column_id, str) and ".search" in f.column_id
 
 
+# (entity, column) -> True when the entity being rendered has `<column>` but NO
+# `<column>.exact` sibling — there, quoted values are unambiguously stemmed
+# phrases (the parser's degrade path), so the render keeps them plain (#611
+# follow-up). Boot-static registry → safe to cache.
+_EXACT_UNAVAILABLE_CACHE: Dict[Tuple[str, str], bool] = {}
+
+
+def _exact_unavailable(column: str) -> bool:
+    ent = _RENDER_ENTITY.get()
+    if not ent or not column.endswith(".search"):
+        return False
+    key = (ent, column)
+    if key not in _EXACT_UNAVAILABLE_CACHE:
+        out = False
+        try:
+            from core.properties import get_entity_properties
+            props = get_entity_properties(ent)
+            out = bool(props) and column in props and (column + ".exact") not in props
+        except Exception:
+            out = False
+        _EXACT_UNAVAILABLE_CACHE[key] = out
+    return _EXACT_UNAVAILABLE_CACHE[key]
+
+
 def _render_term(value: str, column: str) -> str:
     """OQL surface form of one search value, given its column:
       .search (stemmed):       bare word | stemmed "phrase" | within N (a, b, ...)
@@ -3033,7 +3107,13 @@ def _render_term(value: str, column: str) -> str:
         items = [w if stemmed else f'"{w}"' for w in prox.group(1).split()]
         return f'within {slop} ({", ".join(items)})'
     if value.startswith('"') and value.endswith('"') and len(value) >= 2:  # multi-word phrase
-        return f"stemmed {value}" if stemmed else value
+        # On an entity with NO `.search.exact` sibling (#611 follow-up: every
+        # non-works entity), plain quotes can only mean "stemmed phrase" — that's
+        # what the parser degrades them to — so render them plain and keep the
+        # user's text byte-stable instead of prefixing `stemmed `.
+        if stemmed and not _exact_unavailable(column):
+            return f"stemmed {value}"
+        return value
     if not stemmed:
         # exact single word/token => quoted (`.search.exact` carries exactness)
         return f'"{value}"'
