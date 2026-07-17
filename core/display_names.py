@@ -129,7 +129,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
     'concepts': {
         'description': {"display_name": 'description'},
         'display_name': {"display_name": 'name'},
-        'display_name.search': {"display_name": 'name search'},
+        'display_name.search': {"display_name": 'name search', "aliases": ['name']},
         'ids.openalex': {"display_name": 'OpenAlex ID'},
         'level': {"display_name": 'level'},
     },
@@ -166,7 +166,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'default.search': {"display_name": 'name'},
         'description': {"display_name": 'description'},
         'display_name': {"display_name": 'name'},
-        'display_name.search': {"display_name": 'name search'},
+        'display_name.search': {"display_name": 'name search', "aliases": ['name']},
         'homepage_url': {"display_name": 'homepage URL'},
         'ids.crossref': {"display_name": 'CrossRef ID'},
         'ids.doi': {"display_name": 'DOI'},
@@ -188,7 +188,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'country_code': {"display_name": 'country'},
         'default.search': {"display_name": 'name'},
         'display_name': {"display_name": 'name'},
-        'display_name.search': {"display_name": 'name search'},
+        'display_name.search': {"display_name": 'name search', "aliases": ['name']},
         'display_name_acronyms': {"display_name": 'acronyms'},
         'display_name_alternatives': {"display_name": 'alternate names'},
         'geo.city': {"display_name": 'city'},
@@ -233,11 +233,17 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'version': {"display_name": 'version'},
         'work_id': {"display_name": 'work'},
     },
+    # oa-statuses was the ONE entity without the sibling-standard 'name' label on
+    # its display_name (it fell to humanize → "display name") — added with the
+    # #611 `name` alias work (2026-07-17) so the canonical OQL word is uniform.
+    'oa-statuses': {
+        'display_name': {"display_name": 'name'},
+    },
     'publishers': {
         'alternate_titles': {"display_name": 'alternate names'},
         'country_codes': {"display_name": 'countries'},
         'display_name': {"display_name": 'name'},
-        'display_name.search': {"display_name": 'name search'},
+        'display_name.search': {"display_name": 'name search', "aliases": ['name']},
         'hierarchy_level': {"display_name": 'hierarchy level'},
         'homepage_url': {"display_name": 'homepage'},
         'ids.openalex': {"display_name": 'OpenAlex ID'},
@@ -262,7 +268,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'country_code': {"display_name": 'country'},
         'default.search': {"display_name": 'name'},
         'display_name': {"display_name": 'name'},
-        'display_name.search': {"display_name": 'title search'},
+        'display_name.search': {"display_name": 'title search', "aliases": ['name']},
         'first_publication_year': {"display_name": 'first publication year'},
         'homepage_url': {"display_name": 'homepage'},
         'host_organization': {"display_name": 'publisher'},
@@ -579,6 +585,13 @@ GLOBAL_DISPLAY_NAME_OVERRIDES: Dict[str, dict] = {
     # concepts/funders/awards/topics it also searches descriptions/keywords.
     # `default` / `default.search` are the demoted alternate keys/spellings.
     'text.search': {"display_name": 'text', "aliases": ['anywhere', 'any field', 'default', 'default.search', 'text']},
+    # #611 follow-up (Jason 2026-07-17): `name` is an accepted input spelling for
+    # the name search on every NON-works entity (`authors where name has (einstein)`).
+    # Lives here so all current + future entities get it; works is shadowed by its
+    # per-entity override ('title'), and the five entities with their own
+    # display_name.search override carry the same alias inline (per-entity fully
+    # replaces global). Alias, not label — the catalog labels are untouched.
+    'display_name.search': {"aliases": ['name']},
 }
 
 

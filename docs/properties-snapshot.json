@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "14f77bc8b54a773b2e3f25a9e06d8b6822b9012f4bfbb7efc2d2c3e161bd8c95",
+    "fingerprint": "ee65cf16cbbee6c1eff33774efe2348e520f1bf6256b56d98b24c5e7fff54c64",
     "property_count": 782,
-    "version": "7.1.0"
+    "version": "7.2.0"
   },
   "properties": {
     "authors": {
@@ -253,7 +253,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -1188,7 +1190,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -2295,7 +2299,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -2821,7 +2827,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -3134,7 +3142,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -3447,7 +3457,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -3783,7 +3795,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -4287,7 +4301,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -4837,7 +4853,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -5165,7 +5183,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -6042,7 +6062,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -6280,7 +6302,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -6548,7 +6572,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -7276,7 +7302,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": "other",
-        "display_name": "display name",
+        "display_name": "name",
         "entity_type": null,
         "name": "display_name",
         "operators": [
@@ -7291,7 +7317,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -7619,7 +7647,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -8205,7 +8235,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -8503,7 +8535,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -8944,7 +8978,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -10042,7 +10078,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -10483,7 +10521,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
@@ -10945,7 +10985,9 @@
         "actions": [
           "search"
         ],
-        "aliases": [],
+        "aliases": [
+          "name"
+        ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,

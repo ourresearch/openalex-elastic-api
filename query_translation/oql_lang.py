@@ -21,6 +21,7 @@ Design anchors (see docs/oql-spec.md for prose, oxjob #330 EXPLORE.md for the wh
 """
 from __future__ import annotations
 
+import contextvars
 import re
 from dataclasses import dataclass, replace
 from typing import Dict, List, Optional, Tuple
@@ -959,6 +960,41 @@ def _build_entity_fallback(entity: str) -> Dict[str, "Field"]:
         for key in [getattr(prop, "display_name", "")] + list(getattr(prop, "aliases", []) or []) + [cid]:
             if key:
                 out.setdefault(key.lower(), fld)
+    # --- non-works SEARCH columns (#611 follow-up: `name` on authors et al.) ---
+    # A search column's registry display_name/aliases become parse keys, exactly
+    # like the non-search columns above — this is what lets `authors where name
+    # has (einstein)` resolve (registry alias `name` on display_name.search).
+    # Works is excluded: its search surface is fully curated in `_FIELDS`
+    # ("title", "abstract", "full text", …) and Jason wants `name` works-free
+    # (2026-07-17). Scope = the entity's WHOLE registry, not the GUI-faceted
+    # allowlist: every non-works search column is a plain documented API filter
+    # (default/display_name/text/description/keywords), there is no half-baked
+    # tail to hide. A second, DETERMINISTICALLY-ORDERED pass with setdefault, so
+    # search words can never displace a non-search claim, and a column that IS
+    # its own canonical claims a contested word before an alias-column that the
+    # canonicalizer would rewrite (`name` must land on display_name.search, not
+    # on default.search → text.search). Only plain `.search` columns — the Field
+    # carries the BASE column (curated-search convention: the value's quoting
+    # picks .search / .search.exact at parse).
+    if not is_works:
+        try:
+            from core.properties import canonicalize_column_id
+        except Exception:
+            return out
+        search_cids = [
+            cid for cid, prop in props.items()
+            if cid.endswith(".search") and not cid.endswith(".search.exact")
+            and "search" in set(getattr(prop, "operators", []) or [])
+            and getattr(prop, "display_name", None)
+        ]
+        search_cids.sort(key=lambda c: (canonicalize_column_id(c, entity) != c, c))
+        for cid in search_cids:
+            prop = props[cid]
+            dn0 = prop.display_name
+            fld = Field(column=cid[: -len(".search")], kind="search", oql=dn0, casing="")
+            for key in [dn0] + list(getattr(prop, "aliases", []) or []) + [cid]:
+                if key:
+                    out.setdefault(key.lower(), fld)
     return out
 
 
@@ -2903,9 +2939,67 @@ def _oql_field(column: str) -> Tuple[str, str]:
         mode = "exact"; base = column[: -len(".search.exact")]
     elif column.endswith(".search"):
         base = column[: -len(".search")]
+    # Entity-aware SEARCH word (#611 follow-up): on a non-works entity a search
+    # column renders its per-entity registry word when that word safely
+    # round-trips (authors `default.search` → "name"). Everything else keeps the
+    # frozen entity-blind behavior (works words, tiers, raw ids).
+    if base != column:
+        ent = _RENDER_ENTITY.get()
+        if ent and ent != "works":
+            w = _entity_search_word(ent, base + ".search")
+            if w:
+                return w, mode
     fld = _BY_COLUMN.get(base) or _BY_COLUMN.get(column)
     name = fld.oql if fld else base
     return name, mode
+
+
+# The entity whose OQO is currently being rendered — set for the extent of
+# `_build_tree` (a ContextVar: render runs inside threaded Flask workers).
+# `_oql_field` is called many helpers deep with no room to thread a parameter;
+# this is the one sanctioned side-channel. (#611 follow-up)
+_RENDER_ENTITY: "contextvars.ContextVar[Optional[str]]" = contextvars.ContextVar(
+    "oql_render_entity", default=None)
+
+# (entity, column_id) -> render word or None (None = fall through to the
+# entity-blind path). Word must NOT be shadowed by a curated `_ALIAS` spelling
+# (curated wins length-ties at parse) and must reparse via the entity fallback
+# to this same column — else rendering it would break the round-trip.
+_ENTITY_SEARCH_WORD_CACHE: Dict[Tuple[str, str], Optional[str]] = {}
+
+
+def _entity_search_word(entity: str, cid: str) -> Optional[str]:
+    key = (entity, cid)
+    if key not in _ENTITY_SEARCH_WORD_CACHE:
+        word = None
+        try:
+            from core.properties import get_entity_properties
+            props = get_entity_properties(entity) or {}
+            prop = props.get(cid)
+            if prop is not None:
+                base = cid[: -len(".search")]
+                base_prop = props.get(base)
+                # Candidate order: the BASE column's label first (`display_name`
+                # is labeled 'name' on every non-works entity, and that is the
+                # word people think in — `authors where name has …`), then the
+                # search column's curated aliases (so awards — whose base label
+                # 'title' is works-curated and unusable — still says 'name', not
+                # its mechanical 'display name'), then its own label.
+                candidates = [getattr(base_prop, "display_name", None)] if base_prop else []
+                candidates += list(getattr(prop, "aliases", []) or [])
+                candidates += [getattr(prop, "display_name", None)]
+                for w in candidates:
+                    if not w or w.lower() in _ALIAS:
+                        continue     # curated words win parse ties -> not safe
+                    fld = _entity_fallback(entity).get(w.lower())
+                    if (fld is not None and fld.kind == "search"
+                            and fld.column + ".search" == cid):
+                        word = w
+                        break
+        except Exception:
+            pass
+        _ENTITY_SEARCH_WORD_CACHE[key] = word
+    return _ENTITY_SEARCH_WORD_CACHE[key]
 
 
 def _is_search_leaf(f) -> bool:
@@ -3498,6 +3592,16 @@ def _merge_same_field_items(items, join):
 def _build_tree(oqo: OQO, resolver=None) -> OQLRenderTree:
     """OQO -> canonical `oql_render` tree. `render()` stringifies this; the two
     never drift (Invariant A by construction)."""
+    # Expose the rendered entity to `_oql_field` (deep in the helpers below) for
+    # the per-entity search words (#611 follow-up); reset on the way out.
+    _tok = _RENDER_ENTITY.set(oqo.get_rows)
+    try:
+        return _build_tree_inner(oqo, resolver)
+    finally:
+        _RENDER_ENTITY.reset(_tok)
+
+
+def _build_tree_inner(oqo: OQO, resolver=None) -> OQLRenderTree:
     head = EntityHead(id=oqo.get_rows, text=oqo.get_rows.lower())
     # Corpus selector parenthetical (#481). Canonical phrase for non-core; "" for
     # core (the default ⇒ omitted, so a core OQO round-trips to the bare entity).

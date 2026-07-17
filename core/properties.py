@@ -203,7 +203,11 @@ CAP_COLUMN = "column"
 # 7.1.0: added "title/abs" as an input alias on works title_and_abstract.search
 # (short form of the canonical "title/abstract"; Scopus's TITLE-ABS shorthand).
 # Alias addition only, display_name unchanged. Jason-requested 2026-07-07. = MINOR.
-PROPERTIES_VERSION = "7.1.0"
+# 7.2.0: added "name" as an input alias on display_name.search for every NON-works
+# entity (a global override + the five per-entity overrides that shadow it; works
+# keeps 'title' and does NOT accept "name"). Alias addition only, display_names
+# unchanged. Jason-requested + approved 2026-07-17 (#611 follow-up). = MINOR.
+PROPERTIES_VERSION = "7.2.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
