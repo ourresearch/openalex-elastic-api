@@ -417,7 +417,7 @@ class TestCrossTypeCollectionExecution:
         q = oqo_to_q(oqo, works_fields)
         assert q.to_dict() == {
             "terms": {
-                "authorships.author.id.lower": [
+                "authorships_full.author.id": [
                     "https://openalex.org/A111",
                     "https://openalex.org/A222",
                 ]
@@ -492,7 +492,7 @@ class TestCrossTypeCollectionExecution:
         )
         # Empty terms clause → matches zero (spec).
         assert oqo_to_q(oqo, works_fields).to_dict() == {
-            "terms": {"authorships.author.id.lower": []}
+            "terms": {"authorships_full.author.id": []}
         }
 
     def test_unknown_collection_negation_is_noop_match_all(self, monkeypatch):
@@ -511,7 +511,7 @@ class TestCrossTypeCollectionExecution:
             ],
         )
         assert oqo_to_q(oqo, works_fields).to_dict() == {
-            "bool": {"must_not": [{"terms": {"authorships.author.id.lower": []}}]}
+            "bool": {"must_not": [{"terms": {"authorships_full.author.id": []}}]}
         }
 
     def test_cross_type_type_mismatch_raises(self, monkeypatch):

@@ -56,7 +56,7 @@ class TestPositive:
         )
         body = json.dumps(s.to_dict())
         assert remaining == []
-        assert "authorships.author.id" in body
+        assert "authorships_full.author.id" in body
         assert "https://openalex.org/A111" in body
 
     def test_institutions_uses_dotted_field_name(self, monkeypatch):

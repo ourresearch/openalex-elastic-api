@@ -170,7 +170,7 @@ fields = [
     ),
     BooleanField(
         param="has_orcid",
-        custom_es_field="authorships.author.orcid",
+        custom_es_field="authorships_full.author.orcid",
         docstring=DOCSTRINGS["has_orcid"],
         documentation_link=DOCUMENTATION_LINKS["has_orcid"],
         alternate_names=ALTERNATE_NAMES.get("has_orcid", None),
@@ -404,7 +404,7 @@ fields = [
     ),
     OpenAlexIDField(
         param="author.id",
-        alias="authorships.author.id",
+        alias="authorships_full.author.id",
         alternate_of="authorships.author.id",
         docstring=DOCSTRINGS["author"],
         documentation_link=DOCUMENTATION_LINKS["author"],
@@ -412,6 +412,7 @@ fields = [
     ),
     OpenAlexIDField(
         param="authorships.author.id",
+        custom_es_field="authorships_full.author.id",
         docstring=DOCSTRINGS["author"],
         documentation_link=DOCUMENTATION_LINKS["author"],
         alternate_names=ALTERNATE_NAMES.get("author", None),
@@ -697,6 +698,7 @@ fields = [
     ),
     TermField(
         param="authorships.raw_orcid",
+        alias="authorships_full.raw_orcid",
         docstring="Exact match on the raw ORCID as provided by the source",
     ),
     SearchField(
@@ -739,15 +741,16 @@ fields = [
     ),
     TermField(
         param="authorships.affiliations.institution_ids",
-        custom_es_field="authorships.affiliations.institution_ids.keyword",
+        custom_es_field="authorships_full.affiliations.institution_ids.keyword",
     ),
     TermField(
         param="author.orcid",
-        alias="authorships.author.orcid",
+        alias="authorships_full.author.orcid",
         alternate_of="authorships.author.orcid",
     ),
     TermField(
         param="authorships.author.orcid",
+        alias="authorships_full.author.orcid",
         docstring="The work's authors, by ORCID",
         documentation_link="https://developers.openalex.org/api-reference/authors",
     ),
