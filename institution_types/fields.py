@@ -1,4 +1,5 @@
 from core.fields import (
+    CollectionField,
     DateField,
     DateTimeField,
     ExternalIDField,
@@ -42,6 +43,7 @@ fields = [
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
     TermField(param="display_name", custom_es_field="display_name.keyword"),
+    CollectionField(entity_type="institution-types"),
 ]
 
 fields_dict = {f.param: f for f in fields}

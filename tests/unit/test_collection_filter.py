@@ -192,6 +192,97 @@ class TestCollectionField:
             f.build_query()
 
 
+# ---------- _canonicalize_entity_ids (path-segmented entities, oxjob #396) ----------
+
+class TestCanonicalizePathSegments:
+    """Path-segmented entities index `id` with their API path segment
+    (`https://openalex.org/countries/US`); users-api stores bare codes, so the
+    canonicalizer must insert the segment or the terms clause matches nothing."""
+
+    def _terms_ids(self, entity_type, stored_ids, monkeypatch):
+        monkeypatch.setattr(collection_resolver, "resolve_collection",
+                            lambda lid: (entity_type, stored_ids))
+        f = CollectionField(entity_type=entity_type)
+        f.value = "col_abc"
+        return f.build_query().to_dict()["terms"]["id"]
+
+    def test_countries_bare_codes_get_segment(self, monkeypatch):
+        assert self._terms_ids("countries", ["US", "FR"], monkeypatch) == [
+            "https://openalex.org/countries/US",
+            "https://openalex.org/countries/FR",
+        ]
+
+    def test_sdgs_bare_digits_get_segment(self, monkeypatch):
+        assert self._terms_ids("sdgs", ["1", "13"], monkeypatch) == [
+            "https://openalex.org/sdgs/1",
+            "https://openalex.org/sdgs/13",
+        ]
+
+    def test_keywords_slugs_get_segment(self, monkeypatch):
+        assert self._terms_ids("keywords", ["computer-science"], monkeypatch) == [
+            "https://openalex.org/keywords/computer-science",
+        ]
+
+    def test_work_types_segment_is_types(self, monkeypatch):
+        # The one name/path mismatch: entity_type `work-types`, path `types/`.
+        assert self._terms_ids("work-types", ["article", "book"], monkeypatch) == [
+            "https://openalex.org/types/article",
+            "https://openalex.org/types/book",
+        ]
+
+    def test_awards_native_prefix_no_segment(self, monkeypatch):
+        assert self._terms_ids("awards", ["G6558272803"], monkeypatch) == [
+            "https://openalex.org/G6558272803",
+        ]
+
+    def test_already_segmented_stored_id_not_doubled(self, monkeypatch):
+        assert self._terms_ids("countries", ["countries/US"], monkeypatch) == [
+            "https://openalex.org/countries/US",
+        ]
+
+    def test_off_case_codes_fixed_at_read_time(self, monkeypatch):
+        # users-api's lenient gate can store `us` / `q15` / `Article`; the ES
+        # id is case-sensitive, so canonicalization fixes case per vocab.
+        assert self._terms_ids("countries", ["us"], monkeypatch) == [
+            "https://openalex.org/countries/US",
+        ]
+        assert self._terms_ids("continents", ["q15"], monkeypatch) == [
+            "https://openalex.org/continents/Q15",
+        ]
+        assert self._terms_ids("work-types", ["Article"], monkeypatch) == [
+            "https://openalex.org/types/article",
+        ]
+
+    def test_full_url_passthrough_for_segmented_type(self, monkeypatch):
+        assert self._terms_ids(
+            "sdgs", ["https://openalex.org/sdgs/3"], monkeypatch
+        ) == ["https://openalex.org/sdgs/3"]
+
+    def test_every_registered_collection_field_has_known_segment_or_native(self):
+        """Guard: any endpoint registering a CollectionField must have its
+        entity_type either in the segment map or be a known native
+        letter-prefixed type — a new path-segmented registration that forgets
+        the map entry silently matches nothing."""
+        import importlib
+        from core.fields import ID_PATH_SEGMENT_BY_ENTITY_TYPE
+        from core.properties import ENTITY_FIELDS_MODULES
+
+        native = {"works", "authors", "sources", "institutions", "concepts",
+                  "funders", "publishers", "topics", "awards"}
+        registered = set()
+        for entity_type, module_name in ENTITY_FIELDS_MODULES.items():
+            mod = importlib.import_module(module_name)
+            for f in getattr(mod, "fields", []):
+                if isinstance(f, CollectionField):
+                    registered.add(f.entity_type)
+        assert registered, "no CollectionFields found at all — import wiring broken?"
+        unknown = registered - native - set(ID_PATH_SEGMENT_BY_ENTITY_TYPE)
+        assert not unknown, (
+            f"CollectionField registered for {sorted(unknown)} but they're neither "
+            f"known-native nor in ID_PATH_SEGMENT_BY_ENTITY_TYPE"
+        )
+
+
 # ---------- _apply_collection_filters (intersection) ----------
 
 class TestApplyCollectionFilters:

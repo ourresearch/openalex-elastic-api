@@ -1719,20 +1719,62 @@ class CollectionField(Field):
                 f"not valid for /{self.entity_type}"
             )
 
-        q = Q("terms", id=_canonicalize_entity_ids(entity_ids))
+        q = Q("terms", id=_canonicalize_entity_ids(entity_ids, self.entity_type))
         if negated:
             q = ~Q("bool", must=q)
         return q
 
 
-def _canonicalize_entity_ids(ids):
+# Path-segmented entities index `id` WITH their API path segment
+# (`https://openalex.org/sdgs/1`, `https://openalex.org/countries/US`), while
+# native letter-prefixed types (works `W123`, awards `G123`, …) index
+# `https://openalex.org/<code>` bare. users-api stores bare codes either way,
+# so canonicalization must insert the segment for these types or the terms
+# clause on `id` matches nothing (oxjob #396). work-types is the one
+# name/path mismatch: its canonical segment is `types` (`types/article`).
+ID_PATH_SEGMENT_BY_ENTITY_TYPE = {
+    "continents": "continents",
+    "countries": "countries",
+    "domains": "domains",
+    "fields": "fields",
+    "institution-types": "institution-types",
+    "keywords": "keywords",
+    "languages": "languages",
+    "licenses": "licenses",
+    "oa-statuses": "oa-statuses",
+    "sdgs": "sdgs",
+    "source-types": "source-types",
+    "subfields": "subfields",
+    "work-types": "types",
+}
+
+
+# Segmented-type codes are case-sensitive in the ES `id` (terms clauses don't
+# case-fold): countries/continents codes are uppercase (`US`, `Q15`), every
+# other segmented vocab is a lowercase slug/digit. users-api's lenient
+# forward-compat gate can store an off-case code (`us`), so fix case at read
+# time rather than matching nothing.
+_UPPERCASE_CODE_ENTITY_TYPES = {"countries", "continents"}
+
+
+def _canonicalize_entity_ids(ids, entity_type=None):
     """Convert short-form OpenAlex IDs to the full-URL form ES indexes on."""
+    segment = ID_PATH_SEGMENT_BY_ENTITY_TYPE.get(entity_type)
     out = []
     for v in ids or []:
         if not v:
             continue
         if v.startswith("https://openalex.org/"):
             out.append(v)
+            continue
+        if segment:
+            code = v[len(segment) + 1:] if v.startswith(f"{segment}/") else v
+            code = (
+                code.upper()
+                if entity_type in _UPPERCASE_CODE_ENTITY_TYPES
+                else code.lower()
+            )
+            out.append(f"https://openalex.org/{segment}/{code}")
         else:
             out.append(f"https://openalex.org/{v}")
     return out

@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "ee65cf16cbbee6c1eff33774efe2348e520f1bf6256b56d98b24c5e7fff54c64",
-    "property_count": 782,
-    "version": "7.2.0"
+    "fingerprint": "4d959afbf7f0fe2277b9169cfba55090b72443225552b23b186139e97090b561",
+    "property_count": 794,
+    "version": "7.3.0"
   },
   "properties": {
     "authors": {
@@ -1100,6 +1100,21 @@
         "name": "co_lead_investigator",
         "operators": [],
         "type": null
+      },
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "awards",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "type": "collection"
       },
       "created_date": {
         "actions": [
@@ -2756,6 +2771,21 @@
         ],
         "type": "number"
       },
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "continents",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "type": "collection"
+      },
       "countries": {
         "actions": [
           "column"
@@ -3055,6 +3085,21 @@
           "range"
         ],
         "type": "number"
+      },
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "countries",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "type": "collection"
       },
       "continent": {
         "actions": [
@@ -3401,6 +3446,21 @@
         ],
         "type": "number"
       },
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "domains",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "type": "collection"
+      },
       "created_date": {
         "actions": [
           "column"
@@ -3738,6 +3798,21 @@
           "range"
         ],
         "type": "number"
+      },
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "fields",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "type": "collection"
       },
       "created_date": {
         "actions": [
@@ -4796,6 +4871,21 @@
           "range"
         ],
         "type": "number"
+      },
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "institution-types",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "type": "collection"
       },
       "created_date": {
         "actions": [
@@ -6261,6 +6351,21 @@
         ],
         "type": "number"
       },
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "languages",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "type": "collection"
+      },
       "created_date": {
         "actions": [
           "column"
@@ -6515,6 +6620,21 @@
           "range"
         ],
         "type": "number"
+      },
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "licenses",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "type": "collection"
       },
       "created_date": {
         "actions": [
@@ -7260,6 +7380,21 @@
           "range"
         ],
         "type": "number"
+      },
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "oa-statuses",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "type": "collection"
       },
       "created_date": {
         "actions": [
@@ -8478,6 +8613,21 @@
           "range"
         ],
         "type": "number"
+      },
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "source-types",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "type": "collection"
       },
       "created_date": {
         "actions": [
@@ -10022,6 +10172,21 @@
         ],
         "type": "number"
       },
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "subfields",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "type": "collection"
+      },
       "created_date": {
         "actions": [
           "column"
@@ -10913,6 +11078,21 @@
           "range"
         ],
         "type": "number"
+      },
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "work-types",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "type": "collection"
       },
       "created_date": {
         "actions": [

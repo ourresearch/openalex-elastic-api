@@ -1,4 +1,5 @@
 from core.fields import (
+    CollectionField,
     OpenAlexIDField,
     RangeField,
     SearchField,
@@ -189,6 +190,7 @@ fields = [
         custom_es_field="institution_awarded_full.lineage",
         docstring="The OpenAlex ID of an ancestor of the institution that received the award",
     ),
+    CollectionField(entity_type="awards"),
 ]
 
 fields_dict = {f.param: f for f in fields}

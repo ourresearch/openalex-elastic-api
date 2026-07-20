@@ -255,7 +255,7 @@ def _apply_collection_filters(fields_dict, filter_params, s):
             ids = []
         else:
             _check_type(lid, etype)
-        s = s.filter(Q("terms", id=_canonicalize_entity_ids(ids)))
+        s = s.filter(Q("terms", id=_canonicalize_entity_ids(ids, endpoint_entity_type)))
 
     # Negated collection (at most one — enforced above, and only when positives is empty).
     if negatives:
@@ -264,7 +264,9 @@ def _apply_collection_filters(fields_dict, filter_params, s):
         if etype is not None:
             _check_type(lid, etype)
             _budget(len(ids))
-            s = s.filter(~Q("bool", must=Q("terms", id=_canonicalize_entity_ids(ids))))
+            s = s.filter(
+                ~Q("bool", must=Q("terms", id=_canonicalize_entity_ids(ids, endpoint_entity_type)))
+            )
 
     return s, other
 

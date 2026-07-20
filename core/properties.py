@@ -207,7 +207,7 @@ CAP_COLUMN = "column"
 # entity (a global override + the five per-entity overrides that shadow it; works
 # keeps 'title' and does NOT accept "name"). Alias addition only, display_names
 # unchanged. Jason-requested + approved 2026-07-17 (#611 follow-up). = MINOR.
-PROPERTIES_VERSION = "7.2.0"
+PROPERTIES_VERSION = "7.3.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
