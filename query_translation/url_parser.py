@@ -359,14 +359,40 @@ def parse_single_filter(
     # (renders cleanly + the rendered OQL re-parses). Mirrors the OQL lexer's
     # position-preserving collapse. (oxjob #363)
     value = re.sub('"{2,}', '"', value.translate(CURLY_DQUOTE_MAP))
-    # Lucene-style boolean inside a .search value (AND/OR/NOT keywords,
+    # A raw comma OUTSIDE quotes in a search value (legal in top-level
+    # `search[.…]=` params, where the analyzer strips it) would render an
+    # x_query.url whose filter clause the API edge REJECTS (the comma reads as
+    # a clause separator; live: `filter=display_name.search:cancer, treatment`
+    # → "Invalid request rejected at the API edge"). Normalize to spaces —
+    # result-preserving, live-verified on both column types (stemmed 238,632
+    # and no-stem 224,070, identical either way). Commas INSIDE quotes are
+    # kept: the engine's quote-aware clause splitter handles them. (#633)
+    if field.endswith((".search", ".search.exact")) and "," in value:
+        chars, in_quotes = [], False
+        for ch in value:
+            if ch == '"':
+                in_quotes = not in_quotes
+            chars.append(ch if (ch != "," or in_quotes) else " ")
+        normalized = " ".join("".join(chars).split())
+        if normalized:
+            value = normalized
+    # Lucene-style boolean inside a search value (AND/OR/NOT keywords,
     # optionally with parens) lifts to a BranchFilter tree of has-leaves.
-    # See _parse_search_boolean for grammar. A top-level AND-branch is
+    # See _parse_search_boolean for grammar. Applies to `.search.exact` too
+    # (#633): the engine runs the same Lucene syntax on the no-stem field
+    # (live: `title_and_abstract.search.exact:Windows AND (DLL OR DLLs)` =
+    # its decomposed form = 859), and without lifting the OQL render had to
+    # fall back to a lossy quoted phrase. A top-level AND-branch is
     # flattened into a list — outer filter_rows is itself an implicit AND, so
     # nesting an explicit AND-branch there is redundant and would diverge from
     # the corpus's canonical shape.
-    if field.endswith(".search") and _SEARCH_BOOLEAN_KEYWORD_RE.search(value):
+    if (
+        field.endswith((".search", ".search.exact"))
+        and _SEARCH_BOOLEAN_KEYWORD_RE.search(value)
+    ):
         parsed = _parse_search_boolean(field, value)
+        if field.endswith(".search.exact"):
+            parsed = _canonicalize_lifted_exact(parsed)
         if (
             isinstance(parsed, BranchFilter)
             and parsed.join == "and"
@@ -869,6 +895,32 @@ def _parse_search_boolean(field: str, value: str) -> FilterType:
     # both representations equivalently — but lifting matches the corpus shape
     # where the expected OQO has the AND-leaves as siblings in filter_rows.)
     return result
+
+
+def _canonicalize_lifted_exact(node: FilterType) -> FilterType:
+    """Canonicalize the leaves of a boolean tree lifted from a `.search.exact`
+    value (#633): each leaf value goes through `canonical_exact_search_value`
+    (singleton-quote strip etc.), and a NON-negated bare multi-word clean run
+    (no-stem AND-of-words) splits into an AND-branch of per-token leaves — the
+    same canonical shape `parse_single_filter` builds for an unstructured
+    value. Negated leaves are NOT split: the polarity bit sits on the leaf, and
+    NOT(a AND b) ≠ (NOT a AND NOT b), so splitting under negation would need a
+    De-Morgan rewrite — left as one bare leaf (faithful in OQO/URL; the OQL
+    render falls back to the lossy quoted form for that rare shape)."""
+    if isinstance(node, BranchFilter):
+        node.filters = [_canonicalize_lifted_exact(f) for f in node.filters]
+        return node
+    if not isinstance(node, LeafFilter):
+        return node
+    node.value = canonical_exact_search_value(node.value)
+    if not node.is_negated:
+        words = split_exact_words(node.value)
+        if words:
+            return BranchFilter(join="and", filters=[
+                LeafFilter(column_id=node.column_id, value=w, operator="has")
+                for w in words
+            ])
+    return node
 
 
 def parse_sort_string(sort_string: str) -> List[SortBy]:

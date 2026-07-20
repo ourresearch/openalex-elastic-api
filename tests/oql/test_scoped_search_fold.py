@@ -66,17 +66,18 @@ def test_semantic_maps_to_canonical_semantic_column():
 
 # --- scoped params thread into the OQO and validate ---------------------------
 
-def test_exact_scoped_search_validates_and_keeps_value_verbatim():
+def test_exact_boolean_value_lifts_to_branch():
+    # A Lucene boolean on .exact lifts to a BranchFilter tree, same as .search
+    # (#633 — live-verified: the decomposed form returns the identical 859).
+    # Canonical column order too (NOT title_and_abstract.exact.search).
     oqo, vr = _parse_and_validate(
         {"search.title_and_abstract.exact": "Windows AND (DLL OR DLLs)"})
     assert vr.valid, [getattr(e, "message", e) for e in vr.errors]
-    leaf = oqo.to_dict()["filter_rows"][0]
-    # Canonical column (NOT title_and_abstract.exact.search); the BARE value
-    # stays bare (#633 — bare = no-stem AND/boolean semantics on the engine,
-    # count-distinct from the quoted phrase, so quoting it would silently
-    # rewrite the query; the old #568 auto-quote is reversed).
-    assert leaf["column_id"] == "title_and_abstract.search.exact"
-    assert leaf["value"] == "Windows AND (DLL OR DLLs)"
+    rows = oqo.to_dict()["filter_rows"]
+    assert rows[0]["column_id"] == "title_and_abstract.search.exact"
+    assert rows[0]["value"] == "Windows"
+    assert rows[1]["join"] == "or"
+    assert [f["value"] for f in rows[1]["filters"]] == ["DLL", "DLLs"]
 
 
 @pytest.mark.parametrize("field", ["title", "abstract", "title_and_abstract"])
@@ -90,14 +91,24 @@ def test_plain_scoped_search_still_validates():
     assert vr.valid, [getattr(e, "message", e) for e in vr.errors]
 
 
-def test_comma_in_value_stays_one_clause():
-    # The reason scoped params must NOT ride the comma-joined filter string:
-    # a free-text value containing a comma is still ONE search clause.
+def test_comma_in_value_stays_one_clause_and_normalizes():
+    # A raw comma in a search value is legal top-level (analyzer strips it) but
+    # would render an x_query.url the API edge rejects (comma = clause
+    # separator). It normalizes to a space — result-preserving, live-verified
+    # (238,632 both forms) — and stays ONE clause.
     oqo, vr = _parse_and_validate({"search.title": "cancer, treatment"})
     assert vr.valid, [getattr(e, "message", e) for e in vr.errors]
     rows = oqo.to_dict()["filter_rows"]
     assert len(rows) == 1
-    assert rows[0]["value"] == "cancer, treatment"
+    assert rows[0]["value"] == "cancer treatment"
+
+
+def test_comma_inside_quotes_is_kept():
+    # Quoted commas are literal phrase text; the engine's clause splitter is
+    # quote-aware, so the rendered filter clause stays executable.
+    oqo, _ = _parse_and_validate({"search.title": 'foo "bar, baz"'})
+    rows = oqo.to_dict()["filter_rows"]
+    assert rows[0]["value"] == 'foo "bar, baz"'
 
 
 def test_multiple_scoped_params_all_thread_and_join_as_and():
@@ -146,14 +157,13 @@ def test_wildcard_token_splits_and_renders():
     assert 'has ("cancer" and "treat*")' in render(oqo)
 
 
-def test_lucene_structured_exact_value_does_not_split():
-    # `AND` here is a Lucene OPERATOR spanning tokens — splitting would change
-    # the query. Stays one bare leaf (URL/OQO faithful; OQL falls back lossy).
+def test_exact_boolean_lift_renders_faithful_oql():
+    # The lifted boolean renders real OQL (was: lossy quoted phrase).
     oqo, _ = _parse_and_validate(
         {"search.title_and_abstract.exact": "Windows AND (DLL OR DLLs)"})
-    rows = oqo.to_dict()["filter_rows"]
-    assert len(rows) == 1
-    assert rows[0]["value"] == "Windows AND (DLL OR DLLs)"
+    oql = render(oqo)
+    assert '"Windows"' in oql and '"DLL" or "DLLs"' in oql
+    assert '"Windows AND (DLL OR DLLs)"' not in oql
 
 
 def test_quoted_phrase_exact_still_renders_plain_quotes():
