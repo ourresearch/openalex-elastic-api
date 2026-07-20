@@ -545,8 +545,8 @@ _CONNECTIVES = {"and", "or", "&"}
 # of these appears as a LITERAL word inside a stemmed search value it must be
 # quoted on render (`… "and" …`) so it folds back as an escaped literal rather
 # than re-parsing as structure. `_Parser._is_run_break_word` reads this set.
-_SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "stemmed", "within", "group",
-                                       "sample"}
+_SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "stemmed", "exact", "within",
+                                       "group", "sample"}
 
 # Characters dropped from a STEMMED search value on render (#3, oxjob #363): the
 # ES stemmed-search analyzer strips this punctuation anyway (so dropping it is
@@ -2691,6 +2691,17 @@ class _Parser:
         if self.word_is("stemmed") and self.peek(1) and self.peek(1).kind == "STRING":
             self.next()
             stemmed_phrase = True
+        # `exact <bare run>` — the 4th cell of the 2×2 search grid (oxjob #633):
+        # no-stem AND-of-words, what the raw API executes for a bare multi-word
+        # `search.<scope>.exact=` / `filter=…search.exact:` value. Live-measured
+        # DISTINCT from the quoted phrase (`title.search.exact:cancer treatment`
+        # = 224,070 works vs `…:"cancer treatment"` = 36,755), so it needs its
+        # own surface. Symmetric to `stemmed "…"`: each marker flips the
+        # quoting-derived default (bare⇒stemmed, quoted⇒exact) for its shape.
+        exact_run = False
+        if self.word_is("exact") and self.peek(1) and self.peek(1).kind == "WORD":
+            self.next()
+            exact_run = True
         t = self.peek()
         if t is None or t.kind not in ("WORD", "STRING"):
             raise oql_error("OQL_MISSING_VALUE", "expected a search term",
@@ -2744,8 +2755,9 @@ class _Parser:
             phrase = False
         # quoted => exact (.exact column) unless `stemmed` keeps it stemmed —
         # degraded to the stemmed column on entities with no exact sibling
-        # (#611 follow-up; see _effective_search_col).
-        stemmed = (not phrase) or stemmed_phrase
+        # (#611 follow-up; see _effective_search_col). A leading `exact` marker
+        # forces a BARE run onto the exact column (no-stem AND-of-words, #633).
+        stemmed = ((not phrase) or stemmed_phrase) and not exact_run
         col, degraded = self._effective_search_col(base, exact=not stemmed)
         if degraded:
             stemmed = True
@@ -3121,6 +3133,20 @@ def _render_term(value: str, column: str) -> str:
             return f"stemmed {value}"
         return value
     if not stemmed:
+        # A BARE multi-word exact value is no-stem AND-of-words — a DIFFERENT
+        # query from the quoted phrase (live: 224,070 vs 36,755 for `cancer
+        # treatment` on titles) — so it renders with the `exact` run marker
+        # (#633), the inverse of `stemmed "…"`. Only clean word runs are
+        # markable: a token that would re-parse as structure (quotes, parens,
+        # brackets, `|,;`) or as a reserved word falls back to the legacy
+        # quoted-phrase render (lossy, pre-existing) rather than emit
+        # un-reparseable OQL.
+        toks = value.split()
+        if len(toks) > 1 and all(
+            not re.search(r'["()|\[\],;]', tk) and tk.lower() not in _SEARCH_RUN_RESERVED
+            for tk in toks
+        ):
+            return f'exact {" ".join(toks)}'
         # exact single word/token => quoted (`.search.exact` carries exactness)
         return f'"{value}"'
     # A stemmed value is ONE node (#1 single node, D2 reversal): emit its inner
@@ -3136,12 +3162,22 @@ def canonical_exact_search_value(value: str) -> str:
     """Normalize a raw `.search.exact` value to the ENGINE's canonical OQO
     spelling (oxjob #568): a single token is BARE (`machin*`, `teacher` — the
     parser strips singleton quotes, mirroring the raw API's
-    strip_singleton_wildcard_quotes), a multi-word phrase is QUOTED
-    (`"smart phone"`), and proximity forms (`"a b"~3`, `"a"~3~"b"`) pass
-    through untouched. The URL parser routes `.search.exact:` values through
-    this so every entry door produces ONE canonical OQO for the same intent.
-    Defensive: a value with interior quotes that isn't a recognized
-    quoted/proximity shape passes through unchanged (never corrupt input)."""
+    strip_singleton_wildcard_quotes), a quoted phrase KEEPS its quotes, and
+    proximity forms (`"a b"~3`, `"a"~3~"b"`) pass through untouched.
+
+    A BARE multi-word value stays BARE (#633; this REVERSES the #568 behavior
+    of quoting it into a phrase): on the engine, bare = no-stem AND-of-words
+    and quoted = no-stem adjacent phrase — live-measured DIFFERENT queries
+    (`title.search.exact:cancer treatment` = 224,070 works vs
+    `…:"cancer treatment"` = 36,755), so quoting here silently rewrote one
+    query into another (the echoed x_query.url returned 36,755 for a 224,070
+    request). Bare-vs-quoted is real signal; only singleton quotes are
+    normalized away.
+
+    The URL parser routes `.search.exact:` values through this so every entry
+    door produces ONE canonical OQO for the same intent. Defensive: a value
+    with interior quotes that isn't a recognized quoted/proximity shape passes
+    through unchanged (never corrupt input)."""
     v = (value or "").strip()
     if not v:
         return value
@@ -3152,11 +3188,7 @@ def canonical_exact_search_value(value: str) -> str:
         if '"' in inner:
             return v                            # nested quotes — don't touch
         return inner if inner and not any(c.isspace() for c in inner) else v
-    if '"' in v:
-        return v                                # unrecognized quoting — as-is
-    if any(c.isspace() for c in v):
-        return f'"{v}"'                         # bare multi-word -> phrase
-    return v                                    # bare single token
+    return v                                    # bare (single token OR AND-of-words)
 
 
 def _value_needs_quote(value: str) -> bool:

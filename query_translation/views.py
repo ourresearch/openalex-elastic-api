@@ -28,7 +28,7 @@ from query_translation.oqo_canonicalizer import canonicalize_oqo
 from query_translation.oql_parser import parse_oql_to_oqo
 from query_translation.oql_renderer import make_engine_resolver
 from query_translation.oql_render_v2 import render_v2_and_oql
-from query_translation.url_parser import fold_scoped_search_params, parse_url_to_oqo
+from query_translation.url_parser import parse_url_to_oqo
 from query_translation.url_renderer import URLRenderError, render_oqo_to_url
 from query_translation.x_query import (
     _components_to_oxurl, safe_get_display_name, )
@@ -218,9 +218,12 @@ def _full_query_value(path_value: str) -> str:
 def _parse_oxurl_value(value: str):
     """Parse an oxurl string (`works?filter=…&sort=…`) into an OQO.
 
-    Returns (oqo, error_string). `search.<field>=` params are folded into the
-    filter string as `<field>.search:<value>` (the OQO's representation of a
-    scoped free-text search); a bare `search=` is passed through.
+    Returns (oqo, error_string). `search.<field>[.exact]=` / `search.exact=` /
+    `search.semantic=` params ride the `scoped_searches` dict into
+    `parse_url_to_oqo`, which maps each to its filter-column twin via
+    `scoped_search_column` (comma-safe — never folded into the filter string;
+    oxjob #633 retired the #422 fold-into-filter-string shim). A bare
+    `search=` is passed through.
     """
     value = value.lstrip("/")
     if "?" in value:
@@ -233,14 +236,12 @@ def _parse_oxurl_value(value: str):
     for k, v in urllib.parse.parse_qsl(qs, keep_blank_values=True):
         params[k] = v
 
-    # Fold scoped search params (search.title_and_abstract[.exact]=…) into filter
-    # clauses. Pure helper in url_parser so the offline tests/oql gate covers it.
-    folded_filter = fold_scoped_search_params(params)
-    if folded_filter is not None:
-        params["filter"] = folded_filter
+    scoped_searches = {
+        k: v for k, v in params.items() if k.startswith("search.") and v
+    }
 
     input_data = {
-        "filter": params.get("filter"), "sort": params.get("sort"), "search": params.get("search"), "group_by": params.get("group_by"), "select": params.get("select"), "sample": params.get("sample"), "seed": params.get("seed"), "per_page": params.get("per_page") or params.get("per-page"), "page": params.get("page"), "cursor": params.get("cursor"), }
+        "filter": params.get("filter"), "sort": params.get("sort"), "search": params.get("search"), "group_by": params.get("group_by"), "select": params.get("select"), "sample": params.get("sample"), "seed": params.get("seed"), "per_page": params.get("per_page") or params.get("per-page"), "page": params.get("page"), "cursor": params.get("cursor"), "scoped_searches": scoped_searches or None, }
     return parse_url_input(entity_type, input_data)
 
 
@@ -320,6 +321,7 @@ def parse_url_input(entity_type: str, input_data):
             cursor = input_data.get("cursor")
             search_string = input_data.get("search")
             semantic_search_string = input_data.get("search.semantic")
+            scoped_searches = input_data.get("scoped_searches")
             # Legacy corpus-expansion flag (#481 leftover, #498) → corpus="all".
             include_xpac = (
                 input_data.get("include_xpac") in (True, "true")
@@ -338,10 +340,11 @@ def parse_url_input(entity_type: str, input_data):
             cursor = None
             search_string = None
             semantic_search_string = None
+            scoped_searches = None
             include_xpac = False
 
         oqo = parse_url_to_oqo(
-            entity_type=entity_type, filter_string=filter_string, sort_string=sort_string, sample=sample, group_by_string=group_by_string, select_string=select_string, seed=seed, per_page=per_page, page=page, cursor=cursor, search_string=search_string, semantic_search_string=semantic_search_string, include_xpac=include_xpac, )
+            entity_type=entity_type, filter_string=filter_string, sort_string=sort_string, sample=sample, group_by_string=group_by_string, select_string=select_string, seed=seed, per_page=per_page, page=page, cursor=cursor, search_string=search_string, semantic_search_string=semantic_search_string, scoped_searches=scoped_searches, include_xpac=include_xpac, )
         return oqo, None
     except Exception as e:
         return None, f"Failed to parse URL format: {str(e)}"

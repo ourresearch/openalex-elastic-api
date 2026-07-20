@@ -18,41 +18,37 @@ from query_translation.oql_lang import canonical_exact_search_value
 _COLLECTION_ID_RE = re.compile(r"^col_[A-Za-z0-9]{1,48}$")
 
 
-def fold_scoped_search_params(params: Dict[str, str]) -> Optional[str]:
-    """Fold `search.<field>=` scoped-search params into filter clauses.
+def scoped_search_column(param: str, entity_type: Optional[str]) -> str:
+    """Map a top-level scoped-search URL param name to the filter COLUMN the
+    engine executes it as (oxjob #633).
 
-    Returns the new value for `params['filter']` — the existing filter string
-    with each scoped-search param appended as a `<field>.search` clause — or
-    `None` when there are no scoped-search params (leave `filter` untouched).
-    Pure (no app context), so it's covered by the offline `tests/oql` gate.
+    The engine treats every `search.*` param as the twin of a filter column
+    (`core/params.py` scope map → the same SearchOpenAlex builders as
+    `core/fields.py SearchField.build_query`, count-identical both doors):
 
-    `search.<field>=<v>` becomes `<field>.search:<v>`. `search.<field>.exact=<v>`
-    is the engine's exact-phrase scoped search: pull the trailing `.exact` off
-    BEFORE appending `.search` and re-attach it in canonical order →
-    `<field>.search.exact`, which the normalizer (see `_parse_filter_groups`)
-    rewrites to a `<field>.search` column with a quoted (exact-phrase) value.
-    Naively appending `.search` to `<field>.exact` builds `<field>.exact.search`
-    — an order the normalizer never strips, so the registry rejects it as
-    invalid_column (oxjob #422). Applies to every scoped field, not just
-    `title_and_abstract`.
+        search.<field>=<v>        ≡ filter=<field>.search:<v>
+        search.<field>.exact=<v>  ≡ filter=<field>.search.exact:<v>
+          (`.exact` is pulled off and re-attached AFTER `.search` — the
+          canonical column suffix order; naive appending would build
+          `<field>.exact.search`, which the registry rejects, oxjob #422)
+        search.exact=<v>          ≡ filter=fulltext.search.exact:<v> on works;
+          on every other entity the engine silently degrades it to the plain
+          stemmed broad search (`core/shared_view.py add_search_query` routes
+          exact off-works to full_search_query), so the honest column there
+          is `text.search`.
+        search.semantic=<v>       → `abstract.search.semantic` (the canonical
+          semantic column — same leaf `parse_url_to_oqo`'s own
+          `semantic_search_string` path builds).
     """
-    extra_filters = []
-    for k, v in list(params.items()):
-        if k.startswith("search.") and v:
-            field = k[len("search."):]
-            if field.endswith(".exact"):
-                field = field[: -len(".exact")]
-                extra_filters.append(f"{field}.search.exact:{v}")
-            else:
-                extra_filters.append(f"{field}.search:{v}")
-    if not extra_filters:
-        return None
-    base = params.get("filter")
-    # Join with a bare comma (NOT ", ") — the filter-clause splitter does not
-    # trim, and the engine itself rejects a space-prefixed column, so a ", "
-    # join would corrupt the folded column id to " <field>.search" (oxjob #363
-    # case W3.1, scoped `search.title_and_abstract=`).
-    return ",".join(([base] if base else []) + extra_filters)
+    if param == "search.exact":
+        is_works = (entity_type or "").lower().startswith("work")
+        return "fulltext.search.exact" if is_works else "text.search"
+    if param == "search.semantic":
+        return "abstract.search.semantic"
+    field = param[len("search."):]
+    if field.endswith(".exact"):
+        return field[: -len(".exact")] + ".search.exact"
+    return f"{field}.search"
 
 
 def parse_url_to_oqo(
@@ -69,6 +65,7 @@ def parse_url_to_oqo(
     cursor: Optional[str] = None,
     search_string: Optional[str] = None,
     semantic_search_string: Optional[str] = None,
+    scoped_searches: Optional[Dict[str, str]] = None,
     include_xpac: bool = False,
 ) -> OQO:
     """
@@ -112,6 +109,16 @@ def parse_url_to_oqo(
             (spec §search-modes, corpus row 30). Inverse of the
             `render_oqo_to_url` semantic-routing branch, so a working prod
             `?search.semantic=` URL round-trips to OQL.
+        scoped_searches: Optional map of top-level scoped-search param name →
+            value ({"search.title_and_abstract": "dark matter", …}). Each maps
+            to its filter-column twin via `scoped_search_column` and is routed
+            through `parse_single_filter` — NOT folded into the comma-splitting
+            filter string, so a free-text value containing commas stays one
+            clause (same rule as `search_string`). The engine ANDs multiple
+            simultaneous `search.*` params (`core/params.py`
+            `_extract_all_search_params`), which appending each as its own
+            filter row mirrors exactly. (oxjob #633 — before this, the scoped
+            family was silently absent from the canonical OQO/x_query echo.)
         include_xpac: The legacy `?include_xpac=true` corpus-expansion flag (#481
             leftover, #498). When True, the OQO carries `corpus="all"` (core +
             expansion), matching what the executor actually does with that param —
@@ -164,6 +171,18 @@ def parse_url_to_oqo(
                 operator="has",
             )
         )
+
+    if scoped_searches:
+        for param, value in scoped_searches.items():
+            if not value:
+                continue
+            parsed_scoped = parse_single_filter(
+                scoped_search_column(param, entity_type), value, entity_type
+            )
+            if isinstance(parsed_scoped, list):
+                filter_rows.extend(parsed_scoped)
+            else:
+                filter_rows.append(parsed_scoped)
 
     sort_by = []
     if sort_string:

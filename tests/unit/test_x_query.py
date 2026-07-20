@@ -183,6 +183,55 @@ def test_attach_x_query_is_best_effort_on_error():
     attach_x_query(None, _Req({"filter": "is_oa:true"}), "works-v33")  # no exception
 
 
+def test_attach_x_query_threads_scoped_search():
+    """The scoped-search family must survive into ALL THREE echo forms (#633 —
+    before this a scoped search echoed as bare `works`, a whole-corpus silent
+    mis-scope for chips/exports)."""
+    expected_column = {
+        "search.title": "display_name.search",
+        "search.title.exact": "display_name.search.exact",
+        "search.title_and_abstract": "title_and_abstract.search",
+        "search.title_and_abstract.exact": "title_and_abstract.search.exact",
+        "search.exact": "fulltext.search.exact",
+    }
+    for param, column in expected_column.items():
+        result = {"meta": {"count": 5}, "results": []}
+        attach_x_query(result, _Req({param: "dark matter"}), "works-v33")
+        xq = result["meta"]["x_query"]
+        cols = [f.get("column_id") for f in xq["oqo"].get("filter_rows", [])]
+        assert cols == [column], f"{param}: {cols}"
+        assert xq["url"] and column in xq["url"], f"{param}: {xq['url']}"
+        assert xq["oql"] != "works", f"{param} echoed bare works"
+
+
+def test_attach_x_query_scoped_search_ands_with_plain_search_and_filter():
+    """Multiple simultaneous search params AND together (engine:
+    _extract_all_search_params) alongside a filter."""
+    result = {"meta": {"count": 5}, "results": []}
+    attach_x_query(result, _Req({
+        "search": "brain",
+        "search.title_and_abstract": "dark matter",
+        "filter": "type:article",
+    }), "works-v33")
+    cols = {f.get("column_id")
+            for f in result["meta"]["x_query"]["oqo"]["filter_rows"]}
+    assert cols == {"fulltext.search", "title_and_abstract.search", "type"}
+
+
+def test_attach_x_query_bare_multiword_exact_value_stays_bare():
+    """A bare multi-word `.exact` value is no-stem AND-of-words — count-distinct
+    from the quoted phrase (live: 224,070 vs 36,755) — so the echo must NOT
+    quote it into a phrase (#633 reversed the #568 auto-quote)."""
+    result = {"meta": {"count": 5}, "results": []}
+    attach_x_query(result, _Req({"search.title.exact": "cancer treatment"}),
+                   "works-v33")
+    xq = result["meta"]["x_query"]
+    leaf = xq["oqo"]["filter_rows"][0]
+    assert leaf["value"] == "cancer treatment"          # bare, not '"cancer treatment"'
+    assert "display_name.search.exact:cancer treatment" in xq["url"]
+    assert "exact cancer treatment" in xq["oql"]        # the `exact` run marker
+
+
 # --------------------------------------------------------------------------- #
 # MetaSchema pass-through (survives marshmallow dump)
 # --------------------------------------------------------------------------- #

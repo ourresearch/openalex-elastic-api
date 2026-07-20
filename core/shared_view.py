@@ -90,11 +90,11 @@ def attach_x_query(result, request, index_name):
     the only consumer of `oql`) only appears when `url is None`, which never
     happens for a query that arrived as a URL.
 
-    Known gaps (acceptable for #378 S1 — x_query is not yet consumed; the #378 V1
-    differential gate will enumerate these before the client cutover): the
-    two-phase semantic search path returns earlier and never reaches here, and
-    scoped search params (`search.title`, `search.title_and_abstract`, `.exact`)
-    are not threaded into the OQO.
+    Known gap: the two-phase semantic search path returns earlier and never
+    reaches here. (The scoped-search family — `search.exact`, `search.title`,
+    `search.title_and_abstract`, and their `.exact` variants — IS threaded
+    since oxjob #633; before that a scoped search echoed as bare `works`, a
+    whole-corpus silent mis-scope for every x_query consumer.)
     """
     try:
         if not isinstance(result, dict) or "meta" not in result:
@@ -127,6 +127,21 @@ def attach_x_query(result, request, index_name):
             cursor=request.args.get("cursor"),
             search_string=request.args.get("search"),
             semantic_search_string=request.args.get("search.semantic"),
+            # The scoped-search family (validate.py 400s any other `search.*`
+            # spelling before we get here, so this can't pick up junk keys).
+            # `search.semantic` is excluded — it's threaded separately above.
+            scoped_searches={
+                p: request.args.get(p)
+                for p in (
+                    "search.exact",
+                    "search.title",
+                    "search.title.exact",
+                    "search.title_and_abstract",
+                    "search.title_and_abstract.exact",
+                )
+                if request.args.get(p)
+            }
+            or None,
             include_xpac=(
                 request.args.get("include_xpac") == "true"
                 or request.args.get("include-xpac") == "true"
