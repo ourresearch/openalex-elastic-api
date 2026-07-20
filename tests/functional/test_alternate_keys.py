@@ -133,10 +133,22 @@ def test_aliases_still_resolve_in_filter_layer():
 
 def test_public_count_drops_by_exactly_the_demoted_aliases():
     works = cp._canonical_catalog()["works"]
-    # 30 alias params demoted on works (the original 20 + 10 leftovers from Thread C);
-    # 240 -> 210. None of the works aliases are select-only survivors.
+    # 30 alias params demoted on works by #446 itself (the original 20 + 10
+    # Thread C leftovers); 240 -> 210. None of the works aliases are select-only
+    # survivors.
     assert len(ALL_ALIASES) == 30
-    assert len(works) == 210
+    # Post-#446 catalog movements (each approved in its own ship; this pin was
+    # missed in those ships — ledger reconciled 2026-07-20):
+    #   -2  default.search + default.search.exact demoted to aliases of
+    #       fulltext.search[.exact] (dddd4ed — on works, default.search was a
+    #       byte-identical duplicate of fulltext.search)
+    #   -1  is_xpac unlisted (#498 — superseded by the `corpus` selector)
+    for later_alias in ("default.search", "default.search.exact"):
+        assert later_alias not in works, later_alias
+        assert cp.ENTITY_PROPERTIES["works"][later_alias].alternate_of, later_alias
+    assert "is_xpac" not in works
+    assert cp.ENTITY_PROPERTIES["works"]["is_xpac"].unlisted
+    assert len(works) == 210 - 2 - 1
 
 
 def test_other_entity_canonicals_carry_alternate_keys():

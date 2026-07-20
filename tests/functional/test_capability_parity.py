@@ -54,8 +54,17 @@ from query_translation.validator import validate_oqo
 # group_by == the live `validate_group_by` subset of it; column == |selectable|.
 PARITY_BASELINE = {
     "works": (190, 164, 58),
-    "authors": (39, 34, 21),
-    "sources": (44, 31, 43),
+    # authors 39/34/21 -> 40/35/21 (#593, 2026-07-15): the mangled GUI-rewrite
+    # key `last_known_authorships.institutions.lineage` became a live (unlisted)
+    # execution alias of last_known_institutions.id — filter-capable, so it
+    # carries the derived sort+group like every alias (identical ES query);
+    # not selectable. Baseline was missed in that ship; reconciled 2026-07-20.
+    "authors": (40, 35, 21),
+    # sources 44/31/43 -> 45/32/44 (05447ec, 2026-06-30): new boolean field
+    # `is_preprint_repository` (filter + derived sort/group, and selectable; its
+    # snapshot side was healed in #557's regen). Baseline was missed in that
+    # ship; reconciled 2026-07-20.
+    "sources": (45, 32, 44),
     "institutions": (30, 27, 31),
     "funders": (22, 19, 18),
     "publishers": (21, 18, 20),

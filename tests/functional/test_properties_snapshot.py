@@ -115,8 +115,9 @@ def test_committed_snapshot_matches_live_render():
 
 def test_rendered_catalog_is_filter_union_select():
     """The rendered catalog is the union of (filter-columns MINUS demoted alias
-    spellings) and selectable result-fields, discriminated by `actions`
-    (#318 / Decision D; #446 alias demotion). The render must NOT mutate
+    spellings MINUS unlisted columns) and selectable result-fields, discriminated
+    by `actions` (#318 / Decision D; #446 alias demotion; #498 unlisted). The
+    render must NOT mutate
     `ENTITY_PROPERTIES` (the validator's filter-column source) — every selectable
     name appears in the render, every NON-alias filter name appears in the render,
     and a both-name carries `column` unioned into its filter actions (the action
@@ -131,18 +132,35 @@ def test_rendered_catalog_is_filter_union_select():
         name for name, prop in ENTITY_PROPERTIES["works"].items() if prop.alternate_of
     }
     assert alias_names, "expected some demoted alias columns on works (#446)"
+    # #498: unlisted columns (e.g. is_xpac) ALSO stay live in ENTITY_PROPERTIES
+    # ("accept, never advertise") but are dropped from the public render. The
+    # invariant gained this third subtraction when #498 shipped (2026-06-20);
+    # this test was missed in that ship — reconciled 2026-07-20.
+    unlisted_names = {
+        name for name, prop in ENTITY_PROPERTIES["works"].items() if prop.unlisted
+    }
+    assert unlisted_names, "expected some unlisted columns on works (#498)"
     select_names = get_selectable_fields("works")
 
-    # render = (filter MINUS demoted aliases) ∪ select
-    assert (filter_names - alias_names) <= set(works)
+    # render = (filter MINUS demoted aliases MINUS unlisted) ∪ (select MINUS unlisted)
+    # — an unlisted column stays live on BOTH surfaces (?filter= and ?select=
+    # still resolve it) and is dropped from the render on both: _merged_properties
+    # has a second drop so an unlisted-but-selectable field (is_xpac) can't sneak
+    # back in via the column union.
+    assert (filter_names - alias_names - unlisted_names) <= set(works)
     assert not (alias_names & set(works)), "demoted aliases must not be in the render"
-    assert select_names <= set(works)
+    assert not (unlisted_names & set(works)), "unlisted columns must not be in the render"
+    assert (select_names - unlisted_names) <= set(works)
+    assert select_names & unlisted_names, (
+        "expected an unlisted-but-selectable column (is_xpac, #498); if this ever "
+        "empties, the second-drop branch in _merged_properties has no coverage here"
+    )
 
     # selectable names carry the `column` action (renamed from `select`, v4.0.0)
-    for name in select_names:
+    for name in select_names - unlisted_names:
         assert "column" in works[name]["actions"], name
-    # a filter-only name does NOT gain `column` (skip demoted aliases — not rendered)
-    filter_only = filter_names - select_names - alias_names
+    # a filter-only name does NOT gain `column` (skip demoted aliases + unlisted — not rendered)
+    filter_only = filter_names - select_names - alias_names - unlisted_names
     assert filter_only, "expected some filter-only columns on works"
     for name in filter_only:
         assert "column" not in works[name]["actions"], name

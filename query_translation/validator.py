@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from core.entities import entity_for_id_prefix, get_entity_type
-from core.fields import Property
+from core.fields import CollectionField, Property
 from core.properties import (
     CAP_GROUP_BY,
     CAP_SORT,
@@ -635,7 +635,21 @@ class OQOValidator:
           Tier 2 — open OpenAlex-ID entities (institutions / authors / sources /
             …): ID prefix/shape against the entity registry's `idRegex`. Rejects a
             right-shaped ID of the wrong type (`institution is W5` — a Works ID).
+
+        Collection references pass BOTH tiers through: a pure `col_…` / `!col_…`
+        value on an entity-typed column is the cross-type collection filter
+        (#266; worked example 49 `authorships.countries: col_eu27`, and the same
+        shape on classic REST `filter=`). It is execution-resolved —
+        `core.filter.resolve_collection_for_field` enforces the collection's
+        entity_type against the column's and expands it to member values — so
+        the value-domain tiers must mirror execution's exact detection
+        (`CollectionField.COLLECTION_ID_RE`) rather than reject a value the
+        engine executes. (Dispatch (c)/(d) above already noted collections are
+        "resolved elsewhere" but only exempted the `in collection` OPERATOR,
+        not a `col_…` VALUE under the default `is` — fixed 2026-07-20.)
         """
+        if isinstance(f.value, str) and CollectionField.COLLECTION_ID_RE.match(f.value):
+            return []
         namespace = CLOSED_VOCAB_NAMESPACE.get(entry.entity_type)
         if namespace is not None:
             return self._validate_closed_vocab(f, entry, location, namespace)

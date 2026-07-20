@@ -175,6 +175,37 @@ def test_in_scope_examples_validate(row_id):
     )
 
 
+@pytest.mark.parametrize("column_id,value", [
+    # Tier 1 (closed vocab) — worked example 49's shape, plus negation
+    ("authorships.countries", "col_eu27"),
+    ("authorships.countries", "!col_eu27"),
+    # Tier 2 (openalex_id shape) — same carve-out on an ID column
+    ("authorships.institutions.id", "col_myinsts"),
+    ("authorships.institutions.id", "!col_myinsts"),
+])
+def test_collection_ref_value_passes_value_domain(column_id, value):
+    """A pure `col_…` / `!col_…` VALUE (default `is` operator — the documented
+    OQO shape, oqo-spec `value: "col_eu27"`) is the cross-type collection filter
+    (#266): execution resolves + type-checks it, so neither value-domain tier may
+    reject it. Regression: pre-2026-07-20 both tiers 400'd it (only the
+    `in collection` operator was exempt), failing worked example 49."""
+    result = validate_oqo(OQO.from_dict(
+        {"get_rows": "works", "filter_rows": [
+            {"column_id": column_id, "value": value}]}))
+    assert result.valid, [(e.type, e.message) for e in result.errors]
+
+
+def test_collection_ref_shape_is_exact_not_prefix():
+    """Only the EXACT execution-detected shape passes: a col_-prefixed string
+    that fails `COLLECTION_ID_RE` (illegal chars) is NOT a collection ref and
+    still hits closed-vocab membership."""
+    result = validate_oqo(OQO.from_dict(
+        {"get_rows": "works", "filter_rows": [
+            {"column_id": "authorships.countries", "value": "col_bad id!"}]}))
+    assert not result.valid
+    assert result.errors[0].type == "invalid_value"
+
+
 # --- Negative cases (must reject with the right error type) ------------------
 
 NEGATIVES = [
