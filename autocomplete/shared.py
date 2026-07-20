@@ -139,12 +139,14 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
         preference = clean_preference(q)
         s = s.params(preference=preference)
 
-    print(s.to_dict())
+    # track_total_hits folds the exact count into the one search request;
+    # a separate s.count() round-trip roughly doubled cold-query latency (#648).
+    s = s.extra(track_total_hits=True)
     response = s.params(timeout='5s').execute()
 
     result = OrderedDict()
     result["meta"] = {
-        "count": s.count(),
+        "count": response.hits.total.value,
         "db_response_time_ms": response.took,
         "page": 1,
         "per_page": 10,
