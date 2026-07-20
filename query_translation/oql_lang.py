@@ -545,8 +545,8 @@ _CONNECTIVES = {"and", "or", "&"}
 # of these appears as a LITERAL word inside a stemmed search value it must be
 # quoted on render (`… "and" …`) so it folds back as an escaped literal rather
 # than re-parsing as structure. `_Parser._is_run_break_word` reads this set.
-_SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "stemmed", "exact", "within",
-                                       "group", "sample"}
+_SEARCH_RUN_RESERVED = _CONNECTIVES | {"not", "stemmed", "within", "group",
+                                       "sample"}
 
 # Characters dropped from a STEMMED search value on render (#3, oxjob #363): the
 # ES stemmed-search analyzer strips this punctuation anyway (so dropping it is
@@ -2691,17 +2691,6 @@ class _Parser:
         if self.word_is("stemmed") and self.peek(1) and self.peek(1).kind == "STRING":
             self.next()
             stemmed_phrase = True
-        # `exact <bare run>` — the 4th cell of the 2×2 search grid (oxjob #633):
-        # no-stem AND-of-words, what the raw API executes for a bare multi-word
-        # `search.<scope>.exact=` / `filter=…search.exact:` value. Live-measured
-        # DISTINCT from the quoted phrase (`title.search.exact:cancer treatment`
-        # = 224,070 works vs `…:"cancer treatment"` = 36,755), so it needs its
-        # own surface. Symmetric to `stemmed "…"`: each marker flips the
-        # quoting-derived default (bare⇒stemmed, quoted⇒exact) for its shape.
-        exact_run = False
-        if self.word_is("exact") and self.peek(1) and self.peek(1).kind == "WORD":
-            self.next()
-            exact_run = True
         t = self.peek()
         if t is None or t.kind not in ("WORD", "STRING"):
             raise oql_error("OQL_MISSING_VALUE", "expected a search term",
@@ -2755,9 +2744,8 @@ class _Parser:
             phrase = False
         # quoted => exact (.exact column) unless `stemmed` keeps it stemmed —
         # degraded to the stemmed column on entities with no exact sibling
-        # (#611 follow-up; see _effective_search_col). A leading `exact` marker
-        # forces a BARE run onto the exact column (no-stem AND-of-words, #633).
-        stemmed = ((not phrase) or stemmed_phrase) and not exact_run
+        # (#611 follow-up; see _effective_search_col).
+        stemmed = (not phrase) or stemmed_phrase
         col, degraded = self._effective_search_col(base, exact=not stemmed)
         if degraded:
             stemmed = True
@@ -3135,18 +3123,16 @@ def _render_term(value: str, column: str) -> str:
     if not stemmed:
         # A BARE multi-word exact value is no-stem AND-of-words — a DIFFERENT
         # query from the quoted phrase (live: 224,070 vs 36,755 for `cancer
-        # treatment` on titles) — so it renders with the `exact` run marker
-        # (#633), the inverse of `stemmed "…"`. Only clean word runs are
-        # markable: a token that would re-parse as structure (quotes, parens,
-        # brackets, `|,;`) or as a reserved word falls back to the legacy
-        # quoted-phrase render (lossy, pre-existing) rather than emit
-        # un-reparseable OQL.
-        toks = value.split()
-        if len(toks) > 1 and all(
-            not re.search(r'["()|\[\],;]', tk) and tk.lower() not in _SEARCH_RUN_RESERVED
-            for tk in toks
-        ):
-            return f'exact {" ".join(toks)}'
+        # treatment` on titles) — so it renders as the quoted-AND operand list
+        # `"cancer" and "treatment"` (#633, surface per Jason 2026-07-20; the
+        # canonical OQO form is per-token leaves — see split_exact_words — so
+        # this leaf shape only arises from direct-OQO submissions; the render
+        # re-parses to the canonical split leaves, execution-identical, live
+        # count-verified). A value with Lucene structure isn't splittable and
+        # falls back to the legacy quoted-phrase render (lossy, pre-existing).
+        toks = split_exact_words(value)
+        if toks:
+            return " and ".join(f'"{t}"' for t in toks)
         # exact single word/token => quoted (`.search.exact` carries exactness)
         return f'"{value}"'
     # A stemmed value is ONE node (#1 single node, D2 reversal): emit its inner
@@ -3156,6 +3142,46 @@ def _render_term(value: str, column: str) -> str:
     # multi-token run re-parses to this same single stemmed node (the run-merge),
     # so `title has (machine learning)` round-trips with no inner parens.
     return _render_stemmed_search_value(value)
+
+
+# Chars that make a bare `.search.exact` token structural rather than a plain
+# word: quotes/grouping/OR-pipe/list separators would re-parse as syntax, and
+# `~ ^ : ! &` are Lucene operators whose meaning spans tokens (fuzzy/boost/
+# field/compact-NOT/AND) — splitting a value containing any of these would
+# change the query. Wildcards `* ?` are per-token and split-safe.
+_EXACT_SPLIT_BANNED_RE = re.compile(r'["()|\[\],;:~^!&]')
+# Uppercase-only Lucene operator words (lowercase `and` is a literal term).
+_LUCENE_OPERATOR_WORDS = {"AND", "OR", "NOT", "TO"}
+
+
+def split_exact_words(value: str):
+    """Split a BARE multi-word `.search.exact` value into its word tokens, or
+    return None when it must stay one leaf (oxjob #633).
+
+    On the engine, a bare multi-word exact value is the AND of its word tokens
+    on the no-stem field, so the canonical OQO is one exact leaf PER TOKEN
+    (ANDed) — live count-verified identical (`display_name.search.exact:cancer
+    treatment` = `…:cancer,…:treatment` = 224,070). That gives the AND-of-words
+    query a natural OQL surface, `title has ("cancer" and "treatment")`, with
+    no new grammar (surface per Jason, 2026-07-20).
+
+    None (don't split) when: single token; any token carries structural /
+    cross-token Lucene chars (see _EXACT_SPLIT_BANNED_RE); a token is an
+    uppercase Lucene operator word (`Windows AND DLL` — AND is an operator,
+    not a term); or a token starts with `+`/`-` (Lucene require/prohibit).
+    Those stay one bare leaf: the URL/OQO echo stays faithful, and the OQL
+    render falls back to the (lossy, pre-existing) quoted form."""
+    toks = (value or "").split()
+    if len(toks) < 2:
+        return None
+    for tk in toks:
+        if _EXACT_SPLIT_BANNED_RE.search(tk):
+            return None
+        if tk in _LUCENE_OPERATOR_WORDS:
+            return None
+        if tk[0] in "+-":
+            return None
+    return toks
 
 
 def canonical_exact_search_value(value: str) -> str:

@@ -8,7 +8,10 @@ Handles the traditional query parameter syntax:
 import re
 from typing import Dict, List, Optional, Tuple, Any
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP, VALID_SORT_AGGREGATES, canonicalize_oqo_column_ids
-from query_translation.oql_lang import canonical_exact_search_value
+from query_translation.oql_lang import (
+    canonical_exact_search_value,
+    split_exact_words,
+)
 
 # A Collection membership ref: `col_<base58>` (mirrors core/fields.py
 # CollectionField.COLLECTION_ID_RE, `!` stripped before matching). A value of this
@@ -439,9 +442,19 @@ def parse_single_filter(
 
     # Simple value. Exact-search values normalize to the engine's canonical
     # spelling (single token bare, phrase quoted) so every door yields ONE
-    # canonical OQO (#568).
+    # canonical OQO (#568). A bare multi-word exact value (no-stem
+    # AND-of-words on the engine) canonicalizes to one exact leaf PER TOKEN
+    # (#633) — same shape the OQL door builds for `has ("a" and "b")`, and
+    # count-identical live; un-splittable (Lucene-structured) values stay one
+    # bare leaf. See oql_lang.split_exact_words.
     if field.endswith(".search.exact"):
         value = canonical_exact_search_value(value)
+        words = split_exact_words(value)
+        if words:
+            return [
+                LeafFilter(column_id=field, value=w, operator=default_op)
+                for w in words
+            ]
     return LeafFilter(column_id=field, value=value, operator=default_op)
 
 

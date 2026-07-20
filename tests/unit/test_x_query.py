@@ -187,20 +187,22 @@ def test_attach_x_query_threads_scoped_search():
     """The scoped-search family must survive into ALL THREE echo forms (#633 —
     before this a scoped search echoed as bare `works`, a whole-corpus silent
     mis-scope for chips/exports)."""
-    expected_column = {
-        "search.title": "display_name.search",
-        "search.title.exact": "display_name.search.exact",
-        "search.title_and_abstract": "title_and_abstract.search",
-        "search.title_and_abstract.exact": "title_and_abstract.search.exact",
-        "search.exact": "fulltext.search.exact",
+    # A multi-word value on an .exact param canonicalizes to one leaf PER TOKEN
+    # (no-stem AND-of-words, #633) — so those expect two rows of the column.
+    expected = {
+        "search.title": ["display_name.search"],
+        "search.title.exact": ["display_name.search.exact"] * 2,
+        "search.title_and_abstract": ["title_and_abstract.search"],
+        "search.title_and_abstract.exact": ["title_and_abstract.search.exact"] * 2,
+        "search.exact": ["fulltext.search.exact"] * 2,
     }
-    for param, column in expected_column.items():
+    for param, columns in expected.items():
         result = {"meta": {"count": 5}, "results": []}
         attach_x_query(result, _Req({param: "dark matter"}), "works-v33")
         xq = result["meta"]["x_query"]
         cols = [f.get("column_id") for f in xq["oqo"].get("filter_rows", [])]
-        assert cols == [column], f"{param}: {cols}"
-        assert xq["url"] and column in xq["url"], f"{param}: {xq['url']}"
+        assert cols == columns, f"{param}: {cols}"
+        assert xq["url"] and columns[0] in xq["url"], f"{param}: {xq['url']}"
         assert xq["oql"] != "works", f"{param} echoed bare works"
 
 
@@ -218,18 +220,20 @@ def test_attach_x_query_scoped_search_ands_with_plain_search_and_filter():
     assert cols == {"fulltext.search", "title_and_abstract.search", "type"}
 
 
-def test_attach_x_query_bare_multiword_exact_value_stays_bare():
+def test_attach_x_query_bare_multiword_exact_value_is_and_of_words():
     """A bare multi-word `.exact` value is no-stem AND-of-words — count-distinct
     from the quoted phrase (live: 224,070 vs 36,755) — so the echo must NOT
-    quote it into a phrase (#633 reversed the #568 auto-quote)."""
+    quote it into a phrase (#633 reversed the #568 auto-quote). Canonical form:
+    one exact leaf per token; OQL `has ("cancer" and "treatment")` (per Jason);
+    URL = ANDed per-token clauses (prod count-verified ≡ the original)."""
     result = {"meta": {"count": 5}, "results": []}
     attach_x_query(result, _Req({"search.title.exact": "cancer treatment"}),
                    "works-v33")
     xq = result["meta"]["x_query"]
-    leaf = xq["oqo"]["filter_rows"][0]
-    assert leaf["value"] == "cancer treatment"          # bare, not '"cancer treatment"'
-    assert "display_name.search.exact:cancer treatment" in xq["url"]
-    assert "exact cancer treatment" in xq["oql"]        # the `exact` run marker
+    values = [f["value"] for f in xq["oqo"]["filter_rows"]]
+    assert values == ["cancer", "treatment"]
+    assert "display_name.search.exact:cancer,display_name.search.exact:treatment" in xq["url"]
+    assert 'has ("cancer" and "treatment")' in xq["oql"]
 
 
 # --------------------------------------------------------------------------- #

@@ -120,20 +120,40 @@ def test_scoped_search_coexists_with_filter_string():
     assert "type" in cols and "display_name.search" in cols
 
 
-# --- the exact AND-of-words OQL surface (#633) --------------------------------
+# --- the exact AND-of-words form (#633, surface per Jason) --------------------
 
-def test_bare_multiword_exact_renders_exact_marker_and_roundtrips():
+def test_bare_multiword_exact_splits_to_per_token_leaves_and_renders_quoted_and():
     # Bare multi-word on .exact = no-stem AND-of-words — a different query from
     # the quoted phrase (live: title.search.exact:cancer treatment = 224,070
-    # vs :"cancer treatment" = 36,755). OQL surface: `exact <words>`, the
-    # inverse of `stemmed "…"`.
+    # vs :"cancer treatment" = 36,755). Canonical OQO: one exact leaf PER TOKEN
+    # (count-verified identical on prod); OQL surface: `has ("cancer" and
+    # "treatment")` — no new grammar.
     oqo, vr = _parse_and_validate({"search.title.exact": "cancer treatment"})
     assert vr.valid, [getattr(e, "message", e) for e in vr.errors]
-    leaf = oqo.to_dict()["filter_rows"][0]
-    assert leaf["column_id"] == "display_name.search.exact"
-    assert leaf["value"] == "cancer treatment"
-    oql = render(oqo)
-    assert "has (exact cancer treatment)" in oql
+    rows = oqo.to_dict()["filter_rows"]
+    assert [(r["column_id"], r["value"]) for r in rows] == [
+        ("display_name.search.exact", "cancer"),
+        ("display_name.search.exact", "treatment"),
+    ]
+    assert 'has ("cancer" and "treatment")' in render(oqo)
+
+
+def test_wildcard_token_splits_and_renders():
+    oqo, vr = _parse_and_validate({"search.title.exact": "cancer treat*"})
+    assert vr.valid, [getattr(e, "message", e) for e in vr.errors]
+    values = [r["value"] for r in oqo.to_dict()["filter_rows"]]
+    assert values == ["cancer", "treat*"]
+    assert 'has ("cancer" and "treat*")' in render(oqo)
+
+
+def test_lucene_structured_exact_value_does_not_split():
+    # `AND` here is a Lucene OPERATOR spanning tokens — splitting would change
+    # the query. Stays one bare leaf (URL/OQO faithful; OQL falls back lossy).
+    oqo, _ = _parse_and_validate(
+        {"search.title_and_abstract.exact": "Windows AND (DLL OR DLLs)"})
+    rows = oqo.to_dict()["filter_rows"]
+    assert len(rows) == 1
+    assert rows[0]["value"] == "Windows AND (DLL OR DLLs)"
 
 
 def test_quoted_phrase_exact_still_renders_plain_quotes():
