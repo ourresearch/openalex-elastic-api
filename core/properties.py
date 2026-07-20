@@ -28,10 +28,12 @@ committed `docs/properties-snapshot.json` is its versioned, fingerprinted mirror
 import hashlib
 import importlib
 import json
+import os
 from dataclasses import replace
 
 from core.display_names import resolve_display_name
 from core.fields import Property
+from core.oxurl_documented import OXURL_DOCUMENTED_WORKS_COLUMNS
 from core.property_categories import resolve_category
 from core.validate import group_by_rejection
 
@@ -207,7 +209,20 @@ CAP_COLUMN = "column"
 # entity (a global override + the five per-entity overrides that shadow it; works
 # keeps 'title' and does NOT accept "name"). Alias addition only, display_names
 # unchanged. Jason-requested + approved 2026-07-17 (#611 follow-up). = MINOR.
-PROPERTIES_VERSION = "7.3.0"
+# 7.3.0 (#396): registered CollectionField on the 12 new #394 entity endpoints
+# (+12 <entity>.collection properties; part of the same-type collection: filter
+# fix for path-segmented entities). Property additions = MINOR. (Entry backfilled
+# by #420 — the #396 ship documented the bump only in its commit message, 97cf418.)
+# 7.4.0 (#420): added `supported_by` to every property — which user-facing
+# surfaces expose it ("gui" = openalex-gui filter facet, computed from the
+# vendored client_registry.json; "oxurl" = documented classic REST, the curated
+# works list in core/oxurl_documented.py). Replaces the retired generated
+# input_alias_columns.py snapshot (+ regen/check scripts + its gate step); OQL's
+# raw-column_id fallback now reads it off the registry. Purely additive key;
+# the classifier treats any supported_by transition as MINOR (category-weight —
+# descriptive of other surfaces, can't invalidate a /properties query). Public
+# serialization + MINOR class approved by Jason 2026-07-20. = MINOR.
+PROPERTIES_VERSION = "7.4.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -244,6 +259,58 @@ ENTITY_FIELDS_MODULES = {
 }
 
 
+# --- supported_by inputs (#420) --------------------------------------------
+# The `gui` half of each property's `supported_by`: which params the openalex-gui
+# facet picker filter-facets, read from the vendored client registry (the same
+# committed artifact the properties-gate subset/label checks ride; refresh with
+# scripts/extract_client_registry.mjs against a local GUI checkout). Computed
+# here at catalog build — this replaced the generated
+# query_translation/input_alias_columns.py snapshot (+ its regen/check scripts),
+# so there is no frozen middle layer left to drift. Fail-loud: a missing or
+# unparsable registry file is a packaging bug, not a degradable condition —
+# silently returning {} would strip `gui` from every property and OQL would
+# quietly stop parsing every uncurated GUI-faceted column (the silent-count-0
+# failure class).
+_CLIENT_REGISTRY_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "scripts", "client_registry.json",
+)
+# client-registry entity spelling -> catalog key, where they differ (the GUI
+# says "types"; the catalog says "work-types").
+_CLIENT_ENTITY_ALIAS = {"types": "work-types"}
+
+
+def _load_gui_filter_columns():
+    """{catalog entity_type -> frozenset of GUI filter-faceted params}."""
+    with open(_CLIENT_REGISTRY_PATH, encoding="utf-8") as f:
+        registry = json.load(f)
+    out = {}
+    for client_entity, entries in registry.items():
+        entity_type = _CLIENT_ENTITY_ALIAS.get(client_entity, client_entity)
+        out[entity_type] = frozenset(
+            param for param, cfg in (entries or {}).items()
+            if "filter" in ((cfg or {}).get("actions") or [])
+        )
+    return out
+
+
+_GUI_FILTER_COLUMNS = _load_gui_filter_columns()
+
+
+def _resolve_supported_by(entity_type, param):
+    """The `supported_by` surface set for one (entity, param): `gui` iff the GUI
+    filter-facets it, `oxurl` iff the documented classic REST API surfaces it
+    (works-only curated list). Callers only annotate params that exist in the
+    live catalog, so membership is implicitly intersected with the registry
+    (matching the retired regen script's `∩ catalog` rule)."""
+    supported = set()
+    if param in _GUI_FILTER_COLUMNS.get(entity_type, ()):
+        supported.add("gui")
+    if entity_type == "works" and param in OXURL_DOCUMENTED_WORKS_COLUMNS:
+        supported.add("oxurl")
+    return frozenset(supported)
+
+
 def _build_entity_properties(entity_type, module_name):
     """Introspect one entity's live fields into {property_name: Property}.
 
@@ -269,6 +336,7 @@ def _build_entity_properties(entity_type, module_name):
             display_name=display_name,
             aliases=aliases,
             category=category,
+            supported_by=_resolve_supported_by(entity_type, param),
         )
     return _fold_alternate_keys(out, entity_type)
 

@@ -63,13 +63,14 @@ jobs:
         # other half of the #569 strict-parity pair.
         run: PYTHONPATH=. python scripts/check_curated_core_parity.py
 
-      - name: OQL input-alias allowlist staleness check
-        # oxjob #569: query_translation/input_alias_columns.py is generated from
-        # the vendored gui facet registry (+ curated extras in the regen script);
-        # this fails when a GUI facet change (arriving via the client_registry.json
-        # refresh) hasn't been propagated — regenerate with
-        # scripts/regen_input_alias_columns.py.
-        run: PYTHONPATH=. python scripts/check_input_alias_columns.py
+      # (#420: the former "OQL input-alias allowlist staleness check" (#569) is
+      # gone — query_translation/input_alias_columns.py was a generated snapshot
+      # of client_registry.json + curated extras; each property's `supported_by`
+      # is now computed from those same inputs directly at catalog build, so
+      # there is no generated artifact left to go stale. Its drift protection is
+      # inherited by the snapshot staleness check above: `supported_by` is in the
+      # rendered /properties payload, so a client_registry.json change that
+      # shifts it forces a snapshot regen or fails check 1.)
 
       - name: Label consistency check (gui displayName == registry display_name)
         # oxjob #381 anti-re-drift guard: the registry is the single source of truth

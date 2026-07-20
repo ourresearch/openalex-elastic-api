@@ -197,6 +197,50 @@ def test_alias_removed_is_major():
 
 
 # --------------------------------------------------------------------------- #
+# supported_by (#420) — descriptive metadata about OTHER surfaces (gui facet
+# picker / documented REST): every transition is MINOR, category-weight.
+# --------------------------------------------------------------------------- #
+
+def test_supported_by_added_is_minor():
+    # the #420 ship case: properties gain a supported_by set → MINOR.
+    new = {**BASE_PROPS, "works": {**BASE_PROPS["works"],
+           "publication_year": _with(BASE_PROPS["works"]["publication_year"],
+                                     supported_by=["gui", "oxurl"])}}
+    cls, reasons = clf.classify_change(_snapshot("1.0.0", BASE_PROPS), _snapshot("1.0.0", new))
+    assert cls == "minor"
+    assert any(
+        "supported_by changed: works.publication_year: [] -> ['gui', 'oxurl']" in r
+        for r in reasons
+    )
+
+
+def test_supported_by_removed_is_minor():
+    # unlike aliases, removal is still MINOR: it changes nothing a /properties
+    # consumer may validly send to THIS API.
+    base = {**BASE_PROPS, "works": {**BASE_PROPS["works"],
+            "publication_year": _with(BASE_PROPS["works"]["publication_year"],
+                                      supported_by=["gui"])}}
+    cls, reasons = clf.classify_change(_snapshot("1.0.0", base), _snapshot("1.0.0", BASE_PROPS))
+    assert cls == "minor"
+    assert any(
+        "supported_by changed: works.publication_year: ['gui'] -> []" in r
+        for r in reasons
+    )
+
+
+def test_supported_by_order_insensitive():
+    # membership is a SET — a reordered list is not a change.
+    base = {**BASE_PROPS, "works": {**BASE_PROPS["works"],
+            "publication_year": _with(BASE_PROPS["works"]["publication_year"],
+                                      supported_by=["oxurl", "gui"])}}
+    new = {**BASE_PROPS, "works": {**BASE_PROPS["works"],
+           "publication_year": _with(BASE_PROPS["works"]["publication_year"],
+                                     supported_by=["gui", "oxurl"])}}
+    cls, reasons = clf.classify_change(_snapshot("1.0.0", base), _snapshot("1.0.0", new))
+    assert cls == "none"
+
+
+# --------------------------------------------------------------------------- #
 # classify_version_delta
 # --------------------------------------------------------------------------- #
 

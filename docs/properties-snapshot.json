@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "4d959afbf7f0fe2277b9169cfba55090b72443225552b23b186139e97090b561",
+    "fingerprint": "285f28b46fe6a89ab8bc480200aeb9622bc360aaf43cb9b5ef23f2c4070e14a8",
     "property_count": 794,
-    "version": "7.3.0"
+    "version": "7.4.0"
   },
   "properties": {
     "authors": {
@@ -20,6 +20,7 @@
         "entity_type": null,
         "name": "affiliations",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "affiliations.institution.country_code": {
@@ -42,6 +43,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "affiliations.institution.id": {
@@ -63,6 +65,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "openalex_id"
       },
@@ -86,6 +91,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "affiliations.institution.ror": {
@@ -108,6 +114,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "affiliations.institution.type": {
@@ -129,6 +136,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -153,6 +163,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "cited_by_count": {
@@ -180,6 +191,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -194,6 +208,9 @@
         "name": "collection",
         "operators": [
           "collection"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "collection"
       },
@@ -210,6 +227,7 @@
         "entity_type": null,
         "name": "counts_by_year",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "created_date": {
@@ -225,6 +243,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -247,6 +266,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -266,6 +286,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "display_name_alternatives": {
@@ -281,6 +302,7 @@
         "entity_type": null,
         "name": "display_name_alternatives",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "from_created_date": {
@@ -301,6 +323,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -321,6 +344,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "full_name": {
@@ -336,6 +360,7 @@
         "entity_type": null,
         "name": "full_name",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "has_orcid": {
@@ -356,6 +381,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "id": {
@@ -371,6 +399,7 @@
         "entity_type": null,
         "name": "id",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids": {
@@ -386,6 +415,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids.openalex": {
@@ -412,6 +442,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "last_known_institutions": {
@@ -427,6 +458,7 @@
         "entity_type": null,
         "name": "last_known_institutions",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "last_known_institutions.continent": {
@@ -449,6 +481,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "last_known_institutions.country_code": {
@@ -470,6 +503,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -493,6 +529,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "last_known_institutions.is_global_south": {
@@ -513,6 +552,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "last_known_institutions.lineage": {
@@ -535,6 +575,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "last_known_institutions.ror": {
@@ -557,6 +598,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "last_known_institutions.type": {
@@ -578,6 +620,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -602,6 +647,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "parsed_longest_name.first": {
@@ -624,6 +672,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "parsed_longest_name.last": {
@@ -646,6 +695,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "parsed_longest_name.middle": {
@@ -668,6 +718,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "parsed_longest_name.suffix": {
@@ -690,6 +741,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "raw_author_names": {
@@ -705,6 +757,7 @@
         "entity_type": null,
         "name": "raw_author_names",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "relevance_score": {
@@ -720,6 +773,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "scopus": {
@@ -742,6 +796,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "summary_stats": {
@@ -757,6 +812,7 @@
         "entity_type": null,
         "name": "summary_stats",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "summary_stats.2yr_mean_citedness": {
@@ -779,6 +835,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -803,6 +862,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "summary_stats.i10_index": {
@@ -825,6 +887,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -851,6 +916,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "to_created_date": {
@@ -871,6 +937,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "to_updated_date": {
@@ -891,6 +958,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "topic_share": {
@@ -906,6 +974,7 @@
         "entity_type": null,
         "name": "topic_share",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "topic_share.id": {
@@ -928,6 +997,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "topics": {
@@ -943,6 +1013,7 @@
         "entity_type": null,
         "name": "topics",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "topics.id": {
@@ -965,6 +1036,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "updated_date": {
@@ -980,6 +1054,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -995,6 +1070,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -1019,6 +1095,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "x_concepts": {
@@ -1034,6 +1113,7 @@
         "entity_type": null,
         "name": "x_concepts",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "x_concepts.id": {
@@ -1059,6 +1139,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       }
     },
@@ -1084,6 +1165,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "co_lead_investigator": {
@@ -1099,6 +1183,7 @@
         "entity_type": null,
         "name": "co_lead_investigator",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "collection": {
@@ -1114,6 +1199,7 @@
         "operators": [
           "collection"
         ],
+        "supported_by": [],
         "type": "collection"
       },
       "created_date": {
@@ -1129,6 +1215,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "currency": {
@@ -1152,6 +1239,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "description": {
@@ -1167,6 +1255,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description.search": {
@@ -1184,6 +1273,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "display_name": {
@@ -1199,6 +1289,7 @@
         "entity_type": null,
         "name": "display_name",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name.search": {
@@ -1218,6 +1309,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "doi": {
@@ -1240,6 +1332,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "end_date": {
@@ -1255,6 +1350,7 @@
         "entity_type": null,
         "name": "end_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "end_year": {
@@ -1279,6 +1375,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "funded_outputs": {
@@ -1302,6 +1401,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "funded_outputs_count": {
@@ -1325,6 +1425,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "funder": {
@@ -1340,6 +1443,7 @@
         "entity_type": null,
         "name": "funder",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "funder.doi": {
@@ -1361,6 +1465,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -1384,6 +1491,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "funder.ror": {
@@ -1405,6 +1515,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -1429,6 +1542,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "funder_name": {
@@ -1451,6 +1567,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "funder_scheme": {
@@ -1473,6 +1590,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -1497,6 +1617,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "id": {
@@ -1520,6 +1643,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "institution_awarded": {
@@ -1535,6 +1661,7 @@
         "entity_type": null,
         "name": "institution_awarded",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "institution_awarded.continent": {
@@ -1557,6 +1684,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "institution_awarded.country_code": {
@@ -1578,6 +1706,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -1601,6 +1732,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "institution_awarded.lineage": {
@@ -1622,6 +1754,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "openalex_id"
       },
@@ -1645,6 +1780,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "institution_awarded.type": {
@@ -1667,6 +1803,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "investigators": {
@@ -1682,6 +1819,7 @@
         "entity_type": null,
         "name": "investigators",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "landing_page_url": {
@@ -1697,6 +1835,7 @@
         "entity_type": null,
         "name": "landing_page_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "lead_investigator": {
@@ -1712,6 +1851,7 @@
         "entity_type": null,
         "name": "lead_investigator",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "lead_investigator.affiliation.country": {
@@ -1734,6 +1874,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "lead_investigator.affiliation.name": {
@@ -1756,6 +1897,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "lead_investigator.family_name": {
@@ -1778,6 +1920,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "lead_investigator.given_name": {
@@ -1800,6 +1943,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "lead_investigator.orcid": {
@@ -1822,6 +1966,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "primary_topic": {
@@ -1837,6 +1982,7 @@
         "entity_type": null,
         "name": "primary_topic",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "primary_topic.domain.id": {
@@ -1858,6 +2004,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -1881,6 +2030,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "primary_topic.id": {
@@ -1903,6 +2055,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "primary_topic.subfield.id": {
@@ -1924,6 +2079,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -1948,6 +2106,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "relevance_score": {
@@ -1963,6 +2124,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "start_date": {
@@ -1978,6 +2140,7 @@
         "entity_type": null,
         "name": "start_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "start_year": {
@@ -2001,6 +2164,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -2027,6 +2193,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "topics": {
@@ -2042,6 +2209,7 @@
         "entity_type": null,
         "name": "topics",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "topics.domain.id": {
@@ -2064,6 +2232,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "topics.field.id": {
@@ -2086,6 +2255,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "topics.id": {
@@ -2107,6 +2277,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "openalex_id"
       },
@@ -2130,6 +2303,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "updated_date": {
@@ -2145,6 +2319,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -2160,6 +2335,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       }
     },
@@ -2177,6 +2353,7 @@
         "entity_type": null,
         "name": "ancestors",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ancestors.id": {
@@ -2199,6 +2376,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "cited_by_count": {
@@ -2226,6 +2404,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -2240,6 +2421,9 @@
         "name": "collection",
         "operators": [
           "collection"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "collection"
       },
@@ -2256,6 +2440,7 @@
         "entity_type": null,
         "name": "counts_by_year",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "created_date": {
@@ -2271,6 +2456,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -2286,6 +2472,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -2308,6 +2495,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -2327,6 +2515,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "from_created_date": {
@@ -2347,6 +2536,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -2367,6 +2557,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "has_wikidata": {
@@ -2387,6 +2578,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "id": {
@@ -2402,6 +2594,7 @@
         "entity_type": null,
         "name": "id",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids": {
@@ -2417,6 +2610,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids.openalex": {
@@ -2442,6 +2636,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "image_thumbnail_url": {
@@ -2457,6 +2652,7 @@
         "entity_type": null,
         "name": "image_thumbnail_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "image_url": {
@@ -2472,6 +2668,7 @@
         "entity_type": null,
         "name": "image_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "international": {
@@ -2487,6 +2684,7 @@
         "entity_type": null,
         "name": "international",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "level": {
@@ -2511,6 +2709,7 @@
           "or",
           "range"
         ],
+        "supported_by": [],
         "type": "number"
       },
       "related_concepts": {
@@ -2526,6 +2725,7 @@
         "entity_type": null,
         "name": "related_concepts",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "relevance_score": {
@@ -2541,6 +2741,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "summary_stats": {
@@ -2556,6 +2757,7 @@
         "entity_type": null,
         "name": "summary_stats",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "summary_stats.2yr_mean_citedness": {
@@ -2578,6 +2780,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -2602,6 +2807,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "summary_stats.i10_index": {
@@ -2624,6 +2832,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -2650,6 +2861,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -2665,6 +2877,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "wikidata": {
@@ -2680,6 +2893,7 @@
         "entity_type": null,
         "name": "wikidata",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "wikidata_id": {
@@ -2702,6 +2916,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "works_api_url": {
@@ -2717,6 +2932,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -2740,6 +2956,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       }
@@ -2769,6 +2988,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -2784,6 +3006,7 @@
         "operators": [
           "collection"
         ],
+        "supported_by": [],
         "type": "collection"
       },
       "countries": {
@@ -2799,6 +3022,7 @@
         "entity_type": null,
         "name": "countries",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "created_date": {
@@ -2814,6 +3038,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -2829,6 +3054,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -2851,6 +3077,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -2870,6 +3097,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "display_name_alternatives": {
@@ -2885,6 +3113,7 @@
         "entity_type": null,
         "name": "display_name_alternatives",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "from_created_date": {
@@ -2905,6 +3134,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -2925,6 +3155,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -2946,6 +3177,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "external_id"
       },
       "ids": {
@@ -2961,6 +3193,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "relevance_score": {
@@ -2976,6 +3209,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "text.search": {
@@ -3001,6 +3235,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -3016,6 +3251,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -3040,6 +3276,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       }
     },
@@ -3057,6 +3296,7 @@
         "entity_type": null,
         "name": "authors_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "cited_by_count": {
@@ -3084,6 +3324,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -3099,6 +3342,7 @@
         "operators": [
           "collection"
         ],
+        "supported_by": [],
         "type": "collection"
       },
       "continent": {
@@ -3114,6 +3358,7 @@
         "entity_type": null,
         "name": "continent",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "country_code": {
@@ -3129,6 +3374,7 @@
         "entity_type": null,
         "name": "country_code",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "created_date": {
@@ -3144,6 +3390,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -3159,6 +3406,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -3181,6 +3429,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -3200,6 +3449,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "display_name_alternatives": {
@@ -3215,6 +3465,7 @@
         "entity_type": null,
         "name": "display_name_alternatives",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "from_created_date": {
@@ -3235,6 +3486,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -3255,6 +3507,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -3276,6 +3529,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "external_id"
       },
       "ids": {
@@ -3291,6 +3545,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "institutions_api_url": {
@@ -3306,6 +3561,7 @@
         "entity_type": null,
         "name": "institutions_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "is_global_south": {
@@ -3321,6 +3577,7 @@
         "entity_type": null,
         "name": "is_global_south",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "relevance_score": {
@@ -3336,6 +3593,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "text.search": {
@@ -3361,6 +3619,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -3376,6 +3635,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -3391,6 +3651,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -3414,6 +3675,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       }
@@ -3444,6 +3708,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -3459,6 +3726,7 @@
         "operators": [
           "collection"
         ],
+        "supported_by": [],
         "type": "collection"
       },
       "created_date": {
@@ -3474,6 +3742,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -3489,6 +3758,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -3511,6 +3781,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -3530,6 +3801,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "display_name_alternatives": {
@@ -3545,6 +3817,7 @@
         "entity_type": null,
         "name": "display_name_alternatives",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "fields": {
@@ -3560,6 +3833,7 @@
         "entity_type": null,
         "name": "fields",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "fields.id": {
@@ -3583,6 +3857,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "from_created_date": {
@@ -3603,6 +3880,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -3623,6 +3901,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -3644,6 +3923,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "external_id"
       },
       "ids": {
@@ -3659,6 +3939,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "relevance_score": {
@@ -3674,6 +3955,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "siblings": {
@@ -3689,6 +3971,7 @@
         "entity_type": null,
         "name": "siblings",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "text.search": {
@@ -3714,6 +3997,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -3729,6 +4013,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -3744,6 +4029,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -3767,6 +4053,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       }
@@ -3797,6 +4086,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -3812,6 +4104,7 @@
         "operators": [
           "collection"
         ],
+        "supported_by": [],
         "type": "collection"
       },
       "created_date": {
@@ -3827,6 +4120,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -3842,6 +4136,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -3864,6 +4159,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -3883,6 +4179,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "display_name_alternatives": {
@@ -3898,6 +4195,7 @@
         "entity_type": null,
         "name": "display_name_alternatives",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "domain": {
@@ -3913,6 +4211,7 @@
         "entity_type": null,
         "name": "domain",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "domain.id": {
@@ -3935,6 +4234,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "from_created_date": {
@@ -3955,6 +4257,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -3975,6 +4278,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -3996,6 +4300,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "external_id"
       },
       "ids": {
@@ -4011,6 +4316,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "relevance_score": {
@@ -4026,6 +4332,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "siblings": {
@@ -4041,6 +4348,7 @@
         "entity_type": null,
         "name": "siblings",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "subfields": {
@@ -4056,6 +4364,7 @@
         "entity_type": null,
         "name": "subfields",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "subfields.id": {
@@ -4078,6 +4387,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -4104,6 +4416,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -4119,6 +4432,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -4134,6 +4448,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -4158,6 +4473,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       }
     },
@@ -4175,6 +4493,7 @@
         "entity_type": null,
         "name": "alternate_titles",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "awards_count": {
@@ -4198,6 +4517,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -4226,6 +4548,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -4240,6 +4565,9 @@
         "name": "collection",
         "operators": [
           "collection"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "collection"
       },
@@ -4262,6 +4590,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -4286,6 +4617,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "counts_by_year": {
@@ -4301,6 +4635,7 @@
         "entity_type": null,
         "name": "counts_by_year",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "created_date": {
@@ -4316,6 +4651,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -4331,6 +4667,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description.search": {
@@ -4348,6 +4685,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "display_name": {
@@ -4370,6 +4708,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -4389,6 +4728,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "from_created_date": {
@@ -4409,6 +4749,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -4429,6 +4770,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "homepage_url": {
@@ -4444,6 +4786,7 @@
         "entity_type": null,
         "name": "homepage_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "id": {
@@ -4459,6 +4802,7 @@
         "entity_type": null,
         "name": "id",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids": {
@@ -4474,6 +4818,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids.crossref": {
@@ -4496,6 +4841,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "ids.doi": {
@@ -4517,6 +4863,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -4543,6 +4892,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "ids.ror": {
@@ -4567,6 +4917,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "ids.wikidata": {
@@ -4591,6 +4942,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "image_thumbnail_url": {
@@ -4606,6 +4958,7 @@
         "entity_type": null,
         "name": "image_thumbnail_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "image_url": {
@@ -4621,6 +4974,7 @@
         "entity_type": null,
         "name": "image_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "is_global_south": {
@@ -4641,6 +4995,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "relevance_score": {
@@ -4656,6 +5013,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "roles": {
@@ -4671,6 +5029,7 @@
         "entity_type": null,
         "name": "roles",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "roles.id": {
@@ -4693,6 +5052,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "summary_stats": {
@@ -4708,6 +5068,7 @@
         "entity_type": null,
         "name": "summary_stats",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "summary_stats.2yr_mean_citedness": {
@@ -4730,6 +5091,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -4754,6 +5118,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "summary_stats.i10_index": {
@@ -4776,6 +5143,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -4802,6 +5172,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -4817,6 +5188,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -4840,6 +5212,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       }
@@ -4870,6 +5245,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -4885,6 +5263,7 @@
         "operators": [
           "collection"
         ],
+        "supported_by": [],
         "type": "collection"
       },
       "created_date": {
@@ -4900,6 +5279,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -4915,6 +5295,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -4937,6 +5318,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -4956,6 +5338,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "from_created_date": {
@@ -4976,6 +5359,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -4996,6 +5380,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -5017,6 +5402,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "external_id"
       },
       "relevance_score": {
@@ -5032,6 +5418,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "text.search": {
@@ -5057,6 +5444,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -5072,6 +5460,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -5087,6 +5476,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -5111,6 +5501,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       }
     },
@@ -5128,6 +5521,7 @@
         "entity_type": null,
         "name": "associated_institutions",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "cited_by_count": {
@@ -5155,6 +5549,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -5169,6 +5566,9 @@
         "name": "collection",
         "operators": [
           "collection"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "collection"
       },
@@ -5191,6 +5591,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -5215,6 +5618,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "counts_by_year": {
@@ -5230,6 +5636,7 @@
         "entity_type": null,
         "name": "counts_by_year",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "created_date": {
@@ -5245,6 +5652,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -5267,6 +5675,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -5286,6 +5695,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "display_name_acronyms": {
@@ -5301,6 +5711,7 @@
         "entity_type": null,
         "name": "display_name_acronyms",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name_alternatives": {
@@ -5316,6 +5727,7 @@
         "entity_type": null,
         "name": "display_name_alternatives",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "from_created_date": {
@@ -5336,6 +5748,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -5356,6 +5769,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "geo": {
@@ -5371,6 +5785,7 @@
         "entity_type": null,
         "name": "geo",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "has_ror": {
@@ -5391,6 +5806,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "homepage_url": {
@@ -5406,6 +5822,7 @@
         "entity_type": null,
         "name": "homepage_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "id": {
@@ -5421,6 +5838,7 @@
         "entity_type": null,
         "name": "id",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids": {
@@ -5436,6 +5854,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids.openalex": {
@@ -5462,6 +5881,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "image_thumbnail_url": {
@@ -5477,6 +5897,7 @@
         "entity_type": null,
         "name": "image_thumbnail_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "image_url": {
@@ -5492,6 +5913,7 @@
         "entity_type": null,
         "name": "image_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "international": {
@@ -5507,6 +5929,7 @@
         "entity_type": null,
         "name": "international",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "is_global_south": {
@@ -5527,6 +5950,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "is_super_system": {
@@ -5548,6 +5972,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "lineage": {
@@ -5571,6 +5996,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "relevance_score": {
@@ -5586,6 +6014,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "repositories": {
@@ -5601,6 +6030,7 @@
         "entity_type": null,
         "name": "repositories",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "repositories.host_organization": {
@@ -5623,6 +6053,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "repositories.host_organization_lineage": {
@@ -5645,6 +6076,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "repositories.id": {
@@ -5667,6 +6099,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "roles": {
@@ -5682,6 +6115,7 @@
         "entity_type": null,
         "name": "roles",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "roles.id": {
@@ -5704,6 +6138,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "ror": {
@@ -5727,6 +6162,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "status": {
@@ -5750,6 +6186,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "summary_stats": {
@@ -5765,6 +6202,7 @@
         "entity_type": null,
         "name": "summary_stats",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "summary_stats.2yr_mean_citedness": {
@@ -5787,6 +6225,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -5811,6 +6252,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "summary_stats.i10_index": {
@@ -5833,6 +6277,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -5859,6 +6306,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "topic_share": {
@@ -5874,6 +6322,7 @@
         "entity_type": null,
         "name": "topic_share",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "topic_share.id": {
@@ -5896,6 +6345,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "topics": {
@@ -5911,6 +6361,7 @@
         "entity_type": null,
         "name": "topics",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "topics.id": {
@@ -5932,6 +6383,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -5956,6 +6410,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "type_id": {
@@ -5971,6 +6428,7 @@
         "entity_type": null,
         "name": "type_id",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "updated_date": {
@@ -5986,6 +6444,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -6001,6 +6460,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -6025,6 +6485,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "x_concepts": {
@@ -6040,6 +6503,7 @@
         "entity_type": null,
         "name": "x_concepts",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "x_concepts.id": {
@@ -6065,6 +6529,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       }
     },
@@ -6094,6 +6559,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -6108,6 +6576,9 @@
         "name": "collection",
         "operators": [
           "collection"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "collection"
       },
@@ -6124,6 +6595,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -6146,6 +6618,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -6165,6 +6638,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "from_created_date": {
@@ -6185,6 +6659,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -6205,6 +6680,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -6226,6 +6702,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "external_id"
       },
       "relevance_score": {
@@ -6241,6 +6718,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "text.search": {
@@ -6266,6 +6744,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -6281,6 +6760,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -6296,6 +6776,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -6319,6 +6800,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       }
@@ -6349,6 +6833,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -6364,6 +6851,7 @@
         "operators": [
           "collection"
         ],
+        "supported_by": [],
         "type": "collection"
       },
       "created_date": {
@@ -6379,6 +6867,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -6401,6 +6890,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -6420,6 +6910,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "from_created_date": {
@@ -6440,6 +6931,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -6460,6 +6952,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -6481,6 +6974,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "external_id"
       },
       "is_global_south": {
@@ -6496,6 +6990,7 @@
         "entity_type": null,
         "name": "is_global_south",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "relevance_score": {
@@ -6511,6 +7006,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "text.search": {
@@ -6536,6 +7032,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -6551,6 +7048,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -6566,6 +7064,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -6589,6 +7088,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       }
@@ -6619,6 +7121,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -6634,6 +7139,7 @@
         "operators": [
           "collection"
         ],
+        "supported_by": [],
         "type": "collection"
       },
       "created_date": {
@@ -6649,6 +7155,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -6664,6 +7171,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -6686,6 +7194,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -6705,6 +7214,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "from_created_date": {
@@ -6725,6 +7235,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -6745,6 +7256,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -6766,6 +7278,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "external_id"
       },
       "relevance_score": {
@@ -6781,6 +7294,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "text.search": {
@@ -6806,6 +7320,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -6821,6 +7336,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "url": {
@@ -6836,6 +7352,7 @@
         "entity_type": null,
         "name": "url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -6851,6 +7368,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -6874,6 +7392,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       }
@@ -6900,6 +7421,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "ids": {
@@ -6915,6 +7437,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "is_oa": {
@@ -6936,6 +7459,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "is_retracted": {
@@ -6957,6 +7481,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "landing_page_url": {
@@ -6972,6 +7497,7 @@
         "entity_type": null,
         "name": "landing_page_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "language": {
@@ -6995,6 +7521,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "license": {
@@ -7018,6 +7545,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "merge_key": {
@@ -7033,6 +7561,7 @@
         "entity_type": null,
         "name": "merge_key",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "native_id": {
@@ -7056,6 +7585,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "native_id_namespace": {
@@ -7079,6 +7609,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "pdf_url": {
@@ -7094,6 +7625,7 @@
         "entity_type": null,
         "name": "pdf_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "provenance": {
@@ -7117,6 +7649,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "publisher": {
@@ -7140,6 +7673,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "relevance_score": {
@@ -7155,6 +7689,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "source_id": {
@@ -7178,6 +7713,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "source_name": {
@@ -7201,6 +7737,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "text.search": {
@@ -7226,6 +7763,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "title": {
@@ -7249,6 +7787,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "title.search": {
@@ -7266,6 +7805,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "type": {
@@ -7289,6 +7829,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "urls": {
@@ -7304,6 +7845,7 @@
         "entity_type": null,
         "name": "urls",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "version": {
@@ -7327,6 +7869,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "work_id": {
@@ -7350,6 +7893,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       }
     },
@@ -7379,6 +7923,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -7394,6 +7941,7 @@
         "operators": [
           "collection"
         ],
+        "supported_by": [],
         "type": "collection"
       },
       "created_date": {
@@ -7409,6 +7957,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -7424,6 +7973,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -7446,6 +7996,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -7465,6 +8016,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "from_created_date": {
@@ -7485,6 +8037,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -7505,6 +8058,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -7526,6 +8080,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "external_id"
       },
       "relevance_score": {
@@ -7541,6 +8096,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "text.search": {
@@ -7566,6 +8122,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -7581,6 +8138,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -7596,6 +8154,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -7620,6 +8179,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       }
     },
@@ -7637,6 +8199,7 @@
         "entity_type": null,
         "name": "alternate_titles",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "cited_by_count": {
@@ -7664,6 +8227,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -7678,6 +8244,9 @@
         "name": "collection",
         "operators": [
           "collection"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "collection"
       },
@@ -7700,6 +8269,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -7724,6 +8296,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "counts_by_year": {
@@ -7739,6 +8312,7 @@
         "entity_type": null,
         "name": "counts_by_year",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "created_date": {
@@ -7754,6 +8328,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -7776,6 +8351,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -7795,6 +8371,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "from_created_date": {
@@ -7815,6 +8392,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -7835,6 +8413,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "hierarchy_level": {
@@ -7859,6 +8438,7 @@
           "or",
           "range"
         ],
+        "supported_by": [],
         "type": "number"
       },
       "homepage_url": {
@@ -7874,6 +8454,7 @@
         "entity_type": null,
         "name": "homepage_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "id": {
@@ -7889,6 +8470,7 @@
         "entity_type": null,
         "name": "id",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids": {
@@ -7904,6 +8486,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids.openalex": {
@@ -7929,6 +8512,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "ids.ror": {
@@ -7953,6 +8537,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "ids.wikidata": {
@@ -7977,6 +8562,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "image_thumbnail_url": {
@@ -7992,6 +8578,7 @@
         "entity_type": null,
         "name": "image_thumbnail_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "image_url": {
@@ -8007,6 +8594,7 @@
         "entity_type": null,
         "name": "image_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "lineage": {
@@ -8030,6 +8618,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "parent_publisher": {
@@ -8053,6 +8642,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "relevance_score": {
@@ -8068,6 +8658,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "roles": {
@@ -8083,6 +8674,7 @@
         "entity_type": null,
         "name": "roles",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "roles.id": {
@@ -8105,6 +8697,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "sources_api_url": {
@@ -8120,6 +8713,7 @@
         "entity_type": null,
         "name": "sources_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "summary_stats": {
@@ -8135,6 +8729,7 @@
         "entity_type": null,
         "name": "summary_stats",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "summary_stats.2yr_mean_citedness": {
@@ -8157,6 +8752,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -8181,6 +8779,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "summary_stats.i10_index": {
@@ -8203,6 +8804,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -8229,6 +8833,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -8244,6 +8849,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -8267,6 +8873,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       }
@@ -8297,6 +8906,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -8311,6 +8923,9 @@
         "name": "collection",
         "operators": [
           "collection"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "collection"
       },
@@ -8327,6 +8942,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -8342,6 +8958,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -8364,6 +8981,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -8383,6 +9001,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "from_created_date": {
@@ -8403,6 +9022,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -8423,6 +9043,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -8444,6 +9065,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "external_id"
       },
       "ids": {
@@ -8459,6 +9081,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "image_thumbnail_url": {
@@ -8474,6 +9097,7 @@
         "entity_type": null,
         "name": "image_thumbnail_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "image_url": {
@@ -8489,6 +9113,7 @@
         "entity_type": null,
         "name": "image_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "relevance_score": {
@@ -8504,6 +9129,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "text.search": {
@@ -8529,6 +9155,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -8544,6 +9171,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -8559,6 +9187,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -8582,6 +9211,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       }
@@ -8612,6 +9244,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -8627,6 +9262,7 @@
         "operators": [
           "collection"
         ],
+        "supported_by": [],
         "type": "collection"
       },
       "created_date": {
@@ -8642,6 +9278,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -8657,6 +9294,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -8679,6 +9317,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -8698,6 +9337,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "from_created_date": {
@@ -8718,6 +9358,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -8738,6 +9379,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -8759,6 +9401,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "external_id"
       },
       "relevance_score": {
@@ -8774,6 +9417,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "text.search": {
@@ -8799,6 +9443,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -8814,6 +9459,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -8829,6 +9475,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -8853,6 +9500,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       }
     },
@@ -8870,6 +9520,7 @@
         "entity_type": null,
         "name": "abbreviated_title",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "alternate_titles": {
@@ -8885,6 +9536,7 @@
         "entity_type": null,
         "name": "alternate_titles",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "apc_prices": {
@@ -8900,6 +9552,7 @@
         "entity_type": null,
         "name": "apc_prices",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "apc_prices.currency": {
@@ -8922,6 +9575,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "apc_prices.price": {
@@ -8944,6 +9598,7 @@
           "or",
           "range"
         ],
+        "supported_by": [],
         "type": "number"
       },
       "apc_usd": {
@@ -8967,6 +9622,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -8995,6 +9653,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -9009,6 +9670,9 @@
         "name": "collection",
         "operators": [
           "collection"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "collection"
       },
@@ -9032,6 +9696,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "country": {
@@ -9047,6 +9714,7 @@
         "entity_type": null,
         "name": "country",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "country_code": {
@@ -9070,6 +9738,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "counts_by_year": {
@@ -9085,6 +9756,7 @@
         "entity_type": null,
         "name": "counts_by_year",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "created_date": {
@@ -9100,6 +9772,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -9122,6 +9795,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -9141,6 +9815,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "first_publication_year": {
@@ -9164,6 +9839,7 @@
           "or",
           "range"
         ],
+        "supported_by": [],
         "type": "number"
       },
       "from_created_date": {
@@ -9184,6 +9860,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -9204,6 +9881,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "has_issn": {
@@ -9224,6 +9902,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "homepage_url": {
@@ -9239,6 +9920,7 @@
         "entity_type": null,
         "name": "homepage_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "host_organization": {
@@ -9262,6 +9944,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "host_organization.id": {
@@ -9284,6 +9969,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "host_organization_lineage": {
@@ -9307,6 +9993,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "host_organization_name": {
@@ -9322,6 +10009,7 @@
         "entity_type": null,
         "name": "host_organization_name",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "id": {
@@ -9337,6 +10025,7 @@
         "entity_type": null,
         "name": "id",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids": {
@@ -9352,6 +10041,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids.mag": {
@@ -9372,6 +10062,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -9398,6 +10091,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "is_core": {
@@ -9419,6 +10113,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "is_global_south": {
@@ -9439,6 +10136,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "is_high_oa_rate": {
@@ -9460,6 +10158,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "is_high_oa_rate_since_year": {
@@ -9483,6 +10182,7 @@
           "or",
           "range"
         ],
+        "supported_by": [],
         "type": "number"
       },
       "is_in_doaj": {
@@ -9503,6 +10203,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "boolean"
       },
@@ -9527,6 +10230,7 @@
           "or",
           "range"
         ],
+        "supported_by": [],
         "type": "number"
       },
       "is_in_jstage": {
@@ -9548,6 +10252,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "is_in_jstage_since_year": {
@@ -9571,6 +10276,7 @@
           "or",
           "range"
         ],
+        "supported_by": [],
         "type": "number"
       },
       "is_in_scielo": {
@@ -9586,6 +10292,7 @@
         "entity_type": null,
         "name": "is_in_scielo",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "is_indexed_in_scopus": {
@@ -9601,6 +10308,7 @@
         "entity_type": null,
         "name": "is_indexed_in_scopus",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "is_oa": {
@@ -9621,6 +10329,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "boolean"
       },
@@ -9643,6 +10354,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "is_preprint_repository": {
@@ -9664,6 +10376,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "issn": {
@@ -9686,6 +10399,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -9710,6 +10426,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "last_publication_year": {
@@ -9733,6 +10450,7 @@
           "or",
           "range"
         ],
+        "supported_by": [],
         "type": "number"
       },
       "oa_flip_year": {
@@ -9756,6 +10474,7 @@
           "or",
           "range"
         ],
+        "supported_by": [],
         "type": "number"
       },
       "oa_works_count": {
@@ -9771,6 +10490,7 @@
         "entity_type": null,
         "name": "oa_works_count",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "relevance_score": {
@@ -9786,6 +10506,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "societies": {
@@ -9801,6 +10522,7 @@
         "entity_type": null,
         "name": "societies",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "summary_stats": {
@@ -9816,6 +10538,7 @@
         "entity_type": null,
         "name": "summary_stats",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "summary_stats.2yr_mean_citedness": {
@@ -9838,6 +10561,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -9862,6 +10588,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "summary_stats.i10_index": {
@@ -9884,6 +10613,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -9910,6 +10642,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "to_created_date": {
@@ -9930,6 +10663,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "to_updated_date": {
@@ -9950,6 +10684,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "topic_share": {
@@ -9965,6 +10700,7 @@
         "entity_type": null,
         "name": "topic_share",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "topic_share.id": {
@@ -9987,6 +10723,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "topics": {
@@ -10002,6 +10739,7 @@
         "entity_type": null,
         "name": "topics",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "topics.id": {
@@ -10023,6 +10761,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -10047,6 +10788,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "updated_date": {
@@ -10062,6 +10806,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -10077,6 +10822,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -10101,6 +10847,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "x_concepts": {
@@ -10116,6 +10865,7 @@
         "entity_type": null,
         "name": "x_concepts",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "x_concepts.id": {
@@ -10141,6 +10891,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       }
     },
@@ -10170,6 +10921,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -10185,6 +10939,7 @@
         "operators": [
           "collection"
         ],
+        "supported_by": [],
         "type": "collection"
       },
       "created_date": {
@@ -10200,6 +10955,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -10215,6 +10971,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -10237,6 +10994,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -10256,6 +11014,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "display_name_alternatives": {
@@ -10271,6 +11030,7 @@
         "entity_type": null,
         "name": "display_name_alternatives",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "domain": {
@@ -10286,6 +11046,7 @@
         "entity_type": null,
         "name": "domain",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "domain.id": {
@@ -10308,6 +11069,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "field": {
@@ -10323,6 +11087,7 @@
         "entity_type": null,
         "name": "field",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "field.id": {
@@ -10345,6 +11110,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "from_created_date": {
@@ -10365,6 +11133,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -10385,6 +11154,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -10406,6 +11176,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "external_id"
       },
       "ids": {
@@ -10421,6 +11192,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "relevance_score": {
@@ -10436,6 +11208,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "siblings": {
@@ -10451,6 +11224,7 @@
         "entity_type": null,
         "name": "siblings",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "text.search": {
@@ -10476,6 +11250,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "topics": {
@@ -10491,6 +11266,7 @@
         "entity_type": null,
         "name": "topics",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "topics.id": {
@@ -10513,6 +11289,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "updated_date": {
@@ -10528,6 +11307,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -10543,6 +11323,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -10566,6 +11347,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       }
@@ -10596,6 +11380,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -10610,6 +11397,9 @@
         "name": "collection",
         "operators": [
           "collection"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "collection"
       },
@@ -10626,6 +11416,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -10641,6 +11432,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description.search": {
@@ -10658,6 +11450,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "display_name": {
@@ -10680,6 +11473,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -10699,6 +11493,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "domain": {
@@ -10714,6 +11509,7 @@
         "entity_type": null,
         "name": "domain",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "domain.id": {
@@ -10736,6 +11532,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "field": {
@@ -10751,6 +11550,7 @@
         "entity_type": null,
         "name": "field",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "field.id": {
@@ -10773,6 +11573,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "from_created_date": {
@@ -10793,6 +11596,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -10813,6 +11617,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -10828,6 +11633,7 @@
         "entity_type": null,
         "name": "id",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids": {
@@ -10843,6 +11649,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids.openalex": {
@@ -10868,6 +11675,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "keywords": {
@@ -10883,6 +11691,7 @@
         "entity_type": null,
         "name": "keywords",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "keywords.search": {
@@ -10900,6 +11709,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "relevance_score": {
@@ -10915,6 +11725,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "siblings": {
@@ -10930,6 +11741,7 @@
         "entity_type": null,
         "name": "siblings",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "subfield": {
@@ -10945,6 +11757,7 @@
         "entity_type": null,
         "name": "subfield",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "subfield.id": {
@@ -10968,6 +11781,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -10994,6 +11810,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -11009,6 +11826,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -11024,6 +11842,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -11047,6 +11866,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       }
@@ -11077,6 +11899,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -11092,6 +11917,7 @@
         "operators": [
           "collection"
         ],
+        "supported_by": [],
         "type": "collection"
       },
       "created_date": {
@@ -11107,6 +11933,7 @@
         "entity_type": null,
         "name": "created_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "crossref_types": {
@@ -11122,6 +11949,7 @@
         "entity_type": null,
         "name": "crossref_types",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "description": {
@@ -11137,6 +11965,7 @@
         "entity_type": null,
         "name": "description",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "display_name": {
@@ -11159,6 +11988,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "display_name.search": {
@@ -11178,6 +12008,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "from_created_date": {
@@ -11198,6 +12029,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "date"
       },
       "from_updated_date": {
@@ -11218,6 +12050,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "datetime"
       },
       "id": {
@@ -11239,6 +12072,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "external_id"
       },
       "relevance_score": {
@@ -11254,6 +12088,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "text.search": {
@@ -11279,6 +12114,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "updated_date": {
@@ -11294,6 +12130,7 @@
         "entity_type": null,
         "name": "updated_date",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_api_url": {
@@ -11309,6 +12146,7 @@
         "entity_type": null,
         "name": "works_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "works_count": {
@@ -11333,6 +12171,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       }
     },
@@ -11352,6 +12193,9 @@
         "operators": [
           "search"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "search"
       },
       "abstract.search.exact": {
@@ -11369,6 +12213,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "abstract_inverted_index": {
@@ -11384,6 +12229,7 @@
         "entity_type": null,
         "name": "abstract_inverted_index",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "apc_list": {
@@ -11399,6 +12245,7 @@
         "entity_type": null,
         "name": "apc_list",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "apc_list.currency": {
@@ -11421,6 +12268,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "string"
       },
       "apc_list.provenance": {
@@ -11442,6 +12292,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "string"
       },
@@ -11466,6 +12319,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "number"
       },
       "apc_list.value_usd": {
@@ -11489,6 +12345,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "number"
       },
       "apc_paid": {
@@ -11504,6 +12363,7 @@
         "entity_type": null,
         "name": "apc_paid",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "apc_paid.currency": {
@@ -11526,6 +12386,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "string"
       },
       "apc_paid.provenance": {
@@ -11547,6 +12410,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "string"
       },
@@ -11571,6 +12437,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "number"
       },
       "apc_paid.value_usd": {
@@ -11593,6 +12462,9 @@
           "null",
           "or",
           "range"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "number"
       },
@@ -11617,6 +12489,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "authorships": {
@@ -11632,6 +12507,7 @@
         "entity_type": null,
         "name": "authorships",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "authorships.affiliations.institution_ids": {
@@ -11653,6 +12529,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "string"
       },
@@ -11677,6 +12556,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "openalex_id"
       },
@@ -11704,6 +12586,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "string"
       },
       "authorships.countries": {
@@ -11725,6 +12611,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -11750,6 +12639,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "authorships.institutions.country_code": {
@@ -11773,6 +12665,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "string"
       },
@@ -11799,6 +12694,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "openalex_id"
       },
       "authorships.institutions.is_global_south": {
@@ -11821,6 +12719,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "boolean"
       },
       "authorships.institutions.lineage": {
@@ -11842,6 +12743,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "openalex_id"
       },
@@ -11867,6 +12771,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "string"
       },
       "authorships.institutions.type": {
@@ -11891,6 +12799,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "authorships.is_corresponding": {
@@ -11912,6 +12823,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "boolean"
       },
@@ -11935,6 +12849,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "awards": {
@@ -11950,6 +12865,7 @@
         "entity_type": null,
         "name": "awards",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "awards.doi": {
@@ -11972,6 +12888,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "awards.funder_award_id": {
@@ -11994,6 +12911,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "awards.funder_display_name": {
@@ -12016,6 +12934,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "awards.funder_id": {
@@ -12038,6 +12957,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "awards.id": {
@@ -12060,6 +12980,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "best_oa_location": {
@@ -12075,6 +12998,7 @@
         "entity_type": null,
         "name": "best_oa_location",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "best_oa_location.is_accepted": {
@@ -12094,6 +13018,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "boolean"
       },
@@ -12115,6 +13042,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "best_oa_location.is_published": {
@@ -12134,6 +13062,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "boolean"
       },
@@ -12157,6 +13088,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "best_oa_location.license": {
@@ -12181,6 +13113,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "best_oa_location.raw_type": {
@@ -12203,6 +13138,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "best_oa_location.source.host_organization": {
@@ -12224,6 +13160,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "openalex_id"
       },
@@ -12247,6 +13186,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "best_oa_location.source.id": {
@@ -12269,6 +13209,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "openalex_id"
       },
       "best_oa_location.source.is_in_doaj": {
@@ -12288,6 +13232,10 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "boolean"
       },
@@ -12309,6 +13257,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "best_oa_location.source.issn": {
@@ -12330,6 +13279,10 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "string"
       },
@@ -12353,6 +13306,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "string"
       },
       "best_oa_location.version": {
@@ -12374,6 +13331,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "string"
       },
@@ -12397,6 +13357,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "string"
       },
       "biblio": {
@@ -12412,6 +13376,7 @@
         "entity_type": null,
         "name": "biblio",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "biblio.first_page": {
@@ -12432,6 +13397,10 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "string"
       },
@@ -12455,6 +13424,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "string"
       },
       "biblio.last_page": {
@@ -12475,6 +13448,10 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "string"
       },
@@ -12498,6 +13475,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "string"
       },
       "citation_normalized_percentile": {
@@ -12513,6 +13494,7 @@
         "entity_type": null,
         "name": "citation_normalized_percentile",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "citation_normalized_percentile.is_in_top_10_percent": {
@@ -12533,6 +13515,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "citation_normalized_percentile.is_in_top_1_percent": {
@@ -12552,6 +13537,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "boolean"
       },
@@ -12575,6 +13563,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "cited_by": {
@@ -12596,6 +13587,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "openalex_id"
       },
       "cited_by_api_url": {
@@ -12611,6 +13606,7 @@
         "entity_type": null,
         "name": "cited_by_api_url",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "cited_by_count": {
@@ -12638,6 +13634,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "cited_by_percentile_year": {
@@ -12653,6 +13652,7 @@
         "entity_type": null,
         "name": "cited_by_percentile_year",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "cited_by_percentile_year.max": {
@@ -12676,6 +13676,7 @@
           "or",
           "range"
         ],
+        "supported_by": [],
         "type": "number"
       },
       "cited_by_percentile_year.min": {
@@ -12699,6 +13700,7 @@
           "or",
           "range"
         ],
+        "supported_by": [],
         "type": "number"
       },
       "collection": {
@@ -12713,6 +13715,9 @@
         "name": "collection",
         "operators": [
           "collection"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "collection"
       },
@@ -12729,6 +13734,7 @@
         "entity_type": null,
         "name": "concepts",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "concepts.id": {
@@ -12753,6 +13759,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "openalex_id"
       },
       "concepts.wikidata": {
@@ -12774,6 +13783,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "string"
       },
@@ -12798,6 +13810,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "number"
       },
       "content_urls": {
@@ -12813,6 +13828,7 @@
         "entity_type": null,
         "name": "content_urls",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "corresponding_author_ids": {
@@ -12836,6 +13852,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "corresponding_institution_ids": {
@@ -12858,6 +13877,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "openalex_id"
       },
@@ -12883,6 +13905,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "counts_by_year": {
@@ -12898,6 +13923,7 @@
         "entity_type": null,
         "name": "counts_by_year",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "created_date": {
@@ -12918,6 +13944,9 @@
           "date_range",
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "date"
       },
@@ -12942,6 +13971,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "display_name": {
@@ -12964,6 +13994,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "string"
       },
       "display_name.search": {
@@ -12985,6 +14018,9 @@
         "operators": [
           "search"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "search"
       },
       "display_name.search.exact": {
@@ -13004,6 +14040,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "doi": {
@@ -13025,6 +14062,10 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "string"
       },
@@ -13048,6 +14089,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "from_created_date": {
@@ -13067,6 +14111,9 @@
           "date_range",
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "date"
       },
@@ -13088,6 +14135,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "date"
       },
       "from_updated_date": {
@@ -13107,6 +14157,9 @@
           "date_range",
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "datetime"
       },
@@ -13134,6 +14187,9 @@
         "operators": [
           "search"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "search"
       },
       "fulltext.search.exact": {
@@ -13153,6 +14209,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "fulltext_origin": {
@@ -13176,6 +14233,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "string"
       },
       "funders": {
@@ -13191,6 +14251,7 @@
         "entity_type": null,
         "name": "funders",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "funders.id": {
@@ -13215,6 +14276,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "fwci": {
@@ -13238,6 +14302,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "has_abstract": {
@@ -13258,6 +14325,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "has_content": {
@@ -13273,6 +14343,7 @@
         "entity_type": null,
         "name": "has_content",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "has_content.grobid_xml": {
@@ -13292,6 +14363,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "boolean"
       },
@@ -13313,6 +14387,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "has_doi": {
@@ -13332,6 +14409,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "boolean"
       },
@@ -13353,6 +14433,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "has_fulltext": {
@@ -13374,6 +14455,10 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "boolean"
       },
       "has_oa_accepted_or_published_version": {
@@ -13393,6 +14478,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "boolean"
       },
@@ -13414,6 +14502,10 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "boolean"
       },
       "has_old_authors": {
@@ -13434,6 +14526,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "has_orcid": {
@@ -13453,6 +14546,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "boolean"
       },
@@ -13474,6 +14570,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "has_pmcid": {
@@ -13493,6 +14590,10 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "boolean"
       },
@@ -13514,6 +14615,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "has_raw_affiliation_strings": {
@@ -13534,6 +14638,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "has_references": {
@@ -13554,6 +14659,10 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "boolean"
       },
       "id": {
@@ -13569,6 +14678,7 @@
         "entity_type": null,
         "name": "id",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids": {
@@ -13584,6 +14694,7 @@
         "entity_type": null,
         "name": "ids",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "ids.mag": {
@@ -13606,6 +14717,10 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "string"
       },
@@ -13632,6 +14747,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "openalex_id"
       },
       "ids.pmcid": {
@@ -13654,6 +14772,10 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "string"
       },
@@ -13678,6 +14800,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "string"
       },
       "indexed_in": {
@@ -13701,6 +14827,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "institution_assertions": {
@@ -13716,6 +14845,7 @@
         "entity_type": null,
         "name": "institution_assertions",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "institution_assertions.country_code": {
@@ -13738,6 +14868,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "institution_assertions.id": {
@@ -13760,6 +14891,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "institution_assertions.lineage": {
@@ -13782,6 +14914,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "institution_assertions.ror": {
@@ -13804,6 +14937,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "institution_assertions.type": {
@@ -13826,6 +14960,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "institutions": {
@@ -13841,6 +14976,7 @@
         "entity_type": null,
         "name": "institutions",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "institutions_distinct_count": {
@@ -13865,6 +15001,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "is_authors_truncated": {
@@ -13880,6 +15019,7 @@
         "entity_type": null,
         "name": "is_authors_truncated",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "is_paratext": {
@@ -13900,6 +15040,10 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "boolean"
       },
@@ -13922,6 +15066,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "keyword.search": {
@@ -13939,6 +15086,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "keywords": {
@@ -13954,6 +15102,7 @@
         "entity_type": null,
         "name": "keywords",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "keywords.id": {
@@ -13975,6 +15124,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -13999,6 +15151,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "locations": {
@@ -14014,6 +15169,7 @@
         "entity_type": null,
         "name": "locations",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "locations.is_accepted": {
@@ -14033,6 +15189,10 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "boolean"
       },
@@ -14054,6 +15214,10 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "boolean"
       },
       "locations.is_published": {
@@ -14073,6 +15237,10 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "boolean"
       },
@@ -14096,6 +15264,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "locations.license": {
@@ -14120,6 +15289,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "string"
       },
       "locations.raw_type": {
@@ -14142,6 +15315,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "locations.source.has_issn": {
@@ -14162,6 +15336,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "locations.source.host_organization": {
@@ -14183,6 +15358,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "openalex_id"
       },
@@ -14209,6 +15387,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "openalex_id"
       },
       "locations.source.id": {
@@ -14231,6 +15412,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "locations.source.is_core": {
@@ -14250,6 +15434,10 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "boolean"
       },
@@ -14271,6 +15459,10 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "boolean"
       },
       "locations.source.is_oa": {
@@ -14291,6 +15483,7 @@
           "eq",
           "null"
         ],
+        "supported_by": [],
         "type": "boolean"
       },
       "locations.source.issn": {
@@ -14313,6 +15506,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "string"
       },
       "locations.source.type": {
@@ -14334,6 +15531,10 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "string"
       },
@@ -14359,6 +15560,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "string"
       },
       "locations_count": {
@@ -14383,6 +15588,10 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "number"
       },
       "mag_only": {
@@ -14403,6 +15612,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "mesh": {
@@ -14418,6 +15630,7 @@
         "entity_type": null,
         "name": "mesh",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "open_access": {
@@ -14433,6 +15646,7 @@
         "entity_type": null,
         "name": "open_access",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "open_access.any_repository_has_fulltext": {
@@ -14452,6 +15666,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "boolean"
       },
@@ -14474,6 +15691,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "boolean"
       },
@@ -14501,6 +15721,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "primary_location": {
@@ -14516,6 +15739,7 @@
         "entity_type": null,
         "name": "primary_location",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "primary_location.is_accepted": {
@@ -14535,6 +15759,10 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "boolean"
       },
@@ -14556,6 +15784,10 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "boolean"
       },
       "primary_location.is_published": {
@@ -14575,6 +15807,10 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "boolean"
       },
@@ -14598,6 +15834,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "primary_location.license": {
@@ -14622,6 +15859,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "string"
       },
       "primary_location.raw_type": {
@@ -14644,6 +15885,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "string"
       },
       "primary_location.source.has_issn": {
@@ -14663,6 +15905,10 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "boolean"
       },
@@ -14685,6 +15931,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "openalex_id"
       },
@@ -14711,6 +15960,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "openalex_id"
       },
       "primary_location.source.id": {
@@ -14735,6 +15987,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "primary_location.source.is_core": {
@@ -14754,6 +16009,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "boolean"
       },
@@ -14775,6 +16033,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "primary_location.source.is_oa": {
@@ -14794,6 +16055,9 @@
         "operators": [
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "boolean"
       },
@@ -14817,6 +16081,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "string"
       },
       "primary_location.source.type": {
@@ -14838,6 +16106,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -14861,6 +16132,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "string"
       },
       "primary_topic": {
@@ -14876,6 +16151,7 @@
         "entity_type": null,
         "name": "primary_topic",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "primary_topic.domain.id": {
@@ -14897,6 +16173,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -14920,6 +16199,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "primary_topic.id": {
@@ -14941,6 +16223,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "openalex_id"
       },
@@ -14964,6 +16249,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "publication_date": {
@@ -14984,6 +16272,9 @@
           "date_range",
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "date"
       },
@@ -15009,6 +16300,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "raw_affiliation_strings": {
@@ -15031,6 +16325,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "raw_affiliation_strings.search": {
@@ -15051,6 +16348,9 @@
         "operators": [
           "search"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "search"
       },
       "raw_author_name.search": {
@@ -15070,6 +16370,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "referenced_works": {
@@ -15097,6 +16398,10 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
         "type": "openalex_id"
       },
       "referenced_works_count": {
@@ -15123,6 +16428,9 @@
           "or",
           "range"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "related_to": {
@@ -15144,6 +16452,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "related_works": {
@@ -15159,6 +16470,7 @@
         "entity_type": null,
         "name": "related_works",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "relevance_score": {
@@ -15174,6 +16486,7 @@
         "entity_type": null,
         "name": "relevance_score",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "repository": {
@@ -15196,6 +16509,7 @@
           "null",
           "or"
         ],
+        "supported_by": [],
         "type": "openalex_id"
       },
       "semantic.search": {
@@ -15213,6 +16527,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "sources": {
@@ -15228,6 +16543,7 @@
         "entity_type": null,
         "name": "sources",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "sustainable_development_goals": {
@@ -15243,6 +16559,7 @@
         "entity_type": null,
         "name": "sustainable_development_goals",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "sustainable_development_goals.id": {
@@ -15268,6 +16585,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "sustainable_development_goals.score": {
@@ -15290,6 +16610,7 @@
           "or",
           "range"
         ],
+        "supported_by": [],
         "type": "number"
       },
       "title": {
@@ -15305,6 +16626,7 @@
         "entity_type": null,
         "name": "title",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "title_and_abstract.search": {
@@ -15328,6 +16650,9 @@
         "operators": [
           "search"
         ],
+        "supported_by": [
+          "gui"
+        ],
         "type": "search"
       },
       "title_and_abstract.search.exact": {
@@ -15345,6 +16670,7 @@
         "operators": [
           "search"
         ],
+        "supported_by": [],
         "type": "search"
       },
       "to_created_date": {
@@ -15364,6 +16690,9 @@
           "date_range",
           "eq",
           "null"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "date"
       },
@@ -15385,6 +16714,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "date"
       },
       "to_updated_date": {
@@ -15405,6 +16737,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "datetime"
       },
       "topics": {
@@ -15420,6 +16755,7 @@
         "entity_type": null,
         "name": "topics",
         "operators": [],
+        "supported_by": [],
         "type": null
       },
       "topics.domain.id": {
@@ -15441,6 +16777,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "oxurl"
         ],
         "type": "string"
       },
@@ -15464,6 +16803,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "string"
       },
       "topics.id": {
@@ -15485,6 +16827,10 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
         ],
         "type": "openalex_id"
       },
@@ -15508,6 +16854,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "string"
       },
       "topics_count": {
@@ -15530,6 +16879,7 @@
           "or",
           "range"
         ],
+        "supported_by": [],
         "type": "number"
       },
       "type": {
@@ -15552,6 +16902,9 @@
           "not",
           "null",
           "or"
+        ],
+        "supported_by": [
+          "gui"
         ],
         "type": "string"
       },
@@ -15576,6 +16929,9 @@
           "null",
           "or"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "string"
       },
       "updated_date": {
@@ -15597,6 +16953,9 @@
           "eq",
           "null"
         ],
+        "supported_by": [
+          "oxurl"
+        ],
         "type": "date"
       },
       "versions": {
@@ -15612,6 +16971,7 @@
         "entity_type": null,
         "name": "versions",
         "operators": [],
+        "supported_by": [],
         "type": null
       }
     }

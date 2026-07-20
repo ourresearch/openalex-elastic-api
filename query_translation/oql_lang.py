@@ -759,10 +759,12 @@ def match_field(toks: List[Tok], i: int) -> Optional[Tuple[str, "Field", int]]:
 # through this same fallback).
 #
 # Scope = GUI/docs parity, NOT the full registry (Jason, 2026-06-08): only columns
-# that are GUI-faceted or documented (`INPUT_ALIAS_COLUMNS`) — accepting the whole
-# 207-column registry would surface internal / half-baked / redundant fields that
-# only confuse people. Built lazily + defensively so `oql_lang` stays importable
-# in lightweight contexts without the engine properties registry.
+# with a non-empty `Property.supported_by` (GUI-faceted or documented — #420, the
+# registry-native successor of the retired INPUT_ALIAS_COLUMNS snapshot) —
+# accepting the whole 207-column registry would surface internal / half-baked /
+# redundant fields that only confuse people. Built lazily + defensively so
+# `oql_lang` stays importable in lightweight contexts without the engine
+# properties registry.
 _REGISTRY_FALLBACK_CACHE: Optional[Dict[str, "Field"]] = None
 
 
@@ -797,7 +799,6 @@ def _registry_kind(prop, *, surface_rich_kinds: bool) -> Optional[str]:
 def _build_registry_fallback() -> Dict[str, "Field"]:
     try:
         from core.properties import get_entity_properties
-        from query_translation.input_alias_columns import INPUT_ALIAS_COLUMNS
         cols = get_entity_properties("works")
     except Exception:
         return {}
@@ -806,8 +807,8 @@ def _build_registry_fallback() -> Dict[str, "Field"]:
         key = cid.lower()
         if key in _ALIAS:
             continue                     # already curated (or its raw id is an alias)
-        if cid not in INPUT_ALIAS_COLUMNS:
-            continue                     # not GUI-faceted / documented -> don't surface it
+        if not getattr(prop, "supported_by", None):
+            continue                     # not GUI-faceted / documented -> don't surface it (#420)
         ops = tuple(getattr(prop, "operators", []) or [])
         if "search" in ops or "collection" in ops:
             # search columns are mode-encoded (.search/.search.exact) — expressed
@@ -906,8 +907,8 @@ def _entity_resolve_field(fld: "Field", entity: Optional[str]) -> "Field":
 # Part B coverage: a NON-works column with no curated `_FIELDS` surface and no
 # homonym (e.g. `issn_l`/"ISSN-L" on sources, `works_count`/"works count" on
 # authors, `summary_stats.h_index`/"h-index") gains an OQL surface here. Scope =
-# the GUI-faceted subset per entity (`input_alias_columns.GUI_FACETED_COLUMNS_BY_
-# ENTITY`, Jason's GUI-parity lens), synthesized from the registry's own metadata
+# the GUI-faceted subset per entity (`'gui' in Property.supported_by` — #420,
+# Jason's GUI-parity lens), synthesized from the registry's own metadata
 # so the friendly word == the engine `display_name`. Parsed by display_name, alias,
 # OR raw column_id (oxurl-fluent users), greedily (multi-word labels like "works
 # count"). Booleans are EXCLUDED — their OQL render needs a curated sentence
@@ -918,31 +919,25 @@ _ENTITY_FALLBACK_CACHE: Dict[str, Dict[str, "Field"]] = {}
 def _build_entity_fallback(entity: str) -> Dict[str, "Field"]:
     try:
         from core.properties import get_entity_properties
-        from query_translation.input_alias_columns import (
-            GUI_FACETED_COLUMNS_BY_ENTITY, INPUT_ALIAS_COLUMNS)
         props = get_entity_properties(entity) or {}
     except Exception:
         return {}
-    # works uses its existing GUI/docs allowlist; the non-works entities use the
-    # per-entity GUI-faceted snapshot. On WORKS this fallback exists ONLY to let the
+    # works allows its GUI/docs union (`supported_by` non-empty); the non-works
+    # entities allow the GUI-faceted columns only (`'gui' in supported_by` —
+    # #572 strict GUI==OQL parity). Both read the per-property `supported_by`
+    # annotation (#420), the registry-native successor of the retired
+    # input_alias_columns snapshot. On WORKS this fallback exists ONLY to let the
     # registry own a curated column's input aliases — so a friendly alias can be
     # DROPPED from `_FIELDS` (it lives in `core/display_names.py`) and still parse
     # (oxjob #406 1c cleanup). It deliberately does NOT surface uncurated works
     # columns (those keep the raw column-id path + raw render) — see the works guard.
     is_works = entity == "works"
-    # The allowlist is keyed by CATALOG entity keys; normalize OQO spellings
-    # ("types" → "work-types") the same way the registry getters do (#611
-    # follow-up — `types` previously resolved NO fallback fields at all).
-    try:
-        from core.properties import resolve_entity_key
-        allow_key = resolve_entity_key(entity)
-    except Exception:
-        allow_key = entity
-    allow = INPUT_ALIAS_COLUMNS if is_works else GUI_FACETED_COLUMNS_BY_ENTITY.get(allow_key, frozenset())
     out: Dict[str, Field] = {}
-    for cid in allow:
-        prop = props.get(cid)
-        if prop is None:
+    for cid in sorted(props):
+        prop = props[cid]
+        surfaces = getattr(prop, "supported_by", None) or frozenset()
+        allowed = bool(surfaces) if is_works else ("gui" in surfaces)
+        if not allowed:
             continue
         ops = set(getattr(prop, "operators", []) or [])
         if "search" in ops or "collection" in ops:
@@ -1105,7 +1100,6 @@ def _build_by_column() -> None:
     # the curated map alone stands.
     try:
         from core.properties import ENTITY_PROPERTIES, canonicalize_column_id
-        from query_translation.input_alias_columns import GUI_FACETED_COLUMNS_BY_ENTITY
         entities = list(ENTITY_PROPERTIES.keys())
     except Exception:
         return
@@ -1132,15 +1126,27 @@ def _build_by_column() -> None:
                 claim(2, canon, fld,
                       f"alias-canonical of {fld.oql!r} on {ent}")
 
+    # Per-entity GUI-faceted sets, projected from the registry's `supported_by`
+    # annotation (#420 — the registry-native successor of the retired
+    # GUI_FACETED_COLUMNS_BY_ENTITY snapshot). Works is excluded: it was never
+    # in the per-entity snapshot (its fallback scope is the GUI∪docs union).
+    gui_faceted_by_entity = {
+        e: {c for c, p in (ENTITY_PROPERTIES.get(e) or {}).items()
+            if "gui" in (getattr(p, "supported_by", None) or ())}
+        for e in entities if e != "works"
+    }
+
     def _faceted_everywhere(cid: str) -> bool:
-        # Only entities in fallback SCOPE (those with a GUI-faceted allowlist)
-        # can parse a fallback word, so only they constrain whether a friendly
-        # render round-trips. An in-scope entity that HAS the column but
-        # doesn't facet it (e.g. authors has `works_count` but doesn't
+        # Only entities in fallback SCOPE (those with at least one GUI-faceted
+        # column) can parse a fallback word, so only they constrain whether a
+        # friendly render round-trips. An in-scope entity that HAS the column
+        # but doesn't facet it (e.g. authors has `works_count` but doesn't
         # surface it) forces raw render.
-        for e in GUI_FACETED_COLUMNS_BY_ENTITY:
+        for e, gui_cols in gui_faceted_by_entity.items():
+            if not gui_cols:
+                continue
             props = ENTITY_PROPERTIES.get(e) or {}
-            if cid in props and cid not in GUI_FACETED_COLUMNS_BY_ENTITY[e]:
+            if cid in props and cid not in gui_cols:
                 return False
         return True
 

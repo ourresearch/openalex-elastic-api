@@ -16,7 +16,9 @@ The bump rule (docs/PROPERTIES_VERSIONING.md):
              alias; add or tweak a display_name (#381 — labels are display
              metadata, not query semantics); ANY change to a property's `category`
              (#441 — a nullable, ungated organizational grouping; add / change /
-             remove are all MINOR, none can break a query).
+             remove are all MINOR, none can break a query); ANY change to
+             `supported_by` (#420 — descriptive metadata about OTHER surfaces:
+             gui facet picker / documented REST; same weight as category).
     MAJOR  — anything that could invalidate a previously-valid query: remove an
              entity/property/operator/action/alias, rename a property (= remove + add,
              so the removal side already forces MAJOR), change a property's
@@ -153,6 +155,19 @@ def classify_change(old, new):
                 ob, nb = o.get(key), n.get(key)
                 if ob != nb:
                     minor.append(f"{key} changed: {e}.{name}: {ob!r} -> {nb!r}")
+            # supported_by (#420) — which OTHER user-facing surfaces expose the
+            # property (gui facet picker / documented classic REST). Descriptive
+            # metadata about surfaces beyond this API: no transition changes what
+            # a /properties consumer may validly send HERE, so add / change /
+            # remove are all MINOR, like category. (OQL's raw-column_id parse
+            # acceptance derives from it, but the OQL contract is gated by its
+            # own test corpus, not PROPERTIES_VERSION.)
+            osb, nsb = set(o.get("supported_by") or []), set(n.get("supported_by") or [])
+            if osb != nsb:
+                minor.append(
+                    f"supported_by changed: {e}.{name}: "
+                    f"{sorted(osb)} -> {sorted(nsb)}"
+                )
 
     if major:
         return "major", major + minor

@@ -2,7 +2,7 @@ import datetime
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import FrozenSet, List, Optional
 
 from elasticsearch_dsl import Q, Search
 
@@ -220,6 +220,18 @@ class Property:
     # without a curated OQL sentence yet.
     bool_true: Optional[str] = None
     bool_false: Optional[str] = None
+    # Surface support (#420). Which user-facing surfaces expose this property:
+    #   "gui"   — the openalex-gui facet picker filter-facets it (computed at
+    #             catalog build from the vendored scripts/client_registry.json)
+    #   "oxurl" — the documented classic REST API surfaces it (works-only
+    #             curated list, core/oxurl_documented.py)
+    # Resolved entity-aware by the properties builder (like display_name /
+    # category), never set on the engine `Field`. Empty = internal-only.
+    # PUBLIC (serialized, v7.4.0). Replaces the retired generated allowlists in
+    # query_translation/input_alias_columns.py: OQL's raw-column_id fallback
+    # accepts a column iff supported_by is non-empty (works) / contains "gui"
+    # (non-works — #572 strict GUI==OQL parity).
+    supported_by: FrozenSet[str] = frozenset()
 
     def serialize(self) -> dict:
         """The canonical PUBLIC JSON-ready dict. `operators`/`actions`/`aliases`/
@@ -247,6 +259,7 @@ class Property:
             "alternate_keys": sorted(self.alternate_keys),
             "bool_true": self.bool_true,
             "bool_false": self.bool_false,
+            "supported_by": sorted(self.supported_by),
         }
 
 
