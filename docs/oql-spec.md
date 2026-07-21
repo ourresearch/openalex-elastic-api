@@ -85,10 +85,11 @@ This invariant is the spec's runnable contract — see §9.
   accepted on **input** for back-compat, but the canonical form never emits one.
 
 OQL covers exactly **OQO Stage A filtering + Stage B (group_by)**. Result-display
-concerns — **sort order** (`OQO.sort_by`) and **column projection**
-(`OQO.select`) — are deliberately **not** part of the OQL surface (oxjob #504);
-they are driven by the URL (`?sort=` / `?select=`) and the GUI's own controls. There
-is deliberately **no Stage-C / HAVING syntax** (§10).
+concerns — **sort order** and **column projection** — are deliberately **not** part
+of the OQL surface (oxjob #504), and since the #661 query/view split they're not
+part of the OQO either: they travel as sibling request params on the execute
+surface (`?sort=` / `?select=`), driven by the GUI's own controls. There is
+deliberately **no Stage-C / HAVING syntax** (§10).
 
 ### 2.1 Canonical formatting (output layout)
 
@@ -773,11 +774,11 @@ works where … stemmed "genome editing" … sample 500                (row 63)
 - **`group by <dim>[, <dim>]*`** → `group_by` list (order = dimension order).
 - **`sample <n> [seed <s>]`** → `sample` (+ optional reproducibility `seed`).
 
-**Not in the OQL surface (oxjob #504):** result *sort order* (`OQO.sort_by`) and
-*column projection* (`OQO.select`) are display concerns, not query language. They
-are populated by the URL (`?sort=` / `?select=`) and the GUI's own sort dropdown /
-column picker, and round-trip through OQO untouched — OQL simply never reads or
-emits them. (They are additive to re-introduce in a future OQL version.)
+**Not in the OQL surface (oxjob #504) — nor in the OQO (#661):** result *sort
+order* and *column projection* are view concerns, not query language. They travel
+as sibling request params on the execute surface (`?sort=` / `?select=`, or POST
+body siblings), populated by the GUI's own sort/column controls — OQL and OQO
+never read or emit them. (They are additive to re-introduce in a future version.)
 
 ## 5. Diagnostics (codes + fix-its)
 

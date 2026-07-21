@@ -264,17 +264,21 @@ def _build_params_from_oqo(oqo: OQO, request):
 # path-form now translates; both had zero consumers — see #372 EXPLORE).
 
 
-def execute_oqo_dict(oqo_dict):
+def execute_oqo_dict(oqo_dict, view_params=None):
     """Public entry point: execute an OQO given as a dict → Flask response.
 
     Response shape mirrors /works, /authors, etc.: {meta, group_by, results},
     plus a canonicalized `oqo` echo for round-trip introspection.
+
+    `view_params` (#661 query/view split) is the dict of sibling view keys the
+    POST body carried (sort/select/page/per_page/cursor); None/{} for the GET
+    forms, whose siblings arrive on the query string instead.
     """
     if not isinstance(oqo_dict, dict):
         return _error_response(
             "OQO must be a JSON object.", "invalid_body", status=400
         )
-    return _execute_oqo(oqo_dict)
+    return _execute_oqo(oqo_dict, view_params=view_params)
 
 
 def execute_oqo_json_string(oqo_str):
@@ -288,7 +292,7 @@ def execute_oqo_json_string(oqo_str):
     return execute_oqo_dict(oqo_dict)
 
 
-def execute_oql_string(oql_str):
+def execute_oql_string(oql_str, view_params=None):
     """Public entry point: execute an OQL string → Flask response."""
     if not oql_str or not oql_str.strip():
         return _error_response("Empty OQL query.", "invalid_oql", status=400)
@@ -300,54 +304,95 @@ def execute_oql_string(oql_str):
         return _error_response(
             f"Failed to parse OQL: {e}", "parse_error", status=400
         )
-    return _execute_oqo(oqo)
+    return _execute_oqo(oqo, view_params=view_params)
 
 
-def _merge_classic_sort_select(oqo: OQO, request) -> OQO:
-    """Fold the classic `?sort=` / `?select=` query-string params INTO the OQO.
+def _merge_view_params(oqo: OQO, request, body_params=None) -> OQO:
+    """Fold the sibling VIEW params into the OQO's internal view fields (#661).
 
-    Sorting and field selection are the OQO's job (#318) — they were removed from
-    the OQL *language* (#504) and live as `sort_by` / `select` on the object. But
-    for back-compat with the legacy `/works?sort=…&select=…` muscle memory, a
-    client hitting `GET /?oql=…&sort=…&select=…` (or `?oqo=…`) expects those to
-    take effect. They used to be **silently ignored** (execution built params
-    straight off the OQO; the query-string fallback covered only
-    per_page/page/cursor/seed) — the classic OQL-adjacent footgun (#631).
-
-    Folding them into the OQO here (rather than into the synthetic params dict)
-    means they flow through the SAME machinery as OQO-native sort/select:
-    `validate_oqo` (structured 400s on a bad column), `canonicalize_oqo_column_ids`
-    (alias spellings like `is_oa`), the `select` projection in
+    The query/view split: the public OQO describes WHICH ROWS only; sort, column
+    projection (`select`), and pagination are *view* concerns that travel as
+    siblings of the query — top-level POST-body keys (`body_params`) or classic
+    query-string params (`?sort=…&select=…&page=…&per_page=…&cursor=…`), same
+    syntax either way. The OQO *dataclass* keeps sort_by/select/page/per_page/
+    cursor as the internal execution struct, so folding the siblings in here
+    means they flow through the SAME machinery as before: `validate_oqo`
+    (structured 400s on a bad column), `canonicalize_oqo_column_ids` (alias
+    spellings like `is_oa`), the `select` projection in
     `_finalize_oqo_response`, and the `meta.x_query` echo — one code path, no
     downstream special-casing, semantic path included.
 
-    Precedence mirrors the per_page/page/cursor/seed fallback: **the OQO wins when
-    it already carries a value**; the query-string param is honored only when the
-    OQO omits it. (An OQL string never carries sort_by/select — both are gone from
-    the language — so `?oql=…&sort=…` always uses the fallback; only an `?oqo=…`
-    that already sets sort_by/select overrides the query string.)
+    Precedence: **body sibling > query-string sibling > value embedded in the
+    OQO dict**. Embedded view keys are the pre-#661 shape — still accepted as a
+    transition so in-flight callers (today's GUI) keep working — but a sibling
+    always wins over them. (Pre-#661 the OQO won; the flip is deliberate: the
+    sibling is now the documented surface.)
 
     `map_sort_params` raises `APIQueryParamsError` on a malformed `sort` — the
     caller wraps this so that surfaces as a clean 400, never a 500.
     """
+    body = body_params or {}
     updates = {}
 
-    if not oqo.sort_by:
-        sort_map = map_sort_params(request.args.get("sort"))  # may raise
-        if sort_map:
-            # Insertion order preserved (Py3.7+ dict) → multi-column tiebreaker
-            # priority survives, exactly like the legacy URL path.
-            updates["sort_by"] = [
-                SortBy(column_id=col, direction=direction)
-                for col, direction in sort_map.items()
-            ]
+    raw_sort = body.get("sort")
+    if raw_sort is not None and not isinstance(raw_sort, str):
+        raise APIQueryParamsError(
+            "Body param 'sort' must be a string like 'cited_by_count:desc[,…]'."
+        )
+    if raw_sort is None:
+        raw_sort = request.args.get("sort")
+    sort_map = map_sort_params(raw_sort)  # may raise
+    if sort_map:
+        # Insertion order preserved (Py3.7+ dict) → multi-column tiebreaker
+        # priority survives, exactly like the legacy URL path.
+        updates["sort_by"] = [
+            SortBy(column_id=col, direction=direction)
+            for col, direction in sort_map.items()
+        ]
 
-    if not oqo.select:
-        select_param = request.args.get("select")
-        if select_param:
-            cols = [c.strip() for c in select_param.split(",") if c.strip()]
-            if cols:
-                updates["select"] = cols
+    raw_select = body.get("select")
+    if raw_select is None:
+        raw_select = request.args.get("select")
+    if raw_select is not None:
+        # Classic comma-string is the canonical syntax; a JSON list of column
+        # names is accepted on the POST body as a natural-JSON convenience.
+        if isinstance(raw_select, str):
+            cols = [c.strip() for c in raw_select.split(",") if c.strip()]
+        elif isinstance(raw_select, list) and all(
+            isinstance(c, str) for c in raw_select
+        ):
+            cols = [c.strip() for c in raw_select if c.strip()]
+        else:
+            raise APIQueryParamsError(
+                "Param 'select' must be a comma-separated string of column "
+                "names (or a JSON list of strings in a POST body)."
+            )
+        if cols:
+            updates["select"] = cols
+
+    # Pagination siblings. Body values are typed already (JSON); query-string
+    # values go through the usual int coercion. Only explicit values are folded
+    # in — defaults (page 1, per_page 25/200) stay applied at execution so
+    # canonical OQOs remain minimal.
+    for body_key, arg_name in (("page", "page"), ("per_page", "per-page")):
+        val = body.get(body_key)
+        if val is not None:
+            if not isinstance(val, int) or isinstance(val, bool):
+                raise APIQueryParamsError(
+                    f"Body param '{body_key}' must be an integer."
+                )
+        else:
+            val = _set_int_arg(request, arg_name, None)  # may raise
+        if val is not None:
+            updates[body_key] = val
+
+    cursor = body.get("cursor")
+    if cursor is not None and not isinstance(cursor, str):
+        raise APIQueryParamsError("Body param 'cursor' must be a string.")
+    if cursor is None:
+        cursor = request.args.get("cursor")
+    if cursor is not None:
+        updates["cursor"] = cursor
 
     if not updates:
         return oqo
@@ -358,10 +403,11 @@ def _merge_classic_sort_select(oqo: OQO, request) -> OQO:
     return canonicalize_oqo_column_ids(replace(oqo, **updates))
 
 
-def _execute_oqo(oqo_or_dict):
+def _execute_oqo(oqo_or_dict, view_params=None):
     """Shared body for the POST and GET-path-form handlers. Accepts a parsed
     OQO (the OQL path — already canonicalized at the parse boundary) or a raw
-    dict (the OQO-JSON paths)."""
+    dict (the OQO-JSON paths). `view_params` = sibling view keys from a POST
+    body (#661); the GET forms pass None and rely on query-string args."""
     if isinstance(oqo_or_dict, OQO):
         oqo = oqo_or_dict
     else:
@@ -376,11 +422,11 @@ def _execute_oqo(oqo_or_dict):
                 status=400,
             )
 
-    # Back-compat: fold classic ?sort=/?select= query-string params into the OQO
-    # (when it doesn't already carry them) so they're honored, validated, and
-    # echoed like OQO-native sort/select rather than silently ignored (#631).
+    # Fold the sibling view params (sort/select/page/per_page/cursor — POST
+    # body first, then query string) into the OQO's internal view fields so
+    # they're honored, validated, and echoed through the one code path (#661).
     try:
-        oqo = _merge_classic_sort_select(oqo, request)
+        oqo = _merge_view_params(oqo, request, view_params)
     except APIQueryParamsError as e:
         return _error_response(str(e), "invalid_params", status=400)
 

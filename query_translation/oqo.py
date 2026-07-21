@@ -277,11 +277,18 @@ class SortBy:
 class OQO:
     """OpenAlex Query Object - the canonical query representation.
 
-    Beyond *query semantics* (which rows match, sort, group, sample), the OQO
-    also carries the "logistics" every OXURL carries so it can fully stand in
-    for a `/:entity` request (#318): column projection (`select`), the sample
-    `seed`, and pagination (`per_page`/`page`/`cursor`). These five are all
-    back-compatible additions — absent ⇒ the prior behavior.
+    Query/view split (#661): the PUBLIC OQO describes WHICH ROWS a query
+    matches — `get_rows`, `corpus`, `filter_rows`, `group_by`, `sample`/`seed`
+    — and nothing else. View/presentation parameters (`sort_by`, `select`,
+    `per_page`/`page`/`cursor`) are NOT part of the public object (they're gone
+    from docs/oqo-schema.json v1.4): they travel as SIBLING request params on
+    the execute surface, classic URL syntax (`?sort=…&select=…&page=…`, or
+    top-level POST-body keys). This dataclass still carries them as the
+    INTERNAL execution struct — `_merge_view_params` (execution.py) folds the
+    siblings in at the request boundary so the validator/canonicalizer/executor
+    machinery is unchanged. `from_dict` also still accepts them embedded in an
+    input dict as a TRANSITION (pre-#661 callers, i.e. today's GUI) — a sibling
+    always wins over an embedded value; don't build new callers on that.
     """
     get_rows: str
     # `corpus` selects which corpus(es) seed the base result set — a
@@ -302,7 +309,11 @@ class OQO:
     sort_by: List[SortBy] = field(default_factory=list)
     sample: Optional[int] = None
     group_by: List[GroupBy] = field(default_factory=list)
-    # --- logistics layer (#318) ------------------------------------------
+    # --- view layer (#318 "logistics"; INTERNAL since the #661 split) -----
+    # sort_by (above) + select/per_page/page/cursor (below) are view state,
+    # populated from sibling request params (or, transitionally, embedded
+    # input-dict keys). Not in the public schema; still echoed in x_query
+    # until the GUI stops rehydrating sort from it (#661 slice 2).
     # `select` is a list of registry column_ids carrying the `column`
     # capability (#450), e.g. ["id", "display_name", "cited_by_count"];
     # absent ⇒ full object. Order is meaningful (display order) and preserved.

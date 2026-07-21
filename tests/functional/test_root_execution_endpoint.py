@@ -178,11 +178,12 @@ class TestRootErrors:
 
 
 class TestStrictPostBody:
-    """The POST body may contain ONLY `oql`/`oqo` — extra top-level keys used to
-    be silently ignored (`{"oql": "...", "per_page": 5}` dropped per_page), the
-    classic OQL-adjacent footgun. Now they're a hard 400 (#631)."""
+    """The POST body may contain `oql`/`oqo` plus the sibling view params
+    (sort/select/page/per_page/cursor — #661 query/view split). Anything else
+    is a hard 400 (#631): unknown keys used to be silently ignored, the classic
+    OQL-adjacent footgun."""
 
-    def test_extra_top_level_key_is_400(self, client):
+    def test_unknown_top_level_key_is_400(self, client):
         captured = []
         oql = _valid_oql(client)
         with patch(
@@ -191,7 +192,8 @@ class TestStrictPostBody:
         ):
             res = client.post(
                 "/",
-                data=json.dumps({"oql": oql, "per_page": 5}),
+                # `sample` belongs INSIDE the OQO, not as a sibling — still 400.
+                data=json.dumps({"oql": oql, "sample": 5}),
                 content_type="application/json",
             )
         _assert_400(res)
@@ -199,16 +201,16 @@ class TestStrictPostBody:
         assert captured == []
         err = res.get_json()["validation"]["errors"][0]
         assert err["type"] == "invalid_body"
-        assert "per_page" in err["message"]
+        assert "sample" in err["message"]
 
-    def test_extra_key_alongside_oqo_is_400(self, client):
+    def test_unknown_key_alongside_oqo_is_400(self, client):
         res = client.post(
             "/",
-            data=json.dumps({"oqo": WORKS_OQO, "sort": "cited_by_count:asc"}),
+            data=json.dumps({"oqo": WORKS_OQO, "frobnicate": True}),
             content_type="application/json",
         )
         _assert_400(res)
-        assert "sort" in res.get_json()["validation"]["errors"][0]["message"]
+        assert "frobnicate" in res.get_json()["validation"]["errors"][0]["message"]
 
     def test_both_oql_and_oqo_is_400(self, client):
         res = client.post(
@@ -481,13 +483,14 @@ class TestSemanticOqoExecution:
 
 
 # ---------------------------------------------------------------------------
-# Classic ?sort= / ?select= are honored next to ?oql=/?oqo= (oxjob #631).
+# Sibling view params (#661 query/view split; classic query-string fold #631).
 #
-# Sorting + field selection are the OQO's job (#318, removed from the OQL
-# *language* #504). For back-compat they're folded INTO the OQO before
-# validation, so they run + validate + echo like OQO-native sort_by/select
-# instead of being silently ignored. Precedence mirrors per_page/seed: the OQO
-# wins when it already carries a value.
+# Sorting + field selection + pagination are VIEW concerns — not part of the
+# public OQO. They travel as siblings of the query (query-string params on
+# either verb, or top-level body keys on POST) and are folded into the OQO's
+# internal view fields before validation, so they run + validate + echo like
+# the old OQO-native sort_by/select. Precedence: body sibling > query-string
+# sibling > (transition) a value still embedded in the OQO dict.
 # ---------------------------------------------------------------------------
 
 
@@ -569,8 +572,10 @@ class TestClassicSortSelectHonored:
             {"column_id": "cited_by_count", "direction": "asc"}
         ]
 
-    def test_oqo_sort_by_wins_over_query_string(self, client):
-        """An OQO that already carries sort_by is NOT overridden by ?sort=."""
+    def test_query_string_sort_wins_over_embedded_oqo_sort_by(self, client):
+        """The sibling is the documented surface (#661): ?sort= overrides a
+        sort_by still embedded in the OQO dict (the pre-#661 transition shape).
+        Pre-#661 the OQO won; the flip is deliberate."""
         captured = []
         oqo = {
             "get_rows": "works",
@@ -585,11 +590,11 @@ class TestClassicSortSelectHonored:
             res = client.get(f"/?oqo={encoded}&sort=cited_by_count:asc")
         assert res.status_code == 200, res.get_json()
         assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
-            {"column_id": "publication_year", "direction": "desc"}
+            {"column_id": "cited_by_count", "direction": "asc"}
         ]
 
-    def test_oqo_select_wins_over_query_string(self, client):
-        """An OQO that already carries select is NOT overridden by ?select=."""
+    def test_query_string_select_wins_over_embedded_oqo_select(self, client):
+        """?select= overrides a select still embedded in the OQO dict (#661)."""
         captured = []
         oqo = {
             "get_rows": "works",
@@ -603,12 +608,163 @@ class TestClassicSortSelectHonored:
         ):
             res = client.get(f"/?oqo={encoded}&select=id,display_name,cited_by_count")
         assert res.status_code == 200, res.get_json()
-        assert res.get_json()["meta"]["x_query"]["oqo"]["select"] == ["id"]
+        assert res.get_json()["meta"]["x_query"]["oqo"]["select"] == [
+            "id",
+            "display_name",
+            "cited_by_count",
+        ]
+
+    def test_embedded_oqo_view_keys_still_accepted_without_siblings(self, client):
+        """Transition back-compat (#661): an OQO still carrying embedded
+        sort_by/select/per_page (today's GUI shape) with NO siblings executes
+        exactly as before — no 400, values honored."""
+        captured = []
+        oqo = {
+            "get_rows": "works",
+            "filter_rows": [{"column_id": "type", "value": "article"}],
+            "sort_by": [{"column_id": "publication_year", "direction": "desc"}],
+            "select": ["id", "display_name"],
+            "per_page": 7,
+        }
+        encoded = urllib.parse.quote(json.dumps(oqo), safe="")
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.get(f"/?oqo={encoded}")
+        assert res.status_code == 200, res.get_json()
+        echo = res.get_json()["meta"]["x_query"]["oqo"]
+        assert echo["sort_by"] == [
+            {"column_id": "publication_year", "direction": "desc"}
+        ]
+        assert echo["select"] == ["id", "display_name"]
+
+
+class TestBodyViewParams:
+    """POST-body sibling view params (#661): {"oqo": …, "sort": …, "select": …,
+    "page": …, "per_page": …, "cursor": …} — same classic syntax as the
+    query-string form, plus a JSON-list convenience for select."""
+
+    def test_body_sort_select_per_page_are_honored(self, client):
+        captured = []
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.post(
+                "/",
+                data=json.dumps({
+                    "oqo": WORKS_OQO,
+                    "sort": "cited_by_count:desc",
+                    "select": "id,display_name",
+                    "per_page": 7,
+                }),
+                content_type="application/json",
+            )
+        assert res.status_code == 200, res.get_json()
+        echo = res.get_json()["meta"]["x_query"]["oqo"]
+        assert echo["sort_by"] == [
+            {"column_id": "cited_by_count", "direction": "desc"}
+        ]
+        assert echo["select"] == ["id", "display_name"]
+        # per_page actually shaped the ES query (size = per_page).
+        assert captured[0].get("size") == 7
+
+    def test_body_select_accepts_json_list(self, client):
+        captured = []
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.post(
+                "/",
+                data=json.dumps({"oqo": WORKS_OQO, "select": ["id", "doi"]}),
+                content_type="application/json",
+            )
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["meta"]["x_query"]["oqo"]["select"] == ["id", "doi"]
+
+    def test_body_sibling_wins_over_embedded_oqo_value(self, client):
+        """Acceptance #3 (#661): sibling sort beats an embedded sort_by."""
+        captured = []
+        oqo = dict(WORKS_OQO)
+        oqo["sort_by"] = [{"column_id": "display_name", "direction": "asc"}]
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.post(
+                "/",
+                data=json.dumps({"oqo": oqo, "sort": "cited_by_count:desc"}),
+                content_type="application/json",
+            )
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
+            {"column_id": "cited_by_count", "direction": "desc"}
+        ]
+
+    def test_body_sibling_wins_over_query_string_sibling(self, client):
+        captured = []
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.post(
+                "/?sort=display_name:asc",
+                data=json.dumps({"oqo": WORKS_OQO, "sort": "cited_by_count:desc"}),
+                content_type="application/json",
+            )
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
+            {"column_id": "cited_by_count", "direction": "desc"}
+        ]
+
+    def test_body_sort_wrong_type_is_400(self, client):
+        res = client.post(
+            "/",
+            data=json.dumps({"oqo": WORKS_OQO, "sort": ["cited_by_count"]}),
+            content_type="application/json",
+        )
+        _assert_400(res)
+
+    def test_body_per_page_wrong_type_is_400(self, client):
+        res = client.post(
+            "/",
+            data=json.dumps({"oqo": WORKS_OQO, "per_page": "seven"}),
+            content_type="application/json",
+        )
+        _assert_400(res)
+
+    def test_body_unknown_sort_column_is_structured_400(self, client):
+        res = client.post(
+            "/",
+            data=json.dumps({"oqo": WORKS_OQO, "sort": "not_a_real_field:asc"}),
+            content_type="application/json",
+        )
+        _assert_400(res)
+        assert res.get_json()["validation"]["valid"] is False
+
+    def test_body_view_params_work_with_oql_too(self, client):
+        captured = []
+        oql = _valid_oql(client)
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.post(
+                "/",
+                data=json.dumps({"oql": oql, "sort": "cited_by_count:desc"}),
+                content_type="application/json",
+            )
+        assert res.status_code == 200, res.get_json()
+        assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
+            {"column_id": "cited_by_count", "direction": "desc"}
+        ]
 
     def test_query_string_sort_select_honored_on_post_oql(self, client):
         """The fold works on the POST body form too (args are method-agnostic)."""
         captured = []
-        oql = self._oql(client)
+        oql = _valid_oql(client)
         with patch(
             "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
@@ -625,7 +781,7 @@ class TestClassicSortSelectHonored:
 
     def test_malformed_sort_is_400_not_500(self, client):
         """A malformed ?sort= surfaces as a clean 400, never a raw 500."""
-        oql = self._oql(client)
+        oql = _valid_oql(client)
         res = client.get(
             "/?oql=" + urllib.parse.quote(oql, safe="") + "&sort=" +
             urllib.parse.quote("a:b:c", safe="")
@@ -634,7 +790,7 @@ class TestClassicSortSelectHonored:
 
     def test_unknown_select_column_is_structured_400(self, client):
         """An unknown ?select= column → structured invalid_select_column 400."""
-        oql = self._oql(client)
+        oql = _valid_oql(client)
         res = client.get(
             "/?oql=" + urllib.parse.quote(oql, safe="") + "&select=not_a_real_field"
         )
@@ -648,7 +804,7 @@ class TestClassicSortSelectHonored:
 
     def test_unknown_sort_column_is_structured_400(self, client):
         """An unknown ?sort= column → structured sort validation 400."""
-        oql = self._oql(client)
+        oql = _valid_oql(client)
         res = client.get(
             "/?oql=" + urllib.parse.quote(oql, safe="") + "&sort=not_a_real_field:asc"
         )

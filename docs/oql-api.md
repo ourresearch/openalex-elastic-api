@@ -98,12 +98,12 @@ The paging parameters work alongside `oql`:
 | `select` | yes | classic `select=field,field` to project a subset of fields |
 | `api_key` | yes | or send `Authorization: Bearer <key>` (see Auth below) |
 
-**Sorting and field selection are the OQO's job**, but the classic `?sort=`/`?select=`
-parameters still work next to `?oql=`/`?oqo=` for convenience — they're folded into the query
-as `sort_by`/`select`. If the OQO already carries a `sort_by`/`select`, the object wins and the
-matching query-string parameter is ignored (same precedence as `per_page`/`seed`). The
-canonical form is to put `sort_by`/`select` inside the OQO (examples below), and that's what
-`meta.x_query` always echoes back.
+**Sorting, field selection, and paging are view parameters, not part of the query**
+(the #661 query/view split): the OQO/OQL describes *which rows*, and `sort`, `select`,
+`page`, `per-page`, and `cursor` travel as **siblings** of it — the classic query-string
+parameters above, on either verb, or top-level body keys on POST (below). A sibling always
+wins over a value still embedded inside an OQO (the deprecated pre-#661 shape, accepted
+transitionally).
 
 Grouping *is* part of the language — write it in the query:
 
@@ -126,9 +126,10 @@ curl -G "https://api.openalex.org/" \
   --data-urlencode "per-page=1"
 ```
 
-An OQO can be fully **self-contained**: paging, sorting, and projection can live inside the
-object itself (`per_page`, `page`, `cursor`, `sort_by`, `select`, `sample`, `seed`) instead
-of in URL parameters. See "The OQO object" below for the shape.
+The OQO carries the query itself — filters, grouping, and sampling (`sample`/`seed`
+live inside the object; a sampled corpus is a different row set). Sorting, projection,
+and paging are **not** in the object: put them in the URL parameters as above. See
+"The OQO object" below for the shape.
 
 ### POST /
 
@@ -142,26 +143,30 @@ curl -X POST "https://api.openalex.org/?per-page=5" \
   -d '{"oql": "works where year is (2020)"}'
 ```
 
-or with an OQO:
+or with an OQO, view params riding as sibling body keys:
 
 ```
 curl -X POST "https://api.openalex.org/" \
   -H "Content-Type: application/json" \
   -d '{"oqo": {"get_rows": "works",
-               "filter_rows": [{"column_id": "publication_year", "value": 2020}],
-               "sort_by": [{"column_id": "cited_by_count", "direction": "desc"}],
-               "select": ["id", "display_name", "cited_by_count"],
-               "per_page": 5}}'
+               "filter_rows": [{"column_id": "publication_year", "value": 2020}]},
+       "sort": "cited_by_count:desc",
+       "select": "id,display_name,cited_by_count",
+       "per_page": 5}'
 ```
 
 Rules of the road:
 
-- The body is a JSON object with **exactly one** of `"oql"` or `"oqo"` — and *nothing else*.
-  Any other top-level key is a **400** (`invalid_body`), and so is sending both. `Content-Type:
+- The body is a JSON object with **exactly one** of `"oql"` or `"oqo"`, plus optionally the
+  sibling view params `sort` / `select` / `page` / `per_page` / `cursor`. Any other top-level
+  key is a **400** (`invalid_body`), and so is sending both `oql` and `oqo`. `Content-Type:
   application/json` is required (without it: 400, `invalid_body`).
-- Paging/sorting/projection go in the **URL query string** (as with GET) or **inside the OQO**
-  — *not* as extra top-level body keys. `{"oql": "…", "per_page": 5}` is **rejected** (put
-  `per_page` in the query string); `{"oqo": {…, "per_page": 5}}` is the right place for it.
+- Sibling view params use the same classic syntax as the query-string form: `sort` is a
+  string like `"cited_by_count:desc,display_name"`, `select` a comma-string (a JSON list of
+  column names also works in the body), `page`/`per_page` integers, `cursor` a string. Body
+  siblings win over query-string siblings, which win over anything still embedded in the OQO.
+- `sample`/`seed` belong **inside the OQO** — they change which rows you get, not how
+  they're presented; `{"oql": "…", "sample": 5}` is rejected.
 
 ### Errors
 
@@ -335,10 +340,11 @@ The full, formal shape is the JSON Schema on the **OQO schema** page (served at
 | `filter_rows` | array of filter nodes | the filters; top-level entries are AND-ed |
 | `corpus` | `core` \| `expansion` \| `all` | which works corpus (works only; default `core`) |
 | `group_by` | array of `{column_id}` | group results into buckets |
-| `sort_by` | array of `{column_id, direction, aggregate?}` | result order (`aggregate` = `mean`/`sum`/`min`/`max`, for sorting group buckets by a metric) |
-| `select` | array of column ids | project result fields |
 | `sample` | int | random sample of n results (optional `seed`, a string, for reproducibility) |
-| `per_page`, `page`, `cursor` | paging | so an OQO can be fully self-contained |
+
+That's the whole object (#661): sorting, projection, and paging are **sibling request
+params** (`sort`, `select`, `page`, `per_page`, `cursor` — see "Rules of the road"
+above), not OQO keys.
 
 A **filter node** is either a leaf or a branch:
 

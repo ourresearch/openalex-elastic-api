@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openalex.org/schemas/oqo/v1.3",
+  "$id": "https://openalex.org/schemas/oqo/v1.4",
   "name": "OpenAlex_Query_Object",
-  "description": "The canonical JSON representation for OpenAlex queries. OQO is the intermediate format for bidirectional translation between URL parameters, OQL (human-readable query language), and programmatic JSON access. GENERATED from query_translation/oqo.py by query_translation/regen_schema.py — do not hand-edit. Entity values are BARE (the namespace is the column_id, resolved via the column registry): 'I136199984', 'de', 'article', '13' — never 'institutions/I136199984'. Negation is the per-node 'is_negated' polarity bit; the canonical form is NNF (negation on leaves only). JSON is the normative serialization; YAML is display-only and MUST round-trip to identical JSON (quote every string value on emit).",
+  "description": "The canonical JSON representation for OpenAlex queries. OQO is the intermediate format for bidirectional translation between URL parameters, OQL (human-readable query language), and programmatic JSON access. GENERATED from query_translation/oqo.py by query_translation/regen_schema.py — do not hand-edit. Entity values are BARE (the namespace is the column_id, resolved via the column registry): 'I136199984', 'de', 'article', '13' — never 'institutions/I136199984'. Negation is the per-node 'is_negated' polarity bit; the canonical form is NNF (negation on leaves only). JSON is the normative serialization; YAML is display-only and MUST round-trip to identical JSON (quote every string value on emit). The OQO describes WHICH ROWS a query matches — nothing else (#661 query/view split, v1.4). View/presentation parameters (sort, column projection, pagination) are NOT part of the OQO; they travel as sibling request parameters on the execute surface, in the classic URL syntax: `sort=<col>[:asc|desc][,…]`, `select=<col>,[…]`, `page`, `per_page`, `cursor` — as query-string params on `GET /?oqo=…` / `GET /?oql=…`, or as sibling top-level body keys on `POST / {\"oqo\": …, \"sort\": …}`.",
   "type": "object",
   "required": [
     "get_rows"
@@ -39,14 +39,6 @@
       },
       "default": []
     },
-    "sort_by": {
-      "type": "array",
-      "description": "Sort keys, applied in order as primary/secondary/… tiebreakers. A LIST, so a multi-column sort (`sort=publication_year:desc,cited_by_count:desc`) is expressible; list order is meaningful and is preserved (NOT sorted). Absent/empty ⇒ the entity's implicit default sort.",
-      "items": {
-        "$ref": "#/$defs/SortBy"
-      },
-      "default": []
-    },
     "sample": {
       "type": [
         "integer",
@@ -57,14 +49,6 @@
       "description": "Return a random sample of N results instead of all matches.",
       "default": null
     },
-    "select": {
-      "type": "array",
-      "description": "Column projection (#318): the columns each returned row should carry, e.g. ['id','display_name','cited_by_count']. Order is meaningful (display order). Absent/empty ⇒ the full object. Valid values are the entity's column-capable properties (the registry `column` capability, #450 — the same set the URL `?select=` accepts), NOT its filter predicates. OQL surface: the `return col1, col2` clause.",
-      "items": {
-        "type": "string"
-      },
-      "default": []
-    },
     "seed": {
       "type": [
         "string",
@@ -72,33 +56,6 @@
         "null"
       ],
       "description": "Seed that makes a `sample` reproducible. Only meaningful alongside `sample`; ignored (with a warning) otherwise.",
-      "default": null
-    },
-    "per_page": {
-      "type": [
-        "integer",
-        "null"
-      ],
-      "minimum": 1,
-      "maximum": 200,
-      "description": "Page size (#318). Default 25, max 200 — applied at execution, so a canonical OQO leaves it absent when unset.",
-      "default": null
-    },
-    "page": {
-      "type": [
-        "integer",
-        "null"
-      ],
-      "minimum": 1,
-      "description": "Offset page number (1-based). Mutually exclusive with `cursor`; absent both ⇒ page 1.",
-      "default": null
-    },
-    "cursor": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "description": "Cursor-pagination token ('*' to start; opaque thereafter). Mutually exclusive with `page`.",
       "default": null
     }
   },
@@ -257,47 +214,6 @@
         }
       }
     },
-    "SortBy": {
-      "type": "object",
-      "description": "A single sort key: a column plus a direction. `column_id` may be a real sortable column or a synthetic sort key — 'relevance_score' (requires a search clause; descending only) or, when a group_by is present, the bucket-ordering keys 'count' / 'key'. With a group_by, `aggregate` (mean/sum/min/max) orders the buckets by a metric sub-aggregation of a numeric `column_id` — e.g. funders ranked by mean(cited_by_count); URL form 'cited_by_count.mean:desc'.",
-      "required": [
-        "column_id"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "column_id": {
-          "type": "string",
-          "description": "The column/field to sort by.",
-          "examples": [
-            "cited_by_count",
-            "publication_year",
-            "fwci",
-            "display_name",
-            "works_count",
-            "relevance_score"
-          ]
-        },
-        "direction": {
-          "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ],
-          "description": "Sort direction. 'asc' ascending, 'desc' descending. Defaults to 'asc'.",
-          "default": "asc"
-        },
-        "aggregate": {
-          "type": "string",
-          "enum": [
-            "mean",
-            "sum",
-            "min",
-            "max"
-          ],
-          "description": "Metric sub-aggregation to order group_by buckets by (only valid with a group_by, over a numeric column_id). URL form: '<column_id>.<aggregate>:<direction>', e.g. 'cited_by_count.mean:desc'."
-        }
-      }
-    },
     "Operator": {
       "type": "string",
       "description": "Leaf comparison operators (strictly affirmative). Sourced from oqo.VALID_OPERATORS. Negation is the `is_negated` bit, not an operator.",
@@ -409,7 +325,7 @@
       }
     },
     {
-      "description": "Sort + sample (top-cited sample)",
+      "description": "Reproducible random sample (seed makes the sample stable)",
       "value": {
         "get_rows": "works",
         "filter_rows": [
@@ -419,51 +335,8 @@
             "operator": ">="
           }
         ],
-        "sort_by": [
-          {
-            "column_id": "cited_by_count",
-            "direction": "desc"
-          }
-        ],
-        "sample": 100
-      }
-    },
-    {
-      "description": "Multi-column sort: newest first, then most-cited as a tiebreaker",
-      "value": {
-        "get_rows": "works",
-        "sort_by": [
-          {
-            "column_id": "publication_year",
-            "direction": "desc"
-          },
-          {
-            "column_id": "cited_by_count",
-            "direction": "desc"
-          }
-        ]
-      }
-    },
-    {
-      "description": "Logistics layer (#318): projection + reproducible sample + pagination, all self-contained",
-      "value": {
-        "get_rows": "works",
-        "filter_rows": [
-          {
-            "column_id": "publication_year",
-            "value": 2024,
-            "operator": ">="
-          }
-        ],
-        "select": [
-          "id",
-          "display_name",
-          "cited_by_count"
-        ],
-        "sample": 50,
-        "seed": "42",
-        "per_page": 25,
-        "page": 2
+        "sample": 100,
+        "seed": "42"
       }
     }
   ]

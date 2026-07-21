@@ -7,8 +7,20 @@ hand-edited. This document explains the model, the design decisions behind it,
 and the equality / canonicalization / rendering / serialization stances so future
 work doesn't relitigate them.
 
-Scope: **Stage A (filter / sort / sample) + Stage B (group_by)**. Stage C
+Scope: **Stage A (filter / sample) + Stage B (group_by)**. Stage C
 (filtering on groups / HAVING) and embedding-as-query are out of scope.
+
+**Query/view split (oxjob #661, schema v1.4):** the OQO describes **which rows
+a query matches** — nothing else. View/presentation parameters — sort order,
+column projection, pagination — are *not* part of the OQO. They travel as
+**sibling request params** on the execute surface, in the classic URL syntax:
+`sort=<col>[:asc|desc][,…]`, `select=<col>,[…]`, `page`, `per_page`, `cursor` —
+query-string params on `GET /?oql=…` / `GET /?oqo=…`, or top-level sibling body
+keys on `POST /` (`{"oqo": …, "sort": "cited_by_count:desc", "per_page": 5}`).
+`sample`/`seed` stay on the OQO (a sampled corpus is a different row set).
+Transitionally the executor still accepts the pre-#661 embedded keys
+(`sort_by`/`select`/`page`/`per_page`/`cursor` inside the OQO dict), but a
+sibling always wins over an embedded value; don't build new callers on them.
 
 > Provenance: this spec and schema are the deliverable of oxjob **#284**. The
 > worked-examples corpus that pressure-tested it (43 real queries spanning WoS /
@@ -23,10 +35,11 @@ An OQO is one JSON object:
 ```jsonc
 {
   "get_rows": "works",              // entity type to return (required)
+  "corpus": "core",                 // which corpus(es) seed the base set (works)
   "filter_rows": [ <Filter>, ... ], // implicitly AND-joined at the top level
   "group_by":   [ <GroupBy>, ... ], // Stage B grouping dimensions (a list)
-  "sort_by":    [ <SortBy>, ... ],  // ordered sort keys (primary, secondary, …)
-  "sample": 100                     // random sample of N, or null
+  "sample": 100,                    // random sample of N, or null
+  "seed": "42"                      // makes a sample reproducible
 }
 ```
 
@@ -43,14 +56,14 @@ A **`Filter`** is either a **`LeafFilter`** (one condition) or a **`BranchFilter
 
 A **`GroupBy`** is `{ "column_id": "primary_topic.id" }`.
 
-A **`SortBy`** is one sort key: `{ "column_id": "cited_by_count", "direction": "desc" }`
-(`direction` is `"asc"` | `"desc"`, default `"asc"`). `sort_by` is an **ordered list**
-of these, so a multi-column sort — e.g. `sort=publication_year:desc,cited_by_count:desc`
-on the URL surface — is expressible; the list order is the tiebreaker priority and is
-**preserved** (never sorted), unlike the commutative top-level `filter_rows`. `column_id`
-may be a real sortable column or a synthetic key: `relevance_score` (requires a search
-clause; descending only) or, when a `group_by` is present, the bucket-ordering keys
-`count` / `key`. Absent/empty ⇒ the entity's implicit default sort.
+Sort order is a **view concern**, not part of the object (#661): it rides the
+sibling `sort=` param, classic syntax — comma-separated keys applied in order as
+primary/secondary tiebreakers (`sort=publication_year:desc,cited_by_count:desc`),
+direction defaulting to `asc`. A key may be a real sortable column or a synthetic
+one: `relevance_score` (requires a search clause; descending only); with a
+`group_by`, the bucket-ordering keys `count` / `key`, or the metric-aggregate
+form `<column>.<mean|sum|min|max>` (e.g. `cited_by_count.mean:desc`). Absent ⇒
+the entity's implicit default sort.
 
 `get_rows` ∈ the entity enum (works, authors, institutions, sources, publishers,
 funders, topics, …). The full enum is in the schema (sourced from
@@ -271,16 +284,13 @@ Dimension order is meaningful and is preserved by the canonicalizer.
 
 - Multi-dimensional `group_by` (>1 dimension) is single-dimension only in the live
   serving impl → **#297** (`group-by-extensions`).
-- Sorting groups by an aggregate metric (e.g. funders by mean citation impact) is
-  out of scope here (adjacent to Stage C) → **#297**. **Group buckets always
-  auto-sort by `_count` descending (= works_count desc) by default**; a `sort_by`
-  alongside `group_by` may only re-order buckets via the synthetic `count` / `key`
-  keys — a `sort_by` naming a *real* column under a `group_by` is **not** supported
-  (it orders rows, which don't exist in a grouped response) and is treated as
-  ignored. The NL→OQO agent (oxjob #344) therefore OMITS `sort_by` when it emits a
-  `group_by`; supporting real-column bucket ordering was scoped and deferred as
-  non-trivial (sub-aggregation wiring across buckets.py / sort.py / validator.py —
-  oxjob #344 decision 3).
+- **Group buckets always auto-sort by `_count` descending (= works_count desc)
+  by default**; a sibling `sort=` alongside a `group_by` may re-order buckets via
+  the synthetic `count` / `key` keys, or by a metric sub-aggregation of a numeric
+  column via the dotted form `<column>.<mean|sum|min|max>:<dir>` (oxjob #389). A
+  *bare* real column as a group sort key is **not** supported (it orders rows,
+  which don't exist in a grouped response) and is treated as ignored. The NL→OQO
+  agent (oxjob #344) therefore omits sort when it emits a `group_by`.
 
 ---
 

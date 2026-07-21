@@ -29,6 +29,13 @@ def index():
       POST /  body {"oqo": {...}} or {"oql": "..."}   (for queries over the
               proxy's ~4 KB URL cap — the proxy skips the cap for POST bodies)
 
+    Query/view split (oxjob #661): the OQO/OQL describes WHICH ROWS only.
+    View/presentation parameters — sort, column projection, pagination — travel
+    as siblings of the query, in the classic URL syntax: query-string params
+    (`?sort=cited_by_count:desc&select=id,doi&page=2&per_page=50&cursor=…`) on
+    either verb, or top-level sibling body keys on POST
+    (`{"oqo": …, "sort": "…", "select": "…", "page": 2, …}`).
+
     A bare `GET /` (no oql/oqo) still returns the "Don't panic" descriptor.
     """
     # Lazy import: avoids any import-time coupling between the works and
@@ -49,20 +56,21 @@ def index():
                 "invalid_body",
                 status=400,
             )
-        # Strict body (#631): the ONLY permitted top-level keys are `oql` / `oqo`.
-        # We used to silently ignore everything else — so `{"oql": "...",
-        # "per_page": 5}` dropped the `per_page` with no signal (the classic
-        # OQL-adjacent footgun). Paging/sorting/projection go in the URL query
-        # string or INSIDE the OQO, never as sibling body keys. Reject unknown
-        # keys with a message that names them + points at the right home.
-        extra_keys = [k for k in body if k not in ("oql", "oqo")]
+        # Strict body (#631): permitted top-level keys are the query (`oql` /
+        # `oqo`) plus the sibling VIEW params (#661 query/view split): `sort`,
+        # `select`, `page`, `per_page`, `cursor`. Anything else is rejected —
+        # we used to silently ignore unknown keys, the classic OQL-adjacent
+        # footgun. Reject with a message that names them + the allowed set.
+        view_param_keys = ("sort", "select", "page", "per_page", "cursor")
+        allowed_keys = ("oql", "oqo") + view_param_keys
+        extra_keys = [k for k in body if k not in allowed_keys]
         if extra_keys:
             return _error_response(
                 "Unexpected top-level key(s) in request body: "
-                f"{', '.join(sorted(extra_keys))}. The body may contain only "
-                "'oql' or 'oqo'. Put paging/sorting/projection in the URL query "
-                "string (e.g. ?per-page=5&sort=…) or inside the OQO "
-                "(per_page/page/cursor/sort_by/select/sample/seed).",
+                f"{', '.join(sorted(extra_keys))}. The body may contain one of "
+                "'oql'/'oqo' plus the sibling view params "
+                "(sort/select/page/per_page/cursor). sample/seed belong inside "
+                "the OQO.",
                 "invalid_body",
                 status=400,
             )
@@ -73,10 +81,13 @@ def index():
                 "invalid_body",
                 status=400,
             )
+        view_params = {
+            k: body[k] for k in view_param_keys if body.get(k) is not None
+        }
         if "oqo" in body:
-            return execute_oqo_dict(body["oqo"])
+            return execute_oqo_dict(body["oqo"], view_params=view_params)
         if "oql" in body:
-            return execute_oql_string(body["oql"])
+            return execute_oql_string(body["oql"], view_params=view_params)
         return _error_response(
             "Request body must contain an 'oql' or 'oqo' key.",
             "invalid_body",
