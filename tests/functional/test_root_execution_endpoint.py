@@ -45,6 +45,23 @@ def _fake_execute(captured):
     return _inner
 
 
+def _spy_merge(merged):
+    """Wrap _merge_view_params to record the merged INTERNAL OQO (the execution
+    struct that carries the folded view params). #661: the public x_query echo
+    sheds sort_by/select/paging, so "the sibling was honored" is observed here
+    (and/or on the captured ES query), never on the echo."""
+    import query_translation.execution as _execution_mod
+
+    real = _execution_mod._merge_view_params
+
+    def _inner(oqo, request, body_params=None):
+        out = real(oqo, request, body_params)
+        merged.append(out)
+        return out
+
+    return _inner
+
+
 WORKS_OQO = {
     "get_rows": "works",
     "filter_rows": [{"column_id": "type", "value": "article"}],
@@ -510,21 +527,24 @@ class TestClassicSortSelectHonored:
                 "/?oql=" + urllib.parse.quote(oql, safe="") + "&sort=cited_by_count:asc"
             )
         assert res.status_code == 200, res.get_json()
-        # Folded into the OQO → shows up in the canonical echo.
-        sort_by = res.get_json()["meta"]["x_query"]["oqo"]["sort_by"]
-        assert sort_by == [{"column_id": "cited_by_count", "direction": "asc"}]
-        # And it actually shaped the ES query. ES renders an ascending sort as
-        # the bare field name (asc is its default); desc becomes {field:{order}}.
+        # #661: the echo sheds view keys, so honoring is observed on the ES
+        # query. ES renders an ascending sort as the bare field name (asc is
+        # its default); desc becomes {field:{order}}.
+        assert "sort_by" not in res.get_json()["meta"]["x_query"]["oqo"]
         es_sort = captured[0].get("sort")
         assert es_sort and es_sort[0] == "cited_by_count"
 
     def test_query_string_select_is_honored_with_oql(self, client):
         """?select= next to ?oql= is folded into oqo.select (drives projection)."""
         captured = []
+        merged = []
         oql = self._oql(client)
         with patch(
             "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
+        ), patch(
+            "query_translation.execution._merge_view_params",
+            side_effect=_spy_merge(merged),
         ):
             res = client.get(
                 "/?oql="
@@ -532,18 +552,21 @@ class TestClassicSortSelectHonored:
                 + "&select=id,display_name"
             )
         assert res.status_code == 200, res.get_json()
-        assert res.get_json()["meta"]["x_query"]["oqo"]["select"] == [
-            "id",
-            "display_name",
-        ]
+        # Folded into the internal execution struct; the echo sheds it (#661).
+        assert merged[0].select == ["id", "display_name"]
+        assert "select" not in res.get_json()["meta"]["x_query"]["oqo"]
 
     def test_multi_key_sort_preserves_priority(self, client):
         """Comma-separated sort keeps primary→secondary order (tiebreaker priority)."""
         captured = []
+        merged = []
         oql = self._oql(client)
         with patch(
             "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
+        ), patch(
+            "query_translation.execution._merge_view_params",
+            side_effect=_spy_merge(merged),
         ):
             res = client.get(
                 "/?oql="
@@ -551,7 +574,7 @@ class TestClassicSortSelectHonored:
                 + "&sort=publication_year:asc,cited_by_count:desc"
             )
         assert res.status_code == 200, res.get_json()
-        assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
+        assert [x.to_dict() for x in merged[0].sort_by] == [
             {"column_id": "publication_year", "direction": "asc"},
             {"column_id": "cited_by_count", "direction": "desc"},
         ]
@@ -559,16 +582,20 @@ class TestClassicSortSelectHonored:
     def test_directionless_sort_defaults_asc(self, client):
         """A bare `sort=col` defaults to asc, matching the legacy URL path."""
         captured = []
+        merged = []
         oql = self._oql(client)
         with patch(
             "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
+        ), patch(
+            "query_translation.execution._merge_view_params",
+            side_effect=_spy_merge(merged),
         ):
             res = client.get(
                 "/?oql=" + urllib.parse.quote(oql, safe="") + "&sort=cited_by_count"
             )
         assert res.status_code == 200, res.get_json()
-        assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
+        assert [x.to_dict() for x in merged[0].sort_by] == [
             {"column_id": "cited_by_count", "direction": "asc"}
         ]
 
@@ -583,13 +610,17 @@ class TestClassicSortSelectHonored:
             "sort_by": [{"column_id": "publication_year", "direction": "desc"}],
         }
         encoded = urllib.parse.quote(json.dumps(oqo), safe="")
+        merged = []
         with patch(
             "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
+        ), patch(
+            "query_translation.execution._merge_view_params",
+            side_effect=_spy_merge(merged),
         ):
             res = client.get(f"/?oqo={encoded}&sort=cited_by_count:asc")
         assert res.status_code == 200, res.get_json()
-        assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
+        assert [x.to_dict() for x in merged[0].sort_by] == [
             {"column_id": "cited_by_count", "direction": "asc"}
         ]
 
@@ -602,13 +633,17 @@ class TestClassicSortSelectHonored:
             "select": ["id"],
         }
         encoded = urllib.parse.quote(json.dumps(oqo), safe="")
+        merged = []
         with patch(
             "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
+        ), patch(
+            "query_translation.execution._merge_view_params",
+            side_effect=_spy_merge(merged),
         ):
             res = client.get(f"/?oqo={encoded}&select=id,display_name,cited_by_count")
         assert res.status_code == 200, res.get_json()
-        assert res.get_json()["meta"]["x_query"]["oqo"]["select"] == [
+        assert merged[0].select == [
             "id",
             "display_name",
             "cited_by_count",
@@ -627,17 +662,25 @@ class TestClassicSortSelectHonored:
             "per_page": 7,
         }
         encoded = urllib.parse.quote(json.dumps(oqo), safe="")
+        merged = []
         with patch(
             "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
+        ), patch(
+            "query_translation.execution._merge_view_params",
+            side_effect=_spy_merge(merged),
         ):
             res = client.get(f"/?oqo={encoded}")
         assert res.status_code == 200, res.get_json()
-        echo = res.get_json()["meta"]["x_query"]["oqo"]
-        assert echo["sort_by"] == [
+        assert [x.to_dict() for x in merged[0].sort_by] == [
             {"column_id": "publication_year", "direction": "desc"}
         ]
-        assert echo["select"] == ["id", "display_name"]
+        assert merged[0].select == ["id", "display_name"]
+        assert merged[0].per_page == 7
+        # …but the echo conforms to the public spec: no view keys (#661).
+        echo = res.get_json()["meta"]["x_query"]["oqo"]
+        for view_key in ("sort_by", "select", "page", "per_page", "cursor"):
+            assert view_key not in echo
 
 
 class TestBodyViewParams:
@@ -647,9 +690,13 @@ class TestBodyViewParams:
 
     def test_body_sort_select_per_page_are_honored(self, client):
         captured = []
+        merged = []
         with patch(
             "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
+        ), patch(
+            "query_translation.execution._merge_view_params",
+            side_effect=_spy_merge(merged),
         ):
             res = client.post(
                 "/",
@@ -662,19 +709,26 @@ class TestBodyViewParams:
                 content_type="application/json",
             )
         assert res.status_code == 200, res.get_json()
-        echo = res.get_json()["meta"]["x_query"]["oqo"]
-        assert echo["sort_by"] == [
+        assert [x.to_dict() for x in merged[0].sort_by] == [
             {"column_id": "cited_by_count", "direction": "desc"}
         ]
-        assert echo["select"] == ["id", "display_name"]
+        assert merged[0].select == ["id", "display_name"]
         # per_page actually shaped the ES query (size = per_page).
         assert captured[0].get("size") == 7
+        # The echo conforms to the public spec: no view keys (#661).
+        echo = res.get_json()["meta"]["x_query"]["oqo"]
+        for view_key in ("sort_by", "select", "page", "per_page", "cursor"):
+            assert view_key not in echo
 
     def test_body_select_accepts_json_list(self, client):
         captured = []
+        merged = []
         with patch(
             "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
+        ), patch(
+            "query_translation.execution._merge_view_params",
+            side_effect=_spy_merge(merged),
         ):
             res = client.post(
                 "/",
@@ -682,16 +736,20 @@ class TestBodyViewParams:
                 content_type="application/json",
             )
         assert res.status_code == 200, res.get_json()
-        assert res.get_json()["meta"]["x_query"]["oqo"]["select"] == ["id", "doi"]
+        assert merged[0].select == ["id", "doi"]
 
     def test_body_sibling_wins_over_embedded_oqo_value(self, client):
         """Acceptance #3 (#661): sibling sort beats an embedded sort_by."""
         captured = []
+        merged = []
         oqo = dict(WORKS_OQO)
         oqo["sort_by"] = [{"column_id": "display_name", "direction": "asc"}]
         with patch(
             "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
+        ), patch(
+            "query_translation.execution._merge_view_params",
+            side_effect=_spy_merge(merged),
         ):
             res = client.post(
                 "/",
@@ -699,15 +757,19 @@ class TestBodyViewParams:
                 content_type="application/json",
             )
         assert res.status_code == 200, res.get_json()
-        assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
+        assert [x.to_dict() for x in merged[0].sort_by] == [
             {"column_id": "cited_by_count", "direction": "desc"}
         ]
 
     def test_body_sibling_wins_over_query_string_sibling(self, client):
         captured = []
+        merged = []
         with patch(
             "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
+        ), patch(
+            "query_translation.execution._merge_view_params",
+            side_effect=_spy_merge(merged),
         ):
             res = client.post(
                 "/?sort=display_name:asc",
@@ -715,7 +777,7 @@ class TestBodyViewParams:
                 content_type="application/json",
             )
         assert res.status_code == 200, res.get_json()
-        assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
+        assert [x.to_dict() for x in merged[0].sort_by] == [
             {"column_id": "cited_by_count", "direction": "desc"}
         ]
 
@@ -746,10 +808,14 @@ class TestBodyViewParams:
 
     def test_body_view_params_work_with_oql_too(self, client):
         captured = []
+        merged = []
         oql = _valid_oql(client)
         with patch(
             "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
+        ), patch(
+            "query_translation.execution._merge_view_params",
+            side_effect=_spy_merge(merged),
         ):
             res = client.post(
                 "/",
@@ -757,17 +823,21 @@ class TestBodyViewParams:
                 content_type="application/json",
             )
         assert res.status_code == 200, res.get_json()
-        assert res.get_json()["meta"]["x_query"]["oqo"]["sort_by"] == [
+        assert [x.to_dict() for x in merged[0].sort_by] == [
             {"column_id": "cited_by_count", "direction": "desc"}
         ]
 
     def test_query_string_sort_select_honored_on_post_oql(self, client):
         """The fold works on the POST body form too (args are method-agnostic)."""
         captured = []
+        merged = []
         oql = _valid_oql(client)
         with patch(
             "query_translation.execution.execute_search",
             side_effect=_fake_execute(captured),
+        ), patch(
+            "query_translation.execution._merge_view_params",
+            side_effect=_spy_merge(merged),
         ):
             res = client.post(
                 "/?sort=cited_by_count:asc&select=id",
@@ -775,9 +845,10 @@ class TestBodyViewParams:
                 content_type="application/json",
             )
         assert res.status_code == 200, res.get_json()
-        echo = res.get_json()["meta"]["x_query"]["oqo"]
-        assert echo["sort_by"] == [{"column_id": "cited_by_count", "direction": "asc"}]
-        assert echo["select"] == ["id"]
+        assert [x.to_dict() for x in merged[0].sort_by] == [
+            {"column_id": "cited_by_count", "direction": "asc"}
+        ]
+        assert merged[0].select == ["id"]
 
     def test_malformed_sort_is_400_not_500(self, client):
         """A malformed ?sort= surfaces as a clean 400, never a raw 500."""
@@ -787,6 +858,52 @@ class TestBodyViewParams:
             urllib.parse.quote("a:b:c", safe="")
         )
         assert res.status_code == 400, res.get_json()
+
+
+class TestXQueryEchoShedsViewState:
+    """#661 slice-2 companion: meta.x_query never hands the client view state.
+    The echoed oqo conforms to the public spec (v1.4 — no sort_by/select/page/
+    per_page/cursor) and the url form sheds sort=/select= on every execute path."""
+
+    def test_get_oql_with_all_siblings_echo_is_pure(self, client):
+        captured = []
+        oql = _valid_oql(client)
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.get(
+                "/?oql=" + urllib.parse.quote(oql, safe="")
+                + "&sort=cited_by_count:desc&select=id,doi&page=2&per_page=5"
+            )
+        assert res.status_code == 200, res.get_json()
+        x_query = res.get_json()["meta"]["x_query"]
+        for view_key in ("sort_by", "select", "page", "per_page", "cursor"):
+            assert view_key not in x_query["oqo"]
+        assert "sort=" not in (x_query["url"] or "")
+        assert "select=" not in (x_query["url"] or "")
+
+    def test_post_embedded_view_keys_echo_is_pure(self, client):
+        captured = []
+        oqo = dict(WORKS_OQO)
+        oqo["sort_by"] = [{"column_id": "cited_by_count", "direction": "desc"}]
+        oqo["select"] = ["id", "doi"]
+        oqo["per_page"] = 5
+        with patch(
+            "query_translation.execution.execute_search",
+            side_effect=_fake_execute(captured),
+        ):
+            res = client.post(
+                "/",
+                data=json.dumps({"oqo": oqo}),
+                content_type="application/json",
+            )
+        assert res.status_code == 200, res.get_json()
+        x_query = res.get_json()["meta"]["x_query"]
+        for view_key in ("sort_by", "select", "page", "per_page", "cursor"):
+            assert view_key not in x_query["oqo"]
+        assert "sort=" not in (x_query["url"] or "")
+        assert "select=" not in (x_query["url"] or "")
 
     def test_unknown_select_column_is_structured_400(self, client):
         """An unknown ?select= column → structured invalid_select_column 400."""

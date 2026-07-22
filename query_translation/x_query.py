@@ -148,6 +148,13 @@ def build_x_query(
     url_form = None
     try:
         components = render_oqo_to_url(canonical)
+        # #661 query/view split: sort/select are VIEW state (transient client
+        # sort, sticky column preference) — they must not ride in the shareable
+        # canonical forms the client rehydrates from, or they'd re-open the
+        # column/sort-leak class (#471). Paging stays: on the classic URL form
+        # page/per_page/cursor are legitimate sibling params.
+        components.pop("sort", None)
+        components.pop("select", None)
         url_form = _components_to_oxurl(canonical.get_rows, components)
     except URLRenderError:
         # Not URL-expressible (e.g. nested boolean tree). url stays None; the
@@ -161,8 +168,17 @@ def build_x_query(
         # object at all — see the docstring for why wrapping None is a bug.
         oql_form = oql_lang.render(canonical, resolver=None)
 
+    # #661: the echoed OQO conforms to the PUBLIC spec (schema v1.4) — pure
+    # "which rows" (get_rows, corpus, filter_rows, group_by, sample, seed).
+    # The internal OQO dataclass still carries the view params for execution;
+    # they're stripped here, at the single echo boundary, so no execute path
+    # ever hands the client an OQO with view keys in it.
+    oqo_dict = canonical.to_dict()
+    for view_key in ("sort_by", "select", "page", "per_page", "cursor"):
+        oqo_dict.pop(view_key, None)
+
     return {
         "oql": oql_form,
-        "oqo": canonical.to_dict(),
+        "oqo": oqo_dict,
         "url": url_form,
     }

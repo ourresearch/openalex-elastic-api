@@ -59,6 +59,26 @@ def test_build_x_query_flat_query_has_url_and_triple():
     assert isinstance(xq["oql"], str) and xq["oql"]
 
 
+def test_build_x_query_echo_sheds_view_keys():
+    """#661 query/view split: the echoed oqo conforms to the public spec (v1.4) —
+    no sort_by/select/page/per_page/cursor — and the url form sheds sort/select
+    (paging may stay: classic sibling params)."""
+    oqo = parse_url_to_oqo(
+        entity_type="works",
+        filter_string="type:article",
+        sort_string="cited_by_count:desc",
+        select_string="id,doi",
+        page=3,
+        per_page=7,
+    )
+    xq = build_x_query(oqo)
+    for view_key in ("sort_by", "select", "page", "per_page", "cursor"):
+        assert view_key not in xq["oqo"]
+    assert "sort=" not in xq["url"]
+    assert "select=" not in xq["url"]
+    assert xq["url"].startswith("/works?filter=type:article")
+
+
 def test_build_x_query_no_resolver_renders_bare_ids():
     """The hot path passes no entity_resolver, so OQL keeps bare IDs (no ES lookups)."""
     oqo = parse_url_to_oqo(
@@ -153,7 +173,12 @@ def test_attach_x_query_injects_into_meta():
     attach_x_query(result, _Req({"filter": "is_oa:true", "sort": "cited_by_count:desc"}),
                    "works-v33")
     assert "x_query" in result["meta"]
-    assert result["meta"]["x_query"]["url"] == "/works?filter=is_oa:true&sort=cited_by_count:desc"
+    # #661: sort/select are view state and never ride in the shareable canonical
+    # forms — the url keeps the query (filter, in its canonical column-id
+    # spelling) and sheds the sort.
+    url = result["meta"]["x_query"]["url"]
+    assert url.startswith("/works?filter=") and "is_oa:true" in url
+    assert "sort=" not in url
 
 
 def test_attach_x_query_uses_raw_args_not_injected_defaults():
