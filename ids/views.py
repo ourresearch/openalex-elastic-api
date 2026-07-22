@@ -62,6 +62,25 @@ from works.schemas import WorksSchema
 blueprint = Blueprint("ids", __name__)
 
 
+def get_merged_into_id(connection, merge_index, full_id):
+    """Resolve a merged entity id to its winner via a merge-* mapping index.
+
+    Merge losers are removed from the entity index (e.g. MergeFunders.ipynb in
+    openalex-walden tombstones the mid.funder row and deletes the ES doc); the
+    mapping index holds {id, merge_into_id} docs keyed by the loser's full
+    OpenAlex URL. Returns the winner's short id (e.g. "F4320311904"), or None
+    when the id was never merged or the mapping index doesn't exist.
+    """
+    try:
+        s = Search(index=merge_index, using=connection).filter("ids", values=[full_id])
+        response = s.execute()
+        if response:
+            return normalize_openalex_id(response[0].merge_into_id.rsplit("/", 1)[-1])
+    except Exception:
+        return None
+    return None
+
+
 # works
 
 
@@ -503,6 +522,18 @@ def funders_id_get(id):
         abort(404)
     response = s.execute()
     if not response:
+        # merged funders: the loser doc is deleted from the entity index, and the
+        # merge-funders mapping (written by MergeFunders.ipynb) carries the winner —
+        # answer with the documented 301 instead of a 404
+        if is_openalex_id(id):
+            merged_into = get_merged_into_id(
+                connection, "merge-funders", f"https://openalex.org/F{clean_id}"
+            )
+            if merged_into:
+                return redirect(
+                    url_for("ids.funders_id_get", id=merged_into, **request.args),
+                    code=301,
+                )
         abort(404)
     funders_schema = FundersSchema(
         context={"display_relevance": False}, only=only_fields
