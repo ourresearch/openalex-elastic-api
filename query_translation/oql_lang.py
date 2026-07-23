@@ -230,7 +230,7 @@ _f("to_updated_date", "to_updated_date", "date", date_axis="updated date", date_
 # Field.oql below AND the registry display_name (core/display_names.py) — kept in
 # lockstep so OQL, /properties, and the GUI builder all show the same noun.
 _f("open access", "open_access.is_oa", "bool")
-_f("global south", "institutions.is_global_south", "bool")
+_f("global south", "authorships.institutions.is_global_south", "bool")
 _f("retracted", "is_retracted", "bool")
 _f("has DOI", "has_doi", "bool")
 _f("has ORCID", "has_orcid", "bool")
@@ -247,10 +247,11 @@ _f("source", "primary_location.source.id", "id")
 _f("topic", "primary_topic.id", "id")
 _f("topics", "topics.id", "id")
 _f("funder", "funders.id", "id")
-# Publisher of the work's primary source (engine param primary_location.source.publisher_lineage,
-# a P-id; lineage so a parent publisher matches its imprints). Mirrors `funder`: an entity-id
-# reference, name-resolved via the publishers namespace. (oxjob #363 discovery loop run #1)
-_f("publisher", "primary_location.source.publisher_lineage", "id")
+# Publisher of the work's primary source (canonical column host_organization_lineage;
+# `publisher_lineage` stays an input alias — a P-id; lineage so a parent publisher matches
+# its imprints). Mirrors `funder`: an entity-id reference, name-resolved via the publishers
+# namespace. (oxjob #363 discovery loop run #1; identity re-key oxjob #455 Phase B)
+_f("publisher", "primary_location.source.host_organization_lineage", "id")
 # Render word "SDG" = the registry display_name (#381 Phase 5: acronym made canonical
 # everywhere). Long forms stay parse aliases.
 # "sustainable development goal(s)" input aliases live in the registry (#406 1c).
@@ -807,16 +808,27 @@ def _build_registry_fallback() -> Dict[str, "Field"]:
         key = cid.lower()
         if key in _ALIAS:
             continue                     # already curated (or its raw id is an alias)
-        if not getattr(prop, "supported_by", None):
-            continue                     # not GUI-faceted / documented -> don't surface it (#420)
-        ops = tuple(getattr(prop, "operators", []) or [])
+        # An alias spelling (registry `alternate_of`, #446) is the same IDENTITY as
+        # its canonical: gate + type it off the canonical, and parse it straight to
+        # the canonical's Field — the curated one when it exists, so `journal is S…`
+        # behaves exactly like `source is S…` (#455 Phase C).
+        canon = getattr(prop, "alternate_of", None)
+        target = (cols.get(canon) or prop) if canon else prop
+        if not getattr(target, "supported_by", None):
+            continue                     # identity not GUI-faceted / documented -> don't surface it (#420)
+        ops = tuple(getattr(target, "operators", []) or [])
         if "search" in ops or "collection" in ops:
             # search columns are mode-encoded (.search/.search.exact) — expressed
             # via the curated friendly fields + quoting, not a raw-id leaf; the
             # `collection` column is curated. Skip both.
             continue
-        kind = _registry_kind(prop, surface_rich_kinds=False)
-        out[key] = Field(column=cid, kind=kind, oql=cid, casing="",
+        curated = _BY_COLUMN.get(canon) if canon else None
+        if curated is not None and curated.kind not in ("search", "collection"):
+            out[key] = curated
+            continue
+        kind = _registry_kind(target, surface_rich_kinds=False)
+        col = canon or cid
+        out[key] = Field(column=col, kind=kind, oql=col, casing="",
                          is_float=(kind == "num"))
     return out
 
@@ -926,11 +938,11 @@ def _build_entity_fallback(entity: str) -> Dict[str, "Field"]:
     # entities allow the GUI-faceted columns only (`'gui' in supported_by` —
     # #572 strict GUI==OQL parity). Both read the per-property `supported_by`
     # annotation (#420), the registry-native successor of the retired
-    # input_alias_columns snapshot. On WORKS this fallback exists ONLY to let the
-    # registry own a curated column's input aliases — so a friendly alias can be
-    # DROPPED from `_FIELDS` (it lives in `core/display_names.py`) and still parse
-    # (oxjob #406 1c cleanup). It deliberately does NOT surface uncurated works
-    # columns (those keep the raw column-id path + raw render) — see the works guard.
+    # input_alias_columns snapshot. Works surfaces its uncurated supported columns
+    # by display_name too (#455 Phase C, Jason 2026-07-23 — the display_names are
+    # the human-reviewed #446 thread-B labels, so the old "don't surface uncurated
+    # works columns" guard no longer buys quality; collision words still render raw
+    # via the tier-3 works round-trip guard in `_build_by_column`).
     is_works = entity == "works"
     out: Dict[str, Field] = {}
     for cid in sorted(props):
@@ -948,8 +960,6 @@ def _build_entity_fallback(entity: str) -> Dict[str, "Field"]:
         curated = _BY_COLUMN.get(cid)
         if curated is not None and curated.kind not in ("search", "collection"):
             fld = curated
-        elif is_works:
-            continue                  # works: don't surface uncurated columns here
         else:
             kind = _registry_kind(prop, surface_rich_kinds=True)
             if kind is None:
@@ -1151,17 +1161,27 @@ def _build_by_column() -> None:
         return True
 
     for ent in entities:                    # Tier 3 — entity fallback (#406 1b)
-        if ent == "works":
-            continue
         # `_entity_fallback()` builds (and caches) each entity's index against
         # `_BY_COLUMN` *as of this claim* — curated Fields (including tier-1/2
         # keys) are reused for full fidelity, so the interleaving of index
         # builds with claims is deliberate, frozen behavior.
-        for cid, fld in _entity_fallback(ent).items():
+        idx = _entity_fallback(ent)
+        for cid, fld in idx.items():
             # only the canonical column_id key (fld.column) seeds the reverse
             # map, and only when the friendly word renders safely everywhere.
-            if cid == fld.column and _faceted_everywhere(cid):
-                claim(3, cid, fld, f"entity fallback on {ent}")
+            if cid != fld.column or not _faceted_everywhere(cid):
+                continue
+            if ent == "works":
+                # #455 Phase C: works joined tier 3 (supported/documented columns
+                # render their registry display_name). Extra round-trip guard: the
+                # word must resolve back to THIS field on works — a collision word
+                # (e.g. "domain", owned by `primary_topic.domain.id`) or one past
+                # the 4-token matcher cap keeps the raw-id render, which always
+                # round-trips via the raw-column_id door.
+                w = (fld.oql or "").lower()
+                if len(w.split()) > 4 or idx.get(w) is not fld:
+                    continue
+            claim(3, cid, fld, f"entity fallback on {ent}")
 
 
 _build_by_column()

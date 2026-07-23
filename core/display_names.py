@@ -125,6 +125,9 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'provenance': {"display_name": 'provenance'},
         'start_date': {"display_name": 'start date'},
         'start_year': {"display_name": 'start year'},
+        # matches the GUI facet label + sibling entities (label-consistency gate;
+        # surfaced by the #455 client_registry refresh)
+        'topics.id': {"display_name": 'topic'},
     },
     'concepts': {
         'description': {"display_name": 'description'},
@@ -427,7 +430,8 @@ _THREAD_B_OVERRIDES: Dict[str, Dict[str, dict]] = {
     'works': {
         # APC
         'apc_list.value': {"display_name": 'APC list price'},
-        'apc_list.value_usd': {"display_name": 'APC list price (USD)'},
+        # paren-free (#455 Phase C/D): these labels double as OQL parse words now.
+        'apc_list.value_usd': {"display_name": 'APC list price USD'},
         'apc_list.currency': {"display_name": 'APC list currency'},
         'apc_list.provenance': {"display_name": 'APC list provenance'},
         'apc_paid.value': {"display_name": 'APC paid'},
@@ -437,9 +441,11 @@ _THREAD_B_OVERRIDES: Dict[str, Dict[str, dict]] = {
         # The gui's "institution" facet is the lineage filter (institution + parents);
         # keep it. The #446 dedup survivor `.id` is the exact-match filter — label it
         # distinctly instead of leaving the "authorships institutions id" path-dump.
-        'authorships.institutions.id': {"display_name": 'institution (exact)'},
+        'authorships.institutions.id': {"display_name": 'exact institution'},
         'authorships.institutions.country_code': {"display_name": 'institution country'},
-        'authorships.institutions.is_global_south': {"display_name": 'institution is in Global South'},
+        # "global south" promoted from the alias `institutions.is_global_south` to this, its
+        # canonical key (oxjob #455 Phase B) — matches the OQL word + the GUI facet label.
+        'authorships.institutions.is_global_south': {"display_name": 'global south'},
         'authorships.affiliations.institution_ids': {"display_name": 'affiliation institution'},
         'authorships.is_corresponding': {"display_name": 'is corresponding author'},
         'authorships.raw_orcid': {"display_name": 'raw ORCID'},
@@ -471,11 +477,14 @@ _THREAD_B_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'primary_location.source.has_issn': {"display_name": 'has ISSN'},
         'locations.source.has_issn': {"display_name": 'source has ISSN (any location)'},
         'primary_location.source.host_organization': {"display_name": 'host organization'},
-        'locations.source.host_organization': {"display_name": 'host organization (any location)'},
+        'locations.source.host_organization': {"display_name": 'any location host organization'},
         'best_oa_location.source.host_organization': {"display_name": 'best OA host organization'},
-        'primary_location.source.host_organization_lineage': {"display_name": 'host organization lineage'},
-        'locations.source.host_organization_lineage': {"display_name": 'host organization lineage (any location)'},
-        'best_oa_location.source.host_organization_lineage': {"display_name": 'best OA host organization lineage'},
+        # "publisher" promoted from the alias `primary_location.source.publisher_lineage` to this,
+        # its canonical key (oxjob #455 Phase B; the alias keeps the same dn for the GUI facet).
+        'primary_location.source.host_organization_lineage': {"display_name": 'publisher'},
+        # lineage = "publisher" family-wide (matches the promoted primary_location label)
+        'locations.source.host_organization_lineage': {"display_name": 'any location publisher'},
+        'best_oa_location.source.host_organization_lineage': {"display_name": 'best OA publisher'},
         'locations.source.is_in_doaj': {"display_name": 'any location DOAJ'},
         'best_oa_location.source.is_in_doaj': {"display_name": 'best OA source DOAJ'},
         'locations.source.is_oa': {"display_name": 'source is OA (any location)'},

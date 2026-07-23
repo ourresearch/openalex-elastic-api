@@ -222,7 +222,13 @@ CAP_COLUMN = "column"
 # the classifier treats any supported_by transition as MINOR (category-weight —
 # descriptive of other surfaces, can't invalidate a /properties query). Public
 # serialization + MINOR class approved by Jason 2026-07-20. = MINOR.
-PROPERTIES_VERSION = "7.4.0"
+#
+# 7.5.0 (oxjob #455 Phase B): display_name-only — "publisher" promoted from the
+# alias `primary_location.source.publisher_lineage` to its canonical key
+# `primary_location.source.host_organization_lineage` (identity-keyed friendly
+# names; precedent = the 4.1.0 friendly-name audit). Approved by Jason
+# 2026-07-21. = MINOR.
+PROPERTIES_VERSION = "7.5.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

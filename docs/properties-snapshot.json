@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 23,
-    "fingerprint": "285f28b46fe6a89ab8bc480200aeb9622bc360aaf43cb9b5ef23f2c4070e14a8",
+    "fingerprint": "476f5f1ab7d9bf49211b35d1714bc9b49362a6381aafa1523d34156d6dfb6fc1",
     "property_count": 794,
-    "version": "7.4.0"
+    "version": "7.5.0"
   },
   "properties": {
     "authors": {
@@ -2269,7 +2269,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "topics id",
+        "display_name": "topic",
         "entity_type": null,
         "name": "topics.id",
         "operators": [
@@ -7459,7 +7459,9 @@
           "eq",
           "null"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "boolean"
       },
       "is_retracted": {
@@ -12335,7 +12337,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "APC list price (USD)",
+        "display_name": "APC list price USD",
         "entity_type": null,
         "name": "apc_list.value_usd",
         "operators": [
@@ -12685,7 +12687,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "institution (exact)",
+        "display_name": "exact institution",
         "entity_type": "institutions",
         "name": "authorships.institutions.id",
         "operators": [
@@ -12712,7 +12714,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "institution is in Global South",
+        "display_name": "global south",
         "entity_type": null,
         "name": "authorships.institutions.is_global_south",
         "operators": [
@@ -12720,6 +12722,7 @@
           "null"
         ],
         "supported_by": [
+          "gui",
           "oxurl"
         ],
         "type": "boolean"
@@ -13177,7 +13180,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "best OA host organization lineage",
+        "display_name": "best OA publisher",
         "entity_type": "publishers",
         "name": "best_oa_location.source.host_organization_lineage",
         "operators": [
@@ -15350,7 +15353,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "host organization (any location)",
+        "display_name": "any location host organization",
         "entity_type": null,
         "name": "locations.source.host_organization",
         "operators": [
@@ -15378,7 +15381,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "host organization lineage (any location)",
+        "display_name": "any location publisher",
         "entity_type": "publishers",
         "name": "locations.source.host_organization_lineage",
         "operators": [
@@ -15951,7 +15954,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "host organization lineage",
+        "display_name": "publisher",
         "entity_type": "publishers",
         "name": "primary_location.source.host_organization_lineage",
         "operators": [
@@ -15961,6 +15964,7 @@
           "or"
         ],
         "supported_by": [
+          "gui",
           "oxurl"
         ],
         "type": "openalex_id"

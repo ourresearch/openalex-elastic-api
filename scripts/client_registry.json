@@ -717,8 +717,8 @@
       "isId": false,
       "hasExport": false
     },
-    "institutions.is_global_south": {
-      "key": "institutions.is_global_south",
+    "authorships.institutions.is_global_south": {
+      "key": "authorships.institutions.is_global_south",
       "entityToFilter": "works",
       "entityToSelect": null,
       "displayName": "global south",
@@ -1303,8 +1303,8 @@
       "isId": false,
       "hasExport": false
     },
-    "primary_location.source.publisher_lineage": {
-      "key": "primary_location.source.publisher_lineage",
+    "primary_location.source.host_organization_lineage": {
+      "key": "primary_location.source.host_organization_lineage",
       "entityToFilter": "works",
       "entityToSelect": "publishers",
       "displayName": "publisher",
@@ -2078,9 +2078,14 @@
       "actions": [
         "filter",
         "sort",
-        "column"
+        "column",
+        "group_by"
       ],
-      "actionsPopular": [],
+      "actionsPopular": [
+        "sort",
+        "column",
+        "group_by"
+      ],
       "isId": false,
       "hasExport": false
     },
@@ -2115,6 +2120,20 @@
       "isId": false,
       "hasExport": false
     },
+    "topics.id": {
+      "key": "topics.id",
+      "entityToFilter": "awards",
+      "entityToSelect": "topics",
+      "displayName": "topic",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "primary_topic.id": {
       "key": "primary_topic.id",
       "entityToFilter": "awards",
@@ -2130,20 +2149,6 @@
         "filter",
         "group_by"
       ],
-      "isId": false,
-      "hasExport": false
-    },
-    "topics.id": {
-      "key": "topics.id",
-      "entityToFilter": "awards",
-      "entityToSelect": null,
-      "displayName": "topics id",
-      "displayNameVerbatim": false,
-      "type": "search",
-      "actions": [
-        "filter"
-      ],
-      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     }
@@ -2909,10 +2914,10 @@
     "continent": {
       "key": "continent",
       "entityToFilter": "publishers",
-      "entityToSelect": null,
+      "entityToSelect": "continents",
       "displayName": "continent",
       "displayNameVerbatim": false,
-      "type": "search",
+      "type": "selectEntity",
       "actions": [
         "filter"
       ],
@@ -3155,12 +3160,12 @@
       "type": "range",
       "actions": [
         "filter",
-        "sort",
-        "column"
+        "column",
+        "sort"
       ],
       "actionsPopular": [
-        "sort",
-        "column"
+        "column",
+        "sort"
       ],
       "isId": false,
       "hasExport": false
@@ -3168,10 +3173,10 @@
     "continent": {
       "key": "continent",
       "entityToFilter": "funders",
-      "entityToSelect": null,
+      "entityToSelect": "continents",
       "displayName": "continent",
       "displayNameVerbatim": false,
-      "type": "search",
+      "type": "selectEntity",
       "actions": [
         "filter"
       ],
@@ -4289,10 +4294,10 @@
     "topics.id": {
       "key": "topics.id",
       "entityToFilter": "subfields",
-      "entityToSelect": null,
+      "entityToSelect": "topics",
       "displayName": "topic",
       "displayNameVerbatim": false,
-      "type": "search",
+      "type": "selectEntity",
       "actions": [
         "filter"
       ],
@@ -5219,7 +5224,10 @@
       "displayName": "is open access",
       "displayNameVerbatim": false,
       "type": "boolean",
-      "actions": [],
+      "actions": [
+        "filter",
+        "column"
+      ],
       "actionsPopular": null,
       "isId": false,
       "hasExport": false

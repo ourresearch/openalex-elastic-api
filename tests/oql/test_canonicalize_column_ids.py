@@ -56,12 +56,14 @@ def test_oqo_walker_is_idempotent_and_pure():
     assert once.group_by[0].column_id == "primary_location.source.id"
 
 
-# Only some alias spellings are accepted as OQL `where` words; `institution.id` /
-# `journal` are technical-column inputs that the OQL lexer doesn't surface as words
-# (pre-existing — they reach the engine via the URL/JSON surfaces, covered below).
+# Every alias spelling of a supported identity is an OQL `where` word: curated
+# words parse via `_FIELDS`, technical alias columns (`institution.id`, `journal`)
+# via the raw-column_id door, which resolves them to the canonical (#455 Phase C).
 OQL_PARSEABLE_PAIRS = [
     ("works", "is_oa", "open_access.is_oa", "true"),
     ("works", "cites", "referenced_works", "w1984893742"),
+    ("works", "institution.id", "authorships.institutions.id", "i33213144"),
+    ("works", "journal", "primary_location.source.id", "s137773608"),
 ]
 
 
@@ -133,3 +135,41 @@ def test_unlisted_alias_canonicalizes_but_is_not_advertised():
     assert mangled not in props[canon].alternate_keys  # never advertised
     u = parse_url_to_oqo(entity_type="authors", filter_string=f"{mangled}:i90183372")
     assert u.filter_rows[0].column_id == canon
+
+
+# --- #455 Phase C/D: works friendly renders from registry display_names -------
+# Works joined the tier-3 entity-fallback render (Jason 2026-07-23, option D): a
+# supported works identity with no curated `_FIELDS` word renders its registry
+# display_name — which therefore also parses (round-trip by construction).
+# Collision words and uncurated booleans keep the raw-id render, which always
+# round-trips via the raw-column_id door.
+
+from query_translation.oql_renderer import render_oqo_to_oql  # noqa: E402
+
+
+WORKS_DN_RENDER = [
+    ("authorships.institutions.id", "exact institution", "I33213144"),
+    ("apc_list.value_usd", "APC list price USD", "2000"),
+    ("locations.source.host_organization_lineage", "any location publisher",
+     "P4310320990"),
+]
+
+
+@pytest.mark.parametrize("canon,word,val", WORKS_DN_RENDER)
+def test_works_registry_display_name_renders_and_round_trips(canon, word, val):
+    a = parse(f"works where {canon} is {val}")
+    b = parse(f"works where {word} is {val}")
+    assert a.to_dict() == b.to_dict()          # word and raw id are the same query
+    r = render_oqo_to_oql(a)
+    assert word in r
+    r2 = render_oqo_to_oql(parse(r.replace(" [no entity found]", "")))
+    assert r2 == r                             # render is a fixpoint
+
+
+def test_works_collision_and_uncurated_bool_render_raw():
+    # "domain" is owned by primary_topic.domain.id -> topics.domain.id stays raw.
+    r = render_oqo_to_oql(parse("works where topics.domain.id is D1"))
+    assert "topics.domain.id" in r
+    # Uncurated bool: no sentence phrasing -> raw-id render, still parseable.
+    r = render_oqo_to_oql(parse("works where has_content.grobid_xml is true"))
+    assert "has_content.grobid_xml" in r
