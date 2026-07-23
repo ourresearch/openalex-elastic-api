@@ -403,7 +403,7 @@ _f("paratext", "is_paratext", "bool")
 
 # --- oxjob #402 Tier-1 open-access first-class columns ---
 _f("best open version", "best_open_version", "string")
-_f("indexed in", "indexed_in", "string")
+_f("indexed in", "indexed_in", "enum")
 _f("PDF-linked", "has_content.pdf", "bool")
 _f("OA accepted", "best_oa_location.is_accepted", "bool")
 _f("OA published", "best_oa_location.is_published", "bool")
@@ -1227,7 +1227,7 @@ _SELF_ID_COLUMNS = {"ids.openalex", "id", "openalex", "openalex_id"}
 # annotation namespace. They still validate and autocomplete through their
 # closed vocab (validator.CLOSED_VOCAB_NAMESPACE ∘ entity_type_for_column).
 _READABLE_SLUG_TYPES = {"work-types", "oa-statuses", "source-types",
-                        "institution-types", "licenses"}
+                        "institution-types", "licenses", "indexes"}
 
 _ENTITY_TYPE_CACHE: Dict[Tuple[str, Optional[str]], Optional[str]] = {}
 

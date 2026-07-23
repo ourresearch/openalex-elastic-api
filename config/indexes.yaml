@@ -1,0 +1,18 @@
+id: indexes
+displayName: Indexes
+displayNameSingular: Index
+descr: bibliographic index
+descrFull: A bibliographic index or registry (like Crossref or PubMed) that lists a work.
+isNative: false
+idRegex: (?:https:\/\/openalex\.org\/indexes\/|indexes\/)([a-zA-Z]+)
+values:
+- id: indexes/crossref
+  display_name: Crossref
+- id: indexes/pubmed
+  display_name: PubMed
+- id: indexes/datacite
+  display_name: DataCite
+- id: indexes/doaj
+  display_name: DOAJ
+- id: indexes/arxiv
+  display_name: arXiv

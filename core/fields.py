@@ -100,6 +100,8 @@ ENTITY_ID_PARAM_TYPES = {
     # oa-statuses
     "oa_status": "oa-statuses",
     "open_access.oa_status": "oa-statuses",
+    # indexes
+    "indexed_in": "indexes",
     # source-types (dotted forms are unambiguous; the bare `type` is set per-Field)
     "best_oa_location.source.type": "source-types",
     "locations.source.type": "source-types",

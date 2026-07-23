@@ -1,0 +1,79 @@
+from flask import Blueprint, jsonify, request
+
+from combined_config import all_entities_config
+from core.export import export_group_by, is_group_by_export
+from core.filters_view import shared_filter_view
+from core.histogram import shared_histogram_view
+from core.schemas import FiltersWrapperSchema, HistogramWrapperSchema
+from core.shared_view import shared_view
+from core.utils import (
+    get_flattened_fields,
+    get_valid_fields,
+    process_only_fields,
+)
+from indexes.fields import fields_dict
+from indexes.schemas import IndexesSchema, MessageSchema
+from settings import INDEXES_INDEX
+
+blueprint = Blueprint("indexes", __name__)
+
+
+@blueprint.route("/indexes")
+@blueprint.route("/entities/indexes")
+def indexes():
+    index_name = INDEXES_INDEX
+    default_sort = ["-works_count", "id"]
+    only_fields = process_only_fields(request, IndexesSchema)
+    result = shared_view(request, fields_dict, index_name, default_sort)
+    # export option
+    if is_group_by_export(request):
+        return export_group_by(result, request)
+    message_schema = MessageSchema(only=only_fields)
+    return message_schema.dump(result)
+
+
+@blueprint.route("/indexes/filters/<path:params>")
+def indexes_filters(params):
+    index_name = INDEXES_INDEX
+    results = shared_filter_view(request, params, fields_dict, index_name)
+    filters_schema = FiltersWrapperSchema()
+    return filters_schema.dump(results)
+
+
+@blueprint.route("/indexes/histogram/<string:param>")
+def indexes_histograms(param):
+    index_name = INDEXES_INDEX
+    result = shared_histogram_view(request, param, fields_dict, index_name)
+    histogram_schema = HistogramWrapperSchema()
+    return histogram_schema.dump(result)
+
+
+@blueprint.route("/indexes/valid_fields")
+def indexes_valid_fields():
+    valid_fields = get_valid_fields(fields_dict)
+    return jsonify(valid_fields)
+
+
+@blueprint.route("/indexes/flattened_schema")
+def indexes_flattened_schema():
+    flattened_schema = get_flattened_fields(IndexesSchema())
+    return jsonify(flattened_schema)
+
+
+@blueprint.route("/indexes/filters_docstrings")
+def indexes_filters_doctrings():
+    ret = {}
+    for param, f in fields_dict.items():
+        ret[param] = {
+            "key": f.param,
+            "entityType": "indexes",
+            "docstring": f.docstring,
+            "documentationLink": f.documentation_link,
+            "alternateNames": f.alternate_names,
+        }
+    return jsonify(ret)
+
+
+@blueprint.route("/indexes/config")
+def indexes_config():
+    return jsonify(all_entities_config["indexes"])

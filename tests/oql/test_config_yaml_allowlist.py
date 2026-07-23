@@ -46,8 +46,8 @@ def _extra_keys(doc):
 
 
 def test_all_config_files_present():
-    # 22 entity config files (one per browsable entity type).
-    assert len(_config_files()) == 22
+    # 23 entity config files (one per browsable entity type).
+    assert len(_config_files()) == 23
 
 
 def test_every_config_yaml_only_has_allowlisted_keys():

@@ -1,0 +1,51 @@
+from core.fields import (
+    CollectionField,
+    DateField,
+    DateTimeField,
+    ExternalIDField,
+    RangeField,
+    SearchField,
+    TermField,
+)
+from core.alternate_names import ALTERNATE_NAMES
+
+# shared docstrings for when multiple fields share the same docstring (such as aliases)
+DOCSTRINGS = {
+    "openalex": "The OpenAlex ID for the index",
+}
+
+# shared documentation_links for when multiple fields share the same link (such as aliases)
+DOCUMENTATION_LINKS = {
+    "openalex": "https://developers.openalex.org/guides/get",
+}
+
+fields = [
+    DateField(
+        param="from_created_date",
+        custom_es_field="created_date",
+    ),
+    DateTimeField(
+        param="from_updated_date",
+        custom_es_field="updated_date",
+    ),
+    ExternalIDField(
+        param="id",
+        entity_type="indexes",
+        docstring=DOCSTRINGS["openalex"],
+        documentation_link=DOCUMENTATION_LINKS["openalex"],
+        alternate_names=ALTERNATE_NAMES.get("openalex", None),
+    ),
+    RangeField(param="cited_by_count"),
+    RangeField(param="works_count"),
+    SearchField(param="text.search", index="indexes"),
+    SearchField(param="default.search", index="indexes", alternate_of="text.search"),
+    SearchField(
+        param="display_name.search",
+        docstring="Free text search among indexes' names",
+        documentation_link="https://developers.openalex.org/guides/searching",
+    ),
+    TermField(param="display_name", custom_es_field="display_name.keyword"),
+    CollectionField(entity_type="indexes"),
+]
+
+fields_dict = {f.param: f for f in fields}

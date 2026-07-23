@@ -228,7 +228,13 @@ CAP_COLUMN = "column"
 # `primary_location.source.host_organization_lineage` (identity-keyed friendly
 # names; precedent = the 4.1.0 friendly-name audit). Approved by Jason
 # 2026-07-21. = MINOR.
-PROPERTIES_VERSION = "7.5.0"
+# 8.0.0 (oxjob #672): new `indexes` registry entity (crossref/pubmed/datacite/
+# doaj/arxiv) + works `indexed_in` gains entity_type "indexes" (was a bare
+# string filter). The entity_type transition on an existing property is what
+# makes this MAJOR (the classifier treats ANY entity_type transition as MAJOR);
+# the new entity catalog key itself is additive. Approved by Jason 2026-07-23.
+# = MAJOR.
+PROPERTIES_VERSION = "8.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -255,6 +261,7 @@ ENTITY_FIELDS_MODULES = {
     "continents": "continents.fields",
     "languages": "languages.fields",
     "licenses": "licenses.fields",
+    "indexes": "indexes.fields",
     "oa-statuses": "oa_statuses.fields",
     "sdgs": "sdgs.fields",
     "source-types": "source_types.fields",

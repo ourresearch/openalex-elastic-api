@@ -97,6 +97,7 @@ CLOSED_VOCAB_NAMESPACE = {
     "sdgs": "sdgs",
     "work-types": "types",
     "oa-statuses": "oa-statuses",
+    "indexes": "indexes",
     # Tier-1.5: the topic-hierarchy code vocabs — small, fully-enumerable closed
     # sets (domains 4, fields 26, subfields 252; complete in `config/*.yaml` and
     # matching the live API). Identity-mapped (namespace == entity_type ==

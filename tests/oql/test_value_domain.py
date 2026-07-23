@@ -113,6 +113,8 @@ def test_closed_vocab_namespace_set():
         "countries", "continents", "languages", "sdgs", "work-types", "oa-statuses",
         # Tier-1.5 topic-hierarchy vocabs (oxjob #363):
         "domains", "fields", "subfields",
+        # indexes registry entity (oxjob #672):
+        "indexes",
     }
     # work-types' config namespace is the legacy "types"
     assert CLOSED_VOCAB_NAMESPACE["work-types"] == "types"

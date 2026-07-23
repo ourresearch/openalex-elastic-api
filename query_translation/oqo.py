@@ -476,6 +476,7 @@ VALID_ENTITY_TYPES = {
     "works", "authors", "institutions", "sources", "publishers",
     "funders", "topics", "keywords", "concepts", "countries",
     "continents", "domains", "fields", "subfields", "sdgs",
-    "languages", "licenses", "types", "source-types", 
-    "institution-types", "awards", "locations", "oa-statuses"
+    "languages", "licenses", "types", "source-types",
+    "institution-types", "awards", "locations", "oa-statuses",
+    "indexes"
 }

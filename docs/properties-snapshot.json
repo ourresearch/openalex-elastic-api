@@ -1,9 +1,9 @@
 {
   "meta": {
-    "entity_count": 23,
-    "fingerprint": "476f5f1ab7d9bf49211b35d1714bc9b49362a6381aafa1523d34156d6dfb6fc1",
-    "property_count": 794,
-    "version": "7.5.0"
+    "entity_count": 24,
+    "fingerprint": "5b01ef549f25b2bded65e6395bd684375726b0784092918578d2da5f39904f5e",
+    "property_count": 808,
+    "version": "8.0.0"
   },
   "properties": {
     "authors": {
@@ -5216,6 +5216,290 @@
         "supported_by": [
           "gui"
         ],
+        "type": "number"
+      }
+    },
+    "indexes": {
+      "cited_by_count": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [
+          "citations",
+          "cited by count"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "citation",
+        "display_name": "citation count",
+        "entity_type": null,
+        "name": "cited_by_count",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or",
+          "range"
+        ],
+        "supported_by": [],
+        "type": "number"
+      },
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "indexes",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "supported_by": [],
+        "type": "collection"
+      },
+      "created_date": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "created date",
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "description": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "description",
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "display_name": {
+        "actions": [
+          "column",
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "display name",
+        "entity_type": null,
+        "name": "display_name",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
+      },
+      "display_name.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "name"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "display name",
+        "entity_type": null,
+        "name": "display_name.search",
+        "operators": [
+          "search"
+        ],
+        "supported_by": [],
+        "type": "search"
+      },
+      "from_created_date": {
+        "actions": [
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "from created date",
+        "entity_type": null,
+        "name": "from_created_date",
+        "operators": [
+          "date_range",
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "date"
+      },
+      "from_updated_date": {
+        "actions": [
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "from updated date",
+        "entity_type": null,
+        "name": "from_updated_date",
+        "operators": [
+          "date_range",
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "datetime"
+      },
+      "id": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "ids",
+        "display_name": "id",
+        "entity_type": "indexes",
+        "name": "id",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "external_id"
+      },
+      "relevance_score": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "relevance score",
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "supported_by": [],
+        "type": "search"
+      },
+      "updated_date": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "updated date",
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "works api url",
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "works_count": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "citation",
+        "display_name": "works count",
+        "entity_type": null,
+        "name": "works_count",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or",
+          "range"
+        ],
+        "supported_by": [],
         "type": "number"
       }
     },
@@ -14822,7 +15106,7 @@
         "bool_true": null,
         "category": "ids",
         "display_name": "indexed in",
-        "entity_type": null,
+        "entity_type": "indexes",
         "name": "indexed_in",
         "operators": [
           "eq",

@@ -19,6 +19,7 @@ import fields
 import funder_search
 import funders
 import ids
+import indexes
 import institution_types
 import institutions
 import keywords
@@ -96,6 +97,7 @@ def register_blueprints(app):
     app.register_blueprint(funder_search.views.blueprint)
     app.register_blueprint(funders.views.blueprint)
     app.register_blueprint(ids.views.blueprint)
+    app.register_blueprint(indexes.views.blueprint)
     app.register_blueprint(institution_types.views.blueprint)
     app.register_blueprint(institutions.views.blueprint)
     app.register_blueprint(keywords.views.blueprint)

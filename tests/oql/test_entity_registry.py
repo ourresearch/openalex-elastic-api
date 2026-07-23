@@ -29,14 +29,14 @@ ALL_ENTITIES = sorted(_registry().keys())
 # Tier-1 set + the three currently-unread lists). Native-ID entities carry a
 # null/empty `values` and must project to None.
 CLOSED_VOCAB = {
-    "continents", "countries", "domains", "fields", "institution-types",
-    "languages", "licenses", "oa-statuses", "sdgs", "source-types",
-    "subfields", "work-types",
+    "continents", "countries", "domains", "fields", "indexes",
+    "institution-types", "languages", "licenses", "oa-statuses", "sdgs",
+    "source-types", "subfields", "work-types",
 }
 
 
-def test_all_22_entities_present():
-    assert len(ALL_ENTITIES) == 22, ALL_ENTITIES
+def test_all_23_entities_present():
+    assert len(ALL_ENTITIES) == 23, ALL_ENTITIES
 
 
 @pytest.mark.parametrize("name", ALL_ENTITIES)
