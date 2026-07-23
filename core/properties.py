@@ -238,7 +238,11 @@ CAP_COLUMN = "column"
 # indexes entity facets — supported_by [] -> ["gui"] on indexes.works_count and
 # indexes.cited_by_count (the globally-injected range facets). Any supported_by
 # transition = MINOR (category-weight). Approved by Jason 2026-07-23. = MINOR.
-PROPERTIES_VERSION = "8.1.0"
+# 8.2.0 (oxjob #672 follow-up): works.indexed_in added to
+# OXURL_DOCUMENTED_WORKS_COLUMNS — it is a documented classic REST filter, so
+# its supported_by gains "oxurl" (["gui"] -> ["gui","oxurl"]). supported_by
+# transition = MINOR. Approved by Jason 2026-07-23. = MINOR.
+PROPERTIES_VERSION = "8.2.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
