@@ -16,6 +16,7 @@ from concepts.schemas import ConceptsSchema
 from continents.schemas import ContinentsSchema
 from countries.schemas import CountriesSchema
 from domains.schemas import DomainsSchema
+from indexes.schemas import IndexesSchema
 from oa_statuses.schemas import OaStatusesSchema
 from fields.schemas import FieldsSchema
 from funders.schemas import FundersSchema
@@ -823,6 +824,12 @@ def languages_id_get(id):
 @blueprint.route("/entities/oa-statuses/<path:id>")
 def oa_statuses_id_get(id):
     return get_by_openalex_external_id(settings.OA_STATUSES_INDEX, OaStatusesSchema, id)
+
+
+@blueprint.route("/indexes/<path:id>")
+@blueprint.route("/entities/indexes/<path:id>")
+def indexes_id_get(id):
+    return get_by_openalex_external_id(settings.INDEXES_INDEX, IndexesSchema, id)
 
 
 @blueprint.route("/types/<path:id>")

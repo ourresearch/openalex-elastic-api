@@ -1752,6 +1752,7 @@ ID_PATH_SEGMENT_BY_ENTITY_TYPE = {
     "countries": "countries",
     "domains": "domains",
     "fields": "fields",
+    "indexes": "indexes",
     "institution-types": "institution-types",
     "keywords": "keywords",
     "languages": "languages",
