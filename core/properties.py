@@ -234,7 +234,11 @@ CAP_COLUMN = "column"
 # makes this MAJOR (the classifier treats ANY entity_type transition as MAJOR);
 # the new entity catalog key itself is additive. Approved by Jason 2026-07-23.
 # = MAJOR.
-PROPERTIES_VERSION = "8.0.0"
+# 8.1.0 (oxjob #672 trailing): client_registry.json refreshed with the GUI's new
+# indexes entity facets — supported_by [] -> ["gui"] on indexes.works_count and
+# indexes.cited_by_count (the globally-injected range facets). Any supported_by
+# transition = MINOR (category-weight). Approved by Jason 2026-07-23. = MINOR.
+PROPERTIES_VERSION = "8.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

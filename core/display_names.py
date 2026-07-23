@@ -236,6 +236,9 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'version': {"display_name": 'version'},
         'work_id': {"display_name": 'work'},
     },
+    'indexes': {
+        'display_name': {"display_name": 'name'},
+    },
     # oa-statuses was the ONE entity without the sibling-standard 'name' label on
     # its display_name (it fell to humanize → "display name") — added with the
     # #611 `name` alias work (2026-07-17) so the canonical OQL word is uniform.

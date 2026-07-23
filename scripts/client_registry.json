@@ -866,7 +866,7 @@
     "indexed_in": {
       "key": "indexed_in",
       "entityToFilter": "works",
-      "entityToSelect": null,
+      "entityToSelect": "indexes",
       "displayName": "indexed in",
       "displayNameVerbatim": false,
       "type": "selectEntity",
@@ -5199,6 +5199,72 @@
     "works_count": {
       "key": "works_count",
       "entityToFilter": "oa-statuses",
+      "entityToSelect": null,
+      "displayName": "works count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "isId": false,
+      "hasExport": false
+    }
+  },
+  "indexes": {
+    "cited_by_count": {
+      "key": "cited_by_count",
+      "entityToFilter": "indexes",
+      "entityToSelect": null,
+      "displayName": "citation count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "column",
+        "sort"
+      ],
+      "actionsPopular": [
+        "column",
+        "sort"
+      ],
+      "isId": false,
+      "hasExport": false
+    },
+    "description": {
+      "key": "description",
+      "entityToFilter": "indexes",
+      "entityToSelect": null,
+      "displayName": "description",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "display_name": {
+      "key": "display_name",
+      "entityToFilter": "indexes",
+      "entityToSelect": null,
+      "displayName": "name",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "works_count": {
+      "key": "works_count",
+      "entityToFilter": "indexes",
       "entityToSelect": null,
       "displayName": "works count",
       "displayNameVerbatim": false,

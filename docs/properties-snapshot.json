@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 24,
-    "fingerprint": "5b01ef549f25b2bded65e6395bd684375726b0784092918578d2da5f39904f5e",
+    "fingerprint": "7128803003e79f9fc3af0e6081537e5922ae2c1d3e0ba72fef63d206bf4259c5",
     "property_count": 808,
-    "version": "8.0.0"
+    "version": "8.1.0"
   },
   "properties": {
     "authors": {
@@ -5245,7 +5245,9 @@
           "or",
           "range"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       },
       "collection": {
@@ -5307,7 +5309,7 @@
         "bool_false": null,
         "bool_true": null,
         "category": null,
-        "display_name": "display name",
+        "display_name": "name",
         "entity_type": null,
         "name": "display_name",
         "operators": [
@@ -5499,7 +5501,9 @@
           "or",
           "range"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "number"
       }
     },
