@@ -87,15 +87,6 @@ class HistogramWrapperSchema(Schema):
         ordered = True
 
 
-class APCByYearSchema(Schema):
-    year = fields.Int()
-    price = fields.Int()
-
-    class Meta:
-        ordered = True
-        unknown = INCLUDE
-
-
 class CountsByYearSchema(Schema):
     year = fields.Int()
     works_count = fields.Int()

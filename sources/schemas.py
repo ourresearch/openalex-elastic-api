@@ -1,7 +1,6 @@
 from marshmallow import INCLUDE, Schema, fields, post_dump
 
 from core.schemas import (
-    APCByYearSchema,
     CountsByYearSchema,
     GroupBySchema,
     GroupBysSchema,
@@ -77,7 +76,6 @@ class SourcesSchema(Schema):
     homepage_url = fields.Str()
     apc_prices = fields.List(fields.Nested(APCSchema))
     apc_usd = fields.Integer()
-    apc_usd_by_year = fields.List(fields.Nested(APCByYearSchema))
     country = fields.Str()
     country_code = fields.Str()
     societies = fields.List(fields.Nested(SocietiesSchema))
