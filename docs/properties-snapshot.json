@@ -1,8 +1,8 @@
 {
   "meta": {
     "entity_count": 24,
-    "fingerprint": "ce7fefb3d42e96dfcbd29e2c2d7bde407348a4cfa77e849215b43f49757adfdc",
-    "property_count": 808,
+    "fingerprint": "ab9fc5fc1e7dcaeaf0523d620d4b107875bfc3e294c6f850ce863f855da938b6",
+    "property_count": 809,
     "version": "8.2.0"
   },
   "properties": {
@@ -9917,6 +9917,22 @@
           "gui"
         ],
         "type": "number"
+      },
+      "apc_usd_by_year": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "apc usd by year",
+        "entity_type": null,
+        "name": "apc_usd_by_year",
+        "operators": [],
+        "supported_by": [],
+        "type": null
       },
       "cited_by_count": {
         "actions": [

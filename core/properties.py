@@ -242,7 +242,14 @@ CAP_COLUMN = "column"
 # OXURL_DOCUMENTED_WORKS_COLUMNS — it is a documented classic REST filter, so
 # its supported_by gains "oxurl" (["gui"] -> ["gui","oxurl"]). supported_by
 # transition = MINOR. Approved by Jason 2026-07-23. = MINOR.
-PROPERTIES_VERSION = "8.2.0"
+# 8.3.0 (oxjob #571): sources gain `apc_usd_by_year` — per-year APC list prices
+# (Butler et al. dataset; observed years only), rendered as a column-selectable
+# list of {year, price} structs (counts_by_year convention). Purely additive:
+# one new property, no operators, nothing existing changed. Data has flowed
+# registry -> mirror -> sources_api -> ES since 2026-07-28; this declaration is
+# the final exposure step. Handling delegated in the 2026-07-27 meeting; bump
+# run by Rohan 2026-07-28. = MINOR.
+PROPERTIES_VERSION = "8.3.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
