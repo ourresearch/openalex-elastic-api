@@ -37,6 +37,8 @@ fields = [
     TermField(param='provenance', custom_es_field='provenance'),
     TermField(param="title", custom_es_field="title"),
     TermField(param="type", custom_es_field="type"),
+    TermField(param="raw_type", custom_es_field="raw_type"),
+    TermField(param="raw_source_name", custom_es_field="source_name"),
     TermField(param="source_name", custom_es_field="source_name"),
     TermField(param="version", custom_es_field="version"),
     TermField(param="license", custom_es_field="license",
