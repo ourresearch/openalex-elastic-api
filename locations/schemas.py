@@ -44,7 +44,7 @@ class LocationsSchema(Schema):
     type = fields.Str()
     raw_type = fields.Str(default=None)
     source_name = fields.Str(default=None)
-    raw_source_name = fields.Str(attribute="source_name", default=None)
+    raw_source_name = fields.Method("get_raw_source_name")
     publisher = fields.Str(default=None)
     source_id = fields.Str(default=None)
     is_oa = fields.Bool()
@@ -66,6 +66,10 @@ class LocationsSchema(Schema):
     @staticmethod
     def get_relevance_score(obj):
         return relevance_score(obj)
+
+    @staticmethod
+    def get_raw_source_name(obj):
+        return getattr(obj, "source_name", None)
 
     class Meta:
         ordered = True
