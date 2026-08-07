@@ -890,12 +890,24 @@ def _entity_resolve_field(fld: "Field", entity: Optional[str]) -> "Field":
     resolved here too (a bool homonym like `CWTS core source` → works
     `primary_location.source.is_core` vs sources bare `is_core`); the bool clause
     parser calls this after matching the phrasing (oxjob #406 1c)."""
-    if not entity or fld.kind in ("search", "collection"):
+    if not entity or fld.kind == "collection":
         return fld
     try:
         from core.properties import get_entity_properties
         props = get_entity_properties(entity) or {}
     except Exception:
+        return fld
+    if fld.kind == "search":
+        # Search bases are works-centric (`title` → display_name). When the queried
+        # entity lacks `<base>.search` but carries `<word>.search` under the friendly
+        # word itself (locations: `title.search`), re-point the base so the emitted
+        # column exists on the entity (oxjob #748). Entities with the curated base
+        # (works, authors, sources…) keep frozen behavior.
+        if not props or (fld.column + ".search") in props:
+            return fld
+        base = fld.oql.lower()
+        if base != fld.column and (base + ".search") in props:
+            return replace(fld, column=base)
         return fld
     if not props or fld.column in props:
         return fld
