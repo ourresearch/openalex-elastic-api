@@ -36,11 +36,11 @@ from core.utils import get_data_version_connection, get_field
 from core.vector_index import vector_semantic_search
 
 
-def shared_view(request, fields_dict, index_name, default_sort, connection=None, default_filters=None):
+def shared_view(request, fields_dict, index_name, default_sort, connection=None, default_filters=None, extra_valid_params=()):
     """Primary function used to search, filter, and aggregate across all entities."""
     if connection is None:
         connection = get_data_version_connection(request)
-    params = parse_params(request)
+    params = parse_params(request, extra_valid_params)
 
     # Merge default filters with user filters
     if default_filters:
@@ -146,6 +146,10 @@ def attach_x_query(result, request, index_name):
                 request.args.get("include_xpac") == "true"
                 or request.args.get("include-xpac") == "true"
             ),
+            # Top-level `corpus=` REST param (works-only, oxjob #763). The view
+            # has already 400'd invalid values and corpus+xpac combos by the
+            # time a result exists to attach x_query to.
+            corpus=request.args.get("corpus"),
         )
         result["meta"]["x_query"] = build_x_query(oqo)
     except Exception:

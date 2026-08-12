@@ -3,9 +3,9 @@ from core.utils import map_filter_params, map_sort_params, set_number_param
 from core.validate import validate_export_format, validate_params
 
 
-def parse_params(request):
+def parse_params(request, extra_valid_params=()):
     """Extract and validate parameters from the request."""
-    validate_params(request)
+    validate_params(request, extra_valid_params)
 
     # Determine search type, scope, and query from search.* dot notation params
     search_type, search_scope, search_query = _extract_search_params(request)

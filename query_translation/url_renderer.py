@@ -40,17 +40,11 @@ def render_oqo_to_url(oqo: OQO) -> Dict[str, Any]:
         URLRenderError: If the OQO contains structures that cannot be
                        expressed in URL format (e.g., nested boolean logic)
     """
-    # Corpus selection (#481) has no classic OXURL form — the legacy
-    # `include_xpac` param is on #464's drop list and a `?filter=is_xpac:` form
-    # is being retired — so a non-core corpus is OQL-only. Raise rather than
-    # silently render a URL that drops the corpus (which would mislead callers
-    # into thinking the URL is a faithful equivalent).
-    if getattr(oqo, "corpus", "core") and oqo.corpus != "core":
-        raise URLRenderError(
-            f"corpus '{oqo.corpus}' cannot be expressed as a classic OpenAlex "
-            "URL; it is OQL-only (use the OQL corpus selector, e.g. "
-            "'works (all corpora) …')"
-        )
+    # Corpus selection (#481) renders as the first-class `?corpus=` param
+    # (oxjob #763 gave classic REST that spelling; before #763 a non-core
+    # corpus was OQL-only and this raised URLRenderError). "core" is the
+    # default and is omitted, matching every other default in this renderer.
+    corpus = getattr(oqo, "corpus", "core") or "core"
 
     # Semantic search (`<field> is similar to "..."`) is lifted OUT of the
     # `filter=` string into its own top-level `search.semantic=` param — the
@@ -63,6 +57,7 @@ def render_oqo_to_url(oqo: OQO) -> Dict[str, Any]:
 
     return {
         "filter": filter_string if filter_string else None,
+        "corpus": corpus if corpus != "core" else None,
         "search.semantic": semantic_value,
         "sort": sort_string if sort_string else None,
         "sample": oqo.sample,

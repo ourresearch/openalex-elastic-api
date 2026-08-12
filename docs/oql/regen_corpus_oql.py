@@ -82,8 +82,8 @@ _SUPPLEMENTAL_NAMES = {
 # it leads. Mirror of query_translation.views._OXURL_COMPONENT_ORDER, but the
 # corpus/GUI render an absolute openalex.org URL with the readable SAFE set below.
 _OXURL_COMPONENT_ORDER = (
-    "search.semantic", "filter", "sort", "group_by", "sample", "select",
-    "seed", "per_page", "page", "cursor",
+    "search.semantic", "filter", "corpus", "sort", "group_by", "sample",
+    "select", "seed", "per_page", "page", "cursor",
 )
 # Filter/sort syntax chars are structural -- preserve them; percent-encode the
 # rest (spaces, +, ", #, &, %, ...) so the stored oxurl is a valid URL. (Byte

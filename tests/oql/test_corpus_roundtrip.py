@@ -341,12 +341,10 @@ def test_every_row_has_valid_facets():
         # an `error` footgun row — not in this ok-row map.)
         161: "oql-only", 163: "oql-only", 164: "oql-only",
         165: "oql-only", 166: "oql-only", 167: "oql-only",
-        # Corpus selector (#481): a non-core corpus has no classic OXURL form
-        # (the legacy include_xpac param is on #464's drop list), so url_renderer
-        # raises and these are oql-only. (185 is the error row — not in this map;
-        # the "all corpora" row is 186, renumbered from a dup of #363's error id
-        # 182 — see #497.)
-        183: "oql-only", 184: "oql-only", 186: "oql-only",
+        # Corpus selector (#481): rows 183/184/186 moved to has-oxurl when #763
+        # gave the classic URL surface a first-class `corpus=` param. (185 is
+        # the error row — not in this map; the "all corpora" row is 186,
+        # renumbered from a dup of #363's error id 182 — see #497.)
         # K-ary list proximity (oxjob #514): 3+ operands have no classic URL `~` form
         # (the syntax tops out at binary), so the renderer raises -> oql-only.
         187: "oql-only",

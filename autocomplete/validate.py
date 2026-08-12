@@ -13,6 +13,7 @@ def validate_entity_autocomplete_params(request):
         "data-version",
         "include_xpac",
         "include-xpac",
+        "corpus",
         "api-key",
         "api_key",
     ]
@@ -40,6 +41,7 @@ def validate_full_autocomplete_params(request):
         "data-version",
         "include_xpac",
         "include-xpac",
+        "corpus",
         "api-key",
         "api_key",
     ]

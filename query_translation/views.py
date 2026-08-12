@@ -241,7 +241,7 @@ def _parse_oxurl_value(value: str):
     }
 
     input_data = {
-        "filter": params.get("filter"), "sort": params.get("sort"), "search": params.get("search"), "group_by": params.get("group_by"), "select": params.get("select"), "sample": params.get("sample"), "seed": params.get("seed"), "per_page": params.get("per_page") or params.get("per-page"), "page": params.get("page"), "cursor": params.get("cursor"), "scoped_searches": scoped_searches or None, }
+        "filter": params.get("filter"), "sort": params.get("sort"), "search": params.get("search"), "group_by": params.get("group_by"), "select": params.get("select"), "sample": params.get("sample"), "seed": params.get("seed"), "per_page": params.get("per_page") or params.get("per-page"), "page": params.get("page"), "cursor": params.get("cursor"), "scoped_searches": scoped_searches or None, "include_xpac": params.get("include_xpac") or params.get("include-xpac"), "corpus": params.get("corpus"), }
     return parse_url_input(entity_type, input_data)
 
 
@@ -327,6 +327,8 @@ def parse_url_input(entity_type: str, input_data):
                 input_data.get("include_xpac") in (True, "true")
                 or input_data.get("include-xpac") in (True, "true")
             )
+            # First-class `corpus=` REST param (#763); beats the legacy flag.
+            corpus = input_data.get("corpus")
         else:
             # Input is just the filter string
             filter_string = input_data
@@ -342,9 +344,10 @@ def parse_url_input(entity_type: str, input_data):
             semantic_search_string = None
             scoped_searches = None
             include_xpac = False
+            corpus = None
 
         oqo = parse_url_to_oqo(
-            entity_type=entity_type, filter_string=filter_string, sort_string=sort_string, sample=sample, group_by_string=group_by_string, select_string=select_string, seed=seed, per_page=per_page, page=page, cursor=cursor, search_string=search_string, semantic_search_string=semantic_search_string, scoped_searches=scoped_searches, include_xpac=include_xpac, )
+            entity_type=entity_type, filter_string=filter_string, sort_string=sort_string, sample=sample, group_by_string=group_by_string, select_string=select_string, seed=seed, per_page=per_page, page=page, cursor=cursor, search_string=search_string, semantic_search_string=semantic_search_string, scoped_searches=scoped_searches, include_xpac=include_xpac, corpus=corpus, )
         return oqo, None
     except Exception as e:
         return None, f"Failed to parse URL format: {str(e)}"

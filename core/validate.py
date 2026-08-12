@@ -11,7 +11,11 @@ VALID_SEARCH_TYPES = [
 ]
 
 
-def validate_params(request):
+def validate_params(request, extra_valid_params=()):
+    # `extra_valid_params` lets a view accept endpoint-specific top-level params
+    # (e.g. `corpus` is works-only, oxjob #763) without loosening the shared
+    # allowlist — every other endpoint keeps the stock "not a valid parameter"
+    # 400 for those spellings.
     # NOTE: an upstream edge-validation layer in the `openalex-api-proxy`
     # Cloudflare Worker (src/f1Validation.ts, oxjob #194) fast-fails a few
     # request shapes BEFORE they ever reach this code — e.g. the `limit=`
@@ -50,6 +54,7 @@ def validate_params(request):
         "sort",
         "warm",
     ]
+    valid_params = sorted(set(valid_params) | set(extra_valid_params))
     hidden_valid_params = ["bypass_cache"]
     for arg in request.args:
         # Accept any search.* param (dot notation)

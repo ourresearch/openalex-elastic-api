@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from combined_config import all_entities_config
 from core.entities import get_entity_type
+from core.exceptions import APIQueryParamsError
 from core.export import export_group_by, is_group_by_export
 from core.filters_view import shared_filter_view
 from core.semantic import semantic_search
@@ -15,6 +16,59 @@ from works.fields import fields_dict
 from works.schemas import MessageSchema, WorksSchema
 
 blueprint = Blueprint("works", __name__)
+
+# Top-level `corpus=` selector (oxjob #763): the first-class REST spelling of
+# the 3-state corpus choice (#481). Works-only — every other endpoint keeps
+# rejecting it as an unknown param.
+VALID_CORPUS_VALUES = ("core", "expansion", "all")
+
+
+def resolve_corpus_default_filters(corpus, xpac_param_present, xpac_in_filter,
+                                   include_xpac):
+    """Decide the works corpus default filter from the request's corpus controls.
+
+    Pure function (unit-tested without the app): returns the `default_filters`
+    list for `shared_view` — `[{'is_xpac': ...}]` or None — or raises
+    APIQueryParamsError.
+
+    Args:
+        corpus: raw `corpus=` param value, or None if absent
+        xpac_param_present: `include_xpac`/`include-xpac` appears in the query
+            string (any value)
+        xpac_in_filter: the raw `filter=` string contains `is_xpac:`/`is-xpac:`
+        include_xpac: the legacy param is present AND true
+    """
+    if corpus is None:
+        # Legacy behavior, unchanged: default to the core corpus unless the
+        # deprecated escape hatches say otherwise.
+        if xpac_in_filter or include_xpac:
+            return None
+        return [{"is_xpac": "false"}]
+
+    # `corpus=` never combines with the legacy xpac controls — even when the
+    # values agree, mixing the two vocabularies is a footgun (oxjob #763).
+    if xpac_param_present or xpac_in_filter:
+        raise APIQueryParamsError(
+            "corpus cannot be combined with include_xpac or the is_xpac filter. "
+            "Those are deprecated legacy controls for the same choice; use the "
+            "corpus parameter by itself instead: corpus=core (default, curated "
+            "works only), corpus=expansion (expansion works only), or "
+            "corpus=all (both)."
+        )
+
+    corpus_value = corpus.strip().lower()
+    if corpus_value not in VALID_CORPUS_VALUES:
+        raise APIQueryParamsError(
+            f"corpus must be one of: {', '.join(VALID_CORPUS_VALUES)}. "
+            "corpus=core (default) returns curated works only, "
+            "corpus=expansion returns expansion works only, and corpus=all "
+            "returns both."
+        )
+    if corpus_value == "core":
+        return [{"is_xpac": "false"}]
+    if corpus_value == "expansion":
+        return [{"is_xpac": "true"}]
+    return None  # "all": no corpus constraint
 
 
 @blueprint.route("/", methods=["GET", "POST"])
@@ -132,11 +186,15 @@ def works():
     if connection == 'walden':
         current_filter = request.args.get('filter', '')
         include_xpac = request.args.get('include_xpac') == 'true' or request.args.get('include-xpac') == 'true'
+        default_filters = resolve_corpus_default_filters(
+            corpus=request.args.get('corpus'),
+            xpac_param_present='include_xpac' in request.args or 'include-xpac' in request.args,
+            xpac_in_filter='is_xpac:' in current_filter or 'is-xpac:' in current_filter,
+            include_xpac=include_xpac,
+        )
 
-        if 'is_xpac:' not in current_filter and 'is-xpac:' not in current_filter and not include_xpac:
-            default_filters = [{'is_xpac': 'false'}]
-
-    result = shared_view(request, fields_dict, index_name, default_sort, connection, default_filters=default_filters)
+    result = shared_view(request, fields_dict, index_name, default_sort, connection, default_filters=default_filters,
+                         extra_valid_params=("corpus",))
     if is_group_by_export(request):
         return export_group_by(result, request)
     message_schema = MessageSchema(only=only_fields)

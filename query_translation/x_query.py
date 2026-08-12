@@ -39,8 +39,8 @@ NATIVE_ENTITY_TYPES = {
 
 # The order components appear in a rendered oxurl (mirrors the API's param order).
 _OXURL_COMPONENT_ORDER = (
-    "search.semantic", "filter", "sort", "group_by", "select", "sample", "seed",
-    "per_page", "page", "cursor",
+    "search.semantic", "filter", "corpus", "sort", "group_by", "select",
+    "sample", "seed", "per_page", "page", "cursor",
 )
 
 

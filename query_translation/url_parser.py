@@ -7,7 +7,7 @@ Handles the traditional query parameter syntax:
 
 import re
 from typing import Dict, List, Optional, Tuple, Any
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP, VALID_SORT_AGGREGATES, canonicalize_oqo_column_ids
+from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, GroupBy, SortBy, CURLY_DQUOTE_MAP, VALID_SORT_AGGREGATES, canonicalize_oqo_column_ids, normalize_corpus
 from query_translation.oql_lang import (
     canonical_exact_search_value,
     split_exact_words,
@@ -70,6 +70,7 @@ def parse_url_to_oqo(
     semantic_search_string: Optional[str] = None,
     scoped_searches: Optional[Dict[str, str]] = None,
     include_xpac: bool = False,
+    corpus: Optional[str] = None,
 ) -> OQO:
     """
     Parse URL filter/sort/group_by strings into an OQO object.
@@ -129,9 +130,13 @@ def parse_url_to_oqo(
             to `core`. An explicit `is_xpac:` filter still wins (it redirects to
             `corpus` in `canonicalize_oqo_column_ids`, run below, OVERRIDING this),
             mirroring the legacy precedence (explicit filter > include_xpac > core).
-            Note: a non-core corpus is OQL-only on the render side — `?include_xpac`
-            itself is on #464's drop list — so this is an oxurl→OQO INPUT fidelity
-            fix, not a round-trippable URL form.
+            Note: `?include_xpac` itself is on #464's drop list; since #763 the
+            round-trippable URL spelling is the `corpus=` param below.
+        corpus: The first-class `?corpus=core|expansion|all` REST param (oxjob
+            #763). Wins over `include_xpac` here only in the sense that the two
+            can't legally co-occur — the works view 400s that combination before
+            parsing. Unrecognized values are ignored (the view has already
+            validated); aliases accepted by `normalize_corpus` are normalized.
 
     Returns:
         OQO object representing the query
@@ -200,11 +205,17 @@ def parse_url_to_oqo(
     # Collapse alias spellings (e.g. `filter=is_oa:true`, `group_by=institution.id`)
     # to one canonical identity at the URL-input boundary (#455). Idempotent; the
     # alias stays accepted on input, it's just normalized for everything downstream.
-    # Legacy `?include_xpac=true` ⇒ corpus="all" (#481 leftover, #498). Set before
-    # canonicalize: an `is_xpac:` filter present in `filter_rows` redirects to
-    # `corpus` there and OVERRIDES this, matching the executor's precedence
-    # (explicit filter > include_xpac > core).
-    corpus = "all" if include_xpac else "core"
+    # Corpus resolution: first-class `?corpus=` param (#763) > legacy
+    # `?include_xpac=true` ⇒ "all" (#481 leftover, #498) > "core" default. Set
+    # before canonicalize: an `is_xpac:` filter present in `filter_rows`
+    # redirects to `corpus` there and OVERRIDES this, matching the executor's
+    # precedence (explicit filter > params > core). The REST view 400s any
+    # corpus+xpac combination before we get here, so the ordering below only
+    # matters for direct callers.
+    corpus = (
+        normalize_corpus(corpus)
+        or ("all" if include_xpac else "core")
+    )
     return canonicalize_oqo_column_ids(OQO(
         get_rows=entity_type,
         corpus=corpus,
