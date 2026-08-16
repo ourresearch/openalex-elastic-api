@@ -16,6 +16,15 @@ const GUI = process.env.GUI_FACETCONFIGS
   || path.join(os.homedir(), "Documents/openalex-gui/src/facetConfigs.js");
 let src = fs.readFileSync(GUI, "utf8");
 
+// Since GUI oxjob #424, most facet displayNames are no longer authored in
+// facetConfigs.js — they derive at runtime from the server /meta catalog via
+// getPropertyDisplayName(), seeded from the GUI's committed metaSnapshot.json.
+// Load that snapshot (sibling of facetConfigs.js) so the harness resolves the
+// same labels the GUI does; the registry output stays what it always was.
+const SNAPSHOT_PATH = path.join(path.dirname(GUI), "metaSnapshot.json");
+const metaSnapshot = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, "utf8"));
+const GUI_TO_SERVER_ENTITY = { types: "work-types" };
+
 // Real entity names that getEntityConfigs() returns (from entityConfigs.js).
 const ENTITY_NAMES = [
   "works","awards","authors","sources","publishers","funders","institutions",
@@ -41,6 +50,11 @@ const countryCodeLookup = { byIso: () => null, byCountry: () => null };
 // uninvoked extractFn closure. Trivial stubs keep the harness from crashing.
 const collectionFilterLabel = (name) => name;
 const continentForCountryCode = () => null;
+// #424: label lookup into the GUI's committed /meta snapshot (see above).
+const __snapshotProps = ${JSON.stringify(metaSnapshot.properties)};
+const __entityMap = ${JSON.stringify(GUI_TO_SERVER_ENTITY)};
+const getPropertyDisplayName = (entityType, key) =>
+  __snapshotProps[__entityMap[entityType] ?? entityType]?.[key];
 ${src}
 globalThis.__facetConfigs = facetConfigs;
 `;
