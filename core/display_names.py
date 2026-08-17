@@ -408,6 +408,8 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'publication_year': {"display_name": 'year'},
         'raw_affiliation_strings': {"display_name": 'exact raw affiliation'},
         'raw_affiliation_strings.search': {"display_name": 'raw affiliation', "aliases": ['affiliation', 'raw affiliation string']},
+        # the .exact sibling shares the base label, like title/abstract (#800)
+        'raw_affiliation_strings.search.exact': {"display_name": 'raw affiliation'},
         'raw_author_name.search': {"display_name": 'byline', "aliases": ['raw author name']},
         'related_to': {"display_name": 'related to'},
         'sustainable_development_goals.id': {"display_name": 'SDG', "aliases": ['sustainable development goal', 'sustainable development goals']},

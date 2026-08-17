@@ -83,7 +83,9 @@ def test_proximity_degrades_on_exactless_entity():
 def test_quoted_wildcard_rejected_on_exactless_entity():
     with pytest.raises(Exception) as exc:
         L.parse('authors where name has ("ein*")')
-    assert "no exact search field" in str(exc.value)
+    # #800: the rejection names the COLUMN the user typed (not the entity),
+    # and is the same terminal error whether the wildcard is quoted or not.
+    assert '"name" has no exact search variant on authors' in str(exc.value)
 
 
 def test_works_exact_path_unchanged():

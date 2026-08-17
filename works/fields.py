@@ -687,6 +687,15 @@ fields = [
         param="raw_affiliation_strings.search",
         custom_es_field="authorships.raw_affiliation_strings",
     ),
+    SearchField(
+        # The underlying ES field is indexed WITHOUT stemming (standard analyzer),
+        # so this is behaviorally identical to raw_affiliation_strings.search —
+        # offered under the .exact name so wildcards (* and ?) have a sanctioned
+        # no-stem target, consistent with the other .search.exact fields (#800).
+        param="raw_affiliation_strings.search.exact",
+        custom_es_field="authorships.raw_affiliation_strings",
+        docstring="Free text search on raw affiliation strings, without stemming",
+    ),
     TermField(
         param="raw_affiliation_strings",
         custom_es_field="authorships.raw_affiliation_strings.keyword",

@@ -845,6 +845,7 @@ class SearchField(Field):
             q = full_search_query_exact(self.value)
         elif (
             self.param == "raw_affiliation_strings.search"
+            or self.param == "raw_affiliation_strings.search.exact"
             or self.param == "abstract.search"
             or self.param == "abstract.search.exact"
             or self.param == "keyword.search"

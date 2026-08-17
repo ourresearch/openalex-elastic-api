@@ -1231,6 +1231,15 @@ def _build_by_column() -> None:
 _build_by_column()
 
 
+def _search_word_of(base: str) -> str:
+    """The canonical OQL word for a search column's BASE id, for error messages
+    (#800: wildcard rejections must name the column, not the entity). Falls back
+    to the raw base id if no Field claims it (can't happen for parsed input —
+    the parser only reaches search paths through a registered word)."""
+    fld = _BY_COLUMN.get(base + ".search") or _BY_COLUMN.get(base)
+    return fld.oql if fld is not None else base
+
+
 # --- registry-derived namespace resolution (oxjob #565) ----------------------
 # "Which entity namespace does this column's value belong to" used to live in
 # THREE hand-maintained maps (renderer `_RESOLVE_NAMESPACE`, editor
@@ -1501,6 +1510,10 @@ class _Parser:
         self._ctx = None          # (category, payload) recorded at the cursor
         self._entity = None       # resolved get_rows entity (for the context reply)
         self._cur_fld = None      # field of the clause currently being parsed
+        self._cur_search_word = None  # the word the user TYPED for the current
+                                      # search field (may be an alias of the
+                                      # canonical word) — used by #800 wildcard
+                                      # errors so they name what the user wrote
         self._in_list = False     # are we inside a parenthesized value list?
         self._directive = None    # "group" when inside a directive
         # --- editor sectioned-menu bookkeeping (oxjob #357, ctx-mode only) ---
@@ -1924,6 +1937,7 @@ class _Parser:
             return self._parse_row_subject_clause(rs)
         field, fld = self._parse_field()
         self._cur_fld = fld
+        self._cur_search_word = field if fld.kind == "search" else None
         # a complete field with the cursor right after it -> operator slot
         self._want(CTX_OPERATOR, fld=fld)
         op = self._parse_operator()
@@ -1971,6 +1985,7 @@ class _Parser:
                            None, t.pos)
         fld = _entity_resolve_field(_BY_COLUMN[column], self._entity)
         self._cur_fld = fld
+        self._cur_search_word = None
         self.i += n
         subj, verb, _bare = _ROW_SUBJECT_RENDER[column]
         return self._parse_value_clause(f"{subj}{verb.rstrip()}", fld, "is")
@@ -2689,17 +2704,26 @@ class _Parser:
         quoted = operands[0][1]
         # exact-column availability degrades quoted operands to the stemmed
         # column on entities with no `.search.exact` (#611 follow-up).
-        col, prox_degraded = self._effective_search_col(base, exact=quoted)
+        col, _ = self._effective_search_col(base, exact=quoted)
         # Wildcards: a bare (stemmed) operand can't carry one (#364 — stemming strips the
         # literal prefix); a quoted operand can, validated per-token + a shared expansion
         # budget across the whole intervals query (#355 guard).
         all_tokens = [w for text, _ in operands for w in text.split()]
         has_wild = any("*" in w or "?" in w for w in all_tokens)
-        if has_wild and prox_degraded:
-            raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
-                           f'wildcards need exact (no-stem) search, and '
-                           f'"{self._entity}" has no exact search field',
-                           "remove the wildcard", wt.pos)
+        # #800: exact-availability FIRST, regardless of quoting — if this column has
+        # no `.search.exact` sibling, no amount of quoting helps, so never emit the
+        # "quote it" hint (the old order sent users in a quote-it -> remove-it
+        # circle), and name the COLUMN, not the entity (the entity may well have
+        # exact search on other columns — works does).
+        if has_wild:
+            _, no_exact = self._effective_search_col(base, exact=True)
+            if no_exact:
+                word = self._cur_search_word or _search_word_of(base)
+                raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
+                               f'wildcards need exact (no-stem) search, and '
+                               f'"{word}" has no exact search variant'
+                               f'{f" on {self._entity}" if self._entity else ""}',
+                               "remove the wildcard", wt.pos)
         if has_wild and not quoted:
             bad = next(w for w in all_tokens if "*" in w or "?" in w)
             raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
@@ -2814,15 +2838,21 @@ class _Parser:
         if degraded:
             stemmed = True
         has_wildcard = "*" in text or "?" in text
-        if has_wildcard and degraded:
-            # Wildcards only run correctly on exact (no-stem) text (#364), and
-            # this entity has none — no column can execute this. Tailored error
-            # (the generic ones below say "quote it", which is exactly what the
-            # user already did).
-            raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
-                           f'wildcards need exact (no-stem) search, and '
-                           f'"{self._entity}" has no exact search field',
-                           "remove the wildcard", t.pos)
+        if has_wildcard:
+            # #800: exact-availability FIRST, whatever the quoting — if this column
+            # has no `.search.exact` sibling, neither quoting nor dropping `stemmed`
+            # can help, so emit ONE terminal error instead of a fix-hint that leads
+            # straight to another rejection (the old quote-it -> remove-it circle).
+            # Name the COLUMN, not the entity (works has exact search on other
+            # columns, so "works has no exact search field" was simply wrong).
+            _, no_exact = self._effective_search_col(base, exact=True)
+            if no_exact:
+                word = self._cur_search_word or _search_word_of(base)
+                raise oql_error("OQL_WILDCARD_NEEDS_EXACT",
+                               f'wildcards need exact (no-stem) search, and '
+                               f'"{word}" has no exact search variant'
+                               f'{f" on {self._entity}" if self._entity else ""}',
+                               "remove the wildcard", t.pos)
         self._skip_annot()
         # `within` is now ONLY the leading list operator `within N (a, b, ...)` (oxjob
         # #514), intercepted before the atom in _parse_search_value / _parse_search_operand.
