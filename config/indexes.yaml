@@ -1,6 +1,6 @@
 id: indexes
-displayName: Indexes
-displayNameSingular: Index
+displayName: indexes
+displayNameSingular: index
 descr: bibliographic index
 descrFull: A bibliographic index or registry (like Crossref or PubMed) that lists a work.
 isNative: false

@@ -1,6 +1,6 @@
 id: topics
 displayName: topics
-displayNameSingular: topics
+displayNameSingular: topic
 descr: what works are about
 descrFull: Topics are the fourth level of description of the subject area of works. Each topic has a unique
   OpenAlex ID. Topics are above keywords but below domains, fields, and subfields in the hierarchy of
