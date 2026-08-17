@@ -1058,6 +1058,23 @@ def match_entity_fallback(toks: List[Tok], i: int, entity: Optional[str]
     return spelling, best, best_len
 
 
+def _distinct_nonsearch_columns() -> set:
+    """Engine column_ids that are real NON-search columns in some entity registry
+    yet coincide with a curated search Field's base id (#799). Empty without the
+    registry (lightweight contexts keep the base-claim status quo)."""
+    try:
+        from core.properties import ENTITY_PROPERTIES
+    except Exception:
+        return set()
+    bases = {fld.column for _s, fld in _FIELDS if fld.kind == "search"}
+    out = set()
+    for props in ENTITY_PROPERTIES.values():
+        for cid, prop in (props or {}).items():
+            if cid in bases and "search" not in set(getattr(prop, "operators", []) or []):
+                out.add(cid)
+    return out
+
+
 # --- the ONE `_BY_COLUMN` build (oxjob #567) --------------------------------
 # Every render-side column->Field mapping is claimed HERE, in one pass with an
 # EXPLICIT precedence ladder — nothing else writes `_BY_COLUMN`. Before #567
@@ -1111,7 +1128,22 @@ def _build_by_column() -> None:
         # else: a stronger (lower) tier already owns the column.
 
     # Tier 0 — curated rows.
+    # A SEARCH Field's `column` is its mode-less BASE id (`raw_affiliation_strings`
+    # for `raw_affiliation_strings.search[.exact]`). Claim the full mode-encoded ids
+    # for it too, so the search render (`_oql_field`) resolves by the leaf's real
+    # column. And when the bare base id is ALSO a distinct, non-search engine
+    # column (works `raw_affiliation_strings` = whole-string keyword equality, GUI
+    # label "exact raw affiliation"), leave the base UNCLAIMED here so tier 3 can
+    # give that column its own registry word — otherwise an equality leaf on it
+    # rendered as the search word (`raw affiliation is (X)`), which does not
+    # re-parse (oxjob #799, CNRS Q4b).
+    distinct = _distinct_nonsearch_columns()
     for _spellings, fld in _FIELDS:
+        if fld.kind == "search":
+            for suf in (".search", ".search.exact", ".search.semantic"):
+                claim(0, fld.column + suf, fld, "curated _FIELDS search row")
+            if fld.column in distinct:
+                continue
         claim(0, fld.column, fld, "curated _FIELDS row")
     # default.search is the deprecated alias of fulltext.search (oxjob #374):
     # render any stray `default` column (e.g. from an external URL->OQO) to
@@ -3037,7 +3069,12 @@ def _oql_field(column: str) -> Tuple[str, str]:
             w = _entity_search_word(ent, base + ".search")
             if w:
                 return w, mode
-    fld = _BY_COLUMN.get(base) or _BY_COLUMN.get(column)
+    # Prefer the leaf's REAL (mode-encoded) column, then the base — and prefer a
+    # search-kind Field: the bare base id may now belong to a distinct non-search
+    # column (#799: `raw_affiliation_strings` -> "exact raw affiliation").
+    cands = [_BY_COLUMN.get(column), _BY_COLUMN.get(base)]
+    fld = next((c for c in cands if c is not None and c.kind == "search"), None) \
+        or next((c for c in cands if c is not None), None)
     name = fld.oql if fld else base
     return name, mode
 
