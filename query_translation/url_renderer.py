@@ -8,6 +8,7 @@ Generates the traditional query parameter syntax:
 import re
 from typing import Dict, List, Optional, Tuple, Any
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, SortBy
+from query_translation.oql_lang import split_exact_words
 
 # K-ary list proximity `"a"~N~"b"~"c"[...]` (3+ operands, oxjob #514) — an OQL-only
 # capability. The classic URL `~` syntax expresses single (`"P"~N`) and binary
@@ -330,8 +331,22 @@ def render_or_branch(f: BranchFilter) -> str:
     
     # All same field - render as pipe-separated values
     field = f.filters[0].column_id
-    values = []
 
+    # An ALL-negated OR branch on a `.search.exact` column is the De Morgan
+    # form of NOT(bare multi-word AND-of-words) — `has (not "a" or not "b")`.
+    # Its classic spelling is the compact bang-prefixed bare run `field:!a b`,
+    # which parses back to this exact branch (#633 Category 1). It must NOT
+    # take the pipe path below: a leading `!` in a pipe list means NOT of the
+    # whole list (`!a|b` = NOT(a OR b), core/filter.py semantics), so `!a|!b`
+    # would silently round-trip to a different query.
+    if (field.endswith(".search.exact")
+            and all(getattr(sf, "is_negated", False) for sf in f.filters)
+            and all(isinstance(sf.value, str) for sf in f.filters)):
+        joined = " ".join(sf.value for sf in f.filters)
+        if split_exact_words(joined) == [sf.value for sf in f.filters]:
+            return f"{field}:!{joined}"
+
+    values = []
     for sub_f in f.filters:
         # A null-sentinel leaf (`language is (en or unknown)`, #554) renders as
         # the classic URL's `null` token, same as the standalone-leaf path.
@@ -340,6 +355,20 @@ def render_or_branch(f: BranchFilter) -> str:
             values.append(f"!{val}")
         else:
             values.append(val)
+
+    # A leading `!` would flip the meaning of the whole pipe list on parse-back
+    # (NOT(a OR b) instead of (NOT a) OR b). OR is commutative, so when any
+    # positive member exists, emit the positives first; a pure-NOT OR group
+    # (that didn't compact above) has NO classic pipe spelling at all — refuse
+    # rather than emit a silently different query. (#633)
+    if values and values[0].startswith("!"):
+        positives = [v for v in values if not v.startswith("!")]
+        if not positives:
+            raise URLRenderError(
+                "An all-negated OR group cannot be expressed in URL format: a "
+                "leading ! in a pipe list negates the whole list"
+            )
+        values = positives + [v for v in values if v.startswith("!")]
 
     pipe_joined = "|".join(values)
     return f"{field}:{pipe_joined}"

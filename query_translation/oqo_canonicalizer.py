@@ -25,7 +25,13 @@ registry) — there is no entity-id prefix normalization. See docs/oql-spec.md.
 import json
 from typing import List, Union, Any
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, SortBy, canonicalize_oqo_column_ids
-from query_translation.oql_lang import canon_value_for_column, _is_search_leaf, is_numeric_column
+from query_translation.oql_lang import (
+    canon_value_for_column,
+    canonical_exact_search_value,
+    _is_search_leaf,
+    is_numeric_column,
+    split_exact_words,
+)
 
 
 def canonicalize_oqo(oqo: OQO, sort_operands: bool = True) -> OQO:
@@ -201,22 +207,44 @@ def canonicalize_filter(f: FilterType, sort_operands: bool = True) -> Union[Filt
         - None (if filter should be removed)
     """
     if isinstance(f, LeafFilter):
-        return canonicalize_leaf_filter(f)
+        return canonicalize_leaf_filter(f, sort_operands)
     elif isinstance(f, BranchFilter):
         return canonicalize_branch_filter(f, sort_operands)
     return None
 
 
-def canonicalize_leaf_filter(f: LeafFilter) -> LeafFilter:
+def canonicalize_leaf_filter(f: LeafFilter, sort_operands: bool = True) -> Union[LeafFilter, BranchFilter]:
     """
     Canonicalize a leaf filter.
 
     - Normalizes value types (string "true" -> bool True; numeric strings -> int)
     - Preserves the `is_negated` polarity bit (already pushed to leaves by NNF)
     - Values stay *bare* (no entity-id prefix normalization)
+    - A `.search.exact` value normalizes to the engine's canonical spelling
+      (singleton quotes stripped), and a bare multi-word clean run — the
+      no-stem AND-of-words — splits into per-token leaves (#633): AND-branch
+      when positive, De Morgan OR-branch of negated leaves when negated
+      (NOT(a AND b) = (NOT a) OR (NOT b)). The parse doors already build this
+      shape; doing it here too makes direct-OQO submissions converge on the
+      same canonical form, so the OQL render never sees the one-leaf shape it
+      can't render faithfully (its `not` bound only the first token).
     """
     value = canonicalize_value(f.value, f.column_id)
     operator = f.operator or "is"
+
+    if f.column_id.endswith(".search.exact") and isinstance(value, str):
+        value = canonical_exact_search_value(value)
+        words = split_exact_words(value)
+        if words:
+            leaves = [
+                LeafFilter(column_id=f.column_id, value=w, operator=operator,
+                           is_negated=bool(f.is_negated))
+                for w in words
+            ]
+            if sort_operands:
+                leaves.sort(key=_sort_key)
+            return BranchFilter(join="or" if f.is_negated else "and",
+                                filters=leaves)
 
     return LeafFilter(
         column_id=f.column_id,

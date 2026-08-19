@@ -464,6 +464,20 @@ def parse_single_filter(
         actual_value = value[1:]
         if field.endswith(".search.exact"):
             actual_value = canonical_exact_search_value(actual_value)
+            # A negated BARE multi-word exact value is NOT(no-stem AND-of-words).
+            # The polarity bit can't just sit on a split AND (NOT(a AND b) ≠
+            # (NOT a AND NOT b)), so De Morgan it into an OR of negated
+            # per-token leaves — the same canonical shape the OQL door builds
+            # for `has (not "a" or not "b")` / `does not have ("a" and "b")`.
+            # Without the split, the one negated bare leaf mis-rendered in OQL
+            # (`not` bound to the first token only). (#633 Category 1)
+            words = split_exact_words(actual_value)
+            if words:
+                return BranchFilter(join="or", filters=[
+                    LeafFilter(column_id=field, value=w, operator=default_op,
+                               is_negated=True)
+                    for w in words
+                ])
         return LeafFilter(column_id=field, value=actual_value, operator=default_op, is_negated=True)
 
     # Handle inline comparison-operator prefixes. Order matters: `>=` / `<=`
@@ -911,26 +925,32 @@ def _parse_search_boolean(field: str, value: str) -> FilterType:
 def _canonicalize_lifted_exact(node: FilterType) -> FilterType:
     """Canonicalize the leaves of a boolean tree lifted from a `.search.exact`
     value (#633): each leaf value goes through `canonical_exact_search_value`
-    (singleton-quote strip etc.), and a NON-negated bare multi-word clean run
-    (no-stem AND-of-words) splits into an AND-branch of per-token leaves — the
-    same canonical shape `parse_single_filter` builds for an unstructured
-    value. Negated leaves are NOT split: the polarity bit sits on the leaf, and
-    NOT(a AND b) ≠ (NOT a AND NOT b), so splitting under negation would need a
-    De-Morgan rewrite — left as one bare leaf (faithful in OQO/URL; the OQL
-    render falls back to the lossy quoted form for that rare shape)."""
+    (singleton-quote strip etc.), and a bare multi-word clean run (no-stem
+    AND-of-words) splits into per-token leaves — the same canonical shape
+    `parse_single_filter` builds for an unstructured value. A NON-negated run
+    splits into an AND-branch; a NEGATED run De Morgans into an OR-branch of
+    negated leaves (NOT(a AND b) = (NOT a) OR (NOT b)) — the shape the OQL door
+    builds for `has (not "a" or not "b")`, so the OQL render stays faithful
+    (#633 Category 1; before this, the one negated bare leaf mis-rendered with
+    `not` bound to the first token only)."""
     if isinstance(node, BranchFilter):
         node.filters = [_canonicalize_lifted_exact(f) for f in node.filters]
         return node
     if not isinstance(node, LeafFilter):
         return node
     node.value = canonical_exact_search_value(node.value)
-    if not node.is_negated:
-        words = split_exact_words(node.value)
-        if words:
-            return BranchFilter(join="and", filters=[
-                LeafFilter(column_id=node.column_id, value=w, operator="has")
+    words = split_exact_words(node.value)
+    if words:
+        if node.is_negated:
+            return BranchFilter(join="or", filters=[
+                LeafFilter(column_id=node.column_id, value=w, operator="has",
+                           is_negated=True)
                 for w in words
             ])
+        return BranchFilter(join="and", filters=[
+            LeafFilter(column_id=node.column_id, value=w, operator="has")
+            for w in words
+        ])
     return node
 
 

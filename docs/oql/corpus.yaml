@@ -4106,3 +4106,14 @@ rows:
   oql: 'works where work is in collection (col_abc123 or col_def456)'
   diagnostic: OQL_GROUP_NEEDS_ONE_VALUE
   note: 'One collection per clause (v1 rule, §3.10) — union several with or-clauses: (work is in collection (col_a) or work is in collection (col_b)).'
+- id: 199
+  tags: [negation, phrase-exact]
+  provenance:
+    type: "spec design"
+    label: "NOT of a bare multi-word exact value (De Morgan, #633 Cat 1)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:!cancer%20treatment'
+  status: ok
+  note: 'A bare multi-word exact value is the no-stem AND-of-words, so its negation is NOT(a AND b) — the canonical OQO De Morgans it into an OR of negated per-token leaves, the mirror of row 169. `does not have ("cancer" and "treatment")` canonicalizes to the same form. The classic spelling is the compact bang-prefixed run — never the pipe form `!a|!b`, whose leading `!` means NOT of the whole list.'
+  oql: 'works where title has (not "cancer" or not "treatment")'
+  oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: display_name.search.exact, value: cancer, operator: has, is_negated: true}, {column_id: display_name.search.exact, value: treatment, operator: has, is_negated: true}]}]}

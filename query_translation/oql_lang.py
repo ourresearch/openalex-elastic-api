@@ -3587,7 +3587,21 @@ def _leaf_node_inner(f: LeafFilter, resolver=None) -> ClauseNode:
             # decision 23: negation is a bare `not ` prefix on the value, never a
             # `does not have` predicate (`title has (not pediatric)`).
             term = _render_term(f.value, f.column_id)
-            val = f"not {term}" if f.is_negated else term
+            if (f.is_negated and f.column_id.endswith(".search.exact")
+                    and isinstance(f.value, str)
+                    and split_exact_words(canonical_exact_search_value(f.value))):
+                # Negated bare multi-word exact leaf = NOT(AND-of-words). The
+                # positive multi-word render is the operand list `"a" and "b"`,
+                # so a plain `not ` prefix would bind only the first operand —
+                # a different query. De Morgan instead: `not "a" or not "b"`.
+                # Canonical OQO never carries this one-leaf shape (the parsers
+                # and canonicalizer split it into an OR-branch of negated
+                # leaves, #633 Category 1); this is the faithful render for a
+                # direct-OQO leaf that skipped canonicalization.
+                toks = split_exact_words(canonical_exact_search_value(f.value))
+                val = " or ".join(f'not "{t}"' for t in toks)
+            else:
+                val = f"not {term}" if f.is_negated else term
             segs = [_seg("column", name, column_id=f.column_id),
                     _seg("operator", " has "), _seg("text", "("),
                     _seg("value", val, value=f.value), _seg("text", ")")]
