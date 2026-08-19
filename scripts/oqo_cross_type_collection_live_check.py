@@ -17,6 +17,7 @@ Run:
   PYTHONPATH=. venv/bin/python scripts/oqo_cross_type_collection_live_check.py
 """
 import json
+import os
 import urllib.parse
 
 from app import create_app
@@ -25,8 +26,9 @@ from app import create_app
 COLLECTION_ID = "col_a48SaZFvdS"
 FIELD = "authorships.author.id"
 # Prod api_key (Jason); forwarded to users-api so the owner check passes and the
-# collection resolves to its 12 author IDs.
-API_KEY = "tEO76RnvV2LwjHcTG74OtA"
+# collection resolves to its 12 author IDs. Never hardcode the key here (this
+# repo is public — bit us in oxjob #825): source ~/.zshenv first.
+API_KEY = os.environ["OPENALEX_API_KEY"]
 
 app = create_app()
 client = app.test_client()
