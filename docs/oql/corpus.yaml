@@ -4117,3 +4117,14 @@ rows:
   note: 'A bare multi-word exact value is the no-stem AND-of-words, so its negation is NOT(a AND b) — the canonical OQO De Morgans it into an OR of negated per-token leaves, the mirror of row 169. `does not have ("cancer" and "treatment")` canonicalizes to the same form. The classic spelling is the compact bang-prefixed run — never the pipe form `!a|!b`, whose leading `!` means NOT of the whole list.'
   oql: 'works where title has (not "cancer" or not "treatment")'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: display_name.search.exact, value: cancer, operator: has, is_negated: true}, {column_id: display_name.search.exact, value: treatment, operator: has, is_negated: true}]}]}
+- id: 200
+  tags: [phrase-exact]
+  provenance:
+    type: "spec design"
+    label: "Colon in a bare multi-word exact value still splits (#633 session 6)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=display_name.search.exact:Beyond,display_name.search.exact:Data,display_name.search.exact:Gaps:,display_name.search.exact:Tracking'
+  status: ok
+  note: 'A `:` is ordinary punctuation to the search door, not the Lucene field separator (`display_name:cancer` matches 0 works), so it must NOT block the per-token split — scholarly titles are full of colons, and the old ban made this the largest single source of a lossy oql leg (~6.3% of all `.exact` traffic). Prod-verified result-preserving: `learning: machine` = `learning machine` = split into two leaves = 2,919,096. Structural chars (`" ( ) | [ ] , ; ~ ^ ! &`) still refuse to split — those change the result set.'
+  oql: 'works where title has ("Beyond" and "Data" and "Gaps:" and "Tracking")'
+  oqo: {get_rows: works, filter_rows: [{column_id: display_name.search.exact, value: Beyond, operator: has}, {column_id: display_name.search.exact, value: Data, operator: has}, {column_id: display_name.search.exact, value: "Gaps:", operator: has}, {column_id: display_name.search.exact, value: Tracking, operator: has}]}

@@ -3245,10 +3245,21 @@ def _render_term(value: str, column: str) -> str:
 
 # Chars that make a bare `.search.exact` token structural rather than a plain
 # word: quotes/grouping/OR-pipe/list separators would re-parse as syntax, and
-# `~ ^ : ! &` are Lucene operators whose meaning spans tokens (fuzzy/boost/
-# field/compact-NOT/AND) — splitting a value containing any of these would
-# change the query. Wildcards `* ?` are per-token and split-safe.
-_EXACT_SPLIT_BANNED_RE = re.compile(r'["()|\[\],;:~^!&]')
+# `~ ^ ! &` are Lucene operators whose meaning spans tokens (fuzzy/boost/
+# compact-NOT/AND) — splitting a value containing any of these would change the
+# query. Wildcards `* ?` are per-token and split-safe.
+#
+# `:` was banned here too, as the Lucene FIELD separator, but that operator is
+# unreachable through this door and the ban was the single largest cause of a
+# lossy oql leg — ~6.3% of all `.exact` traffic, because scholarly titles are
+# full of colons ("Beyond Data Gaps: Tracking …"). Prod-measured (#633 session
+# 5, `title_and_abstract.search.exact`): the colon is analyzed away as ordinary
+# punctuation (`learning machine` = `learning: machine` = `learning : machine` =
+# 2,919,096), field syntax does NOT resolve (`display_name:cancer` = 0), and
+# splitting is result-preserving (one leaf `learning: machine` = split
+# `…exact:learning:,…exact:machine` = 2,919,096). Both renderer legs round-trip
+# a colon-bearing token; see tests/oql/test_exact_colon_split.py.
+_EXACT_SPLIT_BANNED_RE = re.compile(r'["()|\[\],;~^!&]')
 # Uppercase-only Lucene operator words (lowercase `and` is a literal term).
 _LUCENE_OPERATOR_WORDS = {"AND", "OR", "NOT", "TO"}
 
@@ -3269,7 +3280,11 @@ def split_exact_words(value: str):
     uppercase Lucene operator word (`Windows AND DLL` — AND is an operator,
     not a term); or a token starts with `+`/`-` (Lucene require/prohibit).
     Those stay one bare leaf: the URL/OQO echo stays faithful, and the OQL
-    render falls back to the (lossy, pre-existing) quoted form."""
+    render falls back to the (lossy, pre-existing) quoted form.
+
+    A `:` inside a token does NOT block the split (#633 session 6): it is
+    ordinary punctuation to this door, not a field separator — see
+    _EXACT_SPLIT_BANNED_RE for the prod measurements."""
     toks = (value or "").split()
     if len(toks) < 2:
         return None
