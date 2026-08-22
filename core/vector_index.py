@@ -168,7 +168,7 @@ def _build_single_filter(key, field_name, value):
         return {"term": {field_name: bool_val}}
 
     if key in _RANGE_FIELDS:
-        return _build_range_filter(field_name, value)
+        return _build_range_filter(key, field_name, value)
 
     # Keyword fields — handle OR (pipe-separated) values
     # Normalize OpenAlex IDs to full URLs (e.g., "S1980519" → "https://openalex.org/S1980519")
@@ -194,27 +194,89 @@ def _build_single_filter(key, field_name, value):
     return {"term": {field_name: str_value}}
 
 
-def _build_range_filter(field_name, value):
-    """Build a range or term filter for integer fields.
+def _build_range_filter(key, field_name, value):
+    """Build a filter clause for an integer range field (e.g. publication_year).
 
-    Supports: >N, <N, >=N, <=N, N-M (range), plain N (exact match).
+    Speaks the same grammar as the classic ``RangeField.build_query``
+    (core/fields.py), so every value the URL renderer / GUI Year chip can emit
+    works on the vector path too (oxjob #862 — ``2025-`` from the "Since 2025"
+    chip used to hit ``int('')`` and 500):
+
+        >N  <N  >=N  <=N   strict / inclusive bounds
+        N-                 gte N   (open-ended; what "Since N" emits)
+        -N                 lte N
+        A-B                gte A and lte B
+        N                  exact match
+        null               field missing
+        a|b|c              OR of any of the above (bool.should)
+
+    Negation (``!``) is stripped by ``build_vector_filter`` before we get here
+    and applied as ``must_not`` around the whole clause, matching classic
+    ``NOT (a or b)`` semantics. Unparseable input raises APIQueryParamsError
+    (a 400) instead of leaking a ValueError (a 500).
     """
     value = str(value).strip()
+    if "|" in value:
+        clauses = [
+            _build_single_range_clause(key, field_name, v.strip())
+            for v in value.split("|")
+            if v.strip()
+        ]
+        if not clauses:
+            raise _range_error(key, value)
+        if len(clauses) == 1:
+            return clauses[0]
+        return {"bool": {"should": clauses, "minimum_should_match": 1}}
+    return _build_single_range_clause(key, field_name, value)
 
+
+def _build_single_range_clause(key, field_name, value):
+    """One pipe-free range term → ES clause. See _build_range_filter for grammar."""
+    if value == "null":
+        return {"bool": {"must_not": [{"exists": {"field": field_name}}]}}
     if value.startswith(">="):
-        return {"range": {field_name: {"gte": int(value[2:])}}}
+        return {"range": {field_name: {"gte": _range_int(key, value, value[2:])}}}
     if value.startswith("<="):
-        return {"range": {field_name: {"lte": int(value[2:])}}}
+        return {"range": {field_name: {"lte": _range_int(key, value, value[2:])}}}
     if value.startswith(">"):
-        return {"range": {field_name: {"gt": int(value[1:])}}}
+        return {"range": {field_name: {"gt": _range_int(key, value, value[1:])}}}
     if value.startswith("<"):
-        return {"range": {field_name: {"lt": int(value[1:])}}}
-    if "-" in value and not value.startswith("-"):
-        parts = value.split("-", 1)
-        return {"range": {field_name: {"gte": int(parts[0]), "lte": int(parts[1])}}}
+        return {"range": {field_name: {"lt": _range_int(key, value, value[1:])}}}
+    if value.startswith("-"):
+        return {"range": {field_name: {"lte": _range_int(key, value, value[1:])}}}
+    if value.endswith("-"):
+        return {"range": {field_name: {"gte": _range_int(key, value, value[:-1])}}}
+    if "-" in value:
+        left, right = value.split("-", 1)
+        return {
+            "range": {
+                field_name: {
+                    "gte": _range_int(key, value, left),
+                    "lte": _range_int(key, value, right),
+                }
+            }
+        }
+    return {"term": {field_name: _range_int(key, value, value)}}
 
-    # Exact match
-    return {"term": {field_name: int(value)}}
+
+def _range_int(key, whole_value, raw):
+    """Parse one numeric piece of a range value; 400 (not 500) on garbage."""
+    raw = raw.strip()
+    try:
+        return int(raw)
+    except ValueError:
+        try:
+            return int(float(raw))
+        except ValueError:
+            raise _range_error(key, whole_value)
+
+
+def _range_error(key, value):
+    return APIQueryParamsError(
+        f"Value for filter {key} must be a number (2020), a range (2020-2024, "
+        f"2020-, -2024), or a comparison (>2020, <2024, >=2020, <=2024), "
+        f"optionally OR'd with |. Problem value: {value}"
+    )
 
 
 def _normalize_license(value):
