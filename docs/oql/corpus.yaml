@@ -4150,3 +4150,21 @@ rows:
   note: 'A value holding both a quoted phrase and bare words (`"machine learning" neural`) runs on the engine''s query_string branch as phrase AND word. It used to stay ONE leaf the renderers could not spell — the stemmed door dropped the quotes (a different query: 314,033 vs 1,189,845) and the exact door nested them (`(""machine learning" neural")`, unparseable OQL). The URL door now lifts it through the same tokenizer as an explicit boolean, so both legs are faithful and the phrase keeps its quotes.'
   oql: 'works where title has (stemmed "machine learning" and neural)'
   oqo: {get_rows: works, filter_rows: [{column_id: display_name.search, value: '"machine learning"', operator: has}, {column_id: display_name.search, value: neural, operator: has}]}
+- id: 203
+  tags: [search-semantics]
+  provenance:
+    type: "spec design"
+    label: "`~` is not an OQL operator — fuzzy / slop never leak into the engine (#865)"
+  status: error
+  oql: 'works where title has (cancer~1)'
+  diagnostic: OQL_NO_FUZZY
+  note: 'OQL is explicit pseudo-English; a search-engine operator character typed inside a value must not reach Lucene with its engine meaning. Before #865 this ran as Lucene fuzzy matching (prod: 3,212,830 vs 3,126,171 for `cancer`) although OQL has no word for it, and a typed `"machine learning"~3` was mangled into the phrase AND a stray token `~3`. Proximity is `within N (…)`; fuzzy matching is a planned explicit keyword, built only when users ask. A classic-URL `term~N` keeps working on the classic door but has no OQL form — its `x_query.oql` is null with an `oql_unavailable` reason.'
+- id: 204
+  tags: [search-semantics]
+  provenance:
+    type: "spec design"
+    label: "`|` is not an OQL operator — alternatives are written `or` (#865)"
+  status: error
+  oql: 'works where title has (dog|cat)'
+  diagnostic: OQL_CHAR_NOT_OPERATOR
+  note: 'The pipe is the classic URL''s OR syntax. Typed in an OQL value it executed as the two words ANDed (3,232) yet rendered to the SAME url leg as `has (dog or cat)` (371,675) — a url-leg lie. Rejected with a fix-it; `\` (the engine escape character) is rejected under the same code.'

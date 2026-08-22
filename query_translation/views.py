@@ -29,6 +29,7 @@ from query_translation.oql_parser import parse_oql_to_oqo
 from query_translation.oql_renderer import make_engine_resolver
 from query_translation.oql_render_v2 import render_v2_and_oql
 from query_translation.url_parser import parse_url_to_oqo
+from query_translation.diagnostics import OQLError
 from query_translation.url_renderer import URLRenderError, render_oqo_to_url
 from query_translation.x_query import (
     _components_to_oxurl, safe_get_display_name, )
@@ -403,7 +404,15 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
     # layout-bearing tree + logical `lines` projection — plus the canonical OQL
     # string it was laid out from. The v1 `oql_render` key was dropped (#566;
     # the GUI reads only `oql` + `oql_render_v2`).
-    oql_render_v2, oql_output, oql_oneline = render_v2_and_oql(canonical_oqo, resolver=resolver)
+    try:
+        oql_render_v2, oql_output, oql_oneline = render_v2_and_oql(canonical_oqo, resolver=resolver)
+    except OQLError as e:
+        # No honest OQL form for this OQO (classic fuzzy `term~N`, oxjob #865):
+        # omit the OQL legs and say why, as the oxurl leg does above.
+        oql_render_v2, oql_output, oql_oneline = None, None, None
+        warnings.append(ValidationError(
+            type="oql_not_representable", message=e.message
+        ))
 
     # Build response
     return {

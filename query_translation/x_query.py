@@ -22,6 +22,7 @@ from query_translation import oql_lang
 from query_translation.oqo import OQO
 from query_translation.oqo_canonicalizer import canonicalize_oqo
 from query_translation.oql_renderer import render_oqo_to_oql
+from query_translation.diagnostics import OQLError
 from query_translation.url_renderer import URLRenderError, render_oqo_to_url
 
 
@@ -161,12 +162,20 @@ def build_x_query(
         # client treats null as an "advanced query" it can't render as chips.
         pass
 
-    if entity_resolver is not None:
-        oql_form = render_oqo_to_oql(canonical, entity_resolver=entity_resolver)
-    else:
-        # Executed-query path (decision 14): bare-ID canonical OQL, no resolver
-        # object at all — see the docstring for why wrapping None is a bug.
-        oql_form = oql_lang.render(canonical, resolver=None)
+    oql_form = None
+    oql_unavailable = None
+    try:
+        if entity_resolver is not None:
+            oql_form = render_oqo_to_oql(canonical, entity_resolver=entity_resolver)
+        else:
+            # Executed-query path (decision 14): bare-ID canonical OQL, no resolver
+            # object at all — see the docstring for why wrapping None is a bug.
+            oql_form = oql_lang.render(canonical, resolver=None)
+    except OQLError as e:
+        # No honest OQL form for this query (classic fuzzy `term~N`, oxjob #865).
+        # Mirror the url leg: omit rather than echo OQL that means something
+        # else, and say why.
+        oql_unavailable = e.message
 
     # #661: the echoed OQO conforms to the PUBLIC spec (schema v1.4) — pure
     # "which rows" (get_rows, corpus, filter_rows, group_by, sample, seed).
@@ -177,8 +186,11 @@ def build_x_query(
     for view_key in ("sort_by", "select", "page", "per_page", "cursor"):
         oqo_dict.pop(view_key, None)
 
-    return {
+    out = {
         "oql": oql_form,
         "oqo": oqo_dict,
         "url": url_form,
     }
+    if oql_unavailable is not None:
+        out["oql_unavailable"] = oql_unavailable
+    return out

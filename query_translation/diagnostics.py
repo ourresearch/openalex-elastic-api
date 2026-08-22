@@ -215,6 +215,21 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         # OQL_PROXIMITY_NEEDS_PHRASE, OQL_WILDCARD_IN_PROXIMITY — were removed with the
         # `within N words` / `of` surface in oxjob #514; the no-orphan-codes gate requires
         # every registered PARSE code to be raised, so they are not kept as dead specs.)
+        # -- search: engine syntax OQL does not expose (oxjob #865) ----------------
+        # OQL is explicit pseudo-English; search-engine operator characters typed
+        # inside a value must never reach Lucene with their engine meaning. `~`
+        # (fuzzy `term~N`, slop `"phrase"~N`) has no OQL surface; `|` is the classic
+        # URL's OR; `\` is Lucene's escape character. All three are rejected with a
+        # fix-it rather than silently escaped (Jason, 2026-08-22: option b).
+        _spec("OQL_NO_FUZZY", ERROR, PARSE,
+              "`~` is not an OQL operator — fuzzy matching (term~N) and phrase slop "
+              "(\"phrase\"~N) are search-engine syntax that OQL does not expose",
+              'for words near each other use within N (…), e.g. within 3 ("smart", '
+              '"phone"); fuzzy matching is not available in OQL yet — remove the ~'),
+        _spec("OQL_CHAR_NOT_OPERATOR", ERROR, PARSE,
+              "this character is not an OQL operator (`|` is classic-URL OR syntax; "
+              "`\\` is a search-engine escape character)",
+              "write alternatives with or, e.g. (dog or cat); remove a backslash"),
         _spec("OQL_WILDCARD_NEEDS_EXACT", ERROR, PARSE,
               "a bare wildcard term needs exact (non-stemmed) matching",
               'quote it, or use "exactly", so the wildcard is not stemmed'),

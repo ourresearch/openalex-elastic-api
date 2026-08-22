@@ -550,6 +550,7 @@ vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); 
 | adjacency (phrase) | `" … "` | quotes in the value |
 | proximity | leading list form `within N (a, b, …)` | `"op1"~N~"op2"[~"op3"…]` in the value |
 | wildcard | bare `*` / `?` | `*` / `?` in the value |
+| not OQL syntax | `~` (fuzzy / slop), `\|` (URL OR-pipe), `\\` (engine escape) | **rejected** — `OQL_NO_FUZZY` / `OQL_CHAR_NOT_OPERATOR`; these never reach the engine from OQL (#865) |
 | boolean | infix `and`/`or`/`not` inside `( … )` (a bare-word run is ONE node, not AND) | the BranchFilter tree |
 
 The gauntlet pins the consequences (all are corpus rows):
@@ -566,6 +567,21 @@ The gauntlet pins the consequences (all are corpus rows):
 | 18 | `(climate and change or warming)` | ✓ resolves by precedence → `(climate and change) or warming` (canonical re-parenthesizes) |
 | 19 | `"bar*"` | ✓ quoted wildcard = the sanctioned path → no-stem `.search.exact` (oxjob #364) |
 | 20 | `bar*` | ✗ `OQL_WILDCARD_NEEDS_EXACT` — bare wildcard is stemmed (wrong); fix-it: quote it `"bar*"` |
+| 203 | `cancer~1` | ✗ `OQL_NO_FUZZY` — `~` is search-engine syntax OQL does not expose; proximity is `within N (…)`, fuzzy matching is not available yet |
+| 204 | `dog\|cat` | ✗ `OQL_CHAR_NOT_OPERATOR` — the pipe is classic-URL OR; write `(dog or cat)` |
+
+**No search-engine syntax leaks through a value.** OQL is explicit pseudo-English:
+the only value micro-syntax is the table above (quotes, `within N (…)`, `*`/`?`
+wildcards inside quotes). Operator characters from other search languages — `~`
+(fuzzy / slop), `|` (the classic URL's OR), `\` (the engine's escape character) —
+are **rejected with a fix-it** rather than silently passed to the engine with their
+engine meaning. (Before #865, `title has (cancer~1)` quietly ran as fuzzy matching;
+`^`, `+`/`-`, `{}` and `&&` are literal text at every door since #633.) **Fuzzy
+matching is planned as an explicit OQL keyword** (something like `fuzzy`) and will
+be built when actual users ask for it, not before. A classic-URL query that uses
+the documented `term~N` fuzzy form still works on the classic door, but it has no
+OQL form: its `x_query.oql` leg is `null` with an `oql_unavailable` reason — never
+OQL that means something else.
 
 Key rules these encode:
 
@@ -791,6 +807,8 @@ NL) share codes and only localize prose. Every `✗` corpus row asserts its code
 | `OQL_IMPLICIT_ADJACENCY` | two operands, no connective | insert an `and` or `or` |
 | `OQL_MISSING_ENTITY_ID` | entity ref with only a `[name]` | put the ID first: `institution is I136199984 [Harvard]` |
 | `OQL_WILDCARD_NEEDS_EXACT` | bare (stemmed) `*`/`?` wildcard — standalone or as a proximity operand | quote it: `"bar*"` (runs on no-stem `.search.exact`) |
+| `OQL_NO_FUZZY` | `~` typed in a search value (`term~N` fuzzy, `"phrase"~N` slop) — search-engine syntax with no OQL surface | proximity: `within N (…)`; fuzzy matching is not available in OQL yet — remove the `~` |
+| `OQL_CHAR_NOT_OPERATOR` | `\|` or `\\` typed in a search value — classic-URL OR-pipe / engine escape character | write alternatives with `or`; remove a backslash |
 | `OQL_LEADING_WILDCARD` | leading `*`/`?` | anchor it: `cycle*` |
 | `OQL_SHORT_WILDCARD_PREFIX` | `<3` chars before `*` | add characters: `abc*` |
 | `OQL_MULTI_WILDCARD_SHORT_PREFIX` | 2+ wildcards with a `<4`-char prefix | lengthen the prefixes (expansion budget, #355) |
