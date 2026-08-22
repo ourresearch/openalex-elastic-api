@@ -371,6 +371,53 @@ _SEARCH_INPUT_TRANSLATION = {
 }
 
 
+# Lucene syntax the docs do NOT list (oxjob #633, session 8). `query_string` honors the
+# whole Lucene mini-language, but help.openalex.org documents only AND/OR/NOT, quotes,
+# `~N` proximity/fuzzy and `*`/`?` wildcards. The rest is live purely by inheritance on
+# the boolean/phrase/wildcard branches (the plain branch is analyzed, where these chars
+# are punctuation already): `-`/`+` at a token start = prohibit/require, `^N` = boost,
+# `{a TO b}` = range, `&&` = AND. Prod-measured over 7d of traffic nobody uses them on
+# purpose (0 deliberate boosts; 1 deliberate `-prohibit` per 30d of hand-written
+# queries), while ~3,800 req/wk of pasted titles that happen to contain an uppercase
+# AND/OR plus a spaced hyphen (`MARKET -LEVEL …`) silently EXCLUDE the very paper they
+# look up (0 results as sent, 1 escaped), and a leading `NOT -dog` 500s. So, outside
+# double quotes, they are escaped to literal text — which is what the analyzer makes of
+# them on every other path (`+cancer -treatment` = `cancer treatment`; `C++` = `c`).
+# Inside quotes Lucene already treats them literally. Token-leading only for `+`/`-`
+# (`COVID-19`, `state-of-the-art` are single terms to the parser either way). Documented
+# syntax is untouched: `~`, `*`, `?`, `"`, `(`, `)`, AND/OR/NOT.
+_LUCENE_ESCAPE_ANYWHERE = set("^&{}")
+_LUCENE_ESCAPE_TOKEN_LEADING = set("+-")
+
+
+def escape_undocumented_lucene(text):
+    """Escape the undocumented Lucene operators in `text`, outside double quotes.
+
+    `^ & { }` anywhere; `+`/`-` only at the start of a token (start of string, or
+    after whitespace / an opening paren). An already-escaped char (preceded by a
+    backslash) is left alone. Quote state toggles on every `"`; an unbalanced
+    trailing quote leaves the tail unescaped, which is the conservative side.
+    """
+    if not text:
+        return text
+    out = []
+    in_quote = False
+    prev = ""
+    for ch in text:
+        if ch == '"':
+            in_quote = not in_quote
+        elif not in_quote and prev != "\\":
+            if ch in _LUCENE_ESCAPE_ANYWHERE:
+                ch = "\\" + ch
+            elif ch in _LUCENE_ESCAPE_TOKEN_LEADING and (
+                prev == "" or prev.isspace() or prev == "("
+            ):
+                ch = "\\" + ch
+        out.append(ch)
+        prev = ch[-1]
+    return "".join(out)
+
+
 def normalize_search_input(text):
     if not text or not isinstance(text, str):
         return text
@@ -474,7 +521,7 @@ class SearchOpenAlex:
     def query_string_query(self):
         return Q(
             "query_string",
-            query=f"{self.search_terms}",
+            query=escape_undocumented_lucene(self.search_terms),
             default_operator="AND",
             default_field=self.primary_field,
             allow_leading_wildcard=False,
@@ -1010,6 +1057,11 @@ class SearchOpenAlex:
             self.search_terms = self.search_terms[:-3].strip()
         # strip html
         self.search_terms = self.search_terms.replace("<", "").replace(">", "")
+        # Undocumented Lucene operators (`-`/`+` token-leading, `^`, `{}`, `&`) ->
+        # literal text. Last, so it sees the final token boundaries. Only the
+        # query_string branches call this method, so the analyzed plain branch and
+        # the #355 intervals builders are untouched by construction (oxjob #633).
+        self.search_terms = escape_undocumented_lucene(self.search_terms)
 
 
 def full_search_query(index_name, search_terms, skip_citation_boost=False):

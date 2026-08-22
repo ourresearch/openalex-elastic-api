@@ -74,12 +74,13 @@ def test_negated_quoted_phrase_stays_one_leaf():
 
 
 def test_negated_unsplittable_lucene_value_stays_one_leaf():
-    # Category 2 (deferred): Lucene structure blocks the split — the leaf stays
-    # bare-and-negated, faithful in OQO/URL.
-    oqo = _parse_filter("title.search.exact:!+cancer treatment")
+    # Documented Lucene structure (fuzzy `~N`) blocks the split — the leaf stays
+    # bare-and-negated, faithful in OQO/URL. (Was `+cancer treatment` until #633
+    # session 8 made token-leading `+`/`-` literal, so that value now splits.)
+    oqo = _parse_filter("title.search.exact:!cancer~2 treatment")
     (leaf,) = oqo.filter_rows
     assert isinstance(leaf, LeafFilter)
-    assert (leaf.value, leaf.is_negated) == ("+cancer treatment", True)
+    assert (leaf.value, leaf.is_negated) == ("cancer~2 treatment", True)
 
 
 def test_lifted_boolean_not_operand_demorgans():

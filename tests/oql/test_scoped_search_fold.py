@@ -106,9 +106,11 @@ def test_comma_in_value_stays_one_clause_and_normalizes():
 def test_comma_inside_quotes_is_kept():
     # Quoted commas are literal phrase text; the engine's clause splitter is
     # quote-aware, so the rendered filter clause stays executable.
+    # (Since #633 session 8 a mixed phrase+word value lifts to its implicit AND,
+    # so the phrase is its own leaf — still carrying its comma.)
     oqo, _ = _parse_and_validate({"search.title": 'foo "bar, baz"'})
     rows = oqo.to_dict()["filter_rows"]
-    assert rows[0]["value"] == 'foo "bar, baz"'
+    assert [r["value"] for r in rows] == ["foo", '"bar, baz"']
 
 
 def test_multiple_scoped_params_all_thread_and_join_as_and():

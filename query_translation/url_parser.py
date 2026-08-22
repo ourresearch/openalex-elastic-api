@@ -397,9 +397,16 @@ def parse_single_filter(
     # flattened into a list — outer filter_rows is itself an implicit AND, so
     # nesting an explicit AND-branch there is redundant and would diverge from
     # the corpus's canonical shape.
+    # A MIXED value — a quoted phrase plus bare words with no keyword
+    # (`"machine learning" neural`) — is the engine's implicit AND of the phrase
+    # and the words (the query_string branch). It used to stay one leaf, which the
+    # renderers could not spell: the stemmed door dropped the quotes (a different
+    # query, 314,033 vs 1,189,845) and the exact door nested them
+    # (`(""machine learning" neural")`, unparseable). Lift it through the same
+    # tokenizer — implicit AND is already its grammar (#633 session 8).
     if (
         field.endswith((".search", ".search.exact"))
-        and _SEARCH_BOOLEAN_KEYWORD_RE.search(value)
+        and (_SEARCH_BOOLEAN_KEYWORD_RE.search(value) or _is_mixed_phrase_value(value))
     ):
         parsed = _parse_search_boolean(field, value)
         if field.endswith(".search.exact"):
@@ -760,6 +767,24 @@ def parse_bounded_range(field: str, value: str) -> List[LeafFilter]:
 # not AND(supply, chain)).
 
 _SEARCH_BOOLEAN_KEYWORD_RE = re.compile(r"(?:^|\s)(AND|OR|NOT)(?=\s|\()")
+
+# A quoted span, with its optional proximity tail (`"a b"~3`, `"a"~3~"b"`, …).
+_QUOTED_SPAN_RE = re.compile(r'"[^"]*"(?:~\d+(?:~"[^"]*")*)?')
+
+
+def _is_mixed_phrase_value(value: str) -> bool:
+    """True when a search value holds BOTH a quoted phrase and bare words outside
+    the quotes (`"machine learning" neural`) — and nothing structural that the
+    boolean tokenizer would misread. Pure phrase / proximity shapes, values with
+    no quotes, and values with an odd quote count (not a phrase) are not mixed."""
+    if not value or value.count('"') < 2 or value.count('"') % 2:
+        return False
+    if "!" in value or "|" in value:
+        # `!` is the within-field / leading NOT and `|` the OR-pipe — both have
+        # their own decomposition below and must keep it.
+        return False
+    rest = _QUOTED_SPAN_RE.sub(" ", value).strip()
+    return bool(rest) and '"' not in rest
 
 
 def _tokenize_search_boolean(value: str) -> List[Tuple[str, str]]:

@@ -16,8 +16,9 @@ The ban was over-cautious. Prod-measured on `title_and_abstract.search.exact`:
     split into two leaves   2,919,096   the split is result-preserving
 
 So the colon is ordinary punctuation to this door and splitting is safe. The
-remaining chars (`" ( ) | [ ] , ; ~ ^ ! &`) genuinely change the result set and
-stay banned — `machine^3 learning` = 229,590 vs 2,919,096 unboosted.
+remaining chars (`" ( ) | [ ] , ; ~ ! &`) genuinely change the result set and
+stay banned. (`^` and token-leading `+`/`-` were un-banned in session 8 — they
+were punctuation on this path all along; see test_exact_operator_split.py.)
 
 Pure: no app boot. Run with
     PYTHONPATH=. pytest tests/oql/test_exact_colon_split.py -q --noconftest
@@ -71,9 +72,9 @@ def test_single_token_with_colon_still_does_not_split():
 
 
 @pytest.mark.parametrize("value", [
-    "machine^3 learning",       # boost — changes the result set (229,590 vs 2,919,096)
+    # (`machine^3 learning` and `+cancer -treatment` moved to the SPLITS list in
+    # test_exact_operator_split.py — #633 session 8 made `^`/`+`/`-` literal.)
     "machine~2 learning",       # fuzzy
-    '+cancer -treatment',       # require/prohibit
     'the "big" thing',          # quotes would re-parse as syntax
     "cancer|treatment",         # OR-pipe is split upstream, not here
     "a [b TO c]",               # range brackets

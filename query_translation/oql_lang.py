@@ -3259,7 +3259,14 @@ def _render_term(value: str, column: str) -> str:
 # splitting is result-preserving (one leaf `learning: machine` = split
 # `…exact:learning:,…exact:machine` = 2,919,096). Both renderer legs round-trip
 # a colon-bearing token; see tests/oql/test_exact_colon_split.py.
-_EXACT_SPLIT_BANNED_RE = re.compile(r'["()|\[\],;~^!&]')
+# `^` left the ban and `+`/`-`-leading tokens stopped refusing in #633 session 8:
+# on the plain (analyzed) path they were always punctuation (`machine^3 learning`
+# = `machine 3 learning` = 229,325; `+cancer -treatment` = `cancer treatment`),
+# and since the engine now escapes them outside quotes on the query_string path
+# too (core/search.py `escape_undocumented_lucene`), they are literal text at
+# every door — so splitting is result-preserving and the per-token oql leg is
+# the faithful render (the phrase fallback re-executed to 0 / 199,107).
+_EXACT_SPLIT_BANNED_RE = re.compile(r'["()|\[\],;~!&]')
 # Uppercase-only Lucene operator words (lowercase `and` is a literal term).
 _LUCENE_OPERATOR_WORDS = {"AND", "OR", "NOT", "TO"}
 
@@ -3278,8 +3285,7 @@ def split_exact_words(value: str):
     None (don't split) when: single token; any token carries structural /
     cross-token Lucene chars (see _EXACT_SPLIT_BANNED_RE); a token is an
     uppercase Lucene operator word (`Windows AND DLL` — AND is an operator,
-    not a term); or a token starts with `+`/`-` (Lucene require/prohibit).
-    Those stay one bare leaf: the URL/OQO echo stays faithful, and the OQL
+    not a term). Those stay one bare leaf: the URL/OQO echo stays faithful, and the OQL
     render falls back to the (lossy, pre-existing) quoted form.
 
     A `:` inside a token does NOT block the split (#633 session 6): it is
@@ -3292,8 +3298,6 @@ def split_exact_words(value: str):
         if _EXACT_SPLIT_BANNED_RE.search(tk):
             return None
         if tk in _LUCENE_OPERATOR_WORDS:
-            return None
-        if tk[0] in "+-":
             return None
     return toks
 
