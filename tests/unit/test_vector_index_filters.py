@@ -111,3 +111,22 @@ def test_full_filter_shape_for_since_year_chip():
             ]
         }
     }
+
+
+def test_institution_lineage_chip_is_served_as_direct_affiliation():
+    """The GUI's only institution facet is lineage; the vector index has no
+    lineage field, so it maps to institution_ids (direct affiliation) rather
+    than 400ing the semantic-mode Institution chip (#862)."""
+    out = build_vector_filter(
+        {"filters": [{"authorships.institutions.lineage": "I27837315"}]}
+    )
+    assert out == {
+        "bool": {"must": [{"term": {"institution_ids": "https://openalex.org/I27837315"}}]}
+    }
+    out = build_vector_filter(
+        {"filters": [{"authorships.institutions.lineage": "I27837315|i4210140016"}]}
+    )
+    assert out["bool"]["must"][0]["terms"]["institution_ids"] == [
+        "https://openalex.org/I27837315",
+        "https://openalex.org/I4210140016",
+    ]

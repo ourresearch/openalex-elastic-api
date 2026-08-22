@@ -41,6 +41,11 @@ FILTER_FIELD_MAP = {
     "authorships.institutions.id": "institution_ids",
     "institution.id": "institution_ids",
     "institutions.id": "institution_ids",
+    # Lineage is what the GUI's Institution chip emits (semantic mode included —
+    # it's the only institution facet the GUI has). The vector index has no
+    # lineage field, so this is served as DIRECT affiliation (descendant
+    # institutions aren't matched). A subset beats the 400 it used to be (#862).
+    "authorships.institutions.lineage": "institution_ids",
     # "authorships.institutions.country_code": "country_codes",  # DISABLED: broad filter, 15-20s kNN timeout
     "is_retracted": "is_retracted",
     "primary_location.source.id": "source_id",
@@ -64,6 +69,7 @@ _RANGE_FIELDS = {"publication_year"}
 _ID_FIELDS = {
     "authorships.author.id", "author.id",
     "authorships.institutions.id", "institution.id", "institutions.id",
+    "authorships.institutions.lineage",
     "primary_location.source.id", "funders.id",
 }
 
