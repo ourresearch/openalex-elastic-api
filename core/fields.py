@@ -16,7 +16,6 @@ from core.search import (
     validate_wildcard_requires_exact,
     validate_wildcards,
 )
-from core.search_negation import validate_no_leading_not
 from core.utils import get_full_openalex_id, normalize_openalex_id
 from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX_LEGACY
 
@@ -915,9 +914,6 @@ class SearchField(Field):
             raise APIQueryParamsError(
                 f"Search filters do not support the ! operator. Problem value: {query}"
             )
-        # #857: a leading NOT was silently dropped (stopword) and returned the
-        # positive set; whole-query negation is refused on every search door.
-        validate_no_leading_not(query)
         # Reject unsupported wildcard shapes with friendly messages (oxjob #337):
         # leading `*`/`?` (raw ES parse error) and sub-3-char prefixes (silent literal).
         validate_wildcards(query)

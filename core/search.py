@@ -4,6 +4,7 @@ from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
 from core.knn import KNNQuery
+from core.search_negation import has_leading_not, whole_query_negation_operand
 import requests
 
 from settings import ES_URL_WALDEN
@@ -455,6 +456,31 @@ class SearchOpenAlex:
     def build_query(self, skip_citation_boost=False):
         if not self.search_terms:
             return self.match_all()
+
+        # Whole-query negation `NOT <one operand>` (oxjob #857): build the
+        # positive query exactly as usual and take its complement. Done here,
+        # above every branch, so each door's own builder (single-field, cross-
+        # field, exact/no-stem, intervals, raw-affiliation) supplies the
+        # positive half — and so the negation never distributes over the
+        # OR'd per-field clauses some branches emit. Semantic search has no
+        # meaningful complement and keeps treating the words as text.
+        negated_operand = (
+            None if self.is_semantic_query
+            else whole_query_negation_operand(self.search_terms)
+        )
+        if negated_operand is not None:
+            positive = SearchOpenAlex(
+                search_terms=negated_operand,
+                primary_field=self.primary_field,
+                secondary_field=self.secondary_field,
+                tertiary_field=self.tertiary_field,
+                is_author_name_query=self.is_author_name_query,
+                combine_fields=self.combine_fields,
+            ).build_query(skip_citation_boost=True)
+            raw_query = Q("bool", must=[self.match_all()], must_not=[positive])
+            if skip_citation_boost:
+                return raw_query
+            return self.citation_boost_query(raw_query)
 
         # Wildcard inside a quoted proximity phrase (`"smart phone*"~3`) — query_string
         # silently drops the wildcard, so build an ES `intervals` query instead (#355).
@@ -1008,7 +1034,13 @@ class SearchOpenAlex:
 
     def is_boolean_search(self):
         boolean_words = [" AND ", " OR ", " NOT "]
-        return any(word in self.search_terms for word in boolean_words)
+        # A leading NOT (multi-operand shapes like `NOT dog cat` — the single-
+        # operand shape is complemented in build_query) must reach the
+        # query_string parser; the plain `match` branch would drop `not` as a
+        # stopword and silently run the positive query (oxjob #857).
+        return any(word in self.search_terms for word in boolean_words) or has_leading_not(
+            self.search_terms
+        )
 
     def has_wildcard(self):
         """Detect intentional wildcard/fuzzy patterns in search terms.
