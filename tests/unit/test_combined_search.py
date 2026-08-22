@@ -134,6 +134,42 @@ class TestValidateSearchParam:
         with pytest.raises(APIQueryParamsError, match="does not support the ! operator"):
             validate_search_param(req)
 
+    # oxjob #857: a leading NOT used to be silently dropped (stopword) and
+    # return the POSITIVE set; it is now refused on every search param.
+    @pytest.mark.parametrize("param", [
+        "search", "search.exact", "search.title", "search.title.exact",
+        "search.title_and_abstract", "search.title_and_abstract.exact",
+    ])
+    def test_leading_not_rejected_on_every_param(self, param):
+        req = FakeRequest({param: "NOT dog"})
+        with pytest.raises(APIQueryParamsError, match="cannot begin with NOT") as exc:
+            validate_search_param(req)
+        assert "Problem value: NOT dog" in str(exc.value)
+
+    @pytest.mark.parametrize("value", [
+        "NOT dog", "  NOT dog", "(NOT dog)", "(NOT dog) AND cat", "NOT (dog OR cat)",
+        'NOT "dog food"', "NOT dog cat", "NOT",
+    ])
+    def test_leading_not_shapes_rejected(self, value):
+        req = FakeRequest({"search.title": value})
+        with pytest.raises(APIQueryParamsError, match="cannot begin with NOT"):
+            validate_search_param(req)
+
+    @pytest.mark.parametrize("value", [
+        "dog NOT cat",            # NOT between terms is supported, untouched
+        "dog AND NOT cat",
+        "cat AND (NOT dog)",
+        "not dog",                # lowercase is a word, not the operator
+        "NOTHING dog",            # whole-word only
+        "notable dogs",
+        '"NOT dog"',              # quoted phrase
+        "-dog",                   # #633: leading `-` is literal text, not an operator
+        "dog",
+    ])
+    def test_non_leading_not_still_accepted(self, value):
+        req = FakeRequest({"search.title": value})
+        validate_search_param(req)  # must not raise
+
 
 # ---- Parameter Extraction Tests ----
 

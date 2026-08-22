@@ -1,5 +1,6 @@
 import settings
 from core.exceptions import APIQueryParamsError
+from core.search_negation import validate_no_leading_not
 
 
 # Search parameter prefixes that are accepted via dot notation
@@ -197,6 +198,9 @@ def validate_search_param(request):
                 raise APIQueryParamsError(
                     f"The search parameter does not support the | operator. Problem value: {search_value}"
                 )
+            # #857: a leading NOT was silently dropped (stopword) and returned
+            # the positive set; whole-query negation is refused on every door.
+            validate_no_leading_not(search_value)
 
 
 def _parse_search_param_name(param_name):

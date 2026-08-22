@@ -1,3 +1,6 @@
+import pytest
+
+
 class TestWorksSearch:
     def test_works_search(self, client):
         res = client.get("/works?search=analysis")
@@ -76,6 +79,30 @@ class TestWorksSearch:
         assert json_data["error"] == "Invalid query parameters error."
         assert json_data["message"] == (
             "Search filters do not support the ! operator. Problem value: !zoo"
+        )
+
+    # oxjob #857: a leading NOT was silently dropped (English stopword) and the
+    # request returned the POSITIVE set; whole-query negation is now refused.
+    @pytest.mark.parametrize("query", [
+        "search=NOT dog",
+        "search.exact=NOT dog",
+        "search.title=NOT dog",
+        "search.title.exact=NOT dog",
+        "search.title_and_abstract=NOT dog",
+        "search.title_and_abstract.exact=NOT dog",
+        "filter=display_name.search:NOT dog",
+        "filter=abstract.search:NOT dog",
+        "filter=title_and_abstract.search:NOT dog",
+        "filter=raw_affiliation_strings.search:NOT dog",
+    ])
+    def test_works_leading_not_rejected(self, client, query):
+        res = client.get(f"/works?{query}")
+        json_data = res.get_json()
+        assert res.status_code == 400
+        assert json_data["error"] == "Invalid query parameters error."
+        assert json_data["message"] == (
+            "Search values cannot begin with NOT: a search needs at least one "
+            "positive term to match, e.g. 'cat NOT dog'. Problem value: NOT dog"
         )
 
     def test_works_search_wildcard_stemmed_rejected(self, client):
