@@ -577,8 +577,7 @@ wildcards inside quotes). Operator characters from other search languages — `~
 are **rejected with a fix-it** rather than silently passed to the engine with their
 engine meaning. (Before #865, `title has (cancer~1)` quietly ran as fuzzy matching;
 `^`, `+`/`-`, `{}` and `&&` are literal text at every door since #633.) **Fuzzy
-matching is planned as an explicit OQL keyword** (something like `fuzzy`) and will
-be built when actual users ask for it, not before. A classic-URL query that uses
+matching is planned; ask us if you're interested.** A classic-URL query that uses
 the documented `term~N` fuzzy form still works on the classic door, but it has no
 OQL form: its `x_query.oql` leg is `null` with an `oql_unavailable` reason — never
 OQL that means something else.
