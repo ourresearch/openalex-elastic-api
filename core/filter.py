@@ -29,8 +29,16 @@ def filter_records(fields_dict, filter_params, s, sample=None):
             if is_quoted:
                 value = value[1:-1]
 
-            # multiple OR queries have | in the param values
-            if "|" in value:
+            # multiple OR queries have | in the param values.
+            # A leading `!` on a SEARCH value also routes here even with no `|`:
+            # handle_or_query is where negation lives, and its `value.split("|")` yields a
+            # single operand for a pipeless value. Before oxjob #633 a bare `!dog` fell
+            # through to the plain branch below and 400'd in SearchField.validate, so
+            # search negation was only ever reachable on a value that ALSO had a pipe.
+            # Scoped to search params on purpose: non-search fields (RangeField, DateField,
+            # TermField, …) already handle a leading `!` inside their own build_query, and
+            # routing them here instead would swap that for a generic NOT wrapper.
+            if "|" in value or (value.startswith("!") and "search" in field.param):
                 s = handle_or_query(field, fields_dict, s, value, sample)
 
             # multiple AND queries have + in the param values which is converted to a space
@@ -92,7 +100,12 @@ def handle_or_query(field, fields_dict, s, value, sample):
     if value.startswith("!"):
         # negate everything in values after !, like: NOT (42 or 43)
         for or_value in value.split("|"):
-            or_value = or_value.replace("!", "")
+            # Strip only a LEADING `!` per operand. This used to be `.replace("!", "")`,
+            # which also ate mid-value bangs; on a search value those are now literal text
+            # (oxjob #633 — `escape_undocumented_lucene`), so `!dog !cat` must negate
+            # `dog !cat`, not `dog cat`. Non-search values never contain a mid-value `!`.
+            if or_value.startswith("!"):
+                or_value = or_value[1:]
             field.value = or_value
             q = field.build_query()
             not_query = ~Q("bool", must=q)

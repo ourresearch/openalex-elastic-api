@@ -910,10 +910,15 @@ class SearchField(Field):
         return q
 
     def validate(self, query):
-        if any([word.startswith("!") for word in query.split()]):
-            raise APIQueryParamsError(
-                f"Search filters do not support the ! operator. Problem value: {query}"
-            )
+        # `!` used to be rejected outright here (Casey `e98d0ef`, 2023-04-03, "show error
+        # if using not or pipe operator in search" — fail-loudly, since nothing implemented
+        # it). oxjob #633 implemented it instead: a LEADING `!` is whole-value negation,
+        # handled in `core/filter.py:handle_or_query` (filter door) and
+        # `core/shared_view.py` (param door), both of which strip the `!` before building
+        # the query — so a leading `!` never reaches this method. A mid-value `!` is
+        # escaped to literal text by `escape_undocumented_lucene`, so it needs no error
+        # either. Nothing left to reject.
+        #
         # Reject unsupported wildcard shapes with friendly messages (oxjob #337):
         # leading `*`/`?` (raw ES parse error) and sub-3-char prefixes (silent literal).
         validate_wildcards(query)

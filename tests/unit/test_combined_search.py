@@ -116,23 +116,24 @@ class TestValidateSearchParam:
         with pytest.raises(APIQueryParamsError, match="Cannot use both stemmed and exact"):
             validate_search_param(req)
 
-    def test_bang_operator_rejected(self):
-        req = FakeRequest({"search.title": "!zoo"})
-        with pytest.raises(APIQueryParamsError, match="does not support the ! operator"):
-            validate_search_param(req)
+    # oxjob #633: `!` used to be rejected on this door (Casey `e98d0ef`, 2023 —
+    # fail-loudly, since nothing implemented it). It is now the negation operator here
+    # too, matching the filter door, so the two spellings of one query agree.
+    def test_bang_operator_accepted(self):
+        validate_search_param(FakeRequest({"search.title": "!zoo"}))  # must not raise
 
     def test_pipe_operator_rejected(self):
+        # Still rejected on the param door: a degenerate empty OR operand on the FILTER
+        # door matches the whole index, so `|` is not spread here until that is fixed.
         req = FakeRequest({"search.title": "dna|rna"})
         with pytest.raises(APIQueryParamsError, match="does not support the \\| operator"):
             validate_search_param(req)
 
     def test_bang_operator_with_multiple_searches(self):
-        req = FakeRequest({
+        validate_search_param(FakeRequest({
             "search.title": "hello",
             "search.title_and_abstract": "!zoo",
-        })
-        with pytest.raises(APIQueryParamsError, match="does not support the ! operator"):
-            validate_search_param(req)
+        }))  # must not raise
 
     # oxjob #857: a leading NOT is whole-query negation (complemented in the
     # engine, see tests/unit/test_whole_query_negation.py) — it is accepted on

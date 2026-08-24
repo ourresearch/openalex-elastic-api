@@ -189,11 +189,17 @@ def validate_search_param(request):
     for param in search_params_present:
         search_value = request.args.get(param)
         if search_value:
-            if any(word.startswith("!") for word in search_value.split()):
-                raise APIQueryParamsError(
-                    f"The search parameter does not support the ! operator. Problem value: {search_value}"
-                )
-            elif "|" in search_value:
+            # `!` was rejected here too until oxjob #633. A LEADING `!` is now the
+            # negation operator on this door as well (`?search.title=!dog`), matching the
+            # filter door so the two spellings of one query stop disagreeing; it is peeled
+            # in core/shared_view.py before the query is built. A mid-value `!` is literal
+            # text (escape_undocumented_lucene). Nothing to reject either way.
+            #
+            # `|` stays rejected on this door for now: a degenerate empty OR operand on the
+            # FILTER door currently matches the whole index (`…search:cancer|` = all
+            # 321,958,325 works), so allowing `|` here would spread that bug to a second
+            # door. Revisit once that is fixed (#633 open item 1).
+            if "|" in search_value:
                 raise APIQueryParamsError(
                     f"The search parameter does not support the | operator. Problem value: {search_value}"
                 )

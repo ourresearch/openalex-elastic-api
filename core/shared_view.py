@@ -244,6 +244,31 @@ def citation_boost_needed(params):
     return True
 
 
+def split_leading_negation(search_str):
+    """Peel a leading `!` off a top-level search value (oxjob #633).
+
+    Returns `(negated, remaining_value)`. The param door mirrors the filter door's
+    operator — `?search.title=!dog` means the same query as
+    `?filter=display_name.search:!dog` — so the two spellings of one query stop giving
+    two different answers (the filter door negated, the param door 400'd).
+
+    Only a LEADING `!` is the operator. A mid-value `!` is literal text, escaped by
+    `escape_undocumented_lucene`; the documented way to negate mid-query is `NOT`.
+    `!` alone is not a negation of nothing — it leaves an empty value, so it is left
+    untouched for the normal empty-value handling to deal with.
+    """
+    if search_str and search_str.startswith("!") and search_str[1:].strip():
+        return True, search_str[1:]
+    return False, search_str
+
+
+def _negate(query):
+    """NOT <query> — the same shape core/filter.py uses for a negated filter value."""
+    from elasticsearch_dsl import Q
+
+    return ~Q("bool", must=query)
+
+
 def add_search_query(params, index_name, s):
     searches = params.get("searches", [])
     skip_boost = not citation_boost_needed(params)
@@ -257,6 +282,10 @@ def add_search_query(params, index_name, s):
             # instead of being rejected. Multi-word phrases / proximity are untouched.
             # zd#9063
             search_str = strip_singleton_wildcard_quotes(params["search"])
+            # Leading `!` = negation (oxjob #633). Peel it BEFORE validation and query
+            # building so every downstream check sees the bare term, then wrap the
+            # finished query in NOT.
+            negated, search_str = split_leading_negation(search_str)
             validate_search_terms(search_str)
             search_scope = params.get("search_scope")
             search_type = params.get("search_type")
@@ -287,6 +316,9 @@ def add_search_query(params, index_name, s):
                     index_name, search_str, skip_citation_boost=skip_boost
                 )
 
+            if negated:
+                search_query = _negate(search_query)
+
             if params["sample"]:
                 s = s.filter(search_query)
             else:
@@ -310,6 +342,10 @@ def add_search_query(params, index_name, s):
         # Single-word wildcard like `"machin*"` -> `machin*` (see single-search
         # branch above). zd#9063
         query_str = strip_singleton_wildcard_quotes(query_str)
+        # Leading `!` = negation, per search param (oxjob #633). Each sub-query is
+        # negated on its own, then the sub-queries are ANDed as before — so
+        # `?search.title=!dog&search.abstract=cat` is NOT(title:dog) AND abstract:cat.
+        negated, query_str = split_leading_negation(query_str)
         validate_search_terms(query_str)
 
         if search_scope and not index_name.lower().startswith("works"):
@@ -331,6 +367,9 @@ def add_search_query(params, index_name, s):
             sub_query = full_search_query(
                 index_name, query_str, skip_citation_boost=True
             )
+
+        if negated:
+            sub_query = _negate(sub_query)
 
         sub_queries.append(sub_query)
         preference_parts.append(query_str)

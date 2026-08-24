@@ -387,7 +387,17 @@ _SEARCH_INPUT_TRANSLATION = {
 # Inside quotes Lucene already treats them literally. Token-leading only for `+`/`-`
 # (`COVID-19`, `state-of-the-art` are single terms to the parser either way). Documented
 # syntax is untouched: `~`, `*`, `?`, `"`, `(`, `)`, AND/OR/NOT.
-_LUCENE_ESCAPE_ANYWHERE = set("^&{}")
+#
+# `!` joined this set with #633's negation work. A LEADING `!` on a search value is the
+# classic API's own negation operator (`display_name.search:!dog`) and is stripped by
+# `core/filter.py` / `core/shared_view.py` before the value ever reaches here, so it never
+# sees this function. Any `!` that survives is mid-value (`dog !cat`), where ES
+# query_string would read it as Lucene NOT on the boolean/phrase/wildcard branches while
+# the plain analyzed branch drops it as punctuation — the same silent split-brain the rest
+# of this set exists to close (measured: `dog!cat` = `dog cat` = 3,230, but `dog AND !cat`
+# would have run as `dog NOT cat`). Literal is the honest reading, and the documented way
+# to negate mid-query is `NOT`.
+_LUCENE_ESCAPE_ANYWHERE = set("^&{}!")
 _LUCENE_ESCAPE_TOKEN_LEADING = set("+-")
 
 
