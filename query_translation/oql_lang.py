@@ -1168,6 +1168,24 @@ def _build_by_column() -> None:
                 continue
             resolved = _entity_resolve_field(fld, ent)
             if resolved.column != fld.column:
+                # oxjob #878: a tier-1 claim makes `resolved.column` RENDER as
+                # fld's friendly word globally. If any OTHER entity carries the
+                # same column id but the word resolves elsewhere there (works:
+                # "domain" -> primary_topic.domain.id while topics.domain.id
+                # also exists) -- or doesn't resolve at all (awards) -- the
+                # friendly render wouldn't round-trip on that entity. Keep the
+                # raw-id render instead (same principle as the tier-3 works
+                # round-trip guard below).
+                if any(
+                    resolved.column in (ENTITY_PROPERTIES.get(e) or {})
+                    and (w := _entity_word_index(e).get(fld.oql.lower()))
+                    is not None
+                    and canonicalize_column_id(w, e)
+                    != canonicalize_column_id(resolved.column, e)
+                    for e in entities
+                    if e != ent
+                ):
+                    continue
                 claim(1, resolved.column, fld,
                       f"homonym of {fld.oql!r} on {ent}")
 
