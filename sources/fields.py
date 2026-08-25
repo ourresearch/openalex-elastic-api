@@ -157,6 +157,8 @@ fields = [
     TermField(param="issn"),
     TermField(param="issn_l", custom_es_field="issn_l"),
     TermField(param="topics.id"),
+    TermField(param="topics.domain.id", custom_es_field="topics.domain.id"),
+    TermField(param="topics.field.id", custom_es_field="topics.field.id"),
     TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),
     TermField(
         param="type",

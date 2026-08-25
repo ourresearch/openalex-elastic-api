@@ -288,6 +288,8 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'summary_stats.h_index': {"display_name": 'h-index'},
         'summary_stats.i10_index': {"display_name": 'i10-index'},
         'topics.id': {"display_name": 'topic'},
+        'topics.domain.id': {"display_name": 'domain'},
+        'topics.field.id': {"display_name": 'field'},
         'type': {"display_name": 'source type'},
     },
     'subfields': {

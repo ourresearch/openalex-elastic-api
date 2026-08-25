@@ -249,7 +249,7 @@ CAP_COLUMN = "column"
 # registry -> mirror -> sources_api -> ES since 2026-07-28; this declaration is
 # the final exposure step. Handling delegated in the 2026-07-27 meeting; bump
 # run by Rohan 2026-07-28. = MINOR.
-PROPERTIES_VERSION = "8.5.0"
+PROPERTIES_VERSION = "8.6.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

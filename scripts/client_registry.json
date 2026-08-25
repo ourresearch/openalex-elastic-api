@@ -2579,6 +2579,36 @@
       "isId": false,
       "hasExport": false
     },
+    "topics.domain.id": {
+      "key": "topics.domain.id",
+      "entityToFilter": "sources",
+      "entityToSelect": "domains",
+      "displayName": "Domain",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "topics.field.id": {
+      "key": "topics.field.id",
+      "entityToFilter": "sources",
+      "entityToSelect": "fields",
+      "displayName": "Field",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "first_publication_year": {
       "key": "first_publication_year",
       "entityToFilter": "sources",

@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 24,
-    "fingerprint": "4ad2819b9e8c691d7c77b1852d72891ff176798a434441db468b3c6de297e774",
-    "property_count": 812,
-    "version": "8.5.0"
+    "fingerprint": "9b01589adf3f610348c6dc3d3a39c5cb7ffc9663880756050e4dcf6895d06188",
+    "property_count": 814,
+    "version": "8.6.0"
   },
   "properties": {
     "authors": {
@@ -11095,6 +11095,56 @@
         "operators": [],
         "supported_by": [],
         "type": null
+      },
+      "topics.domain.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "domain",
+        "entity_type": "domains",
+        "name": "topics.domain.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
+      "topics.field.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "field",
+        "entity_type": "fields",
+        "name": "topics.field.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
       },
       "topics.id": {
         "actions": [
