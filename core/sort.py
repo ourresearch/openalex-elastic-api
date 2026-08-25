@@ -61,6 +61,32 @@ def get_sort_fields(fields_dict, group_by, sort_params):
     return sort_fields
 
 
+WORKS_TIE_BREAK_SORT = ["-publication_date", "id"]
+
+
+def with_tie_break(sort_fields, default_sort, index_name):
+    """Append a deterministic tie-break tail to an explicit sort (oxjob #879).
+
+    Explicit sorts (e.g. ?sort=cited_by_count:desc) used to end at the user's
+    fields, so tied rows came back in arbitrary ES internal order (shard +
+    Lucene doc id), which can change on segment merge/reindex. Mirror the
+    cursor path (sort_with_cursor), which already appends default_sort, but
+    use a more legible tail for works: newest publication first, then id.
+
+    Fields already in the user's sort are not re-appended; a sort that already
+    contains the unique `id` key is left untouched (already deterministic).
+    """
+    if not sort_fields:
+        return sort_fields
+    seen = {f[1:] if f.startswith("-") else f for f in sort_fields}
+    if "id" in seen:
+        return sort_fields
+    tail = WORKS_TIE_BREAK_SORT if index_name.startswith("works") else default_sort
+    return sort_fields + [
+        f for f in tail if (f[1:] if f.startswith("-") else f) not in seen
+    ]
+
+
 def sort_with_cursor(default_sort, fields_dict, group_by, s, sort_params):
     sort_fields = get_sort_fields(fields_dict, group_by, sort_params)
     sort_fields_with_default = sort_fields + default_sort

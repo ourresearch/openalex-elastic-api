@@ -31,7 +31,12 @@ from core.params import parse_params
 from core.preference import clean_preference, combine_preferences, set_preference_for_filter_search
 from core.search import SearchOpenAlex, check_is_search_query, full_search_query, full_search_query_exact, scoped_search_query, strip_singleton_wildcard_quotes, validate_search_terms, validate_top_level_search_wildcard
 from core.semantic_search import embed_query, VECTOR_FIELD
-from core.sort import get_sort_fields, sort_with_cursor, sort_with_sample
+from core.sort import (
+    get_sort_fields,
+    sort_with_cursor,
+    sort_with_sample,
+    with_tie_break,
+)
 from core.utils import get_data_version_connection, get_field
 from core.vector_index import vector_semantic_search
 
@@ -526,6 +531,12 @@ def apply_sorting(params, fields_dict, default_sort, index_name, s):
             or sort_fields == ["-cited_by_percentile_year.max"]
         ):
             sort_fields = default_sort
+
+        # oxjob #879: deterministic tie-break so tied rows (e.g. all
+        # zero-citation works under sort=cited_by_count:desc) have a stable,
+        # legible order. Safe with semantic search: add_semantic_search never
+        # adds a rescore when an explicit sort is present.
+        sort_fields = with_tie_break(sort_fields, default_sort, index_name)
 
         s = s.sort(*sort_fields)
     elif is_search_query and not params["sort"] and index_name.startswith("works"):
