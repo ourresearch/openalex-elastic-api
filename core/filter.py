@@ -86,6 +86,26 @@ def handle_or_query(field, fields_dict, s, value, sample):
             f"https://developers.openalex.org/download/snapshot-format"
         )
 
+    # An EMPTY OR-operand in a SEARCH value would match the whole index: the
+    # operand builds SearchOpenAlex(search_terms="") → match_all(), so a stray
+    # trailing/leading/doubled `|` silently turned `display_name.search:nature`
+    # (222 sources) into all 255K sources (oxjob #633 item 1). Fail loudly
+    # instead, mirroring the whole-value empty check in
+    # core/utils.py:map_filter_params. Scoped to search params on purpose: on
+    # term/range fields an empty operand matches nothing (a harmless no-op since
+    # forever), and 400ing it would break silently-working queries for no
+    # safety win.
+    if "search" in field.param:
+        for or_value in value.split("|"):
+            if or_value.startswith("!"):
+                or_value = or_value[1:]
+            if not or_value.strip():
+                raise APIQueryParamsError(
+                    f"Invalid filter value for '{field.param}': the value contains "
+                    f"an empty OR operand ('{value}'). Remove the stray | (or "
+                    f"supply a value on each side of it)."
+                )
+
     # raise error if trying to use | between filters like filter=institutions.country_code:fr|host_venue.issn:0957-1558
     fields = fields_dict.keys()
     for filter_field in fields:

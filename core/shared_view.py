@@ -274,6 +274,94 @@ def _negate(query):
     return ~Q("bool", must=query)
 
 
+def _build_one_search_operand(
+    index_name, query_str, search_scope, search_type, skip_citation_boost
+):
+    """Validate + build the query for ONE search operand (no `!`/`|` operators left)."""
+    validate_search_terms(query_str)
+
+    if search_scope and not index_name.lower().startswith("works"):
+        raise APIQueryParamsError(
+            f"search.{search_scope} is only supported for /works."
+        )
+
+    # #364: a wildcard on the stemmed top-level search returns wrong
+    # results; require &search_type=exact (or the default.search.exact
+    # filter). search_scope=... with search_type=exact also routes no-stem.
+    validate_top_level_search_wildcard(
+        query_str, index_name, is_exact=(search_type == "exact")
+    )
+
+    if search_scope:
+        return scoped_search_query(
+            query_str, search_scope, search_type,
+            skip_citation_boost=skip_citation_boost,
+        )
+    if search_type == "exact" and index_name.lower().startswith("works"):
+        return full_search_query_exact(
+            query_str, skip_citation_boost=skip_citation_boost
+        )
+    return full_search_query(
+        index_name, query_str, skip_citation_boost=skip_citation_boost
+    )
+
+
+def build_search_value_query(
+    index_name, value, search_scope, search_type, skip_citation_boost=False
+):
+    """Build the query for one search PARAM value, with the same value operators
+    as the filter door (core/filter.py:handle_or_query), so the two spellings of
+    one query agree (oxjob #633):
+
+    - a leading `!` negates the whole value (`?search.title=!dog`);
+    - `|` is OR (`?search.title=dog|cat`) — lifted as part of #633 item 1; it was
+      rejected on this door only so the filter door's empty-OR-operand bug would
+      not spread here, and both doors now 400 an empty operand instead;
+    - `!a|b` / `!a|!b` = NOT (a OR b), the filter door's whole-list negation; a
+      non-leading `!` on an OR operand is the same error the filter door raises.
+    """
+    from elasticsearch_dsl import Q
+
+    negated, value = split_leading_negation(value)
+
+    if "|" not in value:
+        query = _build_one_search_operand(
+            index_name, value, search_scope, search_type, skip_citation_boost
+        )
+        return _negate(query) if negated else query
+
+    or_queries = []
+    for operand in value.split("|"):
+        if operand.startswith("!"):
+            if not negated:
+                raise APIQueryParamsError(
+                    f"The ! operator can only be used at the beginning of an OR "
+                    f"query. Problem value: {operand}"
+                )
+            operand = operand[1:]
+        # An empty operand would build match_all() and swallow the whole index —
+        # the filter-door bug this door's `|` ban existed to contain (#633 item
+        # 1). validate.py already 400s it for request args; this covers direct
+        # callers.
+        if not operand.strip():
+            raise APIQueryParamsError(
+                f"Search value contains an empty OR operand ('{value}'). Remove "
+                f"the stray | (or supply a value on each side of it)."
+            )
+        or_queries.append(
+            _build_one_search_operand(
+                index_name, operand, search_scope, search_type,
+                skip_citation_boost=True,
+            )
+        )
+    combined = Q("bool", should=or_queries, minimum_should_match=1)
+    if negated:
+        return _negate(combined)
+    if skip_citation_boost:
+        return combined
+    return SearchOpenAlex.citation_boost_query(combined)
+
+
 def add_search_query(params, index_name, s):
     searches = params.get("searches", [])
     skip_boost = not citation_boost_needed(params)
@@ -287,42 +375,15 @@ def add_search_query(params, index_name, s):
             # instead of being rejected. Multi-word phrases / proximity are untouched.
             # zd#9063
             search_str = strip_singleton_wildcard_quotes(params["search"])
-            # Leading `!` = negation (oxjob #633). Peel it BEFORE validation and query
-            # building so every downstream check sees the bare term, then wrap the
-            # finished query in NOT.
-            negated, search_str = split_leading_negation(search_str)
-            validate_search_terms(search_str)
-            search_scope = params.get("search_scope")
-            search_type = params.get("search_type")
-
-            if search_scope and not index_name.lower().startswith("works"):
-                raise APIQueryParamsError(
-                    f"search.{search_scope} is only supported for /works."
-                )
-
-            # #364: a wildcard on the stemmed top-level search returns wrong
-            # results; require &search_type=exact (or the default.search.exact
-            # filter). search_scope=... with search_type=exact also routes no-stem.
-            validate_top_level_search_wildcard(
-                search_str, index_name, is_exact=(search_type == "exact")
+            # Leading `!` = negation and `|` = OR — the same value operators as
+            # the filter door, composed in build_search_value_query (oxjob #633).
+            search_query = build_search_value_query(
+                index_name,
+                search_str,
+                params.get("search_scope"),
+                params.get("search_type"),
+                skip_citation_boost=skip_boost,
             )
-
-            if search_scope:
-                search_query = scoped_search_query(
-                    search_str, search_scope, search_type,
-                    skip_citation_boost=skip_boost,
-                )
-            elif search_type == "exact" and index_name.lower().startswith("works"):
-                search_query = full_search_query_exact(
-                    search_str, skip_citation_boost=skip_boost
-                )
-            else:
-                search_query = full_search_query(
-                    index_name, search_str, skip_citation_boost=skip_boost
-                )
-
-            if negated:
-                search_query = _negate(search_query)
 
             if params["sample"]:
                 s = s.filter(search_query)
@@ -347,34 +408,14 @@ def add_search_query(params, index_name, s):
         # Single-word wildcard like `"machin*"` -> `machin*` (see single-search
         # branch above). zd#9063
         query_str = strip_singleton_wildcard_quotes(query_str)
-        # Leading `!` = negation, per search param (oxjob #633). Each sub-query is
-        # negated on its own, then the sub-queries are ANDed as before — so
-        # `?search.title=!dog&search.abstract=cat` is NOT(title:dog) AND abstract:cat.
-        negated, query_str = split_leading_negation(query_str)
-        validate_search_terms(query_str)
-
-        if search_scope and not index_name.lower().startswith("works"):
-            raise APIQueryParamsError(
-                f"search.{search_scope} is only supported for /works."
-            )
-
-        validate_top_level_search_wildcard(
-            query_str, index_name, is_exact=(search_type == "exact")
+        # Leading `!` = negation and `|` = OR, per search param (oxjob #633). Each
+        # sub-query composes its own value operators, then the sub-queries are
+        # ANDed as before — `?search.title=!dog&search.abstract=cat|dog` is
+        # NOT(title:dog) AND (abstract:cat OR abstract:dog).
+        sub_query = build_search_value_query(
+            index_name, query_str, search_scope, search_type,
+            skip_citation_boost=True,
         )
-
-        if search_scope:
-            sub_query = scoped_search_query(
-                query_str, search_scope, search_type, skip_citation_boost=True
-            )
-        elif search_type == "exact" and index_name.lower().startswith("works"):
-            sub_query = full_search_query_exact(query_str, skip_citation_boost=True)
-        else:
-            sub_query = full_search_query(
-                index_name, query_str, skip_citation_boost=True
-            )
-
-        if negated:
-            sub_query = _negate(sub_query)
 
         sub_queries.append(sub_query)
         preference_parts.append(query_str)

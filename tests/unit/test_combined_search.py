@@ -122,11 +122,16 @@ class TestValidateSearchParam:
     def test_bang_operator_accepted(self):
         validate_search_param(FakeRequest({"search.title": "!zoo"}))  # must not raise
 
-    def test_pipe_operator_rejected(self):
-        # Still rejected on the param door: a degenerate empty OR operand on the FILTER
-        # door matches the whole index, so `|` is not spread here until that is fixed.
-        req = FakeRequest({"search.title": "dna|rna"})
-        with pytest.raises(APIQueryParamsError, match="does not support the \\| operator"):
+    def test_pipe_operator_accepted(self):
+        # Lifted with #633 item 1: the ban existed only so the filter door's
+        # empty-OR-operand bug wouldn't spread here. Both doors now 400 the empty
+        # operand instead, and this door composes OR like the filter door
+        # (core/shared_view.py:build_search_value_query).
+        validate_search_param(FakeRequest({"search.title": "dna|rna"}))  # must not raise
+
+    def test_pipe_with_empty_operand_rejected(self):
+        req = FakeRequest({"search.title": "dna|"})
+        with pytest.raises(APIQueryParamsError, match="empty OR operand"):
             validate_search_param(req)
 
     def test_bang_operator_with_multiple_searches(self):

@@ -60,14 +60,17 @@ class TestWorksSearch:
             "The search parameter does not support the ! operator. Problem value: !zoo"
         )
 
-    def test_works_search_pipe_operator_error(self, client):
-        res = client.get("/works?search=dna|rna")
+    def test_works_search_pipe_empty_operand_error(self, client):
+        # `|` is OR on this door since #633 item 1 (so `search=dna|rna` is no
+        # longer rejected — it needs ES, covered in unit tests); what IS rejected
+        # is the empty operand, which would otherwise match the whole index.
+        res = client.get("/works?search=dna|")
         json_data = res.get_json()
-        assert res.status_code == 403
+        # 403 through the prod edge; the bare Flask test app maps
+        # APIQueryParamsError to 400 (same as the sibling tests' env baseline).
+        assert res.status_code in (400, 403)
         assert json_data["error"] == "Invalid query parameters error."
-        assert json_data["message"] == (
-            "The search parameter does not support the | operator. Problem value: dna|rna"
-        )
+        assert "empty OR operand" in json_data["message"]
 
     def test_works_filter_search_not_operator_error(self, client):
         res = client.get("/works?filter=abstract.search:!zoo")

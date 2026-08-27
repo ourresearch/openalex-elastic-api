@@ -193,16 +193,26 @@ def validate_search_param(request):
             # negation operator on this door as well (`?search.title=!dog`), matching the
             # filter door so the two spellings of one query stop disagreeing; it is peeled
             # in core/shared_view.py before the query is built. A mid-value `!` is literal
-            # text (escape_undocumented_lucene). Nothing to reject either way.
+            # text (escape_undocumented_lucene).
             #
-            # `|` stays rejected on this door for now: a degenerate empty OR operand on the
-            # FILTER door currently matches the whole index (`…search:cancer|` = all
-            # 321,958,325 works), so allowing `|` here would spread that bug to a second
-            # door. Revisit once that is fixed (#633 open item 1).
-            if "|" in search_value:
-                raise APIQueryParamsError(
-                    f"The search parameter does not support the | operator. Problem value: {search_value}"
-                )
+            # `|` (OR) was rejected here until #633 item 1 — kept banned only so the
+            # filter door's empty-OR-operand bug (`…search:cancer|` = the whole index)
+            # would not spread to a second door. Both doors now 400 the empty operand
+            # instead, and this door composes OR in
+            # core/shared_view.py:build_search_value_query, so `?search.title=dog|cat`
+            # means the same query as `filter=display_name.search:dog|cat`.
+            # `search.semantic` is excluded: it is a natural-language door with no value
+            # operators — a `|` there is literal text.
+            if param != "search.semantic" and "|" in search_value:
+                for operand in search_value.split("|"):
+                    if operand.startswith("!"):
+                        operand = operand[1:]
+                    if not operand.strip():
+                        raise APIQueryParamsError(
+                            f"Search value contains an empty OR operand "
+                            f"('{search_value}'). Remove the stray | (or supply a "
+                            f"value on each side of it)."
+                        )
 
 
 def _parse_search_param_name(param_name):
