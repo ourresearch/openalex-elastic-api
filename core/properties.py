@@ -249,7 +249,14 @@ CAP_COLUMN = "column"
 # registry -> mirror -> sources_api -> ES since 2026-07-28; this declaration is
 # the final exposure step. Handling delegated in the 2026-07-27 meeting; bump
 # run by Rohan 2026-07-28. = MINOR.
-PROPERTIES_VERSION = "8.6.0"
+# 9.0.0 (oxjob #915): locations loses `raw_source_name` — it was a duplicate
+# alias of `source_name` (same ES field, same value; the API served identical
+# strings under both names). Removal of a property = MAJOR per the bump rule.
+# Rides the locations-v2 index cutover; same change adds locations
+# `endpoint_id` (term) and `updated_date` + `from_updated_date` +
+# `to_updated_date` (date; v2 maps updated_date as a real date) — the additive
+# side would be MINOR, the removal dominates. Casey-directed 2026-08-28. = MAJOR.
+PROPERTIES_VERSION = "9.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

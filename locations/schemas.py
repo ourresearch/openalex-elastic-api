@@ -40,11 +40,11 @@ class LocationsSchema(Schema):
     native_id = fields.Str()
     native_id_namespace = fields.Str()
     provenance = fields.Str(default=None)
+    endpoint_id = fields.Str(default=None)
     title = fields.Str()
     type = fields.Str()
     raw_type = fields.Str(default=None)
     source_name = fields.Str(default=None)
-    raw_source_name = fields.Method("get_raw_source_name")
     publisher = fields.Str(default=None)
     source_id = fields.Str(default=None)
     is_oa = fields.Bool()
@@ -54,6 +54,7 @@ class LocationsSchema(Schema):
     is_retracted = fields.Bool(defaul=False)
     landing_page_url = fields.Str(default=None)
     pdf_url = fields.Str(default=None)
+    updated_date = fields.Str(default=None)
     ids = fields.Nested(IdsSchema, many=True, default=None)
     urls = fields.Nested(UrlsSchema, many=True, default=None)
     merge_key = fields.Nested(MergeKeySchema, default=None)
@@ -66,10 +67,6 @@ class LocationsSchema(Schema):
     @staticmethod
     def get_relevance_score(obj):
         return relevance_score(obj)
-
-    @staticmethod
-    def get_raw_source_name(obj):
-        return getattr(obj, "source_name", None)
 
     class Meta:
         ordered = True

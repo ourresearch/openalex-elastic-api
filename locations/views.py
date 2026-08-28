@@ -7,7 +7,7 @@ from core.utils import process_only_fields
 
 blueprint = Blueprint("locations", __name__)
 
-LOCATIONS_INDEX = "locations-v1"
+LOCATIONS_INDEX = "locations-v2"
 
 
 @blueprint.route("/locations")

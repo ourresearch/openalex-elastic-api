@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 24,
-    "fingerprint": "9b01589adf3f610348c6dc3d3a39c5cb7ffc9663880756050e4dcf6895d06188",
-    "property_count": 814,
-    "version": "8.6.0"
+    "fingerprint": "19af536bf9ecb6418e7c430a7ce9ba4ac5db7a4efbaaa9a8e139c9cc02bebdcc",
+    "property_count": 817,
+    "version": "9.0.0"
   },
   "properties": {
     "authors": {
@@ -7688,6 +7688,51 @@
       }
     },
     "locations": {
+      "endpoint_id": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "endpoint id",
+        "entity_type": null,
+        "name": "endpoint_id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
+      },
+      "from_updated_date": {
+        "actions": [
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "from updated date",
+        "entity_type": null,
+        "name": "from_updated_date",
+        "operators": [
+          "date_range",
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "date"
+      },
       "id": {
         "actions": [
           "column",
@@ -7966,30 +8011,6 @@
         "supported_by": [],
         "type": "string"
       },
-      "raw_source_name": {
-        "actions": [
-          "column",
-          "filter",
-          "group_by",
-          "sort"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "raw source name",
-        "entity_type": null,
-        "name": "raw_source_name",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "supported_by": [],
-        "type": "string"
-      },
       "raw_type": {
         "actions": [
           "column",
@@ -8146,6 +8167,27 @@
         "supported_by": [],
         "type": "search"
       },
+      "to_updated_date": {
+        "actions": [
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "to updated date",
+        "entity_type": null,
+        "name": "to_updated_date",
+        "operators": [
+          "date_range",
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "date"
+      },
       "type": {
         "actions": [
           "column",
@@ -8169,6 +8211,28 @@
         ],
         "supported_by": [],
         "type": "string"
+      },
+      "updated_date": {
+        "actions": [
+          "column",
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "updated date",
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [
+          "date_range",
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "date"
       },
       "urls": {
         "actions": [
