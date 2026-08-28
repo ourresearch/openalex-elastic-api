@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 24,
-    "fingerprint": "1d9319da80cfef82773862e4572b4184bfe9d9e7b33d82abce433f7a07441c77",
-    "property_count": 818,
-    "version": "9.1.0"
+    "fingerprint": "315826b830d6ba132b45b73113d10888d5fb6be7b39bf2ec711e072d0753afa2",
+    "property_count": 815,
+    "version": "10.0.0"
   },
   "properties": {
     "authors": {
@@ -7712,27 +7712,6 @@
         "supported_by": [],
         "type": "string"
       },
-      "from_updated_date": {
-        "actions": [
-          "filter",
-          "sort"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "dates",
-        "display_name": "from updated date",
-        "entity_type": null,
-        "name": "from_updated_date",
-        "operators": [
-          "date_range",
-          "eq",
-          "null"
-        ],
-        "supported_by": [],
-        "type": "date"
-      },
       "id": {
         "actions": [
           "column",
@@ -8191,27 +8170,6 @@
         "supported_by": [],
         "type": "search"
       },
-      "to_updated_date": {
-        "actions": [
-          "filter",
-          "sort"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "dates",
-        "display_name": "to updated date",
-        "entity_type": null,
-        "name": "to_updated_date",
-        "operators": [
-          "date_range",
-          "eq",
-          "null"
-        ],
-        "supported_by": [],
-        "type": "date"
-      },
       "type": {
         "actions": [
           "column",
@@ -8235,28 +8193,6 @@
         ],
         "supported_by": [],
         "type": "string"
-      },
-      "updated_date": {
-        "actions": [
-          "column",
-          "filter",
-          "sort"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "dates",
-        "display_name": "updated date",
-        "entity_type": null,
-        "name": "updated_date",
-        "operators": [
-          "date_range",
-          "eq",
-          "null"
-        ],
-        "supported_by": [],
-        "type": "date"
       },
       "urls": {
         "actions": [

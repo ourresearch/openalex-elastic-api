@@ -260,7 +260,12 @@ CAP_COLUMN = "column"
 # timestamp carried from the ingest pipeline (#911 lineage), keyword-typed in
 # locations-v2 (uniform timestamp strings, so term filter + sort behave
 # chronologically). Purely additive. Casey-directed 2026-08-28. = MINOR.
-PROPERTIES_VERSION = "9.1.0"
+# 10.0.0 (oxjob #915 follow-up): locations loses `updated_date` +
+# `from_updated_date` + `to_updated_date`, added earlier the same day (9.0.0)
+# and never announced — Casey cut it from the surface (ingested_at is the
+# useful acquisition signal; updated_date stays in the ES doc for a cheap
+# re-add). Removal = MAJOR by rule. Casey-directed 2026-08-28. = MAJOR.
+PROPERTIES_VERSION = "10.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

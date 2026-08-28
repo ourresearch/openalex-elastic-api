@@ -1,6 +1,5 @@
 from core.fields import (
     BooleanField,
-    DateField,
     OpenAlexIDField,
     SearchField,
     TermField,
@@ -42,18 +41,6 @@ fields = [
     TermField(param="source_name", custom_es_field="source_name"),
     TermField(param="endpoint_id", custom_es_field="endpoint_id"),
     TermField(param="ingested_at", custom_es_field="ingested_at"),
-    DateField(
-        param="updated_date",
-        custom_es_field="updated_date",
-    ),
-    DateField(
-        param="from_updated_date",
-        custom_es_field="updated_date",
-    ),
-    DateField(
-        param="to_updated_date",
-        custom_es_field="updated_date",
-    ),
     TermField(param="version", custom_es_field="version"),
     TermField(param="license", custom_es_field="license",
               entity_type="licenses"),
