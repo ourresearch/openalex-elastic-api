@@ -41,6 +41,7 @@ fields = [
     TermField(param="raw_type", custom_es_field="raw_type"),
     TermField(param="source_name", custom_es_field="source_name"),
     TermField(param="endpoint_id", custom_es_field="endpoint_id"),
+    TermField(param="ingested_at", custom_es_field="ingested_at"),
     DateField(
         param="updated_date",
         custom_es_field="updated_date",

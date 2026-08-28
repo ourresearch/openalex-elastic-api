@@ -55,6 +55,7 @@ class LocationsSchema(Schema):
     landing_page_url = fields.Str(default=None)
     pdf_url = fields.Str(default=None)
     updated_date = fields.Str(default=None)
+    ingested_at = fields.Str(default=None)
     ids = fields.Nested(IdsSchema, many=True, default=None)
     urls = fields.Nested(UrlsSchema, many=True, default=None)
     merge_key = fields.Nested(MergeKeySchema, default=None)

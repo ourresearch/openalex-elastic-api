@@ -256,7 +256,11 @@ CAP_COLUMN = "column"
 # `endpoint_id` (term) and `updated_date` + `from_updated_date` +
 # `to_updated_date` (date; v2 maps updated_date as a real date) — the additive
 # side would be MINOR, the removal dominates. Casey-directed 2026-08-28. = MAJOR.
-PROPERTIES_VERSION = "9.0.0"
+# 9.1.0 (oxjob #915 follow-up): locations gains `ingested_at` — acquisition
+# timestamp carried from the ingest pipeline (#911 lineage), keyword-typed in
+# locations-v2 (uniform timestamp strings, so term filter + sort behave
+# chronologically). Purely additive. Casey-directed 2026-08-28. = MINOR.
+PROPERTIES_VERSION = "9.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

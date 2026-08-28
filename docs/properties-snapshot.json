@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 24,
-    "fingerprint": "19af536bf9ecb6418e7c430a7ce9ba4ac5db7a4efbaaa9a8e139c9cc02bebdcc",
-    "property_count": 817,
-    "version": "9.0.0"
+    "fingerprint": "1d9319da80cfef82773862e4572b4184bfe9d9e7b33d82abce433f7a07441c77",
+    "property_count": 818,
+    "version": "9.1.0"
   },
   "properties": {
     "authors": {
@@ -7772,6 +7772,30 @@
         "operators": [],
         "supported_by": [],
         "type": null
+      },
+      "ingested_at": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "ingested at",
+        "entity_type": null,
+        "name": "ingested_at",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
       },
       "is_oa": {
         "actions": [
