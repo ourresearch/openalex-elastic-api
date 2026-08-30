@@ -1,5 +1,6 @@
 import logging
 import random
+import re
 import time
 
 from elasticsearch_dsl import Q, Search
@@ -929,11 +930,13 @@ def licenses_id_get(id):
 def locations_id_get(id):
     # Accept the canonical URL forms alongside the bare namespaced id, so a paste
     # of `https://openalex.org/locations/doi:...` (or `locations/doi:...`)
-    # resolves (oxjob #850). No case-folding — native ids are case-significant.
-    for prefix in ("https://openalex.org/locations/", "locations/"):
-        if id.startswith(prefix):
-            id = id[len(prefix):]
-            break
+    # resolves (oxjob #850). Slash-lenient: routers collapse the `//` after the
+    # scheme, so the view sees `https:/openalex.org/...`. The prefix matches
+    # case-insensitively but the captured native id keeps its case — native ids
+    # are case-significant.
+    m = re.match(r"(?i)^(?:https?:/+openalex\.org/)?locations/(.+)$", id)
+    if m:
+        id = m.group(1)
     s = Search(index=settings.LOCATIONS_INDEX, using="walden")
     only_fields = process_id_only_fields(request, LocationsSchema)
 
