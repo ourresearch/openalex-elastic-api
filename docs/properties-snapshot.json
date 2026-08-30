@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 24,
-    "fingerprint": "315826b830d6ba132b45b73113d10888d5fb6be7b39bf2ec711e072d0753afa2",
+    "fingerprint": "9f481022a60725796625d7821b1935031e548f48ef1c95e46b6ab291ffd77b10",
     "property_count": 815,
-    "version": "10.0.0"
+    "version": "11.0.0"
   },
   "properties": {
     "authors": {
@@ -7756,7 +7756,6 @@
         "actions": [
           "column",
           "filter",
-          "group_by",
           "sort"
         ],
         "aliases": [],
@@ -7768,13 +7767,12 @@
         "entity_type": null,
         "name": "ingested_at",
         "operators": [
+          "date_range",
           "eq",
-          "not",
-          "null",
-          "or"
+          "null"
         ],
         "supported_by": [],
-        "type": "string"
+        "type": "datetime"
       },
       "is_oa": {
         "actions": [

@@ -45,6 +45,11 @@ CAP_SORT = "sort"
 CAP_GROUP_BY = "group_by"
 CAP_COLUMN = "column"
 
+# 11.0.0 (#915/#850 locations-v3): locations ingested_at keyword→date
+# (TermField→DateTimeField; operators change, range filters now WORK — they
+# silently matched nothing on v2's keyword field). Type change = MAJOR per
+# convention; no working query breaks (Jason delegated the class call 2026-08-30,
+# convention-as-written applied). Rides the locations-v3 index cutover.
 # Human-curated semver of the published /properties contract (#331 Decision C).
 # MINOR/MAJOR only — no PATCH lane (the fingerprint already records that the
 # payload changed). Bumped by a human (Jason/Casey) when the rendered payload
@@ -265,7 +270,7 @@ CAP_COLUMN = "column"
 # and never announced — Casey cut it from the surface (ingested_at is the
 # useful acquisition signal; updated_date stays in the ES doc for a cheap
 # re-add). Removal = MAJOR by rule. Casey-directed 2026-08-28. = MAJOR.
-PROPERTIES_VERSION = "10.0.0"
+PROPERTIES_VERSION = "11.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

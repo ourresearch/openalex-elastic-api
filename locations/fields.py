@@ -1,5 +1,6 @@
 from core.fields import (
     BooleanField,
+    DateTimeField,
     OpenAlexIDField,
     SearchField,
     TermField,
@@ -40,7 +41,9 @@ fields = [
     TermField(param="raw_type", custom_es_field="raw_type"),
     TermField(param="source_name", custom_es_field="source_name"),
     TermField(param="endpoint_id", custom_es_field="endpoint_id"),
-    TermField(param="ingested_at", custom_es_field="ingested_at"),
+    # Real date field since locations-v3 (was keyword in v1/v2, where range
+    # filters silently matched nothing). Supports >/< range prefixes.
+    DateTimeField(param="ingested_at", custom_es_field="ingested_at"),
     TermField(param="version", custom_es_field="version"),
     TermField(param="license", custom_es_field="license",
               entity_type="licenses"),
