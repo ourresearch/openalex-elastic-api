@@ -5,7 +5,7 @@ from flask import current_app as app
 import settings
 from core.cursor import decode_group_by_cursor
 from core.exceptions import APIQueryParamsError
-from core.group_by.utils import get_bucket_keys
+from core.group_by.utils import get_bucket_keys, is_works_version_group_by
 from core.validate import validate_group_by
 from core.preference import clean_preference
 from core.utils import get_field
@@ -69,7 +69,11 @@ def create_group_by_buckets(fields_dict, group_by, include_unknown, s, params):
     field = get_field(fields_dict, group_by)
     validate_group_by(field, params)
 
-    if field.param in ["best_open_version", "version"] or "continent" in field.param:
+    if (
+        field.param == "best_open_version"
+        or is_works_version_group_by(field)
+        or "continent" in field.param
+    ):
         return s
 
     group_by_field = field.alias if field.alias else field.es_sort_field()
@@ -310,7 +314,8 @@ def _reject_unsupported_nested_field(field):
         or "is_global_south" in field.param
         or field.param == "mag_only"
         or "continent" in field.param
-        or field.param in ("version", "best_open_version")
+        or field.param == "best_open_version"
+        or is_works_version_group_by(field)
         or field.param in topic_hierarchy_fields
     ):
         raise APIQueryParamsError(

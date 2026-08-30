@@ -880,10 +880,15 @@ def _entity_word_index(entity: str) -> Dict[str, str]:
     return idx
 
 
-def _entity_resolve_field(fld: "Field", entity: Optional[str]) -> "Field":
+def _entity_resolve_field(fld: "Field", entity: Optional[str],
+                          word: Optional[str] = None) -> "Field":
     """Re-point a curated Field's column at the column that actually exists on
     `entity` for the same friendly word, leaving every other (render/parse)
-    attribute untouched. A no-op when the curated column already exists on the
+    attribute untouched. `word` (optional) is the spelling the user actually
+    typed, when it differs from the Field's canonical `oql` word — the raw
+    registry-column_id door matches e.g. `version` but hands back the curated
+    Field whose word is "any location version", so resolving by `fld.oql` alone
+    finds nothing on the queried entity (oxjob #850). A no-op when the curated column already exists on the
     entity (the works common case → byte-identical strict behavior), or when there
     is no entity, no registry, or no entity-correct column (→ the curated column
     flows through and the validator gates it as `invalid_column`). Booleans ARE
@@ -911,7 +916,7 @@ def _entity_resolve_field(fld: "Field", entity: Optional[str]) -> "Field":
         return fld
     if not props or fld.column in props:
         return fld
-    col = _entity_word_index(entity).get(fld.oql.lower())
+    col = _entity_word_index(entity).get((word or fld.oql).lower())
     if col and col != fld.column:
         return replace(fld, column=col)
     return fld
@@ -2060,6 +2065,14 @@ class _Parser:
             if not self._ctx_mode and t0 is not None and t0.kind == "WORD":
                 raw = _registry_fallback_field(t0.val)
                 if raw is not None:
+                    # A works raw-column word typed on ANOTHER entity resolves to
+                    # that entity's own column for the same word when one exists
+                    # (`version` on locations → locations' bare `version`, not
+                    # the works alias target `locations.version`, which the
+                    # validator would 400 as invalid_column). Works behavior is
+                    # unchanged — its column is always in its own props.
+                    # (oxjob #850)
+                    raw = _entity_resolve_field(raw, self._entity, word=t0.val)
                     self.i += 1
                     return t0.val, raw
             if self._ctx_mode:

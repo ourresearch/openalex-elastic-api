@@ -947,10 +947,11 @@ class TermField(Field):
         values = [v for v in values if v != "null"]
         null_query = None
         if has_null:
-            if self.param == "version":
-                null_query = ~Q("exists", field="locations.version")
-            else:
-                null_query = ~Q("exists", field=self.es_field().replace("__", "."))
+            # (The old works-only `version` special case — hardcoding
+            # `locations.version` — was redundant: works' version field already
+            # carries custom_es_field="locations.version", and it broke the
+            # locations ENTITY's own bare `version` column. oxjob #850.)
+            null_query = ~Q("exists", field=self.es_field().replace("__", "."))
 
         # Special handling for continents - expand each to country codes and flatten
         if "continent" in self.param:
@@ -1156,6 +1157,12 @@ class TermField(Field):
             and self.param.endswith("license_id")
             or self.param.endswith("license")
         ):
+            # Full-URL license IDs are a works-index convention (all its license
+            # params target `*license_id.keyword`). The locations entity's
+            # `license` field stores the bare short code (`cc-by`) — converting
+            # its values to full URLs matched nothing (oxjob #850).
+            if "license_id" not in self.es_field():
+                return self._strip_openalex_prefix(self.value, "licenses/")
             if self.value.startswith("https://openalex.org/licenses/"):
                 return self.value
             elif self.value.startswith("licenses/"):
@@ -1273,20 +1280,17 @@ class TermField(Field):
             ):
                 self.value = f"https://openalex.org/{self.value}"
         if self.value == "null":
+            # (Works' `version` no longer needs a special case here — its
+            # custom_es_field IS "locations.version"; the hardcode broke the
+            # locations entity's bare `version` column. oxjob #850.)
             field_name = self.es_field()
             field_name = field_name.replace("__", ".")
-            if self.param == "version":
-                q = ~Q("exists", field="locations.version")
-            else:
-                q = ~Q("exists", field=field_name)
+            q = ~Q("exists", field=field_name)
             return q
         elif self.value == "!null":
-            if self.param == "version":
-                q = Q("exists", field="locations.version")
-            else:
-                field_name = self.es_field()
-                field_name = field_name.replace("__", ".")
-                q = Q("exists", field=field_name)
+            field_name = self.es_field()
+            field_name = field_name.replace("__", ".")
+            q = Q("exists", field=field_name)
         elif self.param == "doi_starts_with":
             if "https://doi.org" in self.value:
                 raise APIQueryParamsError("Enter DOI in short format such as 10.12")
@@ -1356,8 +1360,11 @@ class TermField(Field):
                 and self.param.endswith("license_id")
                 or self.param.endswith("license")
             ):
-                formatted_version = f"https://openalex.org/licenses/{query}"
-                kwargs = {self.es_field(): formatted_version}
+                # Bare-code license fields (locations entity) negate the code
+                # as-is; only `*license_id*` es fields hold full URLs (#850).
+                if "license_id" in self.es_field():
+                    query = f"https://openalex.org/licenses/{query}"
+                kwargs = {self.es_field(): query}
                 q = ~Q("term", **kwargs)
             else:
                 q = ~Q("term", **kwargs)
@@ -1424,7 +1431,12 @@ class TermField(Field):
             and self.param.endswith("license_id")
             or self.param.endswith("license")
         ):
-            formatted_version = f"https://openalex.org/licenses/{self.value}"
+            # Bare-code license fields (locations entity) term on the code
+            # as-is; only `*license_id*` es fields hold full URLs (#850).
+            if "license_id" in self.es_field():
+                formatted_version = f"https://openalex.org/licenses/{self.value}"
+            else:
+                formatted_version = self.value
             kwargs = {self.es_field(): formatted_version}
             q = Q("term", **kwargs)
         elif self.param == "doi":

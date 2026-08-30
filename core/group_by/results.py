@@ -13,7 +13,11 @@ from core.group_by.custom_results import (
     group_by_continent,
     group_by_version,
 )
-from core.group_by.utils import parse_group_by, get_all_groupby_values
+from core.group_by.utils import (
+    parse_group_by,
+    get_all_groupby_values,
+    is_works_version_group_by,
+)
 
 from core.utils import (
     get_field,
@@ -42,7 +46,7 @@ def get_group_by_results(
         return get_boolean_group_by_results(response, group_by)
     elif "continent" in field.param:
         results = group_by_continent(field, index_name, params, fields_dict)
-    elif field.param == "version":
+    elif is_works_version_group_by(field):
         results = group_by_version(
             field, index_name, params, include_unknown, fields_dict
         )
