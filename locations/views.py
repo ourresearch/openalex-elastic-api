@@ -1,5 +1,6 @@
 from flask import Blueprint, request
 
+import settings
 from locations.fields import fields_dict
 from locations.schemas import LocationsSchema, MessageSchema
 from core.shared_view import shared_view
@@ -7,7 +8,7 @@ from core.utils import process_only_fields
 
 blueprint = Blueprint("locations", __name__)
 
-LOCATIONS_INDEX = "locations-v2"
+LOCATIONS_INDEX = settings.LOCATIONS_INDEX
 
 
 @blueprint.route("/locations")

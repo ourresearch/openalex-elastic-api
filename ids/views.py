@@ -927,7 +927,14 @@ def licenses_id_get(id):
 @blueprint.route("/locations/<path:id>")
 @blueprint.route("/v2/locations/<path:id>")
 def locations_id_get(id):
-    s = Search(index="locations-v1", using="walden")
+    # Accept the canonical URL forms alongside the bare namespaced id, so a paste
+    # of `https://openalex.org/locations/doi:...` (or `locations/doi:...`)
+    # resolves (oxjob #850). No case-folding — native ids are case-significant.
+    for prefix in ("https://openalex.org/locations/", "locations/"):
+        if id.startswith(prefix):
+            id = id[len(prefix):]
+            break
+    s = Search(index=settings.LOCATIONS_INDEX, using="walden")
     only_fields = process_id_only_fields(request, LocationsSchema)
 
     query = Q("term", id=id)

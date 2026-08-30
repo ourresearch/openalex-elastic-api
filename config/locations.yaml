@@ -1,0 +1,11 @@
+id: locations
+displayName: locations
+displayNameSingular: location
+descr: Hosted copies of works
+descrFull: A location is one hosted copy of a work at a source — for example the publisher's
+  version of record at a journal, or a copy in an institutional repository. Each work has
+  one or more locations. Location IDs are namespaced native identifiers (doi, pmid, mag,
+  pmh) rather than OpenAlex-native IDs.
+isNative: false
+idRegex: (?:https:\/\/openalex\.org\/locations\/|locations\/)?((?:doi|pmid|mag|pmh):\S+)
+values: null

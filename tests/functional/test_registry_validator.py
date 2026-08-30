@@ -361,9 +361,12 @@ def test_every_registry_entity_resolves_for_execution(entity):
 
 
 def test_locations_resolves_to_its_walden_index():
-    """#334 regression: locations resolves to locations-v1 with its own sort."""
+    """#334 regression: locations resolves to its live index with its own sort
+    (the constant lives in settings.py since #850 — don't re-hardcode a version)."""
+    from settings import LOCATIONS_INDEX
+
     _fields, index_name, default_sort, _schema = _resolve_entity(
         "locations", connection="walden"
     )
-    assert index_name == "locations-v1"
+    assert index_name == LOCATIONS_INDEX
     assert default_sort == ["work_id", "native_id"]

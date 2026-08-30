@@ -16,10 +16,10 @@ Field objects):
 Needs the test app (tests/conftest `client` fixture) — run WITHOUT --noconftest.
 """
 
-# The 22 browsable entity types in the registry (config/*.yaml). `locations` is a
-# properties-only key (reachable via /properties) and intentionally NOT a /meta
-# entity — see meta/views.py.
-EXPECTED_ENTITY_COUNT = 22
+# The browsable entity types in the registry (config/*.yaml). `locations`
+# graduated from a properties-only key to a full registry entity on 2026-08-30
+# (config/locations.yaml — oxjob #850, locations-entity program).
+EXPECTED_ENTITY_COUNT = 24
 
 
 def _json(client, path):
@@ -101,9 +101,13 @@ def test_meta_single_property_object(client):
     assert resp.status_code == 200
     # one property object, embedding the property contract fields (no sub-routes)
     assert body["name"] == "publication_year"
+    # (Key set grew with the catalog: category (#405), alternate_keys (#446),
+    # supported_by (#420), bool_true/bool_false phrasings — test caught up
+    # 2026-08-30, oxjob #850.)
     assert set(body) == {
         "name", "type", "operators", "actions", "entity_type",
-        "display_name", "aliases",
+        "display_name", "aliases", "alternate_keys", "category",
+        "supported_by", "bool_true", "bool_false",
     }
     # matches the entry inside the collection route exactly
     coll = client.get("/meta/entities/works/properties").get_json()

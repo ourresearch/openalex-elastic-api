@@ -51,7 +51,7 @@ class LocationsSchema(Schema):
     version = fields.Str(default=None)
     license = fields.Str(default=None)
     language = fields.Str(default=None)
-    is_retracted = fields.Bool(defaul=False)
+    is_retracted = fields.Bool(default=False)
     landing_page_url = fields.Str(default=None)
     pdf_url = fields.Str(default=None)
     ids = fields.Nested(IdsSchema, many=True, default=None)
