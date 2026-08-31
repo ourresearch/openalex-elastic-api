@@ -3734,7 +3734,7 @@
       "actions": [],
       "actionsPopular": [],
       "isId": false,
-      "hasExport": false
+      "hasExport": true
     },
     "geo.region": {
       "key": "geo.region",
@@ -5322,9 +5322,12 @@
       "type": "boolean",
       "actions": [
         "filter",
+        "group_by",
         "column"
       ],
-      "actionsPopular": null,
+      "actionsPopular": [
+        "filter"
+      ],
       "isId": false,
       "hasExport": false
     },
@@ -5346,9 +5349,13 @@
       "entityToSelect": "languages",
       "displayName": "language",
       "displayNameVerbatim": false,
-      "type": "search",
-      "actions": [],
-      "actionsPopular": null,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by",
+        "column"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -5358,9 +5365,15 @@
       "entityToSelect": "licenses",
       "displayName": "license",
       "displayNameVerbatim": false,
-      "type": "search",
-      "actions": [],
-      "actionsPopular": null,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by",
+        "column"
+      ],
+      "actionsPopular": [
+        "filter"
+      ],
       "isId": false,
       "hasExport": false
     },
@@ -5383,8 +5396,11 @@
       "displayName": "native ID",
       "displayNameVerbatim": false,
       "type": "search",
-      "actions": [],
-      "actionsPopular": null,
+      "actions": [
+        "filter",
+        "column"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -5394,9 +5410,13 @@
       "entityToSelect": null,
       "displayName": "native ID namespace",
       "displayNameVerbatim": false,
-      "type": "search",
-      "actions": [],
-      "actionsPopular": null,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by",
+        "column"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -5418,9 +5438,13 @@
       "entityToSelect": null,
       "displayName": "provenance",
       "displayNameVerbatim": false,
-      "type": "search",
-      "actions": [],
-      "actionsPopular": null,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by",
+        "column"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -5443,8 +5467,14 @@
       "displayName": "source",
       "displayNameVerbatim": false,
       "type": "selectEntity",
-      "actions": [],
-      "actionsPopular": null,
+      "actions": [
+        "filter",
+        "group_by",
+        "column"
+      ],
+      "actionsPopular": [
+        "filter"
+      ],
       "isId": false,
       "hasExport": false
     },
@@ -5467,8 +5497,10 @@
       "displayName": "title",
       "displayNameVerbatim": false,
       "type": "search",
-      "actions": [],
-      "actionsPopular": null,
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -5478,9 +5510,13 @@
       "entityToSelect": null,
       "displayName": "type",
       "displayNameVerbatim": false,
-      "type": "search",
-      "actions": [],
-      "actionsPopular": null,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by",
+        "column"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     },
@@ -5490,9 +5526,15 @@
       "entityToSelect": null,
       "displayName": "version",
       "displayNameVerbatim": false,
-      "type": "search",
-      "actions": [],
-      "actionsPopular": null,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by",
+        "column"
+      ],
+      "actionsPopular": [
+        "filter"
+      ],
       "isId": false,
       "hasExport": false
     },
@@ -5503,8 +5545,11 @@
       "displayName": "work",
       "displayNameVerbatim": false,
       "type": "selectEntity",
-      "actions": [],
-      "actionsPopular": null,
+      "actions": [
+        "filter",
+        "column"
+      ],
+      "actionsPopular": [],
       "isId": false,
       "hasExport": false
     }

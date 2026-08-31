@@ -270,7 +270,7 @@ CAP_COLUMN = "column"
 # and never announced — Casey cut it from the surface (ingested_at is the
 # useful acquisition signal; updated_date stays in the ES doc for a cheap
 # re-add). Removal = MAJOR by rule. Casey-directed 2026-08-28. = MAJOR.
-PROPERTIES_VERSION = "11.0.0"
+PROPERTIES_VERSION = "11.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

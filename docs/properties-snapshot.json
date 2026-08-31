@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 24,
-    "fingerprint": "9f481022a60725796625d7821b1935031e548f48ef1c95e46b6ab291ffd77b10",
+    "fingerprint": "de36c8651a15f2a33f881ce017fb0800f116d1f123b7f345c0d7221c99c85858",
     "property_count": 815,
-    "version": "11.0.0"
+    "version": "11.1.0"
   },
   "properties": {
     "authors": {
@@ -7857,7 +7857,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "license": {
@@ -7881,7 +7883,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "merge_key": {
@@ -7921,7 +7925,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "native_id_namespace": {
@@ -7945,7 +7951,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "pdf_url": {
@@ -7985,7 +7993,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "publisher": {
@@ -8073,7 +8083,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       },
       "source_name": {
@@ -8189,7 +8201,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "urls": {
@@ -8229,7 +8243,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "string"
       },
       "work_id": {
@@ -8253,7 +8269,9 @@
           "null",
           "or"
         ],
-        "supported_by": [],
+        "supported_by": [
+          "gui"
+        ],
         "type": "openalex_id"
       }
     },
