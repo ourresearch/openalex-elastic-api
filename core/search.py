@@ -1196,6 +1196,17 @@ def full_search_query(index_name, search_terms, skip_citation_boost=False):
             tertiary_field="fulltext",
             combine_fields=True,  # cross-field: a b == a AND b == two-filter (#399)
         )
+    elif index_name.lower().startswith("locations"):
+        # Locations (oxjob #850): docs carry `title` (keyword) + an analyzed
+        # `title.text` subfield (since locations-v3) — no display_name, no
+        # cited_by_count. Primary-only match, no citation boost. Before this
+        # branch, locations fell into the generic else and searched the
+        # nonexistent display_name — search= was a silent count-0 no-op.
+        search_oa = SearchOpenAlex(
+            search_terms=search_terms,
+            primary_field="title.text",
+        )
+        return search_oa.primary_match_query()
     elif index_name.lower().startswith("funder-search"):
         # Support wildcards, proximity search, and span queries for funder-search
         # Proximity: "term1 term2"~5 finds terms within 5 words

@@ -31,6 +31,10 @@ fields = [
     SearchField(
         param="title.search",
         unique_id="location_search",
+        # The analyzed subfield (locations-v3+). Without it, es_field() derives
+        # "title__search" -> ES "title.search", a nonexistent field (count 0).
+        custom_es_field="title.text",
+        index="locations",
     ),
     TermField(param="id", custom_es_field="id"),
     TermField(param="native_id", custom_es_field="native_id"),

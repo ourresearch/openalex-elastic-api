@@ -843,6 +843,14 @@ class SearchField(Field):
             # No-stem sibling of the broad search (#364) — the exact target a
             # wildcard on the top-level search must use. Works-only.
             q = full_search_query_exact(self.value)
+        elif self.param == "title.search" and self.unique_id == "location_search":
+            # Locations title search (oxjob #850): analyzed `title.text` (v3+).
+            # Locations docs have no cited_by_count, so skip the citation boost
+            # (same reason as the awards display_name.search branch below).
+            search_oa = SearchOpenAlex(
+                search_terms=self.value, primary_field=self.es_field()
+            )
+            q = search_oa.primary_match_query()
         elif (
             self.param == "raw_affiliation_strings.search"
             or self.param == "raw_affiliation_strings.search.exact"
