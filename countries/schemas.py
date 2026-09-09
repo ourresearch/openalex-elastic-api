@@ -31,6 +31,7 @@ class CountriesSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     country_code = fields.Str()
+    alpha_3 = fields.Str()
     description = fields.Str()
     ids = fields.Nested(IdsSchema)
     display_name_alternatives = fields.List(fields.Str())
