@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 24,
-    "fingerprint": "de36c8651a15f2a33f881ce017fb0800f116d1f123b7f345c0d7221c99c85858",
-    "property_count": 815,
-    "version": "11.1.0"
+    "fingerprint": "6d91d69d18d7b4406791fe1be4e3c499d97fdfbdb41f9be6c7f0133710a8a23f",
+    "property_count": 816,
+    "version": "11.2.0"
   },
   "properties": {
     "authors": {
@@ -3283,6 +3283,22 @@
       }
     },
     "countries": {
+      "alpha_3": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "alpha 3",
+        "entity_type": null,
+        "name": "alpha_3",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
       "authors_api_url": {
         "actions": [
           "column"
