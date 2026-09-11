@@ -58,6 +58,21 @@ def test_legacy_numeric_list_cursor_still_decodes():
     assert decode_cursor(legacy) == [12, "https://openalex.org/W2741809807"]
 
 
+def test_legacy_list_cursor_with_apostrophe_still_decodes():
+    original = [1847, "O'Brien"]
+    assert decode_cursor(_legacy_encode(original)) == original
+
+
+def test_legacy_list_cursor_with_embedded_quotes_still_decodes():
+    original = [99, 'He said "hello"']
+    assert decode_cursor(_legacy_encode(original)) == original
+
+
+def test_legacy_list_cursor_with_none_still_decodes():
+    original = [None, "https://openalex.org/W123"]
+    assert decode_cursor(_legacy_encode(original)) == original
+
+
 def test_legacy_plain_group_by_key_still_decodes():
     legacy = _legacy_encode("Harvard University")
     assert decode_cursor(legacy, return_json=False) == "Harvard University"

@@ -1,3 +1,4 @@
+import ast
 import base64
 import json
 
@@ -18,7 +19,7 @@ def encode_cursor(cursor):
 
 def _decode_legacy_list_repr(payload):
     """Parse payloads from the old encoder (`json.dumps(str(list))`)."""
-    return json.loads(payload.replace("'", '"').replace("None", "null"))
+    return ast.literal_eval(payload)
 
 
 def decode_cursor(encoded_cursor, return_json=True):
