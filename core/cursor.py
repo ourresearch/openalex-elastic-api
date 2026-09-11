@@ -1,3 +1,4 @@
+import ast
 import base64
 import json
 
@@ -9,8 +10,16 @@ from core.group_by.utils import parse_group_by, get_bucket_keys
 
 
 def encode_cursor(cursor):
-    cursor_json = json.dumps(str(cursor)).encode()
-    return base64.b64encode(cursor_json).decode()
+    # JSON, not Python repr. str(cursor) + quote-stripping broke on apostrophes
+    # ("O'Brien", "Alzheimer's") and embedded quotes in search_after / after_key.
+    if not isinstance(cursor, (str, int, float, bool, type(None), list, dict)):
+        cursor = list(cursor)
+    return base64.b64encode(json.dumps(cursor).encode()).decode()
+
+
+def _decode_legacy_list_repr(payload):
+    """Parse payloads from the old encoder (`json.dumps(str(list))`)."""
+    return ast.literal_eval(payload)
 
 
 def decode_cursor(encoded_cursor, return_json=True):
@@ -18,16 +27,23 @@ def decode_cursor(encoded_cursor, return_json=True):
         raise APIPaginationError("Cursor is null. Likely reached end of results.")
 
     try:
-        decoded_cursor = base64.b64decode(encoded_cursor)
-        cursor_utf8 = decoded_cursor.decode("utf8")
-        cursor_str = cursor_utf8.replace('"', "").replace("'", '"').replace("None", "null")
-
-        if return_json:
-            return list(json.loads(cursor_str))
-        return cursor_str
-
-    except (json.decoder.JSONDecodeError, ValueError):
+        payload = json.loads(base64.b64decode(encoded_cursor).decode("utf8"))
+    except (json.decoder.JSONDecodeError, ValueError, UnicodeDecodeError):
         raise APIPaginationError("Invalid cursor value")
+
+    if return_json:
+        if isinstance(payload, list):
+            return payload
+        if isinstance(payload, str):
+            try:
+                parsed = _decode_legacy_list_repr(payload)
+            except (json.decoder.JSONDecodeError, ValueError):
+                raise APIPaginationError("Invalid cursor value")
+            if isinstance(parsed, list):
+                return parsed
+        raise APIPaginationError("Invalid cursor value")
+
+    return payload
 
 
 def get_cursor(response, per_page):
