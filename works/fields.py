@@ -123,7 +123,7 @@ fields = [
     ),
     TermField(
         param="best_oa_location.source.listed_in",
-        docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, cdd-cnu-sante). Membership only, non-normative (best OA location)",
+        docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, doyens). Membership only, non-normative (best OA location)",
         documentation_link="https://help.openalex.org/data/sources/attributes/#listed_in",
     ),
     BooleanField(
@@ -299,7 +299,7 @@ fields = [
     ),
     TermField(
         param="locations.source.listed_in",
-        docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, cdd-cnu-sante). Membership only, non-normative (any location)",
+        docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, doyens). Membership only, non-normative (any location)",
         documentation_link="https://help.openalex.org/data/sources/attributes/#listed_in",
     ),
     BooleanField(
@@ -356,7 +356,7 @@ fields = [
     ),
     TermField(
         param="primary_location.source.listed_in",
-        docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, cdd-cnu-sante). Membership only, non-normative (primary location)",
+        docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, doyens). Membership only, non-normative (primary location)",
         documentation_link="https://help.openalex.org/data/sources/attributes/#listed_in",
     ),
     BooleanField(
