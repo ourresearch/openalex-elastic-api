@@ -40,6 +40,7 @@ OXURL_DOCUMENTED_WORKS_COLUMNS = frozenset({
     'locations.is_oa', 'locations.is_published', 'locations.license',
     'locations.source.host_institution_lineage', 'locations.source.host_organization',
     'locations.source.host_organization_lineage', 'locations.source.is_core',
+    'locations.source.listed_in', 'primary_location.source.listed_in',
     'locations.source.is_in_doaj', 'locations.source.issn',
     'locations.source.publisher_lineage', 'locations.source.type',
     'locations.version', 'locations_count', 'oa_status',

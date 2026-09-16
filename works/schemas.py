@@ -164,6 +164,7 @@ class SourceSchema(Schema):
     is_in_doaj = fields.Bool()
     is_indexed_in_scopus = fields.Bool()
     is_core = fields.Bool()
+    listed_in = fields.List(fields.Str())
     host_organization = fields.Str()
     host_organization_name = fields.Str()
     host_organization_lineage = fields.List(fields.Str())
@@ -206,6 +207,7 @@ class SourcesSchema(Schema):
     is_oa = fields.Bool()
     is_in_doaj = fields.Bool()
     is_core = fields.Bool()
+    listed_in = fields.List(fields.Str())
     host_organization = fields.Nested(HostOrganizationSchma)
     type = fields.Str()
 

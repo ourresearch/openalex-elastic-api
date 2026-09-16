@@ -43,6 +43,11 @@ fields = [
     BooleanField(
         param="is_core",
     ),
+    TermField(
+        param="listed_in",
+        docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, cdd-cnu-sante). Membership only, non-normative",
+        documentation_link="https://help.openalex.org/data/sources/attributes/#listed_in",
+    ),
     BooleanField(
         param="is_ojs",
     ),

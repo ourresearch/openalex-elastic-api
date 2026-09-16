@@ -121,6 +121,11 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["source.is_in_doaj"],
         alternate_names=ALTERNATE_NAMES.get("source.is_in_doaj", None),
     ),
+    TermField(
+        param="best_oa_location.source.listed_in",
+        docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, cdd-cnu-sante). Membership only, non-normative (best OA location)",
+        documentation_link="https://help.openalex.org/data/sources/attributes/#listed_in",
+    ),
     BooleanField(
         param="best_oa_location.is_accepted",
         docstring=DOCSTRINGS["is_accepted"].format(
@@ -292,6 +297,11 @@ fields = [
     BooleanField(
         param="locations.source.is_core",
     ),
+    TermField(
+        param="locations.source.listed_in",
+        docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, cdd-cnu-sante). Membership only, non-normative (any location)",
+        documentation_link="https://help.openalex.org/data/sources/attributes/#listed_in",
+    ),
     BooleanField(
         param="locations.is_accepted",
         docstring=DOCSTRINGS["is_accepted"].format(
@@ -343,6 +353,11 @@ fields = [
     ),
     BooleanField(
         param="primary_location.source.is_core",
+    ),
+    TermField(
+        param="primary_location.source.listed_in",
+        docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, cdd-cnu-sante). Membership only, non-normative (primary location)",
+        documentation_link="https://help.openalex.org/data/sources/attributes/#listed_in",
     ),
     BooleanField(
         param="primary_location.is_accepted",

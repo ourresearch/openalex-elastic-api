@@ -419,6 +419,7 @@ _f("primary published", "primary_location.is_published", "bool")
 _f("primary accepted", "primary_location.is_accepted", "bool")
 _f("has ISSN", "primary_location.source.has_issn", "bool")
 _f("CWTS core", "primary_location.source.is_core", "bool")
+_f("source listed in", "primary_location.source.listed_in", "enum")
 _f("DOAJ", "primary_location.source.is_in_doaj", "bool")
 _f("OA source", "primary_location.source.is_oa", "bool")
 _f("best OA source DOAJ", "best_oa_location.source.is_in_doaj", "bool")
@@ -431,10 +432,14 @@ _f("best OA source DOAJ", "best_oa_location.source.is_in_doaj", "bool")
 # needed; the resolver maps the word to bare is_core on sources.
 _f("fully OA", "is_oa", "bool")
 _f("DOAJ", "is_in_doaj", "bool")
+# `listed_in` (sources) is a HOMONYM of works' primary_location.source.listed_in via
+# "source listed in"; the bare word is registered for the sources entity (oxjob #1205).
+_f("listed in", "listed_in", "enum")
 _f("any location OA", "locations.is_oa", "bool")
 _f("any location published", "locations.is_published", "bool")
 _f("any location accepted", "locations.is_accepted", "bool")
 _f("any location CWTS core", "locations.source.is_core", "bool")
+_f("any location source listed in", "locations.source.listed_in", "enum")
 _f("any location DOAJ", "locations.source.is_in_doaj", "bool")
 _f("submitted version OA", "has_oa_submitted_version", "bool")
 

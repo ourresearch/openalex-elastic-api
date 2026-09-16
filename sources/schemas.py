@@ -70,6 +70,7 @@ class SourcesSchema(Schema):
     is_preprint_repository = fields.Bool()
     is_indexed_in_scopus = fields.Bool()
     is_core = fields.Bool()
+    listed_in = fields.List(fields.Str())
     oa_flip_year = fields.Int()
     first_publication_year = fields.Int()
     last_publication_year = fields.Int()
