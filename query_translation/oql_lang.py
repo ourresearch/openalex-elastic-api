@@ -423,6 +423,7 @@ _f("source listed in", "primary_location.source.listed_in", "enum")
 _f("DOAJ", "primary_location.source.is_in_doaj", "bool")
 _f("OA source", "primary_location.source.is_oa", "bool")
 _f("best OA source DOAJ", "best_oa_location.source.is_in_doaj", "bool")
+_f("best OA source listed in", "best_oa_location.source.listed_in", "enum")
 # --- non-works entity booleans (oxjob #406 1c) ---
 # `is_oa`/`is_in_doaj` are sources columns. "fully OA" (`is_oa`) also filters
 # works.is_oa. The "DOAJ" word is shared with works' primary_location.source.is_in_doaj
@@ -526,6 +527,9 @@ _ALIAS = {}
 for _spellings, _fld in _FIELDS:
     for s in _spellings:
         _ALIAS[s] = _fld
+# Longest alias, in words: the greedy matchers' lookahead. Was a literal 4 until the
+# 5-word "any location source listed in" silently failed to parse (oxjob #1205).
+_MAX_ALIAS_WORDS = max(len(_s.split()) for _s in _ALIAS)
 
 # Parser entity vocabulary. Single source of truth is the OQO validator's
 # `oqo.VALID_ENTITY_TYPES` (hyphenated canonical forms, e.g. `source-types`,
@@ -733,12 +737,12 @@ def _range_endpoint_fixit(field: str, lo, hi) -> str:
 # sites agree.
 # ---------------------------------------------------------------------------
 def match_field(toks: List[Tok], i: int) -> Optional[Tuple[str, "Field", int]]:
-    """Greedy longest field-alias match (up to 4 words) at ``toks[i]``.
+    """Greedy longest field-alias match (up to `_MAX_ALIAS_WORDS`) at ``toks[i]``.
     Returns ``(spelling, Field, n_tokens)`` or ``None``."""
     best: Optional[Field] = None
     best_len = 0
     parts: List[str] = []
-    for k in range(0, 4):
+    for k in range(0, _MAX_ALIAS_WORDS):
         t = toks[i + k] if i + k < len(toks) else None
         if not t or t.kind != "WORD":
             break
@@ -1041,7 +1045,7 @@ def _entity_fallback(entity: str) -> Dict[str, "Field"]:
 
 def match_entity_fallback(toks: List[Tok], i: int, entity: Optional[str]
                           ) -> Optional[Tuple[str, "Field", int]]:
-    """Greedy longest GUI-faceted-registry match (up to 4 words) at ``toks[i]`` for
+    """Greedy longest GUI-faceted-registry match (up to `_MAX_ALIAS_WORDS`) at ``toks[i]`` for
     `entity`. Returns ``(spelling, Field, n_tokens)`` or ``None``. On works the index
     holds ONLY curated columns' registry aliases (so a dropped `_FIELDS` alias still
     parses); uncurated works columns stay on the `_registry_fallback_field` path."""
@@ -1053,7 +1057,7 @@ def match_entity_fallback(toks: List[Tok], i: int, entity: Optional[str]
     best: Optional[Field] = None
     best_len = 0
     parts: List[str] = []
-    for k in range(0, 4):
+    for k in range(0, _MAX_ALIAS_WORDS):
         t = toks[i + k] if i + k < len(toks) else None
         if not t or t.kind != "WORD":
             break
@@ -2047,7 +2051,7 @@ class _Parser:
             self.i += 1
         # an empty / partially-typed field slot at the cursor
         self._want(CTX_FIELD)
-        # greedy longest alias match (up to 4 words) — shared with the editor walker
+        # greedy longest alias match (up to `_MAX_ALIAS_WORDS`) — shared with the editor walker
         m = match_field(self.toks, self.i)
         # Non-works GUI-faceted registry field (oxjob #406 1b): a non-works column's
         # display_name / alias / raw id (e.g. `issn-l` on sources, `works count` on
@@ -2620,7 +2624,7 @@ class _Parser:
                     return True
             # a (known, when required) field word-run followed by an operator
             parts = []
-            for j in range(0, 4):
+            for j in range(0, _MAX_ALIAS_WORDS):
                 tt = self.peek(j)
                 if not tt or tt.kind != "WORD":
                     break
