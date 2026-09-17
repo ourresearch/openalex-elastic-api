@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 24,
-    "fingerprint": "6d91d69d18d7b4406791fe1be4e3c499d97fdfbdb41f9be6c7f0133710a8a23f",
-    "property_count": 816,
-    "version": "11.2.0"
+    "fingerprint": "6a9fe7cc74d196545ca77b47121f28b1067d9abf9f53b0f858e439521176a99f",
+    "property_count": 820,
+    "version": "11.3.0"
   },
   "properties": {
     "authors": {
@@ -10863,6 +10863,32 @@
         "supported_by": [],
         "type": "number"
       },
+      "listed_in": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "listed in",
+        "entity_type": null,
+        "name": "listed_in",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
       "oa_flip_year": {
         "actions": [
           "column",
@@ -13747,6 +13773,31 @@
         ],
         "type": "string"
       },
+      "best_oa_location.source.listed_in": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "source",
+        "display_name": "best OA source listed in",
+        "entity_type": null,
+        "name": "best_oa_location.source.listed_in",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
       "best_oa_location.source.type": {
         "actions": [
           "filter",
@@ -15974,6 +16025,32 @@
         ],
         "type": "string"
       },
+      "locations.source.listed_in": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "source",
+        "display_name": "any location source listed in",
+        "entity_type": null,
+        "name": "locations.source.listed_in",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
+        "type": "string"
+      },
       "locations.source.type": {
         "actions": [
           "filter",
@@ -16538,6 +16615,32 @@
         "display_name": "ISSN",
         "entity_type": null,
         "name": "primary_location.source.issn",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
+        "type": "string"
+      },
+      "primary_location.source.listed_in": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "source",
+        "display_name": "source listed in",
+        "entity_type": null,
+        "name": "primary_location.source.listed_in",
         "operators": [
           "eq",
           "not",

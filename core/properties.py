@@ -270,7 +270,13 @@ CAP_COLUMN = "column"
 # and never announced — Casey cut it from the surface (ingested_at is the
 # useful acquisition signal; updated_date stays in the ES doc for a cheap
 # re-add). Removal = MAJOR by rule. Casey-directed 2026-08-28. = MAJOR.
-PROPERTIES_VERSION = "11.2.0"
+# 11.3.0 (oxjob #1205): `listed_in` — external journal lists a source appears on
+# (doyens / cwts-core / doaj) — added on sources and on the works dehydrated source
+# (primary_location / locations / best_oa_location). Four purely additive properties,
+# born supported_by ["gui"] (facets shipped in openalex-gui f7de1ef5). The fields
+# went live in dfe6013 (2026-09-16) without this regen, which left the gate red;
+# this catches the snapshot up. Approved by Jason 2026-09-17. = MINOR.
+PROPERTIES_VERSION = "11.3.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

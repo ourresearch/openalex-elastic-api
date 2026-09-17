@@ -128,6 +128,21 @@
       "isId": false,
       "hasExport": false
     },
+    "locations.source.listed_in": {
+      "key": "locations.source.listed_in",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "any location source listed in",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "locations.source.type": {
       "key": "locations.source.type",
       "entityToFilter": "works",
@@ -273,6 +288,21 @@
       "type": "search",
       "actions": [
         "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "best_oa_location.source.listed_in": {
+      "key": "best_oa_location.source.listed_in",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "best OA source listed in",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
       ],
       "actionsPopular": [],
       "isId": false,
@@ -1241,7 +1271,8 @@
       "displayNameVerbatim": false,
       "type": "search",
       "actions": [
-        "filter"
+        "filter",
+        "column"
       ],
       "actionsPopular": [],
       "isId": false,
@@ -1431,6 +1462,21 @@
       "entityToFilter": "works",
       "entityToSelect": "sources",
       "displayName": "source",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "primary_location.source.listed_in": {
+      "key": "primary_location.source.listed_in",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "source listed in",
       "displayNameVerbatim": false,
       "type": "selectEntity",
       "actions": [
@@ -2722,6 +2768,24 @@
       "actionsPopular": null,
       "isId": true,
       "hasExport": false
+    },
+    "listed_in": {
+      "key": "listed_in",
+      "entityToFilter": "sources",
+      "entityToSelect": null,
+      "displayName": "listed in",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "column",
+        "group_by"
+      ],
+      "actionsPopular": [
+        "filter"
+      ],
+      "isId": false,
+      "hasExport": true
     },
     "ids.mag": {
       "key": "ids.mag",
