@@ -123,6 +123,9 @@ fields = [
     ),
     TermField(
         param="best_oa_location.source.listed_in",
+        # Mapped as a bare `keyword` with no `.lower` subfield (list ids are
+        # lowercase by construction), so query the field itself. oxjob #1205
+        custom_es_field="best_oa_location.source.listed_in",
         docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, doyens). Membership only, non-normative (best OA location)",
         documentation_link="https://help.openalex.org/data/sources/attributes/#listed_in",
     ),
@@ -299,6 +302,9 @@ fields = [
     ),
     TermField(
         param="locations.source.listed_in",
+        # Mapped as a bare `keyword` with no `.lower` subfield (list ids are
+        # lowercase by construction), so query the field itself. oxjob #1205
+        custom_es_field="locations.source.listed_in",
         docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, doyens). Membership only, non-normative (any location)",
         documentation_link="https://help.openalex.org/data/sources/attributes/#listed_in",
     ),
@@ -356,6 +362,9 @@ fields = [
     ),
     TermField(
         param="primary_location.source.listed_in",
+        # Mapped as a bare `keyword` with no `.lower` subfield (list ids are
+        # lowercase by construction), so query the field itself. oxjob #1205
+        custom_es_field="primary_location.source.listed_in",
         docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, doyens). Membership only, non-normative (primary location)",
         documentation_link="https://help.openalex.org/data/sources/attributes/#listed_in",
     ),

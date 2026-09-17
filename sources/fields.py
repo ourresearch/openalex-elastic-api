@@ -45,6 +45,9 @@ fields = [
     ),
     TermField(
         param="listed_in",
+        # Mapped as a bare `keyword` with no `.lower` subfield (list ids are
+        # lowercase by construction), so query the field itself. oxjob #1205
+        custom_es_field="listed_in",
         docstring="External source lists the source appears on, by list id (e.g. cwts-core, doaj, doyens). Membership only, non-normative",
         documentation_link="https://help.openalex.org/data/sources/attributes/#listed_in",
     ),
