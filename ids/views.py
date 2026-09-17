@@ -5,6 +5,7 @@ import time
 
 from elasticsearch_dsl import Q, Search
 from flask import Blueprint, abort, redirect, request, url_for, jsonify
+from urllib.parse import quote
 
 import settings
 from works import lakebase
@@ -729,29 +730,74 @@ def topics_id_get(id):
     return topics_schema.dump(response[0])
 
 
+def award_location(short_id):
+    # Preserve the raw query bytes (repeated args, existing percent-encoding); percent-encode
+    # anything that is not a safe ASCII query character so the Location header is always ASCII.
+    location = url_for("ids.awards_id_get", id=short_id)
+    if request.query_string:
+        raw = request.query_string.decode("latin-1")
+        location += "?" + quote(raw, safe="%=&+;,/?:@!$'()*[]~-._", encoding="latin-1")
+    return location
+
+
+def award_search_execute(search):
+    try:
+        response = search.execute()
+        body = response.to_dict()
+        shards = body.get("_shards")
+        # A response without completeness metadata is malformed, not successful.
+        if not isinstance(shards, dict) or "failed" not in shards or "timed_out" not in body:
+            raise RuntimeError("award backend response lacks completeness metadata")
+        if shards.get("failed") or body.get("timed_out"):
+            raise RuntimeError("incomplete award backend response")
+        return response
+    except Exception:
+        logger.exception("award backend lookup failed")
+        abort(503)
+
+
+def award_redirect_target(connection, full_id):
+    response = award_search_execute(
+        Search(index="merge-awards", using=connection)
+        .filter("ids", values=[full_id])
+    )
+    if not response:
+        return None
+    if len(response) != 1:
+        abort(503)
+    target = getattr(response[0], "merge_into_id", None)
+    if not isinstance(target, str) or not re.fullmatch(r"https://openalex\.org/G[0-9]+", target):
+        abort(503)
+    if target == full_id:
+        abort(503)
+    return target.rsplit("/", 1)[-1]
+
+
 @blueprint.route("/awards/<path:id>")
 def awards_id_get(id):
-    # Awards data only exists in WALDEN connection, not in default/prod
-    connection = 'walden'
-
-    s = Search(index=settings.AWARDS_INDEX, using=connection)
+    connection = "walden"
     only_fields = process_id_only_fields(request, AwardsSchema)
-
-    if is_openalex_id(id):
-        clean_id = normalize_openalex_id(id)
-        if clean_id != id:
-            return redirect(url_for("ids.awards_id_get", id=clean_id, **request.args))
-        clean_id = int(clean_id[1:])
-        full_openalex_id = f"https://openalex.org/G{clean_id}"
-        query = Q("term", id=full_openalex_id)
-        s = s.filter(query)
-    else:
+    if not is_award_openalex_id(id):
         abort(404)
-    response = s.execute()
-    if not response:
-        abort(404)
-    awards_schema = AwardsSchema(context={"display_relevance": False}, only=only_fields)
-    return awards_schema.dump(response[0])
+    clean_id = normalize_openalex_id(id)
+    if clean_id != id:
+        return redirect(award_location(clean_id))
+    full_openalex_id = f"https://openalex.org/G{int(clean_id[1:])}"
+    response = award_search_execute(
+        Search(index=settings.AWARDS_INDEX, using=connection)
+        .filter(Q("term", id=full_openalex_id))
+    )
+    if response:
+        try:
+            awards_schema = AwardsSchema(context={"display_relevance": False}, only=only_fields)
+            return awards_schema.dump(response[0])
+        except Exception:
+            logger.exception("award document serialization failed")
+            abort(503)
+    target = award_redirect_target(connection, full_openalex_id)
+    if target is not None:
+        return redirect(award_location(target), code=301)
+    abort(404)
 
 
 def get_by_openalex_external_id(index, schema, id):
@@ -972,7 +1018,7 @@ def universal_get(openalex_id):
     
     # Check awards first since it's a new entity type
     if is_award_openalex_id(openalex_id):
-        return redirect(url_for("ids.awards_id_get", id=openalex_id, **request.args))
+        return redirect(award_location(openalex_id))
     elif is_work_openalex_id(openalex_id):
         return redirect(url_for("ids.works_id_get", id=openalex_id, **request.args))
     elif is_author_openalex_id(openalex_id):
