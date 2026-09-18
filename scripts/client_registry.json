@@ -131,7 +131,7 @@
     "locations.source.listed_in": {
       "key": "locations.source.listed_in",
       "entityToFilter": "works",
-      "entityToSelect": null,
+      "entityToSelect": "source-lists",
       "displayName": "any location source listed in",
       "displayNameVerbatim": false,
       "type": "selectEntity",
@@ -296,7 +296,7 @@
     "best_oa_location.source.listed_in": {
       "key": "best_oa_location.source.listed_in",
       "entityToFilter": "works",
-      "entityToSelect": null,
+      "entityToSelect": "source-lists",
       "displayName": "best OA source listed in",
       "displayNameVerbatim": false,
       "type": "selectEntity",
@@ -1475,7 +1475,7 @@
     "primary_location.source.listed_in": {
       "key": "primary_location.source.listed_in",
       "entityToFilter": "works",
-      "entityToSelect": null,
+      "entityToSelect": "source-lists",
       "displayName": "source listed in",
       "displayNameVerbatim": false,
       "type": "selectEntity",
@@ -2772,7 +2772,7 @@
     "listed_in": {
       "key": "listed_in",
       "entityToFilter": "sources",
-      "entityToSelect": null,
+      "entityToSelect": "source-lists",
       "displayName": "listed in",
       "displayNameVerbatim": false,
       "type": "selectEntity",
@@ -5359,6 +5359,126 @@
     "works_count": {
       "key": "works_count",
       "entityToFilter": "indexes",
+      "entityToSelect": null,
+      "displayName": "works count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "isId": false,
+      "hasExport": false
+    }
+  },
+  "source-lists": {
+    "cited_by_count": {
+      "key": "cited_by_count",
+      "entityToFilter": "source-lists",
+      "entityToSelect": null,
+      "displayName": "citation count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "column",
+        "sort"
+      ],
+      "actionsPopular": [
+        "column",
+        "sort"
+      ],
+      "isId": false,
+      "hasExport": false
+    },
+    "description": {
+      "key": "description",
+      "entityToFilter": "source-lists",
+      "entityToSelect": null,
+      "displayName": "description",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "list_version": {
+      "key": "list_version",
+      "entityToFilter": "source-lists",
+      "entityToSelect": null,
+      "displayName": "edition",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "maintainer": {
+      "key": "maintainer",
+      "entityToFilter": "source-lists",
+      "entityToSelect": null,
+      "displayName": "maintainer",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "display_name": {
+      "key": "display_name",
+      "entityToFilter": "source-lists",
+      "entityToSelect": null,
+      "displayName": "name",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "sources_count": {
+      "key": "sources_count",
+      "entityToFilter": "source-lists",
+      "entityToSelect": null,
+      "displayName": "sources",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "sort",
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "url": {
+      "key": "url",
+      "entityToFilter": "source-lists",
+      "entityToSelect": null,
+      "displayName": "URL",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "works_count": {
+      "key": "works_count",
+      "entityToFilter": "source-lists",
       "entityToSelect": null,
       "displayName": "works count",
       "displayNameVerbatim": false,

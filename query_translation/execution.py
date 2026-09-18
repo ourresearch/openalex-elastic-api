@@ -87,6 +87,7 @@ _ENTITY_DISPATCH = {
     "licenses": ("licenses", "LICENSES_INDEX"),
     "indexes": ("indexes", "INDEXES_INDEX"),
     "oa-statuses": ("oa_statuses", "OA_STATUSES_INDEX"),
+    "source-lists": ("source_lists", "SOURCE_LISTS_INDEX"),
     "source-types": ("source_types", "SOURCE_TYPES_INDEX"),
     "institution-types": ("institution_types", "INSTITUTION_TYPES_INDEX"),
     "work-types": ("work_types", "WORK_TYPES_INDEX"),

@@ -1,0 +1,14 @@
+id: source-lists
+displayName: source lists
+displayNameSingular: source list
+descr: external source list
+descrFull: An externally maintained list of sources (journals) that a source appears on, such as DOAJ or the CWTS Core sources list. Membership only; OpenAlex does not endorse any list.
+isNative: false
+idRegex: (?:https:\/\/openalex\.org\/source-lists\/|source-lists\/)([a-z0-9-]+)
+values:
+- id: source-lists/cwts-core
+  display_name: CWTS Core
+- id: source-lists/doaj
+  display_name: DOAJ
+- id: source-lists/doyens
+  display_name: Doyens de Médecine (FR)

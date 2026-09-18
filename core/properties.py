@@ -276,7 +276,14 @@ CAP_COLUMN = "column"
 # born supported_by ["gui"] (facets shipped in openalex-gui f7de1ef5). The fields
 # went live in dfe6013 (2026-09-16) without this regen, which left the gate red;
 # this catches the snapshot up. Approved by Jason 2026-09-17. = MINOR.
-PROPERTIES_VERSION = "11.3.0"
+# 12.0.0 (oxjob #1205): new `source-lists` registry entity (cwts-core/doaj/doyens;
+# the vocabulary behind sources.listed_in, fed from the registry's source_list
+# table) + the four `listed_in` properties (sources; works primary/any/best-OA
+# location source) gain entity_type "source-lists" (were bare enum filters). The
+# entity_type transition on existing properties is what makes this MAJOR
+# (precedent 8.0.0 / indexes); the new entity catalog key is additive.
+# Approved by Jason 2026-09-18. = MAJOR.
+PROPERTIES_VERSION = "12.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -306,6 +313,7 @@ ENTITY_FIELDS_MODULES = {
     "indexes": "indexes.fields",
     "oa-statuses": "oa_statuses.fields",
     "sdgs": "sdgs.fields",
+    "source-lists": "source_lists.fields",
     "source-types": "source_types.fields",
     "institution-types": "institution_types.fields",
     "work-types": "work_types.fields",

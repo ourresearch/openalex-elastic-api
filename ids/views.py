@@ -20,6 +20,7 @@ from countries.schemas import CountriesSchema
 from domains.schemas import DomainsSchema
 from indexes.schemas import IndexesSchema
 from oa_statuses.schemas import OaStatusesSchema
+from source_lists.schemas import SourceListsSchema
 from fields.schemas import FieldsSchema
 from funders.schemas import FundersSchema
 from ids.utils import (
@@ -815,6 +816,9 @@ def get_by_openalex_external_id(index, schema, id):
         endpoint_name = "types"
     elif index.startswith("oa-statuses"):
         entity_name = endpoint_name = "oa-statuses"
+    elif index.startswith("source-lists"):
+        # split("-")[0] would give "source" and 404 every lookup (oxjob #1205)
+        entity_name = endpoint_name = "source-lists"
     else:
         entity_name = endpoint_name = index.split("-")[0]
 
@@ -871,6 +875,12 @@ def languages_id_get(id):
 @blueprint.route("/entities/oa-statuses/<path:id>")
 def oa_statuses_id_get(id):
     return get_by_openalex_external_id(settings.OA_STATUSES_INDEX, OaStatusesSchema, id)
+
+
+@blueprint.route("/source-lists/<path:id>")
+@blueprint.route("/entities/source-lists/<path:id>")
+def source_lists_id_get(id):
+    return get_by_openalex_external_id(settings.SOURCE_LISTS_INDEX, SourceListsSchema, id)
 
 
 @blueprint.route("/indexes/<path:id>")

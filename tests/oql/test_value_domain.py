@@ -115,6 +115,8 @@ def test_closed_vocab_namespace_set():
         "domains", "fields", "subfields",
         # indexes registry entity (oxjob #672):
         "indexes",
+        # source-lists registry entity (oxjob #1205):
+        "source-lists",
     }
     # work-types' config namespace is the legacy "types"
     assert CLOSED_VOCAB_NAMESPACE["work-types"] == "types"

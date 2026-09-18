@@ -264,6 +264,11 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'description': {"display_name": 'description'},
         'display_name': {"display_name": 'name'},
     },
+    'source-lists': {
+        'display_name': {"display_name": 'name'},
+        'sources_count': {"display_name": 'sources'},
+        'list_version': {"display_name": 'edition'},
+    },
     'source-types': {
         'description': {"display_name": 'description'},
         'display_name': {"display_name": 'name'},

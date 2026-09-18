@@ -98,6 +98,9 @@ CLOSED_VOCAB_NAMESPACE = {
     "work-types": "types",
     "oa-statuses": "oa-statuses",
     "indexes": "indexes",
+    # source-lists (oxjob #1205): `values:` in config/source-lists.yaml must list
+    # every id the registry knows, or valid filters are rejected as invalid_value
+    "source-lists": "source-lists",
     # Tier-1.5: the topic-hierarchy code vocabs — small, fully-enumerable closed
     # sets (domains 4, fields 26, subfields 252; complete in `config/*.yaml` and
     # matching the live API). Identity-mapped (namespace == entity_type ==

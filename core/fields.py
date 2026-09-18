@@ -102,6 +102,12 @@ ENTITY_ID_PARAM_TYPES = {
     "open_access.oa_status": "oa-statuses",
     # indexes
     "indexed_in": "indexes",
+    # source-lists (oxjob #1205): bare `listed_in` on /sources, dotted on /works;
+    # all mean the same vocabulary
+    "listed_in": "source-lists",
+    "best_oa_location.source.listed_in": "source-lists",
+    "locations.source.listed_in": "source-lists",
+    "primary_location.source.listed_in": "source-lists",
     # source-types (dotted forms are unambiguous; the bare `type` is set per-Field)
     "best_oa_location.source.type": "source-types",
     "locations.source.type": "source-types",
@@ -1785,6 +1791,7 @@ ID_PATH_SEGMENT_BY_ENTITY_TYPE = {
     "licenses": "licenses",
     "oa-statuses": "oa-statuses",
     "sdgs": "sdgs",
+    "source-lists": "source-lists",
     "source-types": "source-types",
     "subfields": "subfields",
     "work-types": "types",
