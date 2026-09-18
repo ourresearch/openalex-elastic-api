@@ -12,3 +12,13 @@ values:
   display_name: DOAJ
 - id: source-lists/doyens
   display_name: Doyens de Médecine (FR)
+- id: source-lists/medline
+  display_name: MEDLINE
+- id: source-lists/norway
+  display_name: Norwegian Register
+- id: source-lists/jufo
+  display_name: JUFO (Finland)
+- id: source-lists/erih-plus
+  display_name: ERIH PLUS
+- id: source-lists/scielo
+  display_name: SciELO
