@@ -14,11 +14,25 @@ values:
   display_name: Doyens de Médecine (FR)
 - id: source-lists/medline
   display_name: MEDLINE
-- id: source-lists/norway
-  display_name: Norwegian Register
-- id: source-lists/jufo
-  display_name: JUFO (Finland)
+- id: source-lists/norway-1
+  display_name: Norwegian Register, level 1
+- id: source-lists/norway-2
+  display_name: Norwegian Register, level 2 (highest)
+- id: source-lists/jufo-1
+  display_name: JUFO (Finland), level 1
+- id: source-lists/jufo-2
+  display_name: JUFO (Finland), level 2
+- id: source-lists/jufo-3
+  display_name: JUFO (Finland), level 3 (highest)
 - id: source-lists/erih-plus
   display_name: ERIH PLUS
 - id: source-lists/scielo
   display_name: SciELO
+- id: source-lists/jpps-1
+  display_name: JPPS, one star
+- id: source-lists/jpps-2
+  display_name: JPPS, two stars
+- id: source-lists/jpps-3
+  display_name: JPPS, three stars (highest)
+- id: source-lists/latindex
+  display_name: Latindex Catálogo 2.0
