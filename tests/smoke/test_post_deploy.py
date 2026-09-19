@@ -133,9 +133,9 @@ class TestSmokeEndpoints:
             params={"api_key": API_KEY},
             allow_redirects=False,
         )
-        # 302 = redirect to R2, 404 = work doesn't have PDF (acceptable)
-        assert response.status_code in [302, 404], (
-            f"Expected 302 or 404, got {response.status_code}"
+        # 200 = served directly from R2, 404 = work doesn't have PDF (acceptable)
+        assert response.status_code in [200, 404], (
+            f"Expected 200 or 404, got {response.status_code}"
         )
 
 

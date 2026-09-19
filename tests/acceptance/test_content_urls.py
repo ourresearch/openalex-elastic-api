@@ -153,11 +153,11 @@ class TestContentUrls:
             allow_redirects=False,
         )
 
-        # Should return 302 redirect to R2 signed URL
-        assert pdf_response.status_code == 302, (
-            f"Expected 302 redirect with API key, got {pdf_response.status_code}"
+        # Served directly from R2 (no redirect since 2026-07-30)
+        assert pdf_response.status_code == 200, (
+            f"Expected 200 with API key, got {pdf_response.status_code}"
         )
-        assert "Location" in pdf_response.headers
+        assert pdf_response.headers.get("Content-Type") == "application/pdf"
 
     @pytest.mark.skipif(not API_KEY, reason="OPENALEX_API_KEY not set")
     def test_grobid_xml_url_returns_content_with_api_key(self):
@@ -180,11 +180,34 @@ class TestContentUrls:
             allow_redirects=False,
         )
 
-        # Should return 302 redirect to R2 signed URL
-        assert xml_response.status_code == 302, (
-            f"Expected 302 redirect with API key, got {xml_response.status_code}"
+        # Served directly from R2 (no redirect since 2026-07-30). The stored
+        # object is gzipped; it must be described as XML + gzip *encoding* so
+        # standard clients decompress transparently (oxjob #779).
+        assert xml_response.status_code == 200, (
+            f"Expected 200 with API key, got {xml_response.status_code}"
         )
-        assert "Location" in xml_response.headers
+        assert xml_response.headers.get("Content-Type", "").startswith("application/xml")
+        assert xml_response.headers.get("Content-Encoding") == "gzip"
+
+    @pytest.mark.skipif(not API_KEY, reason="OPENALEX_API_KEY not set")
+    def test_grobid_xml_download_full(self):
+        """A plain requests.get should yield readable TEI XML, not gzip bytes."""
+        response = requests.get(
+            f"{API_BASE}/works",
+            params={"filter": "has_content.grobid_xml:true", "per-page": 1},
+            timeout=30,
+        )
+        assert response.status_code == 200
+        work = response.json()["results"][0]
+        grobid_url = work["content_urls"]["grobid_xml"]
+
+        xml_response = requests.get(grobid_url, params={"api_key": API_KEY}, timeout=30)
+        assert xml_response.status_code == 200
+        body = xml_response.content
+        assert not body.startswith(b"\x1f\x8b"), "Body is raw gzip; client did not decompress"
+        assert b"<" in body[:512] and b"tei" in body[:4096].lower(), (
+            "Downloaded content should be TEI XML"
+        )
 
     @pytest.mark.skipif(not API_KEY, reason="OPENALEX_API_KEY not set")
     def test_pdf_download_full(self):
