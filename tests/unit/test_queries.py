@@ -11,6 +11,7 @@ from core.search import (
     validate_top_level_search_wildcard,
     validate_wildcard_requires_exact,
     validate_wildcards,
+    analyzer_subtokens,
 )
 from core.sort import get_sort_fields
 from core.utils import map_filter_params, map_sort_params
@@ -821,6 +822,128 @@ class TestAdjacentWildcard:
         assert "display_name.no_stem" in should[0]["intervals"]
         assert should[1]["intervals"]["abstract.no_stem"]["boost"] == 0.10
         assert "query_string" not in str(q)  # wildcard NOT dropped to query_string
+
+
+class TestSplitWildcardToken:
+    """oxjob #1260: a wildcard on a token the analyzer splits (`e-cigarette*`, `x-ray*`,
+    `APP/PS1*`) must compile to an adjacency `intervals` query over its sub-tokens
+    (match `e` + prefix `cigarette`). query_string ran a literal `e-cigarette` prefix,
+    which matches no indexed term -> 0 hits, silently (live: 0 vs 10,850 for the
+    pre-split `"e cigarette*"`)."""
+
+    @pytest.mark.parametrize(
+        "word,parts",
+        [
+            ("e-cigarette*", ["e", "cigarette*"]),
+            ("APP/PS1*", ["APP", "PS1*"]),
+            ("state-of-the-art", ["state", "of", "the", "art"]),
+            ("smart*", ["smart*"]),
+            ("don't*", ["don't*"]),        # UAX#29 MidNumLet: apostrophe keeps the token
+            ("1.5*", ["1.5*"]),            # ... and a dot between digits
+            ("pre_print*", ["pre_print*"]),  # ExtendNumLet: underscore keeps it
+        ],
+    )
+    def test_analyzer_subtokens_mirror_standard_tokenizer(self, word, parts):
+        # Pinned against `_analyze` on works-v34 `display_name.no_stem`.
+        assert analyzer_subtokens(word) == parts
+
+    @pytest.mark.parametrize("terms", ["e-cigarette*", "x-ray*", "t-cell*", "APP/PS1*", "wom-?n"])
+    def test_has_split_wildcard_token_true(self, terms):
+        assert SearchOpenAlex(search_terms=terms).has_split_wildcard_token()
+
+    @pytest.mark.parametrize(
+        "terms",
+        # atomic wildcard token, plain hyphen token (no wildcard), quoted phrases (their
+        # own routes), multi-word unquoted, Lucene-leading `-`.
+        ["smart*", "e-cigarette", '"e-cigarette* use"', "e-cigarette* use", "-phone*"],
+    )
+    def test_has_split_wildcard_token_false(self, terms):
+        assert not SearchOpenAlex(search_terms=terms).has_split_wildcard_token()
+
+    def test_bare_split_token_builds_adjacency_intervals(self):
+        oa = SearchOpenAlex(search_terms="e-cigarette*", primary_field="display_name.no_stem")
+        q = oa.build_query(skip_citation_boost=True).to_dict()
+        all_of = q["intervals"]["display_name.no_stem"]["all_of"]
+        assert all_of["ordered"] is True
+        assert all_of["max_gaps"] == 0
+        assert all_of["intervals"] == [
+            {"match": {"query": "e"}},
+            {"prefix": {"prefix": "cigarette"}},
+        ]
+        assert "query_string" not in str(q)
+
+    def test_singleton_quoted_form_is_unwrapped_to_same_query(self):
+        # `"e-cigarette*"` is unwrapped upstream (zd#9063) -> identical to the bare form.
+        bare = SearchOpenAlex(search_terms="e-cigarette*", primary_field="display_name.no_stem")
+        quoted = SearchOpenAlex(
+            search_terms=strip_singleton_wildcard_quotes('"e-cigarette*"'),
+            primary_field="display_name.no_stem",
+        )
+        assert bare.build_query(skip_citation_boost=True).to_dict() == \
+            quoted.build_query(skip_citation_boost=True).to_dict()
+
+    def test_split_token_inside_adjacency_phrase_nests_ordered_rule(self):
+        oa = SearchOpenAlex(search_terms='"e-cigarette* use"', primary_field="display_name.no_stem")
+        rules = oa.build_query(skip_citation_boost=True).to_dict()[
+            "intervals"]["display_name.no_stem"]["all_of"]["intervals"]
+        assert rules == [
+            {"all_of": {"ordered": True, "max_gaps": 0, "intervals": [
+                {"match": {"query": "e"}},
+                {"prefix": {"prefix": "cigarette"}},
+            ]}},
+            {"match": {"query": "use"}},
+        ]
+
+    def test_split_token_inside_proximity_keeps_inner_adjacency(self):
+        # Outer NEAR is unordered/max_gaps=3; the hyphenated token stays an ordered,
+        # gap-0 unit inside it (otherwise `e` could float 3 words away from `cigarette`).
+        oa = SearchOpenAlex(search_terms='"e-cigarette* smoking"~3', primary_field="display_name.no_stem")
+        all_of = oa.build_query(skip_citation_boost=True).to_dict()[
+            "intervals"]["display_name.no_stem"]["all_of"]
+        assert all_of["ordered"] is False and all_of["max_gaps"] == 3
+        inner = all_of["intervals"][0]["all_of"]
+        assert inner["ordered"] is True and inner["max_gaps"] == 0
+
+    def test_plain_split_token_in_phrase_gets_explicit_adjacency(self):
+        # A bare intervals `match` on multi-term text is unordered with unlimited gaps by
+        # default, so even a NON-wildcard hyphen token needs the nested ordered rule.
+        oa = SearchOpenAlex(search_terms='"state-of-the-art device*"', primary_field="display_name.no_stem")
+        rules = oa.build_query(skip_citation_boost=True).to_dict()[
+            "intervals"]["display_name.no_stem"]["all_of"]["intervals"]
+        assert rules[0]["all_of"]["ordered"] is True
+        assert [r["match"]["query"] for r in rules[0]["all_of"]["intervals"]] == ["state", "of", "the", "art"]
+        assert rules[1] == {"prefix": {"prefix": "device"}}
+
+    def test_combine_fields_ors_with_boost(self):
+        oa = SearchOpenAlex(
+            search_terms="e-cigarette*",
+            primary_field="display_name.no_stem",
+            secondary_field="abstract.no_stem",
+            combine_fields=True,
+        )
+        q = oa.build_query(skip_citation_boost=True).to_dict()
+        should = q["bool"]["should"]
+        assert len(should) == 2
+        assert "display_name.no_stem" in should[0]["intervals"]
+        assert should[1]["intervals"]["abstract.no_stem"]["boost"] == 0.10
+
+    @pytest.mark.parametrize("terms", ["e-cigarette*", "x-ray*", "t-cell*", '"e-cigarette*"', '"e-cigarette* use"'])
+    def test_hyphenated_wildcard_with_3char_subtoken_passes_validation(self, terms):
+        validate_wildcards(terms)
+
+    def test_short_subtoken_prefix_rejected_with_split_explanation(self):
+        with pytest.raises(APIQueryParamsError) as exc:
+            validate_wildcards("covid-19*")
+        msg = str(exc.value.args[0])
+        assert "at least 3 leading characters" in msg
+        assert 'splits "covid-19*" into the words "covid", "19*"' in msg
+
+    def test_two_wildcard_budget_measures_effective_prefix(self):
+        # `x-ray*` anchors on `ray` (3) — under the 4-char two-wildcard floor.
+        with pytest.raises(APIQueryParamsError) as exc:
+            validate_wildcards('"x-ray* t-cell*"')
+        assert "at least 4 leading characters" in str(exc.value.args[0])
+        validate_wildcards('"x-rays* t-cell*"')  # `rays` (4) + `cell` (4) is fine
 
 
 class TestBinaryProximity:

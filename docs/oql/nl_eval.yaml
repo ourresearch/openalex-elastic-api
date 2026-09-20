@@ -712,3 +712,9 @@ cases:
     - {text: "CWTS core sources", difficulty: easy}
     - {text: "sources that are in the CWTS core collection", difficulty: easy}
     - {text: "which journals count as CWTS core", difficulty: hard}
+
+- ref: 205  # works where title has ("e-cigarette*") — hyphenated wildcard (#1260)
+  nl:
+    - {text: "works whose title contains a word starting with e-cigarette, like e-cigarettes", difficulty: easy}
+    - {text: "title search for e-cigarette with a wildcard so e-cigarettes is included too", difficulty: easy}
+    - {text: "papers on e-cigs, title has e-cigarette* (any ending)", difficulty: hard}

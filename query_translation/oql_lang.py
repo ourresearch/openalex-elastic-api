@@ -3038,6 +3038,25 @@ def _precedence_tree(operands: List[FilterType], conns: List[str]) -> FilterType
     return BranchFilter(join="or", filters=and_nodes)
 
 
+# oxjob #1260: mirrors core/search.py (ANALYZER_SPLIT_RE / analyzer_subtokens /
+# wildcard_prefix_len) — duplicated because this module must import without the
+# Flask/ES stack (tests/oql runs in a bare venv). The standard tokenizer splits a
+# hyphen/slash token (`e-cigarette` -> `e`, `cigarette`; verified with `_analyze` on
+# works-v34) and keeps mid-token `'`/`.`/`_` (`don't`, `1.5`, `pre_print`). The engine
+# compiles a split wildcard token as adjacent sub-rules (match `e` + prefix
+# `cigarette`), so the prefix that matters is the run right before the `*`.
+_ANALYZER_SPLIT_RE = re.compile(r"[^\w*?'.\u2019]+")
+
+
+def _analyzer_subtokens(word: str) -> List[str]:
+    return [p for p in _ANALYZER_SPLIT_RE.split(word) if re.search(r"[\w*?]", p)]
+
+
+def _wildcard_prefix_len(word: str) -> int:
+    m = re.search(r"(\w*)\*", word)
+    return len(m.group(1)) if m else 0
+
+
 def _validate_wildcards(word: str, pos: int):
     if "*" not in word and "?" not in word:
         return
@@ -3046,15 +3065,26 @@ def _validate_wildcards(word: str, pos: int):
                        f'leading wildcard "{word}" is not supported (too expensive)',
                        'anchor the wildcard with leading characters, e.g. cycle*', pos)
     star = word.find("*")
-    if star != -1:
-        prefix = re.match(r"\w*", word).group(0)
-        if star < 3 or len(prefix) < 3 or star > len(prefix):
-            # require >=3 word chars immediately before the *
-            chars_before = len(re.match(r"\w*", word).group(0)[:star])
-            if chars_before < 3:
+    if star > 0:
+        # >=3 word chars immediately before the * — measured on the run the engine
+        # actually expands, not from the token start: `e-cigarette*` is a prefix on
+        # `cigarette` (fine), `covid-19*` a prefix on `19` (too short). Same rule as
+        # core/search.py::_validate_wildcard_token (oxjob #1260; the old from-the-start
+        # count rejected every hyphenated term with a short first part).
+        if _wildcard_prefix_len(word) < 3:
+            parts = _analyzer_subtokens(word)
+            if len(parts) > 1:
+                wild = next((p for p in parts if "*" in p), parts[-1])
+                listed = ", ".join(f'"{p}"' for p in parts)
                 raise oql_error("OQL_SHORT_WILDCARD_PREFIX",
-                               f'wildcard needs at least 3 leading characters: "{word}"',
-                               'add characters before the *, e.g. abc*', pos)
+                               f'the search engine splits "{word}" into the words '
+                               f'{listed}, so the * applies only to "{wild}", which '
+                               f'needs at least 3 leading characters',
+                               'use a longer prefix before the *, e.g. abc*, or drop '
+                               'the wildcard', pos)
+            raise oql_error("OQL_SHORT_WILDCARD_PREFIX",
+                           f'wildcard needs at least 3 leading characters: "{word}"',
+                           'add characters before the *, e.g. abc*', pos)
     q = word.find("?")
     if q != -1:
         if q == 0 or not (word[q - 1].isalnum()):
@@ -3085,7 +3115,9 @@ def _validate_wildcard_budget(words: List[str], pos: int):
         # Only a trailing-`*` prefix drives multiplicative expansion; require a longer
         # anchor for it when a second wildcard is present.
         if w.endswith("*") and w.count("*") == 1 and "?" not in w:
-            if len(w) - 1 < MULTI_WILDCARD_MIN_PREFIX:
+            # Anchor = the run before the `*` after any analyzer split (`x-ray*` expands
+            # `ray`, not `x-ray`) — mirrors core/search.py (oxjob #1260).
+            if _wildcard_prefix_len(w) < MULTI_WILDCARD_MIN_PREFIX:
                 raise oql_error("OQL_MULTI_WILDCARD_SHORT_PREFIX",
                                f'with two wildcards in one phrase or proximity search, '
                                f'each * needs at least {MULTI_WILDCARD_MIN_PREFIX} '

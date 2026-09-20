@@ -56,6 +56,54 @@ SINGLETON_QUOTE_RE = re.compile(r'(?<!~)"([^"\s]+)"(?!~)')
 MAX_WILDCARDS_PER_INTERVALS = 2
 MULTI_WILDCARD_MIN_PREFIX = 4
 
+# oxjob #1260: analyzer-boundary split for wildcard tokens. Every text field here
+# (the works `.no_stem` subfields included) runs the standard tokenizer, which breaks
+# a hyphen/slash token into separate terms: `e-cigarette` -> `e`, `cigarette`;
+# `APP/PS1` -> `app`, `ps1` (verified with `_analyze` on works-v34). Neither
+# `query_string` (analyze_wildcard is off) nor the intervals `prefix`/`wildcard` rules
+# analyze a wildcard term, so `e-cigarette*` compiled literally is a prefix on a term
+# the index never contains -> 0 hits, silently (live: `e-cigarette*` = 0 vs
+# `"e cigarette*"` = 10,850; `x-ray*` = 0 vs `"x ray*"` = 493,977). So a wildcard token
+# is split at the same boundaries the tokenizer uses and compiled as adjacent, ordered
+# sub-rules (match `e` + prefix `cigarette`). Kept whole, matching UAX#29: `'` and `.`
+# mid-token (MidNumLet: `don't`, `1.5`, `o'brien`), `_` (ExtendNumLet: `pre_print`),
+# and the `*`/`?` metachars themselves.
+ANALYZER_SPLIT_RE = re.compile(r"[^\w*?'.\u2019]+")
+
+
+def analyzer_subtokens(word):
+    """Split one search token the way the standard tokenizer will (see above).
+
+    `e-cigarette*` -> ["e", "cigarette*"]; `smart*` -> ["smart*"]; `1.5*` -> ["1.5*"].
+    """
+    return [p for p in ANALYZER_SPLIT_RE.split(word) if re.search(r"[\w*?]", p)]
+
+
+def wildcard_prefix_len(word):
+    """Length of the `\w` run immediately before the first `*` -- the prefix the engine
+    actually expands. On `covid-19*` that is `19` (2), not `covid-19` (8): the tokenizer
+    splits at the hyphen first, so the anchor the prefix rule gets is only `19`.
+    """
+    m = re.search(r"(\w*)\*", word)
+    return len(m.group(1)) if m else 0
+
+
+def _split_short_prefix_message(word):
+    """The fix-it for a short prefix that only LOOKS long (`covid-19*`): say where the
+    engine splits the token, so the user isn't told to add characters to a 8-char word.
+    Returns None when the token doesn't split (the plain `ab*` message applies)."""
+    parts = analyzer_subtokens(word)
+    if len(parts) < 2:
+        return None
+    wild = next((p for p in parts if "*" in p), parts[-1])
+    listed = ", ".join(f'"{p}"' for p in parts)
+    return (
+        f'The search engine splits "{word}" into the words {listed}, so the * applies '
+        f'only to "{wild}", which needs at least 3 leading characters before the *. '
+        f'Use a longer prefix (e.g. abc*), or drop the wildcard.'
+    )
+
+
 # #364: stemmed text fields whose wildcards are silently wrong. Stemming happens
 # at INDEX time, so the literal prefix the user types (e.g. `studies` in
 # `studies*`) is usually absent from the stemmed index (it was stored as `studi`)
@@ -189,9 +237,13 @@ def _validate_wildcard_token(word):
     # `*` (handled above or left alone), not a prefix.
     star = word.find("*")
     if star > 0:
-        m = re.search(r"(\w*)\*", word)
-        chars_before = len(m.group(1)) if m else 0
+        chars_before = wildcard_prefix_len(word)
         if chars_before < 3:
+            # `covid-19*`: the run before the `*` is short only because the tokenizer
+            # splits at the hyphen -- say so instead of "add characters" (oxjob #1260).
+            split_msg = _split_short_prefix_message(word)
+            if split_msg:
+                raise APIQueryParamsError(split_msg)
             raise APIQueryParamsError(
                 f'A * wildcard needs at least 3 leading characters: "{word}". '
                 "Add characters before the *, e.g. abc*."
@@ -224,7 +276,9 @@ def _validate_wildcard_budget(words):
         # Only a trailing-`*` prefix drives the multiplicative expansion; require a
         # longer anchor for it when a second wildcard is present.
         if w.endswith("*") and w.count("*") == 1 and "?" not in w:
-            if len(w) - 1 < MULTI_WILDCARD_MIN_PREFIX:
+            # The anchor is the run before the `*` (after any analyzer split), not the
+            # whole token: `x-ray*` expands the prefix `ray`, not `x-ray` (oxjob #1260).
+            if wildcard_prefix_len(w) < MULTI_WILDCARD_MIN_PREFIX:
                 raise APIQueryParamsError(
                     f"With two wildcards in one phrase or proximity search, each * "
                     f"needs at least {MULTI_WILDCARD_MIN_PREFIX} leading characters "
@@ -508,6 +562,16 @@ class SearchOpenAlex:
                 return raw_query
             return self.citation_boost_query(raw_query)
 
+        # A single wildcard token the analyzer splits (`e-cigarette*`, `APP/PS1*`) —
+        # query_string would run a literal prefix on a term the index never contains
+        # (0 hits, silently), so compile it as an adjacency `intervals` query over its
+        # sub-tokens: match `e` + prefix `cigarette`, ordered, max_gaps=0 (oxjob #1260).
+        if self.has_split_wildcard_token():
+            raw_query = self.split_wildcard_token_query()
+            if skip_citation_boost:
+                return raw_query
+            return self.citation_boost_query(raw_query)
+
         # Binary proximity `"A"~N~"B"` — two separate operands NEAR each other (WoS
         # `NEAR/N`); `match_phrase`+slop can't express it (slop is whole-phrase), so it
         # builds an ES `intervals` query with one sub-interval per operand (#355 Goal B).
@@ -592,6 +656,32 @@ class SearchOpenAlex:
         phrase = m.group(1)
         return ("*" in phrase or "?" in phrase) and len(phrase.split()) >= 2
 
+    def has_split_wildcard_token(self):
+        """True for ONE bare wildcard token that the analyzer splits (oxjob #1260).
+
+        e.g. `e-cigarette*`, `x-ray*`, `t-cell*`, `APP/PS1*` — a single token (no
+        whitespace, no quotes; a singleton-quoted `"e-cigarette*"` is unwrapped upstream
+        by strip_singleton_wildcard_quotes) whose analyzer sub-tokens number 2+. Left on
+        query_string are: an atomic token (`smart*`), and multi-token searches (the
+        quoted phrase shapes have their own intervals routes above; an unquoted
+        multi-word search with a wildcard keeps its current path).
+        """
+        t = self.search_terms.strip()
+        if not t or '"' in t or re.search(r"\s", t):
+            return False
+        if "*" not in t and "?" not in t:
+            return False
+        return len(analyzer_subtokens(t)) > 1
+
+    def split_wildcard_token_query(self):
+        """Build an `intervals` adjacency query for one analyzer-split wildcard token.
+
+        `e-cigarette*` -> all_of(ordered, max_gaps=0)[match `e`, prefix `cigarette`] —
+        byte-identical to what the already-working `"e cigarette*"` phrase compiles to
+        (live works-v34: both 10,850 hits), so the user never has to pre-split the hyphen.
+        """
+        return self._intervals_over_fields(self._interval_rule(self.search_terms.strip()))
+
     def has_binary_proximity(self):
         """True for binary proximity `"A"~N~"B"` (oxjob #355 Goal B).
 
@@ -610,7 +700,22 @@ class SearchOpenAlex:
         Trailing `*` -> `prefix` (cheap, anchored). Any other wildcard (mid-word `?`,
         embedded `*`) -> `wildcard`. A plain token -> `match` (so it's analyzed/stemmed
         consistently with the field). Shapes are pre-validated by validate_wildcards().
+
+        A token the analyzer splits (`e-cigarette*`, `state-of-the-art`) becomes a nested
+        ordered, gap-0 `all_of` of one rule per sub-token (oxjob #1260): `prefix`/
+        `wildcard` rules are never analyzed, so a literal `e-cigarette` prefix matches
+        nothing; and a bare `match` on a multi-term text is unordered with unlimited
+        gaps by default, so even the plain-token case needs the explicit adjacency.
         """
+        parts = analyzer_subtokens(word)
+        if len(parts) > 1:
+            return {
+                "all_of": {
+                    "ordered": True,
+                    "max_gaps": 0,
+                    "intervals": [SearchOpenAlex._interval_rule(p) for p in parts],
+                }
+            }
         lower = word.lower()
         if word.endswith("*") and word.count("*") == 1 and "?" not in word:
             return {"prefix": {"prefix": lower[:-1]}}
