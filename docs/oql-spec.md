@@ -661,7 +661,12 @@ works where title has within 3 (foo, "bar")             (row 192) ✗ OQL_PROXIM
   on a single token must be **quoted** → it runs on `.search.exact`: `"bar*"`,
   `"foo*bar"`, `"wom?n"`. A **bare** wildcard is `OQL_WILDCARD_NEEDS_EXACT` (fix-it:
   quote it). `stemmed` keeps a phrase stemmed, so a wildcard there is the same error.
-  Leading → `OQL_LEADING_WILDCARD`. Sub-3-char prefix → `OQL_SHORT_WILDCARD_PREFIX`.
+  Leading → `OQL_LEADING_WILDCARD`. Sub-3-char prefix → `OQL_SHORT_WILDCARD_PREFIX`,
+  measured on the word the engine actually expands: the tokenizer splits a
+  hyphen/slash term into separate words, so `"e-cigarette*"` is a prefix on
+  `cigarette` (fine; it runs as adjacent `e` + `cigarette*`, row 205) while
+  `"covid-19*"` is a prefix on `19` and is rejected with a fix-it that names the
+  split (row 206, oxjob #1260).
   In a proximity list the same rule applies per operand: a wildcard needs a
   *quoted* operand (row 189 ✓, row 29 ✗). Wildcard-heavy queries share an
   expansion budget (#355): two-plus wildcards each need a ≥4-char prefix
