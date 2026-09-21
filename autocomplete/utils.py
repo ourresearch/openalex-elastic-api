@@ -12,6 +12,7 @@ AUTOCOMPLETE_SOURCE = [
     "issn_l",
     "last_known_institutions",
     "orcid",
+    "observed_orcids",
     "publisher",
     "ror",
     "wikidata",

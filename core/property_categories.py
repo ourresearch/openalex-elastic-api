@@ -76,7 +76,7 @@ GLOBAL_CATEGORY_BY_PARAM: Dict[str, str] = {
 # Conservative name-pattern defaults for NON-facet registry properties (the bulk of
 # the ~837 that have no facetConfigs peer). Only fires for high-confidence shapes;
 # everything else stays None. Explicit overrides above always win.
-_ID_PARAMS = {"doi", "issn", "issn_l", "orcid", "ror", "pmid", "pmcid", "mag", "id"}
+_ID_PARAMS = {"doi", "issn", "issn_l", "orcid", "observed_orcids", "ror", "pmid", "pmcid", "mag", "id"}
 _ID_HAS = {"has_doi", "has_orcid", "has_pmid", "has_pmcid", "has_issn"}
 _ID_SUFFIXES = (".orcid", ".ror", ".issn", ".wikidata", ".pmid", ".pmcid", ".mag", ".doi")
 _CITATION_PARAMS = {

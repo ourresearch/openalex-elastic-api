@@ -4,6 +4,7 @@ from core.fields import (
     DateTimeField,
     CollectionField,
     OpenAlexIDField,
+    OrcidField,
     RangeField,
     SearchField,
     TermField,
@@ -172,7 +173,8 @@ fields = [
     TermField(param="parsed_longest_name.middle"),
     TermField(param="parsed_longest_name.last"),
     TermField(param="parsed_longest_name.suffix"),
-    TermField(param="orcid", alias="ids.orcid"),
+    OrcidField(param="orcid", alias="ids.orcid"),
+    OrcidField(param="observed_orcids", alias="ids.observed_orcids"),  # same class: negation + URL prefix handled; primary is always in the array
     TermField(param="scopus", alias="ids.scopus.keyword"),
     TermField(param="topics.id", custom_es_field="topics.id"),
     TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),

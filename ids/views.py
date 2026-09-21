@@ -309,7 +309,9 @@ def authors_id_get(id):
         if not clean_orcid:
             return abort(404)
         full_orcid = f"https://orcid.org/{clean_orcid}"
-        query = Q("term", ids__orcid=full_orcid)
+        query = Q("term", ids__orcid=full_orcid) | Q(
+            "term", ids__observed_orcids=full_orcid
+        )
         s = s.filter(query)
     elif id.startswith("scopus:") or id.startswith("https://www.scopus.com"):
         scopus_id = id.replace("scopus:", "")

@@ -172,7 +172,9 @@ def search_canonical_id_single(index_name, s, q):
     elif index_name.startswith("author") and id_utils.is_orcid(q):
         normalized_id = id_utils.normalize_orcid(q)
         orcid_id = f"https://orcid.org/{normalized_id}"
-        s = s.filter("term", ids__orcid=orcid_id)
+        s = s.filter(
+            Q("term", ids__orcid=orcid_id) | Q("term", ids__observed_orcids=orcid_id)
+        )
         canonical_id_found = True
     elif index_name.startswith("concept") and id_utils.is_wikidata(q):
         normalized_id = id_utils.normalize_wikidata(q)
@@ -204,7 +206,9 @@ def search_canonical_id_full(s, q):
     elif id_utils.is_orcid(q):
         normalized_id = id_utils.normalize_orcid(q)
         orcid_id = f"https://orcid.org/{normalized_id}"
-        s = s.filter("term", ids__orcid=orcid_id)
+        s = s.filter(
+            Q("term", ids__orcid=orcid_id) | Q("term", ids__observed_orcids=orcid_id)
+        )
         canonical_id_found = True
     elif id_utils.is_wikidata(q):
         normalized_id = id_utils.normalize_wikidata(q)

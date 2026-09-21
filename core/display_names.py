@@ -90,6 +90,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'last_known_institutions.country_code': {"display_name": 'institution country'},
         'last_known_institutions.id': {"display_name": 'institution'},
         'last_known_institutions.type': {"display_name": 'institution type'},
+        'observed_orcids': {"display_name": 'Observed ORCIDs'},
         'orcid': {"display_name": 'ORCID'},
         'summary_stats.2yr_mean_citedness': {"display_name": '2-year mean citedness'},
         'summary_stats.h_index': {"display_name": 'h-index'},

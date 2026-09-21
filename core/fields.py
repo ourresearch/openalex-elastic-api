@@ -1127,6 +1127,7 @@ class TermField(Field):
             "institutions.ror",
             "issn",
             "orcid",
+            "observed_orcids",
             "openalex_id",
             "pmid",
             "pmcid",
@@ -1255,6 +1256,7 @@ class TermField(Field):
             "institutions.ror",
             "issn",
             "orcid",
+            "observed_orcids",
             "openalex_id",
             "pmid",
             "pmcid",
@@ -1505,7 +1507,7 @@ class TermField(Field):
         ) and "ncbi.nlm.nih.gov/pmc/articles" not in self.value:
             formatted = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{self.value}"
         elif (
-            self.param in ["author.orcid", "authorships.author.orcid", "orcid", "authorships.raw_orcid"]
+            self.param in ["author.orcid", "authorships.author.orcid", "orcid", "observed_orcids", "authorships.raw_orcid"]
             and "orcid.org" not in self.value
         ):
             formatted = f"https://orcid.org/{self.value}"
@@ -1617,6 +1619,78 @@ class TermField(Field):
             raise APIQueryParamsError(
                 f"Value for {self.param} must be one of {', '.join(valid_values)} and not {self.value}."
             )
+
+
+class OrcidField(TermField):
+    """The `orcid` filter on /authors (observed_orcids, oxjob #1267): a profile's
+    `ids.observed_orcids` array holds every ORCID ever seen attached to it, with
+    the primary `ids.orcid` always element 0. A filter/lookup on `orcid:X` must
+    match if X is the primary OR any observed ORCID, so every query this field
+    builds is OR'd across BOTH es fields (`ids.orcid.lower` and
+    `ids.observed_orcids.lower`).
+
+    Implementation: reuse TermField's value formatting (via `format_id()`,
+    which already special-cases `orcid`) and just build the term/exists query
+    twice — once per field — combining with `|`. Negation and `null` are
+    handled by wrapping the OR'd positive/exists query in `~`, which
+    elasticsearch_dsl compiles to a `bool.must_not` around the nested `should`
+    — i.e. NOT(A OR B), the correct De Morgan form — rather than naively OR-ing
+    two independently-negated sub-queries (which would wrongly match nearly
+    every document).
+    """
+
+    SECONDARY_ES_FIELD = "ids__observed_orcids__lower"
+
+    def _formatted_value(self, value):
+        # Reuses TermField.format_id()'s "orcid" branch (adds the
+        # https://orcid.org/ prefix if missing) by temporarily swapping in the
+        # value to format.
+        original_value = self.value
+        self.value = value
+        try:
+            return self.format_id()
+        finally:
+            self.value = original_value
+
+    def _match_query(self, formatted_value):
+        primary_field = self.es_field()
+        return Q("term", **{primary_field: formatted_value}) | Q(
+            "term", **{self.SECONDARY_ES_FIELD: formatted_value}
+        )
+
+    def _exists_query(self):
+        primary_field = self.es_field().replace("__", ".")
+        secondary_field = self.SECONDARY_ES_FIELD.replace("__", ".")
+        return Q("exists", field=primary_field) | Q("exists", field=secondary_field)
+
+    def build_query(self):
+        if self.value == "null":
+            return ~self._exists_query()
+        if self.value == "!null":
+            return self._exists_query()
+        if self.value.startswith("!"):
+            formatted_value = self._formatted_value(self.value[1:])
+            return ~self._match_query(formatted_value)
+        formatted_value = self._formatted_value(self.value)
+        return self._match_query(formatted_value)
+
+    def build_terms_query(self, values):
+        # Mirrors TermField.build_terms_query's null-peeling (oxjob #299): a
+        # literal "null" in an OR-list means "field missing", not a term value.
+        has_null = any(v == "null" for v in values)
+        values = [v for v in values if v != "null"]
+
+        null_query = ~self._exists_query() if has_null else None
+
+        match_query = None
+        for value in values:
+            formatted_value = self._formatted_value(value)
+            q = self._match_query(formatted_value)
+            match_query = q if match_query is None else (match_query | q)
+
+        if match_query is not None and null_query is not None:
+            return match_query | null_query
+        return match_query if match_query is not None else null_query
 
 
 class ExternalIDField(Field):

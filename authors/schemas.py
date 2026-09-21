@@ -16,6 +16,7 @@ from core.schemas import (
 class IDsSchema(Schema):
     openalex = fields.Str()
     orcid = fields.Str()
+    observed_orcids = fields.List(fields.Str())
     mag = fields.Str()
     twitter = fields.Str()
     wikipedia = fields.Str()
@@ -62,6 +63,7 @@ class AffiliationSchema(Schema):
 class AuthorsSchema(Schema):
     id = fields.Str()
     orcid = fields.Str()
+    observed_orcids = fields.List(fields.Str())
     display_name = fields.Str()
     raw_author_names = fields.List(fields.Str())
     full_name = fields.Str()
