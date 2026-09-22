@@ -17,10 +17,20 @@ import requests as http_requests
 import settings
 from core.exceptions import APIQueryParamsError
 
-# Databricks embedding model config
-EMBEDDING_MODEL = "databricks-gte-large-en"
+# Databricks embedding model config (oxjob #1275: Qwen3-Embedding-0.6B, multilingual,
+# pay-per-token Foundation Model endpoint; corpus vectors live in
+# openalex.vector_search.work_embeddings_qwen3 and are served from works-vectors-v2).
+EMBEDDING_MODEL = "databricks-qwen3-embedding-0-6b"
 EMBEDDING_DIMENSION = 1024
 VECTOR_FIELD = "vector_embedding"
+
+# Qwen3-Embedding is asymmetric: the QUERY side carries an instruction prefix while
+# documents are embedded bare. The corpus was built WITHOUT this prefix, so it must
+# never be applied to document text — only here, on the incoming query.
+QUERY_INSTRUCTION = (
+    "Instruct: Given a web search query, retrieve relevant passages that answer the query\n"
+    "Query: "
+)
 
 # Refresh OAuth tokens this many seconds before they expire
 _TOKEN_REFRESH_BUFFER_SECONDS = 60
@@ -65,7 +75,8 @@ def _get_access_token() -> str:
 
 def embed_query(query_text: str) -> list:
     """
-    Embed query text using Databricks GTE model via Foundation Model API.
+    Embed query text using Databricks Qwen3-Embedding-0.6B (multilingual) via the
+    Foundation Model API, prefixed with the model's query instruction.
 
     Uses direct REST API call to model serving endpoint for low latency
     (typically <200ms vs 1-2s via SQL warehouse).
@@ -82,8 +93,8 @@ def embed_query(query_text: str) -> list:
     if not query_text or not query_text.strip():
         raise APIQueryParamsError("Search query is required for semantic search")
 
-    # Truncate to stay within model limits
-    truncated = query_text[:2000]
+    # Truncate to stay within model limits, then prepend the query-side instruction.
+    truncated = QUERY_INSTRUCTION + query_text[:2000]
 
     host = settings.DATABRICKS_HOST
     if not host:

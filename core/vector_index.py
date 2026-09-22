@@ -1,10 +1,10 @@
 """
 Two-phase semantic search using dedicated vector index.
 
-Phase 1: kNN on works-vectors-v1 (lightweight: 12 shards, 14 filter fields)
-Phase 2: mget full docs from works-v32, merge scores, citation rescore
+Phase 1: kNN on settings.WORKS_VECTOR_INDEX (lightweight: 8 shards, 14 filter fields)
+Phase 2: mget full docs from settings.WORKS_INDEX_WALDEN, merge scores, citation rescore
 
-This replaces single-index kNN on works-v32 (72 shards, HNSW can't stay warm).
+This replaces single-index kNN on the main works index (72 shards, HNSW can't stay warm).
 """
 
 import logging
@@ -293,7 +293,7 @@ def _normalize_license(value):
 
 
 def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75):
-    """Run kNN search on works-vectors-v1.
+    """Run kNN search on settings.WORKS_VECTOR_INDEX.
 
     Returns list of (work_id, score) tuples sorted by score descending.
     """
