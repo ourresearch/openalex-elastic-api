@@ -297,7 +297,14 @@ CAP_COLUMN = "column"
 # sibling sustainable_development_goals.id (facet "Experimental SDGs" in openalex-gui;
 # documented on the SDGs help page). One purely
 # additive property. Bump authorised by Jason's 2026-09-22 brief for #1300. = MINOR.
-PROPERTIES_VERSION = "12.2.0"
+# 13.0.0 (oxjob #1299 withdrawn / #1312, 2026-09-22): works loses `pubmed_publication_types`
+# (added in 12.1.0 the day before; data never reached ES, the walden branch was never merged,
+# so no live query can have depended on it). Jason, 2026-09-22: a raw 85-value PubMed facet
+# beside `type` and the coming `study_design` is a second type taxonomy; the study-design
+# half ships under #1312 instead. GUI facet reverted in openalex-gui 76fa86f6; help section
+# removed. The removal of a property is a MAJOR bump by the table above. Bump authorised by
+# Jason's 2026-09-22 "get rid of the raw field entirely". = MAJOR.
+PROPERTIES_VERSION = "13.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

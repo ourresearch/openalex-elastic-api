@@ -407,10 +407,6 @@ _f("paratext", "is_paratext", "bool")
 # --- oxjob #402 Tier-1 open-access first-class columns ---
 _f("best open version", "best_open_version", "string")
 _f("indexed in", "indexed_in", "enum")
-# oxjob #1299: raw PubMed PublicationTypeList strings ("Randomized Controlled Trial");
-# casing="" keeps PubMed's capitalisation on render (the filter is case-insensitive
-# via the `.lower` subfield either way).
-_f("PubMed publication types", "pubmed_publication_types", "enum", casing="")
 _f("PDF-linked", "has_content.pdf", "bool")
 _f("OA accepted", "best_oa_location.is_accepted", "bool")
 _f("OA published", "best_oa_location.is_published", "bool")

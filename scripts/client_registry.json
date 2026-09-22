@@ -1379,22 +1379,6 @@
       "isId": false,
       "hasExport": false
     },
-    "pubmed_publication_types": {
-      "key": "pubmed_publication_types",
-      "entityToFilter": "works",
-      "entityToSelect": null,
-      "displayName": "PubMed publication types",
-      "displayNameVerbatim": false,
-      "type": "selectEntity",
-      "actions": [
-        "filter",
-        "column",
-        "group_by"
-      ],
-      "actionsPopular": null,
-      "isId": false,
-      "hasExport": true
-    },
     "raw_affiliation_strings.search": {
       "key": "raw_affiliation_strings.search",
       "entityToFilter": "works",

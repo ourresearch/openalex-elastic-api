@@ -377,7 +377,6 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'ids.pmcid': {"display_name": 'PMCID'},
         'ids.pmid': {"display_name": 'PMID'},
         'indexed_in': {"display_name": 'indexed in'},
-        'pubmed_publication_types': {"display_name": 'PubMed publication types'},
         'institutions.display_name.search': {"display_name": 'institution name'},
         'institutions.is_global_south': {"display_name": 'global south'},
         'institutions_distinct_count': {"display_name": 'institutions count'},

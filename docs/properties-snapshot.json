@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 25,
-    "fingerprint": "ac4291e3fc09bf6241c843059eaf851f04f6395371f90cbba364a062ebfbc875",
-    "property_count": 843,
-    "version": "12.2.0"
+    "fingerprint": "4a732ee15ca5496449f7999949e42d3bd7ce951751400d162e65e6d2755bc81f",
+    "property_count": 842,
+    "version": "13.0.0"
   },
   "properties": {
     "authors": {
@@ -17282,33 +17282,6 @@
           "gui"
         ],
         "type": "number"
-      },
-      "pubmed_publication_types": {
-        "actions": [
-          "column",
-          "filter",
-          "group_by",
-          "sort"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "other",
-        "display_name": "PubMed publication types",
-        "entity_type": null,
-        "name": "pubmed_publication_types",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "supported_by": [
-          "gui",
-          "oxurl"
-        ],
-        "type": "string"
       },
       "raw_affiliation_strings": {
         "actions": [

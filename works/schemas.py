@@ -340,7 +340,6 @@ class WorksSchema(Schema):
     type = fields.Str()
     type_crossref = fields.Str()
     indexed_in = fields.List(fields.Str())
-    pubmed_publication_types = fields.List(fields.Str())
     open_access = fields.Nested(OpenAccessSchema)
     authorships = fields.Nested(AuthorshipsSchema, many=True)
     institution_assertions = fields.Nested(InstitutionsSchema, many=True)
