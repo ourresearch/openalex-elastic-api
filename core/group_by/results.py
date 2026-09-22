@@ -82,6 +82,7 @@ def get_group_by_results(
             "countries",
             "language",
             "sustainable_development_goals.id",
+            "x_sdgs.id",
             "locations.source.type",
             "primary_location.source.type",
             "keywords.id",
@@ -113,6 +114,7 @@ def _keep_only_openalex_keys(results, field, include_unknown):
         "countries",
         "language",
         "sustainable_development_goals.id",
+        "x_sdgs.id",
         "locations.source.type",
         "primary_location.source.type",
         "keywords.id",
@@ -391,7 +393,7 @@ def format_key(key, group_by, index_name):
         formatted_key = f"{id_prefix}/languages/{key}"
     elif group_by == "type" and "works" in index_name:
         formatted_key = f"{id_prefix}/types/{key}"
-    elif group_by == "sustainable_development_goals.id":
+    elif group_by in ("sustainable_development_goals.id", "x_sdgs.id"):
         sdg_number = key.split("/")[-1]
         formatted_key = f"{id_prefix}/sdgs/{sdg_number}"
     elif (

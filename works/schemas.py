@@ -371,6 +371,8 @@ class WorksSchema(Schema):
     locations = fields.Nested(LocationSchema, many=True)
     best_oa_location = fields.Nested(LocationSchema)
     sustainable_development_goals = fields.Nested(SDGSchema, many=True)
+    # oxjob #1300: shadow field; [] until the x_sdgs backfill sync has reached the doc
+    x_sdgs = fields.Nested(SDGSchema, many=True, dump_default=[])
     awards = fields.Nested(AwardsSchema, many=True)
     funders = fields.Nested(FundersSchema, many=True)
     datasets = fields.List(fields.Str())

@@ -257,6 +257,9 @@ _f("publisher", "primary_location.source.host_organization_lineage", "id")
 # "sustainable development goal(s)" input aliases live in the registry (#406 1c).
 _f("SDG", "sustainable_development_goals.id", "id",
    aliases=["sdg"])
+# oxjob #1300: shadow Jev-head SDG field (x_sdgs), same sdgs entity behind it; input aliases
+# ("x sdgs", "x_sdgs", "shadow SDG") live in the registry (core/display_names.py).
+_f("experimental SDGs", "x_sdgs.id", "id", aliases=["x_sdgs"])
 _f("last known institution", "last_known_institutions.id", "id")
 # `primary_topic.domain.id` is the canonical works column the GUI facets as "domain"
 # (entityToSelect domains); `domain.id` is the OQL-only shorthand. Fold the GUI param in

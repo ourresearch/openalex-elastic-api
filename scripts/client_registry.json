@@ -653,6 +653,21 @@
       "isId": false,
       "hasExport": false
     },
+    "x_sdgs.id": {
+      "key": "x_sdgs.id",
+      "entityToFilter": "works",
+      "entityToSelect": "sdgs",
+      "displayName": "Experimental SDGs",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
     "is_xpac": {
       "key": "is_xpac",
       "entityToFilter": "works",

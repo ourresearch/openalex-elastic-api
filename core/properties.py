@@ -290,7 +290,14 @@ CAP_COLUMN = "column"
 # up authors.observed_orcids (#1267, shipped 7d06976 without a snapshot regen).
 # Two purely additive properties. Bump authorised by Jason's 2026-09-21 brief for
 # #1299 ("PROPERTIES_VERSION bump with a dated comment"). = MINOR.
-PROPERTIES_VERSION = "12.1.0"
+# 12.2.0 (oxjob #1300, 2026-09-22): works gains `x_sdgs.id` — the shadow SDG field from the
+# Jev-trained head on Qwen3 vectors, served beside the unchanged Aurora field while under
+# evaluation (Jason, 2026-09-21: "ship as shadow in x_sdgs; switch the main field after
+# Kyle"). filter/group_by, entity sdgs, category aboutness, born supported_by ["gui"] like its
+# sibling sustainable_development_goals.id (facet "Experimental SDGs" in openalex-gui;
+# documented on the SDGs help page). One purely
+# additive property. Bump authorised by Jason's 2026-09-22 brief for #1300. = MINOR.
+PROPERTIES_VERSION = "12.2.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

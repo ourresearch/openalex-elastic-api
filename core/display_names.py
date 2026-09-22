@@ -424,6 +424,9 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'raw_author_name.search': {"display_name": 'byline', "aliases": ['raw author name']},
         'related_to': {"display_name": 'related to'},
         'sustainable_development_goals.id': {"display_name": 'SDG', "aliases": ['sustainable development goal', 'sustainable development goals']},
+        # oxjob #1300: shadow Jev-head SDG field. No parentheses in the label: the OQL render
+        # word must equal it and "(" is grouping syntax in OQL.
+        'x_sdgs.id': {"display_name": 'experimental SDGs', "aliases": ['x sdgs', 'x_sdgs', 'experimental SDG', 'shadow SDG']},
         'title.search': {"display_name": 'title'},
         'title_and_abstract.search': {"display_name": 'title/abstract', "aliases": ['title/abs', 'title & abstract', 'title and abstract', 'title&abstract', 'title_and_abstract']},
         'topics.id': {"display_name": 'topics'},

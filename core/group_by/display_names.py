@@ -180,6 +180,7 @@ def get_display_name_mapping(keys, group_by, connection='default'):
         "fields.id": get_display_names_keywords_licenses_topics,
         "keywords.id": get_display_names_keywords_licenses_topics,
         "sustainable_development_goals.id": get_display_names_sdgs,
+        "x_sdgs.id": get_display_names_sdgs,
         "license": get_display_names_keywords_licenses_topics,
         "license_id": get_display_names_keywords_licenses_topics,
     }

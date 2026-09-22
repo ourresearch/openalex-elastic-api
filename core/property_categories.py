@@ -423,6 +423,7 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "is_retracted": "other",
         "language": "geo",
         "sustainable_development_goals.id": "aboutness",
+        "x_sdgs.id": "aboutness",
         "cited_by_count": "citation",
         "referenced_works_count": "citation",
         "fwci": "citation",
