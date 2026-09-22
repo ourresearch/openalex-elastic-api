@@ -34,6 +34,7 @@ OXURL_DOCUMENTED_WORKS_COLUMNS = frozenset({
     'has_fulltext', 'has_oa_accepted_or_published_version',
     'has_oa_submitted_version', 'has_pmcid', 'has_references', 'ids.mag',
     'indexed_in',
+    'pubmed_publication_types',
     'ids.openalex', 'ids.pmcid', 'ids.pmid', 'institutions.continent',
     'institutions.country_code', 'institutions.id', 'institutions.ror',
     'is_corresponding', 'is_oa', 'is_paratext', 'locations.is_accepted',

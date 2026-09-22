@@ -415,6 +415,7 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "publication_date": "dates",
         "has_doi": "ids",
         "indexed_in": "ids",
+        "pubmed_publication_types": "other",
         "mag_only": "ids",
         "is_xpac": "other",
         "has_orcid": "ids",

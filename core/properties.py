@@ -283,7 +283,14 @@ CAP_COLUMN = "column"
 # entity_type transition on existing properties is what makes this MAJOR
 # (precedent 8.0.0 / indexes); the new entity catalog key is additive.
 # Approved by Jason 2026-09-18. = MAJOR.
-PROPERTIES_VERSION = "12.0.0"
+# 12.1.0 (oxjob #1299, 2026-09-21): works gains `pubmed_publication_types` — PubMed's
+# full PublicationTypeList as raw strings on the ~41M PMID works (empty otherwise),
+# filter/group_by/column, born supported_by ["gui","oxurl"] (facet in openalex-gui
+# 0cae9319, documented on the works attributes help page). The same regen catches
+# up authors.observed_orcids (#1267, shipped 7d06976 without a snapshot regen).
+# Two purely additive properties. Bump authorised by Jason's 2026-09-21 brief for
+# #1299 ("PROPERTIES_VERSION bump with a dated comment"). = MINOR.
+PROPERTIES_VERSION = "12.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

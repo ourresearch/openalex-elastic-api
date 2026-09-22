@@ -866,6 +866,14 @@ fields = [
     TermField(
         param="indexed_in",
     ),
+    TermField(
+        # PubMed's full PublicationTypeList as raw strings; PMID works only, [] otherwise.
+        # Mapped keyword + `.lower` on works-v34 (house shape), so the default
+        # TermField `.lower` filter path applies. oxjob #1299
+        param="pubmed_publication_types",
+        docstring="PubMed publication types assigned to the record, verbatim (e.g. Randomized Controlled Trial, Systematic Review, Meta-Analysis, Case Reports); only works with a PMID carry them, empty otherwise",
+        documentation_link="https://help.openalex.org/data/works/attributes/#pubmed_publication_types",
+    ),
     TermField(param="institution_assertions.country_code"),
     TermField(param="institution_assertions.ror"),
     TermField(param="institution_assertions.type"),

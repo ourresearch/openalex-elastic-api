@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 25,
-    "fingerprint": "2a36d582fb9838b5b397fd0a68556e59e55b7404b8197dacb1ed17185292983b",
-    "property_count": 839,
-    "version": "12.0.0"
+    "fingerprint": "411d05a3d707f7f516acf01e8ad1d1f93739a19e4e01e41ebda6e009001fad8c",
+    "property_count": 841,
+    "version": "12.1.0"
   },
   "properties": {
     "authors": {
@@ -615,6 +615,32 @@
         "display_name": "institution type",
         "entity_type": "institution-types",
         "name": "last_known_institutions.type",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
+      "observed_orcids": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "ids",
+        "display_name": "Observed ORCIDs",
+        "entity_type": null,
+        "name": "observed_orcids",
         "operators": [
           "eq",
           "not",
@@ -17256,6 +17282,33 @@
           "gui"
         ],
         "type": "number"
+      },
+      "pubmed_publication_types": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "PubMed publication types",
+        "entity_type": null,
+        "name": "pubmed_publication_types",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui",
+          "oxurl"
+        ],
+        "type": "string"
       },
       "raw_affiliation_strings": {
         "actions": [
