@@ -36,3 +36,17 @@ values:
   display_name: JPPS, three stars
 - id: source-lists/latindex
   display_name: Latindex Catálogo 2.0
+- id: source-lists/ki-jl-1
+  display_name: KI Journal List, level 1
+- id: source-lists/ki-jl-2
+  display_name: KI Journal List, level 2
+- id: source-lists/ki-jl-3
+  display_name: KI Journal List, level 3
+- id: source-lists/abdc-a-star
+  display_name: ABDC Journal Quality List, A*
+- id: source-lists/abdc-a
+  display_name: ABDC Journal Quality List, A
+- id: source-lists/abdc-b
+  display_name: ABDC Journal Quality List, B
+- id: source-lists/abdc-c
+  display_name: ABDC Journal Quality List, C
