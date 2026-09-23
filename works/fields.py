@@ -8,6 +8,7 @@ from core.fields import (
     SearchField,
     TermField,
     annotate_entity_types,
+    OrcidField,
 )
 from core.alternate_names import ALTERNATE_NAMES
 
@@ -776,15 +777,15 @@ fields = [
         param="authorships.affiliations.institution_ids",
         custom_es_field="authorships_full.affiliations.institution_ids.keyword",
     ),
-    TermField(
+    OrcidField(
         param="author.orcid",
         alias="authorships_full.author.orcid",
         alternate_of="authorships.author.orcid",
     ),
-    TermField(
+    OrcidField(
         param="authorships.author.orcid",
         alias="authorships_full.author.orcid",
-        docstring="The work's authors, by ORCID",
+        docstring="The work's authors, by ORCID. Matches any ORCID observed on the author's profile (authorships.author.observed_orcids), not only the primary",
         documentation_link="https://developers.openalex.org/api-reference/authors",
     ),
     TermField(

@@ -304,7 +304,15 @@ CAP_COLUMN = "column"
 # half ships under #1312 instead. GUI facet reverted in openalex-gui 76fa86f6; help section
 # removed. The removal of a property is a MAJOR bump by the table above. Bump authorised by
 # Jason's 2026-09-22 "get rid of the raw field entirely". = MAJOR.
-PROPERTIES_VERSION = "13.0.0"
+# 14.0.0 (oxjob #1340, 2026-09-23): authors loses the `observed_orcids` FILTER (added 12.1.0,
+# three days old, never in the OQL corpus; the response field, the ID lookup and the GUI
+# column all stay). In its place the existing ORCID filters gain list semantics: works
+# `authorships.author.orcid` / `author.orcid` and authors `orcid` match the primary OR any
+# ORCID observed on the author's profile (same shape as sources `issn` vs `issn_l`). Jason,
+# 2026-09-23, final after three reversals: "no new filters", remap the existing ones. The
+# removal of a property's filter action is a MAJOR bump by the table above; bump approved
+# by Jason 2026-09-23 in the #1340 brief. = MAJOR.
+PROPERTIES_VERSION = "14.0.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

@@ -1128,7 +1128,6 @@ class TermField(Field):
             "institutions.ror",
             "issn",
             "orcid",
-            "observed_orcids",
             "openalex_id",
             "pmid",
             "pmcid",
@@ -1257,7 +1256,6 @@ class TermField(Field):
             "institutions.ror",
             "issn",
             "orcid",
-            "observed_orcids",
             "openalex_id",
             "pmid",
             "pmcid",
@@ -1508,7 +1506,7 @@ class TermField(Field):
         ) and "ncbi.nlm.nih.gov/pmc/articles" not in self.value:
             formatted = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{self.value}"
         elif (
-            self.param in ["author.orcid", "authorships.author.orcid", "orcid", "observed_orcids", "authorships.raw_orcid"]
+            self.param in ["author.orcid", "authorships.author.orcid", "orcid", "authorships.raw_orcid"]
             and "orcid.org" not in self.value
         ):
             formatted = f"https://orcid.org/{self.value}"
@@ -1623,12 +1621,17 @@ class TermField(Field):
 
 
 class OrcidField(TermField):
-    """The `orcid` filter on /authors (observed_orcids, oxjob #1267): a profile's
-    `ids.observed_orcids` array holds every ORCID ever seen attached to it, with
-    the primary `ids.orcid` always element 0. A filter/lookup on `orcid:X` must
-    match if X is the primary OR any observed ORCID, so every query this field
-    builds is OR'd across BOTH es fields (`ids.orcid.lower` and
-    `ids.observed_orcids.lower`).
+    """An ORCID filter that matches the primary OR any observed ORCID.
+
+    Authors (oxjob #1267): a profile's `ids.observed_orcids` array holds every
+    ORCID ever seen attached to it, with the primary `ids.orcid` always element
+    0. Works (oxjob #1340): the dehydrated `authorships.author` carries the same
+    pair (`orcid` + `observed_orcids`, copied from the profile at rebuild), so
+    `authorships.author.orcid:X` finds a work by any ORCID its author has been
+    seen with, not only the primary. Jason 2026-09-23: same shape as sources'
+    `issn` — the existing filter word gains list semantics, no new filter.
+    Every query this field builds is OR'd across BOTH es fields (the alias'
+    `<path>.orcid.lower` and its sibling `<path>.observed_orcids.lower`).
 
     Implementation: reuse TermField's value formatting (via `format_id()`,
     which already special-cases `orcid`) and just build the term/exists query
@@ -1640,7 +1643,14 @@ class OrcidField(TermField):
     every document).
     """
 
-    SECONDARY_ES_FIELD = "ids__observed_orcids__lower"
+    def __init__(self, *args, secondary_alias=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if secondary_alias is None:
+            base = self.alias or self.param
+            head, _, leaf = base.rpartition(".")
+            assert leaf == "orcid", f"OrcidField needs a *.orcid alias, got {base!r}"
+            secondary_alias = f"{head}.observed_orcids" if head else "observed_orcids"
+        self.secondary_es_field = secondary_alias.replace(".", "__") + "__lower"
 
     def _formatted_value(self, value):
         # Reuses TermField.format_id()'s "orcid" branch (adds the
@@ -1656,12 +1666,12 @@ class OrcidField(TermField):
     def _match_query(self, formatted_value):
         primary_field = self.es_field()
         return Q("term", **{primary_field: formatted_value}) | Q(
-            "term", **{self.SECONDARY_ES_FIELD: formatted_value}
+            "term", **{self.secondary_es_field: formatted_value}
         )
 
     def _exists_query(self):
         primary_field = self.es_field().replace("__", ".")
-        secondary_field = self.SECONDARY_ES_FIELD.replace("__", ".")
+        secondary_field = self.secondary_es_field.replace("__", ".")
         return Q("exists", field=primary_field) | Q("exists", field=secondary_field)
 
     def build_query(self):

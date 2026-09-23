@@ -2416,7 +2416,6 @@
       "displayNameVerbatim": false,
       "type": "search",
       "actions": [
-        "filter",
         "column"
       ],
       "actionsPopular": [],

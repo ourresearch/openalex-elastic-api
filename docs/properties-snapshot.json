@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 25,
-    "fingerprint": "4a732ee15ca5496449f7999949e42d3bd7ce951751400d162e65e6d2755bc81f",
+    "fingerprint": "55ec609a6adea1922b54463a7fee2585ba596599c8fc45158458cb8415df55f4",
     "property_count": 842,
-    "version": "13.0.0"
+    "version": "14.0.0"
   },
   "properties": {
     "authors": {
@@ -628,10 +628,7 @@
       },
       "observed_orcids": {
         "actions": [
-          "column",
-          "filter",
-          "group_by",
-          "sort"
+          "column"
         ],
         "aliases": [],
         "alternate_keys": [],
@@ -641,16 +638,9 @@
         "display_name": "Observed ORCIDs",
         "entity_type": null,
         "name": "observed_orcids",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "supported_by": [
-          "gui"
-        ],
-        "type": "string"
+        "operators": [],
+        "supported_by": [],
+        "type": null
       },
       "orcid": {
         "actions": [
