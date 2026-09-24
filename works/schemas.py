@@ -57,6 +57,7 @@ class AuthorSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     orcid = fields.Str()
+    observed_orcids = fields.List(fields.Str())  # every ORCID observed on the resolved profile; element 0 == orcid (oxjob #1340)
 
     class Meta:
         ordered = True
