@@ -312,7 +312,7 @@ CAP_COLUMN = "column"
 # 2026-09-23, final after three reversals: "no new filters", remap the existing ones. The
 # removal of a property's filter action is a MAJOR bump by the table above; bump approved
 # by Jason 2026-09-23 in the #1340 brief. = MAJOR.
-# 14.1.0 (oxjob #1312, 2026-09-25; pending Jason's approval): new `study-designs` registry
+# 14.1.0 (oxjob #1312, 2026-09-25; approved by Jason 2026-09-25): new `study-designs` registry
 # entity (seven PubMed-backed values: randomized-controlled-trial, clinical-trial,
 # observational-study, case-report, systematic-review, meta-analysis, study-protocol; ES
 # study-designs-v1 built by walden) + works `study_designs` (select) and `study_designs.id`
