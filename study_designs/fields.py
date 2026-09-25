@@ -35,6 +35,7 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["openalex"],
         alternate_names=ALTERNATE_NAMES.get("openalex", None),
     ),
+    RangeField(param="cited_by_count"),
     RangeField(param="works_count"),
     SearchField(param="text.search", index="study-designs"),
     SearchField(param="default.search", index="study-designs", alternate_of="text.search"),

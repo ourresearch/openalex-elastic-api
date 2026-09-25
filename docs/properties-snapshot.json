@@ -1,8 +1,8 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "e7e7f08b8b392628ce1568582382718e169fcaa017843428c272a5d843dd6111",
-    "property_count": 858,
+    "fingerprint": "4f595f9081b3516d13ffa97d5869807f1ed6009f32820a5bad03c53bb9e5c623",
+    "property_count": 859,
     "version": "14.1.0"
   },
   "properties": {
@@ -11784,6 +11784,36 @@
       }
     },
     "study-designs": {
+      "cited_by_count": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [
+          "citations",
+          "cited by count"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "citation",
+        "display_name": "citation count",
+        "entity_type": null,
+        "name": "cited_by_count",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or",
+          "range"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "number"
+      },
       "collection": {
         "actions": [],
         "aliases": [],

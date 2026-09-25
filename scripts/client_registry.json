@@ -5541,6 +5541,25 @@
     }
   },
   "study-designs": {
+    "cited_by_count": {
+      "key": "cited_by_count",
+      "entityToFilter": "study-designs",
+      "entityToSelect": null,
+      "displayName": "citation count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "column",
+        "sort"
+      ],
+      "actionsPopular": [
+        "column",
+        "sort"
+      ],
+      "isId": false,
+      "hasExport": false
+    },
     "description": {
       "key": "description",
       "entityToFilter": "study-designs",
