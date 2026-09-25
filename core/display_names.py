@@ -265,6 +265,10 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'description': {"display_name": 'description'},
         'display_name': {"display_name": 'name'},
     },
+    'study-designs': {
+        'description': {"display_name": 'description'},
+        'display_name': {"display_name": 'name'},
+    },
     'source-lists': {
         'display_name': {"display_name": 'name'},
         'sources_count': {"display_name": 'sources'},
@@ -425,6 +429,9 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'sustainable_development_goals.id': {"display_name": 'SDG', "aliases": ['sustainable development goal', 'sustainable development goals']},
         # oxjob #1300: shadow Jev-head SDG field. No parentheses in the label: the OQL render
         # word must equal it and "(" is grouping syntax in OQL.
+        # oxjob #1312: how the research was done (RCT, systematic review, ...); `type` says
+        # what kind of document it is.
+        'study_designs.id': {"display_name": 'study design', "aliases": ['study designs', 'study_designs', 'study_designs.id']},
         'x_sdgs.id': {"display_name": 'experimental SDGs', "aliases": ['x sdgs', 'x_sdgs', 'experimental SDG', 'shadow SDG']},
         'title.search': {"display_name": 'title'},
         'title_and_abstract.search': {"display_name": 'title/abstract', "aliases": ['title/abs', 'title & abstract', 'title and abstract', 'title&abstract', 'title_and_abstract']},

@@ -119,6 +119,21 @@ def get_display_names_sdgs(ids, connection='default'):
     return results
 
 
+def get_display_names_study_designs(ids, connection='default'):
+    """Display names for study-design ids from the closed vocabulary in
+    config/study-designs.yaml (oxjob #1312). No index query: the vocabulary is
+    fixed and `get_id_display_names` can't route a slug id (it would raise
+    "not a valid OpenAlex ID")."""
+    from core.entities import get_entity_type
+
+    ent = get_entity_type("study-designs")
+    names = {
+        f"https://openalex.org/{row['id']}": row["display_name"]
+        for row in (ent.values if ent and ent.values else [])
+    }
+    return {i: names[i] for i in ids if i in names}
+
+
 def get_display_names_keywords_licenses_topics(ids, connection='default'):
     if not ids or (ids[0] == "unknown" and len(ids) == 1):
         return None
@@ -181,6 +196,7 @@ def get_display_name_mapping(keys, group_by, connection='default'):
         "keywords.id": get_display_names_keywords_licenses_topics,
         "sustainable_development_goals.id": get_display_names_sdgs,
         "x_sdgs.id": get_display_names_sdgs,
+        "study_designs.id": get_display_names_study_designs,
         "license": get_display_names_keywords_licenses_topics,
         "license_id": get_display_names_keywords_licenses_topics,
     }

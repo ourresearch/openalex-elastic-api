@@ -39,6 +39,7 @@ import snapshots
 import sources
 import source_lists
 import source_types
+import study_designs
 import subfields
 import suggest
 import topics
@@ -116,6 +117,7 @@ def register_blueprints(app):
     app.register_blueprint(sources.views.blueprint)
     app.register_blueprint(source_lists.views.blueprint)
     app.register_blueprint(source_types.views.blueprint)
+    app.register_blueprint(study_designs.views.blueprint)
     app.register_blueprint(subfields.views.blueprint)
     app.register_blueprint(suggest.views.blueprint)
     app.register_blueprint(topics.views.blueprint)

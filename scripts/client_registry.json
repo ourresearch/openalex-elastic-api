@@ -1518,6 +1518,21 @@
       "isId": false,
       "hasExport": false
     },
+    "study_designs.id": {
+      "key": "study_designs.id",
+      "entityToFilter": "works",
+      "entityToSelect": "study-designs",
+      "displayName": "study design",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
     "primary_topic.subfield.id": {
       "key": "primary_topic.subfield.id",
       "entityToFilter": "works",
@@ -5508,6 +5523,65 @@
     "works_count": {
       "key": "works_count",
       "entityToFilter": "source-lists",
+      "entityToSelect": null,
+      "displayName": "works count",
+      "displayNameVerbatim": false,
+      "type": "range",
+      "actions": [
+        "filter",
+        "sort",
+        "column"
+      ],
+      "actionsPopular": [
+        "sort",
+        "column"
+      ],
+      "isId": false,
+      "hasExport": false
+    }
+  },
+  "study-designs": {
+    "description": {
+      "key": "description",
+      "entityToFilter": "study-designs",
+      "entityToSelect": null,
+      "displayName": "description",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "display_name": {
+      "key": "display_name",
+      "entityToFilter": "study-designs",
+      "entityToSelect": null,
+      "displayName": "name",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "column"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "pubmed_publication_types": {
+      "key": "pubmed_publication_types",
+      "entityToFilter": "study-designs",
+      "entityToSelect": null,
+      "displayName": "PubMed publication types",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "works_count": {
+      "key": "works_count",
+      "entityToFilter": "study-designs",
       "entityToSelect": null,
       "displayName": "works count",
       "displayNameVerbatim": false,

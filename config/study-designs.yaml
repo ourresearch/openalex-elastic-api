@@ -1,0 +1,22 @@
+id: study-designs
+displayName: study designs
+displayNameSingular: study design
+descr: how the research was done
+descrFull: How the research reported in a work was done, such as a randomized controlled trial or a systematic review. Separate from a work's type, which says what kind of document it is. Taken from PubMed's publication types where a MEDLINE-indexed record has them, otherwise assigned automatically.
+isNative: false
+idRegex: (?:https:\/\/openalex\.org\/study-designs\/|study-designs\/)([a-z0-9-]+)
+values:
+- id: study-designs/randomized-controlled-trial
+  display_name: Randomized Controlled Trial
+- id: study-designs/clinical-trial
+  display_name: Clinical Trial
+- id: study-designs/observational-study
+  display_name: Observational Study
+- id: study-designs/case-report
+  display_name: Case Report
+- id: study-designs/systematic-review
+  display_name: Systematic Review
+- id: study-designs/meta-analysis
+  display_name: Meta-Analysis
+- id: study-designs/study-protocol
+  display_name: Study Protocol

@@ -19,7 +19,7 @@ Needs the test app (tests/conftest `client` fixture) — run WITHOUT --noconftes
 # The browsable entity types in the registry (config/*.yaml). `locations`
 # graduated from a properties-only key to a full registry entity on 2026-08-30
 # (config/locations.yaml — oxjob #850, locations-entity program).
-EXPECTED_ENTITY_COUNT = 25
+EXPECTED_ENTITY_COUNT = 26
 
 
 def _json(client, path):

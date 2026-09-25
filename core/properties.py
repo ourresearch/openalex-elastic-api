@@ -312,7 +312,13 @@ CAP_COLUMN = "column"
 # 2026-09-23, final after three reversals: "no new filters", remap the existing ones. The
 # removal of a property's filter action is a MAJOR bump by the table above; bump approved
 # by Jason 2026-09-23 in the #1340 brief. = MAJOR.
-PROPERTIES_VERSION = "14.0.0"
+# 14.1.0 (oxjob #1312, 2026-09-25; pending Jason's approval): new `study-designs` registry
+# entity (seven PubMed-backed values: randomized-controlled-trial, clinical-trial,
+# observational-study, case-report, systematic-review, meta-analysis, study-protocol; ES
+# study-designs-v1 built by walden) + works `study_designs` (select) and `study_designs.id`
+# (filter/group_by, entity study-designs, category aboutness beside SDG, OQL "study design",
+# born supported_by ["gui"]). Purely additive: classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "14.1.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
@@ -344,6 +350,7 @@ ENTITY_FIELDS_MODULES = {
     "sdgs": "sdgs.fields",
     "source-lists": "source_lists.fields",
     "source-types": "source_types.fields",
+    "study-designs": "study_designs.fields",
     "institution-types": "institution_types.fields",
     "work-types": "work_types.fields",
     "awards": "awards.fields",

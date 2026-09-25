@@ -1,9 +1,9 @@
 {
   "meta": {
-    "entity_count": 25,
-    "fingerprint": "55ec609a6adea1922b54463a7fee2585ba596599c8fc45158458cb8415df55f4",
-    "property_count": 842,
-    "version": "14.0.0"
+    "entity_count": 26,
+    "fingerprint": "e7e7f08b8b392628ce1568582382718e169fcaa017843428c272a5d843dd6111",
+    "property_count": 858,
+    "version": "14.1.0"
   },
   "properties": {
     "authors": {
@@ -11783,6 +11783,280 @@
         "type": "openalex_id"
       }
     },
+    "study-designs": {
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "study-designs",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "supported_by": [],
+        "type": "collection"
+      },
+      "created_date": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "created date",
+        "entity_type": null,
+        "name": "created_date",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "description": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "description",
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "display_name": {
+        "actions": [
+          "column",
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "name",
+        "entity_type": null,
+        "name": "display_name",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
+      },
+      "display_name.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "name"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "display name",
+        "entity_type": null,
+        "name": "display_name.search",
+        "operators": [
+          "search"
+        ],
+        "supported_by": [],
+        "type": "search"
+      },
+      "from_created_date": {
+        "actions": [
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "from created date",
+        "entity_type": null,
+        "name": "from_created_date",
+        "operators": [
+          "date_range",
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "date"
+      },
+      "from_updated_date": {
+        "actions": [
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "from updated date",
+        "entity_type": null,
+        "name": "from_updated_date",
+        "operators": [
+          "date_range",
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "datetime"
+      },
+      "id": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "ids",
+        "display_name": "id",
+        "entity_type": "study-designs",
+        "name": "id",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "external_id"
+      },
+      "pubmed_publication_types": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "pubmed publication types",
+        "entity_type": null,
+        "name": "pubmed_publication_types",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "relevance_score": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "relevance score",
+        "entity_type": null,
+        "name": "relevance_score",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "text.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "any field",
+          "anywhere",
+          "default",
+          "default.search",
+          "text"
+        ],
+        "alternate_keys": [
+          "default.search"
+        ],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "text",
+        "entity_type": null,
+        "name": "text.search",
+        "operators": [
+          "search"
+        ],
+        "supported_by": [],
+        "type": "search"
+      },
+      "updated_date": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "dates",
+        "display_name": "updated date",
+        "entity_type": null,
+        "name": "updated_date",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "works_api_url": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "works api url",
+        "entity_type": null,
+        "name": "works_api_url",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "works_count": {
+        "actions": [
+          "column",
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "citation",
+        "display_name": "works count",
+        "entity_type": null,
+        "name": "works_count",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or",
+          "range"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "number"
+      }
+    },
     "subfields": {
       "cited_by_count": {
         "actions": [
@@ -17531,6 +17805,51 @@
         "operators": [],
         "supported_by": [],
         "type": null
+      },
+      "study_designs": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "study designs",
+        "entity_type": null,
+        "name": "study_designs",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "study_designs.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [
+          "study designs",
+          "study_designs",
+          "study_designs.id"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "aboutness",
+        "display_name": "study design",
+        "entity_type": "study-designs",
+        "name": "study_designs.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
       },
       "sustainable_development_goals": {
         "actions": [

@@ -478,5 +478,5 @@ VALID_ENTITY_TYPES = {
     "continents", "domains", "fields", "subfields", "sdgs",
     "languages", "licenses", "types", "source-types",
     "institution-types", "awards", "locations", "oa-statuses",
-    "indexes", "source-lists"
+    "indexes", "source-lists", "study-designs"
 }

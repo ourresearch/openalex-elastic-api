@@ -109,6 +109,8 @@ ENTITY_ID_PARAM_TYPES = {
     "best_oa_location.source.listed_in": "source-lists",
     "locations.source.listed_in": "source-lists",
     "primary_location.source.listed_in": "source-lists",
+    # study-designs (oxjob #1312): works `study_designs.id`
+    "study_designs.id": "study-designs",
     # source-types (dotted forms are unambiguous; the bare `type` is set per-Field)
     "best_oa_location.source.type": "source-types",
     "locations.source.type": "source-types",
@@ -1048,6 +1050,21 @@ class TermField(Field):
             return f"https://metadata.un.org/sdg/{number}"
         return value
 
+    @staticmethod
+    def _normalize_study_design_value(value):
+        """Normalize any accepted study-design filter form to the ES-indexed full URL.
+
+        Works index ``study_designs.id`` as ``https://openalex.org/study-designs/<slug>``
+        (oxjob #1312), so the bare slug the GUI sends (``meta-analysis``) and the short
+        id (``study-designs/meta-analysis``) must be *expanded*, the reverse of the
+        strip the bare-code vocabularies need. ``null`` passes through for the
+        missing-value filter.
+        """
+        if value == "null":
+            return value
+        slug = TermField._strip_openalex_prefix(value.strip(), "study-designs/")
+        return f"https://openalex.org/study-designs/{slug.lower()}"
+
     def _normalize_term_value(self, value):
         """Normalize a filter value to its ES-indexed form for `build_query`.
 
@@ -1073,6 +1090,8 @@ class TermField(Field):
             neg, value = "!", value[1:]
         if self.param in ("sustainable_development_goals.id", "x_sdgs.id"):
             value = self._normalize_sdg_value(value)
+        elif self.param == "study_designs.id":
+            value = self._normalize_study_design_value(value)
         elif self.param == "language":
             value = self._strip_openalex_prefix(value, "languages/")
         elif (
@@ -1141,6 +1160,8 @@ class TermField(Field):
         # canonical id copied off an entity page round-trips as a filter value (#275).
         if self.param in ("sustainable_development_goals.id", "x_sdgs.id"):
             return self._normalize_sdg_value(self.value)
+        elif self.param == "study_designs.id":
+            return self._normalize_study_design_value(self.value)
         elif self.param == "language":
             return self._strip_openalex_prefix(self.value, "languages/").lower()
         elif self.param == "type" or self.param == "last_known_institution.type":
@@ -1878,6 +1899,7 @@ ID_PATH_SEGMENT_BY_ENTITY_TYPE = {
     "sdgs": "sdgs",
     "source-lists": "source-lists",
     "source-types": "source-types",
+    "study-designs": "study-designs",
     "subfields": "subfields",
     "work-types": "types",
 }

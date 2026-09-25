@@ -309,6 +309,11 @@ class SDGSchema(Schema):
     score = fields.Float()
 
 
+class StudyDesignSchema(Schema):
+    id = fields.String()
+    display_name = fields.String()
+
+
 class CitedByPercentileYearSchema(Schema):
     min = fields.Integer()
     max = fields.Integer()
@@ -373,6 +378,9 @@ class WorksSchema(Schema):
     sustainable_development_goals = fields.Nested(SDGSchema, many=True)
     # oxjob #1300: shadow field; [] until the x_sdgs backfill sync has reached the doc
     x_sdgs = fields.Nested(SDGSchema, many=True, dump_default=[])
+    # oxjob #1312: [] when the work has no study design (and until the walden fill
+    # reaches the doc)
+    study_designs = fields.Nested(StudyDesignSchema, many=True, dump_default=[])
     awards = fields.Nested(AwardsSchema, many=True)
     funders = fields.Nested(FundersSchema, many=True)
     datasets = fields.List(fields.Str())

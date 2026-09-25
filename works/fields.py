@@ -1002,6 +1002,17 @@ fields = [
         documentation_link="https://help.openalex.org/data/sdgs/#experimental-x_sdgs",
         alternate_names=ALTERNATE_NAMES.get("sustainable_development_goals"),
     ),
+    TermField(
+        # oxjob #1312: how the research was done — seven PubMed-backed values (RCT,
+        # clinical trial, observational study, case report, systematic review,
+        # meta-analysis, study protocol), parents included (RCT => clinical trial,
+        # meta-analysis => systematic review). ES holds the full id
+        # (https://openalex.org/study-designs/<slug>) on the house keyword + `.lower`
+        # mapping; the filter accepts the slug, short or full id (core/fields.py).
+        param="study_designs.id",
+        docstring="How the research reported in the work was done (e.g. randomized controlled trial, systematic review), from PubMed's publication types where a MEDLINE-indexed record has them, otherwise assigned automatically; empty when the work reports no study",
+        documentation_link="https://help.openalex.org/data/study-designs/",
+    ),
     TermField(param="topics.domain.id", custom_es_field="topics.domain.id"),
     TermField(param="topics.field.id", custom_es_field="topics.field.id"),
     TermField(param="topics.subfield.id", custom_es_field="topics.subfield.id"),

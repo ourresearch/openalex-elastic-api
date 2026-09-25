@@ -101,6 +101,9 @@ CLOSED_VOCAB_NAMESPACE = {
     # source-lists (oxjob #1205): `values:` in config/source-lists.yaml must list
     # every id the registry knows, or valid filters are rejected as invalid_value
     "source-lists": "source-lists",
+    # study-designs (oxjob #1312): the seven PubMed-backed values in
+    # config/study-designs.yaml; a slug outside them is invalid_value
+    "study-designs": "study-designs",
     # Tier-1.5: the topic-hierarchy code vocabs — small, fully-enumerable closed
     # sets (domains 4, fields 26, subfields 252; complete in `config/*.yaml` and
     # matching the live API). Identity-mapped (namespace == entity_type ==

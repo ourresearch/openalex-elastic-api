@@ -423,6 +423,7 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "language": "geo",
         "sustainable_development_goals.id": "aboutness",
         "x_sdgs.id": "aboutness",
+        "study_designs.id": "aboutness",  # oxjob #1312, beside SDG
         "cited_by_count": "citation",
         "referenced_works_count": "citation",
         "fwci": "citation",

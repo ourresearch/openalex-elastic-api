@@ -81,9 +81,13 @@ def _builtin_name(entity_type: Optional[str], short_id: str) -> Optional[str]:
 
 def _normalize_code(value: Any) -> Optional[str]:
     """Reduce an OQO value to the casefolded short code the config tables key on
-    (strip any `…/` URL/path prefix, lowercase). None for non-strings."""
+    (strip any `…/` URL/path prefix, lowercase). None for non-strings.
+    A canonical `https://openalex.org/<ns>/<code>` loses its host first, so the
+    full id copied off an entity page is a member too (oxjob #1312)."""
     if not isinstance(value, str):
         return None
+    if value.lower().startswith("https://openalex.org/"):
+        value = value[len("https://openalex.org/"):]
     short = value.split("/", 1)[1] if "/" in value else value
     return short.lower()
 
