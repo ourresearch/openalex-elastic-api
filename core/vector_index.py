@@ -2,7 +2,8 @@
 Two-phase semantic search using dedicated vector index.
 
 Phase 1: kNN on settings.WORKS_VECTOR_INDEX (lightweight: 8 shards, 14 filter fields)
-Phase 2: mget full docs from settings.WORKS_INDEX_WALDEN, merge scores, citation rescore
+Phase 2: fetch full docs from settings.WORKS_INDEX_WALDEN (re-applying the filters there), merge scores,
+citation rescore
 
 This replaces single-index kNN on the main works index (72 shards, HNSW can't stay warm).
 """
@@ -338,7 +339,9 @@ _VECTOR_TO_WORKS_FIELD = {
     "author_ids": "authorships.author.id",
     "institution_ids": "authorships.institutions.id",
     "funder_ids": "funders.id",
-    "license_id": "primary_location.license",
+    # The vector index stores the license URL (https://openalex.org/licenses/cc-by); works-v34 keeps the
+    # URL in license_id and the bare slug in license.
+    "license_id": "primary_location.license_id.keyword",
     "type": "type.lower",
     "language": "language.lower",
 }
@@ -355,6 +358,15 @@ def _translate_filter_for_works(filter_dict):
                 field = next(iter(clause[query_type]))
                 new_field = _VECTOR_TO_WORKS_FIELD.get(field, field)
                 return {query_type: {new_field: clause[query_type][field]}}
+        if "exists" in clause:
+            field = clause["exists"]["field"]
+            return {"exists": {"field": _VECTOR_TO_WORKS_FIELD.get(field, field)}}
+        if "bool" in clause:
+            # Range ORs (bool.should) and `null` (bool.must_not exists) nest one level down.
+            return {"bool": {
+                k: [_translate_clause(c) for c in v] if isinstance(v, list) else v
+                for k, v in clause["bool"].items()
+            }}
         return clause
 
     result = {"bool": {}}
@@ -419,12 +431,14 @@ def _text_boost_search(query_text, k=20, connection="walden", filter_dict=None):
     return results
 
 
-def hydrate_results(vector_results, connection="walden"):
-    """Fetch full work docs from works-v32 via mget, merge scores.
+def hydrate_results(vector_results, connection="walden", works_filter=None):
+    """Fetch full work docs from works-v34, merge scores.
 
     Args:
         vector_results: list of (work_id, knn_score, cited_by_count) tuples
         connection: ES connection name
+        works_filter: the request's filters in works-v34 field names
+            (`_translate_filter_for_works`); hits whose current record fails them are dropped
 
     Returns:
         List of ES hit-like dicts with _source and injected meta.score
@@ -481,16 +495,31 @@ def hydrate_results(vector_results, connection="walden"):
         citation_factor = 1.0 + max_boost * relevance_strength * citation_signal
         score_map[work_id] = knn_score * citation_factor
 
-    # mget full docs from works-v32
-    response = es.mget(
-        index=settings.WORKS_INDEX_WALDEN,
-        body={"ids": work_ids},
-        _source_excludes=["abstract", "embeddings", "fulltext", "authorships_full", "vector_embedding"],
-    )
+    source_excludes = ["abstract", "embeddings", "fulltext", "authorships_full", "vector_embedding"]
+    if works_filter:
+        # The vector index's filter fields are written when a work's text is embedded and are not
+        # refreshed when its metadata changes (the 2026-09-27 affiliation swap left ~10% of works with
+        # stale institution_ids there; oxjob #1433). So the kNN pre-filter can admit a work whose
+        # current record no longer matches: re-check the filter on works-v34 while fetching.
+        response = es.search(
+            index=settings.WORKS_INDEX_WALDEN,
+            body={
+                "query": {"bool": {"filter": [{"ids": {"values": work_ids}}, works_filter]}},
+                "size": len(work_ids),
+                "_source": {"excludes": source_excludes},
+            },
+        )
+        docs = [{"_id": h["_id"], "_source": h["_source"], "found": True} for h in response["hits"]["hits"]]
+    else:
+        docs = es.mget(
+            index=settings.WORKS_INDEX_WALDEN,
+            body={"ids": work_ids},
+            _source_excludes=source_excludes,
+        )["docs"]
 
     # Build hit objects that work with WorksSchema serialization
     hits = []
-    for doc in response["docs"]:
+    for doc in docs:
         if not doc.get("found"):
             continue
         hit = doc["_source"]
@@ -585,9 +614,9 @@ def vector_semantic_search(params, index_name, connection):
             import traceback; print(f"VECTOR_ERR text_boost: {traceback.format_exc()}", flush=True)
             # Non-fatal: continue with kNN results only
 
-    # Hydrate full docs from works-v33
+    # Hydrate full docs from works-v34, re-applying the filters to the current records
     try:
-        hits = hydrate_results(vector_results, connection)
+        hits = hydrate_results(vector_results, connection, works_filter=_translate_filter_for_works(filter_dict))
     except Exception as e:
         import traceback; print(f"VECTOR_ERR hydrate: {type(e).__name__}: {e}", flush=True)
         raise
