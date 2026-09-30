@@ -293,10 +293,25 @@ def _normalize_license(value):
     return f"https://openalex.org/licenses/{value}"
 
 
-def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75):
+# oxjob #1433: kNN pre-filtered on a broad attribute (type, has_abstract, a year range...) takes 15-50 s on the
+# disk-bound vector cluster (filtered HNSW reads 10-60x more vectors) and the proxy 504s at 9 s: 39% of filtered
+# semantic requests timed out vs 1-2% unfiltered. So filters without an id clause run as an unfiltered kNN over the
+# POST_FILTER_POOL nearest works, filtered afterwards: on 29 real queries 1.1 s median (3.3 s max) vs 14.9 s, and 98% of
+# the best 25 hits vs 90% for the pre-filter. Id filters (author, source, institution, funder) stay pre-filtered:
+# they match few works, so the pre-filter is an exact scan and fast.
+POST_FILTER_POOL = 1000
+
+
+def _has_id_filter(params):
+    return any(key in _ID_FIELDS for f in (params.get("filters") or []) for key in f)
+
+
+def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75, post_filter=False):
     """Run kNN search on settings.WORKS_VECTOR_INDEX.
 
-    Returns list of (work_id, score) tuples sorted by score descending.
+    Returns list of (work_id, score) tuples sorted by score descending. With post_filter=True, filter_dict is applied
+    to the POST_FILTER_POOL nearest works instead of inside the kNN; returns None when that pool was full but kept
+    fewer than k works, i.e. more matches may lie further out and the caller should pre-filter instead.
     """
     es = connections.get_connection("vector")
 
@@ -307,17 +322,24 @@ def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75):
         "num_candidates": num_candidates,
         "similarity": 0.5,
     }
-    if filter_dict:
-        knn_body["filter"] = filter_dict
-
     body = {
         "knn": knn_body,
         "_source": False,
         "fields": ["cited_by_count"],
         "size": k,
     }
+    if filter_dict and post_filter:
+        knn_body["k"] = knn_body["num_candidates"] = POST_FILTER_POOL
+        body["post_filter"] = filter_dict
+        body["aggs"] = {"pool": {"value_count": {"field": "id"}}}  # aggs see the kNN pool before post_filter
+    elif filter_dict:
+        knn_body["filter"] = filter_dict
 
     response = es.search(index=settings.WORKS_VECTOR_INDEX, body=body)
+
+    if "post_filter" in body and len(response["hits"]["hits"]) < k \
+            and response["aggregations"]["pool"]["value"] >= POST_FILTER_POOL:
+        return None
 
     results = []
     for hit in response["hits"]["hits"]:
@@ -587,7 +609,12 @@ def vector_semantic_search(params, index_name, connection):
     k = MAX_SEMANTIC_RESULTS
     num_candidates = max(k * 2, 75)
     try:
-        vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates)
+        vector_results = None
+        if filter_dict and not _has_id_filter(params):
+            vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates,
+                                                   post_filter=True)
+        if vector_results is None:
+            vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates)
     except Exception as e:
         import traceback; print(f"VECTOR_ERR kNN filter={filter_dict}: {type(e).__name__}: {e}", flush=True)
         raise
