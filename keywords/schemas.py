@@ -9,9 +9,19 @@ from core.schemas import (
 )
 
 
+class IDsSchema(Schema):
+    openalex = fields.Str()
+    wikidata = fields.Str()
+
+    class Meta:
+        ordered = True
+
+
 class KeywordsSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
+    description = fields.Str()
+    ids = fields.Nested(IDsSchema)
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()
     cited_by_count = fields.Int()
