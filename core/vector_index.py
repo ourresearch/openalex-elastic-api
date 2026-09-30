@@ -296,22 +296,25 @@ def _normalize_license(value):
 # oxjob #1433: kNN pre-filtered on a broad attribute (type, has_abstract, a year range...) takes 15-50 s on the
 # disk-bound vector cluster (filtered HNSW reads 10-60x more vectors) and the proxy 504s at 9 s: 39% of filtered
 # semantic requests timed out vs 1-2% unfiltered. So filters without an id clause run as an unfiltered kNN over the
-# POST_FILTER_POOL nearest works, filtered afterwards: on 29 real queries 1.1 s median (3.3 s max) vs 14.9 s, and 98% of
+# 1,000 nearest works, filtered afterwards: on 29 real queries 1.1 s median (3.3 s max) vs 14.9 s, and 98% of
 # the best 25 hits vs 90% for the pre-filter. Id filters (author, source, institution, funder) stay pre-filtered:
-# they match few works, so the pre-filter is an exact scan and fast.
-POST_FILTER_POOL = 1000
+# they match few works, so the pre-filter is an exact scan and fast. A single year (3-5% of works) often leaves fewer
+# than 50 in the 1,000 nearest, so a second pool of 5,000 comes before the pre-filter: on the real queries that fell
+# back it filled all 50 in 0.4-4 s vs 6-13 s pre-filtered. A pool 5x bigger keeps about 5x the matches, so it is only
+# tried when the smaller one kept at least k/5; rarer filters (e.g. language:ja) go straight to the pre-filter.
+POST_FILTER_POOLS = (1000, 5000)
 
 
 def _has_id_filter(params):
     return any(key in _ID_FIELDS for f in (params.get("filters") or []) for key in f)
 
 
-def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75, post_filter=False):
+def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75, post_filter_pool=None):
     """Run kNN search on settings.WORKS_VECTOR_INDEX.
 
-    Returns list of (work_id, score) tuples sorted by score descending. With post_filter=True, filter_dict is applied
-    to the POST_FILTER_POOL nearest works instead of inside the kNN; returns None when that pool was full but kept
-    fewer than k works, i.e. more matches may lie further out and the caller should pre-filter instead.
+    Returns list of (work_id, score, cited_by_count) tuples sorted by score descending. With post_filter_pool=N,
+    filter_dict is applied to the N nearest works instead of inside the kNN, and the return is (results, complete):
+    complete is False when that pool was full but kept fewer than k works, i.e. more matches may lie further out.
     """
     es = connections.get_connection("vector")
 
@@ -328,18 +331,14 @@ def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75, po
         "fields": ["cited_by_count"],
         "size": k,
     }
-    if filter_dict and post_filter:
-        knn_body["k"] = knn_body["num_candidates"] = POST_FILTER_POOL
+    if filter_dict and post_filter_pool:
+        knn_body["k"] = knn_body["num_candidates"] = post_filter_pool
         body["post_filter"] = filter_dict
         body["aggs"] = {"pool": {"value_count": {"field": "id"}}}  # aggs see the kNN pool before post_filter
     elif filter_dict:
         knn_body["filter"] = filter_dict
 
     response = es.search(index=settings.WORKS_VECTOR_INDEX, body=body)
-
-    if "post_filter" in body and len(response["hits"]["hits"]) < k \
-            and response["aggregations"]["pool"]["value"] >= POST_FILTER_POOL:
-        return None
 
     results = []
     for hit in response["hits"]["hits"]:
@@ -350,6 +349,9 @@ def execute_vector_search(query_vector, filter_dict, k=50, num_candidates=75, po
             cited_by = hit["fields"]["cited_by_count"][0] or 0
         results.append((work_id, score, cited_by))
 
+    if post_filter_pool:
+        pool_size = response.get("aggregations", {}).get("pool", {}).get("value", 0)
+        return results, len(results) >= k or pool_size < post_filter_pool
     return results
 
 
@@ -611,8 +613,15 @@ def vector_semantic_search(params, index_name, connection):
     try:
         vector_results = None
         if filter_dict and not _has_id_filter(params):
-            vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates,
-                                                   post_filter=True)
+            for i, pool in enumerate(POST_FILTER_POOLS):
+                kept, complete = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates,
+                                                       post_filter_pool=pool)
+                if complete:
+                    vector_results = kept
+                    break
+                bigger = POST_FILTER_POOLS[i + 1] if i + 1 < len(POST_FILTER_POOLS) else None
+                if not bigger or len(kept) * bigger / pool < k:
+                    break
         if vector_results is None:
             vector_results = execute_vector_search(query_vector, filter_dict, k=k, num_candidates=num_candidates)
     except Exception as e:

@@ -231,31 +231,69 @@ class _FakeVectorES:
 
 
 def test_broad_filter_runs_as_post_filter_over_the_pool(monkeypatch):
-    es = _FakeVectorES(n_hits=50, pool=vector_index.POST_FILTER_POOL)
+    es = _FakeVectorES(n_hits=50, pool=1000)
     monkeypatch.setattr(vector_index.connections, "get_connection", lambda alias: es)
     fd = build_vector_filter({"filters": [{"type": "article"}]})
-    results = vector_index.execute_vector_search([0.1] * 4, fd, k=50, num_candidates=100, post_filter=True)
-    assert len(results) == 50
+    results, complete = vector_index.execute_vector_search([0.1] * 4, fd, k=50, num_candidates=100, post_filter_pool=1000)
+    assert len(results) == 50 and complete
     body = es.bodies[0]
     assert "filter" not in body["knn"]
-    assert body["knn"]["k"] == body["knn"]["num_candidates"] == vector_index.POST_FILTER_POOL
+    assert body["knn"]["k"] == body["knn"]["num_candidates"] == 1000
     assert body["post_filter"] == fd and body["size"] == 50
 
 
-def test_post_filter_asks_for_pre_filter_when_a_full_pool_keeps_too_few(monkeypatch):
-    es = _FakeVectorES(n_hits=7, pool=vector_index.POST_FILTER_POOL)
+def test_a_full_pool_that_keeps_too_few_is_incomplete(monkeypatch):
+    es = _FakeVectorES(n_hits=7, pool=1000)
     monkeypatch.setattr(vector_index.connections, "get_connection", lambda alias: es)
     fd = build_vector_filter({"filters": [{"publication_year": "2020"}]})
-    assert vector_index.execute_vector_search([0.1] * 4, fd, k=50, post_filter=True) is None
+    assert vector_index.execute_vector_search([0.1] * 4, fd, k=50, post_filter_pool=1000)[1] is False
 
 
-def test_post_filter_keeps_few_hits_when_the_similarity_cut_emptied_the_pool(monkeypatch):
+def test_few_hits_are_complete_when_the_similarity_cut_emptied_the_pool(monkeypatch):
     es = _FakeVectorES(n_hits=7, pool=300)
     monkeypatch.setattr(vector_index.connections, "get_connection", lambda alias: es)
     fd = build_vector_filter({"filters": [{"publication_year": "2020"}]})
-    assert len(vector_index.execute_vector_search([0.1] * 4, fd, k=50, post_filter=True)) == 7
+    results, complete = vector_index.execute_vector_search([0.1] * 4, fd, k=50, post_filter_pool=1000)
+    assert len(results) == 7 and complete
 
 
-def test_id_filters_stay_pre_filtered():
+class _PoolES:
+    """Keeps `per_1000` matches per 1,000 pooled works; the pre-filter (knn.filter) returns 50."""
+
+    def __init__(self, per_1000):
+        self.per_1000, self.calls = per_1000, []
+
+    def search(self, index, body):
+        pool = body["knn"]["k"] if "post_filter" in body else None
+        self.calls.append(pool or "pre")
+        n = min(50, self.per_1000 * pool // 1000) if pool else 50
+        hits = [{"_id": f"https://openalex.org/W{i}", "_score": 0.9} for i in range(n)]
+        return {"hits": {"hits": hits}, "aggregations": {"pool": {"value": pool or 0}}}
+
+
+def _run_semantic(monkeypatch, es, filters):
+    monkeypatch.setattr(vector_index.connections, "get_connection", lambda alias: es)
+    monkeypatch.setattr(vector_index, "embed_query", lambda text: [0.1] * 4)
+    monkeypatch.setattr(vector_index, "hydrate_results", lambda results, *a, **kw: [{"_id": r[0]} for r in results])
+    monkeypatch.setattr(vector_index.settings, "SEMANTIC_TEXT_BOOST", False)
+    return vector_index.vector_semantic_search({"search": "q", "filters": filters, "per_page": 25}, "works", "walden")
+
+
+def test_single_year_tries_the_bigger_pool_before_the_pre_filter(monkeypatch):
+    es = _PoolES(per_1000=15)   # 15 in 1,000 -> 50 in 5,000
+    _run_semantic(monkeypatch, es, [{"publication_year": "2025"}])
+    assert es.calls == [1000, 5000]
+
+
+def test_rare_filter_skips_the_bigger_pool(monkeypatch):
+    es = _PoolES(per_1000=3)    # 3 in 1,000 -> 15 in 5,000: not worth it
+    _run_semantic(monkeypatch, es, [{"language": "ja"}])
+    assert es.calls == [1000, "pre"]
+
+
+def test_id_filters_stay_pre_filtered(monkeypatch):
     assert vector_index._has_id_filter({"filters": [{"publication_year": "2020"}, {"authorships.author.id": "A1"}]})
     assert not vector_index._has_id_filter({"filters": [{"type": "article"}, {"has_abstract": "true"}]})
+    es = _PoolES(per_1000=50)
+    _run_semantic(monkeypatch, es, [{"authorships.author.id": "A1"}])
+    assert es.calls == ["pre"]
