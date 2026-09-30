@@ -215,3 +215,47 @@ def test_hydrate_without_filters_keeps_mget(monkeypatch):
     hits = hydrate_results([("https://openalex.org/W1", 0.8, 0), ("https://openalex.org/W2", 0.9, 0)])
     assert [c[0] for c in es.calls] == ["mget"]
     assert [h["_id"] for h in hits] == ["https://openalex.org/W2", "https://openalex.org/W1"]
+
+
+class _FakeVectorES:
+    """Returns `n_hits` hits and reports a kNN pool of `pool` works."""
+
+    def __init__(self, n_hits, pool):
+        self.n_hits, self.pool, self.bodies = n_hits, pool, []
+
+    def search(self, index, body):
+        self.bodies.append(body)
+        hits = [{"_id": f"https://openalex.org/W{i}", "_score": 0.9, "fields": {"cited_by_count": [1]}}
+                for i in range(self.n_hits)]
+        return {"hits": {"hits": hits}, "aggregations": {"pool": {"value": self.pool}}}
+
+
+def test_broad_filter_runs_as_post_filter_over_the_pool(monkeypatch):
+    es = _FakeVectorES(n_hits=50, pool=vector_index.POST_FILTER_POOL)
+    monkeypatch.setattr(vector_index.connections, "get_connection", lambda alias: es)
+    fd = build_vector_filter({"filters": [{"type": "article"}]})
+    results = vector_index.execute_vector_search([0.1] * 4, fd, k=50, num_candidates=100, post_filter=True)
+    assert len(results) == 50
+    body = es.bodies[0]
+    assert "filter" not in body["knn"]
+    assert body["knn"]["k"] == body["knn"]["num_candidates"] == vector_index.POST_FILTER_POOL
+    assert body["post_filter"] == fd and body["size"] == 50
+
+
+def test_post_filter_asks_for_pre_filter_when_a_full_pool_keeps_too_few(monkeypatch):
+    es = _FakeVectorES(n_hits=7, pool=vector_index.POST_FILTER_POOL)
+    monkeypatch.setattr(vector_index.connections, "get_connection", lambda alias: es)
+    fd = build_vector_filter({"filters": [{"publication_year": "2020"}]})
+    assert vector_index.execute_vector_search([0.1] * 4, fd, k=50, post_filter=True) is None
+
+
+def test_post_filter_keeps_few_hits_when_the_similarity_cut_emptied_the_pool(monkeypatch):
+    es = _FakeVectorES(n_hits=7, pool=300)
+    monkeypatch.setattr(vector_index.connections, "get_connection", lambda alias: es)
+    fd = build_vector_filter({"filters": [{"publication_year": "2020"}]})
+    assert len(vector_index.execute_vector_search([0.1] * 4, fd, k=50, post_filter=True)) == 7
+
+
+def test_id_filters_stay_pre_filtered():
+    assert vector_index._has_id_filter({"filters": [{"publication_year": "2020"}, {"authorships.author.id": "A1"}]})
+    assert not vector_index._has_id_filter({"filters": [{"type": "article"}, {"has_abstract": "true"}]})
