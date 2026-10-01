@@ -17,6 +17,11 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 OPEN_ALEX_API_KEY = os.environ.get("OPEN_ALEX_API_KEY")
 USERS_API_URL = os.environ.get("USERS_API_URL")
+# Keyword-search endpoint for /keywords?search.semantic= (oxjob #1464). Both unset = the
+# param falls back to plain text search over keyword names.
+KEYWORD_SEARCH_URL = os.environ.get("KEYWORD_SEARCH_URL")
+KEYWORD_SEARCH_TOKEN = os.environ.get("KEYWORD_SEARCH_TOKEN")
+KEYWORD_SEARCH_TIMEOUT = float(os.environ.get("KEYWORD_SEARCH_TIMEOUT", "3"))
 
 # indexes
 AUTHORS_INDEX_WALDEN = "authors-v19"

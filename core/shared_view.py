@@ -25,6 +25,11 @@ from core.group_by.buckets import (
     create_group_by_buckets,
     create_nested_group_by_buckets,
 )
+from core.keyword_semantic import (
+    is_keyword_semantic,
+    keyword_search_configured,
+    keyword_semantic_search,
+)
 from core.knn import KNNQueryWithFilter
 from core.paginate import get_pagination
 from core.params import parse_params
@@ -64,6 +69,15 @@ def shared_view(request, fields_dict, index_name, default_sort, connection=None,
     )
     if is_semantic and settings.USE_VECTOR_INDEX:
         return vector_semantic_search(params, index_name, connection)
+
+    # /keywords?search.semantic= is ranked by the external keyword-search endpoint
+    # (oxjob #1464). None = endpoint unavailable: fall through to the plain text
+    # search below, which is what search.semantic has always meant on /keywords.
+    if is_keyword_semantic(params, index_name) and keyword_search_configured():
+        result = keyword_semantic_search(params, fields_dict, index_name, connection)
+        if result is not None:
+            attach_x_query(result, request, index_name)
+            return result
 
     s = construct_query(params, fields_dict, index_name, default_sort, connection)
     response = execute_search(s, params)
