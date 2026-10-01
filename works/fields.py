@@ -904,6 +904,10 @@ fields = [
     ),
     TermField(
         param="awards.funder_display_name",
+        # works-v34 maps this as a bare keyword (no `.lower` subfield), so the default
+        # `.lower` filter matched 0 works for every funder while group_by worked. Exact,
+        # case-sensitive match on the keyword until a rebuild adds `.lower`.
+        custom_es_field="awards.funder_display_name",
         docstring="The display names of funders for awards associated with this work",
         documentation_link="https://developers.openalex.org/api-reference/works",
     ),
