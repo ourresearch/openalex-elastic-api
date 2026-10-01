@@ -21,6 +21,7 @@ class KeywordsSchema(Schema):
     id = fields.Str()
     display_name = fields.Str()
     description = fields.Str()
+    display_name_alternatives = fields.List(fields.Str())
     ids = fields.Nested(IDsSchema)
     relevance_score = fields.Method("get_relevance_score")
     works_count = fields.Int()

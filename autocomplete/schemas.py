@@ -29,6 +29,10 @@ class AutoCompleteSchema(Schema):
                 return "host organization unknown"
         elif "works" in obj.meta.index:
             return self.build_author_string(obj)
+        elif "matched_alternative" in obj:
+            # A keyword that matched only through one of its
+            # display_name_alternatives shows that alternative (oxjob #1464).
+            return obj.matched_alternative
         else:
             return obj.description if "description" in obj else None
 

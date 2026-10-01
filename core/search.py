@@ -1243,6 +1243,15 @@ def full_search_query(index_name, search_terms, skip_citation_boost=False):
             secondary_field="display_name_alternatives",
             tertiary_field="display_name_acronyms",
         )
+    elif index_name.lower().startswith("keywords"):
+        # A keyword's display_name_alternatives are its synonyms, so
+        # "antibacterial resistance" finds the keyword whose alternatives hold it
+        # (oxjob #1464). One secondary field, like publishers below (topics adds a
+        # tertiary); a name match still outranks an alternative-only match.
+        search_oa = SearchOpenAlex(
+            search_terms=search_terms,
+            secondary_field="display_name_alternatives",
+        )
     elif index_name.lower().startswith("publishers"):
         search_oa = SearchOpenAlex(
             search_terms=search_terms,

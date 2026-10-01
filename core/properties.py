@@ -327,7 +327,10 @@ CAP_COLUMN = "column"
 # `parent_awards.relationship`, `sub_awards.relationship` (component | sub_award), `has_parent_award` (exists on the parent list)
 # and `sub_awards_count` (range). Data: walden Nightly Grants award_relations (71789f19). Purely additive:
 # classify_properties_diff.py says MINOR.
-PROPERTIES_VERSION = "14.3.0"
+# 14.4.0 (oxjob #1464, 2026-10-02; Jason's ship yes 2026-10-02 05:00 CT): keywords
+# `display_name_alternatives` (select-only, label "alternate names"). Purely additive:
+# classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "14.4.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

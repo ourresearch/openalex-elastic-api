@@ -253,6 +253,7 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
     },
     "keywords": {
         "display_name": "other",
+        "display_name_alternatives": "other",
     },
     "languages": {
         "display_name": "other",

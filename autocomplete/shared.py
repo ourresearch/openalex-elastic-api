@@ -1,8 +1,16 @@
+import operator
 from collections import OrderedDict
+from functools import reduce
 
 from elasticsearch_dsl import Q, Search
 
-from autocomplete.utils import AUTOCOMPLETE_SOURCE
+from autocomplete.utils import (
+    ALTERNATIVE_MATCH,
+    AUTOCOMPLETE_SOURCE,
+    KEYWORD_AUTOCOMPLETE_SOURCE,
+    NAME_MATCH,
+    matching_alternative,
+)
 from autocomplete.validate import validate_entity_autocomplete_params
 from core.filter import filter_records
 from core.search import full_search_query
@@ -43,6 +51,7 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
             "cited_by_count" if index_name.startswith("work") else "works_count"
         )
 
+        source_fields = AUTOCOMPLETE_SOURCE
         if q:
             # Build two queries per entity type:
             #   autocomplete_query — the full candidate selector (display_name plus
@@ -51,6 +60,9 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
             #     entity by: its display_name plus identifier-style fields (acronyms,
             #     abbreviated titles). Used to give those matches a higher tier than
             #     name-variant / description matches below.
+            # exact_fields — the keyword fields whose case-insensitive exact match
+            #     earns the top tier.
+            exact_fields = ["display_name.keyword"]
             if index_name.startswith("author"):
                 primary_query = Q("match_phrase_prefix", display_name__autocomplete=q)
                 autocomplete_query = primary_query | Q(
@@ -79,6 +91,29 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
                     | Q("match_phrase_prefix", description__autocomplete=q)
                     | Q("match_phrase_prefix", keywords__autocomplete=q)
                 )
+            elif index_name.startswith("keyword"):
+                # A keyword's display_name_alternatives are synonyms ("heart attack"
+                # for myocardial infarction), as much its name as display_name, so a
+                # match on either is primary and ranks in the same tier: "heart att"
+                # puts myocardial infarction (270K works) above "heart attack
+                # prediction" (623). The query names tell set_matched_alternatives
+                # which of the two matched, for the hint (oxjob #1464).
+                primary_query = Q(
+                    "match_phrase_prefix",
+                    display_name__autocomplete={"query": q, "_name": NAME_MATCH},
+                ) | Q(
+                    "match_phrase_prefix",
+                    display_name_alternatives__autocomplete={
+                        "query": q,
+                        "_name": ALTERNATIVE_MATCH,
+                    },
+                )
+                autocomplete_query = primary_query
+                exact_fields = [
+                    "display_name.keyword",
+                    "display_name_alternatives.keyword",
+                ]
+                source_fields = KEYWORD_AUTOCOMPLETE_SOURCE
             else:
                 primary_query = Q("match_phrase_prefix", display_name__autocomplete=q)
                 autocomplete_query = primary_query
@@ -90,9 +125,10 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
             # boost_mode="replace" discards its noisy match_phrase_prefix relevance,
             # and we score each doc as tier_weight + log1p(popularity), so the order
             # is:
-            #   1. exact display_name match (case-insensitive),
+            #   1. exact display_name match (case-insensitive; for keywords, also an
+            #      exact match on one of its display_name_alternatives),
             #   2. match on a primary identifier field (display_name / acronym /
-            #      abbreviated title),
+            #      abbreviated title / a keyword's display_name_alternatives),
             #   3. match only on another alternate field (name variants, topic
             #      description/keywords),
             # and WITHIN each tier by popularity (works_count, or cited_by_count for
@@ -106,13 +142,7 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
                 query=autocomplete_query,
                 functions=[
                     {
-                        "filter": Q(
-                            "term",
-                            display_name__keyword={
-                                "value": q,
-                                "case_insensitive": True,
-                            },
-                        ),
+                        "filter": exact_match_query(exact_fields, q),
                         "weight": 2000000,
                     },
                     {
@@ -135,7 +165,7 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
 
         s = s.sort("_score", f"-{popularity_field}")
 
-        s = s.source(AUTOCOMPLETE_SOURCE)
+        s = s.source(source_fields)
         preference = clean_preference(q)
         s = s.params(preference=preference)
 
@@ -143,6 +173,9 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
     # a separate s.count() round-trip roughly doubled cold-query latency (#648).
     s = s.extra(track_total_hits=True)
     response = s.params(timeout='5s').execute()
+    if q and not canonical_id_found:
+        # A no-op unless hits carry the keyword branch's query names.
+        set_matched_alternatives(response, q)
 
     result = OrderedDict()
     result["meta"] = {
@@ -153,6 +186,32 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
     }
     result["results"] = response
     return result
+
+
+def set_matched_alternatives(hits, q):
+    """On each keyword hit that matched q only through one of its
+    display_name_alternatives, set `matched_alternative` to that alternative, so
+    the hint can show why "myocardial infarction" appeared for "heart att"."""
+    for hit in hits:
+        matched = set(getattr(hit.meta, "matched_queries", None) or [])
+        if ALTERNATIVE_MATCH not in matched or NAME_MATCH in matched:
+            continue
+        alternative = matching_alternative(
+            q, getattr(hit, "display_name_alternatives", None)
+        )
+        if alternative:
+            hit.matched_alternative = alternative
+
+
+def exact_match_query(exact_fields, q):
+    """Case-insensitive exact match of q on any of exact_fields."""
+    return reduce(
+        operator.or_,
+        (
+            Q("term", **{field: {"value": q, "case_insensitive": True}})
+            for field in exact_fields
+        ),
+    )
 
 
 def search_canonical_id_single(index_name, s, q):

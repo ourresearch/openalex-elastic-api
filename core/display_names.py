@@ -211,6 +211,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
     },
     'keywords': {
         'display_name': {"display_name": 'name'},
+        'display_name_alternatives': {"display_name": 'alternate names'},
     },
     'languages': {
         'display_name': {"display_name": 'name'},
