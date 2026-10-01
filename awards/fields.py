@@ -1,4 +1,5 @@
 from core.fields import (
+    BooleanField,
     CollectionField,
     OpenAlexIDField,
     RangeField,
@@ -190,6 +191,22 @@ fields = [
         custom_es_field="institution_awarded_full.lineage",
         docstring="The OpenAlex ID of an ancestor of the institution that received the award",
     ),
+    OpenAlexIDField(param="parent_awards.id", custom_es_field="parent_awards_full.id", entity_type="awards",
+                    docstring="The OpenAlex ID of an award this award is part of, or was re-granted from"),
+    OpenAlexIDField(param="sub_awards.id", custom_es_field="sub_awards_full.id", entity_type="awards",
+                    docstring="The OpenAlex ID of an award that is part of, or re-granted from, this award"),
+    OpenAlexIDField(param="parent_awards.funder.id", custom_es_field="parent_awards_full.funder.id", entity_type="funders",
+                    docstring="The OpenAlex ID of the funder of a parent award (e.g. every award that Wellcome money flowed into through another organisation)"),
+    OpenAlexIDField(param="sub_awards.funder.id", custom_es_field="sub_awards_full.funder.id", entity_type="funders",
+                    docstring="The OpenAlex ID of the funder of a sub-award"),
+    TermField(param="parent_awards.relationship", custom_es_field="parent_awards_full.relationship",
+              docstring="How this award relates to a parent award: sub_award (re-granted to another organisation) or component (part of a larger award from the same funder)"),
+    TermField(param="sub_awards.relationship", custom_es_field="sub_awards_full.relationship",
+              docstring="How a sub-award relates to this award: sub_award or component"),
+    BooleanField(param="has_parent_award", custom_es_field="parent_awards_full.id",
+                 docstring="Whether the award is part of, or re-granted from, another award (true when it lists any parent_awards)"),
+    RangeField(param="sub_awards_count", custom_es_field="sub_awards_count",
+               docstring="The number of awards that are part of, or re-granted from, this award"),
     CollectionField(entity_type="awards"),
 ]
 

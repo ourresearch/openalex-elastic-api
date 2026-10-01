@@ -422,6 +422,7 @@ class BooleanField(Field):
             or self.param == "has_pdf_url"
             or self.param == "has_raw_affiliation_strings"
             or self.param == "has_references"
+            or self.param == "has_parent_award"   # awards: exists on parent_awards_full.id (unlinked docs carry no field until resent)
         ):
             self.validate_true_false()
             if self.value.lower().strip() == "true":

@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "1195051012c32b5692dd48808e85321cb45346f8010fe39ef4c0fe109eed6b0f",
-    "property_count": 861,
-    "version": "14.2.0"
+    "fingerprint": "99966abea59fe1535c0ea09c9e649074eb4a92475eb1f5b2d243332325058a5c",
+    "property_count": 871,
+    "version": "14.3.0"
   },
   "properties": {
     "authors": {
@@ -1638,6 +1638,27 @@
         ],
         "type": "string"
       },
+      "has_parent_award": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "has parent award",
+        "entity_type": null,
+        "name": "has_parent_award",
+        "operators": [
+          "eq",
+          "null"
+        ],
+        "supported_by": [],
+        "type": "boolean"
+      },
       "id": {
         "actions": [
           "column",
@@ -1985,6 +2006,91 @@
         "supported_by": [],
         "type": "string"
       },
+      "parent_awards": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "parent awards",
+        "entity_type": null,
+        "name": "parent_awards",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "parent_awards.funder.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "parent awards funder id",
+        "entity_type": "funders",
+        "name": "parent_awards.funder.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "openalex_id"
+      },
+      "parent_awards.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "parent awards id",
+        "entity_type": "awards",
+        "name": "parent_awards.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "openalex_id"
+      },
+      "parent_awards.relationship": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "parent awards relationship",
+        "entity_type": null,
+        "name": "parent_awards.relationship",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
+      },
       "primary_topic": {
         "actions": [
           "column"
@@ -2184,6 +2290,115 @@
         "supported_by": [
           "gui"
         ],
+        "type": "number"
+      },
+      "sub_awards": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "sub awards",
+        "entity_type": null,
+        "name": "sub_awards",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
+      "sub_awards.funder.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "sub awards funder id",
+        "entity_type": "funders",
+        "name": "sub_awards.funder.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "openalex_id"
+      },
+      "sub_awards.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "sub awards id",
+        "entity_type": "awards",
+        "name": "sub_awards.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "openalex_id"
+      },
+      "sub_awards.relationship": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "sub awards relationship",
+        "entity_type": null,
+        "name": "sub_awards.relationship",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [],
+        "type": "string"
+      },
+      "sub_awards_count": {
+        "actions": [
+          "column",
+          "filter",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "sub awards count",
+        "entity_type": null,
+        "name": "sub_awards_count",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or",
+          "range"
+        ],
+        "supported_by": [],
         "type": "number"
       },
       "text.search": {

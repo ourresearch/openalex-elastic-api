@@ -322,7 +322,12 @@ CAP_COLUMN = "column"
 # (one-sentence description) and `ids` ({openalex, wikidata}), both select-only columns. They
 # shipped in 00117ec without a snapshot regen, which turned the drift gate red; this catches
 # the snapshot up. Purely additive: classify_properties_diff.py says MINOR.
-PROPERTIES_VERSION = "14.2.0"
+# 14.3.0 (sub-awards, 2026-10-01; version set by Rohan): awards gains `parent_awards`, `sub_awards` (first 100) and
+# `sub_awards_count` (select), plus filters `parent_awards.id`, `sub_awards.id`, `parent_awards.funder.id`, `sub_awards.funder.id`,
+# `parent_awards.relationship`, `sub_awards.relationship` (component | sub_award), `has_parent_award` (exists on the parent list)
+# and `sub_awards_count` (range). Data: walden Nightly Grants award_relations (71789f19). Purely additive:
+# classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "14.3.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

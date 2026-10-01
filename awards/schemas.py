@@ -65,6 +65,19 @@ class InstitutionAwardedSchema(Schema):
         unknown = INCLUDE
 
 
+class RelatedAwardFunderSchema(Schema):
+    id = fields.Str(allow_none=True)
+    display_name = fields.Str(allow_none=True)
+
+
+class RelatedAwardSchema(Schema):
+    id = fields.Str()
+    display_name = fields.Str(allow_none=True)
+    funder = fields.Nested(RelatedAwardFunderSchema)
+    relationship = fields.Str()
+    asserted_by = fields.Str()
+
+
 class AwardsSchema(Schema):
     id = fields.Str()
     display_name = fields.Str(default=None)
@@ -76,6 +89,10 @@ class AwardsSchema(Schema):
     funded_outputs = fields.List(fields.Str(), default=None)
     funded_outputs_count = fields.Int(default=None)
     
+    parent_awards = fields.List(fields.Nested(RelatedAwardSchema), dump_default=list)
+    sub_awards = fields.List(fields.Nested(RelatedAwardSchema), dump_default=list)
+    sub_awards_count = fields.Int(dump_default=0)
+
     # Funding information (flat structure as per actual document)
     amount = fields.Float(default=None)
     currency = fields.Str(default=None)
