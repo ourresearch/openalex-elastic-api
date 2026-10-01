@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "4f595f9081b3516d13ffa97d5869807f1ed6009f32820a5bad03c53bb9e5c623",
-    "property_count": 859,
-    "version": "14.1.0"
+    "fingerprint": "1195051012c32b5692dd48808e85321cb45346f8010fe39ef4c0fe109eed6b0f",
+    "property_count": 861,
+    "version": "14.2.0"
   },
   "properties": {
     "authors": {
@@ -6918,6 +6918,22 @@
         "supported_by": [],
         "type": null
       },
+      "description": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "description",
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
       "display_name": {
         "actions": [
           "column",
@@ -7024,6 +7040,22 @@
         ],
         "supported_by": [],
         "type": "external_id"
+      },
+      "ids": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "ids",
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "supported_by": [],
+        "type": null
       },
       "relevance_score": {
         "actions": [

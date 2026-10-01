@@ -318,7 +318,11 @@ CAP_COLUMN = "column"
 # study-designs-v1 built by walden) + works `study_designs` (select) and `study_designs.id`
 # (filter/group_by, entity study-designs, category aboutness beside SDG, OQL "study design",
 # born supported_by ["gui"]). Purely additive: classify_properties_diff.py says MINOR.
-PROPERTIES_VERSION = "14.1.0"
+# 14.2.0 (oxjob #1463, 2026-10-01; approved by Jason 2026-10-01): keywords gains `description`
+# (one-sentence description) and `ids` ({openalex, wikidata}), both select-only columns. They
+# shipped in 00117ec without a snapshot regen, which turned the drift gate red; this catches
+# the snapshot up. Purely additive: classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "14.2.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │
