@@ -1,8 +1,8 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "4f595f9081b3516d13ffa97d5869807f1ed6009f32820a5bad03c53bb9e5c623",
-    "property_count": 859,
+    "fingerprint": "02243f5c1b8452834d21f1bea8e7f2f77000385fef9202a25b89bac0abe46046",
+    "property_count": 867,
     "version": "14.1.0"
   },
   "properties": {
@@ -6918,6 +6918,22 @@
         "supported_by": [],
         "type": null
       },
+      "description": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "description",
+        "entity_type": null,
+        "name": "description",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
       "display_name": {
         "actions": [
           "column",
@@ -7024,6 +7040,22 @@
         ],
         "supported_by": [],
         "type": "external_id"
+      },
+      "ids": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "ids",
+        "entity_type": null,
+        "name": "ids",
+        "operators": [],
+        "supported_by": [],
+        "type": null
       },
       "relevance_score": {
         "actions": [
@@ -15312,6 +15344,81 @@
         ],
         "type": "string"
       },
+      "first_author_countries": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "geo",
+        "display_name": "first author country",
+        "entity_type": null,
+        "name": "first_author_countries",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
+      "first_author_ids": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "author",
+        "display_name": "first author",
+        "entity_type": "authors",
+        "name": "first_author_ids",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "openalex_id"
+      },
+      "first_author_institution_ids": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "institution",
+        "display_name": "first author institution",
+        "entity_type": "institutions",
+        "name": "first_author_institution_ids",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "openalex_id"
+      },
       "from_created_date": {
         "actions": [
           "filter",
@@ -16374,6 +16481,81 @@
           "gui"
         ],
         "type": "string"
+      },
+      "last_author_countries": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "geo",
+        "display_name": "last author country",
+        "entity_type": null,
+        "name": "last_author_countries",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
+      "last_author_ids": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "author",
+        "display_name": "last author",
+        "entity_type": "authors",
+        "name": "last_author_ids",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "openalex_id"
+      },
+      "last_author_institution_ids": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "institution",
+        "display_name": "last author institution",
+        "entity_type": "institutions",
+        "name": "last_author_institution_ids",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "openalex_id"
       },
       "locations": {
         "actions": [

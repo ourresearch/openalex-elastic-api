@@ -340,6 +340,15 @@ _f("DOI prefix", "doi_starts_with", "string")
 _f("corresponding author", "corresponding_author_ids", "id")
 _f("corresponding institution", "corresponding_institution_ids", "id")
 
+# Author position (oxjob #1474): the author / institution / country on the first or last
+# authorship. Name-resolved like `author` / `institution`; countries like `country`.
+_f("first author", "first_author_ids", "id")
+_f("last author", "last_author_ids", "id")
+_f("first author institution", "first_author_institution_ids", "id")
+_f("last author institution", "last_author_institution_ids", "id")
+_f("first author country", "first_author_countries", "enum", casing="upper")
+_f("last author country", "last_author_countries", "enum", casing="upper")
+
 # Bibliographic coordinates (kind string — volumes/issues/pages are free-text
 # labels, e.g. "42", "S1", "iv"). PROPERTIES_VERSION 1.9.0 curated the registry
 # display_names from the raw "biblio volume"/… humanized ids.

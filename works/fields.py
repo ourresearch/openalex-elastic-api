@@ -40,6 +40,13 @@ DOCSTRINGS = {
     "author": "The authors of a work",
     "institution": "The institutional affiliations claimed by the authors of a work",
     "corresponding_institutions": "The institutions to which the corresponding author(s) of a work claim affiliation",
+    # oxjob #1474: author position paired with the author, institution or country on the same authorship
+    "first_author": "The work's first author. Position comes from the byline: a sole author is the first author only; equal-contribution and alphabetical bylines are not marked.",
+    "last_author": "The work's last author (often the senior author or PI). Position comes from the byline: a sole author is the first author only; equal-contribution and alphabetical bylines are not marked.",
+    "first_author_institution": "The institutions the work's first author claims affiliation with",
+    "last_author_institution": "The institutions the work's last author claims affiliation with",
+    "first_author_country": "The countries of the work's first author's affiliations",
+    "last_author_country": "The countries of the work's last author's affiliations",
     "source": "Sources are where works are hosted, such as journals, conferences, and repositories",
     "publisher": "Publishers are companies or organizations behind the source where a work is available (such as a journal).",
     "repository": "The repositories that the work is available in",
@@ -79,6 +86,8 @@ DOCUMENTATION_LINKS = {
     "author": "https://developers.openalex.org/api-reference/authors",
     "institution": "https://developers.openalex.org/api-reference/institutions",
     "corresponding_institutions": "https://developers.openalex.org/api-reference/works",
+    **{f"{p}_author{s}": "https://developers.openalex.org/api-reference/works"
+       for p in ("first", "last") for s in ("", "_institution", "_country")},
     "source": "https://developers.openalex.org/api-reference/sources",
     "publisher": "https://developers.openalex.org/api-reference/publishers",
     "repository": "https://developers.openalex.org/api-reference/works",
@@ -475,6 +484,18 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["corresponding_institutions"],
         alternate_names=ALTERNATE_NAMES.get("corresponding_institutions", None),
     ),
+    # oxjob #1474: authorships is a flat object array in ES, so author_position can't be
+    # paired with an author or institution at query time; walden sync_works precomputes these.
+    *[
+        OpenAlexIDField(
+            param=f"{position}_author{suffix}_ids",
+            docstring=DOCSTRINGS[f"{position}_author{suffix}"],
+            documentation_link=DOCUMENTATION_LINKS[f"{position}_author{suffix}"],
+            alternate_names=ALTERNATE_NAMES.get(f"{position}_author{suffix}", None),
+        )
+        for position in ("first", "last")
+        for suffix in ("", "_institution")
+    ],
     OpenAlexIDField(param="best_oa_location.source.id"),
     OpenAlexIDField(param="best_oa_location.source.host_organization"),
     OpenAlexIDField(param="best_oa_location.source.host_organization_lineage"),
@@ -794,6 +815,15 @@ fields = [
         documentation_link=DOCUMENTATION_LINKS["country"],
         alternate_names=ALTERNATE_NAMES.get("country", None),
     ),
+    *[
+        TermField(
+            param=f"{position}_author_countries",
+            docstring=DOCSTRINGS[f"{position}_author_country"],
+            documentation_link=DOCUMENTATION_LINKS[f"{position}_author_country"],
+            alternate_names=ALTERNATE_NAMES.get("country", None),
+        )
+        for position in ("first", "last")
+    ],
     TermField(
         param="authorships.institutions.country_code",
         alias="authorships_full.institutions.country_code",
