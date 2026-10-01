@@ -698,6 +698,51 @@
       "isId": false,
       "hasExport": false
     },
+    "first_author_ids": {
+      "key": "first_author_ids",
+      "entityToFilter": "works",
+      "entityToSelect": "authors",
+      "displayName": "first author",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "first_author_countries": {
+      "key": "first_author_countries",
+      "entityToFilter": "works",
+      "entityToSelect": "countries",
+      "displayName": "first author country",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "first_author_institution_ids": {
+      "key": "first_author_institution_ids",
+      "entityToFilter": "works",
+      "entityToSelect": "institutions",
+      "displayName": "first author institution",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
     "biblio.first_page": {
       "key": "biblio.first_page",
       "entityToFilter": "works",
@@ -1062,6 +1107,51 @@
       ],
       "isId": false,
       "hasExport": true
+    },
+    "last_author_ids": {
+      "key": "last_author_ids",
+      "entityToFilter": "works",
+      "entityToSelect": "authors",
+      "displayName": "last author",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "last_author_countries": {
+      "key": "last_author_countries",
+      "entityToFilter": "works",
+      "entityToSelect": "countries",
+      "displayName": "last author country",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
+    },
+    "last_author_institution_ids": {
+      "key": "last_author_institution_ids",
+      "entityToFilter": "works",
+      "entityToSelect": "institutions",
+      "displayName": "last author institution",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": null,
+      "isId": false,
+      "hasExport": false
     },
     "biblio.last_page": {
       "key": "biblio.last_page",

@@ -124,6 +124,10 @@ All entity IDs in OQO use a normalized format: `entityName/id`
 | `ids.openalex` | works | OpenAlex ID |
 | `corresponding_author_ids` | authors | Corresponding author |
 | `corresponding_institution_ids` | institutions | Corresponding institution |
+| `first_author_ids` | authors | First author (oxjob #1474) |
+| `last_author_ids` | authors | Last author (oxjob #1474) |
+| `first_author_institution_ids` | institutions | Institution of the first author (oxjob #1474) |
+| `last_author_institution_ids` | institutions | Institution of the last author (oxjob #1474) |
 
 ### Search Filters
 
