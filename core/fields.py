@@ -17,7 +17,7 @@ from core.search import (
     validate_wildcards,
 )
 from core.utils import get_full_openalex_id, normalize_openalex_id
-from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX_LEGACY
+from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX
 
 
 # Cross-type collection filter (#266): maps filter params with unambiguous
@@ -713,7 +713,7 @@ class OpenAlexIDField(Field):
                 "Invalid OpenAlex ID in cited_by or related_to filter."
             )
         openalex_ids = []
-        s = Search(index=WORKS_INDEX_LEGACY).extra(size=1)
+        s = Search(index=WORKS_INDEX).extra(size=1)
         s = s.filter("term", id=full_openalex_id)
         response = s.execute()
         if response:

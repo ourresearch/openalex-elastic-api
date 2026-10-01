@@ -92,7 +92,7 @@ def get_merged_into_id(connection, merge_index, full_id):
 @blueprint.route("/works/RANDOM")
 @blueprint.route("/works/random")
 def works_random_get():
-    s = Search(index=settings.WORKS_INDEX_LEGACY)
+    s = Search(index=settings.WORKS_INDEX)
     only_fields = process_id_only_fields(request, WorksSchema)
 
     # divide queries into year groups to limit how much work the random function_score has to do
@@ -125,7 +125,7 @@ def works_random_get():
 @blueprint.route("/entities/works/<path:id>")
 def works_id_get(id):
     connection = get_data_version_connection(request)
-    index_name = settings.WORKS_INDEX_WALDEN if connection == 'walden' else settings.WORKS_INDEX_LEGACY
+    index_name = settings.WORKS_INDEX
 
     s = Search(index=index_name, using=connection)
     only_fields = process_id_only_fields(request, WorksSchema)
@@ -208,7 +208,7 @@ def works_id_get(id):
 
 @blueprint.route("/v2/works/<path:id>")
 def works_v2_id_get(id):
-    s = Search(index=settings.WORKS_INDEX_WALDEN, using="walden")
+    s = Search(index=settings.WORKS_INDEX, using="walden")
     only_fields = process_id_only_fields(request, WorksSchema)
 
     if is_openalex_id(id):

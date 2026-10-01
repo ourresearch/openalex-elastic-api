@@ -25,11 +25,11 @@ logger = root_logger.getChild(__name__)
 
 from elasticsearch_dsl import Q, Search, connections
 
-from settings import ES_URL_WALDEN, WORKS_INDEX_LEGACY
+from settings import ES_URL_WALDEN, WORKS_INDEX
 
 
 def get_ids():
-    s = Search(index=WORKS_INDEX_LEGACY)
+    s = Search(index=WORKS_INDEX)
     s = s.source(["id", "locations.landing_page_url"])
     count_works = 0
     count_lines = 0

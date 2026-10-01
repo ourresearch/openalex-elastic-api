@@ -110,11 +110,9 @@ def _resolve_entity(entity_type: str, connection: str):
     if et == "works":
         from works.fields import fields_dict
         from works.schemas import MessageSchema
-        from settings import WORKS_INDEX_LEGACY, WORKS_INDEX_WALDEN
+        from settings import WORKS_INDEX
 
-        index_name = (
-            WORKS_INDEX_WALDEN if connection == "walden" else WORKS_INDEX_LEGACY
-        )
+        index_name = WORKS_INDEX
         return fields_dict, index_name, [
             "-cited_by_percentile_year.max",
             "-cited_by_count",

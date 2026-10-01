@@ -46,8 +46,7 @@ STUDY_DESIGNS_INDEX = "study-designs-v1"
 SUBFIELDS_INDEX = "subfields-v2"
 TOPICS_INDEX = "topics-v4"
 WORK_TYPES_INDEX = "work-types-v1"
-WORKS_INDEX_LEGACY = "works"
-WORKS_INDEX_WALDEN = "works"
+WORKS_INDEX = "works"  # alias; rebuilds swap the concrete index in Elasticsearch, never here (oxjob #1456)
 WORKS_VECTOR_INDEX = "works-vectors-v2"  # Qwen3 vectors (oxjob #1275); v1 = gte, retire after a week
 USE_VECTOR_INDEX = os.environ.get("USE_VECTOR_INDEX", "false").lower() == "true"
 SEMANTIC_TEXT_BOOST = os.environ.get("SEMANTIC_TEXT_BOOST", "true").lower() == "true"

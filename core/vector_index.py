@@ -2,7 +2,7 @@
 Two-phase semantic search using dedicated vector index.
 
 Phase 1: kNN on settings.WORKS_VECTOR_INDEX (lightweight: 8 shards, 14 filter fields)
-Phase 2: fetch full docs from settings.WORKS_INDEX_WALDEN (re-applying the filters there), merge scores,
+Phase 2: fetch full docs from settings.WORKS_INDEX (re-applying the filters there), merge scores,
 citation rescore
 
 This replaces single-index kNN on the main works index (72 shards, HNSW can't stay warm).
@@ -441,7 +441,7 @@ def _text_boost_search(query_text, k=20, connection="walden", filter_dict=None):
         "size": k,
     }
 
-    response = es.search(index=settings.WORKS_INDEX_WALDEN, body=body)
+    response = es.search(index=settings.WORKS_INDEX, body=body)
 
     results = []
     for hit in response["hits"]["hits"]:
@@ -526,7 +526,7 @@ def hydrate_results(vector_results, connection="walden", works_filter=None):
         # stale institution_ids there; oxjob #1433). So the kNN pre-filter can admit a work whose
         # current record no longer matches: re-check the filter on works-v34 while fetching.
         response = es.search(
-            index=settings.WORKS_INDEX_WALDEN,
+            index=settings.WORKS_INDEX,
             body={
                 "query": {"bool": {"filter": [{"ids": {"values": work_ids}}, works_filter]}},
                 "size": len(work_ids),
@@ -536,7 +536,7 @@ def hydrate_results(vector_results, connection="walden", works_filter=None):
         docs = [{"_id": h["_id"], "_source": h["_source"], "found": True} for h in response["hits"]["hits"]]
     else:
         docs = es.mget(
-            index=settings.WORKS_INDEX_WALDEN,
+            index=settings.WORKS_INDEX,
             body={"ids": work_ids},
             _source_excludes=source_excludes,
         )["docs"]

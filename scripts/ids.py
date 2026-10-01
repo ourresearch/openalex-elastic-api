@@ -2,11 +2,11 @@ from pathlib import Path
 
 from elasticsearch_dsl import Q, Search, connections
 
-from settings import ES_URL_WALDEN, WORKS_INDEX_LEGACY
+from settings import ES_URL_WALDEN, WORKS_INDEX
 
 
 def get_ids():
-    s = Search(index=WORKS_INDEX_LEGACY)
+    s = Search(index=WORKS_INDEX)
     s = s.source(["id"])
     ids = []
     count = 0
