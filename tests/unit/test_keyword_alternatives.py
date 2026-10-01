@@ -3,8 +3,9 @@
 ES is mocked: single_entity_autocomplete runs against a fake Search.execute that
 captures the request body and returns canned hits. The ranking tests score the
 captured function_score with a small evaluator (`_score` below) that reads the
-query exactly as built, so they check that the query itself puts an
-alternative match level with a name match and an exact alternative in the top tier.
+query exactly as built, so they check that the query itself ranks an
+alternative-only match just below a name match (it needs 100x the works to pass
+it) and an exact alternative in the top tier, below an exact name.
 """
 
 import math
@@ -165,11 +166,10 @@ MICE = {"display_name": "mice", "works_count": 187784}
 
 
 class TestKeywordAutocompleteRanking:
-    def test_alternative_match_ranks_level_with_a_name_match(self):
+    def test_alternative_match_with_100x_the_works_beats_a_name_match(self):
         # "heart att": myocardial infarction matches only through its
-        # alternative "heart attack" and must still beat the name matches,
-        # because both kinds of match share the primary tier and works_count
-        # decides within it.
+        # alternative "heart attack"; with 433x the works of the best name
+        # match it still comes first.
         ranked = _rank(
             "heart att",
             [HEART_ATTACK_PREDICTION, HEART_ATTACK_DETECTION, MYOCARDIAL_INFARCTION],
@@ -178,6 +178,23 @@ class TestKeywordAutocompleteRanking:
             "myocardial infarction",
             "heart attack prediction",
             "heart attack detection",
+        ]
+
+    def test_alternative_match_with_less_than_100x_the_works_stays_below(self):
+        # "social c": social change matches by name; social media matches only
+        # through "social communication media" and has 1.3x the works.
+        social_change = {"display_name": "social change", "works_count": 341484}
+        social_media = {
+            "display_name": "social media",
+            "display_name_alternatives": ["social communication media"],
+            "works_count": 434882,
+        }
+        assert _rank("social c", [social_media, social_change]) == [
+            "social change", "social media"
+        ]
+        heart_attack_risk = dict(HEART_ATTACK_PREDICTION, works_count=2701)
+        assert _rank("heart att", [MYOCARDIAL_INFARCTION, heart_attack_risk]) == [
+            "heart attack prediction", "myocardial infarction"
         ]
 
     def test_exact_alternative_gets_the_top_tier(self):
@@ -192,10 +209,10 @@ class TestKeywordAutocompleteRanking:
         ranked = _rank("heart attack", [HEART_ATTACK_PREDICTION, heart_attack])
         assert ranked == ["Heart Attack", "heart attack prediction"]
 
-    def test_exact_name_and_exact_alternative_tie_on_tier_then_works_count(self):
+    def test_exact_name_beats_exact_alternative(self):
         heart_attack = {"display_name": "heart attack", "works_count": 5}
-        ranked = _rank("Heart Attack", [heart_attack, MYOCARDIAL_INFARCTION])
-        assert ranked == ["myocardial infarction", "heart attack"]
+        ranked = _rank("Heart Attack", [MYOCARDIAL_INFARCTION, heart_attack])
+        assert ranked == ["heart attack", "myocardial infarction"]
 
     def test_query_shape(self):
         body, _ = _run_autocomplete("heart att")
@@ -215,7 +232,7 @@ class TestKeywordAutocompleteRanking:
         }
         primary = {"bool": {"should": [name_clause, alternative_clause]}}
         assert function_score["query"] == primary
-        exact, tier, popularity = function_score["functions"]
+        exact, exact_name, tier, name_bonus, popularity = function_score["functions"]
         assert exact["weight"] == 2000000
         assert exact["filter"] == {
             "bool": {
@@ -225,7 +242,12 @@ class TestKeywordAutocompleteRanking:
                 ]
             }
         }
-        assert tier == {"filter": primary, "weight": 1000000}
+        assert exact_name == {
+            "filter": {"term": {"display_name.keyword": {"value": "heart att", "case_insensitive": True}}},
+            "weight": 100,
+        }
+        assert tier == {"filter": primary, "weight": 999998}
+        assert name_bonus == {"filter": name_clause, "weight": 2}
         assert popularity["field_value_factor"]["field"] == "works_count"
         assert "display_name_alternatives" in body["_source"]
 

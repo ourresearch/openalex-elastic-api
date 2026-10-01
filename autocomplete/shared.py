@@ -18,6 +18,12 @@ from core.utils import map_filter_params
 from core.preference import clean_preference
 from ids import utils as id_utils
 
+# Keyword autocomplete (oxjob #1464). Scores add log10(1 + works_count), so a bonus of
+# 2 on a name match means an alternative-only match needs 100x the works to outrank it.
+KEYWORD_NAME_MATCH_BONUS = 2
+# Lifts an exact display_name above an exact alternative; above any works_count gap.
+KEYWORD_EXACT_NAME_BONUS = 100
+
 
 def single_entity_autocomplete(fields_dict, index_name, request, connection='default'):
     # params
@@ -63,6 +69,7 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
             # exact_fields — the keyword fields whose case-insensitive exact match
             #     earns the top tier.
             exact_fields = ["display_name.keyword"]
+            tier_functions = None  # None: the default primary tier below
             if index_name.startswith("author"):
                 primary_query = Q("match_phrase_prefix", display_name__autocomplete=q)
                 autocomplete_query = primary_query | Q(
@@ -93,15 +100,24 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
                 )
             elif index_name.startswith("keyword"):
                 # A keyword's display_name_alternatives are synonyms ("heart attack"
-                # for myocardial infarction), as much its name as display_name, so a
-                # match on either is primary and ranks in the same tier: "heart att"
-                # puts myocardial infarction (270K works) above "heart attack
-                # prediction" (623). The query names tell set_matched_alternatives
-                # which of the two matched, for the hint (oxjob #1464).
-                primary_query = Q(
+                # for myocardial infarction), so a match on either name or
+                # alternative is primary. Within the primary tier a match only
+                # through an alternative needs 100x the works of a name match to
+                # outrank it (KEYWORD_NAME_MATCH_BONUS): "heart att" still puts
+                # myocardial infarction (270K works) above "heart attack prediction"
+                # (623), but "social c" keeps social change above social media
+                # (alternative "social communication media"). An exact name beats
+                # an exact alternative.
+                # Measured on 400 real keyword-box queries with a blind Opus judge:
+                # top-1 right 23% -> 26%, wanted keyword in top 3 26% -> 30%; ranking
+                # name and alternative matches equally gave 23% -> 22%. The query
+                # names tell set_matched_alternatives which of the two matched, for
+                # the hint (oxjob #1464).
+                name_query = Q(
                     "match_phrase_prefix",
                     display_name__autocomplete={"query": q, "_name": NAME_MATCH},
-                ) | Q(
+                )
+                primary_query = name_query | Q(
                     "match_phrase_prefix",
                     display_name_alternatives__autocomplete={
                         "query": q,
@@ -112,6 +128,17 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
                 exact_fields = [
                     "display_name.keyword",
                     "display_name_alternatives.keyword",
+                ]
+                tier_functions = [
+                    {
+                        "filter": exact_match_query(["display_name.keyword"], q),
+                        "weight": KEYWORD_EXACT_NAME_BONUS,
+                    },
+                    {
+                        "filter": primary_query,
+                        "weight": 1000000 - KEYWORD_NAME_MATCH_BONUS,
+                    },
+                    {"filter": name_query, "weight": KEYWORD_NAME_MATCH_BONUS},
                 ]
                 source_fields = KEYWORD_AUTOCOMPLETE_SOURCE
             else:
@@ -145,10 +172,7 @@ def single_entity_autocomplete(fields_dict, index_name, request, connection='def
                         "filter": exact_match_query(exact_fields, q),
                         "weight": 2000000,
                     },
-                    {
-                        "filter": primary_query,
-                        "weight": 1000000,
-                    },
+                    *(tier_functions or [{"filter": primary_query, "weight": 1000000}]),
                     {
                         "field_value_factor": {
                             "field": popularity_field,
