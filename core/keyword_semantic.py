@@ -12,6 +12,7 @@ any ES cluster and never touches the vector cluster:
    `id.lower`, the same lookup the /keywords/<id> singleton uses), with the request's
    `filter=` applied as an ES filter. Ranked ids that fail the filter drop out.
 3. Keep the endpoint's order, attach `relevance_score` = endpoint `score`, page in memory.
+   The endpoint is always asked for k=200, so meta.count is the real ranked-list size.
 
 Fallback: if the endpoint is unconfigured, errors, times out, or returns a malformed body,
 `keyword_semantic_search` returns None and shared_view runs today's path, which treats
@@ -60,7 +61,8 @@ def validate_keyword_semantic_params(params):
     """Reject params the ranked-list path can't honor, the way works semantic does.
 
     group_by, cursor and `*.search` filters are rejected (one search method per request,
-    as on works); per_page is capped at 50. `sort` is ignored: results
+    as on works); per_page is capped at 50 and page * per_page at 200 (the ranked list's
+    length). `sort` is ignored: results
     are always in ranking order (works semantic ignores sort the same way).
     """
     if params.get("group_by") or params.get("group_bys"):
@@ -85,6 +87,12 @@ def validate_keyword_semantic_params(params):
         raise APIQueryParamsError(
             f"per_page cannot exceed {MAX_PER_PAGE} for semantic search. "
             f"Received per_page={per_page}."
+        )
+    page = params.get("page") or 1
+    if page * per_page > MAX_K:
+        raise APIQueryParamsError(
+            f"Semantic search on keywords returns at most {MAX_K} results: "
+            f"page * per_page cannot exceed {MAX_K}. Received page={page}, per_page={per_page}."
         )
 
 
@@ -156,7 +164,9 @@ def keyword_semantic_search(params, fields_dict, index_name, connection):
 
     page = params.get("page") or 1
     per_page = params.get("per_page") or 25
-    k = max(1, min(page * per_page, MAX_K))
+    # Always ask for the full ranked list and page in memory, so meta.count is the
+    # real number of ranked results (<= MAX_K), not capped by this page.
+    k = MAX_K
     query = params["search"].strip()
 
     t0 = time.time()

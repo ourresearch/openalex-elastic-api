@@ -211,21 +211,32 @@ def test_filter_applied_on_id_fetch_and_drops_ranked_ids(mock_post, configured):
 
 
 @patch.object(ks.http_requests, "post")
-def test_paging_sets_k_and_slices(mock_post, configured):
+def test_always_k_200_pages_in_memory_and_counts_all(mock_post, configured):
     rows = [(f"kw-{i}", 1.0 - i / 100) for i in range(20)]
     mock_post.return_value = _endpoint_response(rows)
     with patch.object(Search, "execute", _fake_execute([kid for kid, _ in rows], [])):
         result = ks.keyword_semantic_search(
             _params(page=2, per_page=10), fields_dict, "keywords-v1", "walden"
         )
-    assert mock_post.call_args.kwargs["json"]["k"] == 20
+    assert mock_post.call_args.kwargs["json"]["k"] == 200
     assert [r.id for r in result["results"]] == [KW + f"kw-{i}" for i in range(10, 20)]
+    assert result["meta"]["count"] == 20
 
 
 @patch.object(ks.http_requests, "post")
-def test_k_capped_at_200(mock_post, configured):
+def test_count_not_capped_by_per_page(mock_post, configured):
+    rows = [(f"kw-{i}", 1.0 - i / 100) for i in range(30)]
+    mock_post.return_value = _endpoint_response(rows)
+    with patch.object(Search, "execute", _fake_execute([kid for kid, _ in rows], [])):
+        result = ks.keyword_semantic_search(_params(per_page=5), fields_dict, "keywords-v1", "walden")
+    assert len(result["results"]) == 5
+    assert result["meta"]["count"] == 30
+
+
+@patch.object(ks.http_requests, "post")
+def test_last_allowed_page_and_empty_list(mock_post, configured):
     mock_post.return_value = _endpoint_response([])
-    result = ks.keyword_semantic_search(_params(page=9, per_page=50), fields_dict, "keywords-v1", "walden")
+    result = ks.keyword_semantic_search(_params(page=4, per_page=50), fields_dict, "keywords-v1", "walden")
     assert mock_post.call_args.kwargs["json"]["k"] == 200
     assert result["results"] == [] and result["meta"]["count"] == 0
 
@@ -236,6 +247,8 @@ def test_k_capped_at_200(mock_post, configured):
         {"group_by": "works_count"},
         {"cursor": "*"},
         {"per_page": 51},
+        {"page": 5, "per_page": 50},
+        {"page": 21, "per_page": 10},
         {"filters": [{"display_name.search": "heart"}]},
     ],
 )
