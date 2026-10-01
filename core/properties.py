@@ -318,7 +318,13 @@ CAP_COLUMN = "column"
 # study-designs-v1 built by walden) + works `study_designs` (select) and `study_designs.id`
 # (filter/group_by, entity study-designs, category aboutness beside SDG, OQL "study design",
 # born supported_by ["gui"]). Purely additive: classify_properties_diff.py says MINOR.
-PROPERTIES_VERSION = "14.1.0"
+# 14.2.0 (oxjob #1473, 2026-09-30; PENDING Jason's or Casey's approval at merge): works
+# `mesh.descriptor_ui`, `mesh.descriptor_name`, `mesh.qualifier_ui`, `mesh.qualifier_name`
+# (filter/group_by on PubMed MeSH headings, category aboutness, OQL "MeSH descriptor" etc.,
+# GUI facets in the same change), plus the two keywords properties #1463 (00117ec) added
+# without a snapshot regen or bump (`keywords.description`, `keywords.ids`). Purely
+# additive: classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "14.2.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

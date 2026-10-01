@@ -897,6 +897,31 @@ fields = [
         alternate_of="authorships.institutions.type",
     ),
     TermField(param="keywords.id", custom_es_field="keywords.id"),
+    # PubMed MeSH headings (oxjob #1473). `mesh` is an object array with keyword +
+    # `.lower` subfields from works-v35 on (flattened, unindexed before), so the
+    # default TermField `.lower` filter path applies and group_by reads the keyword.
+    # Each field matches any heading on the work; is_major_topic is not exposed
+    # because a flat mapping can't tie it to one heading.
+    TermField(
+        param="mesh.descriptor_ui",
+        docstring="MeSH descriptor IDs assigned by PubMed (e.g. D001249 for Asthma); only works indexed in MEDLINE carry them",
+        documentation_link="https://help.openalex.org/data/works/attributes/#mesh",
+    ),
+    TermField(
+        param="mesh.descriptor_name",
+        docstring="MeSH descriptor names assigned by PubMed (e.g. Asthma), case-insensitive; quote names with spaces or commas",
+        documentation_link="https://help.openalex.org/data/works/attributes/#mesh",
+    ),
+    TermField(
+        param="mesh.qualifier_ui",
+        docstring="MeSH qualifier (subheading) IDs assigned by PubMed (e.g. Q000188 for drug therapy)",
+        documentation_link="https://help.openalex.org/data/works/attributes/#mesh",
+    ),
+    TermField(
+        param="mesh.qualifier_name",
+        docstring="MeSH qualifier (subheading) names assigned by PubMed (e.g. drug therapy), case-insensitive",
+        documentation_link="https://help.openalex.org/data/works/attributes/#mesh",
+    ),
     TermField(
         param="awards.funder_award_id",
         docstring="The funder's award ID for awards associated with this work",

@@ -263,6 +263,12 @@ _f("experimental SDGs", "x_sdgs.id", "id", aliases=["x_sdgs"])
 # oxjob #1312: closed study-designs vocabulary (bare slugs, like "listed in"); input
 # aliases ("study designs", "study_designs") live in the registry (core/display_names.py).
 _f("study design", "study_designs.id", "enum")
+# oxjob #1473: PubMed MeSH headings. Names keep NLM's capitalisation on render (the
+# filter is case-insensitive via `.lower`); ids render upper-case (D001249, Q000188).
+_f("MeSH descriptor", "mesh.descriptor_name", "enum", casing="")
+_f("MeSH descriptor ID", "mesh.descriptor_ui", "enum", casing="upper")
+_f("MeSH qualifier", "mesh.qualifier_name", "enum", casing="")
+_f("MeSH qualifier ID", "mesh.qualifier_ui", "enum", casing="upper")
 _f("last known institution", "last_known_institutions.id", "id")
 # `primary_topic.domain.id` is the canonical works column the GUI facets as "domain"
 # (entityToSelect domains); `domain.id` is the OQL-only shorthand. Fold the GUI param in

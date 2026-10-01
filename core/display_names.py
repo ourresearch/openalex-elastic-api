@@ -431,6 +431,11 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         # word must equal it and "(" is grouping syntax in OQL.
         # oxjob #1312: how the research was done (RCT, systematic review, ...); `type` says
         # what kind of document it is.
+        # oxjob #1473: PubMed MeSH headings. "MeSH" keeps NLM's capitalisation.
+        'mesh.descriptor_name': {"display_name": 'MeSH descriptor', "aliases": ['MeSH term', 'MeSH heading', 'mesh descriptor name']},
+        'mesh.descriptor_ui': {"display_name": 'MeSH descriptor ID', "aliases": ['mesh descriptor ui']},
+        'mesh.qualifier_name': {"display_name": 'MeSH qualifier', "aliases": ['MeSH subheading', 'mesh qualifier name']},
+        'mesh.qualifier_ui': {"display_name": 'MeSH qualifier ID', "aliases": ['mesh qualifier ui']},
         'study_designs.id': {"display_name": 'study design', "aliases": ['study designs', 'study_designs', 'study_designs.id']},
         'x_sdgs.id': {"display_name": 'experimental SDGs', "aliases": ['x sdgs', 'x_sdgs', 'experimental SDG', 'shadow SDG']},
         'title.search': {"display_name": 'title'},

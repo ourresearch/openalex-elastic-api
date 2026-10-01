@@ -1134,6 +1134,62 @@
       "isId": false,
       "hasExport": false
     },
+    "mesh.descriptor_name": {
+      "key": "mesh.descriptor_name",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "MeSH descriptor",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "mesh.descriptor_ui": {
+      "key": "mesh.descriptor_ui",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "MeSH descriptor ID",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "mesh.qualifier_name": {
+      "key": "mesh.qualifier_name",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "MeSH qualifier",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "mesh.qualifier_ui": {
+      "key": "mesh.qualifier_ui",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "MeSH qualifier ID",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "best_oa_location.is_accepted": {
       "key": "best_oa_location.is_accepted",
       "entityToFilter": "works",

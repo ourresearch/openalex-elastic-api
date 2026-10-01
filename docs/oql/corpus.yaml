@@ -1745,7 +1745,7 @@ rows:
     type: "analytics question"
     label: "Multi-valued source type with multi-word slugs (ebook platform, book series) — the URL form quotes the whole pipe-list"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=primary_location.source.type:book%20series|conference|ebook%20platform|journal'
+  oxurl: 'https://openalex.org/works?filter=primary_location.source.type:%22book%20series|conference|ebook%20platform|journal%22'
   status: ok
   oql: |-
     works where source type is (
@@ -4189,3 +4189,14 @@ rows:
   oql: 'works where title has ("covid-19*")'
   diagnostic: OQL_SHORT_WILDCARD_PREFIX
   note: 'The token looks 8 chars long, but the analyzer splits it at the hyphen and the `*` applies only to `19`, a 2-char prefix. The fix-it names the split (`"covid", "19*"`) instead of telling the user to "add characters" to a word that already has plenty.'
+- id: 207
+  tags: [filter, boolean-logic]
+  provenance:
+    type: "zendesk ticket"
+    label: "MeSH as controlled vocabulary in an evidence-synthesis search (zd#755, #1473)"
+  oxurl_status: has-oxurl
+  oxurl: 'https://openalex.org/works?filter=mesh.descriptor_name:%22Pregnancy|Pregnant%20Women%22'
+  status: ok
+  oql: 'works where MeSH descriptor is (Pregnancy or "Pregnant Women")'
+  oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: mesh.descriptor_name, value: 'Pregnant Women', operator: is}, {column_id: mesh.descriptor_name, value: Pregnancy, operator: is}]}]}
+  note: 'The controlled-vocabulary leg of a librarian strategy (`Pregnant Women[Mesh] OR Pregnancy[Mesh]`). Matches the heading exactly, case-insensitively, on works PubMed indexed; unlike PubMed''s `[Mesh]` it does not include narrower headings. Names with spaces or commas are quoted. `MeSH descriptor ID is D011247` is the same query by descriptor id.'

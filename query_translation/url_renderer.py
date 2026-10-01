@@ -263,7 +263,7 @@ def render_leaf_filter(f: LeafFilter) -> str:
 
     # Negation is the polarity bit: render as bang-prefixed value
     if negated:
-        return f"{field}:!{str_value}"
+        return f"{field}:{_quote_if_needed(field, '!' + str_value)}"
 
     # Handle operators (symbolic forms only — see oqo.VALID_OPERATORS)
     if operator == ">=":
@@ -276,7 +276,26 @@ def render_leaf_filter(f: LeafFilter) -> str:
         return f"{field}:<{str_value}"
     else:
         # Everything else (is, has, search): plain field:value
-        return f"{field}:{str_value}"
+        return f"{field}:{_quote_if_needed(field, str_value)}"
+
+
+def _quote_if_needed(field: str, rendered_value: str) -> str:
+    """Wrap a non-search value holding a space or comma in double quotes (#1473).
+
+    The classic executor reads an unquoted space as AND (`a b` = a AND b) and an
+    unquoted comma as the next filter, so `mesh.descriptor_name:Pregnant Women`
+    silently matched nothing and `...:Diabetes Mellitus, Type 2` split in two.
+    Quoting the WHOLE value (bang and pipes included: `"!a b"`, `"a|b, c"`) keeps
+    it one literal value on both doors: core/utils.split_filter_string protects the
+    comma, core/filter.filter_records strips the quotes and skips the AND split, and
+    url_parser strips them the same way. Search columns are left alone: quotes there
+    mean a phrase.
+    """
+    if "search" in field or not (" " in rendered_value or "," in rendered_value):
+        return rendered_value
+    if rendered_value.startswith('"') and rendered_value.endswith('"'):
+        return rendered_value
+    return f'"{rendered_value}"'
 
 
 def render_branch_filter(f: BranchFilter, depth: int = 0) -> str:
@@ -371,7 +390,7 @@ def render_or_branch(f: BranchFilter) -> str:
         values = positives + [v for v in values if v.startswith("!")]
 
     pipe_joined = "|".join(values)
-    return f"{field}:{pipe_joined}"
+    return f"{field}:{_quote_if_needed(field, pipe_joined)}"
 
 
 def render_sort(sort_by: List[SortBy]) -> Optional[str]:

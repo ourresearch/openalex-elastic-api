@@ -432,6 +432,15 @@ def parse_single_filter(
         and "search" not in field
     ):
         value = value[1:-1]
+    # The GUI negates a quoted value outside the quotes (`!"a b"`); same value as
+    # `"!a b"` (#1473; it used to keep the quotes inside the value and match nothing).
+    elif (
+        len(value) >= 3
+        and value.startswith('!"')
+        and value.endswith('"')
+        and "search" not in field
+    ):
+        value = "!" + value[2:-1]
 
     # Handle OR (pipe) in values
     if "|" in value:
