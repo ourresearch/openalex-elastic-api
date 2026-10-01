@@ -28,6 +28,16 @@ def filter_records(fields_dict, filter_params, s, sample=None):
             )
             if is_quoted:
                 value = value[1:-1]
+            # The GUI negates a quoted value outside the quotes (`!"a b"`): same
+            # value as `"!a b"`. It used to search for the quotes literally and
+            # match nothing. (#1463 follow-up, from #1473)
+            elif (
+                len(value) >= 3
+                and value.startswith('!"') and value.endswith('"')
+                and "search" not in field.param
+            ):
+                value = "!" + value[2:-1]
+                is_quoted = True
 
             # multiple OR queries have | in the param values.
             # A leading `!` on a SEARCH value also routes here even with no `|`:

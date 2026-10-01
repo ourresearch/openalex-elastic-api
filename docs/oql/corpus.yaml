@@ -1745,7 +1745,7 @@ rows:
     type: "analytics question"
     label: "Multi-valued source type with multi-word slugs (ebook platform, book series) — the URL form quotes the whole pipe-list"
   oxurl_status: has-oxurl
-  oxurl: 'https://openalex.org/works?filter=primary_location.source.type:book%20series|conference|ebook%20platform|journal'
+  oxurl: 'https://openalex.org/works?filter=primary_location.source.type:%22book%20series|conference|ebook%20platform|journal%22'
   status: ok
   oql: |-
     works where source type is (

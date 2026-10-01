@@ -263,7 +263,7 @@ def render_leaf_filter(f: LeafFilter) -> str:
 
     # Negation is the polarity bit: render as bang-prefixed value
     if negated:
-        return f"{field}:!{str_value}"
+        return f"{field}:{_quote_if_needed(field, '!' + str_value)}"
 
     # Handle operators (symbolic forms only — see oqo.VALID_OPERATORS)
     if operator == ">=":
@@ -276,7 +276,28 @@ def render_leaf_filter(f: LeafFilter) -> str:
         return f"{field}:<{str_value}"
     else:
         # Everything else (is, has, search): plain field:value
-        return f"{field}:{str_value}"
+        return f"{field}:{_quote_if_needed(field, str_value)}"
+
+
+def _quote_if_needed(field: str, rendered_value: str) -> str:
+    """Quote a non-search value holding a space or comma (#1463 follow-up, from #1473).
+
+    The classic executor reads an unquoted space as AND (`a b` = a AND b) and an
+    unquoted comma as the next filter, so `display_name:Attention Is All You Need`
+    matched 0 works where the quoted value matches 4, and `x_query.url` (which the
+    GUI rehydrates chips, group-bys and exports from) ran a different query. Quote
+    the whole value, pipes included (`"a b|c"`). A negated value keeps its bang
+    outside the quotes (`!"a b"`), the spelling the GUI writes and its chip parser
+    reads (filterConfigs.js); core/filter.filter_records and url_parser read it the
+    same as `"!a b"`. Search columns are left alone: quotes there mean a phrase.
+    """
+    if "search" in field or not (" " in rendered_value or "," in rendered_value):
+        return rendered_value
+    if rendered_value.startswith('"') and rendered_value.endswith('"'):
+        return rendered_value
+    if rendered_value.startswith("!"):
+        return f'!"{rendered_value[1:]}"'
+    return f'"{rendered_value}"'
 
 
 def render_branch_filter(f: BranchFilter, depth: int = 0) -> str:
@@ -371,7 +392,7 @@ def render_or_branch(f: BranchFilter) -> str:
         values = positives + [v for v in values if v.startswith("!")]
 
     pipe_joined = "|".join(values)
-    return f"{field}:{pipe_joined}"
+    return f"{field}:{_quote_if_needed(field, pipe_joined)}"
 
 
 def render_sort(sort_by: List[SortBy]) -> Optional[str]:
