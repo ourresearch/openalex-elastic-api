@@ -30,6 +30,8 @@ class CollectionNotFoundOrNotSharedError(APIError):
     collection from a missing one (oxjob #646). Replaces the old silent zero."""
     code = 404
     description = "Collection doesn't exist or isn't shared"
+    # Stable machine code, the same string users-api returns (oxjob #646).
+    error_code = "collection_not_found_or_not_shared"
 
 
 class CollectionResolutionUnavailableError(APIError):

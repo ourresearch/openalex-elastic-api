@@ -148,6 +148,10 @@ def register_errorhandlers(app):
         response = {"error": err.description, "message": ""}
         if len(err.args) > 0:
             response["message"] = err.args[0]
+        # Machine-readable code where an error defines one (e.g. a collection the
+        # caller can't read, oxjob #646). Additive: older errors carry none.
+        if getattr(err, "error_code", None):
+            response["code"] = err.error_code
         # Add some logging so that we can monitor different types of errors
         app.logger.error("{}: {}".format(err.description, response["message"]))
         headers = {}
