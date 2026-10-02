@@ -291,7 +291,7 @@ def _apply_collection_filters(fields_dict, filter_params, s):
     # Positive collection (at most one — enforced above).
     if positives:
         lid = positives[0]
-        # An unreadable collection raises "doesn't exist or isn't shared" (oxjob #646).
+        # An unreadable collection raises "not found" (oxjob #646).
         etype, ids = resolve_collection(lid)
         _budget(len(ids))
         _check_type(lid, etype)
@@ -332,7 +332,7 @@ def resolve_collection_for_field(field, collection_id):
     this, the OQO path read a bare `col_…` as a literal OpenAlex ID and matched
     ~zero — see `query_translation/oqo_to_es._cross_type_collection_query`.
 
-    Returns `(entity_type, entity_ids)`. Raises `CollectionNotFoundOrNotSharedError`
+    Returns `(entity_type, entity_ids)`. Raises `CollectionNotFoundError`
     (via the resolver) if the caller can't read the collection, and
     `APIQueryParamsError` if its entity_type doesn't match `field.entity_type`.
 

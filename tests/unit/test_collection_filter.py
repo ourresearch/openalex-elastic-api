@@ -16,7 +16,7 @@ import settings
 from core import collection_resolver
 from core.exceptions import (
     APIQueryParamsError,
-    CollectionNotFoundOrNotSharedError,
+    CollectionNotFoundError,
     CollectionResolutionUnavailableError,
 )
 from core.fields import CollectionField
@@ -24,8 +24,8 @@ from core.filter import _apply_collection_filters
 from works.fields import fields_dict as works_fields_dict
 
 
-def _not_shared(lid):
-    raise CollectionNotFoundOrNotSharedError(f"Collection {lid} doesn't exist or isn't shared.")
+def _not_found(lid):
+    raise CollectionNotFoundError(f"Collection {lid} not found.")
 
 
 
@@ -44,17 +44,17 @@ class _FakeResp:
 
 class TestResolveCollection:
     @pytest.mark.parametrize("status", [401, 403, 404])
-    def test_no_access_raises_not_found_or_not_shared(self, monkeypatch, status):
+    def test_no_access_raises_not_found_or_not_found(self, monkeypatch, status):
         # Missing, deleted and private all answer the same loud 404 (oxjob #646).
         monkeypatch.setattr(settings, "USERS_API_URL", "http://users-api.test")
         monkeypatch.setattr(
             collection_resolver.requests, "get",
             lambda *a, **kw: _FakeResp(status),
         )
-        with pytest.raises(CollectionNotFoundOrNotSharedError) as e:
+        with pytest.raises(CollectionNotFoundError) as e:
             collection_resolver.resolve_collection("col_deleted")
         assert e.value.code == 404
-        assert str(e.value) == "Collection col_deleted doesn't exist or isn't shared."
+        assert str(e.value) == "Collection col_deleted not found."
 
     def test_sends_resolver_key_when_configured(self, monkeypatch):
         monkeypatch.setattr(settings, "USERS_API_URL", "http://users-api.test")
@@ -197,10 +197,10 @@ class TestCollectionField:
 
     @pytest.mark.parametrize("value", ["col_deleted", "!col_deleted"])
     def test_unreadable_collection_raises_positive_and_negated(self, monkeypatch, value):
-        monkeypatch.setattr(collection_resolver, "resolve_collection", _not_shared)
+        monkeypatch.setattr(collection_resolver, "resolve_collection", _not_found)
         f = CollectionField(entity_type="works")
         f.value = value
-        with pytest.raises(CollectionNotFoundOrNotSharedError):
+        with pytest.raises(CollectionNotFoundError):
             f.build_query()
 
 

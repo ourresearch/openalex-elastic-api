@@ -15,7 +15,7 @@ import json
 import pytest
 from elasticsearch_dsl import Q, Search
 
-from core.exceptions import APIQueryParamsError, CollectionNotFoundOrNotSharedError
+from core.exceptions import APIQueryParamsError, CollectionNotFoundError
 from core.filter import filter_records
 from query_translation.oqo import OQO, LeafFilter, BranchFilter
 from query_translation.oqo_to_es import (
@@ -483,10 +483,10 @@ class TestCrossTypeCollectionExecution:
     @pytest.mark.parametrize("negated", [False, True])
     def test_unreadable_collection_raises(self, monkeypatch, negated):
         # OQL gets the same loud 404 as the URL path, negated or not (#646).
-        def _not_shared(lid):
-            raise CollectionNotFoundOrNotSharedError(f"Collection {lid} doesn't exist or isn't shared.")
-        monkeypatch.setattr("core.filter.resolve_collection", _not_shared)
-        monkeypatch.setattr("core.collection_resolver.resolve_collection", _not_shared)
+        def _not_found(lid):
+            raise CollectionNotFoundError(f"Collection {lid} not found.")
+        monkeypatch.setattr("core.filter.resolve_collection", _not_found)
+        monkeypatch.setattr("core.collection_resolver.resolve_collection", _not_found)
         oqo = OQO(
             get_rows="works",
             filter_rows=[
@@ -496,7 +496,7 @@ class TestCrossTypeCollectionExecution:
                 )
             ],
         )
-        with pytest.raises(CollectionNotFoundOrNotSharedError):
+        with pytest.raises(CollectionNotFoundError):
             oqo_to_q(oqo, works_fields)
 
 

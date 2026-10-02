@@ -14,7 +14,7 @@ import json
 import pytest
 from elasticsearch_dsl import Search
 
-from core.exceptions import APIQueryParamsError, CollectionNotFoundOrNotSharedError
+from core.exceptions import APIQueryParamsError, CollectionNotFoundError
 from core.fields import OpenAlexIDField
 from core.filter import (
     MAX_RESOLVED_IDS_PER_REQUEST,
@@ -23,8 +23,8 @@ from core.filter import (
 from works.fields import fields_dict as works_fields_dict
 
 
-def _not_shared(lid):
-    raise CollectionNotFoundOrNotSharedError(f"Collection {lid} doesn't exist or isn't shared.")
+def _not_found(lid):
+    raise CollectionNotFoundError(f"Collection {lid} not found.")
 
 
 
@@ -139,8 +139,8 @@ class TestNegation:
 
     def test_negation_of_unreadable_collection_raises(self, monkeypatch):
         # `!col_x` on a collection you can't read is an error, not a no-op (#646).
-        monkeypatch.setattr("core.filter.resolve_collection", _not_shared)
-        with pytest.raises(CollectionNotFoundOrNotSharedError):
+        monkeypatch.setattr("core.filter.resolve_collection", _not_found)
+        with pytest.raises(CollectionNotFoundError):
             _apply_cross_type_collection_filters(
                 works_fields_dict,
                 [{"primary_location.source.id": "!col_gone"}],
@@ -218,8 +218,8 @@ class TestNegation:
 
 class TestEmptyDeleted:
     def test_unreadable_collection_positive_raises(self, monkeypatch):
-        monkeypatch.setattr("core.filter.resolve_collection", _not_shared)
-        with pytest.raises(CollectionNotFoundOrNotSharedError):
+        monkeypatch.setattr("core.filter.resolve_collection", _not_found)
+        with pytest.raises(CollectionNotFoundError):
             _apply_cross_type_collection_filters(
                 works_fields_dict,
                 [{"primary_location.source.id": "col_gone"}],

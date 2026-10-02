@@ -13,7 +13,7 @@ from flask import g, request, has_request_context
 import settings
 from core.exceptions import (
     APIQueryParamsError,
-    CollectionNotFoundOrNotSharedError,
+    CollectionNotFoundError,
     CollectionResolutionUnavailableError,
 )
 
@@ -48,7 +48,7 @@ _UNAVAILABLE_MSG = "collection resolution temporarily unavailable"
 def resolve_collection(collection_id):
     """Look up a collection by ID and return (entity_type, [entity_ids]).
 
-    - Raises CollectionNotFoundOrNotSharedError (404) when the caller can't read it:
+    - Raises CollectionNotFoundError (404) when the caller can't read it:
       missing, deleted, or private to someone else (users-api answers 404 for all
       three; 401/403 are handled the same for safety). This replaced the old silent
       zero, which made a shared search link quietly return nothing (oxjob #646).
@@ -107,8 +107,8 @@ def resolve_collection(collection_id):
         # No access, missing or deleted: one loud error, same for all, so probes
         # can't tell a private collection from a missing one.
         if resp.status_code in (401, 403, 404):
-            raise CollectionNotFoundOrNotSharedError(
-                f"Collection {collection_id} doesn't exist or isn't shared."
+            raise CollectionNotFoundError(
+                f"Collection {collection_id} not found."
             )
 
         # Anything other than 200 (including 5xx) is treated as users-api being
