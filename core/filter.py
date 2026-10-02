@@ -4,7 +4,7 @@ from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
 from core.fields import CollectionField, TermField, _canonicalize_entity_ids
-from core.collection_resolver import resolve_collection
+from core.collection_resolver import check_collection_reference_count, resolve_collection
 from core.utils import get_field
 from settings import MAX_IDS_IN_FILTER
 
@@ -406,6 +406,9 @@ def _apply_cross_type_collection_filters(fields_dict, filter_params, s):
 
     if not cross:
         return s, remaining
+
+    # Request-wide cap on collection references, before any is resolved (#646 H1).
+    check_collection_reference_count(len(cross))
 
     # Phase 0 decision: one col_... per (field, request) in v1.
     seen = {}

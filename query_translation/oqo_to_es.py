@@ -20,6 +20,7 @@ from elasticsearch_dsl import Q
 
 from core.exceptions import APIError, APIQueryParamsError
 from core.fields import CollectionField
+from core.collection_resolver import check_collection_reference_count
 from core.filter import MAX_RESOLVED_IDS_PER_REQUEST, resolve_collection_for_field
 from core.utils import get_field
 from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType
@@ -42,6 +43,7 @@ def oqo_to_q(oqo: OQO, fields_dict) -> Optional[Q]:
     """
     if not oqo.filter_rows:
         return None
+    _check_collection_leaves(oqo.filter_rows)
 
     child_queries = [_translate(f, fields_dict) for f in oqo.filter_rows]
     child_queries = [q for q in child_queries if q is not None]
@@ -83,6 +85,7 @@ def oqo_to_search_and_filter_q(oqo: OQO, fields_dict, scoring: bool = True):
     When `scoring=False` (sampling — legacy applies search via `s.filter` when a
     `sample` is set), every row goes to `filter_q`, reproducing legacy exactly.
     """
+    _check_collection_leaves(oqo.filter_rows)
     if scoring:
         search_rows = [f for f in oqo.filter_rows if _is_scoring_search_leaf(f)]
         filter_rows = [f for f in oqo.filter_rows if not _is_scoring_search_leaf(f)]
@@ -99,6 +102,24 @@ def oqo_to_search_and_filter_q(oqo: OQO, fields_dict, scoring: bool = True):
         return Q("bool", must=qs)
 
     return _combine(search_rows), _combine(filter_rows)
+
+
+def _count_collection_leaves(nodes) -> int:
+    n = 0
+    for node in nodes or []:
+        if isinstance(node, BranchFilter):
+            n += _count_collection_leaves(node.filters)
+        elif isinstance(node, LeafFilter) and "col_" in str(node.value):
+            n += 1
+    return n
+
+
+def _check_collection_leaves(rows):
+    """Cap collection leaves before any is resolved (oxjob #646 security review H1)."""
+    try:
+        check_collection_reference_count(_count_collection_leaves(rows))
+    except APIQueryParamsError as e:
+        raise OQOTranslationError(str(e))
 
 
 def _translate(node: FilterType, fields_dict) -> Optional[Q]:

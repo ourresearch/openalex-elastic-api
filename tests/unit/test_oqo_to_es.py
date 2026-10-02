@@ -532,3 +532,15 @@ class TestCrossTypeCollectionExecution:
         body = json.dumps(oqo_to_q(oqo, works_fields).to_dict())
         assert "https://openalex.org/W111" in body
         assert "https://openalex.org/W222" in body
+
+
+def test_oqo_collection_leaf_cap_before_any_resolve(monkeypatch):
+    """100 `in collection` leaves fail fast with no resolver calls (oxjob #646 H1)."""
+    from query_translation.oqo_to_es import OQOTranslationError
+    calls = []
+    monkeypatch.setattr("core.filter.resolve_collection", lambda lid: calls.append(lid) or ("authors", ["A1"]))
+    leaves = [LeafFilter("authorships.author.id", "col_X", operator="in collection") for _ in range(100)]
+    oqo = OQO(get_rows="works", filter_rows=[BranchFilter(join="or", filters=leaves)])
+    with pytest.raises(OQOTranslationError):
+        oqo_to_q(oqo, works_fields)
+    assert calls == []

@@ -8,7 +8,7 @@ module, which then becomes a `terms` clause in the ES query.
 import logging
 
 import requests
-from flask import request, has_request_context
+from flask import g, request, has_request_context
 
 import settings
 from core.exceptions import (
@@ -27,6 +27,17 @@ logger = logging.getLogger(__name__)
 # correctness is unaffected, only latency.
 PER_PAGE = 1000
 HTTP_TIMEOUT = 5
+
+# Request-wide caps shared by EVERY path that resolves a collection (URL same-type,
+# URL cross-type, OQL/OQO leaves, re-runs for custom group_by). Anyone can now
+# reference a collection shared by link, logged in or not, and each distinct one
+# costs a users-api call plus up to 1,000 terms, so these bound one request's work
+# (oxjob #646 security review H1; labels-v1 H2/H3 capped only the URL path).
+# Callers also cap how many collection REFERENCES a query may hold
+# (MAX_COLLECTION_REFERENCES_PER_REQUEST), since a repeated ID costs terms, not calls.
+MAX_COLLECTIONS_PER_REQUEST = 5
+MAX_COLLECTION_REFERENCES_PER_REQUEST = 5
+MAX_RESOLVED_IDS_PER_REQUEST = 10_000
 
 # Public-facing message for any 503. Internal details (hostname, status code,
 # JSON parse errors) go to the server log only — never to the response body
@@ -48,6 +59,16 @@ def resolve_collection(collection_id):
     if not settings.USERS_API_URL:
         raise APIQueryParamsError(
             "collection: filter is not configured (USERS_API_URL unset)"
+        )
+
+    # One users-api call per distinct collection per request, however many times
+    # the query (or a group_by re-run) names it.
+    state = _request_state()
+    if state is not None and collection_id in state["resolved"]:
+        return state["resolved"][collection_id]
+    if state is not None and len(state["resolved"]) >= MAX_COLLECTIONS_PER_REQUEST:
+        raise APIQueryParamsError(
+            f"A request can use at most {MAX_COLLECTIONS_PER_REQUEST} different collections."
         )
 
     base = settings.USERS_API_URL.rstrip("/")
@@ -116,4 +137,30 @@ def resolve_collection(collection_id):
             break
         page += 1
 
+    if state is not None:
+        state["ids"] += len(entity_ids)
+        if state["ids"] > MAX_RESOLVED_IDS_PER_REQUEST:
+            raise APIQueryParamsError(
+                f"The collections in this request hold too many entities "
+                f"(max {MAX_RESOLVED_IDS_PER_REQUEST:,} in all)."
+            )
+        state["resolved"][collection_id] = (entity_type, entity_ids)
     return (entity_type, entity_ids)
+
+
+def _request_state():
+    """Per-request memo and budget on flask.g, or None outside a request."""
+    if not has_request_context():
+        return None
+    if not hasattr(g, "_collection_resolver"):
+        g._collection_resolver = {"resolved": {}, "ids": 0}
+    return g._collection_resolver
+
+
+def check_collection_reference_count(count):
+    """Raise if a query names collections more than the per-request cap allows."""
+    if count > MAX_COLLECTION_REFERENCES_PER_REQUEST:
+        raise APIQueryParamsError(
+            f"A request can use at most {MAX_COLLECTION_REFERENCES_PER_REQUEST} "
+            f"collection references."
+        )

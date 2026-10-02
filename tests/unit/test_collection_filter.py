@@ -469,3 +469,52 @@ class TestCollectionIdRegex:
     def test_oversize_id_rejected(self):
         # 49 chars after the prefix should be rejected.
         assert not CollectionField.COLLECTION_ID_RE.match("col_" + "a" * 49)
+
+
+# ---------- request-wide caps (oxjob #646 security review H1) ----------
+
+class TestRequestWideCaps:
+    def _app(self):
+        from flask import Flask
+        return Flask(__name__)
+
+    def _fake_users_api(self, monkeypatch, calls, n_ids=3):
+        monkeypatch.setattr(settings, "USERS_API_URL", "http://users-api.test")
+        def fake_get(url, params=None, headers=None, timeout=None):
+            calls.append(url)
+            return _FakeResp(200, {"meta": {"total_pages": 1},
+                                   "collection": {"entity_type": "works"},
+                                   "entity_ids": [f"W{i}" for i in range(n_ids)]})
+        monkeypatch.setattr(collection_resolver.requests, "get", fake_get)
+
+    def test_repeated_collection_resolves_once_per_request(self, monkeypatch):
+        calls = []
+        self._fake_users_api(monkeypatch, calls)
+        with self._app().test_request_context("/works"):
+            for _ in range(10):
+                collection_resolver.resolve_collection("col_same")
+        assert len(calls) == 1
+
+    def test_distinct_collection_cap(self, monkeypatch):
+        calls = []
+        self._fake_users_api(monkeypatch, calls)
+        with self._app().test_request_context("/works"):
+            for i in range(collection_resolver.MAX_COLLECTIONS_PER_REQUEST):
+                collection_resolver.resolve_collection(f"col_{i}")
+            with pytest.raises(APIQueryParamsError):
+                collection_resolver.resolve_collection("col_onemore")
+        assert len(calls) == collection_resolver.MAX_COLLECTIONS_PER_REQUEST
+
+    def test_request_wide_id_budget(self, monkeypatch):
+        calls = []
+        self._fake_users_api(monkeypatch, calls, n_ids=4000)
+        with self._app().test_request_context("/works"):
+            collection_resolver.resolve_collection("col_a")
+            collection_resolver.resolve_collection("col_b")
+            with pytest.raises(APIQueryParamsError):
+                collection_resolver.resolve_collection("col_c")
+
+    def test_reference_count_cap(self):
+        collection_resolver.check_collection_reference_count(5)
+        with pytest.raises(APIQueryParamsError):
+            collection_resolver.check_collection_reference_count(6)
