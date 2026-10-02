@@ -291,22 +291,19 @@ def _apply_collection_filters(fields_dict, filter_params, s):
     # Positive collection (at most one — enforced above).
     if positives:
         lid = positives[0]
+        # An unreadable collection raises "not found or not shared" (oxjob #646).
         etype, ids = resolve_collection(lid)
         _budget(len(ids))
-        # Unknown / deleted collection → empty `terms` (silently matches 0; spec).
-        if etype is None:
-            ids = []
-        else:
-            _check_type(lid, etype)
+        _check_type(lid, etype)
         s = s.filter(Q("terms", id=_canonicalize_entity_ids(ids, endpoint_entity_type)))
 
     # Negated collection (at most one — enforced above, and only when positives is empty).
     if negatives:
         lid = negatives[0]
         etype, ids = resolve_collection(lid)
-        if etype is not None:
-            _check_type(lid, etype)
-            _budget(len(ids))
+        _check_type(lid, etype)
+        _budget(len(ids))
+        if ids:
             s = s.filter(
                 ~Q("bool", must=Q("terms", id=_canonicalize_entity_ids(ids, endpoint_entity_type)))
             )
@@ -335,17 +332,15 @@ def resolve_collection_for_field(field, collection_id):
     this, the OQO path read a bare `col_…` as a literal OpenAlex ID and matched
     ~zero — see `query_translation/oqo_to_es._cross_type_collection_query`.
 
-    Returns `(entity_type, entity_ids)`:
-      - `(None, [])` for an unknown / deleted collection (the caller matches zero
-        / no-ops per spec).
-    Raises `APIQueryParamsError` if the resolved collection's entity_type doesn't
-    match `field.entity_type`.
+    Returns `(entity_type, entity_ids)`. Raises `CollectionNotFoundOrNotSharedError`
+    (via the resolver) if the caller can't read the collection, and
+    `APIQueryParamsError` if its entity_type doesn't match `field.entity_type`.
 
     `collection_id` must be the bare id (no leading `!`); negation, the match-zero
     empty clause, and the per-request ID budget are the caller's concern.
     """
     etype, ids = resolve_collection(collection_id)
-    if etype is not None and etype != field.entity_type:
+    if etype != field.entity_type:
         raise APIQueryParamsError(
             f"collection {collection_id} is type '{etype}', not valid for "
             f"the `{field.param}` filter (expects '{field.entity_type}')."
@@ -367,7 +362,9 @@ def _apply_cross_type_collection_filters(fields_dict, filter_params, s):
     - `col_xxx` whose resolved entity_type doesn't match the field's
 
     Behavior:
-    - Unknown / deleted collection → positive: match zero; negation: no-op (spec)
+    - Unreadable collection (missing, deleted, private) → 404 "not found or not
+      shared", positive or negated (oxjob #646; it used to match zero silently)
+    - Empty collection → positive: match zero; negation: no-op
     - Negation `!col_xxx` → wrap the resolved terms clause in `bool.must_not`
     - Type check happens before the budget consumes IDs
 
@@ -436,15 +433,6 @@ def _apply_cross_type_collection_filters(fields_dict, filter_params, s):
         collection_id = value[1:] if negate else value
 
         etype, ids = resolve_collection_for_field(field, collection_id)
-
-        # Unknown / deleted collection:
-        # - positive: silently match zero (spec)
-        # - negation: silently no-op (filter matches all docs)
-        if etype is None:
-            if negate:
-                continue
-            s = s.filter(Q("terms", **{field.es_field(): []}))
-            continue
 
         _budget(len(ids))
 

@@ -24,6 +24,14 @@ class HighAuthorCountError(APIError):
     description = "High author count limitation."
 
 
+class CollectionNotFoundOrNotSharedError(APIError):
+    """A `col_` reference the caller can't read: missing, deleted, or private to
+    someone else. One message for all three, so a probe can't tell a private
+    collection from a missing one (oxjob #646). Replaces the old silent zero."""
+    code = 404
+    description = "Collection not found or not shared"
+
+
 class CollectionResolutionUnavailableError(APIError):
     code = 503
     description = "collection resolution unavailable"

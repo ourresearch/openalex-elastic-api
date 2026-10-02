@@ -11,7 +11,11 @@ import requests
 from flask import request, has_request_context
 
 import settings
-from core.exceptions import APIQueryParamsError, CollectionResolutionUnavailableError
+from core.exceptions import (
+    APIQueryParamsError,
+    CollectionNotFoundOrNotSharedError,
+    CollectionResolutionUnavailableError,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -33,9 +37,10 @@ _UNAVAILABLE_MSG = "collection resolution temporarily unavailable"
 def resolve_collection(collection_id):
     """Look up a collection by ID and return (entity_type, [entity_ids]).
 
-    - Returns (None, []) for unknown / deleted collections (404 from users-api) so
-      filter callers can silently match zero results (spec: "Empty / nonexistent
-      / deleted collection: silently matches 0 results. No error.").
+    - Raises CollectionNotFoundOrNotSharedError (404) when the caller can't read it:
+      missing, deleted, or private to someone else (users-api answers 404 for all
+      three; 401/403 are handled the same for safety). This replaced the old silent
+      zero, which made a shared search link quietly return nothing (oxjob #646).
     - Raises CollectionResolutionUnavailableError on users-api 5xx / timeout /
       connection failure. The Flask error handler turns that into a 503.
     - Raises APIQueryParamsError if USERS_API_URL is not configured.
@@ -50,16 +55,18 @@ def resolve_collection(collection_id):
     entity_type = None
     page = 1
 
-    # Labels v1.1 (oxjob #228, QA-040) made collections owner+admin-only. Forward
-    # the current request's Authorization header so users-api can authenticate
-    # the user (JWT for the GUI path, OpenAlex API key for the API path) and
-    # enforce the owner check. Without a request context (e.g. unit tests
-    # calling this directly), forward nothing — users-api will 401 → silent
-    # zero, same as an unauthenticated user.
+    # Forward the current request's Authorization header so users-api can decide
+    # access for THIS caller: the owner reads a private collection, anyone reads one
+    # shared by link (oxjob #646). Without a request context (e.g. unit tests calling
+    # this directly), forward nothing, which reads as a logged-out caller.
     auth_header = ""
     if has_request_context():
         auth_header = request.headers.get("Authorization", "") or ""
     fwd_headers = {"Authorization": auth_header} if auth_header else {}
+    # Skip users-api's per-IP read limit: this traffic comes from Heroku's shared
+    # egress IPs and is already metered per caller at the proxy. Grants no access.
+    if settings.COLLECTION_RESOLVER_KEY:
+        fwd_headers["X-Collection-Resolver-Key"] = settings.COLLECTION_RESOLVER_KEY
 
     while True:
         url = f"{base}/collections/{collection_id}/entities"
@@ -76,12 +83,12 @@ def resolve_collection(collection_id):
             )
             raise CollectionResolutionUnavailableError(_UNAVAILABLE_MSG)
 
-        # 401 / 403 = caller has no access to this collection; treat as a missing
-        # collection so the filter silently matches zero. Same envelope as 404.
-        # (Avoids leaking the existence of private collections via a different
-        # error code to anon vs. authenticated probes.)
+        # No access, missing or deleted: one loud error, same for all, so probes
+        # can't tell a private collection from a missing one.
         if resp.status_code in (401, 403, 404):
-            return (None, [])
+            raise CollectionNotFoundOrNotSharedError(
+                f"Collection {collection_id} not found or not shared."
+            )
 
         # Anything other than 200 (including 5xx) is treated as users-api being
         # unavailable; the Flask error handler turns that into a 503.

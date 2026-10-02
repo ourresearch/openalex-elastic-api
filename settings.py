@@ -17,6 +17,9 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 OPEN_ALEX_API_KEY = os.environ.get("OPEN_ALEX_API_KEY")
 USERS_API_URL = os.environ.get("USERS_API_URL")
+# Shared secret that exempts the collection resolver's server-to-server reads from
+# users-api's per-IP read limit (oxjob #646). Grants no access; see collection_resolver.
+COLLECTION_RESOLVER_KEY = os.environ.get("COLLECTION_RESOLVER_KEY")
 
 # indexes
 AUTHORS_INDEX_WALDEN = "authors-v19"

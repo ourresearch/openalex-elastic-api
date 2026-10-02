@@ -18,7 +18,7 @@ from typing import Optional
 
 from elasticsearch_dsl import Q
 
-from core.exceptions import APIQueryParamsError
+from core.exceptions import APIError, APIQueryParamsError
 from core.fields import CollectionField
 from core.filter import MAX_RESOLVED_IDS_PER_REQUEST, resolve_collection_for_field
 from core.utils import get_field
@@ -150,12 +150,13 @@ def _cross_type_collection_query(field, collection_id: str) -> Q:
     field's `build_terms_query` — so OQO-native execution and the rendered-URL
     pre-pass can't diverge.
 
-    Unknown / deleted / empty collection → a match-zero clause (`terms []`); the
-    caller's negation (`~q`) turns that into match-all, reproducing the spec
-    "negation no-op". Negation itself is the caller's concern.
+    An unreadable collection (missing, deleted, private) raises "not found or not
+    shared" from the resolver (oxjob #646). An empty one gives a match-zero clause
+    (`terms []`); the caller's negation (`~q`) turns that into match-all.
+    Negation itself is the caller's concern.
     """
     etype, ids = resolve_collection_for_field(field, collection_id)
-    if etype is None or not ids:
+    if not ids:
         return Q("terms", **{field.es_field(): []})
     if len(ids) > MAX_RESOLVED_IDS_PER_REQUEST:
         raise OQOTranslationError(
@@ -190,7 +191,9 @@ def _translate_leaf(leaf: LeafFilter, fields_dict) -> Q:
     field.value = url_value
     try:
         q = field.build_query()
-    except APIQueryParamsError:
+    except APIError:
+        # Our own errors keep their status: 400 bad params, 404 collection not
+        # found or not shared (#646), 503 resolver unavailable.
         raise
     except Exception as e:
         # Unexpected build_query failure — surface as 400, not 500.

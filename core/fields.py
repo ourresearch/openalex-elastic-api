@@ -1860,12 +1860,8 @@ class CollectionField(Field):
         negated = raw.startswith("!")
         collection_id = raw[1:] if negated else raw
 
+        # An unreadable collection raises "not found or not shared" (oxjob #646).
         collection_entity_type, entity_ids = resolve_collection(collection_id)
-
-        # Deleted / nonexistent collection → silently match 0 results (spec).
-        if collection_entity_type is None:
-            q = Q("terms", id=[]) if not negated else Q("match_all")
-            return q
 
         if collection_entity_type != self.entity_type:
             raise APIQueryParamsError(

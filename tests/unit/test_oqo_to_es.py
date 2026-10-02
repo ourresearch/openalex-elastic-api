@@ -15,7 +15,7 @@ import json
 import pytest
 from elasticsearch_dsl import Q, Search
 
-from core.exceptions import APIQueryParamsError
+from core.exceptions import APIQueryParamsError, CollectionNotFoundOrNotSharedError
 from core.filter import filter_records
 from query_translation.oqo import OQO, LeafFilter, BranchFilter
 from query_translation.oqo_to_es import (
@@ -480,39 +480,26 @@ class TestCrossTypeCollectionExecution:
         assert "must_not" in body
         assert "https://openalex.org/A1234" in body
 
-    def test_unknown_collection_positive_matches_zero(self, monkeypatch):
-        self._patch_resolver(monkeypatch, (None, []))
+    @pytest.mark.parametrize("negated", [False, True])
+    def test_unreadable_collection_raises(self, monkeypatch, negated):
+        # OQL gets the same loud 404 as the URL path, negated or not (#646).
+        def _not_shared(lid):
+            raise CollectionNotFoundOrNotSharedError(f"Collection {lid} not found or not shared.")
+        monkeypatch.setattr("core.filter.resolve_collection", _not_shared)
+        monkeypatch.setattr("core.collection_resolver.resolve_collection", _not_shared)
         oqo = OQO(
             get_rows="works",
             filter_rows=[
                 LeafFilter(
-                    "authorships.author.id", "col_gone", operator="in collection"
+                    "authorships.author.id", "col_gone",
+                    operator="in collection", is_negated=negated,
                 )
             ],
         )
-        # Empty terms clause → matches zero (spec).
-        assert oqo_to_q(oqo, works_fields).to_dict() == {
-            "terms": {"authorships_full.author.id": []}
-        }
+        with pytest.raises(CollectionNotFoundOrNotSharedError):
+            oqo_to_q(oqo, works_fields)
 
-    def test_unknown_collection_negation_is_noop_match_all(self, monkeypatch):
-        # Negating a match-zero clause yields match-all — the spec "negation of a
-        # deleted collection is a no-op" behavior, reproduced via ~q.
-        self._patch_resolver(monkeypatch, (None, []))
-        oqo = OQO(
-            get_rows="works",
-            filter_rows=[
-                LeafFilter(
-                    "authorships.author.id",
-                    "col_gone",
-                    operator="in collection",
-                    is_negated=True,
-                )
-            ],
-        )
-        assert oqo_to_q(oqo, works_fields).to_dict() == {
-            "bool": {"must_not": [{"terms": {"authorships_full.author.id": []}}]}
-        }
+
 
     def test_cross_type_type_mismatch_raises(self, monkeypatch):
         self._patch_resolver(monkeypatch, ("works", ["W1"]))

@@ -14,13 +14,18 @@ import json
 import pytest
 from elasticsearch_dsl import Search
 
-from core.exceptions import APIQueryParamsError
+from core.exceptions import APIQueryParamsError, CollectionNotFoundOrNotSharedError
 from core.fields import OpenAlexIDField
 from core.filter import (
     MAX_RESOLVED_IDS_PER_REQUEST,
     _apply_cross_type_collection_filters,
 )
 from works.fields import fields_dict as works_fields_dict
+
+
+def _not_shared(lid):
+    raise CollectionNotFoundOrNotSharedError(f"Collection {lid} not found or not shared.")
+
 
 
 # ---------- positive single-collection ----------
@@ -132,25 +137,16 @@ class TestNegation:
         assert "must_not" in body
         assert "https://openalex.org/A1234" in body
 
-    def test_negation_of_deleted_collection_is_noop(self, monkeypatch):
-        monkeypatch.setattr(
-            "core.filter.resolve_collection",
-            lambda lid: (None, []),
-        )
-        s = Search()
-        s2, remaining = _apply_cross_type_collection_filters(
-            works_fields_dict,
-            [{"primary_location.source.id": "!col_gone"}],
-            s,
-        )
-        # No clause added; remaining empty (we consumed the filter).
-        assert remaining == []
-        assert s2.to_dict() == {}
+    def test_negation_of_unreadable_collection_raises(self, monkeypatch):
+        # `!col_x` on a collection you can't read is an error, not a no-op (#646).
+        monkeypatch.setattr("core.filter.resolve_collection", _not_shared)
+        with pytest.raises(CollectionNotFoundOrNotSharedError):
+            _apply_cross_type_collection_filters(
+                works_fields_dict,
+                [{"primary_location.source.id": "!col_gone"}],
+                Search(),
+            )
 
-
-# ---------- 400 rejections ----------
-
-class TestRejections:
     def test_type_mismatch_400(self, monkeypatch):
         monkeypatch.setattr(
             "core.filter.resolve_collection",
@@ -221,23 +217,14 @@ class TestRejections:
 # ---------- empty / deleted collection ----------
 
 class TestEmptyDeleted:
-    def test_deleted_collection_positive_matches_zero(self, monkeypatch):
-        monkeypatch.setattr(
-            "core.filter.resolve_collection",
-            lambda lid: (None, []),
-        )
-        s = Search()
-        s2, remaining = _apply_cross_type_collection_filters(
-            works_fields_dict,
-            [{"primary_location.source.id": "col_gone"}],
-            s,
-        )
-        # An empty terms clause matches zero docs (spec).
-        body = json.dumps(s2.to_dict())
-        assert remaining == []
-        assert '"terms"' in body
-        assert "primary_location.source.id" in body
-        assert "[]" in body
+    def test_unreadable_collection_positive_raises(self, monkeypatch):
+        monkeypatch.setattr("core.filter.resolve_collection", _not_shared)
+        with pytest.raises(CollectionNotFoundOrNotSharedError):
+            _apply_cross_type_collection_filters(
+                works_fields_dict,
+                [{"primary_location.source.id": "col_gone"}],
+                Search(),
+            )
 
     def test_empty_resolved_collection_matches_zero(self, monkeypatch):
         # entity_type set (collection exists) but the entity_ids list is empty.

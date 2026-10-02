@@ -14,10 +14,19 @@ from elasticsearch_dsl import Search
 
 import settings
 from core import collection_resolver
-from core.exceptions import APIQueryParamsError, CollectionResolutionUnavailableError
+from core.exceptions import (
+    APIQueryParamsError,
+    CollectionNotFoundOrNotSharedError,
+    CollectionResolutionUnavailableError,
+)
 from core.fields import CollectionField
 from core.filter import _apply_collection_filters
 from works.fields import fields_dict as works_fields_dict
+
+
+def _not_shared(lid):
+    raise CollectionNotFoundOrNotSharedError(f"Collection {lid} not found or not shared.")
+
 
 
 class _FakeResp:
@@ -34,13 +43,31 @@ class _FakeResp:
 # ---------- resolve_collection ----------
 
 class TestResolveCollection:
-    def test_404_returns_none_empty(self, monkeypatch):
+    @pytest.mark.parametrize("status", [401, 403, 404])
+    def test_no_access_raises_not_found_or_not_shared(self, monkeypatch, status):
+        # Missing, deleted and private all answer the same loud 404 (oxjob #646).
         monkeypatch.setattr(settings, "USERS_API_URL", "http://users-api.test")
         monkeypatch.setattr(
             collection_resolver.requests, "get",
-            lambda *a, **kw: _FakeResp(404),
+            lambda *a, **kw: _FakeResp(status),
         )
-        assert collection_resolver.resolve_collection("col_deleted") == (None, [])
+        with pytest.raises(CollectionNotFoundOrNotSharedError) as e:
+            collection_resolver.resolve_collection("col_deleted")
+        assert e.value.code == 404
+        assert str(e.value) == "Collection col_deleted not found or not shared."
+
+    def test_sends_resolver_key_when_configured(self, monkeypatch):
+        monkeypatch.setattr(settings, "USERS_API_URL", "http://users-api.test")
+        monkeypatch.setattr(settings, "COLLECTION_RESOLVER_KEY", "k")
+        seen = {}
+        def fake_get(url, params=None, headers=None, timeout=None):
+            seen.update(headers or {})
+            return _FakeResp(200, {"meta": {"total_pages": 1},
+                                   "collection": {"entity_type": "works"},
+                                   "entity_ids": ["W1"]})
+        monkeypatch.setattr(collection_resolver.requests, "get", fake_get)
+        collection_resolver.resolve_collection("col_x")
+        assert seen.get("X-Collection-Resolver-Key") == "k"
 
     def test_200_single_page(self, monkeypatch):
         monkeypatch.setattr(settings, "USERS_API_URL", "http://users-api.test")
@@ -168,22 +195,15 @@ class TestCollectionField:
         assert "type 'works'" in str(exc.value)
         assert "/authors" in str(exc.value)
 
-    def test_deleted_label_matches_zero(self, monkeypatch):
-        monkeypatch.setattr(collection_resolver, "resolve_collection",
-                            lambda lid: (None, []))
+    @pytest.mark.parametrize("value", ["col_deleted", "!col_deleted"])
+    def test_unreadable_collection_raises_positive_and_negated(self, monkeypatch, value):
+        monkeypatch.setattr(collection_resolver, "resolve_collection", _not_shared)
         f = CollectionField(entity_type="works")
-        f.value = "col_deleted"
-        q = f.build_query()
-        body = q.to_dict()
-        assert body == {"terms": {"id": []}}
+        f.value = value
+        with pytest.raises(CollectionNotFoundOrNotSharedError):
+            f.build_query()
 
-    def test_negated_deleted_label_matches_all(self, monkeypatch):
-        monkeypatch.setattr(collection_resolver, "resolve_collection",
-                            lambda lid: (None, []))
-        f = CollectionField(entity_type="works")
-        f.value = "!col_deleted"
-        q = f.build_query()
-        assert q.to_dict() == {"match_all": {}}
+
 
     def test_invalid_label_id_format_rejected(self, monkeypatch):
         f = CollectionField(entity_type="works")
