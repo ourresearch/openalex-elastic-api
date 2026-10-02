@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "3ead2503208471f506e8e5fcaf2aae909042c00c1a1324d471be065e1f60440c",
-    "property_count": 900,
-    "version": "14.9.0"
+    "fingerprint": "a6abb9461a0d6438b8c5ae369490b37b6aada2d3a5bf46bd531110e671544939",
+    "property_count": 899,
+    "version": "15.0.0"
   },
   "properties": {
     "authors": {
@@ -18807,6 +18807,22 @@
         "supported_by": [],
         "type": "number"
       },
+      "sustainable_development_goals_aurora": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "deprecated Aurora SDGs",
+        "entity_type": null,
+        "name": "sustainable_development_goals_aurora",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
       "title": {
         "actions": [
           "column"
@@ -19211,52 +19227,6 @@
         "operators": [],
         "supported_by": [],
         "type": null
-      },
-      "x_sdgs": {
-        "actions": [
-          "column"
-        ],
-        "aliases": [],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": null,
-        "display_name": "x sdgs",
-        "entity_type": null,
-        "name": "x_sdgs",
-        "operators": [],
-        "supported_by": [],
-        "type": null
-      },
-      "x_sdgs.id": {
-        "actions": [
-          "filter",
-          "group_by",
-          "sort"
-        ],
-        "aliases": [
-          "experimental SDG",
-          "shadow SDG",
-          "x sdgs",
-          "x_sdgs"
-        ],
-        "alternate_keys": [],
-        "bool_false": null,
-        "bool_true": null,
-        "category": "aboutness",
-        "display_name": "experimental SDGs",
-        "entity_type": "sdgs",
-        "name": "x_sdgs.id",
-        "operators": [
-          "eq",
-          "not",
-          "null",
-          "or"
-        ],
-        "supported_by": [
-          "gui"
-        ],
-        "type": "string"
       }
     }
   }

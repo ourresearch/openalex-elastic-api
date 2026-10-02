@@ -983,7 +983,7 @@ def _display_names(lv: Level, raw_keys: List, connection) -> Dict:
 
 _SPECIAL_NAME_COLUMNS = ("host_organization", "host_organization_lineage", "domain.id",
                          "subfield.id", "subfields.id", "field.id", "fields.id",
-                         "keywords.id", "sustainable_development_goals.id", "x_sdgs.id",
+                         "keywords.id", "sustainable_development_goals.id",
                          "study_designs.id", "license", "license_id")
 
 
