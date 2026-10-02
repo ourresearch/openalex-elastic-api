@@ -291,7 +291,7 @@ def _apply_collection_filters(fields_dict, filter_params, s):
     # Positive collection (at most one — enforced above).
     if positives:
         lid = positives[0]
-        # An unreadable collection raises "not found or not shared" (oxjob #646).
+        # An unreadable collection raises "doesn't exist or isn't shared" (oxjob #646).
         etype, ids = resolve_collection(lid)
         _budget(len(ids))
         _check_type(lid, etype)

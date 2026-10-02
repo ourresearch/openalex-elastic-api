@@ -25,7 +25,7 @@ from works.fields import fields_dict as works_fields_dict
 
 
 def _not_shared(lid):
-    raise CollectionNotFoundOrNotSharedError(f"Collection {lid} not found or not shared.")
+    raise CollectionNotFoundOrNotSharedError(f"Collection {lid} doesn't exist or isn't shared.")
 
 
 
@@ -54,7 +54,7 @@ class TestResolveCollection:
         with pytest.raises(CollectionNotFoundOrNotSharedError) as e:
             collection_resolver.resolve_collection("col_deleted")
         assert e.value.code == 404
-        assert str(e.value) == "Collection col_deleted not found or not shared."
+        assert str(e.value) == "Collection col_deleted doesn't exist or isn't shared."
 
     def test_sends_resolver_key_when_configured(self, monkeypatch):
         monkeypatch.setattr(settings, "USERS_API_URL", "http://users-api.test")

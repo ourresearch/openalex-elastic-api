@@ -24,7 +24,7 @@ from works.fields import fields_dict as works_fields_dict
 
 
 def _not_shared(lid):
-    raise CollectionNotFoundOrNotSharedError(f"Collection {lid} not found or not shared.")
+    raise CollectionNotFoundOrNotSharedError(f"Collection {lid} doesn't exist or isn't shared.")
 
 
 

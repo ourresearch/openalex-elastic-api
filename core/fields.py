@@ -1860,7 +1860,7 @@ class CollectionField(Field):
         negated = raw.startswith("!")
         collection_id = raw[1:] if negated else raw
 
-        # An unreadable collection raises "not found or not shared" (oxjob #646).
+        # An unreadable collection raises "doesn't exist or isn't shared" (oxjob #646).
         collection_entity_type, entity_ids = resolve_collection(collection_id)
 
         if collection_entity_type != self.entity_type:

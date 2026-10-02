@@ -108,7 +108,7 @@ def resolve_collection(collection_id):
         # can't tell a private collection from a missing one.
         if resp.status_code in (401, 403, 404):
             raise CollectionNotFoundOrNotSharedError(
-                f"Collection {collection_id} not found or not shared."
+                f"Collection {collection_id} doesn't exist or isn't shared."
             )
 
         # Anything other than 200 (including 5xx) is treated as users-api being

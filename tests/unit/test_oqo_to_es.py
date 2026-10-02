@@ -484,7 +484,7 @@ class TestCrossTypeCollectionExecution:
     def test_unreadable_collection_raises(self, monkeypatch, negated):
         # OQL gets the same loud 404 as the URL path, negated or not (#646).
         def _not_shared(lid):
-            raise CollectionNotFoundOrNotSharedError(f"Collection {lid} not found or not shared.")
+            raise CollectionNotFoundOrNotSharedError(f"Collection {lid} doesn't exist or isn't shared.")
         monkeypatch.setattr("core.filter.resolve_collection", _not_shared)
         monkeypatch.setattr("core.collection_resolver.resolve_collection", _not_shared)
         oqo = OQO(
