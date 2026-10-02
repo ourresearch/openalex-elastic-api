@@ -257,9 +257,6 @@ _f("publisher", "primary_location.source.host_organization_lineage", "id")
 # "sustainable development goal(s)" input aliases live in the registry (#406 1c).
 _f("SDG", "sustainable_development_goals.id", "id",
    aliases=["sdg"])
-# oxjob #1300: shadow Jev-head SDG field (x_sdgs), same sdgs entity behind it; input aliases
-# ("x sdgs", "x_sdgs", "shadow SDG") live in the registry (core/display_names.py).
-_f("experimental SDGs", "x_sdgs.id", "id", aliases=["x_sdgs"])
 # oxjob #1312: closed study-designs vocabulary (bare slugs, like "listed in"); input
 # aliases ("study designs", "study_designs") live in the registry (core/display_names.py).
 _f("study design", "study_designs.id", "enum")

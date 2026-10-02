@@ -997,16 +997,6 @@ fields = [
         alternate_names=ALTERNATE_NAMES.get("sustainable_development_goals"),
     ),
     TermField(
-        # oxjob #1300: shadow SDG field from the Jev-trained head on the work's Qwen3 vector,
-        # served next to Aurora's sustainable_development_goals while under evaluation. Same
-        # element shape and id form (https://metadata.un.org/sdg/N), same value normalisation
-        # (core/fields.py). Mapped on works-v34 2026-09-22 (object; id keyword + .lower).
-        param="x_sdgs.id",
-        docstring="Experimental SDG tags from a classifier trained on Jev judgments of the work's title and abstract; a shadow of sustainable_development_goals, under evaluation",
-        documentation_link="https://help.openalex.org/data/sdgs/#experimental-x_sdgs",
-        alternate_names=ALTERNATE_NAMES.get("sustainable_development_goals"),
-    ),
-    TermField(
         # oxjob #1312: how the research was done — seven PubMed-backed values (RCT,
         # clinical trial, observational study, case report, systematic review,
         # meta-analysis, study protocol), parents included (RCT => clinical trial,
