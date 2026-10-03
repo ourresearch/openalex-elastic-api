@@ -343,11 +343,15 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "a step after `; then` doesn't start with a known verb",
               "steps are: group those works by ...; group those works into ...; "
               "calculate ...; sample (N) of those works"),
-        _spec("OQL_WALK_NOT_YET", ERROR, PARSE,
-              "walking to related things (`get each author of those works`) "
-              "isn't available yet",
-              "split instead: group those works by author; then calculate ..."),
         # walks and sets (oxjob #1535)
+        _spec("invalid_walk", ERROR, VALIDATE,
+              "a walk doesn't fit where it is",
+              "walk out from works once (get each author of those works), back once "
+              "(get all that author's works), then split and calculate"),
+        _spec("invalid_query_set", ERROR, VALIDATE,
+              "a query used as a set is the wrong kind",
+              "the query in parentheses must return the things the field takes, and "
+              "end at them (no splits or calculations)"),
         _spec("OQL_EACH_WORK", ERROR, PARSE,
               "a query about works starts with `get works where ...`",
               "drop `each`"),

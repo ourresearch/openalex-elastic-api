@@ -4,7 +4,12 @@
 /* No-drift gate: tests/oql/test_grammar_ebnf.py (oxjob #361). */
 /* Renders to a railroad diagram via the rr tool (oxjob #386 recipe). */
 
-query        ::= 'get'? entity ( 'where' conditions )? ( directive | step )*
+query        ::= 'get'? ( entity | 'each' word setIn? ) ( 'where' conditions )? ( directive | step )*
+
+/* Sets (oxjob #1535): `in (...)` holds a collection, a list of one kind, or a
+   whole query in parentheses that returns that kind of thing (type-checked:
+   `author is in (...)` takes a query ending `; then get authors of those works`). */
+setIn        ::= 'in' '(' ( query | scalar ( ',' scalar )* ) ')'
 
 entity       ::= word
 
@@ -19,7 +24,14 @@ sample       ::= 'sample' NUMBER ( 'seed' NUMBER )?
    again by ...; then calculate ...`. A calculation is always the last step; up to
    three splits; `those <entity>` must name what the query holds; `again` is
    optional on input and always rendered on every split after the first. */
-step         ::= ';'? 'then' ( split | calculation | sampleStep )
+step         ::= ';'? 'then' ( split | calculation | sampleStep | walk )
+
+/* Walks (oxjob #1535): out from works to related things (`each`: one result per
+   thing; the plural: one combined set), then back to everything they did. One
+   walk out and one back, before any split; `that` names one thing at a time,
+   `those` the set (`get all that author's works`, `get all those authors' works`). */
+walk         ::= 'get' ( 'each' word | word ) ( 'of' those )? ( 'where' conditions )?
+               | 'get' 'all' ( 'that' | 'those' ) word 'works' ( 'where' conditions )?
 
 split        ::= 'group' those? 'again'? ( 'by' splitBy | 'into' splitInto )
                  ( 'where' conditions )?   /* a group filter: measureClause, the
@@ -61,7 +73,15 @@ operand      ::= 'not' operand
                | '(' conditions ')'
                | clause
 
-clause       ::= determiner? ( valueClause | searchClause )
+clause       ::= determiner? ( valueClause | searchClause ) | relationClause
+
+/* The work's own relations (#557), negated on the verb (oxjob #1535), taking
+   listed works or a set of works: `it cites works in (get works where ...)`. */
+relationClause ::= ( 'it' ( 'cites' | "doesn't" 'cite' | 'does' 'not' 'cite'
+                          | 'is' 'not'? ( 'cited' 'by' | 'related' 'to' )
+                          | "isn't" ( 'cited' 'by' | 'related' 'to' ) )
+                   | ( "it's" | 'its' ) 'not'? ( 'cited' 'by' | 'related' 'to' ) )
+                   ( value | 'works' setIn )
 
 /* An optional leading determiner 'the' is ignorable input sugar before a
    field name (`the title is foo`), so a clause can read like a sentence. It is

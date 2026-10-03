@@ -243,9 +243,11 @@ def test_wrong_set_noun():
     assert e.code == "OQL_WRONG_SET" and "those works" in e.fixit
 
 
-def test_walk_not_yet():
-    e = _err("get works where year > (2020); then get each author of those works")
-    assert e.code == "OQL_WALK_NOT_YET"
+def test_walk_parses_since_rung_2():
+    # walks shipped in oxjob #1535 (tests/oql/test_walks.py has the rest)
+    o = parse("get works where year > (2020); then get each author of those works")
+    assert [w.to_dict() for w in o.walks] == [
+        {"column_id": "authorships.author.id", "each": True}]
 
 
 def test_step_after_calculate():

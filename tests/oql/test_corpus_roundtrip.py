@@ -273,6 +273,8 @@ KNOWN_TAGS = {
     # splits by listed values / conditions / bins, sets in `in (...)`
     "pipeline", "calculate", "group-filter", "listed-values", "condition-groups",
     "bins", "collection",
+    # walks and sets defined by a whole query (oxjob #1535)
+    "walk", "query-set",
 }
 
 
@@ -356,6 +358,8 @@ def test_every_row_has_valid_facets():
         # values, searches, bins or conditions have no classic URL form. 222 is the
         # classic `group by` plus a calculation (its canonical form is a pipeline).
         **{i: "oql-only" for i in range(207, 223)},
+        # Walks and sets defined by a whole query (oxjob #1535): no URL form.
+        **{i: "oql-only" for i in range(230, 239)},
     }
     assert non_has_oxurl == expected, (
         f"oxurl_status classification drifted: "

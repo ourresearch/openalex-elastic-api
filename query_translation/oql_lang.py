@@ -1491,16 +1491,17 @@ def match_negated_relation(toks: List[Tok], i: int) -> Optional[Tuple[str, int]]
         tk = toks[i + k] if i + k < len(toks) else None
         return (tk.val.lower().replace("’", "'")
                 if tk is not None and tk.kind == "WORD" else None)
-    if w(0) != "it" and w(0) not in ("it's", "its"):
+    contracted = w(0) == "it's" or w(0) == "its"
+    if w(0) != "it" and not contracted:
         return None
-    if w(0) == "it" and w(1) in ("doesn't", "doesnt") and w(2) == "cite":
+    if w(0) == "it" and (w(1) == "doesn't" or w(1) == "doesnt") and w(2) == "cite":
         return "referenced_works", 3
     if w(0) == "it" and w(1) == "does" and w(2) == "not" and w(3) == "cite":
         return "referenced_works", 4
     j = None
-    if w(0) == "it" and w(1) in ("isn't", "isnt"):
+    if w(0) == "it" and (w(1) == "isn't" or w(1) == "isnt"):
         j = 2
-    elif w(0) in ("it's", "its") and w(1) == "not":
+    elif contracted and w(1) == "not":
         j = 2
     elif w(0) == "it" and w(1) == "is" and w(2) == "not":
         j = 3
@@ -5333,6 +5334,17 @@ def _fmt_clause(clause: ClauseNode, indent: int, col: int, width: int) -> str:
     flat = _stringify_clause(clause)
     if col + len(flat) <= width:
         return flat
+    ref = getattr(clause.meta, "oqo_ref", None)
+    if isinstance(ref, LeafFilter) and isinstance(ref.value, OQO):
+        # a whole query in parentheses (oxjob #1535): its steps on their own lines,
+        # one level deeper, the closing bracket back at `indent`
+        from query_translation.oql_pipeline import build_pipeline_tree, format_pipeline
+        child = indent + _INDENT
+        open_i = next(i for i, s in enumerate(clause.segments) if s.text == "(")
+        head = "".join(s.text for s in clause.segments[:open_i + 1])
+        inner = format_pipeline(build_pipeline_tree(ref.value), max(40, width - child))
+        body = "\n".join(" " * child + ln for ln in inner.split("\n"))
+        return f"{head}\n{body}\n{' ' * indent})"
     parts = _split_list_clause(clause)
     if parts is None:
         return flat   # an unbreakable clause (e.g. one long search term)

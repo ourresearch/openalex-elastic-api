@@ -4425,10 +4425,10 @@ rows:
   tags: [pipeline]
   provenance:
     type: "spec design"
-    label: 'Walks wait for Rung 2'
+    label: 'Walk before splitting (oxjob #1535; was "walks wait for Rung 2")'
   status: error
-  oql: 'get works where year > (2020); then get each author of those works'
-  diagnostic: OQL_WALK_NOT_YET
+  oql: 'get works where year > (2020); then group those works by year; then get each author of those works'
+  diagnostic: OQL_WALK_AFTER_SPLIT
 - id: 226
   tags: [pipeline]
   provenance:
@@ -4461,3 +4461,161 @@ rows:
   status: error
   oql: 'get works where year > (2020); then group those works by year where h-index > (20)'
   diagnostic: OQL_BAD_GROUP_FILTER
+- id: 230
+  tags: [pipeline, walk, calculate]
+  provenance:
+    type: "spec design"
+    label: '#1512 example 4: each MIT author''s mean FWCI on all their papers (oxjob #1535)'
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: |-
+    get works where institution is (I63966007 [MIT]);
+    then get each author of those works;
+    then get all that author's works;
+    then calculate mean FWCI
+  oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}], "walks": [{"column_id": "authorships.author.id", "each": true}, {"to": "works"}], "calculate": [{"measure": "mean", "column_id": "fwci"}]}
+- id: 231
+  tags: [pipeline, walk, calculate]
+  provenance:
+    type: "spec design"
+    label: '#1512 example 5: distinct authors who published on CRISPR (oxjob #1535)'
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: |-
+    get works where topic is (T10878 [CRISPR and Genetic Engineering]);
+    then get authors of those works;
+    then calculate count
+  oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}], "walks": [{"column_id": "authorships.author.id", "each": false}], "calculate": [{"measure": "count"}]}
+- id: 232
+  tags: [pipeline, walk, calculate]
+  provenance:
+    type: "spec design"
+    label: '#1512 example 7: kelp authors with h-index above 20, their total papers (oxjob #1535)'
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: |-
+    get works where title-abstract has (kelp);
+    then get each author of those works where h-index > (20);
+    then get all that author's works;
+    then calculate count
+  oqo: {"get_rows": "works", "filter_rows": [{"column_id": "title_and_abstract.search", "value": "kelp", "operator": "has"}], "walks": [{"column_id": "authorships.author.id", "each": true, "where": {"column_id": "summary_stats.h_index", "value": 20, "operator": ">"}}, {"to": "works"}], "calculate": [{"measure": "count"}]}
+- id: 233
+  tags: [pipeline, walk]
+  provenance:
+    type: "spec design"
+    label: '#1512 example 8: recent work by the authors of this month''s neuromorphic papers, one list (oxjob #1535)'
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: |-
+    get works where title has (neuromorphic) and date >= (2026-09-14);
+    then get authors of those works;
+    then get all those authors' works where date >= (2026-08-01)
+  oqo: {"get_rows": "works", "filter_rows": [{"column_id": "display_name.search", "value": "neuromorphic", "operator": "has"}, {"column_id": "from_publication_date", "value": "2026-09-14"}], "walks": [{"column_id": "authorships.author.id", "each": false}, {"to": "works", "where": {"column_id": "from_publication_date", "value": "2026-08-01"}}]}
+- id: 234
+  tags: [pipeline, query-set, group-by, calculate]
+  provenance:
+    type: "spec design"
+    label: '#1512 example 11: which countries cite the University of Kansas''s papers (oxjob #1535)'
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: |-
+    get works where it cites works in (
+        get works where institution is (I146416000)
+      );
+    then group those works by country;
+    then calculate count
+  oqo: {"get_rows": "works", "filter_rows": [{"column_id": "referenced_works", "operator": "in", "value": {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I146416000"}]}}], "group_by": [{"column_id": "authorships.countries"}], "calculate": [{"measure": "count"}]}
+- id: 235
+  tags: [pipeline, walk, calculate]
+  provenance:
+    type: "spec design"
+    label: '#1512 example 12: Stanford''s journals since 2020 and the OA share of all their papers (oxjob #1535)'
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: |-
+    get works where institution is (I97018004 [Stanford]) and year >= (2020);
+    then get each source of those works;
+    then get all that source's works;
+    then calculate percent open access
+  oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I97018004"}, {"column_id": "publication_year", "value": 2020, "operator": ">="}], "walks": [{"column_id": "primary_location.source.id", "each": true}, {"to": "works"}], "calculate": [{"measure": "percent", "column_id": "open_access.is_oa"}]}
+- id: 236
+  tags: [pipeline, walk, calculate, group-by]
+  provenance:
+    type: "spec design"
+    label: 'Start from listed things, one result each, all their works by year (oxjob #1535)'
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: |-
+    get each institution in (I63966007, I97018004);
+    then get all that institution's works;
+    then group those works by year;
+    then calculate count, mean FWCI
+  oqo: {"get_rows": "institutions", "each": true, "filter_rows": [{"join": "or", "filters": [{"column_id": "ids.openalex", "value": "I63966007"}, {"column_id": "ids.openalex", "value": "I97018004"}]}], "walks": [{"to": "works"}], "group_by": [{"column_id": "publication_year"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}]}
+- id: 237
+  tags: [pipeline, query-set, negation]
+  provenance:
+    type: "spec design"
+    label: 'Negated relation on the verb, a set by a whole query (oxjob #1535)'
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: |-
+    get works where year >= (2025)
+      and it doesn't cite works in (
+        get works where institution is (I146416000)
+      )
+  oqo: {"get_rows": "works", "filter_rows": [{"column_id": "referenced_works", "operator": "in", "is_negated": true, "value": {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I146416000"}]}}, {"column_id": "publication_year", "value": 2025, "operator": ">="}]}
+- id: 238
+  tags: [pipeline, query-set]
+  provenance:
+    type: "spec design"
+    label: 'Works by the authors of a set of works, as a field set (oxjob #1535)'
+  oxurl_status: oql-only
+  oxurl: null
+  status: ok
+  oql: |-
+    get works where author is in (
+        get works where year >= (2022) and title-abstract has (kelp);
+        then get authors of those works
+      )
+      and year >= (2025)
+  oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.author.id", "operator": "in", "value": {"get_rows": "works", "filter_rows": [{"column_id": "title_and_abstract.search", "value": "kelp", "operator": "has"}, {"column_id": "publication_year", "value": 2022, "operator": ">="}], "walks": [{"column_id": "authorships.author.id", "each": false}]}}, {"column_id": "publication_year", "value": 2025, "operator": ">="}]}
+- id: 239
+  tags: [pipeline, query-set]
+  provenance:
+    type: "spec design"
+    label: 'A set of the wrong type is an error carrying the fixed whole query (oxjob #1535 acceptance 4)'
+  status: error
+  oql: 'get works where it cites works in (get works where title has (kelp); then get each author of those works)'
+  diagnostic: OQL_QUERY_SET_TYPE
+- id: 240
+  tags: [pipeline, walk]
+  provenance:
+    type: "spec design"
+    label: 'A walk back names what the query holds: that (each) or those (the set) (oxjob #1535)'
+  status: error
+  oql: 'get works where year > (2020); then get authors of those works; then get all that author''s works'
+  diagnostic: OQL_WRONG_SET
+- id: 241
+  tags: [pipeline, walk]
+  provenance:
+    type: "spec design"
+    label: 'Splits divide works: walk back first (oxjob #1535)'
+  status: error
+  oql: 'get works where year > (2020); then get each author of those works; then group those authors by year'
+  diagnostic: OQL_SPLIT_NEEDS_WORKS
+- id: 242
+  tags: [pipeline, query-set]
+  provenance:
+    type: "spec design"
+    label: 'A query in parentheses returns things, not numbers (oxjob #1535)'
+  status: error
+  oql: 'get works where author is in (get works where title has (kelp); then get authors of those works; then calculate count)'
+  diagnostic: OQL_QUERY_SET_RETURNS_NUMBERS
