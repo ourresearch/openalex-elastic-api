@@ -506,7 +506,10 @@ def run_each(oqo: OQO, plan: dict, ctx: Ctx) -> dict:
     m_aggs = A._measure_aggs(measures, ctx.works_fields)
     keys, field = plan["keys"], plan["field"]
     core = _core_filter(oqo, ctx)
-    chunks = [keys[i:i + PART_THINGS] for i in range(0, len(keys), PART_THINGS)] or [[]]
+    # at least one partition per call slot, so a small walk uses all 8 too (31K KU
+    # authors in 2 partitions of 25K took 6 s; a few prolific authors carry most works)
+    size = max(1_000, min(PART_THINGS, math.ceil(len(keys) / INFLIGHT)))
+    chunks = [keys[i:i + size] for i in range(0, len(keys), size)] or [[]]
 
     def part(chunk):
         if not chunk:
@@ -582,6 +585,89 @@ def _meta(oqo: OQO, ctx: Ctx, count: int, groups: Optional[int]) -> dict:
             "more_groups": False, "next_cursor": None, "measures": [],
             "es_calls": ctx.deadline.calls, "elapsed_ms": ctx.deadline.elapsed_ms(),
             "steps": ctx.deadline.log, "cost": walk_price(oqo, ctx.deadline.calls)}
+
+
+def check(oqo: OQO, connection) -> dict:
+    """The free `/query` check for walks and sets: limits with their fixes, the time
+    estimate against the budget, the price. One cheap count per walk or set (how
+    many things or works it would list); never the walk itself."""
+    ctx = Ctx(connection, A.Deadline())
+    limits: List[dict] = []
+    est, calls, note = EST_OVERHEAD_S, 1, None
+
+    def add_set(inner: OQO, column: str):
+        nonlocal est, calls, note
+        try:
+            if column == "cited_by":
+                n = count_distinct(ctx, _works_query(inner, ctx), "referenced_works",
+                                   "counting the set's references")
+            elif result_entity(inner) == "works" and not inner.walks:
+                n = ctx.search({"size": 0, "track_total_hits": True,
+                                "query": _works_query(inner, ctx)},
+                               "counting the set")["hits"]["total"]["value"]
+            elif inner.walks and inner.walks[-1].to is None:
+                link = inner.walks[-1].column_id
+                n = count_distinct(ctx, _works_query(inner, ctx), ctx.raw_field(link),
+                                   "counting the set")
+            else:
+                note = "the size of a set that walks out and back is known only when it runs"
+                return
+        except A.AnalyticsError as e:
+            limits.append(e.to_dict())
+            return
+        calls += 2 + math.ceil(n / 10_000) + 1     # year split, pages, no-year, count
+        est += n / EST_IDS_PER_S + n / EST_FILTER_IDS_PER_S
+        if n > MAX_SET_IDS:
+            limits.append(_too_big("uses a set of {n} ids", n, MAX_SET_IDS,
+                                   "Narrow the query in parentheses (a shorter year range, a "
+                                   "smaller institution or topic), or save the set as a "
+                                   "collection.").to_dict())
+
+    def visit(node):
+        if isinstance(node, BranchFilter):
+            for f in node.filters:
+                visit(f)
+        elif isinstance(node, LeafFilter) and isinstance(node.value, OQO):
+            add_set(node.value, node.column_id)
+    for f in oqo.filter_rows:
+        visit(f)
+    out = next((w for w in oqo.walks if w.to is None), None)
+    back = next((w for w in oqo.walks if w.to is not None), None)
+    if out is not None and (back is not None or oqo.calculate or out.where is not None):
+        entity = entity_for_link(out.column_id)
+        try:
+            n = count_distinct(ctx, _works_query(replace(oqo, filter_rows=[
+                f for f in oqo.filter_rows if not has_query_value(f)]), ctx),
+                ctx.raw_field(out.column_id), f"counting the {plural(entity)}")
+        except A.AnalyticsError as e:
+            limits.append(e.to_dict())
+            n = 0
+        if back is None and not out.where and oqo.calculate:
+            # a distinct count: exact listing while it fits, else one approximate call
+            if n <= EXACT_COUNT_MAX:
+                est += n / 200_000
+                calls += math.ceil(n * 1.15 / LIST_PART)
+        else:
+            est += n / EST_THINGS_PER_S
+            size = max(1_000, min(PART_THINGS, math.ceil(max(n, 1) / INFLIGHT)))
+            calls += (math.ceil(n * 1.15 / LIST_PART) + math.ceil(n / size) + 1
+                      + (math.ceil(n / 10_000) if out.where is not None else 0))
+    estimate = {"seconds": round(est, 1), "es_calls": calls,
+                "budget_seconds": A.TIME_BUDGET_S, "within_budget": est <= A.TIME_BUDGET_S}
+    if est > A.TIME_BUDGET_S and not any(x["error"] == "query_too_slow" for x in limits):
+        limits.append({"error": "query_too_slow",
+                       "message": (f"This query is estimated at {est:,.0f} seconds; queries "
+                                   f"get about {int(A.TIME_BUDGET_S)}."),
+                       "fix": ("Narrow the starting works (a shorter year range, a smaller "
+                               "institution or topic), or filter the things you walk to "
+                               "(get each author of those works where ...).")})
+    if limits:
+        estimate["within_budget"] = False
+    out_d = {"valid": not limits, "limits": limits, "estimate": estimate,
+             "cost": walk_price(oqo, calls)}
+    if note:
+        out_d["note"] = note
+    return out_d
 
 
 def walk_price(oqo: OQO, calls: Optional[int] = None) -> dict:
