@@ -4211,7 +4211,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is (I63966007 [no entity found]);
+    get works where institution is (I63966007 [MIT]);
     then group those works by open access status;
     then calculate count, mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}], "group_by": [{"column_id": "open_access.oa_status"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}]}
@@ -4224,7 +4224,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is (I63966007 [no entity found]);
+    get works where institution is (I63966007 [MIT]);
     then group those works by author;
     then calculate mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}], "group_by": [{"column_id": "authorships.author.id"}], "calculate": [{"measure": "mean", "column_id": "fwci"}]}
@@ -4265,8 +4265,8 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where topic is (T10878 [no entity found]);
-    then group those works by institution in (I63966007 [no entity found], I97018004 [Stanford], I136199984 [Harvard]);
+    get works where topic is (T10878 [CRISPR and Genetic Engineering]);
+    then group those works by institution in (I63966007 [MIT], I97018004 [Stanford], I136199984 [Harvard]);
     then calculate count, mean FWCI, percent open access
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}], "group_by": [{"column_id": "authorships.institutions.lineage", "values": ["I63966007", "I97018004", "I136199984"]}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}, {"measure": "percent", "column_id": "open_access.is_oa"}]}
 - id: 213
@@ -4305,7 +4305,7 @@ rows:
   status: ok
   oql: |-
     get works where year >= (2016);
-    then group those works into ((institution is (I99464096 [no entity found])), (country is (BE [Belgium])));
+    then group those works into ((institution is (I99464096 [KU Leuven])), (country is (BE [Belgium])));
     then group those works again by SDG;
     then calculate count, percent of those works
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "publication_year", "value": 2016, "operator": ">="}], "group_by": [{"conditions": [{"column_id": "authorships.institutions.lineage", "value": "I99464096"}, {"column_id": "authorships.countries", "value": "BE"}]}, {"column_id": "sustainable_development_goals.id"}], "calculate": [{"measure": "count"}, {"measure": "percent_of_those"}]}
@@ -4332,7 +4332,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is (I63966007 [no entity found]) and year >= (2015);
+    get works where institution is (I63966007 [MIT]) and year >= (2015);
     then group those works into citation count bins at (1, 10, 100);
     then calculate count, mean FWCI
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "authorships.institutions.lineage", "value": "I63966007"}, {"column_id": "publication_year", "value": 2015, "operator": ">="}], "group_by": [{"column_id": "cited_by_count", "bins": {"at": [1, 10, 100]}}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}]}
@@ -4345,7 +4345,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is (I63966007 [no entity found]) and year >= (2020);
+    get works where institution is (I63966007 [MIT]) and year >= (2020);
     then group those works by year;
     then group those works again into FWCI bins of (0.5);
     then calculate count
@@ -4374,7 +4374,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where institution is (I146416000 [no entity found]);
+    get works where institution is (I146416000 [University of Kansas]);
     then group those works by author
       where count of those works >= (5)
       and that author is not in (col_abc123);
@@ -4389,7 +4389,7 @@ rows:
   oxurl: null
   status: ok
   oql: |-
-    get works where topic is (T10878 [no entity found]);
+    get works where topic is (T10878 [CRISPR and Genetic Engineering]);
     then calculate count, mean FWCI, percent open access, median citation count
   oqo: {"get_rows": "works", "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}], "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"}, {"measure": "percent", "column_id": "open_access.is_oa"}, {"measure": "median", "column_id": "cited_by_count"}]}
 - id: 222

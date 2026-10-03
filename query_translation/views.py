@@ -406,11 +406,11 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
     from query_translation import oql_lang as _oql_lang
     from query_translation.x_query import requested_style
     style = requested_style() or _oql_lang.CANONICAL_STYLE
-    if canonical_oqo.uses_pipeline or style == "pipeline":
+    from query_translation.oql_pipeline import render_pipeline_tree, stringify_pipeline
+    if canonical_oqo.uses_pipeline:
         # The pipeline language (oxjob #1530): its own renderer; the builder tree
         # (oql_render_v2) doesn't know steps yet, so it's null and the website shows
         # the text. Plus the free check: limits, time estimate, price.
-        from query_translation.oql_pipeline import render_pipeline_tree, stringify_pipeline
         oql_output, tree = render_pipeline_tree(canonical_oqo, resolver)
         out = {
             "oxurl": None, "oql": oql_output, "oql_oneline": stringify_pipeline(tree),
@@ -440,6 +440,16 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
         warnings.append(ValidationError(
             type="oql_not_representable", message=e.message
         ))
+    if style == "pipeline" and oql_output is not None:
+        # A plain query in the pipeline style: only the text changes. It keeps its
+        # URL, the builder tree (which is about the where-clause, not the text
+        # style) and today's executor, so no pipeline check.
+        try:
+            oql_output, tree = render_pipeline_tree(canonical_oqo, resolver)
+            oql_oneline = stringify_pipeline(tree)
+        except OQLError as e:
+            oql_output, oql_oneline = None, None
+            warnings.append(ValidationError(type="oql_not_representable", message=e.message))
 
     # Build response
     return {
