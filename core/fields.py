@@ -865,7 +865,7 @@ class SearchField(Field):
             )
         elif (
             self.param in ("default.search", "default.search.exact", "fulltext.search", "fulltext.search.exact")
-            and is_works and settings.SEARCH_KEYWORDS
+            and is_works and getattr(settings, "SEARCH_KEYWORDS", True)
         ):
             # The broad works search (search=, its echo fulltext.search, and the
             # deprecated alias default.search) gains keywords as one query, so

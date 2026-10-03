@@ -84,7 +84,8 @@ def test_long_pasted_text_skips_the_lookup():
 
 
 def test_scoped_search_wraps_title_abstract_with_saturation(monkeypatch):
-    monkeypatch.setattr(settings, "CITATION_SCALING", "sat")
+    import core.search as cs
+    monkeypatch.setattr(cs.settings, "CITATION_SCALING", "sat", raising=False)
     d = scoped_search_query("remote work productivity", "title_abstract_keywords", "default").to_dict()
     script = d["function_score"]["functions"][0]["script_score"]["script"]["source"]
     assert "c / (c + 100.0)" in script
@@ -97,7 +98,8 @@ def test_broad_search_keeps_fulltext():
 
 
 def test_citation_scaling_switch_reverts_to_sqrt(monkeypatch):
-    monkeypatch.setattr(settings, "CITATION_SCALING", "sqrt")
+    import core.search as cs
+    monkeypatch.setattr(cs.settings, "CITATION_SCALING", "sqrt", raising=False)
     d = scoped_search_query("graphene", "title_and_abstract", "default").to_dict()
     assert "Math.sqrt" in d["function_score"]["functions"][0]["script_score"]["script"]["source"]
 
@@ -157,7 +159,7 @@ def test_breaker_opens_after_five_failures():
 
 
 def test_jev_failure_returns_none(monkeypatch):
-    monkeypatch.setattr(settings, "TYPESAFE_API_KEY", "x")
+    monkeypatch.setattr(rerank.settings, "TYPESAFE_API_KEY", "x", raising=False)
     monkeypatch.setattr(rerank, "breaker", rerank.Breaker())
 
     def boom(*a, **k):
@@ -165,3 +167,25 @@ def test_jev_failure_returns_none(monkeypatch):
 
     monkeypatch.setattr(rerank._session, "post", boom)
     assert rerank.jev_probabilities("q", [{"title": "t", "venue": "v", "year": 2020, "type": "article"}]) is None
+
+
+def test_oqo_query_text_collects_search_leaves_only():
+    rows = [
+        {"column_id": "title_abstract_keywords.search", "value": "coral bleaching", "operator": "has"},
+        {"join": "or", "filters": [{"column_id": "abstract.search", "value": "reef"},
+                                   {"column_id": "title.search", "value": "heat", "is_negated": True}]},
+        {"column_id": "publication_year", "value": 2020},
+    ]
+    assert rerank.oqo_query_text(rows) == "coral bleaching ; reef"
+
+
+def test_cache_key_ignores_oqo_view_fields():
+    class Req:
+        class args:
+            @staticmethod
+            def items(multi=True):
+                return []
+    a = rerank.cache_key(Req, "works", {"filter_rows": [1], "page": 1, "per_page": 25})
+    b = rerank.cache_key(Req, "works", {"filter_rows": [1], "page": 3, "per_page": 10, "cursor": "x", "select": ["id"]})
+    c = rerank.cache_key(Req, "works", {"filter_rows": [2]})
+    assert a == b != c

@@ -75,7 +75,7 @@ def shared_view(request, fields_dict, index_name, default_sort, connection=None,
     if rerank_on:
         rerank.validate(params, index_name)
         got = None
-        if settings.RERANK_ENABLED:
+        if getattr(settings, "RERANK_ENABLED", True):
             got = rerank.reranked_response(
                 request, params, index_name,
                 lambda p: construct_query(p, fields_dict, index_name, default_sort, connection).params(timeout="5s"),
@@ -326,7 +326,7 @@ def _build_one_search_operand(
             query_str, search_scope, search_type,
             skip_citation_boost=skip_citation_boost,
         )
-    if index_name.lower().startswith("works") and settings.SEARCH_KEYWORDS:
+    if index_name.lower().startswith("works") and getattr(settings, "SEARCH_KEYWORDS", True):
         # search= / search.exact= on works: title + abstract + fulltext + keywords
         # (oxjob #1521); SEARCH_KEYWORDS=false reverts to text only.
         return works_keyword_search_query(

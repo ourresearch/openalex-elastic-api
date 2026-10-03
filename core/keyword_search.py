@@ -97,7 +97,7 @@ def lookup(spans):
     }
     try:
         es = connections.get_connection("walden")
-        js = es.search(index=settings.KEYWORDS_INDEX, body=body, request_timeout=LOOKUP_TIMEOUT_S)
+        js = es.search(index=getattr(settings, "KEYWORDS_INDEX", "keywords-v1"), body=body, request_timeout=LOOKUP_TIMEOUT_S)
     except Exception:
         return out
     for h in js["hits"]["hits"]:
@@ -282,4 +282,6 @@ def keyword_search_query(search_terms, base_query, search_type="default", with_f
     query = Q(body)
     if skip_citation_boost:
         return query
-    return SearchOpenAlex.citation_boost_query(query, scaling_type=settings.CITATION_SCALING)
+    from core.search import works_citation_scaling
+
+    return SearchOpenAlex.citation_boost_query(query, scaling_type=works_citation_scaling())

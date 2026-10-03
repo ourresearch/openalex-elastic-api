@@ -525,9 +525,62 @@ def _execute_oqo(oqo_or_dict, view_params=None):
     # contexts of the main search so the custom path can replicate them. extra_qs
     # (the is_xpac:false default) is folded into the filter list so bucket totals
     # match meta.count. Plain dict keys; legacy never sets them, so it's untouched.
-    s = Search(index=index_name, using=connection)
     params["_oqo_search_q"] = search_q
     params["_oqo_filter_qs"] = ([filter_q] if filter_q is not None else []) + extra_qs
+
+    def build_search(p):
+        s = Search(index=index_name, using=connection)
+        s = set_source(index_name, s)
+        s = _set_size(p, s)
+        s = _set_cursor_pagination(p, s)
+        if search_q is not None:
+            s = s.query(search_q)
+        if filter_q is not None:
+            s = s.filter(filter_q)
+        for extra in extra_qs:
+            s = s.filter(extra)
+        s = _apply_search_preference(oqo, s)
+        s = apply_sorting(p, fields_dict, default_sort, index_name, s)
+        return s
+
+    # rerank=true (oxjob #1521), the same feature as the /works URL door (core/rerank.py):
+    # a query-string `rerank=` (GET) or the POST body's `rerank` key (stashed on flask.g by
+    # works/views.py). A rerank cursor ("rr.") implies it.
+    from flask import g
+    import settings
+    from core import rerank
+    rerank_value = getattr(g, "rerank_param", None)
+    if rerank_value is None:
+        rerank_value = request.args.get("rerank")
+    if rerank_value is not None and str(rerank_value).lower() not in ("true", "false"):
+        return _error_response("rerank must be true or false.", "invalid_params", status=400)
+    rerank_on = index_name.lower().startswith("works") and (
+        str(rerank_value).lower() == "true" or rerank.is_rerank_cursor(params.get("cursor"))
+    )
+    if rerank_on:
+        rerank_query = rerank.oqo_query_text(oqo.filter_rows)
+        try:
+            rerank.validate(params, index_name, query=rerank_query)
+        except APIQueryParamsError as e:
+            return _error_response(str(e), "invalid_params", status=400)
+        got = None
+        if getattr(settings, "RERANK_ENABLED", True):
+            got = rerank.reranked_response(
+                request, params, index_name, lambda p: build_search(p).params(timeout="5s"),
+                query=rerank_query, key_extra=oqo.to_dict(),
+            )
+        if got is not None:
+            response, meta_overrides = got
+            result = format_response(response, params, index_name, fields_dict, None, connection)
+            result["meta"].update(meta_overrides)
+            return _finalize_oqo_response(result, oqo, MessageSchema)
+        if rerank.is_rerank_cursor(params.get("cursor")):
+            return _error_response(
+                "This cursor came from a reranked search, and rerank is off right now. Start again with cursor=*.",
+                "invalid_params", status=400,
+            )
+
+    s = Search(index=index_name, using=connection)
     s = set_source(index_name, s)
     s = _set_size(params, s)
     s = _set_cursor_pagination(params, s)
@@ -554,6 +607,8 @@ def _execute_oqo(oqo_or_dict, view_params=None):
         )
 
     result = format_response(response, params, index_name, fields_dict, s, connection)
+    if rerank_on:
+        result["meta"]["reranked"] = False
     return _finalize_oqo_response(result, oqo, MessageSchema)
 
 

@@ -116,14 +116,16 @@ def index():
         # we used to silently ignore unknown keys, the classic OQL-adjacent
         # footgun. Reject with a message that names them + the allowed set.
         view_param_keys = ("sort", "select", "page", "per_page", "cursor")
-        allowed_keys = ("oql", "oqo") + view_param_keys
+        # rerank (oxjob #1521) rides beside the view params but isn't one: it is read
+        # from flask.g by query_translation/execution.py, not folded into the OQO.
+        allowed_keys = ("oql", "oqo", "rerank") + view_param_keys
         extra_keys = [k for k in body if k not in allowed_keys]
         if extra_keys:
             return _error_response(
                 "Unexpected top-level key(s) in request body: "
                 f"{', '.join(sorted(extra_keys))}. The body may contain one of "
                 "'oql'/'oqo' plus the sibling view params "
-                "(sort/select/page/per_page/cursor). sample/seed belong inside "
+                "(sort/select/page/per_page/cursor) and rerank. sample/seed belong inside "
                 "the OQO.",
                 "invalid_body",
                 status=400,
@@ -138,6 +140,9 @@ def index():
         view_params = {
             k: body[k] for k in view_param_keys if body.get(k) is not None
         }
+        if body.get("rerank") is not None:
+            from flask import g
+            g.rerank_param = body["rerank"]
         if "oqo" in body:
             return execute_oqo_dict(body["oqo"], view_params=view_params)
         if "oql" in body:

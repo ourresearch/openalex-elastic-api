@@ -1139,7 +1139,7 @@ class SearchOpenAlex:
             # the semantic search's citation prior (core/vector_index.py).
             script_source = (
                 "double c = doc['cited_by_count'].size() == 0 ? 0 : doc['cited_by_count'].value; "
-                f"return 1 + {float(settings.CITATION_MAX_BOOST)} * c / (c + {float(settings.CITATION_PIVOT)});"
+                f"return 1 + {float(getattr(settings, 'CITATION_MAX_BOOST', 0.5))} * c / (c + {float(getattr(settings, 'CITATION_PIVOT', 100))});"
             )
         elif scaling_type == "log":
             script_source = """
@@ -1420,7 +1420,7 @@ def full_search_query_exact(search_terms, skip_citation_boost=False):
 def works_citation_scaling():
     """The citation boost every works search uses: "sat" (oxjob #1521) unless the
     CITATION_SCALING env var says "sqrt" (the one-minute revert)."""
-    return "sqrt" if settings.CITATION_SCALING == "sqrt" else "sat"
+    return "sqrt" if getattr(settings, "CITATION_SCALING", "sat") == "sqrt" else "sat"
 
 
 def works_keyword_search_query(search_terms, search_type="default", with_fulltext=False,

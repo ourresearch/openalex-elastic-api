@@ -28,6 +28,18 @@ from core.exceptions import APIQueryParamsError
 from core.fields import SearchField, TermField
 from core.filter import handle_or_query
 from core.search import full_search_query, full_search_query_exact, scoped_search_query
+
+
+@pytest.fixture(autouse=True)
+def no_keyword_lookup(monkeypatch):
+    """These tests are about the !/| value operators. Since oxjob #1521 a works search also
+    matches keywords, found by an ES lookup; with no keywords the query is the text query,
+    whatever ES a previous test left connected."""
+    import core.keyword_search as ks
+    monkeypatch.setattr(ks, "lookup", lambda spans: {s: [] for s in spans})
+    ks.keyword_record.cache_clear()
+    yield
+    ks.keyword_record.cache_clear()
 from core.shared_view import _negate, build_search_value_query
 from core.validate import validate_search_param
 

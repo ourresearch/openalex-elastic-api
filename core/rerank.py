@@ -21,8 +21,10 @@ order, so rerank never adds, removes or repeats a result and meta.count is uncha
   rerank traffic sits in the 20 req/s it keeps back.
 """
 import base64
+import datetime
 import hashlib
 import json
+import logging
 import threading
 import time
 
@@ -73,7 +75,31 @@ def query_text(params):
     return " ; ".join(p.strip() for p in parts if p and p.strip() and p != '""')
 
 
-def validate(params, index_name):
+def oqo_query_text(filter_rows):
+    """The search text of an OQO (the OQL door): every non-negated *.search leaf's value."""
+    parts = []
+
+    def walk(node):
+        if hasattr(node, "to_dict"):
+            node = node.to_dict()
+        if isinstance(node, list):
+            for x in node:
+                walk(x)
+        elif isinstance(node, dict):
+            col = node.get("column_id")
+            if isinstance(col, str):
+                if (col.endswith(".search") or col.endswith(".search.exact")) and col != "semantic.search" \
+                        and not node.get("is_negated") and node.get("value") not in (None, ""):
+                    parts.append(str(node["value"]))
+            for v in node.values():
+                if isinstance(v, (list, dict)):
+                    walk(v)
+
+    walk(filter_rows)
+    return " ; ".join(parts)
+
+
+def validate(params, index_name, query=None):
     """400 for every combination rerank can't honor; never silently ignored."""
     if not index_name.lower().startswith("works"):
         raise APIQueryParamsError("rerank is only supported on /works.")
@@ -85,8 +111,34 @@ def validate(params, index_name):
         raise APIQueryParamsError("rerank=true can't be combined with sample, which returns results in random order.")
     if params.get("sort") and params["sort"] != {"relevance_score": "desc"}:
         raise APIQueryParamsError("rerank=true reorders results by relevance, so it can't be combined with sort (other than sort=relevance_score:desc).")
-    if not query_text(params):
+    if not (query if query is not None else query_text(params)):
         raise APIQueryParamsError("rerank=true needs a search (search=, search.title_abstract_keywords=, or a .search filter).")
+
+
+logger = logging.getLogger(__name__)
+STATS_PREFIX = "rerank:stats:"
+STATS_TTL_S = 45 * 24 * 3600
+
+
+def record(outcome, ms=None):
+    """Count one rerank outcome in Redis, per UTC day (hash rerank:stats:YYYY-MM-DD):
+    computed / cache_hit / timeout / http_<code> / error / breaker_open / no_key / no_results,
+    plus computed_ms_sum and latency buckets ms_lt300 / ms_lt600 / ms_ge600 for Jev calls that answered.
+    Read with HGETALL. Failures here never affect the request."""
+    try:
+        r = _cache().cache._write_client
+        key = STATS_PREFIX + datetime.datetime.utcnow().strftime("%Y-%m-%d")
+        pipe = r.pipeline()
+        pipe.hincrby(key, outcome, 1)
+        if ms is not None:
+            pipe.hincrby(key, "computed_ms_sum", int(ms))
+            pipe.hincrby(key, "ms_lt300" if ms < 300 else "ms_lt600" if ms < 600 else "ms_ge600", 1)
+        pipe.expire(key, STATS_TTL_S)
+        pipe.execute()
+    except Exception:
+        pass
+    if outcome not in ("computed", "cache_hit", "no_results"):
+        logger.warning("rerank fallback: %s", outcome)
 
 
 # ---------- circuit breaker (per gunicorn worker process) ----------
@@ -119,32 +171,45 @@ _session = requests.Session()
 
 def jev_probabilities(query, cands):
     """p(yes) per candidate, or None on any failure (timeout, HTTP error, missing answer)."""
-    if not settings.TYPESAFE_API_KEY or not breaker.allow():
+    if not getattr(settings, "TYPESAFE_API_KEY", None):
+        record("no_key")
+        return None
+    if not breaker.allow():
+        record("breaker_open")
         return None
     state = "SEARCH QUERY: " + query + "\n\nCANDIDATES:\n\n" + "\n\n".join(
         f"[{i}] Title: {c['title']}\nVenue: {c['venue']} ({c['year']}, {c['type']})" for i, c in enumerate(cands)
     )
     body = {
-        "model": settings.JEV_MODEL,
+        "model": getattr(settings, "JEV_MODEL", "jev-1.13.0"),
         "state": state,
         "questions": {f"n{i}": {"type": "noul", "instructions": INSTRUCTIONS.format(i=i)} for i in range(len(cands))},
     }
+    t0 = time.monotonic()
     try:
         r = _session.post(
-            settings.JEV_URL, json=body,
+            getattr(settings, "JEV_URL", "https://api.typesafe.ai/v1/systemone"), json=body,
             headers={"Authorization": f"Bearer {settings.TYPESAFE_API_KEY}"},
-            timeout=(0.25, settings.RERANK_TIMEOUT_S),
+            timeout=(0.25, getattr(settings, "RERANK_TIMEOUT_S", 0.6)),
         )
         if r.status_code != 200:
-            raise ValueError(f"Jev HTTP {r.status_code}")
+            breaker.record(False)
+            record(f"http_{r.status_code}")
+            return None
         answers = r.json().get("answers") or {}
         p = [(answers.get(f"n{i}") or {}).get("noul") for i in range(len(cands))]
         if any(x is None for x in p):
             raise ValueError("Jev answer missing")
+    except requests.exceptions.Timeout:
+        breaker.record(False)
+        record("timeout")
+        return None
     except Exception:
         breaker.record(False)
+        record("error")
         return None
     breaker.record(True)
+    record("computed", (time.monotonic() - t0) * 1000)
     return [float(x) for x in p]
 
 
@@ -156,10 +221,14 @@ def _window(search, start, size):
 
 # ---------- cached order ----------
 
-def cache_key(request, index_name):
+def cache_key(request, index_name, extra=None):
+    """extra: what else defines the query (the OQO for the OQL door, whose POST body isn't in the args).
+    Its view fields (page, per_page, cursor, select) are dropped like the URL's: every page shares one order."""
+    if isinstance(extra, dict):
+        extra = {k: v for k, v in extra.items() if k not in ("page", "per_page", "cursor", "select")}
     args = sorted((k, v) for k, v in request.args.items(multi=True) if k not in NOT_IN_CACHE_KEY)
     raw = json.dumps([index_name, settings.JEV_MODEL, settings.RERANK_WINDOW, settings.CITATION_SCALING,
-                      settings.SEARCH_KEYWORDS, args])
+                      settings.SEARCH_KEYWORDS, args, extra], sort_keys=True, default=str)
     return CACHE_PREFIX + hashlib.sha1(raw.encode()).hexdigest()
 
 
@@ -182,7 +251,7 @@ def cache_set(key, entry):
         pass
 
 
-def compute_order(base_search, params, key):
+def compute_order(base_search, params, key, query=None):
     """Fetch the normal top RERANK_WINDOW (titles only), ask Jev, cache the order.
     Returns the cache entry, or None if Jev didn't answer in time."""
     window = settings.RERANK_WINDOW
@@ -194,10 +263,12 @@ def compute_order(base_search, params, key):
         venue = (((src.get("primary_location") or {}).get("source")) or {}).get("display_name") or ""
         cands.append({"id": src.get("id"), "title": src.get("display_name") or "", "venue": venue,
                       "year": src.get("publication_year"), "type": src.get("type")})
+    if not cands:
+        record("no_results")
     entry = {"ids": [], "scores": [], "count": resp.hits.total.value,
              "after": raw[-1].get("sort") if len(raw) == window else None}
     if cands:
-        p = jev_probabilities(query_text(params), cands)
+        p = jev_probabilities(query if query is not None else query_text(params), cands)
         if p is None:
             return None
         order = sorted(range(len(cands)), key=lambda i: (-p[i], i))
@@ -232,7 +303,7 @@ def is_rerank_cursor(cursor):
 
 # ---------- the reranked page ----------
 
-def reranked_response(request, params, index_name, build_search):
+def reranked_response(request, params, index_name, build_search, query=None, key_extra=None):
     """The reranked page as (response, meta_overrides), or None to run the normal
     search instead (page past the window, a normal cursor, or Jev unavailable).
 
@@ -250,8 +321,12 @@ def reranked_response(request, params, index_name, build_search):
 
     first_page = dict(params, cursor=None, page=1)
     base = build_search(first_page)
-    key = rr["k"] if rr else cache_key(request, index_name)
-    entry = cache_get(key) or compute_order(base, params, key)
+    key = rr["k"] if rr else cache_key(request, index_name, key_extra)
+    entry = cache_get(key)
+    if entry is not None:
+        record("cache_hit")
+    else:
+        entry = compute_order(base, params, key, query)
     if entry is None:
         if not rr:
             return None
