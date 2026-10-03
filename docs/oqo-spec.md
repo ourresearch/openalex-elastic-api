@@ -292,6 +292,46 @@ Dimension order is meaningful and is preserved by the canonicalizer.
   which don't exist in a grouped response) and is treated as ignored. The NL→OQO
   agent (oxjob #344) therefore omits sort when it emits a `group_by`.
 
+### 8.1 Splits, group filters and calculations (oxjob #1530, schema v1.5)
+
+OQL's pipeline language (`get works where ...; then group those works by ...; then
+calculate ...`) keeps `group_by` as the list of splits (up to three, outermost first)
+and adds `calculate`. A plain `{column_id}` split is today's group-by; a split may
+instead carry **one** of:
+
+| Field | OQL | Meaning |
+|---|---|---|
+| `values` | `by institution in (I1, I2)` / `by title-abstract search in (("a"), ("b"))` | one group per listed value (bare values, or one collection id) or per search (a filter tree each), in order, empty ones included; up to 100 |
+| `bins` | `into citation count bins at (1, 10, 100)` / `bins of (10)` | `{"at": [edges]}` or `{"of": width}` on a number column |
+| `conditions` | `into ((institution is (I1)), (country is (BE)))` | one group per filter tree, in order; no `column_id`; up to 100 |
+
+and any split may carry `where`, the **group filter**: a tree of `MeasureFilter` leaves
+(`{"measure": "count", "operator": ">", "value": 10}` = `count of those works > (10)`)
+and ordinary leaves in the **group entity's** columns (`summary_stats.h_index` on
+author groups; `ids.openalex` / `collection` for `that author is (not) in (...)`; the
+relations `co_author` (author groups) and `collaborator` (institution groups)).
+
+`calculate` is a list of `Measure`s: `count`; `mean` / `median` / `sum` / `min` / `max`
+of a number column (`min` / `max` also of a date); `percent` of a yes/no column;
+`percent_of_those` (each group's share of the set it came from); `value` (a split's
+own field shown beside each group, e.g. each author's `summary_stats.h_index`).
+
+```jsonc
+{ "get_rows": "works",
+  "filter_rows": [ { "column_id": "primary_topic.id", "value": "T10878" } ],
+  "group_by":    [ { "column_id": "authorships.institutions.lineage",
+                     "values": [ "I63966007", "I97018004", "I136199984" ] } ],
+  "calculate":   [ { "measure": "count" }, { "measure": "mean", "column_id": "fwci" },
+                   { "measure": "percent", "column_id": "open_access.is_oa" } ] }
+```
+
+An OQO with any of these (`OQO.uses_pipeline`) runs on `query_translation/analytics.py`
+(one Elasticsearch request; a lookup call for group filters on a group's own fields)
+and answers with `group_by` rows carrying one key per measure (`mean_fwci`,
+`percent_open_access_is_oa`, `percent_of_those`), a `total` row for the whole starting
+set (with the inner splits), and `meta.measures` / `meta.cost`. It has no URL form
+(`x_query.url` is null). Limits and the time budget: #1530 `work/DESIGN.md` § 4.
+
 ---
 
 ## 9. Documented `/works` default: `is_xpac:false`

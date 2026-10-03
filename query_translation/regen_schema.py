@@ -38,7 +38,7 @@ def build_schema() -> dict:
 
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://openalex.org/schemas/oqo/v1.4",
+        "$id": "https://openalex.org/schemas/oqo/v1.5",
         "name": "OpenAlex_Query_Object",
         "description": (
             "The canonical JSON representation for OpenAlex queries. OQO is the "
@@ -91,12 +91,24 @@ def build_schema() -> dict:
             "group_by": {
                 "type": "array",
                 "description": (
-                    "Group-by dimensions (Stage B). A LIST, so multi-dimensional "
-                    "grouping (e.g. topic x year) is expressible; dimension order "
-                    "is meaningful. Live serving impl is single-dimension only "
-                    "(multi-dim deferred to #297)."
+                    "The splits, outermost first (up to three): OQL's `group those "
+                    "works by ...` steps (oxjob #1530). Order is meaningful. A split "
+                    "is a column, or listed values / searches of a column, or bins of "
+                    "a number column, or a list of conditions; any split may filter "
+                    "its groups (`where`)."
                 ),
                 "items": {"$ref": "#/$defs/GroupBy"},
+                "maxItems": 3,
+                "default": [],
+            },
+            "calculate": {
+                "type": "array",
+                "description": (
+                    "OQL's final `calculate ...` step (oxjob #1530): the measures "
+                    "computed for each group and for the total row (the whole "
+                    "starting set), or for the whole set when there is no split."
+                ),
+                "items": {"$ref": "#/$defs/Measure"},
                 "default": [],
             },
             "sample": {
@@ -195,15 +207,98 @@ def build_schema() -> dict:
             },
             "GroupBy": {
                 "type": "object",
-                "description": "A single group-by dimension.",
-                "required": ["column_id"],
+                "description": (
+                    "One split. A column alone is today's group-by; at most one of "
+                    "`values`, `bins`, `conditions` refines it; `where` filters the "
+                    "groups. A split into conditions has no column_id."
+                ),
                 "additionalProperties": False,
                 "properties": {
                     "column_id": {
                         "type": "string",
-                        "description": "The column to group by.",
+                        "description": "The column to split by (absent for a split into conditions).",
                         "examples": ["primary_topic.id", "publication_year", "authorships.countries", "sustainable_development_goals.id"],
                     },
+                    "values": {
+                        "type": "array",
+                        "maxItems": 100,
+                        "description": (
+                            "Split by these values only, one group each, in this order "
+                            "(`by institution in (I1, I2)`): bare values of the column, "
+                            "or one collection id; for a search column "
+                            "(`title_and_abstract.search`), one filter tree per search."
+                        ),
+                        "items": {"anyOf": [{"type": "string"}, {"type": "integer"},
+                                            {"$ref": "#/$defs/Filter"}]},
+                    },
+                    "bins": {
+                        "type": "object",
+                        "description": "Bins of a number column: `{\"at\": [edges]}` or `{\"of\": width}`.",
+                        "properties": {
+                            "at": {"type": "array", "items": {"type": "number"}, "maxItems": 100},
+                            "of": {"type": "number", "exclusiveMinimum": 0},
+                        },
+                        "additionalProperties": False,
+                    },
+                    "conditions": {
+                        "type": "array",
+                        "maxItems": 100,
+                        "description": "One group per condition (`into ((...), (...))`), in this order.",
+                        "items": {"$ref": "#/$defs/Filter"},
+                    },
+                    "where": {
+                        "$ref": "#/$defs/GroupFilter",
+                        "description": (
+                            "The group filter: measure conditions on each group's works "
+                            "(`count of those works > (10)`) and the group's own fields "
+                            "(a leaf in the group entity's columns: `summary_stats.h_index`, "
+                            "`ids.openalex`, `collection`; the relations `co_author` on "
+                            "author groups and `collaborator` on institution groups)."
+                        ),
+                    },
+                },
+            },
+            "GroupFilter": {
+                "description": "A group filter node: a measure condition, a leaf, or a branch of them.",
+                "oneOf": [
+                    {"$ref": "#/$defs/MeasureFilter"},
+                    {"$ref": "#/$defs/LeafFilter"},
+                    {"type": "object", "required": ["join", "filters"], "additionalProperties": False,
+                     "properties": {
+                         "join": {"type": "string", "enum": ["and", "or"]},
+                         "filters": {"type": "array", "minItems": 1,
+                                     "items": {"$ref": "#/$defs/GroupFilter"}},
+                         "is_negated": {"type": "boolean", "default": False}}},
+                ],
+            },
+            "MeasureFilter": {
+                "type": "object",
+                "description": "A condition on a measure of each group's works: `count of those works > (10)`.",
+                "required": ["measure", "value"],
+                "additionalProperties": False,
+                "properties": {
+                    "measure": {"type": "string", "enum": ["count", "mean", "median", "sum", "min", "max", "percent"]},
+                    "column_id": {"type": "string", "description": "The measured column (absent for count)."},
+                    "operator": {"type": "string", "enum": ["is", ">", ">=", "<", "<="], "default": ">"},
+                    "value": {"type": "number"},
+                    "is_negated": {"type": "boolean", "default": False},
+                },
+            },
+            "Measure": {
+                "type": "object",
+                "description": (
+                    "One calculation: `count`; `mean`/`median`/`sum`/`min`/`max` of a "
+                    "number column (min/max also of a date); `percent` of a yes/no "
+                    "column; `percent_of_those` (each group's share of the set it came "
+                    "from); `value` (a split's own field shown beside each group, e.g. "
+                    "an author's `summary_stats.h_index`)."
+                ),
+                "required": ["measure"],
+                "additionalProperties": False,
+                "properties": {
+                    "measure": {"type": "string", "enum": ["count", "mean", "median", "sum", "min", "max",
+                                                           "percent", "percent_of_those", "value"]},
+                    "column_id": {"type": "string"},
                 },
             },
             "Operator": {
@@ -247,6 +342,28 @@ def build_schema() -> dict:
                 "value": {"get_rows": "works",
                           "filter_rows": [{"column_id": "publication_year", "value": 1976, "operator": ">="}],
                           "group_by": [{"column_id": "primary_topic.id"}, {"column_id": "publication_year"}]},
+            },
+            {
+                "description": (
+                    "Calculations by listed values (oxjob #1530): get works where topic is "
+                    "(T10878); then group those works by institution in (I63966007, "
+                    "I97018004); then calculate count, mean FWCI, percent open access"),
+                "value": {"get_rows": "works",
+                          "filter_rows": [{"column_id": "primary_topic.id", "value": "T10878"}],
+                          "group_by": [{"column_id": "authorships.institutions.lineage",
+                                        "values": ["I63966007", "I97018004"]}],
+                          "calculate": [{"measure": "count"}, {"measure": "mean", "column_id": "fwci"},
+                                        {"measure": "percent", "column_id": "open_access.is_oa"}]},
+            },
+            {
+                "description": (
+                    "A group filter (oxjob #1530): ... then group those works by author "
+                    "where count of those works > (10) and h-index > (20)"),
+                "value": {"get_rows": "works",
+                          "filter_rows": [{"column_id": "title_and_abstract.search", "value": "kelp", "operator": "has"}],
+                          "group_by": [{"column_id": "authorships.author.id", "where": {"join": "and", "filters": [
+                              {"measure": "count", "operator": ">", "value": 10},
+                              {"column_id": "summary_stats.h_index", "operator": ">", "value": 20}]}}]},
             },
             {
                 "description": "Reproducible random sample (seed makes the sample stable)",
