@@ -4,7 +4,7 @@
 /* No-drift gate: tests/oql/test_grammar_ebnf.py (oxjob #361). */
 /* Renders to a railroad diagram via the rr tool (oxjob #386 recipe). */
 
-query        ::= entity ( 'where' conditions )? directive*
+query        ::= 'get'? entity ( 'where' conditions )? ( directive | step )*
 
 entity       ::= word
 
@@ -13,6 +13,42 @@ directive    ::= groupBy | sample | ';'
 groupBy      ::= 'group' 'by' word ( ',' word )*
 
 sample       ::= 'sample' NUMBER ( 'seed' NUMBER )?
+
+/* The pipeline language (oxjob #1530; spec: #1512 SYNTAX.md). Canonical form:
+   `get works where ...; then group those works by ...; then group those works
+   again by ...; then calculate ...`. A calculation is always the last step; up to
+   three splits; `those <entity>` must name what the query holds; `again` is
+   optional on input and always rendered on every split after the first. */
+step         ::= ';'? 'then' ( split | calculation | sampleStep )
+
+split        ::= 'group' those? 'again'? ( 'by' splitBy | 'into' splitInto )
+                 ( 'where' conditions )?   /* a group filter: measureClause, the
+                                              group's own fields, thatClause */
+
+those        ::= 'those' word+
+
+splitBy      ::= field ( 'search'? 'in' '(' searchItem ( ',' searchItem )* ')'
+                       | 'in' '(' scalar ( ',' scalar )* ')'
+                       | bins )?
+
+splitInto    ::= '(' '(' conditions ')' ( ',' '(' conditions ')' )* ')'
+               | field bins
+
+searchItem   ::= '(' searchExpr ')'     /* up to 5 AND/OR/NOT; up to 100 items */
+
+bins         ::= 'bins' ( 'at' '(' NUMBER ( ',' NUMBER )* ')' | 'of' '(' NUMBER ')' )
+
+calculation  ::= 'calculate' measure ( ( ',' | 'and' ) measure )*
+
+measure      ::= 'count' ( 'of' those )?
+               | ( 'mean' | 'median' | 'sum' | 'min' | 'max' ) field ( 'of' those )?
+               | 'percent' ( 'of' those | field ( 'of' those )? )
+
+measureClause ::= measure ( '>' | '>=' | '<' | '<=' | 'is' 'not'? ) '(' NUMBER ')'
+
+thatClause   ::= 'that' word+ 'is' 'not'? ( 'in' '(' scalar ( ',' scalar )* ')' | valueGroup )
+
+sampleStep   ::= 'sample' '(' NUMBER ')' ( 'of' those )? ( 'with'? 'seed' '(' scalar ')' )?
 
 /* The `where` body is a boolean of clauses joined by infix `and`/`or`; a 2+
    body renders as the implicit-AND list `a and b`, and explicit groups use
@@ -40,6 +76,7 @@ valueClause  ::= field operator value
 field        ::= word+
 
 operator     ::= 'is' 'not'? 'in' 'collection'
+               | 'is' 'not'? 'in'      /* a set: `is in (col_x)`, `is not in (A, B)` */
                | 'is' 'not'?
                | 'is' 'similar' 'to'
                | 'has'

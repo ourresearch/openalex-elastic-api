@@ -104,6 +104,18 @@ def _parser_recognized_words():
             w = (q[0] or q[1]).strip().lower()
             if w:
                 words.add(w)
+    # The pipeline steps (oxjob #1530) test a lowercased word `w`: `w == "x"`,
+    # `w in ("a", "b")`, and the measure words in the `_MEASURE_WORDS` dict.
+    for m in re.finditer(r'\bw\s*==\s*[\'"]([^\'"]+)[\'"]', src):
+        words.add(m.group(1).lower())
+    for m in re.finditer(r"\bw\s*in\s*\(([^\)]*)\)", src):
+        for q in re.findall(r'"([^"]+)"|\'([^\']+)\'', m.group(1)):
+            w = (q[0] or q[1]).strip().lower()
+            if w:
+                words.add(w)
+    for m in re.finditer(r"_MEASURE_WORDS\s*=\s*\{([^}]*)\}", src):
+        for q in re.findall(r'"([^"]+)"\s*:', m.group(1)):
+            words.add(q.lower())
     # `and` / `or` are recognized via the `_CONNECTIVES` set (membership test),
     # not a literal `word_is(...)` — harvest that named set too.
     for m in re.finditer(r"_CONNECTIVES\s*=\s*\{([^}]*)\}", src):

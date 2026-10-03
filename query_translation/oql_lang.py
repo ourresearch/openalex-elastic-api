@@ -30,7 +30,7 @@ from typing import Dict, List, Optional, Tuple
 from query_translation.oqo import (  # noqa: E402
     OQO, LeafFilter, BranchFilter, FilterType, GroupBy, CURLY_DQUOTE_MAP,
     canonicalize_oqo_column_ids, normalize_corpus, CORPUS_CANONICAL_PHRASE,
-    VALID_ENTITY_TYPES)
+    VALID_ENTITY_TYPES, Measure, MeasureFilter, NUMERIC_MEASURES)
 
 
 # ---------------------------------------------------------------------------
@@ -1584,6 +1584,9 @@ class _Parser:
         # first error.
         self._recover_mode = False
         self._diagnostics: List[OQLError] = []
+        # Inside a split's `where` (a group filter, oxjob #1530): the measured
+        # entity, the group's entity and the split. None everywhere else.
+        self._group_ctx = None
 
     # -- editor-context hook (no-op in strict mode) --
     def _want(self, category, **payload):
@@ -1622,6 +1625,11 @@ class _Parser:
     # -- entry --
     def parse(self) -> OQO:
         self._skip_annot()
+        # The pipeline language starts with a verb (oxjob #1530): `get works where
+        # ...`. The bare-entity start stays accepted forever.
+        if self.word_is("get"):
+            self.next()
+            self._skip_annot()
         entity = self._parse_entity()
         self._entity = entity
         # Optional corpus selector parenthetical right after the entity (#481),
@@ -1629,6 +1637,7 @@ class _Parser:
         corpus = self._parse_corpus_opt()
         filters: List[FilterType] = []
         group_by: List[GroupBy] = []
+        calculate: List[Measure] = []
         sample = None
         seed = None
         self._skip_annot()
@@ -1645,7 +1654,7 @@ class _Parser:
                 filters = _flatten_and(cond)
             else:
                 filters = [cond]
-        # directives
+        # directives (classic) and steps (the pipeline language, oxjob #1530)
         while True:
             self._skip_annot()
             t = self.peek()
@@ -1654,9 +1663,45 @@ class _Parser:
             if t.kind == "SEMI":
                 self.next()
                 continue
+            if t.kind == "WORD" and t.val.lower() == "then":
+                # `; then <step>` (the `;` is optional on input)
+                self.next()
+                self._skip_annot()
+                if calculate:
+                    nt = self.peek()
+                    raise oql_error("OQL_STEP_AFTER_CALCULATE",
+                                    "a calculation must be the last step",
+                                    "move `calculate ...` to the end of the query",
+                                    nt.pos if nt else t.pos)
+                kind, val = self._parse_step(entity, len(group_by))
+                if kind == "split":
+                    group_by.append(val)
+                    if len(group_by) > MAX_SPLITS:
+                        raise oql_error(
+                            "OQL_TOO_MANY_SPLITS",
+                            f"a query can split its {_plural_noun(entity)} at most "
+                            f"{MAX_SPLITS} times; this one splits {len(group_by)} times",
+                            "drop a split, or run one query per value of the outer split",
+                            t.pos)
+                elif kind == "calculate":
+                    calculate = val
+                else:  # sample
+                    sample, seed = val
+                continue
+            if calculate:
+                raise oql_error("OQL_STEP_AFTER_CALCULATE",
+                                "a calculation must be the last step",
+                                "move `calculate ...` to the end of the query", t.pos)
             if t.kind == "WORD" and t.val.lower() == "group" and self.word_is("by", k=1):
                 self.i += 2
-                group_by = self._parse_group_by()
+                group_by = group_by + self._parse_group_by()
+                if len(group_by) > MAX_SPLITS:
+                    raise oql_error(
+                        "OQL_TOO_MANY_SPLITS",
+                        f"a query can split its {_plural_noun(entity)} at most "
+                        f"{MAX_SPLITS} times; this one splits {len(group_by)} times",
+                        "drop a split, or run one query per value of the outer split",
+                        t.pos)
             elif t.kind == "WORD" and t.val.lower() == "sample":
                 self.next()
                 sample, seed = self._parse_sample()
@@ -1675,7 +1720,7 @@ class _Parser:
         # column_id. Idempotent; downstream sees one spelling.
         return canonicalize_oqo_column_ids(
             OQO(get_rows=entity, corpus=corpus, filter_rows=filters,
-                group_by=group_by, sample=sample, seed=seed))
+                group_by=group_by, sample=sample, seed=seed, calculate=calculate))
 
     # -- editor-context entry (dual mode; oxjob #363, decision 15) --
     def parse_for_context(self) -> dict:
@@ -1790,7 +1835,7 @@ class _Parser:
                     return
                 if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
                     return
-                if t.kind == "WORD" and t.val.lower() in ("group", "sample"):
+                if t.kind == "WORD" and t.val.lower() in ("group", "sample", "then"):
                     return
                 # A new field clause begins here (e.g. `... year is abc title is x`):
                 # stop so the connective loop reports the missing AND/OR rather than
@@ -1904,7 +1949,7 @@ class _Parser:
                 operands.append(self._operand_tracked())
                 continue
             # directive keywords end the where-expression
-            if t.kind == "WORD" and t.val.lower() in ("group", "sample"):
+            if t.kind == "WORD" and t.val.lower() in ("group", "sample", "then"):
                 break
             # anything else with no connective = implicit adjacency
             if self._recover_mode:
@@ -1979,6 +2024,11 @@ class _Parser:
         # clauses also pass here but leave `_last_value_start_i` None, so the editor
         # gates them out (no enum value list to extend).
         self._last_operand_simple = True
+        # group filters (oxjob #1530): measures, `that <noun>`, co-author/collaborator
+        if self._group_ctx is not None:
+            gc = self._parse_group_clause()
+            if gc is not None:
+                return gc
         # row-subject leaf: `it cites (…)` / `it's cited by (…)` / `it's related
         # to (…)` — the pronoun claims the field slot (oxjob #557).
         rs = match_row_subject(self.toks, self.i)
@@ -2305,6 +2355,11 @@ class _Parser:
             return LeafFilter(fld.column, v, op)
         # is / is not
         negated = (op == "isnot")
+        # a set (oxjob #1530): `is [not] in (col_x)` or `is [not] in (A, B)`
+        if (self.word_is("in") and self.peek(1) is not None
+                and self.peek(1).kind == "LP" and fld.kind != "bool"):
+            self.next()
+            return self._parse_in_set(field, fld, negated)
         # boolean flag: `<name> is true|false` (oxjob #363)
         if fld.kind == "bool":
             return self._parse_bool_value(fld, negated)
@@ -2345,6 +2400,30 @@ class _Parser:
                            t2.pos if t2 else None)
         return LeafFilter(fld.column, v, "is", is_negated=negated)
 
+    def _parse_in_set(self, field: str, fld: Field, negated: bool) -> FilterType:
+        """`in (...)` always holds a set (oxjob #1530): one collection (`col_...`)
+        or an inline list of values (read as `is (A or B)`)."""
+        example = f"{field} is in (A, B)"
+        open_tok = self._list_open("set", example)
+        values: List = []
+        while True:
+            v = self._parse_scalar(fld)
+            if v not in values:
+                values.append(v)
+            if not self._list_next("set", example, len(values), open_tok):
+                break
+        cols = [v for v in values if isinstance(v, str) and v.startswith("col_")]
+        if cols:
+            if len(values) > 1:
+                raise oql_error("OQL_BAD_LIST",
+                                "a set is one collection or a list of values, not both",
+                                f"e.g. {field} is in (col_abc123), or {example}",
+                                open_tok.pos)
+            return LeafFilter(fld.column, cols[0], "in collection", is_negated=negated)
+        leaves = [LeafFilter(fld.column, v, "is") for v in values]
+        tree = leaves[0] if len(leaves) == 1 else BranchFilter("or", leaves)
+        return _negate(tree) if negated else tree
+
     def _parse_value_operand(self, fld: Field) -> FilterType:
         """One operand inside an `is (...)` value group: a `not`-prefixed operand,
         a nested `(...)` group, the null sentinel `unknown`/`null`, or one scalar
@@ -2383,7 +2462,7 @@ class _Parser:
         t = self.peek()
         if t is None or t.kind in ("RP", "SEMI", "COMMA"):
             return False
-        if t.kind == "WORD" and t.val.lower() in ("group", "sample"):
+        if t.kind == "WORD" and t.val.lower() in ("group", "sample", "then"):
             return False
         if t.kind == "WORD" and t.val.lower() in _CONNECTIVES:
             # Editor context: a connective with NOTHING after it (cursor sits right
@@ -3009,6 +3088,596 @@ class _Parser:
                 seed = st.val
                 self.next()
         return n, seed
+
+    # -- pipeline steps (oxjob #1530) --------------------------------------------
+    # `get works where ...; then group those works [again] by|into ... [where ...];
+    # then calculate ...`. Splits become GroupBy entries (outermost first), the
+    # calculation the OQO's `calculate`. Spec: #1512 SYNTAX.md "The language now".
+
+    def _parse_step(self, entity: str, n_splits: int):
+        """One step after `then`: ("split", GroupBy) | ("calculate", [Measure]) |
+        ("sample", (n, seed))."""
+        self._skip_annot()
+        t = self.peek()
+        if t is None:
+            raise oql_error("OQL_UNKNOWN_STEP", "expected a step after `then`",
+                            None, None)
+        w = t.val.lower() if t.kind == "WORD" else ""
+        if w == "group":
+            self.next()
+            return "split", self._parse_split(entity, n_splits)
+        if w == "calculate":
+            self.next()
+            return "calculate", self._parse_measures(entity)
+        if w == "sample":
+            self.next()
+            return "sample", self._parse_sample_step(entity)
+        if w == "get":
+            noun = _plural_noun(entity)
+            raise oql_error(
+                "OQL_WALK_NOT_YET",
+                "walking to related things (`get each author of those works`, "
+                "`get all that author's works`) isn't available yet",
+                f"to count or measure {noun} per author within this set, split them: "
+                f"group those {noun} by author; then calculate ...", t.pos)
+        raise oql_error("OQL_UNKNOWN_STEP", f'"{t.val}" doesn\'t start a step', None,
+                        t.pos)
+
+    def _parse_those(self, entity: str, required: bool = False):
+        """`those <plural noun>` naming the current things; optional on input, and
+        when written it must name what the query holds (type check)."""
+        noun = _plural_noun(entity)
+        if not self.word_is("those"):
+            if required:
+                t = self.peek()
+                raise oql_error("OQL_WRONG_SET", f'expected "those {noun}"',
+                                f'write "of those {noun}"', t.pos if t else None)
+            return
+        t = self.next()
+        words = noun.split()
+        got = [self.peek(k) for k in range(len(words))]
+        if all(g is not None and g.kind == "WORD" and g.val.lower() == w
+               for g, w in zip(got, words)):
+            self.i += len(words)
+            return
+        nt = self.peek()
+        said = nt.val if nt is not None else ""
+        raise oql_error(
+            "OQL_WRONG_SET",
+            f'this query holds {noun}, not {said}: every step works on the {noun} '
+            f'the query started with',
+            f'write "those {noun}" (to split {noun} by {said.rstrip("s")}: '
+            f'group those {noun} by {said.rstrip("s")})',
+            nt.pos if nt is not None else t.pos)
+
+    def _parse_of_those(self, entity: str):
+        """Optional `of those <noun>` after a measure."""
+        if self.word_is("of") and self.word_is("those", k=1):
+            self.next()
+            self._parse_those(entity, required=True)
+
+    def _parse_split(self, entity: str, n_splits: int) -> GroupBy:
+        self._skip_annot()
+        self._parse_those(entity)
+        if self.word_is("again"):
+            self.next()
+        noun = _plural_noun(entity)
+        if self.word_is("by"):
+            self.next()
+            g = self._parse_split_by(entity)
+        elif self.word_is("into"):
+            self.next()
+            g = self._parse_split_into(entity)
+        else:
+            t = self.peek()
+            raise oql_error("OQL_BAD_SPLIT",
+                            f'expected "by" or "into" after "group those {noun}"',
+                            f"e.g. group those {noun} by year, or group those {noun} "
+                            f"into ((<conditions>), (<conditions>))",
+                            t.pos if t else None)
+        self._skip_annot()
+        if self.word_is("where"):
+            self.next()
+            g = replace(g, where=self._parse_group_where(entity, g))
+        return g
+
+    def _parse_split_by(self, entity: str) -> GroupBy:
+        noun = _plural_noun(entity)
+        start = self.peek()
+        field, fld = self._parse_field()
+        self._skip_annot()
+        if fld.kind == "search":
+            if self.word_is("search"):
+                self.next()
+            if not self.word_is("in"):
+                raise oql_error(
+                    "OQL_BAD_SPLIT",
+                    f'a search field splits {noun} by a list of searches',
+                    f'e.g. group those {noun} by {fld.oql} search in '
+                    f'(("machine learning"), ("edge AI" NOT cloud))',
+                    start.pos if start else None)
+            self.next()
+            return GroupBy(column_id=fld.column + ".search",
+                           values=self._parse_search_list(fld))
+        if self.word_is("in"):
+            self.next()
+            return GroupBy(column_id=fld.column, values=self._parse_value_list(fld))
+        if self.word_is("bins"):
+            return GroupBy(column_id=fld.column, bins=self._parse_bins(fld, noun))
+        if fld.kind == "num" and fld.is_float:
+            raise oql_error(
+                "OQL_DECIMAL_NEEDS_BINS",
+                f'"{fld.oql}" is a decimal, so it can\'t split {noun} by value',
+                f"split it into bins: group those {noun} into {fld.oql} bins at "
+                f"(0.5, 1, 2)", start.pos if start else None)
+        if fld.kind == "collection":
+            raise oql_error("OQL_BAD_SPLIT",
+                            f'"{field}" can\'t split {noun} into groups', None,
+                            start.pos if start else None)
+        return GroupBy(column_id=fld.column)
+
+    def _parse_split_into(self, entity: str) -> GroupBy:
+        noun = _plural_noun(entity)
+        t = self.peek()
+        if t is not None and t.kind == "LP":
+            return GroupBy(conditions=self._parse_condition_list(entity))
+        field, fld = self._parse_field()
+        self._skip_annot()
+        if not self.word_is("bins"):
+            nt = self.peek()
+            raise oql_error(
+                "OQL_BAD_SPLIT",
+                f'"group those {noun} into" takes bins of a number field or a list '
+                f'of conditions',
+                f"e.g. group those {noun} into {fld.oql} bins at (1, 10, 100), or "
+                f"into ((year <= (2019)), (year >= (2020)))",
+                nt.pos if nt else None)
+        return GroupBy(column_id=fld.column, bins=self._parse_bins(fld, noun))
+
+    def _list_open(self, what: str, example: str):
+        t = self.peek()
+        if t is None or t.kind != "LP":
+            raise oql_error("OQL_BAD_LIST", f"expected ( to open the {what}",
+                            f"e.g. {example}", t.pos if t else None)
+        self.next()
+        self._skip_annot()
+        return t
+
+    def _list_next(self, what: str, example: str, count: int, open_tok) -> bool:
+        """After one list item: True for another item (consumes `,` or `or`), False
+        at the closing `)` (consumed)."""
+        self._skip_annot()
+        t = self.peek()
+        if t is not None and (t.kind == "COMMA" or (t.kind == "WORD"
+                                                    and t.val.lower() == "or")):
+            self.next()
+            self._skip_annot()
+            if count >= MAX_LIST_ITEMS:
+                raise oql_error(
+                    "OQL_LIST_TOO_LONG",
+                    f"the {what} holds more than {MAX_LIST_ITEMS} items",
+                    f"keep it to {MAX_LIST_ITEMS} items; for more, save them as a "
+                    f"collection or run several queries", open_tok.pos)
+            return True
+        if t is not None and t.kind == "RP":
+            self.next()
+            return False
+        raise oql_error("OQL_BAD_LIST",
+                        f"items in the {what} are separated by commas",
+                        f"e.g. {example}", t.pos if t else None)
+
+    def _parse_value_list(self, fld: "Field") -> List:
+        """`in (A, B, C)`: listed values of a split, up to MAX_LIST_ITEMS."""
+        example = f"{fld.oql} in (A, B, C)"
+        open_tok = self._list_open("list of values", example)
+        values: List = []
+        while True:
+            v = self._parse_scalar(fld)
+            if v not in values:
+                values.append(v)
+            if not self._list_next("list of values", example, len(values), open_tok):
+                break
+        if any(isinstance(v, str) and v.startswith("col_") for v in values) and len(values) > 1:
+            raise oql_error("OQL_BAD_LIST",
+                            "a split lists values or names one collection, not both",
+                            f"e.g. {fld.oql} in (col_abc123), or {fld.oql} in (A, B)",
+                            open_tok.pos)
+        return values
+
+    def _parse_search_list(self, fld: "Field") -> List[FilterType]:
+        """`search in (("a"), ("b" NOT c))`: one search per group, each a portable
+        search string in its own parentheses, up to MAX_SEARCH_OPERATORS each."""
+        example = f'{fld.oql} search in (("machine learning"), ("edge AI" NOT cloud))'
+        open_tok = self._list_open("list of searches", example)
+        items: List[FilterType] = []
+        self._cur_fld = fld
+        while True:
+            t = self.peek()
+            if t is None or t.kind != "LP":
+                raise oql_error("OQL_BAD_LIST",
+                                "each search in the list goes in its own parentheses",
+                                f"e.g. {example}", t.pos if t else None)
+            start_i = self.i
+            item = self._parse_search_value(fld.column)
+            n_ops = sum(1 for tk in self.toks[start_i:self.i]
+                        if (tk.kind == "WORD" and tk.val.lower() in ("and", "or", "not", "&"))
+                        or tk.kind == "BANG")
+            if n_ops > MAX_SEARCH_OPERATORS:
+                raise oql_error(
+                    "OQL_SEARCH_TOO_COMPLEX",
+                    f"search {len(items) + 1} in the list uses {n_ops} AND/OR/NOT; "
+                    f"the limit is {MAX_SEARCH_OPERATORS} per search",
+                    "simplify it, or split it into two searches in the list",
+                    t.pos)
+            items.append(item)
+            if not self._list_next("list of searches", example, len(items), open_tok):
+                break
+        return items
+
+    def _parse_condition_list(self, entity: str) -> List[FilterType]:
+        """`into ((<conditions>), (<conditions>))`: one group per condition."""
+        noun = _plural_noun(entity)
+        example = (f"group those {noun} into ((institution is (I63966007)), "
+                   f"(country is (BE)))")
+        open_tok = self._list_open("list of conditions", example)
+        conds: List[FilterType] = []
+        while True:
+            t = self.peek()
+            if t is None or t.kind != "LP":
+                raise oql_error("OQL_BAD_LIST",
+                                "each group's conditions go in their own parentheses",
+                                f"e.g. {example}", t.pos if t else None)
+            self.next()
+            cond = self._parse_expr(top=True)
+            self._expect_rp()
+            conds.append(cond)
+            if not self._list_next("list of conditions", example, len(conds), open_tok):
+                break
+        return conds
+
+    def _parse_number_group(self, fld: "Field", what: str):
+        """A single number, canonically parenthesized: `(10)`."""
+        grouped = self._open_scalar_group()
+        t = self.peek()
+        if t is None or t.kind != "WORD":
+            raise oql_error("OQL_BAD_NUMBER", f"expected a number for {what}", None,
+                            t.pos if t else None)
+        self.next()
+        v = _coerce_any_number(t.val, what, t.pos)
+        if grouped:
+            self._close_scalar_group(f"{what} takes one number", f"e.g. {what} (10)")
+        return v
+
+    def _parse_bins(self, fld: "Field", noun: str) -> Dict:
+        bt = self.next()  # `bins`
+        example = f"group those {noun} into {fld.oql} bins at (1, 10, 100)"
+        if fld.kind != "num":
+            raise oql_error("OQL_BAD_BINS",
+                            f'"{fld.oql}" isn\'t a number, so it can\'t go in bins',
+                            f"bins take a number field, e.g. {example}", bt.pos)
+        self._skip_annot()
+        if self.word_is("at"):
+            self.next()
+            open_tok = self._list_open("bin edges", example)
+            edges: List = []
+            while True:
+                t = self.peek()
+                if t is None or t.kind != "WORD":
+                    raise oql_error("OQL_BAD_BINS", "expected a number in the bin edges",
+                                    f"e.g. {example}", t.pos if t else open_tok.pos)
+                self.next()
+                edges.append(_coerce_any_number(t.val, "a bin edge", t.pos))
+                if not self._list_next("bin edges", example, len(edges), open_tok):
+                    break
+            if any(b <= a for a, b in zip(edges, edges[1:])):
+                raise oql_error("OQL_BAD_BINS", "bin edges must increase",
+                                f"e.g. {example}", open_tok.pos)
+            return {"at": edges}
+        if self.word_is("of"):
+            self.next()
+            width = self._parse_number_group(fld, "a bin width")
+            if width <= 0:
+                raise oql_error("OQL_BAD_BINS", "a bin width must be above 0",
+                                f"e.g. group those {noun} into {fld.oql} bins of (10)",
+                                bt.pos)
+            return {"of": width}
+        t = self.peek()
+        raise oql_error("OQL_BAD_BINS", 'expected "bins at (...)" or "bins of (...)"',
+                        f"e.g. {example}, or bins of (10)", t.pos if t else bt.pos)
+
+    def _parse_measures(self, entity: str) -> List[Measure]:
+        """`calculate count, mean FWCI, percent open access`."""
+        measures: List[Measure] = []
+        while True:
+            m = self._parse_measure(entity)
+            if m not in measures:
+                measures.append(m)
+            self._skip_annot()
+            if self.peek() is not None and (self.peek().kind == "COMMA"
+                                            or self.word_is("and")):
+                self.next()
+                self._skip_annot()
+                continue
+            break
+        return measures
+
+    def _parse_measure(self, entity: str) -> Measure:
+        """One measure. Its field is a field of the measured things (`entity`), even
+        inside a group filter, where `self._entity` is the group's entity."""
+        noun = _plural_noun(entity)
+        t = self.peek()
+        w = t.val.lower() if t is not None and t.kind == "WORD" else ""
+        if w in ("count", "number"):
+            self.next()
+            if w == "number" and self.word_is("of") and not self.word_is("those", k=1):
+                self.next()   # `number of works`
+                self._parse_those_noun_optional(entity)
+            else:
+                self._parse_of_those(entity)
+            return Measure("count")
+        if w in _MEASURE_WORDS:
+            self.next()
+            name = _MEASURE_WORDS[w]
+            if name == "percent" and self.word_is("of"):
+                self.next()
+                self._parse_those(entity, required=True)
+                return Measure("percent_of_those")
+            saved = self._entity
+            self._entity = entity
+            try:
+                field, fld = self._parse_field()
+            finally:
+                self._entity = saved
+            if name == "percent" and fld.kind != "bool":
+                raise oql_error(
+                    "OQL_BAD_MEASURE",
+                    f'percent takes a yes/no field; "{fld.oql}" isn\'t one',
+                    f"e.g. calculate percent open access; for the share of each "
+                    f"{fld.oql}, split by it: group those {noun} by {fld.oql}; then "
+                    f"calculate percent of those {noun}",
+                    t.pos)
+            if name != "percent" and fld.kind != "num":
+                raise oql_error(
+                    "OQL_BAD_MEASURE",
+                    f'{name} takes a number field; "{fld.oql}" isn\'t one',
+                    f"e.g. calculate {name} citation count, or {name} FWCI", t.pos)
+            self._parse_of_those(entity)
+            return Measure(name, fld.column)
+        raise oql_error(
+            "OQL_BAD_MEASURE",
+            f'"{t.val if t is not None else ""}" isn\'t a calculation',
+            "calculations: count; mean, median, sum, min, max of a number field; "
+            f"percent of a yes/no field; percent of those {noun}",
+            t.pos if t is not None else None)
+
+    def _parse_those_noun_optional(self, entity: str):
+        """`number of works` (no `those`): accept the plural noun."""
+        words = _plural_noun(entity).split()
+        got = [self.peek(k) for k in range(len(words))]
+        if all(g is not None and g.kind == "WORD" and g.val.lower() == w
+               for g, w in zip(got, words)):
+            self.i += len(words)
+
+    def _parse_sample_step(self, entity: str):
+        """`sample (100) of those works [with seed (42)]`."""
+        grouped = self._open_scalar_group()
+        n, seed = self._parse_sample()
+        if grouped:
+            self._close_scalar_group("a sample takes one number", "e.g. sample (100)")
+        self._parse_of_those(entity)
+        if self.word_is("with") and self.word_is("seed", k=1):
+            self.next()
+        if self.word_is("seed"):
+            self.next()
+            g2 = self._open_scalar_group()
+            st = self.peek()
+            if st is None or st.kind not in ("WORD", "STRING"):
+                raise oql_error("OQL_BAD_SAMPLE", "expected a seed value",
+                                "e.g. with seed (42)", st.pos if st else None)
+            self.next()
+            seed = st.val
+            if g2:
+                self._close_scalar_group("a seed is one value", "e.g. with seed (42)")
+        return n, seed
+
+    # -- group filters ------------------------------------------------------------
+    def _parse_group_where(self, entity: str, g: GroupBy) -> FilterType:
+        """`where` after a split: calculations on each group's works (`count of
+        those works > (10)`) and the group's own fields (`h-index > (20)`,
+        `that author is not in (...)`, `co-author is not (...)`)."""
+        group_entity = _group_entity(g, entity)
+        saved_entity, saved_ctx = self._entity, self._group_ctx
+        self._group_ctx = {"entity": entity, "group_entity": group_entity,
+                           "split": g}
+        if group_entity is not None:
+            self._entity = group_entity
+        try:
+            cond = self._parse_expr(top=True)
+        finally:
+            self._entity, self._group_ctx = saved_entity, saved_ctx
+        return cond
+
+    def _parse_group_clause(self) -> Optional[FilterType]:
+        """A group-filter clause that isn't an ordinary own-field clause: a measure
+        condition, `that <noun> ...`, `co-author ...`, `collaborator ...`. None to
+        fall through to an ordinary clause on the group entity's own fields."""
+        gctx = self._group_ctx
+        entity, group_entity = gctx["entity"], gctx["group_entity"]
+        noun = _plural_noun(entity)
+        t = self.peek()
+        w = t.val.lower() if t is not None and t.kind == "WORD" else ""
+        if w in ("count", "number") or w in _MEASURE_WORDS:
+            m = self._parse_measure(entity)
+            if m.measure == "percent_of_those":
+                raise oql_error(
+                    "OQL_BAD_GROUP_FILTER",
+                    f"a group filter can't test percent of those {noun}",
+                    f"filter on the count instead: count of those {noun} > (N)", t.pos)
+            op = self._parse_operator()
+            if op not in (">", ">=", "<", "<=", "is", "isnot"):
+                raise oql_error("OQL_BAD_GROUP_FILTER",
+                                "a calculation is compared with a number",
+                                f"e.g. count of those {noun} > (10)", t.pos)
+            v = self._parse_number_group(None, "a calculation")
+            return MeasureFilter(measure=m.measure, column_id=m.column_id,
+                                 operator="is" if op == "isnot" else op, value=v,
+                                 is_negated=(op == "isnot"))
+        singular = _singular_noun(group_entity) if group_entity else None
+        if w == "that":
+            self.next()
+            if group_entity is None:
+                raise oql_error(
+                    "OQL_BAD_GROUP_FILTER",
+                    "these groups aren't things with their own ids",
+                    f"filter by a calculation, e.g. count of those {noun} > (10)", t.pos)
+            words = singular.lower().split()
+            got = [self.peek(k) for k in range(len(words))]
+            if not all(x is not None and x.kind == "WORD" and x.val.lower() == y
+                       for x, y in zip(got, words)):
+                nt = self.peek()
+                raise oql_error("OQL_BAD_GROUP_FILTER",
+                                f'these groups are {_plural_noun(group_entity)}',
+                                f'write "that {singular}"', nt.pos if nt else t.pos)
+            self.i += len(words)
+            return self._parse_group_set_clause(
+                f"that {singular}", "ids.openalex", group_entity, allow_collection=True)
+        if w in ("co-author", "coauthor", "co-authors", "coauthors"):
+            if group_entity != "authors":
+                raise oql_error("OQL_BAD_GROUP_FILTER",
+                                "co-author tests authors' co-authorship",
+                                f"split by author first: group those {noun} by author "
+                                f"where co-author is not (A...)", t.pos)
+            self.next()
+            return self._parse_group_set_clause("co-author", "co_author", "authors")
+        if w in ("collaborator", "collaborators"):
+            if group_entity != "institutions":
+                raise oql_error("OQL_BAD_GROUP_FILTER",
+                                "collaborator tests institutions' co-authorship",
+                                f"split by institution first: group those {noun} by "
+                                f"institution where collaborator is not (I...)", t.pos)
+            self.next()
+            return self._parse_group_set_clause("collaborator", "collaborator",
+                                                "institutions")
+        if group_entity is None:
+            what = _split_label(gctx["split"])
+            raise oql_error(
+                "OQL_BAD_GROUP_FILTER",
+                f"{what} groups have no fields of their own to filter on",
+                f"filter by a calculation (count of those {noun} > (10)), or narrow "
+                f"the {noun} in the first step: get {noun} where ...",
+                t.pos if t is not None else None)
+        return None
+
+    def _parse_group_set_clause(self, subject: str, column: str, value_entity: str,
+                                allow_collection: bool = False) -> FilterType:
+        """`<subject> is [not] (A or B)` / `is [not] in (A, B)` / `is [not] in
+        (col_x)` on a group-filter relation or the group's own id."""
+        t = self.peek()
+        op = self._parse_operator()
+        if op in ("incoll", "nincoll"):
+            op = "is" if op == "incoll" else "isnot"
+        if op not in ("is", "isnot"):
+            raise oql_error("OQL_BAD_GROUP_FILTER", f'"{subject}" takes is / is not',
+                            f"e.g. {subject} is not (...)", t.pos if t else None)
+        negated = op == "isnot"
+        fld = Field(column=column, kind="id", oql=subject)
+        self._skip_annot()
+        if self.word_is("in"):
+            self.next()
+            example = f"{subject} is in (A, B)"
+            open_tok = self._list_open("set", example)
+            values: List = []
+            while True:
+                v = self._parse_scalar(fld)
+                if v not in values:
+                    values.append(v)
+                if not self._list_next("set", example, len(values), open_tok):
+                    break
+        else:
+            tree = self._parse_grouped_operand(lambda: self._parse_value_operand(fld),
+                                               implicit_and=False)
+            if tree is None:
+                values = [self._parse_scalar(fld)]
+            else:
+                return _negate(tree) if negated else tree
+        cols = [v for v in values if isinstance(v, str) and v.startswith("col_")]
+        if cols:
+            if not allow_collection or len(values) > 1:
+                raise oql_error("OQL_BAD_LIST",
+                                f'"{subject}" takes a list of ids'
+                                + (" or one collection" if allow_collection else ""),
+                                f"e.g. {subject} is in (A, B)", t.pos if t else None)
+            return LeafFilter("collection", cols[0], "in collection", is_negated=negated)
+        leaves = [LeafFilter(column, v, "is") for v in values]
+        tree = leaves[0] if len(leaves) == 1 else BranchFilter("or", leaves)
+        return _negate(tree) if negated else tree
+
+
+# Pipeline limits (oxjob #1530; Jason, 2026-10-03).
+MAX_SPLITS = 3
+MAX_LIST_ITEMS = 100
+MAX_SEARCH_OPERATORS = 5
+
+# Measure words -> OQO measure. `count` is handled on its own.
+_MEASURE_WORDS = {
+    "mean": "mean", "average": "mean", "median": "median", "sum": "sum",
+    "min": "min", "minimum": "min", "max": "max", "maximum": "max",
+    "percent": "percent",
+}
+
+
+def _plural_noun(entity: Optional[str]) -> str:
+    """The plural noun for an entity in `those <noun>`: `works`, `source types`."""
+    return (entity or "works").replace("-", " ")
+
+
+def _singular_noun(entity: str) -> str:
+    """The singular noun for `that <noun>`: the registry's singular name."""
+    try:
+        from core.entities import get_entity_type
+        et = get_entity_type("work-types" if entity == "types" else entity)
+        if et is not None and et.display_name_singular:
+            return et.display_name_singular
+    except Exception:  # pragma: no cover - registry unavailable
+        pass
+    return entity[:-1] if entity.endswith("s") else entity
+
+
+def _group_entity(g: GroupBy, entity: str) -> Optional[str]:
+    """The entity the groups of split `g` are, when they are things with their own
+    records (authors, institutions, ...); None for years, bins, conditions,
+    searches and yes/no groups."""
+    if g.column_id is None or g.bins is not None or g.conditions is not None:
+        return None
+    if g.column_id.endswith(".search"):
+        return None
+    et = entity_type_for_column(g.column_id, entity)
+    if et in VALID_ENTITY_TYPES and et != "oa-statuses":
+        return et
+    if et == "work-types":
+        return "types"
+    return None
+
+
+def _split_label(g: GroupBy) -> str:
+    if g.conditions is not None:
+        return "condition"
+    if g.bins is not None:
+        return "bin"
+    if g.column_id and g.column_id.endswith(".search"):
+        return "search"
+    return _oql_field(g.column_id)[0] if g.column_id else "these"
+
+
+def _coerce_any_number(val: str, what: str, pos):
+    try:
+        return int(val)
+    except ValueError:
+        try:
+            return float(val)
+        except ValueError:
+            raise oql_error("OQL_BAD_NUMBER", f'"{val}" is not a number for {what}',
+                            "", pos)
 
 
 def _flatten_and(branch: BranchFilter) -> List[FilterType]:
@@ -4278,18 +4947,33 @@ def format_oql(tree: OQLRenderTree, width: int = FORMAT_WIDTH) -> str:
     return "\n".join(lines)
 
 
-def render_tree(oqo: OQO, resolver=None):
+# The canonical text style (oxjob #1530). "classic" = today's `works where ...
+# group by ...`; "pipeline" = `get works where ...; then group those works by ...`.
+# An OQO only the pipeline language can say always renders as pipeline. The launch
+# flips this to "pipeline" for every query (Jason, 2026-10-03; his yes before the flip).
+CANONICAL_STYLE = "classic"
+
+
+def _pipeline_style(oqo: OQO, style: Optional[str]) -> bool:
+    style = style or CANONICAL_STYLE
+    return style == "pipeline" or oqo.uses_pipeline
+
+
+def render_tree(oqo: OQO, resolver=None, style: Optional[str] = None):
     """OQO -> (canonical OQL string, oql_render tree). The string is the
     width-aware `format_oql(tree)`; for queries that fit one line it equals
     `stringify(tree)` (Invariant A), and the multi-line form still round-trips
-    to the same OQO."""
+    to the same OQO. `style` overrides CANONICAL_STYLE."""
+    if _pipeline_style(oqo, style):
+        from query_translation.oql_pipeline import render_pipeline_tree
+        return render_pipeline_tree(oqo, resolver)
     tree = _build_tree(oqo, resolver)
     return format_oql(tree), tree
 
 
-def render(oqo: OQO, resolver=None) -> str:
+def render(oqo: OQO, resolver=None, style: Optional[str] = None) -> str:
     """OQO -> canonical OQL (width-aware multi-line when long; see `format_oql`).
     `resolver(value, column_id) -> name|None` (a 1-arg `resolver(value)` is also
     accepted) synthesizes `[display name]` annotations for opaque-ID / country
     columns."""
-    return render_tree(oqo, resolver)[0]
+    return render_tree(oqo, resolver, style)[0]

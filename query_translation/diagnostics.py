@@ -321,6 +321,53 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
         _spec("seed_without_sample", WARNING, VALIDATE,
               "a seed has no effect without a sample",
               "add a sample N, or drop the seed"),
+        # -- the pipeline language (oxjob #1530) -----------------------------------
+        _spec("OQL_UNKNOWN_STEP", ERROR, PARSE,
+              "a step after `; then` doesn't start with a known verb",
+              "steps are: group those works by ...; group those works into ...; "
+              "calculate ...; sample (N) of those works"),
+        _spec("OQL_WALK_NOT_YET", ERROR, PARSE,
+              "walking to related things (`get each author of those works`) "
+              "isn't available yet",
+              "split instead: group those works by author; then calculate ..."),
+        _spec("OQL_WRONG_SET", ERROR, PARSE,
+              "a step names a different kind of thing than the query holds",
+              "name the current things, e.g. group those works by year"),
+        _spec("OQL_STEP_AFTER_CALCULATE", ERROR, PARSE,
+              "a calculation must be the last step",
+              "move `calculate ...` to the end"),
+        _spec("OQL_TOO_MANY_SPLITS", ERROR, PARSE,
+              "a query can split its works at most three times",
+              "drop a split, or run several queries"),
+        _spec("OQL_BAD_SPLIT", ERROR, PARSE,
+              "this field can't split works into groups that way",
+              "group those works by <field>, by <field> in (...), or into <field> "
+              "bins at (...)"),
+        _spec("OQL_BAD_LIST", ERROR, PARSE,
+              "a listed set is malformed",
+              "write the items in parentheses, separated by commas: in (A, B, C)"),
+        _spec("OQL_LIST_TOO_LONG", ERROR, PARSE,
+              "a list holds more than 100 items",
+              "keep each list to 100 items; use a collection or several queries "
+              "for more"),
+        _spec("OQL_SEARCH_TOO_COMPLEX", ERROR, PARSE,
+              "a search in a list uses more than 5 AND/OR/NOT",
+              "keep each listed search to 5 operators, or split it into two items"),
+        _spec("OQL_BAD_BINS", ERROR, PARSE,
+              "bins need a numeric field and increasing edges (or a positive width)",
+              "e.g. group those works into citation count bins at (1, 10, 100)"),
+        _spec("OQL_DECIMAL_NEEDS_BINS", ERROR, PARSE,
+              "a decimal field can't split by value",
+              "split it into bins, e.g. group those works into FWCI bins at "
+              "(0.5, 1, 2)"),
+        _spec("OQL_BAD_MEASURE", ERROR, PARSE,
+              "a calculation names an unknown measure or a field of the wrong type",
+              "measures: count; mean, median, sum, min, max of a number field; "
+              "percent of a yes/no field; percent of those works"),
+        _spec("OQL_BAD_GROUP_FILTER", ERROR, PARSE,
+              "a group filter tests something the groups don't have",
+              "filter groups by a calculation (count of those works > (10)) or by "
+              "the group's own fields (h-index > (20))"),
     ]
 }
 

@@ -347,7 +347,8 @@ def stringify(tree: OQLRenderTree) -> str:
     # sample) with no separating punctuation — a single space sets it off from the
     # preceding clause (semicolons were dropped from the grammar, oxjob #377).
     for directive in tree.directives:
-        parts.append(" " + _stringify_directive(directive))
+        # pipeline steps (oxjob #1530) carry their own `; then ` joiner
+        parts.append(getattr(directive, "joiner", " ") + _stringify_directive(directive))
 
     return "".join(parts)
 

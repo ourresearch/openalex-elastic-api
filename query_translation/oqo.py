@@ -79,25 +79,56 @@ class BranchFilter:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "BranchFilter":
-        filters = []
-        for f in data["filters"]:
-            if "join" in f:
-                filters.append(BranchFilter.from_dict(f))
-            else:
-                filters.append(LeafFilter.from_dict(f))
+        filters = [filter_from_dict(f) for f in data["filters"]]
         return cls(join=data["join"], filters=filters,
                    is_negated=data.get("is_negated", False))
+
+
+@dataclass
+class MeasureFilter:
+    """A group-filter condition on a calculated measure of the group's works
+    (oxjob #1530): `count of those works > (10)`, `mean FWCI of those works >= (2)`.
+
+    Only valid inside a `GroupBy.where` tree, beside ordinary leaves on the group's
+    own fields. `measure` is one of MEASURES; `column_id` names the measured column
+    (None for `count`)."""
+    measure: str
+    operator: str
+    value: Union[int, float]
+    column_id: Optional[str] = None
+    is_negated: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = {"measure": self.measure}
+        if self.column_id is not None:
+            result["column_id"] = self.column_id
+        result["operator"] = self.operator
+        result["value"] = self.value
+        if self.is_negated:
+            result["is_negated"] = True
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "MeasureFilter":
+        return cls(
+            measure=data["measure"],
+            operator=data.get("operator", ">"),
+            value=data["value"],
+            column_id=data.get("column_id"),
+            is_negated=data.get("is_negated", False),
+        )
 
 
 FilterType = Union[LeafFilter, BranchFilter]
 
 
 def filter_from_dict(data: Dict[str, Any]) -> FilterType:
-    """Convert a dict to either LeafFilter or BranchFilter."""
+    """Convert a dict to a LeafFilter, BranchFilter or (group filters only) MeasureFilter."""
     if "join" in data:
         return BranchFilter.from_dict(data)
-    else:
-        return LeafFilter.from_dict(data)
+    if "measure" in data:
+        return MeasureFilter.from_dict(data)
+    return LeafFilter.from_dict(data)
 
 
 def _is_xpac_value_truthy(value) -> bool:
@@ -200,35 +231,141 @@ def canonicalize_oqo_column_ids(oqo: "OQO") -> "OQO":
     def _canon(column_id):
         return canonicalize_column_id(column_id, entity)
 
-    def _canon_filter(f):
+    def _canon_filter(f, ent=entity):
         if isinstance(f, BranchFilter):
-            return replace(f, filters=[_canon_filter(x) for x in f.filters])
-        return replace(f, column_id=_canon(f.column_id))
+            return replace(f, filters=[_canon_filter(x, ent) for x in f.filters])
+        if f.column_id is None:
+            return f
+        if isinstance(f, MeasureFilter):  # measured column is a column of the main entity
+            return replace(f, column_id=_canon(f.column_id))
+        return replace(f, column_id=canonicalize_column_id(f.column_id, ent))
+
+    def _canon_group(g):
+        if g.is_plain:
+            return replace(g, column_id=_canon(g.column_id))
+        column_id = _canon(g.column_id) if g.column_id is not None else None
+        values = g.values
+        if values is not None:
+            values = [_canon_filter(v) if isinstance(v, (LeafFilter, BranchFilter)) else v
+                      for v in values]
+        conditions = g.conditions
+        if conditions is not None:
+            conditions = [_canon_filter(c) for c in conditions]
+        where = g.where
+        if where is not None:
+            # Own-field leaves live in the GROUP entity's namespace (an author's
+            # h-index), measure leaves in the main one.
+            group_entity = None
+            if column_id is not None:
+                try:
+                    from query_translation.oql_lang import entity_type_for_column
+                    group_entity = entity_type_for_column(column_id, entity)
+                except Exception:
+                    group_entity = None
+            where = _canon_filter(where, group_entity or entity)
+        return replace(g, column_id=column_id, values=values, conditions=conditions, where=where)
 
     return replace(
         oqo,
         filter_rows=[_canon_filter(f) for f in oqo.filter_rows],
         sort_by=[replace(s, column_id=_canon(s.column_id)) for s in oqo.sort_by],
-        group_by=[replace(g, column_id=_canon(g.column_id)) for g in oqo.group_by],
+        group_by=[_canon_group(g) for g in oqo.group_by],
+        calculate=[replace(m, column_id=_canon(m.column_id)) if m.column_id else m
+                   for m in oqo.calculate],
     )
 
 
 @dataclass
 class GroupBy:
-    """A single group-by dimension.
+    """One split (group-by dimension). `group_by` on the OQO is the ordered list of
+    splits, outermost first (up to three).
 
-    `group_by` on the OQO is a *list* of these, so multi-dimensional grouping
-    (e.g. topic × year) is expressible in the spec. The live serving impl is
-    single-dimension only; multi-dim impl is deferred to a follow-up job (#297).
+    The plain split is just `column_id`. The pipeline language (oxjob #1530) adds,
+    at most one of `values` / `bins` / `conditions` per split:
+      * `values`: split only by these values of `column_id`, one group each — bare
+        ids (`["I63966007", ...]`), or, for a search column, one filter tree per
+        search (`title-abstract search in (("a"), ("b" NOT c))`);
+      * `bins`: `{"at": [edges]}` or `{"of": width}` on a numeric column;
+      * `conditions`: one filter tree per group (`into ((...), (...))`); no column.
+    and `where`, the group filter: a tree of MeasureFilter leaves (calculations on
+    the group's works) and ordinary leaves on the group entity's own fields.
     """
-    column_id: str
+    column_id: Optional[str] = None
+    values: Optional[List[Any]] = None
+    bins: Optional[Dict[str, Any]] = None
+    conditions: Optional[List[Any]] = None
+    where: Optional[Any] = None
+
+    @property
+    def is_plain(self) -> bool:
+        """True for today's split (a column, nothing else)."""
+        return (self.values is None and self.bins is None
+                and self.conditions is None and self.where is None)
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"column_id": self.column_id}
+        d: Dict[str, Any] = {}
+        if self.column_id is not None:
+            d["column_id"] = self.column_id
+        if self.values is not None:
+            d["values"] = [v.to_dict() if hasattr(v, "to_dict") else v for v in self.values]
+        if self.bins is not None:
+            d["bins"] = dict(self.bins)
+        if self.conditions is not None:
+            d["conditions"] = [c.to_dict() for c in self.conditions]
+        if self.where is not None:
+            d["where"] = self.where.to_dict()
+        return d
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GroupBy":
-        return cls(column_id=data["column_id"])
+        values = data.get("values")
+        if values is not None:
+            values = [filter_from_dict(v) if isinstance(v, dict) else v for v in values]
+        conditions = data.get("conditions")
+        if conditions is not None:
+            conditions = [filter_from_dict(c) for c in conditions]
+        where = data.get("where")
+        return cls(
+            column_id=data.get("column_id"),
+            values=values,
+            bins=dict(data["bins"]) if data.get("bins") is not None else None,
+            conditions=conditions,
+            where=filter_from_dict(where) if where is not None else None,
+        )
+
+
+# Calculations (oxjob #1530). `percent_of_those` is the group's share of the set it
+# came from (`percent of those works`); `percent` takes a yes/no column; the rest a
+# numeric column; `count` none.
+MEASURES = ("count", "mean", "median", "sum", "min", "max", "percent", "percent_of_those")
+NUMERIC_MEASURES = ("mean", "median", "sum", "min", "max")
+
+
+@dataclass
+class Measure:
+    """One calculation in the final `calculate` step: `count`, `mean FWCI`,
+    `percent open access`, `percent of those works`."""
+    measure: str
+    column_id: Optional[str] = None
+
+    @property
+    def key(self) -> str:
+        """The response key: `count`, `percent_of_those`, or `<measure>_<column>`
+        with dots as underscores (`mean_fwci`, `percent_open_access_is_oa`), the
+        convention of the #389 metric sort (`mean_cited_by_count`)."""
+        if self.column_id is None:
+            return self.measure
+        return f"{self.measure}_{self.column_id.replace('.', '_')}"
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {"measure": self.measure}
+        if self.column_id is not None:
+            d["column_id"] = self.column_id
+        return d
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Measure":
+        return cls(measure=data["measure"], column_id=data.get("column_id"))
 
 
 @dataclass
@@ -328,6 +465,16 @@ class OQO:
     per_page: Optional[int] = None
     page: Optional[int] = None
     cursor: Optional[str] = None
+    # The final `calculate` step of the pipeline language (oxjob #1530): the
+    # measures computed per group (and for the total row), or for the whole set
+    # when there is no split. Part of WHICH ROWS a query returns, so public.
+    calculate: List["Measure"] = field(default_factory=list)
+
+    @property
+    def uses_pipeline(self) -> bool:
+        """True when the OQO uses anything only the pipeline language (oxjob
+        #1530) can say: a calculation, or a split beyond a plain column."""
+        return bool(self.calculate) or any(not g.is_plain for g in self.group_by)
 
     def to_dict(self) -> Dict[str, Any]:
         result = {"get_rows": self.get_rows}
@@ -347,6 +494,9 @@ class OQO:
 
         if self.group_by:
             result["group_by"] = [g.to_dict() for g in self.group_by]
+
+        if self.calculate:
+            result["calculate"] = [m.to_dict() for m in self.calculate]
 
         if self.select:
             result["select"] = list(self.select)
@@ -411,6 +561,7 @@ class OQO:
             per_page=data.get("per_page"),
             page=data.get("page"),
             cursor=data.get("cursor"),
+            calculate=[Measure.from_dict(m) for m in data.get("calculate") or []],
         )
         # Canonicalize alias spellings to one identity at this JSON-input boundary
         # (#455), so a dict carrying `is_oa` / `institution.id` deserializes to the
