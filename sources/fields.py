@@ -167,6 +167,7 @@ fields = [
     TermField(param="topics.id"),
     TermField(param="topics.domain.id", custom_es_field="topics.domain.id"),
     TermField(param="topics.field.id", custom_es_field="topics.field.id"),
+    TermField(param="topics.subfield.id", custom_es_field="topics.subfield.id"),  # oxjob #1526
     TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),
     TermField(
         param="type",

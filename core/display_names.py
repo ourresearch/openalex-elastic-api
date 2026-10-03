@@ -302,6 +302,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'topics.id': {"display_name": 'topic'},
         'topics.domain.id': {"display_name": 'domain'},
         'topics.field.id': {"display_name": 'field'},
+        'topics.subfield.id': {"display_name": 'subfield'},  # oxjob #1526
         'type': {"display_name": 'source type'},
     },
     'subfields': {
@@ -547,6 +548,9 @@ _THREAD_B_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'parsed_longest_name.suffix': {"display_name": 'name suffix'},
         'topic_share.id': {"display_name": 'topic share'},
         'topics.id': {"display_name": 'topic'},
+        'topics.subfield.id': {"display_name": 'subfield'},  # oxjob #1526
+        'topics.field.id': {"display_name": 'field'},
+        'topics.domain.id': {"display_name": 'domain'},
         'x_concepts.id': {"display_name": 'concept (legacy)'},
     },
     'institutions': {
@@ -556,6 +560,9 @@ _THREAD_B_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'roles.id': {"display_name": 'role'},
         'topic_share.id': {"display_name": 'topic share'},
         'topics.id': {"display_name": 'topic'},
+        'topics.subfield.id': {"display_name": 'subfield'},  # oxjob #1526
+        'topics.field.id': {"display_name": 'field'},
+        'topics.domain.id': {"display_name": 'domain'},
     },
     'sources': {
         'apc_prices.price': {"display_name": 'APC price'},

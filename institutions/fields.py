@@ -135,6 +135,13 @@ fields = [
     TermField(param="display_name", custom_es_field="display_name.keyword"),
     TermField(param="ror", alias="ror"),
     TermField(param="topics.id"),
+    # oxjob #1526: subfield, field and domain of the institution's topics, as on sources and authors.
+    TermField(param="topics.subfield.id", custom_es_field="topics.subfield.id"),
+    TermField(param="topics.field.id", custom_es_field="topics.field.id"),
+    TermField(param="topics.domain.id", custom_es_field="topics.domain.id"),
+    # oxjob #1526: GeoNames region (state, province) and city; bare keyword in institutions-v8.
+    TermField(param="geo.region", custom_es_field="geo.region"),
+    TermField(param="geo.city", custom_es_field="geo.city"),
     TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),
     TermField(
         param="status",

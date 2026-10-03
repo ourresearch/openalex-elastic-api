@@ -180,6 +180,10 @@ fields = [
     ),
     TermField(param="scopus", alias="ids.scopus.keyword"),
     TermField(param="topics.id", custom_es_field="topics.id"),
+    # oxjob #1526: the author's top topics carry their subfield, field and domain (bare keyword in authors-v19).
+    TermField(param="topics.subfield.id", custom_es_field="topics.subfield.id"),
+    TermField(param="topics.field.id", custom_es_field="topics.field.id"),
+    TermField(param="topics.domain.id", custom_es_field="topics.domain.id"),
     TermField(param="topic_share.id", custom_es_field="topic_share.id.keyword"),
     CollectionField(entity_type="authors"),
 ]
