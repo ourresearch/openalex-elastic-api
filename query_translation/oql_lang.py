@@ -1976,7 +1976,16 @@ class _Parser:
         rs = match_row_subject(self.toks, self.i)
         if rs is not None:
             return self._parse_row_subject_clause(rs)
-        field, fld = self._parse_field()
+        # same-type membership names the queried entity: `location is in collection
+        # (col_x)` on locations (oxjob #1524). `work is in collection` stays accepted
+        # on every entity (what earlier renders said).
+        n = _collection_subject_len(self.toks, self.i, self._entity)
+        if n:
+            field = " ".join(t.val for t in self.toks[self.i:self.i + n])
+            self.i += n
+            fld = _BY_COLUMN["collection"]
+        else:
+            field, fld = self._parse_field()
         self._cur_fld = fld
         self._cur_search_word = field if fld.kind == "search" else None
         # a complete field with the cursor right after it -> operator slot
@@ -3164,6 +3173,42 @@ def parse_collecting(oql: str) -> Tuple[Optional[OQO], List[OQLError]]:
 
 
 # ---------------------------------------------------------------------------
+# Same-type collection subject (oxjob #1524)
+# ---------------------------------------------------------------------------
+# The `collection` column's subject is the queried entity's singular name, from the
+# entity registry (`displayNameSingular`, what the website's "<Entity> is in
+# collection" label uses): `locations where location is in collection (col_x)`.
+# Unknown entity -> "work", the curated word.
+def _collection_subject(entity: Optional[str]) -> str:
+    if entity:
+        try:
+            from core.entities import get_entity_type
+            # OQL and the URL call work types `types`; the registry, `work-types`.
+            et = get_entity_type("work-types" if entity == "types" else entity)
+            if et is not None and et.display_name_singular:
+                return et.display_name_singular
+        except Exception:  # pragma: no cover - registry unavailable
+            pass
+    return _BY_COLUMN["collection"].oql
+
+
+def _collection_subject_len(toks, i: int, entity: Optional[str]) -> int:
+    """How many words at `i` spell the queried entity's collection subject, when
+    `is [not] in collection` follows them; else 0. Case-insensitive."""
+    if not entity:
+        return 0
+    words = _collection_subject(entity).lower().split()
+    n = len(words)
+    got = toks[i:i + n]
+    if len(got) < n or any(t.kind != "WORD" or t.val.lower() != w for t, w in zip(got, words)):
+        return 0
+    rest = [t.val.lower() for t in toks[i + n:i + n + 4] if t.kind == "WORD"]
+    if rest[:3] == ["is", "in", "collection"] or rest[:4] == ["is", "not", "in", "collection"]:
+        return n
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # Renderer  (OQO -> canonical OQL text)
 # ---------------------------------------------------------------------------
 def _oql_field(column: str) -> Tuple[str, str]:
@@ -3822,6 +3867,8 @@ def _leaf_node_inner(f: LeafFilter, resolver=None) -> ClauseNode:
         col_val = _render_value(fld, f.value)
         if f.is_negated:
             col_val = f"not {col_val}"
+        if f.column_id == "collection":
+            name = _collection_subject(_RENDER_ENTITY.get())
         segs = [_seg("column", name, column_id=f.column_id),
                 _seg("operator", " is in collection "), _seg("text", "("),
                 _seg("value", col_val, value=f.value), _seg("text", ")")]
