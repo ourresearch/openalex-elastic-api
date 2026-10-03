@@ -31,14 +31,17 @@ class LeafFilter:
     removed; see VALID_OPERATORS.)
     """
     column_id: str
-    value: Union[str, int, bool, None]
+    # A value may also be a whole query (a nested OQO, oxjob #1535): `author is in
+    # (get works where ...; then get authors of those works)`, `it cites works in
+    # (get works where ...)`. Its result type must match the column's entity.
+    value: Union[str, int, bool, None, "OQO"]
     operator: str = "is"
     is_negated: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         result = {
             "column_id": self.column_id,
-            "value": self.value,
+            "value": self.value.to_dict() if isinstance(self.value, OQO) else self.value,
         }
         if self.operator != "is":
             result["operator"] = self.operator
@@ -48,9 +51,12 @@ class LeafFilter:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "LeafFilter":
+        value = data["value"]
+        if isinstance(value, dict) and "get_rows" in value:
+            value = OQO.from_dict(value)
         return cls(
             column_id=data["column_id"],
-            value=data["value"],
+            value=value,
             operator=data.get("operator", "is"),
             is_negated=data.get("is_negated", False),
         )
@@ -226,19 +232,36 @@ def canonicalize_oqo_column_ids(oqo: "OQO") -> "OQO":
         from core.properties import canonicalize_column_id
     except Exception:
         return oqo
-    entity = oqo.get_rows
+    start = oqo.get_rows
+    # splits, calculations and sorts belong to the things the query holds at the
+    # end: after a walk, the walk's (oxjob #1535)
+    entity = result_entity(oqo)
 
     def _canon(column_id):
         return canonicalize_column_id(column_id, entity)
 
-    def _canon_filter(f, ent=entity):
+    def _canon_filter(f, ent=start):
         if isinstance(f, BranchFilter):
             return replace(f, filters=[_canon_filter(x, ent) for x in f.filters])
         if f.column_id is None:
             return f
         if isinstance(f, MeasureFilter):  # measured column is a column of the main entity
             return replace(f, column_id=_canon(f.column_id))
+        if isinstance(f.value, OQO):  # a nested query (oxjob #1535)
+            return replace(f, column_id=canonicalize_column_id(f.column_id, ent),
+                           value=canonicalize_oqo_column_ids(f.value))
         return replace(f, column_id=canonicalize_column_id(f.column_id, ent))
+
+    def _canon_walk(w):
+        # a walk out's link is a works column and its `where` sits in the walked
+        # entity's namespace; a walk back's `where` in works' (oxjob #1535)
+        if w.to is not None:
+            return replace(w, where=_canon_filter(w.where, w.to) if w.where is not None else None)
+        column_id = canonicalize_column_id(w.column_id, "works")
+        where = w.where
+        if where is not None:
+            where = _canon_filter(where, walked_entity(column_id) or "works")
+        return replace(w, column_id=column_id, where=where)
 
     def _canon_group(g):
         if g.is_plain:
@@ -268,11 +291,75 @@ def canonicalize_oqo_column_ids(oqo: "OQO") -> "OQO":
     return replace(
         oqo,
         filter_rows=[_canon_filter(f) for f in oqo.filter_rows],
+        walks=[_canon_walk(w) for w in oqo.walks],
         sort_by=[replace(s, column_id=_canon(s.column_id)) for s in oqo.sort_by],
         group_by=[_canon_group(g) for g in oqo.group_by],
         calculate=[replace(m, column_id=_canon(m.column_id)) if m.column_id else m
                    for m in oqo.calculate],
     )
+
+
+@dataclass
+class Walk:
+    """One walk step of the pipeline language (oxjob #1535). `walks` on the OQO is
+    the ordered list, between the start (`filter_rows`, `sample`) and the splits.
+
+    * A walk out, from works to the things they relate to: `column_id` is the works
+      column that links them, the one the noun means in a filter (`author` is
+      `authorships.author.id`); `each` gives one result per thing (`get each author
+      of those works`), else one combined set (`get authors of those works`, so
+      `calculate count` counts distinct authors).
+    * A walk back, from the things to everything they did: `to: "works"` (`get all
+      that author's works`, or `get all those authors' works` after a set). It
+      follows the walk out's column, or after a non-works start that entity's
+      link.
+
+    `where` filters the new current things by their own fields (an author's
+    h-index; the works' date)."""
+    column_id: Optional[str] = None
+    to: Optional[str] = None
+    each: bool = False
+    where: Optional[Any] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {}
+        if self.to is not None:
+            d["to"] = self.to
+        else:
+            d["column_id"] = self.column_id
+            d["each"] = bool(self.each)
+        if self.where is not None:
+            d["where"] = self.where.to_dict()
+        return d
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Walk":
+        where = data.get("where")
+        return cls(column_id=data.get("column_id"), to=data.get("to"),
+                   each=bool(data.get("each", False)),
+                   where=filter_from_dict(where) if where is not None else None)
+
+
+def walked_entity(column_id: Optional[str]) -> Optional[str]:
+    """The entity a works column links to (`authorships.author.id` -> authors)."""
+    from query_translation.walks import entity_for_link
+    return entity_for_link(column_id)
+
+
+def result_entity(oqo: "OQO") -> str:
+    """What the query holds after its walks (oxjob #1535): the last walk's things,
+    else what it started with."""
+    if not oqo.walks:
+        return oqo.get_rows
+    last = oqo.walks[-1]
+    return last.to if last.to is not None else (walked_entity(last.column_id) or oqo.get_rows)
+
+
+def has_query_value(node) -> bool:
+    """True when a filter tree holds a nested query as a value (oxjob #1535)."""
+    if isinstance(node, BranchFilter):
+        return any(has_query_value(f) for f in node.filters)
+    return isinstance(node, LeafFilter) and isinstance(node.value, OQO)
 
 
 @dataclass
@@ -474,12 +561,20 @@ class OQO:
     # measures computed per group (and for the total row), or for the whole set
     # when there is no split. Part of WHICH ROWS a query returns, so public.
     calculate: List["Measure"] = field(default_factory=list)
+    # Walks (oxjob #1535): `get each author of those works`, `get all that author's
+    # works`; and `each` on a start that isn't works (`get each institution in
+    # (...)`): one result per thing.
+    walks: List[Walk] = field(default_factory=list)
+    each: bool = False
 
     @property
     def uses_pipeline(self) -> bool:
         """True when the OQO uses anything only the pipeline language (oxjob
-        #1530) can say: a calculation, or a split beyond a plain column."""
-        return bool(self.calculate) or any(not g.is_plain for g in self.group_by)
+        #1530) can say: a calculation, a split beyond a plain column, a walk, or a
+        nested query (oxjob #1535)."""
+        return (bool(self.calculate) or any(not g.is_plain for g in self.group_by)
+                or bool(self.walks) or self.each
+                or any(has_query_value(f) for f in self.filter_rows))
 
     def to_dict(self) -> Dict[str, Any]:
         result = {"get_rows": self.get_rows}
@@ -496,6 +591,12 @@ class OQO:
 
         if self.sample:
             result["sample"] = self.sample
+
+        if self.each:
+            result["each"] = True
+
+        if self.walks:
+            result["walks"] = [w.to_dict() for w in self.walks]
 
         if self.group_by:
             result["group_by"] = [g.to_dict() for g in self.group_by]
@@ -567,6 +668,8 @@ class OQO:
             page=data.get("page"),
             cursor=data.get("cursor"),
             calculate=[Measure.from_dict(m) for m in data.get("calculate") or []],
+            walks=[Walk.from_dict(w) for w in data.get("walks") or []],
+            each=bool(data.get("each", False)),
         )
         # Canonicalize alias spellings to one identity at this JSON-input boundary
         # (#455), so a dict carrying `is_oa` / `institution.id` deserializes to the
