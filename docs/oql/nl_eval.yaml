@@ -718,3 +718,100 @@ cases:
     - {text: "works whose title contains a word starting with e-cigarette, like e-cigarettes", difficulty: easy}
     - {text: "title search for e-cigarette with a wildcard so e-cigarettes is included too", difficulty: easy}
     - {text: "papers on e-cigs, title has e-cigarette* (any ending)", difficulty: hard}
+
+# -- the pipeline language (oxjob #1530): calculations, group filters, splits ----
+- ref: 207  # Kenyan papers since 2015, percent open access by year
+  nl:
+    - {text: "what share of Kenyan papers since 2015 are open access, each year", difficulty: easy}
+    - {text: "open access percentage by year for research from Kenya, 2015 onward", difficulty: easy}
+    - {text: "how has the OA rate of Kenya's output changed year by year since 2015", difficulty: hard}
+
+- ref: 208  # MIT by open access status: count and mean FWCI
+  nl:
+    - {text: "MIT papers by open access status, with the count and mean FWCI of each", difficulty: easy}
+    - {text: "for MIT's works, how many are gold, green, bronze, closed, and what is the average FWCI of each", difficulty: easy}
+    - {text: "does open access status track citation impact at MIT", difficulty: hard}
+
+- ref: 209  # each MIT author's mean FWCI on their MIT papers
+  nl:
+    - {text: "each MIT author's mean FWCI on their MIT papers", difficulty: easy}
+    - {text: "average field-weighted citation impact per author across MIT's works", difficulty: easy}
+    - {text: "rank MIT researchers by the impact of their MIT-affiliated papers", difficulty: hard}
+
+- ref: 210  # kelp authors with over 10 kelp works who never co-authored with A5023888391
+  nl:
+    - {text: "authors with more than 10 kelp papers who have never co-authored with A5023888391", difficulty: easy}
+    - {text: "kelp researchers with over ten papers on kelp, excluding anyone who has written a paper with author A5023888391", difficulty: easy}
+    - {text: "find independent peer reviewers for a kelp paper by A5023888391: prolific kelp authors who never worked with them", difficulty: hard}
+
+- ref: 211  # three phrasings by year since 2010
+  nl:
+    - {text: "number of works per year since 2010 mentioning inference latency, neuromorphic computing, or edge AI, one series per phrase", difficulty: easy}
+    - {text: "compare growth since 2010 of the phrases \"inference latency\", \"neuromorphic computing\" and \"edge AI\" in titles and abstracts, by year", difficulty: easy}
+    - {text: "which is growing faster: edge AI, neuromorphic computing, or inference latency research", difficulty: hard}
+
+- ref: 212  # CRISPR at MIT, Stanford, Harvard: count, mean FWCI, percent OA
+  nl:
+    - {text: "compare MIT, Stanford and Harvard on CRISPR papers: count, mean FWCI and percent open access", difficulty: easy}
+    - {text: "CRISPR output of I63966007, I97018004 and I136199984, with average FWCI and OA share for each", difficulty: easy}
+    - {text: "who leads in CRISPR research among MIT, Stanford and Harvard, by volume and impact", difficulty: hard}
+
+- ref: 213  # funders of Kenyan papers since 2015 with mean citation count
+  nl:
+    - {text: "funders of Kenyan papers since 2015, with the number of papers and mean citation count for each funder", difficulty: easy}
+    - {text: "which funders support research from Kenya since 2015, and how cited is the work they fund", difficulty: easy}
+    - {text: "top funders behind Kenyan science in the last decade and the citation impact of their papers", difficulty: hard}
+
+- ref: 214  # institutions in a topic collection that never co-authored with MIT
+  nl:
+    - {text: "institutions publishing in the topics of collection col_abc123 that have never co-authored with MIT, with their paper counts", difficulty: easy}
+    - {text: "count works per institution in my saved topic collection col_abc123, leaving out every institution that has ever collaborated with MIT", difficulty: easy}
+    - {text: "potential new partners for MIT: institutions active in MIT's key topics (col_abc123) that have never worked with MIT", difficulty: hard}
+
+- ref: 215  # KU Leuven and Belgium vs the world since 2016, by SDG, with shares
+  nl:
+    - {text: "KU Leuven and Belgium compared with the world since 2016, broken down by SDG, with each SDG's share", difficulty: easy}
+    - {text: "SDG profile of KU Leuven versus Belgium versus all works since 2016, as counts and percentages", difficulty: easy}
+    - {text: "is KU Leuven unusually strong in any sustainable development goal compared with Belgium and the world", difficulty: hard}
+
+- ref: 216  # topics at a set of universities in 2016-2019 vs 2021 onward
+  nl:
+    - {text: "topics of works from the institutions in collection col_abc123, comparing 2016-2019 with 2021 onward", difficulty: easy}
+    - {text: "work counts by topic for my saved institution collection col_abc123, in two periods: 2016 to 2019 and from 2021", difficulty: easy}
+    - {text: "which topics grew at these universities (col_abc123) after 2020 compared with the late 2010s", difficulty: hard}
+
+- ref: 217  # MIT since 2015 in citation-count bins, with mean FWCI
+  nl:
+    - {text: "MIT papers since 2015 split into citation count bins at 1, 10 and 100, with the count and mean FWCI of each bin", difficulty: easy}
+    - {text: "how many MIT works since 2015 have 0, 1-9, 10-99 and 100+ citations, and their average FWCI", difficulty: easy}
+    - {text: "citation distribution of MIT's output since 2015", difficulty: hard}
+
+- ref: 218  # MIT since 2020 by year, then FWCI bins of 0.5
+  nl:
+    - {text: "MIT papers since 2020 by year, and within each year by FWCI in bins of 0.5", difficulty: easy}
+    - {text: "a histogram of FWCI with width 0.5 for each year of MIT works since 2020", difficulty: easy}
+    - {text: "how is FWCI distributed across MIT's papers each year since 2020", difficulty: hard}
+
+- ref: 219  # kelp authors with over 10 kelp works and h-index above 20
+  nl:
+    - {text: "authors with more than 10 kelp papers and an h-index above 20, with their kelp paper count and mean FWCI", difficulty: easy}
+    - {text: "established kelp researchers: over ten works on kelp and h-index over 20", difficulty: easy}
+    - {text: "who are the senior experts on kelp", difficulty: hard}
+
+- ref: 220  # KU authors with 5+ KU works, outside a collection of authors
+  nl:
+    - {text: "authors with at least 5 University of Kansas works who are not in my author collection col_abc123", difficulty: easy}
+    - {text: "count works per author for I146416000, keeping authors with 5 or more works and leaving out the authors in col_abc123", difficulty: easy}
+    - {text: "productive KU researchers who aren't already on my list col_abc123", difficulty: hard}
+
+- ref: 221  # CRISPR: count, mean FWCI, percent OA, median citation count
+  nl:
+    - {text: "for CRISPR papers: total count, mean FWCI, percent open access and median citation count", difficulty: easy}
+    - {text: "summary statistics of the CRISPR topic T10878: how many works, average FWCI, OA share, median citations", difficulty: easy}
+    - {text: "give me the headline numbers for CRISPR research", difficulty: hard}
+
+- ref: 222  # works since 2021 counted by year
+  nl:
+    - {text: "number of works per year after 2020", difficulty: easy}
+    - {text: "count works by publication year for years later than 2020", difficulty: easy}
+    - {text: "how many papers came out each year since 2021", difficulty: hard}

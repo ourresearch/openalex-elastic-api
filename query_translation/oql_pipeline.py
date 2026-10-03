@@ -414,8 +414,46 @@ def format_pipeline(tree: OQLRenderTree, width: int = None) -> str:
     lines = [head]
     for d in tree.directives:
         lines[-1] += ";"
-        lines.append(f"then {d.prefix}{_segs_text(d.segments)}")
+        lines.extend(_wrap_step(f"then {d.prefix}{_segs_text(d.segments)}", width))
     return "\n".join(lines)
+
+
+def _wrap_step(line: str, width: int) -> List[str]:
+    """A step over the width: its group filter on the next lines, one condition
+    per line (`  where ...` / `  and ...`), split only at top-level connectives."""
+    if len(line) <= width:
+        return [line]
+    i = line.find(" where ")
+    if i < 0:
+        return [line]
+    head, rest = line[:i], line[i + len(" where "):]
+    parts, conns = [], []
+    depth, quoted, start, j = 0, False, 0, 0
+    while j < len(rest):
+        c = rest[j]
+        if c == '"':
+            quoted = not quoted
+        elif not quoted and c == "(":
+            depth += 1
+        elif not quoted and c == ")":
+            depth -= 1
+        elif not quoted and depth == 0:
+            for conn in (" and ", " or "):
+                if rest.startswith(conn, j):
+                    parts.append(rest[start:j])
+                    conns.append(conn.strip())
+                    j += len(conn)
+                    start = j
+                    break
+            else:
+                j += 1
+                continue
+            continue
+        j += 1
+    parts.append(rest[start:])
+    out = [head, f"  where {parts[0]}"]
+    out.extend(f"  {conn} {p}" for conn, p in zip(conns, parts[1:]))
+    return out
 
 
 def render_pipeline_tree(oqo: OQO, resolver=None):

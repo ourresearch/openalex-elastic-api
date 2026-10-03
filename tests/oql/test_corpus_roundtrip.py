@@ -269,6 +269,10 @@ KNOWN_TAGS = {
     "proximity", "wildcard", "search-semantics", "entity-references",
     "group-by", "sample", "filter", "sr-transcription",
     "corpus",  # corpus selector — core / expansion / all (oxjob #481)
+    # the pipeline language (oxjob #1530): steps, calculations, group filters,
+    # splits by listed values / conditions / bins, sets in `in (...)`
+    "pipeline", "calculate", "group-filter", "listed-values", "condition-groups",
+    "bins", "collection",
 }
 
 
@@ -348,6 +352,10 @@ def test_every_row_has_valid_facets():
         # K-ary list proximity (oxjob #514): 3+ operands have no classic URL `~` form
         # (the syntax tops out at binary), so the renderer raises -> oql-only.
         187: "oql-only",
+        # The pipeline language (oxjob #1530): calculations and splits by listed
+        # values, searches, bins or conditions have no classic URL form. 222 is the
+        # classic `group by` plus a calculation (its canonical form is a pipeline).
+        **{i: "oql-only" for i in range(207, 223)},
     }
     assert non_has_oxurl == expected, (
         f"oxurl_status classification drifted: "
