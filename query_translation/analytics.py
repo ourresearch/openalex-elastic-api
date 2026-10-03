@@ -798,7 +798,8 @@ def plan_levels(levels: List[Level], cards: Dict[int, int], nested: bool, per_pa
         lv.size = size
         order = [{"_count": "desc"}, {"_key": "asc"}]
         if sort_measure and not nested and lv.selector is None:
-            order = [sort_measure, {"_key": "asc"}]
+            order = ((sort_measure if isinstance(sort_measure, list) else [sort_measure])
+                     + [{"_key": "asc"}])
         terms["order"] = order
         if lv.include is not None:
             inc = sorted(lv.include - (lv.exclude or set()))
@@ -1123,10 +1124,14 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         m = next((x for x in measures if x.key == key), None)
         if key == "count":
             sort_measure = {"_count": direction}
-        elif m is not None and m.measure in ("mean", "sum", "min", "max"):
-            sort_measure = {f"m_{m.key}": direction}
-        elif m is not None and m.measure == "median":
-            sort_measure = {f"m_{m.key}[50.0]": direction}
+        elif m is not None and m.measure in ("mean", "sum", "min", "max", "median"):
+            # groups with no value (a mean of nothing) sort last either way: first by
+            # "has a value", then by the measure (ES put null means first on desc)
+            path = f"m_{m.key}[50.0]" if m.measure == "median" else f"m_{m.key}"
+            es_field = _es_number_field(fields_dict, m.column_id)
+            m_aggs[f"h_{m.key}"] = {"max": {"script": {
+                "source": f"doc['{es_field}'].size() > 0 ? 1 : 0"}}}
+            sort_measure = [{f"h_{m.key}": "desc"}, {path: direction}]
         elif key == "key":
             sort_measure = {"_key": direction}
         # percent and percent_of_those sort after the fact (one page of groups)
