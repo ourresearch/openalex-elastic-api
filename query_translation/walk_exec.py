@@ -51,9 +51,10 @@ class IdSet:
     standing in for a whole query as a leaf's value while the query runs. `label`
     is the canonical text of the query it came from (what `to_dict` echoes)."""
 
-    def __init__(self, ids: List[str], label: str):
+    def __init__(self, ids: List[str], label: str, column: Optional[str] = None):
         self.ids = list(ids)
         self.label = label
+        self.column = column    # the leaf's column as written (`cited_by`), for labels
 
     def __len__(self):
         return len(self.ids)
@@ -62,9 +63,17 @@ class IdSet:
         return {"ids_of": self.label, "count": len(self.ids)}
 
 
+def _split_trees(g: GroupBy) -> List:
+    """The filter trees inside a split: its conditions, listed searches, group filter."""
+    trees = list(g.conditions or [])
+    trees += [v for v in (g.values or []) if isinstance(v, (LeafFilter, BranchFilter))]
+    return trees
+
+
 def needs_walk(oqo: OQO) -> bool:
     return (bool(oqo.walks) or oqo.each
-            or any(has_query_value(f) or has_relation_leaf(f) for f in oqo.filter_rows))
+            or any(has_query_value(f) or has_relation_leaf(f) for f in oqo.filter_rows)
+            or any(has_query_value(t) for g in oqo.group_by for t in _split_trees(g)))
 
 
 def _pmap(fn, items, inflight=INFLIGHT):
@@ -295,7 +304,17 @@ def resolve_sets(oqo: OQO, ctx: Ctx, walk_wheres: bool = True) -> OQO:
     walks = oqo.walks
     if walk_wheres:
         walks = [replace(w, where=walk(w.where)) if w.where is not None else w for w in walks]
-    return replace(oqo, filter_rows=[walk(f) for f in oqo.filter_rows], walks=walks)
+
+    def split(g: GroupBy) -> GroupBy:
+        # a set inside a split's condition (`into ((it cites works in (...)))`)
+        if not any(has_query_value(t) for t in _split_trees(g)):
+            return g
+        conditions = [walk(c) for c in g.conditions] if g.conditions is not None else None
+        values = ([walk(v) if isinstance(v, (LeafFilter, BranchFilter)) else v
+                   for v in g.values] if g.values is not None else None)
+        return replace(g, conditions=conditions, values=values)
+    return replace(oqo, filter_rows=[walk(f) for f in oqo.filter_rows], walks=walks,
+                   group_by=[split(g) for g in oqo.group_by])
 
 
 def _resolve_relation(leaf: LeafFilter, ctx: Ctx) -> LeafFilter:
@@ -330,10 +349,10 @@ def _resolve_leaf(leaf: LeafFilter, ctx: Ctx) -> LeafFilter:
                      f"reads the references of a set that cites about {est:,} works",
                      "Narrow the query in parentheses.")
         ids = list_keys(ctx, works_q, "referenced_works", est, what, map_hint=True)
-        return LeafFilter("ids.openalex", IdSet(ids, label), "in", leaf.is_negated)
+        return LeafFilter("ids.openalex", IdSet(ids, label, "cited_by"), "in", leaf.is_negated)
     ids = resolve_result_ids(inner, ctx, what)
     column = leaf.column_id
-    return LeafFilter(column, IdSet(ids, label), "in", leaf.is_negated)
+    return LeafFilter(column, IdSet(ids, label, column), "in", leaf.is_negated)
 
 
 def _set_works_query(inner: OQO, ctx: Ctx) -> dict:
