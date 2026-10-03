@@ -122,7 +122,7 @@ def test_the_launch_switch_renders_every_query_as_a_pipeline(monkeypatch):
     # the launch sets OQL_CANONICAL_STYLE=pipeline (read into CANONICAL_STYLE)
     from query_translation import oql_lang
     monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "pipeline")
-    assert render(_canon("works where year >= 2020 group by year, type")) == (
+    assert _flat(render(_canon("works where year >= 2020 group by year, type"))) == (
         "get works where year >= (2020); then group those works by year; then group "
         "those works again by type")
     assert render(_canon("works where type is not (review)")) == (
