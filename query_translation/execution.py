@@ -16,6 +16,7 @@ the translation module no longer cohabits with the ES-executing machinery — a
 recurring source of "does /query run the query?" confusion.
 """
 import importlib
+from typing import Optional
 import json
 from dataclasses import replace
 
@@ -674,15 +675,24 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
     refused = _credit_refusal(cost, "narrow it (fewer listed searches)")
     if refused is not None:
         return refused
+    csv_export = _format_asked() == "csv"
+    if csv_export:
+        # the download holds every group (a single split up to MAX_PAGE_DEPTH), not a page
+        from dataclasses import replace
+        oqo = replace(oqo, cursor=None)
     try:
         body = analytics.run(
             oqo, index_name=index_name, connection=connection, fields_dict=fields_dict,
-            base_query=base_query, per_page=oqo.per_page, page=oqo.page, sort=sort)
+            base_query=base_query,
+            per_page=analytics.MAX_PAGE_DEPTH if csv_export else oqo.per_page,
+            page=1 if csv_export else oqo.page, sort=sort)
     except analytics.AnalyticsError as e:
         return jsonify({"error": e.code, "message": e.message, "fix": e.fix,
                         "oqo": oqo.to_dict()}), e.status
     except APIError:
         raise
+    if csv_export:
+        return _csv_response(oqo, body, cost)
     body["meta"]["x_query"] = build_x_query(oqo, sort_operands=False)
     body["meta"]["cost_usd"] = cost["usd"]
     response = jsonify(body)
@@ -717,6 +727,33 @@ def _grandfathered() -> bool:
     """The proxy marks requests from grandfathered keys (a URL search costs them 1);
     it sets the header itself on every forwarded request (#1533)."""
     return request.headers.get("X-Credits-Grandfathered") == "1"
+
+
+def _format_asked() -> Optional[str]:
+    """`format=` on GET, or the POST body's `format` (stashed on flask.g by works/views.py)."""
+    from flask import g
+    value = getattr(g, "format_param", None)
+    if value is None:
+        value = request.args.get("format")
+    return str(value).lower() if value is not None else None
+
+
+def _csv_response(oqo, body: dict, cost: dict):
+    """A pipeline result as a zip of groups.csv, totals.csv and query.oql (#1536's spec)."""
+    from flask import Response
+    from query_translation import analytics, analytics_csv
+    from query_translation.oql_pipeline import render_pipeline
+    meta = body["meta"]
+    cap_note = None
+    if meta.get("more_groups"):
+        cap_note = (f"groups: the first {analytics.MAX_PAGE_DEPTH:,} only"
+                    + (f" of about {meta['groups_count']:,}" if meta.get("groups_count") else "")
+                    + "; narrow the query, or page the JSON with cursor=* for the rest")
+    data, name = analytics_csv.build_zip(oqo, body, cost, render_pipeline(oqo), cap_note)
+    response = Response(data, mimetype="application/zip", headers={
+        "Content-Disposition": f'attachment; filename="{name}"',
+        "X-Credits-Cost": str(cost["credits"])})
+    return response, 200
 
 
 def _website() -> bool:

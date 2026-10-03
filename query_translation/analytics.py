@@ -34,6 +34,7 @@ from elasticsearch_dsl import Q, Search
 import settings
 from core.exceptions import APIQueryParamsError
 from core.preference import clean_preference
+from query_translation.analytics_csv import split_meta
 from query_translation.oqo import (
     OQO, BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter)
 
@@ -1436,6 +1437,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         "more_groups": more_groups,
         "next_cursor": next_cursor,
         "measures": [_measure_meta(m, oqo.get_rows) for m in measures],
+        "splits": [split_meta(g, oqo.get_rows) for g in oqo.group_by],
         "es_calls": deadline.calls,
         "elapsed_ms": deadline.elapsed_ms(),
         "steps": deadline.log,
