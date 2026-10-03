@@ -1421,6 +1421,8 @@ def match_operator(toks: List[Tok], i: int) -> Optional[Tuple[str, int, bool]]:
     w0 = w(0)
     if w0 == "has":
         return "has", 1, True
+    if w0 in ("=", "=="):
+        return "is", 1, True                           # input synonym (oxjob #1530)
     if w0 == "is":
         if w(1) == "similar":
             if w(2) == "to":

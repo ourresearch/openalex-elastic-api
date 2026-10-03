@@ -82,6 +82,7 @@ operator     ::= 'is' 'not'? 'in' 'collection'
                | 'has'
                | ( 'does' 'not' | "doesn't" | 'doesnt' ) 'have'
                | '>=' | '<=' | '>' | '<'
+               | '=' | '=='              /* input synonyms for 'is'; canonical render is 'is' */
 
 /* The CANONICAL value form is always the parenthesized group (oxjob #554,
    spec v2.2) -- `type is (article)`, `year >= (2019)`; the bare scalar /
