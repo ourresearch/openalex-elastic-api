@@ -71,6 +71,10 @@ This invariant is the spec's runnable contract — see §9.
 
 ## 2. Statement shape
 
+The canonical form is the step form of §4.1 (`get works where ...; then group those works
+by ...; then calculate ...`). The classic statement below is still accepted on input, and is
+what §3's condition rules are written against:
+
 ```
 <entity> [ where <conditions> ] [ group by <dims> ] [ sample <n> [ seed <s> ] ]
 ```
@@ -800,6 +804,73 @@ order* and *column projection* are view concerns, not query language. They trave
 as sibling request params on the execute surface (`?sort=` / `?select=`, or POST
 body siblings), populated by the GUI's own sort/column controls — OQL and OQO
 never read or emit them. (They are additive to re-introduce in a future version.)
+
+## 4.1 Steps: the pipeline language (oxjob #1530; syntax settled in #1512)
+
+The canonical form of every query is a series of **steps** joined by `; then`, each
+starting with a verb and doing one thing:
+
+```
+get <entity> [ where <conditions> ]
+  [ ; then sample (<n>) of those <entity> [ with seed (<s>) ] ]
+  [ ; then group those <entity> [again] by <split> [ where <group filter> ] ]   ×0-3
+  [ ; then group those <entity> [again] into <split> [ where <group filter> ] ]
+  [ ; then calculate <measure> [, <measure>]* ]                               last
+```
+
+- **Start:** `get <entity> where ...` is the classic statement with the verb `get`. The
+  bare-entity start (`works where ...`) and the classic `group by` / `sample` directives
+  stay accepted forever and canonicalize to steps.
+- **`those <entity>`** names what the query holds (the plural entity); a different noun is
+  `OQL_WRONG_SET`. Optional on input. **`again`** is on every split after the first in the
+  canonical form; optional on input.
+- **Splits** (the OQO's `group_by`, outermost first; up to 3, `OQL_TOO_MANY_SPLITS`):
+  - `by <field>`: one group per value. A yes/no field gives `true` / `false` groups,
+    labeled `<field>` / `not <field>`. A decimal field can't split by value
+    (`OQL_DECIMAL_NEEDS_BINS`).
+  - `by <field> in (<v>, <v>, ...)`: one group per listed value, in order, empty ones
+    included; or `in (col_...)`, the members of one collection. Up to 100
+    (`OQL_LIST_TOO_LONG`).
+  - `by <search field> search in ((<search>), (<search>), ...)`: one group per portable
+    search string; up to 100, at most 5 AND/OR/NOT each (`OQL_SEARCH_TOO_COMPLEX`).
+  - `into ((<conditions>), (<conditions>), ...)`: one group per condition, in order; up
+    to 100; no empty group (the total row is the baseline).
+  - `into <number field> bins at (<e1>, <e2>, ...)` (increasing edges; integer labels
+    `0`, `1-9`, `100+`, decimal labels `under 0.5`, `0.5-1`, `2+`) or `bins of (<w>)`.
+- **Group filters** (`where` after a split): a boolean of
+  - **measure conditions** on each group's works: `<measure> [of those <entity>] <op>
+    (<number>)`, e.g. `count of those works > (10)`, `mean FWCI of those works >= (2)`;
+  - **the group's own fields** (when the groups are entities): `h-index > (20)`,
+    `last known institution is (I...)`; `that <noun> is [not] in (<ids or col_...>)`;
+    `co-author is [not] (A...)` (author groups), `collaborator is [not] (I...)`
+    (institution groups). Fields a group doesn't have: `OQL_BAD_GROUP_FILTER`.
+  Measures and own fields combine with `and`; an `or` mixing the two kinds is refused at
+  execution.
+- **`calculate`** is always the last step (`OQL_STEP_AFTER_CALCULATE`): `count`; `mean`,
+  `median`, `sum`, `min`, `max` of a number field (`min`/`max` also of a date); `percent`
+  of a yes/no field; `percent of those <entity>` (each group's share of its parent set);
+  after a split by entities, their own number fields (`h-index`), shown beside each group.
+  A bare works field (`calculate authors count`) is `OQL_BAD_MEASURE` with the fix
+  `mean authors count`.
+- **Walks** (`get each author of those works`) are Rung 2: `OQL_WALK_NOT_YET`.
+
+**Results.** Every grouped result has one row per group (nested groups under their
+parents) with one column per measure, plus a **total row** for the whole starting set with
+the same measures and the same later splits.
+
+**Negation and search in the canonical form.** Filters negate on the verb: `type is not
+(review)`, `institution is not (I1 or I2)`, `topic is not in (col_x)`. A search renders as
+one portable string with capital operators: `title-abstract has ((asthma OR wheeze) NOT
+(child OR pediatric))`. Lowercase connectives and value-level `not` stay accepted on input.
+
+**Layout.** A query that fits 80 columns renders on one line; otherwise each step on its
+own line, every line but the last ending in `;`, and a long group filter one condition per
+line (`  where ...` / `  and ...`).
+
+**Limits and time** (checked by the free `GET /query/oql/<q>` before anything runs): up to
+3 splits; 100 items per list; 5 operators per listed search; a nested split up to 10,000
+groups per split and 65,536 combined groups; about 10 seconds a query (refused when the
+plan is estimated over 10 s; cancelled at 15 s).
 
 ## 5. Diagnostics (codes + fix-its)
 
