@@ -148,13 +148,15 @@ def _canon_value_case(value, fld: "Field"):
 # honors it as a filter, so OQL must resolve it too or a shared "Title"-scope URL errors in
 # the editor with `unknown field "title.search"` (oxjob #397).
 _f("title", "display_name", "search", aliases=["display_name.search", "display_name", "title.search"])
-# Render word "title/abstract" is the registry's canonical display_name (#381 Phase 5);
-# the old "title & abstract" spelling stays a parse alias for back-compat.
-_f("title/abstract", "title_and_abstract", "search",
-   aliases=["title/abs", "title & abstract", "title and abstract", "title_and_abstract.search", "title_and_abstract", "title&abstract"])
-# oxjob #1521: title/abstract text OR the keywords a phrase in the query names.
-_f("title/abstract/keywords", "title_abstract_keywords", "search",
-   aliases=["title abstract keywords", "title_abstract_keywords.search", "title_abstract_keywords", "title/abs/keywords"])
+# Render word "title-abstract" is the registry's canonical display_name (#381 Phase 5).
+# Hyphens since 2026-10-03 (#1512/#1521): slashes separate namespaces and ids in OpenAlex
+# ids (fields/27, doi:10.1038/...). "title/abstract" and every older spelling stay parse
+# aliases forever.
+_f("title-abstract", "title_and_abstract", "search",
+   aliases=["title/abstract", "title/abs", "title & abstract", "title and abstract", "title_and_abstract.search", "title_and_abstract", "title&abstract"])
+# oxjob #1521: title and abstract text OR the keywords a phrase in the query names.
+_f("title-abstract-keywords", "title_abstract_keywords", "search",
+   aliases=["title/abstract/keywords", "title abstract keywords", "title_abstract_keywords.search", "title_abstract_keywords", "title/abs/keywords"])
 _f("abstract", "abstract", "search", aliases=["abstract.search"])
 # "full text" is the canonical broad full-text scope: title + abstract + full text
 # (oxjob #374; render word = the registry display_name, #381 Phase 5). All broad-search

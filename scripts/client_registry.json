@@ -1753,7 +1753,7 @@
       "key": "title_and_abstract.search",
       "entityToFilter": "works",
       "entityToSelect": null,
-      "displayName": "title/abstract",
+      "displayName": "title-abstract",
       "displayNameVerbatim": false,
       "type": "search",
       "actions": [
@@ -1769,7 +1769,7 @@
       "key": "title_abstract_keywords.search",
       "entityToFilter": "works",
       "entityToSelect": null,
-      "displayName": "title/abstract/keywords",
+      "displayName": "title-abstract-keywords",
       "displayNameVerbatim": false,
       "type": "search",
       "actions": [

@@ -60,7 +60,7 @@ def _code(oql):
     'works where title has (deep "cancer~1" learning)',       # quoted escape inside a run
     'works where title has (within 3 ("smart~1", "phone"))',  # proximity operand
     "works where title has (within 3 (smart~1, phone))",
-    "works where title/abstract has (cancer~1)",
+    "works where title-abstract has (cancer~1)",
     "works where full text has (cancer~1)",
 ])
 def test_tilde_is_rejected_with_no_fuzzy(oql):

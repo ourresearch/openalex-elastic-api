@@ -520,7 +520,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:%22machine%20learning%22'
   status: ok
-  oql: 'works where title/abstract has ("machine learning")'
+  oql: 'works where title-abstract has ("machine learning")'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"machine learning"', operator: has}]}
   note: Exact phrase, no stemming (.search.exact).
 
@@ -679,7 +679,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:change,title_and_abstract.search:climate'
   status: ok
-  oql: 'works where title/abstract has (change and climate)'
+  oql: 'works where title-abstract has (change and climate)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: climate, operator: has},
         {column_id: title_and_abstract.search, value: change, operator: has}]}
@@ -848,7 +848,7 @@ rows:
   status: ok
   oql: |-
     works where citation count > (100)
-      and title/abstract has (stemmed "coral bleaching")
+      and title-abstract has (stemmed "coral bleaching")
     group by source
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: '"coral bleaching"', operator: has},
@@ -908,7 +908,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:agile,title_and_abstract.search:%22cycle%20time%22|%22lead%20time%22,title_and_abstract.search:%22demand%20chain%22|%22supply%20chain%22|%22value%20chain%22'
   status: ok
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         agile
         and (stemmed "cycle time" or stemmed "lead time")
         and (
@@ -937,7 +937,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:%22smart%22~3~%22phone%22'
   status: ok
-  oql: 'works where title/abstract has (within 3 (smart, phone))'
+  oql: 'works where title-abstract has (within 3 (smart, phone))'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: '"smart"~3~"phone"', operator: has}]}
   note: 'STEMMED list proximity (oxjob #514): all-bare operands → `.search` (stemmed), matching the #284 column. Quote operands for exact proximity. Replaces the old `stemmed "smart phone" within 3 words` stemmed single-phrase form.'
 
@@ -950,7 +950,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:phone*'
   status: ok
-  oql: 'works where title/abstract has ("phone*")'
+  oql: 'works where title-abstract has ("phone*")'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: 'phone*', operator: has}]}
   note: 'Trailing wildcard, quoted so it runs on the no-stem `title_and_abstract.search.exact` column (oxjob #364). Bare `phone*` is now an error (OQL_WILDCARD_NEEDS_EXACT) — stemming would drop the literal prefix.'
 
@@ -963,7 +963,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:%22smart%22~3~%22phone*%22'
   status: ok
-  oql: 'works where title/abstract has (within 3 ("smart", "phone*"))'
+  oql: 'works where title-abstract has (within 3 ("smart", "phone*"))'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"smart"~3~"phone*"', operator: has}]}
   note: 'Wildcard inside a QUOTED (exact) list-proximity operand, SUPPORTED (oxjob #355/#514): compiles to an ES `intervals` query that keeps the wildcard (query_string used to drop it). WoS/Scopus parity. ordered=false + max_gaps=N == slop N. Leading / sub-3-char-prefix wildcards still rejected (#337); a BARE wildcard operand is rejected (row 29).'
 
@@ -976,7 +976,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:%22oyster%20toadfish%22'
   status: ok
-  oql: 'works where title/abstract has ("oyster toadfish")'
+  oql: 'works where title-abstract has ("oyster toadfish")'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"oyster toadfish"', operator: has}]}
   note: 'NL says "exact phrase only, no lemmatization" → plain quotes (exact, .search.exact). The textbook quotes-mean-exact case.'
 
@@ -988,7 +988,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:behavio*r'
   status: ok
-  oql: 'works where title/abstract has ("behavio*r")'
+  oql: 'works where title-abstract has ("behavio*r")'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: 'behavio*r', operator: has}]}
   note: Mid-word wildcard (UK/US spellings in one query), quoted so it runs on the no-stem `title_and_abstract.search.exact` column (oxjob #364). Bare `behavio*r` is now an error (OQL_WILDCARD_NEEDS_EXACT).
 
@@ -1005,7 +1005,7 @@ rows:
     works where language is (en [English])
       and year >= (2015)
       and year <= (2024)
-      and title/abstract has (
+      and title-abstract has (
         (ASD or stemmed "autism spectrum disorder" or autism)
         and (intervention or therapy or treatment)
       )
@@ -1051,7 +1051,7 @@ rows:
   oql: |-
     works where year >= (2018)
       and year <= (2023)
-      and title/abstract has (CRISPR and stemmed "genome editing")
+      and title-abstract has (CRISPR and stemmed "genome editing")
     sample 500
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: CRISPR, operator: has},
@@ -1155,7 +1155,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:!pediatric,title_and_abstract.search:covid'
   status: ok
-  oql: 'works where title/abstract has (not pediatric and covid)'
+  oql: 'works where title-abstract has (not pediatric and covid)'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: covid, operator: has},
         {column_id: title_and_abstract.search, value: pediatric, operator: has, is_negated: true}]}
@@ -1170,7 +1170,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:computing,title_and_abstract.search:quantum&group_by=authorships.countries'
   status: ok
-  oql: 'works where title/abstract has (computing and quantum) group by country'
+  oql: 'works where title-abstract has (computing and quantum) group by country'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: quantum, operator: has},
         {column_id: title_and_abstract.search, value: computing, operator: has}],
@@ -1186,7 +1186,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:CRISPR,title_and_abstract.search:Cas9&group_by=authorships.author.id'
   status: ok
-  oql: 'works where title/abstract has (CRISPR and Cas9) group by author'
+  oql: 'works where title-abstract has (CRISPR and Cas9) group by author'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: CRISPR, operator: has},
         {column_id: title_and_abstract.search, value: Cas9, operator: has}],
@@ -1201,7 +1201,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:CRISPR&group_by=funders.id'
   status: ok
-  oql: 'works where title/abstract has (CRISPR) group by funder'
+  oql: 'works where title-abstract has (CRISPR) group by funder'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: CRISPR, operator: has}],
         group_by: [{column_id: funders.id}]}
   note: 'Only the group-by-COUNT form is in scope. Ranking groups by mean citation impact is sort-by-aggregate -> #297.'
@@ -1328,8 +1328,8 @@ rows:
     2.19 "United Kingdom"
     2.20 "english boys"
     2.21 "english school"
-    3 title/abstract has
-    3.0 title/abstract
+    3 title-abstract has
+    3.0 title-abstract
     3.1 ( … )
     3.1.0 or
     3.1.1 attitude
@@ -1412,7 +1412,7 @@ rows:
         or "Northern Irish" or "United Kingdom" or "english boys"
         or "english school"
       )
-      and title/abstract has (
+      and title-abstract has (
         (
           attitude or attitudes or beliefs or diaries or diary or experiences
           or in-depth or indepth or informal or open or perceptions or perspective
@@ -2028,7 +2028,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:%223xTg-AD%22|%22in%20vivo%22'
   status: ok
-  oql: 'works where title/abstract has (stemmed "3xTg-AD" or stemmed "in vivo")'
+  oql: 'works where title-abstract has (stemmed "3xTg-AD" or stemmed "in vivo")'
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: title_and_abstract.search, value: '"3xTg-AD"', operator: has}, {column_id: title_and_abstract.search, value: '"in vivo"', operator: has}]}]}
   note: "Walkthrough batch 3 (W3.3): on the STEMMED .search column a quoted token the analyzer splits into >1 subtoken (hyphen/slash, e.g. '3xTg-AD', 'APP/PS1') is adjacent-subtokens (phrase), NOT the bare AND form — measured live `\"3xTg-AD\"` 2027 vs `3xTg-AD` 2354. So the encoder keeps quotes for multi-subtoken stemmed tokens; atomic tokens (5xFAD) and exact-column wildcards ('foo*bar') stay bare. Rendered as `near \"…\"` (stemmed adjacent phrase)."
 
@@ -2076,7 +2076,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:mental%20health'
   status: ok
-  oql: 'works where title/abstract has (mental health)'
+  oql: 'works where title-abstract has (mental health)'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: 'mental health', operator: has}]}
   note: "D2 reversal (#363 discovery run #3): a maximal run of bare words = ONE stemmed value node. The engine adjacency-boosts the whole run (match_phrase x2 title / x0.15 abstract OR'd on the plain AND), so splitting `mental health` into `mental AND health` would silently drop that ranking boost. Recall is identical (cross_fields AND, #399/#191.7); ranking is not. Explicit and/or/not still build the tree between nodes."
 
@@ -2088,7 +2088,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:road%20traffic%20safety%20and%20Ghana'
   status: ok
-  oql: 'works where title/abstract has (road traffic safety "and" Ghana)'
+  oql: 'works where title-abstract has (road traffic safety "and" Ghana)'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: 'road traffic safety and Ghana', operator: has}]}
   note: "#2 (#363 discovery run #3): a literal reserved word (and/or/not) inside a stemmed value is quoted on render so it folds back as an escaped literal rather than re-parsing as a connective. A quoted token EMBEDDED in a bare run stays stemmed (escape); a STANDALONE quoted phrase is still exact. The whole run remains ONE node."
 
@@ -2165,7 +2165,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:teacher,title_and_abstract.search.exact:!%22academic%20teacher%22'
   status: ok
-  oql: 'works where title/abstract has (teacher and not "academic teacher")'
+  oql: 'works where title-abstract has (teacher and not "academic teacher")'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: teacher, operator: has},
         {column_id: title_and_abstract.search.exact, value: '"academic teacher"', operator: has, is_negated: true}]}
@@ -2195,7 +2195,7 @@ rows:
   oxurl_status: has-oxurl
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:England,title_and_abstract.search.exact:!%22New%20England%22'
   status: ok
-  oql: 'works where title/abstract has (England and not "New England")'
+  oql: 'works where title-abstract has (England and not "New England")'
   oqo: {get_rows: works, filter_rows: [
         {column_id: title_and_abstract.search, value: England, operator: has},
         {column_id: title_and_abstract.search.exact, value: '"New England"', operator: has, is_negated: true}]}
@@ -2210,7 +2210,7 @@ rows:
 #    literature (oxjob #434 -> #363). One representative sample per shape across
 #    fields. ~90% of real SR strings specify no field, just a boolean tree of
 #    quoted phrases / words thrown at the default field -> we map those to OQL's
-#    `title/abstract` (the interesting structure is the TEXT-MATCH tree, not the
+#    `title-abstract` (the interesting structure is the TEXT-MATCH tree, not the
 #    filter tree; OQL uses one syntax for both). The ~22% that scope blocks to a
 #    field (Title / TS= / TITLE-ABS-KEY / [Mesh]) are the `field-tree` rows below.
 #    oqo is MATERIALIZED from oql by regen_corpus_oql.py (row-78 pattern): these
@@ -2227,8 +2227,8 @@ rows:
   status: ok
   note: >-
     depth-0 AND of two concepts; the untagged free-text default ->
-    title/abstract. (source DB: PubMed).
-  oql: 'works where title/abstract has (acetaminophen and "autism spectrum disorders")'
+    title-abstract. (source DB: PubMed).
+  oql: 'works where title-abstract has (acetaminophen and "autism spectrum disorders")'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: acetaminophen, operator: has},
     {column_id: title_and_abstract.search.exact, value: '"autism spectrum disorders"', operator: has}]}
 
@@ -2242,7 +2242,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search.exact:%22firm-specific%20factors%22,title_and_abstract.search.exact:%22share%20price%22'
   status: ok
   note: 'Two quoted multi-word phrases AND-ed (exact-adjacent, no stemming).'
-  oql: 'works where title/abstract has ("firm-specific factors" and "share price")'
+  oql: 'works where title-abstract has ("firm-specific factors" and "share price")'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"firm-specific
     factors"', operator: has}, {column_id: title_and_abstract.search.exact, value: '"share
     price"', operator: has}]}
@@ -2260,7 +2260,7 @@ rows:
     Canonical SR shape: a flat AND of OR-synonym groups (here 4 blocks).
     (source DB: Engineering Village).
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         concrete
         and (corrosion or deterioration)
         and (durability or resistance)
@@ -2285,7 +2285,7 @@ rows:
   status: ok
   note: 'AND of OR-groups; mixes quoted phrases with bare single words.'
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         "body composition"
         and (elderly or older)
         and (
@@ -2317,7 +2317,7 @@ rows:
     Two synonym groups AND-ed; all single-word stems. (source DB: Web of
     Science).
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         (game or gamification or gamified)
         and (literacy or read or reading)
       )
@@ -2339,7 +2339,7 @@ rows:
   status: ok
   note: 'Three-block PICO-style AND of OR-groups. (source DB: PubMed).'
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         (LMWH or antithrombotic or heparin)
         and (idiopathic or unexplained)
         and (
@@ -2372,7 +2372,7 @@ rows:
     Truncation: wildcards quoted so they run on the no-stem .search.exact
     column (#364).
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         Iran
         and (colimycin or colistimethate or colistin or "Polymyxin E")
         and ("K.pneumoniae" or "Klebsiella pneumoniae")
@@ -2398,7 +2398,7 @@ rows:
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:!children,title_and_abstract.search:depression,title_and_abstract.search:obesity'
   status: ok
   note: 'Negation (NOT) — only ~4% of real SR strings use it. (source DB: PubMed).'
-  oql: 'works where title/abstract has (not children and depression and obesity)'
+  oql: 'works where title-abstract has (not children and depression and obesity)'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: children, operator: has,
     is_negated: true}, {column_id: title_and_abstract.search, value: depression, operator: has},
     {column_id: title_and_abstract.search, value: obesity, operator: has}]}
@@ -2416,7 +2416,7 @@ rows:
     Multiple trailing NOT exclusions after an AND-of-ORs core. (source DB:
     Science Direct).
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         not paediatric
         and not "myocardial infarction"
         and (COVID-19 or coronavirus)
@@ -2447,7 +2447,7 @@ rows:
     Three concept blocks; many quoted device phrases. (source DB: PubMed,
     Cochrane Library, ClinicalTrials.gov).
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         (AI or "artificial intelligence" or "machine learning")
         and (
           "artificial pancreas"
@@ -2482,7 +2482,7 @@ rows:
   status: ok
   note: 'A nested AND-of-ORs inside one block (drug AND (site AND condition)).'
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         (atrophic or atrophy or dryness or lubrication or vaginitis)
         and (carbetocin or oxytocin or pitocin or syntocinon)
         and (
@@ -2519,7 +2519,7 @@ rows:
   status: ok
   note: 'Long brand-name OR list AND a truncated-stem group. (source DB: Scopus).'
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         (
           facebook or instagram or linkedin or reddit or tiktok or twitter
           or youtube or "sina weibo" or "social media"
@@ -2548,7 +2548,7 @@ rows:
   status: ok
   note: 'Spelled-out term OR its acronym — a very common SR idiom.'
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         (NAION or "nonarteritic anterior ischemic optic neuropathy")
         and (semaglutide or "glucagon-like peptide-1 agonist")
       )
@@ -2569,7 +2569,7 @@ rows:
   status: ok
   note: 'Plain three-phrase AND, no synonyms.'
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         variation
         and "branching pattern"
         and "facial nerve"
@@ -2591,7 +2591,7 @@ rows:
     Truncation across both blocks; education-research SR (non-biomed field).
     (source DB: Scopus).
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         (
           "clean energy"
           or "energy education"
@@ -2622,7 +2622,7 @@ rows:
   status: ok
   note: 'Multilingual phrases (Portuguese/English) — corpus is not English-only.'
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         (biology or chemistry or physics or "ensino de ciências")
         and ("blended learning" or "ensino híbrido" or "b-learning")
       )
@@ -2648,7 +2648,7 @@ rows:
     cannot express this (it has no parens), so it is oql-only. ~3-deep.
     (source DB: PubMed).
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         intake
         and (season or (spring and summer and winter and (autumn or fall)))
       )
@@ -2673,7 +2673,7 @@ rows:
     The middle block "(elderly and women) or (older women)" is an AND inside
     an OR — not distributable, hence oql-only. (source DB: PubMed).
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         (
           balance
           or coordination
@@ -2713,7 +2713,7 @@ rows:
     block AND (a or b or c), but the as-written OR-of-ANDs is faithfully
     representable and oql-only. (source DB: PubMed).
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         ("dental stem cell" and (periodontitis or "periodontal regeneration"))
         or (
           "mesenchymal stem cell"
@@ -2743,11 +2743,11 @@ rows:
   oxurl: null
   status: ok
   note: >-
-    Web of Science TS= (Topic) blocks -> each a separate title/abstract clause.
+    Web of Science TS= (Topic) blocks -> each a separate title-abstract clause.
     Filter-tree and value-tree share one OQL syntax. (source DB: Web of
     Science).
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         (aged or elderly or "older adults")
         and (burden or outbreak or prevalence)
         and ("loneliness" or "lonely")
@@ -2772,9 +2772,9 @@ rows:
   status: ok
   note: >-
     PubMed [Title] block scoped to title; the untagged block defaults to
-    title/abstract — two different fields in one query. (source DB: PubMed).
+    title-abstract — two different fields in one query. (source DB: PubMed).
   oql: |-
-    works where title/abstract has ("neuropsychological test")
+    works where title-abstract has ("neuropsychological test")
       and title has (normative or norms or "normative data")
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search.exact, value: '"neuropsychological
     test"', operator: has}, {join: or, filters: [{column_id: display_name.search, value: normative,
@@ -2796,8 +2796,8 @@ rows:
     1.2.1 genai
     1.2.2 "generative ai"
     1.2.3 "generative artificial intelligence"
-    2 title/abstract has
-    2.0 title/abstract
+    2 title-abstract has
+    2.0 title-abstract
     2.1 ( … )
     2.1.0 and
     2.1.1 generation
@@ -2824,14 +2824,14 @@ rows:
   note: >-
     Scopus TITLE(...) AND TITLE-ABS-KEY(...): each field block carries its OWN
     nested boolean (AND-of-ORs in the title block, OR-of-ANDs in the t/a
-    block). TITLE-ABS-KEY≈title/abstract (OpenAlex has no separate author-
+    block). TITLE-ABS-KEY≈title-abstract (OpenAlex has no separate author-
     keyword text field). (source DB: Scopus).
   oql: |-
     works where title has (
         (engineering or industry or "application*")
         and (genai or "generative ai" or "generative artificial intelligence")
       )
-      and title/abstract has (
+      and title-abstract has (
         (generation and text)
         or ((generation or "model*") and (multimodal or nlp or "natural language"))
       )
@@ -2860,9 +2860,9 @@ rows:
   oxurl: 'https://openalex.org/works?filter=title_and_abstract.search:music,title_and_abstract.search:suzuki'
   status: ok
   note: >-
-    Scopus TITLE-ABS-KEY wrapping one small boolean -> one title/abstract
+    Scopus TITLE-ABS-KEY wrapping one small boolean -> one title-abstract
     clause. The common single-field Scopus idiom. (source DB: Scopus).
-  oql: 'works where title/abstract has (music and suzuki)'
+  oql: 'works where title-abstract has (music and suzuki)'
   oqo: {get_rows: works, filter_rows: [{column_id: title_and_abstract.search, value: music, operator: has},
     {column_id: title_and_abstract.search, value: suzuki, operator: has}]}
 
@@ -2906,11 +2906,11 @@ rows:
     block (concept OR text -- the real PubMed pattern). MeSH terms with no
     clean OpenAlex keyword (Thrombocytopenia, Blood Coagulation Disorders)
     fall back to free-text. oql-only: ORs an entity-membership filter with a
-    title/abstract search.
+    title-abstract search.
   oql: |-
     works where (
         keyword is (keywords/anticoagulant [Anticoagulant])
-        or title/abstract has (
+        or title-abstract has (
           INR
           or aPTT
           or coagulopathy
@@ -2921,7 +2921,7 @@ rows:
       )
       and (
         keyword is (keywords/central-venous-catheter [Central venous catheter])
-        or title/abstract has (CVC or "central line" or "central venous catheter")
+        or title-abstract has (CVC or "central line" or "central venous catheter")
       )
   oqo: {get_rows: works, filter_rows: [{join: or, filters: [{column_id: keywords.id, value: keywords/anticoagulant},
     {column_id: title_and_abstract.search, value: INR, operator: has}, {column_id: title_and_abstract.search,
@@ -2958,7 +2958,7 @@ rows:
       and year >= (2003)
       and year <= (2025)
       and type is (types/article)
-      and title/abstract has (
+      and title-abstract has (
         vapes or "e vape" or "e vapes" or "e vaping" or "e vaping" or "e vapor"
         or "e vapors" or "e vapour" or "e vapours" or "liquid nicotine"
         or "nicotine aerosol" or "nicotine bag" or "nicotine bags" or "nicotine gum"
@@ -3101,7 +3101,7 @@ rows:
     the OR-list into one unterminated string. A real librarian hit this; OQL
     surfaces it loudly as OQL_UNTERMINATED_STRING (vs the classic URL silently
     mis-scoping the phrase). Origin DBs: as line 11.
-  oql: 'works where title/abstract has ("e cigarette" or "Vype|VUSE|"e Voke" or Juul or "e liquid")'
+  oql: 'works where title-abstract has ("e cigarette" or "Vype|VUSE|"e Voke" or Juul or "e liquid")'
   diagnostic: OQL_UNTERMINATED_STRING
 
 - id: 163
@@ -3127,7 +3127,7 @@ rows:
       and year >= (2003)
       and year <= (2025)
       and type is (types/article)
-      and title/abstract has (
+      and title-abstract has (
         Juul or "VUSE" or "Vype" or "Geek Bar"
         or within 4 ("cigarette", "ultra sonic") or "e Voke" or "e cigar"
         or "e cigarette" or "e cigarettes" or "e liquid" or "e liquids"
@@ -3185,14 +3185,14 @@ rows:
   oxurl: null
   status: ok
   note: >-
-    Claire's real run query (block 1, 152 hits): FIVE title/abstract search
+    Claire's real run query (block 1, 152 hits): FIVE title-abstract search
     groups AND-ed (accountability x school-type x policy/reform x review x
     evidence), plus a grey-literature `type is (book-chapter or book or
     dissertation or report or ...)` OR and a per-year `year is (2014 or ... or
     2025)` list. Her stray leading quote on the first group is fixed here to
     the intended phrases. Origin DBs: APA PsycInfo / Web of Science.
   oql: |-
-    works where title/abstract has (
+    works where title-abstract has (
         review
         and (
           HAVO or VWO or atheneum or gymnasium or schooling
@@ -3371,7 +3371,7 @@ rows:
         2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or 2023
         or 2024 or 2025
       )
-      and title/abstract has (
+      and title-abstract has (
         DEPP or EQAO or HGIOS or OFSTED or Onderwijsinspectie
         or "Conseil de l'Evaluation de l'Ecole"
         or "Direction de l'Evaluation de la Prospective et de l'Evaluation"
@@ -3513,7 +3513,7 @@ rows:
         2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or 2023
         or 2024 or 2025
       )
-      and title/abstract has (
+      and title-abstract has (
         (
           Britain or Dutch or Estonia or Finland or Finnish or Flemish or France
           or French or Ireland or Irish or Japan or Japanese or Netherlands
@@ -3710,7 +3710,7 @@ rows:
         2014 or 2015 or 2016 or 2017 or 2018 or 2019 or 2020 or 2021 or 2022 or 2023
         or 2024 or 2025
       )
-      and title/abstract has (
+      and title-abstract has (
         (
           HAVO or VWO or atheneum or gymnasium or schooling
           or secondary vocational education or "Elementary Education"

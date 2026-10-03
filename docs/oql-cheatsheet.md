@@ -59,9 +59,9 @@ Search a text field with **`has`**. Bare words are **stemmed** (so `cancer` also
 | `works where title has (stemmed "genome editing")` | exact-adjacent **but** still stemmed |
 | `works where title has ("psoriat*")` | wildcard — **must be quoted**; `*` = any chars, `?` = exactly one char (`"wom?n"`, `"wo??n"`) |
 | `works where title has (within 3 ("smart", "phone"))` | proximity — terms within N words, any order |
-| `works where title/abstract is similar to ("ocean acidification on coral")` | semantic (meaning-based) search |
+| `works where title-abstract is similar to ("ocean acidification on coral")` | semantic (meaning-based) search |
 
-**Text fields:** `title`, `abstract`, `title/abstract`, `full text`, `raw affiliation`, `byline`.
+**Text fields:** `title`, `abstract`, `title-abstract`, `title-abstract-keywords`, `full text`, `raw affiliation`, `byline`.
 
 ---
 
@@ -72,9 +72,9 @@ Join filters with `and` / `or`. Use parentheses to group; `and` binds tighter th
 ```
 works where title has (cancer) and year >= (2020)
 works where institution is (I136199984) or funder is (F4320332161)
-works where title/abstract has ((vape or vaping) and (health or harm))
-works where (year < (2000) and title/abstract has ("global warming"))
-  or (title/abstract has ("climate change") and year > (2020))
+works where title-abstract has ((vape or vaping) and (health or harm))
+works where (year < (2000) and title-abstract has ("global warming"))
+  or (title-abstract has ("climate change") and year > (2020))
 ```
 
 ---

@@ -34,13 +34,13 @@ def _rows(oql):
 # --- #1: a bare multi-word run is ONE node, not per-word AND --------------- #
 
 def test_bare_run_is_one_node():
-    fr = _rows("works where title/abstract has (mental health)")
+    fr = _rows("works where title-abstract has (mental health)")
     assert fr == [{"column_id": "title_and_abstract.search",
                    "value": "mental health", "operator": "has"}]
 
 
 def test_explicit_connective_builds_tree():
-    fr = _rows("works where title/abstract has (mental health or anxiety)")
+    fr = _rows("works where title-abstract has (mental health or anxiety)")
     assert len(fr) == 1 and fr[0]["join"] == "or"
     assert sorted(f["value"] for f in fr[0]["filters"]) == ["anxiety", "mental health"]
 
@@ -81,13 +81,13 @@ def test_reserved_word_literal_round_trips(value):
 def test_embedded_quote_is_a_stemmed_escape():
     # a quoted token inside a bare run folds in as a literal STEMMED word (stays
     # on .search), unlike a standalone quoted phrase (which is exact)
-    fr = _rows('works where title/abstract has (road traffic "and" Ghana)')
+    fr = _rows('works where title-abstract has (road traffic "and" Ghana)')
     assert fr == [{"column_id": "title_and_abstract.search",
                    "value": "road traffic and Ghana", "operator": "has"}]
 
 
 def test_standalone_quote_still_exact():
-    fr = _rows('works where title/abstract has "road traffic"')
+    fr = _rows('works where title-abstract has "road traffic"')
     assert fr[0]["column_id"] == "title_and_abstract.search.exact"
 
 

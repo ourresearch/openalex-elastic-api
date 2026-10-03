@@ -75,15 +75,17 @@ name: `language is (en)`, `country is (US)`, `SDG is (3)`.
 
 ## Searching text — the heart of OQL
 
-Search a text field with **`has`**. The fields are `title`, `abstract`, `title/abstract`
-(both at once), `full text`, `raw affiliation`, and `byline`.
+Search a text field with **`has`**. The fields are `title`, `abstract`, `title-abstract`
+(both at once), `title-abstract-keywords` (title and abstract, or the keywords a phrase names), `full text`,
+`raw affiliation`, and `byline`. (The older spellings `title/abstract` and `title/abstract/keywords` still work
+and echo back with hyphens.)
 
 **Bare words are stemmed.** `title has (cancer)` also matches *cancers*, *cancerous* — the
 everyday default, good recall:
 
 ```
 works where title has (cancer)
-works where title/abstract has (machine learning)
+works where title-abstract has (machine learning)
 ```
 
 (A phrase of 2+ words is matched as a stemmed phrase, ranked higher when the words are
@@ -120,7 +122,7 @@ works where title has (within 3 ("smart", "phone"))
 **Semantic search** finds works by meaning, not keywords:
 
 ```
-works where title/abstract is similar to ("ocean acidification effects on coral reefs")
+works where title-abstract is similar to ("ocean acidification effects on coral reefs")
 ```
 
 ---
@@ -132,10 +134,10 @@ Join filters with `and` / `or`, and group with parentheses. `and` binds tighter 
 parentheses back so nothing is left to guess:
 
 ```
-works where title/abstract has ((vape or vaping) and (health or harm))
+works where title-abstract has ((vape or vaping) and (health or harm))
 
-works where (year < (2000) and title/abstract has ("global warming"))
-  or (title/abstract has ("climate change") and year > (2020))
+works where (year < (2000) and title-abstract has ("global warming"))
+  or (title-abstract has ("climate change") and year > (2020))
 ```
 
 This nesting — and OR across *different* fields

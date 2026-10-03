@@ -265,7 +265,7 @@ SDG is Climate Action [13]        → sustainable_development_goals.id:13
 #### Search
 ```
 title includes "machine learning" → display_name.search:machine learning
-title/abstract includes "climate" → title_and_abstract.search:climate
+title-abstract includes "climate" → title_and_abstract.search:climate
 ```
 
 #### Multiple Values (OR)

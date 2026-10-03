@@ -20,7 +20,7 @@ from tests.oql.oql_v2 import parse, OQLError
 def test_bang_quoted_phrase_is_rejected():
     """`A!"phrase"` is not OQL — raise OQL_BANG_NOT_SUPPORTED, don't mis-parse."""
     with pytest.raises(OQLError) as exc:
-        parse('works where title/abstract has (England!"New England")')
+        parse('works where title-abstract has (England!"New England")')
     assert exc.value.code == "OQL_BANG_NOT_SUPPORTED"
 
 
@@ -34,11 +34,11 @@ def test_bang_bare_term_is_rejected():
 def test_leading_bang_is_rejected():
     """A leading `!` is rejected too (OQL has no `!`)."""
     with pytest.raises(OQLError) as exc:
-        parse('works where title/abstract has (!"New England")')
+        parse('works where title-abstract has (!"New England")')
     assert exc.value.code == "OQL_BANG_NOT_SUPPORTED"
 
 
 def test_oql_not_form_still_works():
     """The OQL way to say it — a bare `not` prefix — is unaffected."""
     # parses without raising
-    parse('works where title/abstract has (England and not "New England")')
+    parse('works where title-abstract has (England and not "New England")')

@@ -424,7 +424,7 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'publication_year': {"display_name": 'year'},
         'raw_affiliation_strings': {"display_name": 'exact raw affiliation'},
         'raw_affiliation_strings.search': {"display_name": 'raw affiliation', "aliases": ['affiliation', 'raw affiliation string']},
-        # the .exact sibling shares the base label, like title/abstract (#800)
+        # the .exact sibling shares the base label, like title-abstract (#800)
         'raw_affiliation_strings.search.exact': {"display_name": 'raw affiliation'},
         'raw_author_name.search': {"display_name": 'byline', "aliases": ['raw author name']},
         'related_to': {"display_name": 'related to'},
@@ -436,9 +436,10 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'study_designs.id': {"display_name": 'study design', "aliases": ['study designs', 'study_designs', 'study_designs.id']},
         'x_sdgs.id': {"display_name": 'experimental SDGs', "aliases": ['x sdgs', 'x_sdgs', 'experimental SDG', 'shadow SDG']},
         'title.search': {"display_name": 'title'},
-        'title_and_abstract.search': {"display_name": 'title/abstract', "aliases": ['title/abs', 'title & abstract', 'title and abstract', 'title&abstract', 'title_and_abstract']},
+        'title_and_abstract.search': {"display_name": 'title-abstract', "aliases": ['title/abstract', 'title/abs', 'title & abstract', 'title and abstract', 'title&abstract', 'title_and_abstract']},
         # oxjob #1521: title + abstract text OR the keywords a query phrase names.
-        'title_abstract_keywords.search': {"display_name": 'title/abstract/keywords', "aliases": ['title abstract keywords', 'title_abstract_keywords', 'title/abs/keywords']},
+        # Hyphenated labels since 2026-10-03 (#1512): slashes belong to ids; the slash forms stay aliases.
+        'title_abstract_keywords.search': {"display_name": 'title-abstract-keywords', "aliases": ['title/abstract/keywords', 'title abstract keywords', 'title_abstract_keywords', 'title/abs/keywords']},
         'topics.id': {"display_name": 'topics'},
         'type': {"display_name": 'type'},
     },

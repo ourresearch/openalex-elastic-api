@@ -140,7 +140,7 @@ def test_oql_render_is_the_faithful_and_of_quoted_tokens():
     which re-executes to 23,661 instead of 2,919,096 (prod, −99.2%).
     """
     assert render_oqo_to_oql(_scoped("learning: machine")) == (
-        'works where title/abstract has ("learning:" and "machine")')
+        'works where title-abstract has ("learning:" and "machine")')
 
 
 def test_colon_bearing_token_keeps_its_colon_verbatim():
@@ -168,7 +168,7 @@ def test_negated_colon_value_round_trips_on_both_legs():
     assert render_oqo_to_url(oqo)["filter"] == f"{COL}:!learning: machine"
     assert _rows(parse_oql_to_oqo(render_oqo_to_oql(oqo))) == _rows(oqo)
     assert render_oqo_to_oql(oqo) == (
-        'works where title/abstract has (not "learning:" or not "machine")')
+        'works where title-abstract has (not "learning:" or not "machine")')
 
 
 # --- the comma+colon shape session 5 flagged as a possible blocker ------------

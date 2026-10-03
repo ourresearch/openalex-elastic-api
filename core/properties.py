@@ -352,7 +352,13 @@ CAP_COLUMN = "column"
 # `authorships.institutions.geo.region`, `.geo.city`; sources `host_organization.country_code`;
 # authors `last_known_institutions.geo.region`, `.geo.city`; awards `funder.country_code`.
 # GUI facets in openalex-gui. Purely additive: classify_properties_diff.py says MINOR.
-PROPERTIES_VERSION = "14.8.0"
+# 14.9.0 (oxjobs #1521 + #1512, 2026-10-03; Jason's yes 2026-10-03 10:51 CT): works
+# `title_and_abstract.search` display_name "title/abstract" -> "title-abstract" and
+# `title_abstract_keywords.search` "title/abstract/keywords" -> "title-abstract-keywords"
+# (slashes separate namespaces and ids in OpenAlex ids: fields/27, doi:10.1038/...). The
+# slash forms become aliases, so every query valid yesterday still parses; param names unchanged.
+# Display-name tweak + alias additions = MINOR.
+PROPERTIES_VERSION = "14.9.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

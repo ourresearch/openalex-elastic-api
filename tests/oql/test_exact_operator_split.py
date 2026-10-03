@@ -96,7 +96,7 @@ def test_url_leg_round_trips(value):
 def test_oql_leg_round_trips_and_is_the_quoted_and(value):
     oqo = _scoped("search.title_and_abstract.exact", value)
     oql = render_oqo_to_oql(oqo)
-    assert oql == "works where title/abstract has (" + " and ".join(f'"{t}"' for t in value.split()) + ")"
+    assert oql == "works where title-abstract has (" + " and ".join(f'"{t}"' for t in value.split()) + ")"
     assert _rows(parse_oql_to_oqo(oql)) == _rows(oqo)
 
 
@@ -124,7 +124,7 @@ def test_mixed_value_lifts_on_the_exact_door():
         {"column_id": EXACT, "value": "-neural", "operator": "has"},
     ]
     oql = render_oqo_to_oql(oqo)
-    assert oql == 'works where title/abstract has ("machine learning" and "-neural")'
+    assert oql == 'works where title-abstract has ("machine learning" and "-neural")'
     assert _rows(parse_oql_to_oqo(oql)) == _rows(oqo)
     assert _rows(parse_url_to_oqo("works", filter_string=render_oqo_to_url(oqo)["filter"])) == _rows(oqo)
 
@@ -136,7 +136,7 @@ def test_mixed_value_lifts_on_the_stemmed_door():
         {"column_id": STEM, "value": "neural", "operator": "has"},
     ]
     oql = render_oqo_to_oql(oqo)
-    assert oql == 'works where title/abstract has (stemmed "machine learning" and neural)'
+    assert oql == 'works where title-abstract has (stemmed "machine learning" and neural)'
     assert _rows(parse_oql_to_oqo(oql)) == _rows(oqo)
     assert _rows(parse_url_to_oqo("works", filter_string=render_oqo_to_url(oqo)["filter"])) == _rows(oqo)
 

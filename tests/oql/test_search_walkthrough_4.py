@@ -106,7 +106,7 @@ def test_w32_same_alias_works_in_where_and_group_by():
 def test_w33_multisubtoken_stemmed_token_keeps_quotes(token):
     # `stemmed "X"` = stemmed adjacent phrase; for a hyphen/slash token it must NOT
     # collapse to bare (different result set on the engine).
-    oqo = parse(f'works where title/abstract has (stemmed "{token}")')
+    oqo = parse(f'works where title-abstract has (stemmed "{token}")')
     leaf = oqo.to_dict()["filter_rows"][0]
     leaf = leaf.get("filters", [leaf])[0] if "filters" in leaf else leaf
     assert leaf["value"] == f'"{token}"', leaf
@@ -117,7 +117,7 @@ def test_w33_multisubtoken_stemmed_token_keeps_quotes(token):
 def test_w33_atomic_stemmed_token_stays_bare(token):
     # an atomic alphanumeric token is not split by the analyzer (measured equal),
     # so it stays bare so the common case isn't gratuitously quoted.
-    oqo = parse(f'works where title/abstract has (stemmed "{token}")')
+    oqo = parse(f'works where title-abstract has (stemmed "{token}")')
     leaf = oqo.to_dict()["filter_rows"][0]
     leaf = leaf.get("filters", [leaf])[0] if "filters" in leaf else leaf
     assert leaf["value"] == token, leaf

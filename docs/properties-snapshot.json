@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "c7517c287ce05a5827949c8f19db69e403a0874790909f6eec1d99a18832702e",
+    "fingerprint": "3ead2503208471f506e8e5fcaf2aae909042c00c1a1324d471be065e1f60440c",
     "property_count": 900,
-    "version": "14.8.0"
+    "version": "14.9.0"
   },
   "properties": {
     "authors": {
@@ -18830,13 +18830,14 @@
         "aliases": [
           "title abstract keywords",
           "title/abs/keywords",
+          "title/abstract/keywords",
           "title_abstract_keywords"
         ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
         "category": "other",
-        "display_name": "title/abstract/keywords",
+        "display_name": "title-abstract-keywords",
         "entity_type": null,
         "name": "title_abstract_keywords.search",
         "operators": [
@@ -18874,13 +18875,14 @@
           "title and abstract",
           "title&abstract",
           "title/abs",
+          "title/abstract",
           "title_and_abstract"
         ],
         "alternate_keys": [],
         "bool_false": null,
         "bool_true": null,
         "category": "other",
-        "display_name": "title/abstract",
+        "display_name": "title-abstract",
         "entity_type": null,
         "name": "title_and_abstract.search",
         "operators": [

@@ -96,8 +96,8 @@ def test_not_group_and_x_flattens_with_no_nested_parens():
 
 
 def test_quoted_phrase_negation_round_trips():
-    assert _identity('works where title/abstract has (teacher and not "academic teacher")') \
-        == 'works where title/abstract has (teacher and not "academic teacher")'
+    assert _identity('works where title-abstract has (teacher and not "academic teacher")') \
+        == 'works where title-abstract has (teacher and not "academic teacher")'
 
 
 # --- a multi-word search run is ONE value-node that `not` negates whole ----- #

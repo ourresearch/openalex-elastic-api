@@ -115,7 +115,7 @@ class TestOQLRenderer:
             ]
         )
         result = render_oqo_to_oql(oqo)
-        assert result == 'works where title/abstract has (machine learning)'
+        assert result == 'works where title-abstract has (machine learning)'
 
     def test_null_value(self):
         """Test null values render as 'unknown'."""

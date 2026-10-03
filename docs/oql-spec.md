@@ -263,7 +263,7 @@ works where institution is (not I33213144 and not I97018004)               (row 
 - **Search values are the exception (D2 reversal, #363):** for a `has ( … )`
   search group, a **maximal run of bare connective-free words is ONE value node**
   (stemmed, adjacency-boosted), not a distributed AND of per-word leaves —
-  `title/abstract has (mental health)` is a single
+  `title-abstract has (mental health)` is a single
   `{title_and_abstract.search: "mental health"}` leaf. The engine adjacency-boosts
   the whole run (`match_phrase`), so splitting it would silently change ranking;
   recall is unaffected (cross-field AND, #399). Explicit `and`/`or`/`not` still build
@@ -413,7 +413,8 @@ works where title has FOO and (bar or baz)            (row 10)  ✓ (any case ac
 - **`&` is an accepted input synonym for `and`** (`a & b` ≡ `a and b`, in both the
   clause body and inside a `has ( … )` search group). It is **input-only**: the
   canonical render always spells out `and`, never `&`. (Mirrors the long-standing
-  `title & abstract` field-name spelling, which canonicalizes to `title/abstract`.)
+  `title & abstract` field-name spelling, which canonicalizes to `title-abstract`; so do
+  `title/abstract` and `title/abstract/keywords`, the canonical words before 2026-10-03.)
 - **Mixed and/or at one grouping level resolves by the standard precedence
   `NOT > AND > OR`** (oxjob #506) — it is **not** an error. `AND` binds tighter than
   `OR`, so `a and b or c` = `(a and b) or c` and `a or b and c` = `a or (b and c)`.
@@ -543,7 +544,7 @@ vs semantic) and **inline value micro-syntax** (phrase / proximity / wildcard); 
 
 | Axis | OQL surface | OQO encoding |
 |---|---|---|
-| field scope | the field name (`title`, `title/abstract`, `abstract`, `full text`, `raw affiliation`, `byline`) | column prefix (`display_name.search`, `title_and_abstract.search`, `fulltext.search`, …) |
+| field scope | the field name (`title`, `title-abstract`, `abstract`, `full text`, `raw affiliation`, `byline`) | column prefix (`display_name.search`, `title_and_abstract.search`, `fulltext.search`, …) |
 | stemming | **default ON**; quotes turn it OFF | column suffix `.search` (stemmed) vs `.search.exact` |
 | stemmed phrase | `stemmed "…"` | `.search` with a quoted value |
 | semantic | `is similar to ("…")` | column suffix `.search.semantic` (2-phase) |

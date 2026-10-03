@@ -145,19 +145,19 @@ def test_short_query_stays_one_line():
 def test_clause_group_and_nested_value_list_explode_like_oql():
     """The SR-style query Jason flagged: an over-width parenthesized clause group
     explodes (open paren / clauses indented / close paren), AND the long value
-    list inside `title/abstract has (…)` ALSO explodes one-value-per-line —
+    list inside `title-abstract has (…)` ALSO explodes one-value-per-line —
     line-for-line with the OQL pane (the value list no longer stays inline)."""
-    oql = ('works where (keyword is types/article or title/abstract has '
+    oql = ('works where (keyword is types/article or title-abstract has '
            '(INR or aPTT or coagulopathy or thrombocytopenia or '
            '"blood coagulation disorders" or "coagulation disorder")) '
            'and language is en')
     assert _norm(_v2_text(oql)) == _norm(_fo(oql))
     # spot-check the shape: the over-width clause group explodes with an infix
-    # open paren, and the long value list inside `title/abstract has (…)`
+    # open paren, and the long value list inside `title-abstract has (…)`
     # explodes one-per-line with leading `or ` connectives (decision 32 revert).
     norm = _norm(_v2_text(oql))
     assert norm[0] == "works where ("
-    assert "or title/abstract has (" in norm
+    assert "or title-abstract has (" in norm
     assert "INR" in norm                            # first value, on its own line
     assert "or aPTT" in norm                         # later value, leading `or`
 
@@ -180,14 +180,14 @@ def test_works_where_merged_on_one_line():
 
 def test_example_78_matches_oql_pane():
     """The real SR query (zd#8101): title's nested sub-groups explode, the short
-    full-text flat list stays inline, title/abstract explodes — all line-for-line
+    full-text flat list stays inline, title-abstract explodes — all line-for-line
     with the OQL pane."""
     oql = (
         "works where title has ("
         "(Boy or Girl or Minors or adolescent or boys) and "
         "(Height or bodyweight or fat or obese or weight)) "
         "and full text has (Britain or England or GB or UK or Wales) "
-        "and title/abstract has ((attitude or beliefs or diaries) and "
+        "and title-abstract has ((attitude or beliefs or diaries) and "
         "(interview or interviews or perceptions))")
     norm = _norm(_v2_text(oql))
     assert norm == _norm(_fo(oql))
@@ -207,10 +207,10 @@ _CONTRACT_CASES = [
         "and title has (not bikes and cars)",
     "works where title has (a or (b and c) or (d and (e or f)))",
     # long clause group + long value list -> both explode (Jason's SR case)
-    'works where (keyword is types/article or title/abstract has '
+    'works where (keyword is types/article or title-abstract has '
         '(INR or aPTT or coagulopathy or thrombocytopenia or '
         '"blood coagulation disorders" or "coagulation disorder")) '
-        'and (keyword is types/book or title/abstract has '
+        'and (keyword is types/book or title-abstract has '
         '(CVC or "central line" or "central venous catheter"))',
     # >8 items -> fill/pack mode
     "works where institution is (" + " or ".join(f"I{i}" for i in range(1, 40)) + ")",

@@ -141,7 +141,7 @@ class TestSeededOverrides:
     def test_works_freetext_labels_from_374(self):
         # #374 shipped → the broad search keys take its final labels (Phase 4).
         assert resolve_display_name("works", "fulltext.search")[0] == "full text"
-        assert resolve_display_name("works", "title_and_abstract.search")[0] == "title/abstract"
+        assert resolve_display_name("works", "title_and_abstract.search")[0] == "title-abstract"
 
     def test_phase4_reconciliation(self):
         # de-paren + reconciliation (#381 Phase 4)
