@@ -596,15 +596,90 @@ def _search(index, connection, body, deadline: Deadline, what: str, **params) ->
 
 def _cardinalities(levels: List[Level], index, connection, base_query, deadline) -> Dict[int, int]:
     """The group guard's estimate: distinct keys of each terms split in the set."""
+    return _probe(levels, index, connection, base_query, deadline)[1]
+
+
+def _probe(levels: List[Level], index, connection, base_query, deadline) -> Tuple[int, Dict[int, int]]:
+    """(works in the set, distinct keys of each terms split): one cheap request."""
     terms = [lv for lv in levels if lv.kind == "terms"]
-    if not terms:
-        return {}
     aggs = {f"card{lv.index}": {"cardinality": {"field": lv.agg["terms"]["field"],
                                                 "precision_threshold": 3000}}
             for lv in terms}
-    body = {"size": 0, "track_total_hits": True, "query": base_query, "aggs": aggs}
+    body = {"size": 0, "track_total_hits": True, "query": base_query}
+    if aggs:
+        body["aggs"] = aggs
     res = _search(index, connection, body, deadline, "counting the groups")
-    return {lv.index: res["aggregations"][f"card{lv.index}"]["value"] for lv in terms}
+    return (res["hits"]["total"]["value"],
+            {lv.index: res["aggregations"][f"card{lv.index}"]["value"] for lv in terms})
+
+
+# Every combination of the terms splits' values in one document, as one key (multi-
+# valued fields give their cross product): its distinct count is the group guard's
+# estimate of a nested split's groups (#1512: multiplying per-split counts overestimated
+# MIT's year x type x OA status 5.9-fold; this gives 4,142 against 4,159 real).
+_COMBO_SCRIPT = """
+List out = new ArrayList(); out.add('');
+for (String f : params.fields) {
+  List nxt = new ArrayList();
+  def vals = doc[f];
+  if (vals.size() == 0) { for (def p : out) { nxt.add(p + '|_'); } }
+  else { for (def p : out) { for (def v : vals) { nxt.add(p + '|' + v); } } }
+  out = nxt;
+}
+return out;
+"""
+
+
+def _combined_groups(levels: List[Level], index, connection, base_query, deadline) -> int:
+    """Estimated groups of a nested split: the distinct combined keys of its terms
+    splits, times the group count of its other splits (listed values, bins)."""
+    fields = [lv.agg["terms"]["field"] for lv in levels if lv.kind == "terms"]
+    other = 1
+    for lv in levels:
+        if lv.kind == "filters":
+            other *= max(len(lv.order_keys), 1)
+        elif lv.kind == "range":
+            other *= max(len(lv.order_keys), 1)
+        elif lv.kind == "histogram":
+            other *= 100
+    body = {"size": 0, "query": base_query, "aggs": {"combo": {"cardinality": {
+        "script": {"source": _COMBO_SCRIPT, "params": {"fields": fields}},
+        "precision_threshold": 1000}}}}
+    res = _search(index, connection, body, deadline, "counting the combined groups")
+    return int(res["aggregations"]["combo"]["value"]) * other
+
+
+def guard_nested(levels: List[Level], cards: Dict[int, int], index, connection,
+                 base_query, deadline) -> Optional[int]:
+    """The group guard on nested splits: refuse when the splits' combined groups pass
+    what one answer can hold (ES search.max_buckets). Multiplies the per-split counts
+    first; only when that product is over the line does it count the combined keys."""
+    if len(levels) < 2:
+        return None
+    product = 1
+    for lv in levels:
+        if lv.kind == "terms":
+            product *= max(cards.get(lv.index) or 1, 1)
+        elif lv.kind in ("filters", "range"):
+            product *= max(len(lv.order_keys), 1)
+        else:
+            product *= 100
+    if product <= MAX_RESPONSE_BUCKETS:
+        return product
+    if not any(lv.kind == "terms" for lv in levels):
+        n = product
+    else:
+        n = _combined_groups(levels, index, connection, base_query, deadline)
+    if n > MAX_RESPONSE_BUCKETS:
+        names = " x ".join(_split_noun(lv) for lv in levels)
+        raise AnalyticsError(
+            "too_many_groups",
+            f"Splitting by {names} gives about {n:,} groups together; one answer holds "
+            f"up to {MAX_RESPONSE_BUCKETS:,}.",
+            "Narrow the starting set (a shorter year range), split by something coarser "
+            "(field instead of topic), or drop a split: one split pages through any "
+            "number of groups.")
+    return n
 
 
 def _split_noun(lv: Level) -> str:
@@ -935,6 +1010,8 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         lv.agg = {"composite": comp}
         lv.composite = True
     plan_levels(levels, cards, nested, per_page, page, sort_measure)
+    if nested:
+        guard_nested(levels, cards, index_name, connection, base_query, deadline)
 
     body = build_body(levels, base_query, m_aggs)
     if (levels and not nested and levels[0].kind == "terms"
@@ -1070,6 +1147,10 @@ EST_LOOKUP_S = 0.4
 EST_COAUTHOR_S = 1.5
 EST_IDS_PER_S = 40_000
 EST_NAMES_S = 0.6
+# The main request over big sets: about (works / 1e8) x (1 + groups / 5,000) seconds
+# (fitted to the three measurements in check()).
+EST_WORKS_PER_S = 100_000_000
+EST_GROUPS_SCALE = 5_000
 
 
 def _tree_has_search(node) -> bool:
@@ -1197,14 +1278,30 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
                     })
                 else:
                     est += 0.2 + n / EST_IDS_PER_S
-    if nested and any(lv.kind == "terms" for lv in levels):
-        try:
-            cards = _cardinalities(levels, index_name, connection, base_query, deadline)
-            calls += 1
-            est += call_s
+    # One probe: how many works the set holds and how many distinct values each split
+    # by a column takes. The main request's time grows with both (measured 2026-10-03:
+    # 2020+ topic x year, 104M works and 32K groups, 8 s; MIT's year x type x OA, 0.4M
+    # works and 4K groups, 0.4 s; field x year over 256M works, 0.5 s).
+    n_works, cards, groups = None, {}, None
+    try:
+        n_works, cards = _probe(levels, index_name, connection, base_query, deadline)
+        if nested:
+            calls += 1                       # the run probes the splits too
             plan_levels(levels, cards, True, DEFAULT_PER_PAGE, 1, None)
-        except AnalyticsError as e:
-            limits.append(e.to_dict())
+            before = deadline.calls
+            groups = guard_nested(levels, cards, index_name, connection, base_query,
+                                  deadline)
+            calls += deadline.calls - before
+        elif levels:
+            lv = levels[0]
+            groups = cards.get(lv.index) if lv.kind == "terms" else max(len(lv.order_keys), 1)
+    except AnalyticsError as e:
+        limits.append(e.to_dict())
+    if n_works is not None:
+        est += max(0.0, (n_works / EST_WORKS_PER_S) * (1 + (groups or 1) / EST_GROUPS_SCALE)
+                   - EST_CALL_ID_SET_S)
+        if nested:
+            est += call_s                    # the probe the run makes first
     est += EST_NAMES_S if levels else 0
     estimate = {"seconds": round(est, 1), "es_calls": calls,
                 "budget_seconds": TIME_BUDGET_S, "within_budget": est <= TIME_BUDGET_S}

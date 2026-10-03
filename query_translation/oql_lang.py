@@ -3328,6 +3328,14 @@ class _Parser:
                                 "each group's conditions go in their own parentheses",
                                 f"e.g. {example}", t.pos if t else None)
             self.next()
+            nt = self.peek()
+            if nt is not None and nt.kind == "RP":
+                raise oql_error(
+                    "OQL_BAD_LIST",
+                    "a condition group can't be empty",
+                    f"drop it: every grouped result already has a total row for the "
+                    f"whole starting set (start from the widest set you compare "
+                    f"against), e.g. {example}", nt.pos)
             cond = self._parse_expr(top=True)
             self._expect_rp()
             conds.append(cond)
@@ -3443,6 +3451,37 @@ class _Parser:
                     f"e.g. calculate {name} citation count, or {name} FWCI", t.pos)
             self._parse_of_those(entity)
             return Measure(name, fld.column)
+        # A field where a measure belongs (`calculate authors count`, `calculate
+        # h-index`): say which measure to write, or that it isn't calculated at all.
+        if t is not None and t.kind == "WORD":
+            m = match_field(self.toks, self.i)
+            if m is None:
+                m = match_entity_fallback(self.toks, self.i, entity)
+            if m is not None and _is_column_of(_entity_resolve_field(m[1], entity).column,
+                                               entity):
+                spelling, fld, _n = m
+                fld = _entity_resolve_field(fld, entity)
+                if fld.kind == "num":
+                    raise oql_error(
+                        "OQL_BAD_MEASURE",
+                        f'"{spelling}" is a field, not a calculation',
+                        f"name the calculation: calculate mean {spelling} (or median, "
+                        f"sum, min, max {spelling})", t.pos)
+                if fld.kind == "bool":
+                    raise oql_error(
+                        "OQL_BAD_MEASURE",
+                        f'"{spelling}" is a field, not a calculation',
+                        f"name the calculation: calculate percent {spelling}", t.pos)
+            for other in ("authors", "institutions", "sources"):
+                om = match_entity_fallback(self.toks, self.i, other)
+                if om is not None and other != entity:
+                    raise oql_error(
+                        "OQL_BAD_MEASURE",
+                        f'"{om[0]}" belongs to each {other[:-1]}, not to the {noun}, so it '
+                        f"isn't calculated",
+                        f"filter the groups by it: group those {noun} by {other[:-1]} "
+                        f"where {om[0]} > (20); showing it beside the groups is a "
+                        f"display column", t.pos)
         raise oql_error(
             "OQL_BAD_MEASURE",
             f'"{t.val if t is not None else ""}" isn\'t a calculation',
@@ -3624,6 +3663,17 @@ _MEASURE_WORDS = {
     "min": "min", "minimum": "min", "max": "max", "maximum": "max",
     "percent": "percent",
 }
+
+
+def _is_column_of(column: str, entity: str) -> bool:
+    """Is `column` a property of `entity` (works have no h-index)? True when the
+    registry can't say."""
+    try:
+        from core.properties import ENTITY_PROPERTIES, resolve_entity_key
+        props = ENTITY_PROPERTIES.get(resolve_entity_key(entity))
+        return props is None or column in props
+    except Exception:
+        return True
 
 
 def _plural_noun(entity: Optional[str]) -> str:
