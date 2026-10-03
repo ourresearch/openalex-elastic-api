@@ -3695,6 +3695,8 @@ def _flatten_and(branch: BranchFilter) -> List[FilterType]:
 def _negate(f: FilterType) -> FilterType:
     if isinstance(f, LeafFilter):
         return LeafFilter(f.column_id, f.value, f.operator, is_negated=not f.is_negated)
+    if isinstance(f, MeasureFilter):
+        return replace(f, is_negated=not f.is_negated)
     return BranchFilter(f.join, f.filters, is_negated=not f.is_negated)
 
 

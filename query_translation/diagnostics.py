@@ -322,6 +322,23 @@ DIAGNOSTICS: Dict[str, DiagnosticSpec] = {
               "a seed has no effect without a sample",
               "add a sample N, or drop the seed"),
         # -- the pipeline language (oxjob #1530) -----------------------------------
+        _spec("too_many_splits", ERROR, VALIDATE,
+              "a query splits its works more than three times",
+              "drop a split, or run one query per value of the outer split"),
+        _spec("invalid_list_length", ERROR, VALIDATE,
+              "a split's list is empty or holds more than 100 items",
+              "keep each list to 1-100 items; use a collection for more"),
+        _spec("invalid_bins", ERROR, VALIDATE,
+              "bins need a number column and increasing edges (or a width above 0)",
+              'e.g. {"column_id": "cited_by_count", "bins": {"at": [1, 10, 100]}}'),
+        _spec("invalid_group_filter", ERROR, VALIDATE,
+              "a group filter tests something these groups don't have",
+              "filter by a calculation (count of those works > (10)), or by the "
+              "group's own fields when the groups are entities"),
+        _spec("invalid_measure", ERROR, VALIDATE,
+              "a calculation names an unknown measure or a column of the wrong type",
+              "count; mean/median/sum/min/max of a number column; percent of a "
+              "yes/no column; percent of those works (needs a split)"),
         _spec("OQL_UNKNOWN_STEP", ERROR, PARSE,
               "a step after `; then` doesn't start with a known verb",
               "steps are: group those works by ...; group those works into ...; "

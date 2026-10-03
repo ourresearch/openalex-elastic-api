@@ -41,6 +41,9 @@ from query_translation.oqo import (
     VALID_OPERATORS,
     VALID_SORT_AGGREGATES,
     VALID_CORPORA,
+    MEASURES,
+    Measure,
+    MeasureFilter,
 )
 
 
@@ -342,8 +345,19 @@ class OQOValidator:
             ))
 
         # group_by dimensions must be non-empty strings AND real columns.
+        if len(oqo.group_by) > MAX_SPLITS:
+            errors.append(ValidationError(
+                type="too_many_splits",
+                message=(f"A query can split its {oqo.get_rows} at most {MAX_SPLITS} "
+                         f"times; this one splits {len(oqo.group_by)} times."),
+                location="group_by",
+            ))
         for i, g in enumerate(oqo.group_by):
             column_id = getattr(g, "column_id", None)
+            if not g.is_plain:
+                # the pipeline language's splits (oxjob #1530)
+                errors.extend(self._validate_split(g, i, oqo, columns, capabilities))
+                continue
             if not column_id or not isinstance(column_id, str):
                 errors.append(ValidationError(
                     type="invalid_group_by",
@@ -359,6 +373,10 @@ class OQOValidator:
                     ),
                     location=f"group_by[{i}].column_id",
                 ))
+
+        for i, m in enumerate(oqo.calculate):
+            errors.extend(self._validate_measure(m, f"calculate[{i}]", columns,
+                                                 bool(oqo.group_by)))
 
         # --- logistics layer (#318) ------------------------------------------
 
@@ -537,6 +555,179 @@ class OQOValidator:
             ))
 
         return errors
+
+    # -- the pipeline language (oxjob #1530) ---------------------------------
+    def _validate_split(self, g, i, oqo, columns, capabilities) -> List[ValidationError]:
+        loc = f"group_by[{i}]"
+        errors: List[ValidationError] = []
+        kinds = [k for k in ("values", "bins", "conditions") if getattr(g, k) is not None]
+        if len(kinds) > 1:
+            errors.append(ValidationError(
+                type="invalid_group_by",
+                message=f"A split takes one of values, bins or conditions, not {' and '.join(kinds)}.",
+                location=loc))
+            return errors
+        if g.conditions is not None:
+            if g.column_id is not None:
+                errors.append(ValidationError(
+                    type="invalid_group_by",
+                    message="A split into conditions has no column_id.",
+                    location=f"{loc}.column_id"))
+            if not g.conditions or len(g.conditions) > MAX_LIST_ITEMS:
+                errors.append(ValidationError(
+                    type="invalid_list_length",
+                    message=f"A split into conditions takes 1 to {MAX_LIST_ITEMS} conditions.",
+                    location=f"{loc}.conditions"))
+            for j, c in enumerate(g.conditions or []):
+                errors.extend(self._validate_filter(c, columns, f"{loc}.conditions[{j}]"))
+        elif not g.column_id or not isinstance(g.column_id, str):
+            errors.append(ValidationError(
+                type="invalid_group_by",
+                message="This split needs a column_id.",
+                location=f"{loc}.column_id"))
+            return errors
+        elif g.values is not None:
+            if not g.values or len(g.values) > MAX_LIST_ITEMS:
+                errors.append(ValidationError(
+                    type="invalid_list_length",
+                    message=f"A split by listed values takes 1 to {MAX_LIST_ITEMS} values.",
+                    location=f"{loc}.values"))
+            search = g.column_id.endswith(".search")
+            for j, v in enumerate(g.values or []):
+                vloc = f"{loc}.values[{j}]"
+                if search:
+                    if not isinstance(v, (LeafFilter, BranchFilter)):
+                        errors.append(ValidationError(
+                            type="invalid_group_by",
+                            message="Each listed search is a filter tree on the search column.",
+                            location=vloc))
+                    else:
+                        errors.extend(self._validate_filter(v, columns, vloc))
+                elif isinstance(v, (LeafFilter, BranchFilter, dict, list)):
+                    errors.append(ValidationError(
+                        type="invalid_group_by",
+                        message="Listed values are bare values of the split column.",
+                        location=vloc))
+                else:
+                    errors.extend(self._validate_leaf_filter(
+                        LeafFilter(g.column_id, v), columns, vloc))
+        elif g.bins is not None:
+            entry = columns.get(g.column_id)
+            if entry is None or entry.type != "number":
+                errors.append(ValidationError(
+                    type="invalid_bins",
+                    message=f"'{g.column_id}' isn't a number column, so it can't go in bins.",
+                    location=f"{loc}.column_id"))
+            at, of = g.bins.get("at"), g.bins.get("of")
+            if (at is None) == (of is None):
+                errors.append(ValidationError(
+                    type="invalid_bins",
+                    message="Bins take either 'at' (edges) or 'of' (a width).",
+                    location=f"{loc}.bins"))
+            elif at is not None:
+                if (not isinstance(at, list) or not at or len(at) > MAX_LIST_ITEMS
+                        or not all(_is_number(x) for x in at)
+                        or any(b <= a for a, b in zip(at, at[1:]))):
+                    errors.append(ValidationError(
+                        type="invalid_bins",
+                        message=f"Bin edges are 1 to {MAX_LIST_ITEMS} increasing numbers.",
+                        location=f"{loc}.bins.at"))
+            elif not _is_number(of) or of <= 0:
+                errors.append(ValidationError(
+                    type="invalid_bins",
+                    message="A bin width is a number above 0.",
+                    location=f"{loc}.bins.of"))
+        elif CAP_GROUP_BY not in capabilities.get(g.column_id, frozenset()):
+            errors.append(ValidationError(
+                type="invalid_column",
+                message=f"'{g.column_id}' is not a groupable column on '{oqo.get_rows}'",
+                location=f"{loc}.column_id"))
+        if g.where is not None:
+            errors.extend(self._validate_group_where(g, g.where, f"{loc}.where", oqo, columns))
+        return errors
+
+    def _validate_group_where(self, g, f, loc, oqo, columns) -> List[ValidationError]:
+        if isinstance(f, BranchFilter):
+            errors: List[ValidationError] = []
+            if f.join not in ("and", "or") or not f.filters:
+                errors.append(ValidationError(
+                    type="invalid_join",
+                    message="A group filter branch needs 'and'/'or' and filters.",
+                    location=loc))
+            for j, c in enumerate(f.filters):
+                errors.extend(self._validate_group_where(
+                    g, c, f"{loc}.filters[{j}]", oqo, columns))
+            return errors
+        if isinstance(f, MeasureFilter):
+            errors = self._validate_measure(Measure(f.measure, f.column_id), loc, columns, True)
+            if f.measure == "percent_of_those":
+                errors.append(ValidationError(
+                    type="invalid_group_filter",
+                    message="A group filter can't test percent of those works; filter on count.",
+                    location=loc))
+            if f.operator not in ("is", ">", ">=", "<", "<="):
+                errors.append(ValidationError(
+                    type="invalid_operator",
+                    message=f"'{f.operator}' doesn't compare a calculation.",
+                    location=f"{loc}.operator"))
+            if not _is_number(f.value):
+                errors.append(ValidationError(
+                    type="invalid_value_type",
+                    message="A calculation is compared with a number.",
+                    location=f"{loc}.value"))
+            return errors
+        # a leaf on the group's own fields
+        from query_translation.oql_lang import _group_entity
+        group_entity = _group_entity(g, oqo.get_rows)
+        if group_entity is None:
+            return [ValidationError(
+                type="invalid_group_filter",
+                message="These groups have no fields of their own; filter by a calculation.",
+                location=loc)]
+        if f.column_id in GROUP_FILTER_RELATIONS:
+            want = GROUP_FILTER_RELATIONS[f.column_id]
+            if group_entity != want:
+                return [ValidationError(
+                    type="invalid_group_filter",
+                    message=f"'{f.column_id}' filters {want} groups, not {group_entity}.",
+                    location=loc)]
+            return []
+        g_entity = _resolve_property_entity(group_entity)
+        g_columns = get_entity_properties(g_entity) if g_entity else None
+        if not g_columns:
+            return [ValidationError(
+                type="invalid_group_filter",
+                message=f"{group_entity} groups have no fields to filter on.",
+                location=loc)]
+        return self._validate_filter(f, g_columns, loc)
+
+    def _validate_measure(self, m, loc, columns, has_split) -> List[ValidationError]:
+        if m.measure not in MEASURES:
+            return [ValidationError(
+                type="invalid_measure",
+                message=f"'{m.measure}' isn't a calculation; use one of {', '.join(MEASURES)}.",
+                location=f"{loc}.measure")]
+        if m.measure in ("count", "percent_of_those"):
+            if m.column_id is not None:
+                return [ValidationError(
+                    type="invalid_measure",
+                    message=f"'{m.measure}' takes no column.",
+                    location=f"{loc}.column_id")]
+            if m.measure == "percent_of_those" and not has_split:
+                return [ValidationError(
+                    type="invalid_measure",
+                    message="percent of those works needs a split (a group's share of its set).",
+                    location=loc)]
+            return []
+        entry = columns.get(m.column_id) if m.column_id else None
+        want = "boolean" if m.measure == "percent" else "number"
+        if entry is None or entry.type != want:
+            kind = "a yes/no" if want == "boolean" else "a number"
+            return [ValidationError(
+                type="invalid_measure",
+                message=f"'{m.measure}' takes {kind} column; '{m.column_id}' isn't one.",
+                location=f"{loc}.column_id")]
+        return []
 
     def _validate_filter(
         self, f: FilterType, columns: Dict[str, Property], location: str
@@ -739,6 +930,17 @@ class OQOValidator:
                 ))
 
         return errors
+
+
+def _is_number(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+# Group-filter relations (oxjob #1530): co-authorship tests, valid only on groups
+# of the named entity. Not registry columns (they need a lookup call).
+GROUP_FILTER_RELATIONS = {"co_author": "authors", "collaborator": "institutions"}
+MAX_SPLITS = 3
+MAX_LIST_ITEMS = 100
 
 
 def validate_oqo(oqo: OQO, config: Optional[Dict] = None) -> ValidationResult:

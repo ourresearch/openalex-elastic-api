@@ -24,7 +24,8 @@ registry) — there is no entity-id prefix normalization. See docs/oql-spec.md.
 
 import json
 from typing import List, Union, Any
-from query_translation.oqo import OQO, LeafFilter, BranchFilter, FilterType, SortBy, canonicalize_oqo_column_ids
+from query_translation.oqo import (OQO, LeafFilter, BranchFilter, FilterType, SortBy, GroupBy,
+                                   MeasureFilter, canonicalize_oqo_column_ids)
 from query_translation.oql_lang import (
     canon_value_for_column,
     canonical_exact_search_value,
@@ -105,7 +106,11 @@ def canonicalize_oqo(oqo: OQO, sort_operands: bool = True) -> OQO:
         # …) -> preserved, NOT sorted (unlike the commutative filter_rows above).
         sort_by=canonical_sort_by,
         sample=oqo.sample,
-        group_by=list(oqo.group_by),  # group_by order is meaningful (dim order) -> preserved
+        # group_by order is meaningful (dim order) -> preserved; the trees inside a
+        # split (conditions, listed searches, the group filter) canonicalize like
+        # filter_rows, but their LIST order is the group order -> preserved.
+        group_by=[_canonicalize_split(g, sort_operands) for g in oqo.group_by],
+        calculate=list(oqo.calculate),
         # Logistics layer (#318) passes through unchanged: `select` order is
         # meaningful (display order), and pagination/seed defaults are applied
         # only at execution — canonical form leaves them absent when unset so
@@ -151,6 +156,38 @@ def _drop_redundant_default_sort(filter_rows: List[FilterType], sort_by) -> List
     return [SortBy(s.column_id, s.direction) for s in sort_by]
 
 
+def _canonicalize_tree(f, sort_operands: bool = True):
+    """One filter tree (a condition, a listed search, a group filter) in canonical
+    form: NNF, then the leaf/branch transforms; a flattened list becomes an AND."""
+    c = canonicalize_filter(push_negation(f, negate=False), sort_operands)
+    if isinstance(c, list):
+        if sort_operands:
+            c.sort(key=_sort_key)
+        return c[0] if len(c) == 1 else BranchFilter(join="and", filters=c)
+    return c
+
+
+def _canonicalize_split(g: GroupBy, sort_operands: bool = True) -> GroupBy:
+    """A split (oxjob #1530): trees inside it canonicalize, list order stays."""
+    if g.is_plain:
+        return g
+    values = g.values
+    if values is not None:
+        values = [_canonicalize_tree(v, sort_operands)
+                  if isinstance(v, (LeafFilter, BranchFilter))
+                  else canonicalize_value(v, g.column_id) for v in values]
+    conditions = g.conditions
+    if conditions is not None:
+        conditions = [_canonicalize_tree(c, sort_operands) for c in conditions]
+    where = _canonicalize_tree(g.where, sort_operands) if g.where is not None else None
+    return GroupBy(column_id=g.column_id, values=values, bins=g.bins,
+                   conditions=conditions, where=where)
+
+
+# NOT of a comparison is the opposite comparison (group filters on measures).
+_NEGATED_COMPARISON = {">": "<=", ">=": "<", "<": ">=", "<=": ">"}
+
+
 def push_negation(f: FilterType, negate: bool) -> FilterType:
     """Push negation down to the leaves (De Morgan), producing NNF.
 
@@ -174,6 +211,13 @@ def push_negation(f: FilterType, negate: bool) -> FilterType:
             filters=[push_negation(c, eff) for c in f.filters],
             is_negated=False,
         )
+    if isinstance(f, MeasureFilter):
+        eff = bool(f.is_negated) ^ bool(negate)
+        if eff and f.operator in _NEGATED_COMPARISON:
+            return MeasureFilter(measure=f.measure, column_id=f.column_id,
+                                 operator=_NEGATED_COMPARISON[f.operator], value=f.value)
+        return MeasureFilter(measure=f.measure, column_id=f.column_id,
+                             operator=f.operator, value=f.value, is_negated=eff)
     return f
 
 
@@ -192,6 +236,10 @@ def _sort_key(f: FilterType) -> str:
     d = f.to_dict()
     if isinstance(f, LeafFilter) and f.operator in _BOUND_ORDER:
         d = {**d, "operator": _BOUND_ORDER[f.operator]}
+    if isinstance(f, MeasureFilter):
+        # group filters read calculations first (`count of those works > (10) and
+        # h-index > (20)`): "0" sorts before every JSON object's "{"
+        return "0" + json.dumps(d, sort_keys=True, ensure_ascii=True)
     return json.dumps(d, sort_keys=True, ensure_ascii=True)
 
 
@@ -210,6 +258,8 @@ def canonicalize_filter(f: FilterType, sort_operands: bool = True) -> Union[Filt
         return canonicalize_leaf_filter(f, sort_operands)
     elif isinstance(f, BranchFilter):
         return canonicalize_branch_filter(f, sort_operands)
+    elif isinstance(f, MeasureFilter):
+        return f
     return None
 
 

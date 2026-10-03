@@ -236,7 +236,23 @@ def _group_where_text(node, ctx: dict, resolver=None, top=True) -> str:
         own = _set_clause_text(node, ctx, resolver)
         if own is not None:
             return own
-        parts = [_group_where_text(c, ctx, resolver, top=False) for c in node.filters]
+        # merge same-subject set leaves back into one clause: in an AND the NNF
+        # of `co-author is not (A1 or A2)`, in an OR `that author is (A1 or A2)`
+        kids, merged = [], {}
+        for c in node.filters:
+            if (isinstance(c, LeafFilter) and c.column_id in ("co_author", "collaborator",
+                                                              "ids.openalex")
+                    and c.is_negated == (node.join == "and")):
+                if c.column_id in merged:
+                    merged[c.column_id].filters.append(c)
+                    continue
+                merged[c.column_id] = BranchFilter(node.join, [c])
+                kids.append(merged[c.column_id])
+            else:
+                kids.append(c)
+        kids = [k.filters[0] if isinstance(k, BranchFilter) and k in merged.values()
+                and len(k.filters) == 1 else k for k in kids]
+        parts = [_group_where_text(c, ctx, resolver, top=False) for c in kids]
         inner = f" {node.join} ".join(parts)
         if node.is_negated:
             return f"not ({inner})"
