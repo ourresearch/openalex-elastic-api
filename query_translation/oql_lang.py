@@ -1480,6 +1480,36 @@ _ROW_SUBJECT_RENDER = {
 }
 
 
+def match_negated_relation(toks: List[Tok], i: int) -> Optional[Tuple[str, int]]:
+    """`it doesn't cite`, `it does not cite`, `it isn't cited by`, `it's not cited
+    by`, `it is not cited by` (and `related to`): (column, n_tokens), or None
+    (oxjob #1535: negation goes on the verb)."""
+    def w(k: int) -> Optional[str]:
+        tk = toks[i + k] if i + k < len(toks) else None
+        return (tk.val.lower().replace("’", "'")
+                if tk is not None and tk.kind == "WORD" else None)
+    if w(0) != "it" and w(0) not in ("it's", "its"):
+        return None
+    if w(0) == "it" and w(1) in ("doesn't", "doesnt") and w(2) == "cite":
+        return "referenced_works", 3
+    if w(0) == "it" and w(1) == "does" and w(2) == "not" and w(3) == "cite":
+        return "referenced_works", 4
+    j = None
+    if w(0) == "it" and w(1) in ("isn't", "isnt"):
+        j = 2
+    elif w(0) in ("it's", "its") and w(1) == "not":
+        j = 2
+    elif w(0) == "it" and w(1) == "is" and w(2) == "not":
+        j = 3
+    if j is None:
+        return None
+    if w(j) == "cited" and w(j + 1) == "by":
+        return "cited_by", j + 2
+    if w(j) == "related" and w(j + 1) == "to":
+        return "related_to", j + 2
+    return None
+
+
 def match_row_subject(toks: List[Tok], i: int
                       ) -> Optional[Tuple[Optional[str], int, bool]]:
     """Greedy row-subject verb-phrase match at ``toks[i]`` (oxjob #557).
@@ -2074,10 +2104,32 @@ class _Parser:
             gc = self._parse_group_clause()
             if gc is not None:
                 return gc
+        # negated relations on the verb (oxjob #1535; decided 2026-10-03):
+        # `it doesn't cite works in (...)`, `it isn't cited by works in (...)`
+        neg = match_negated_relation(self.toks, self.i)
+        if neg is not None:
+            column, n = neg
+            start = self.toks[self.i]
+            self.i += n
+            q = self._parse_relation_query(column, True)
+            if q is not None:
+                return q
+            fld = _entity_resolve_field(_BY_COLUMN[column], self._entity)
+            self._cur_fld, self._cur_search_word = fld, None
+            subj, verb, _bare = _ROW_SUBJECT_RENDER[column]
+            return _negate(self._parse_value_clause(f"{subj}{verb.rstrip()}", fld, "is"))
         # row-subject leaf: `it cites (…)` / `it's cited by (…)` / `it's related
         # to (…)` — the pronoun claims the field slot (oxjob #557).
         rs = match_row_subject(self.toks, self.i)
         if rs is not None:
+            column, n, complete = rs
+            if complete:
+                save = self.i
+                self.i += n
+                q = self._parse_relation_query(column, False)
+                if q is not None:
+                    return q
+                self.i = save
             return self._parse_row_subject_clause(rs)
         # same-type membership names the queried entity: `location is in collection
         # (col_x)` on locations (oxjob #1524). `work is in collection` stays accepted
@@ -2449,6 +2501,13 @@ class _Parser:
         """`in (...)` always holds a set (oxjob #1530): one collection (`col_...`)
         or an inline list of values (read as `is (A or B)`)."""
         example = f"{field} is in (A, B)"
+        nxt = self.peek(1)
+        if nxt is not None and nxt.kind == "WORD" and nxt.val.lower() == "get":
+            # a whole query in parentheses (oxjob #1535)
+            pos = self.peek().pos
+            inner = self._parse_subquery()
+            self._check_query_type(fld.column, inner, pos)
+            return LeafFilter(fld.column, inner, "in", is_negated=negated)
         open_tok = self._list_open("set", example)
         values: List = []
         while True:
@@ -3291,6 +3350,85 @@ class _Parser:
         finally:
             self._entity = saved
 
+    # -- sets defined by a whole query (oxjob #1535) ----------------------------------
+    def _parse_subquery(self) -> OQO:
+        """`(get works where ...; then get authors of those works)`: a whole query in
+        parentheses, parsed on its own. The cursor sits on the `(`."""
+        open_tok = self.next()
+        depth, j = 1, self.i
+        while j < len(self.toks):
+            k = self.toks[j].kind
+            if k == "LP":
+                depth += 1
+            elif k == "RP":
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+        if depth:
+            raise oql_error("OQL_UNCLOSED_QUERY", "the query in parentheses isn't closed",
+                            "add the closing )", open_tok.pos)
+        inner = _Parser(self.toks[self.i:j]).parse()
+        # where the inner query sits in the text, for a fix-it that rewrites it
+        self._subquery_span = (open_tok.pos + 1, self.toks[j].pos)
+        self.i = j + 1
+        return inner
+
+    def _check_query_type(self, column_id: str, inner: OQO, pos):
+        """A query in `in (...)` must return the things the field or relation takes:
+        `author is in (...)` takes authors, `it cites works in (...)` works."""
+        from query_translation.oqo import has_query_value, result_entity
+        from query_translation.walks import WALK_LINKS, plural
+        from query_translation.oql_pipeline import render_pipeline_line
+        if inner.calculate or inner.group_by:
+            raise oql_error(
+                "OQL_QUERY_SET_RETURNS_NUMBERS",
+                "a query in parentheses must return things, not numbers or groups",
+                "end it at the step that names the things: drop its `group ...` and "
+                "`calculate ...` steps", pos)
+        if any(has_query_value(f) for f in inner.filter_rows) or any(
+                w.where is not None and has_query_value(w.where) for w in inner.walks):
+            raise oql_error("OQL_NESTED_QUERY_DEPTH",
+                            "a query in parentheses can't hold another one (for now)",
+                            "save the inner set as a collection and use it by name", pos)
+        from dataclasses import replace as _replace
+        from query_translation.walks import possessive
+        want = ("works" if column_id in _ROW_SUBJECT_RENDER
+                else entity_type_for_column(column_id, self._entity or "works"))
+        got = result_entity(inner)
+        if want is None or got == want:
+            return
+        fixes = []   # (reading, the inner query that would fit)
+        if got == "works" and want in WALK_LINKS:
+            # the usual slip: the works, not their authors
+            fixes.append((f"the {plural(want)} of those works", render_pipeline_line(inner)
+                          + f"; then get {plural(want)} of those works"))
+        elif want == "works" and got in WALK_LINKS and inner.walks:
+            last = inner.walks[-1]
+            fixes.append(("the works themselves",
+                          render_pipeline_line(_replace(inner, walks=inner.walks[:-1]))))
+            fixes.append((f"all their works", render_pipeline_line(inner)
+                          + f"; then get all {possessive(got, False)} works"))
+        err = oql_error(
+            "OQL_QUERY_SET_TYPE",
+            f"this takes {plural(want) if want in WALK_LINKS else want}; the query in "
+            f"parentheses returns {plural(got) if got in WALK_LINKS else got}",
+            None, pos)
+        # `parse()` turns these into whole fixed queries (the span is in the text)
+        err.inner_fixes = fixes
+        err.inner_span = getattr(self, "_subquery_span", None)
+        raise err
+
+    def _parse_relation_query(self, column: str, negated: bool) -> FilterType:
+        """`it cites works in (get works where ...)`: the relation's set of works."""
+        if not (self.word_is("works") and self.word_is("in", k=1)
+                and self.peek(2) is not None and self.peek(2).kind == "LP"):
+            return None
+        self.i += 2
+        # a query, a collection of works, or listed works (`_parse_in_set` takes all)
+        fld = _entity_resolve_field(_BY_COLUMN[column], self._entity)
+        return self._parse_in_set(_ROW_SUBJECT_RENDER[column][2], fld, negated)
+
     def _parse_those(self, entity: str, required: bool = False):
         """`those <plural noun>` naming the current things; optional on input, and
         when written it must name what the query holds (type check)."""
@@ -4094,8 +4232,25 @@ def parse(oql: str) -> OQO:
     if not toks:
         raise oql_error("OQL_EMPTY", "empty query", 'e.g. "works where year >= (2020)"')
     p = _Parser(toks)
-    oqo = p.parse()
+    try:
+        oqo = p.parse()
+    except OQLError as e:
+        _whole_query_fixit(e, oql)
+        raise
     return oqo
+
+
+def _whole_query_fixit(e: OQLError, oql: str):
+    """A set of the wrong type (oxjob #1535): the fix-it carries the whole fixed
+    query, one per plausible reading, so an agent can run it as is."""
+    fixes = getattr(e, "inner_fixes", None)
+    span = getattr(e, "inner_span", None)
+    if not fixes or not span:
+        return
+    a, b = span
+    wholes = [(reading, oql[:a] + inner + oql[b:]) for reading, inner in fixes]
+    e.fixit = " | ".join(f"for {r}: {q}" for r, q in wholes)
+    e.args = (f"[{e.code}] {e.message}  Fix: {e.fixit}",)
 
 
 def parse_collecting(oql: str) -> Tuple[Optional[OQO], List[OQLError]]:
@@ -4700,7 +4855,36 @@ def _leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
     return cn
 
 
+# A relation's set (oxjob #1535): (subject, verb) when it holds, and when it doesn't
+_RELATION_SET_RENDER = {
+    "referenced_works": (("it", " cites works in "), ("it", " doesn't cite works in ")),
+    "cited_by": (("it's", " cited by works in "), ("it", " isn't cited by works in ")),
+    "related_to": (("it's", " related to works in "), ("it", " isn't related to works in ")),
+}
+
+
+def _query_leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
+    """`author is in (get works where ...; then get authors of those works)`, `it
+    cites works in (get works where ...)`: a set defined by a whole query."""
+    from query_translation.oql_pipeline import render_pipeline_line
+    inner = render_pipeline_line(f.value, resolver)
+    rel = _RELATION_SET_RENDER.get(f.column_id)
+    if rel is not None:
+        subj, verb = rel[1] if f.is_negated else rel[0]
+        name = _ROW_SUBJECT_RENDER[f.column_id][2]
+    else:
+        fld = _BY_COLUMN.get(f.column_id)
+        subj = name = fld.oql if fld else f.column_id
+        verb = " is not in " if f.is_negated else " is in "
+    segs = [_seg("column", subj, column_id=f.column_id), _seg("operator", verb),
+            _seg("text", "("), _seg("value", inner, value=None), _seg("text", ")")]
+    return ClauseNode(segments=segs, clause_kind="other", meta=ClauseMeta(
+        column_id=f.column_id, operator="in", value=None, column_display_name=name))
+
+
 def _leaf_node_inner(f: LeafFilter, resolver=None) -> ClauseNode:
+    if isinstance(f.value, OQO):
+        return _query_leaf_node(f, resolver)
     # #554: a condition's value is ALWAYS a parenthesized group in canonical
     # OQL — every leaf clause below wraps its value in `( … )` (bare singletons
     # remain accepted on input). Standalone negation moves INSIDE the group
