@@ -1907,8 +1907,7 @@ class CollectionField(Field):
                 f"not valid for /{self.entity_type}"
             )
 
-        ids = _canonicalize_entity_ids(entity_ids, self.entity_type)
-        q = any_of_terms(lambda chunk: Q("terms", id=chunk), ids)
+        q = collection_ids_query(entity_ids, self.entity_type)
         if negated:
             q = ~Q("bool", must=q)
         return q
@@ -2027,6 +2026,12 @@ def any_of_terms(build, values):
     if len(queries) == 1:
         return queries[0]
     return Q("bool", should=queries, minimum_should_match=1)
+
+
+def collection_ids_query(ids, entity_type):
+    """Documents whose `id` is one of a collection's member IDs (short form, as users-api
+    stores them), chunked under the per-clause cap."""
+    return any_of_terms(lambda chunk: Q("terms", id=chunk), _canonicalize_entity_ids(ids, entity_type))
 
 
 def _canonicalize_entity_ids(ids, entity_type=None):

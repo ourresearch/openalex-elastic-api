@@ -21,7 +21,6 @@ import settings
 from core.exceptions import APIQueryParamsError
 
 ID_PREFIX = "https://openalex.org/"
-TERMS_CHUNK = 60000  # one `terms` clause takes at most 65,536 values (index.max_terms_count)
 COMPOSITE_PAGE = 50000  # under search.max_buckets (65,536)
 
 
@@ -163,7 +162,5 @@ def terms_query(local_field, ids):
     """A filter matching documents whose `local_field` holds any of `ids` (chunked under the clause cap)."""
     if not ids:
         return Q("bool", must_not=[Q("match_all")])
-    chunks = [ids[i:i + TERMS_CHUNK] for i in range(0, len(ids), TERMS_CHUNK)]
-    if len(chunks) == 1:
-        return Q("terms", **{local_field: chunks[0]})
-    return Q("bool", should=[Q("terms", **{local_field: c}) for c in chunks], minimum_should_match=1)
+    from core.fields import any_of_terms  # core.fields imports this module lazily
+    return any_of_terms(lambda chunk: Q("terms", **{local_field: chunk}), ids)
