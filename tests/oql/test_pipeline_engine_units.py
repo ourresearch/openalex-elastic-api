@@ -117,6 +117,17 @@ def test_say_seconds(s, said):
     assert A.say_seconds(s) == said
 
 
+@pytest.mark.parametrize("q,reranked,credits", [
+    ("works where year is 2020", False, 1),
+    ("works where title-abstract has (kelp)", False, 10),
+    ("works where title-abstract has (kelp) group by year", False, 1),   # the URL cap
+    ("works where title-abstract has (kelp)", True, 20),
+    ("works where year is 2020", True, 11),
+])
+def test_a_plain_query_costs_what_its_url_costs(q, reranked, credits):
+    assert A.plain_price(_oqo(q), reranked=reranked)["credits"] == credits
+
+
 def test_count_floor_only():
     def where(q):
         return A._nnf_group_filters(_oqo(q)).group_by[0].where

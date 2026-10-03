@@ -37,6 +37,7 @@ from core.shared_view import (
 )
 from core.utils import get_data_version_connection, map_filter_params, map_sort_params
 from core.vector_index import vector_semantic_search
+from query_translation import analytics as analytics_mod
 from query_translation.oqo import OQO, SortBy, canonicalize_oqo_column_ids
 from query_translation.oqo_to_es import (
     OQOTranslationError,
@@ -478,6 +479,15 @@ def _execute_oqo(oqo_or_dict, view_params=None):
             + ("semantic search" if semantic_value is not None else "sample")
             + " yet. Drop it, or run the calculation on the whole set.",
             "invalid_params", status=400)
+    if analytics_mod.PRICE_ALL_OQL and not oqo.uses_pipeline:
+        # priced like the same query as a URL (Jason, 2026-10-03); refuse up front
+        # when it doesn't fit (rerank counted when asked; it's charged only if it runs)
+        refused = _credit_refusal(
+            analytics_mod.plain_price(
+                oqo, reranked=_rerank_asked() and index_name.lower().startswith("works")),
+            "use a filter instead of a search")
+        if refused is not None:
+            return refused
     if semantic_value is not None:
         if not index_name.lower().startswith("works"):
             return _error_response(
@@ -658,25 +668,11 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
     if oqo.sort_by:
         s0 = oqo.sort_by[0]
         sort = (s0.column_id, s0.direction or "desc")
-    # Priced from the plan (Jason, 2026-10-03). The proxy charged its list price up
-    # front (X-Cost-USD) and says what the caller has left (X-Credits-Remaining);
-    # refuse before running when the rest of the price doesn't fit.
+    # Priced from the plan (Jason, 2026-10-03).
     cost = analytics.price(oqo)
-    remaining = request.headers.get("X-Credits-Remaining")
-    charged_usd = request.headers.get("X-Cost-USD")
-    if remaining is not None:
-        try:
-            charged = round(float(charged_usd or 0) / analytics.CREDIT_USD)
-            if cost["credits"] - charged > int(remaining):
-                return jsonify({
-                    "error": "not_enough_credits",
-                    "message": (f"This query costs {cost['credits']} credits "
-                                f"(${cost['usd']}); you have {int(remaining) + charged} "
-                                f"left today."),
-                    "fix": "Run it tomorrow, add credits, or narrow it (fewer listed searches).",
-                    "cost": cost}), 429
-        except (TypeError, ValueError):
-            pass
+    refused = _credit_refusal(cost, "narrow it (fewer listed searches)")
+    if refused is not None:
+        return refused
     try:
         body = analytics.run(
             oqo, index_name=index_name, connection=connection, fields_dict=fields_dict,
@@ -693,6 +689,35 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
     # content worker's X-Credits-Cost)
     response.headers["X-Credits-Cost"] = str(cost["credits"])
     return response, 200
+
+
+def _credit_refusal(cost: dict, narrow: str):
+    """The proxy charged its list price up front (X-Cost-USD) and says what the
+    caller has left (X-Credits-Remaining): a 429 with the price when the rest of it
+    doesn't fit, before anything runs; else None."""
+    remaining = request.headers.get("X-Credits-Remaining")
+    if remaining is None:
+        return None
+    try:
+        charged = round(float(request.headers.get("X-Cost-USD") or 0) / 0.0001)
+        if cost["credits"] - charged <= int(remaining):
+            return None
+        return jsonify({
+            "error": "not_enough_credits",
+            "message": (f"This query costs {cost['credits']} credits (${cost['usd']}); "
+                        f"you have {int(remaining) + charged} left today."),
+            "fix": f"Run it tomorrow, add credits, or {narrow}.",
+            "cost": cost}), 429
+    except (TypeError, ValueError):
+        return None
+
+
+def _rerank_asked() -> bool:
+    from flask import g
+    value = getattr(g, "rerank_param", None)
+    if value is None:
+        value = request.args.get("rerank")
+    return str(value).lower() == "true"
 
 
 def _finalize_oqo_response(result, oqo: OQO, MessageSchema):
@@ -739,6 +764,15 @@ def _finalize_oqo_response(result, oqo: OQO, MessageSchema):
     # sorting commutative value-bag members here would silently alphabetize the user's
     # values. Sorting stays on the legacy-URL path (shared_view) and dedup hash-keys.
     serialized.setdefault("meta", {})["x_query"] = build_x_query(oqo, sort_operands=False)
+    if analytics_mod.PRICE_ALL_OQL and not oqo.uses_pipeline:
+        # priced like the same query as a URL; the proxy settles against this header
+        cost = analytics_mod.plain_price(
+            oqo, reranked=serialized["meta"].get("reranked") is True)
+        serialized["meta"]["cost"] = cost
+        serialized["meta"]["cost_usd"] = cost["usd"]
+        response = jsonify(serialized)
+        response.headers["X-Credits-Cost"] = str(cost["credits"])
+        return response, 200
     return jsonify(serialized), 200
 
 
