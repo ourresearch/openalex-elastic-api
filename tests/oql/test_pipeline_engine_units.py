@@ -115,3 +115,35 @@ def test_condition_labels_read_by_name():
     (1089880, "about 13 days")])
 def test_say_seconds(s, said):
     assert A.say_seconds(s) == said
+
+
+def test_count_floor_only():
+    def where(q):
+        return A._nnf_group_filters(_oqo(q)).group_by[0].where
+    base = "get works where year > (2020); then group those works by author where "
+    assert A._count_floor_only(where(base + "count of those works > (5)"))
+    assert not A._count_floor_only(where(base + "count of those works < (5)"))
+    assert not A._count_floor_only(where(base + "mean FWCI of those works > (1)"))
+    assert not A._count_floor_only(where(base + "count of those works > (5) and h-index > (20)"))
+
+
+def test_groups_count_after_a_key_set():
+    lv = A.Level(0, None, "terms")
+    assert A._groups_count(lv, {"n_groups": {"value": 100}}) == 100
+    lv.exclude = {"a", "b", "c"}
+    assert A._keyset_count_agg(lv, "f")["terms"]["include"] == ["a", "b", "c"]
+    # two of the three left-out keys are in the set
+    assert A._groups_count(lv, {"n_groups": {"value": 100},
+                                "n_keyset": {"buckets": [{}, {}]}}) == 98
+    lv.include, lv.exclude = {"a", "b"}, None
+    assert A._groups_count(lv, {"n_keyset": {"buckets": [{}]}}) == 1
+
+
+def test_a_filtered_split_says_when_it_left_groups_unchecked():
+    lv = A.Level(0, None, "terms")
+    lv.size = A.FILTERED_CANDIDATES
+    full = {"buckets": [{}] * A.FILTERED_CANDIDATES}
+    assert A._filter_truncated(lv, {"s0": full})              # a count floor filled the split
+    assert not A._filter_truncated(lv, {"s0": {"buckets": [{}]}})
+    more = {"buckets": [{}] * (A.FILTERED_CANDIDATES + 1)}
+    assert A._filter_truncated(lv, {"s0": {"buckets": []}, "n_candidates": more})
