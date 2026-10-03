@@ -194,7 +194,7 @@ def works():
         )
 
     result = shared_view(request, fields_dict, index_name, default_sort, connection, default_filters=default_filters,
-                         extra_valid_params=("corpus",))
+                         extra_valid_params=("corpus", "rerank"))
     if is_group_by_export(request):
         return export_group_by(result, request)
     message_schema = MessageSchema(only=only_fields)

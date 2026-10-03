@@ -371,6 +371,7 @@ CATEGORY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "authorships.author.orcid": "ids",
         "fulltext.search": "other",
         "title_and_abstract.search": "other",
+        "title_abstract_keywords.search": "other",
         "display_name.search": "other",
         "title.search": "other",
         "raw_affiliation_strings.search": "other",

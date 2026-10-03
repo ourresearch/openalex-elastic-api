@@ -1611,6 +1611,22 @@
       "isId": false,
       "hasExport": false
     },
+    "title_abstract_keywords.search": {
+      "key": "title_abstract_keywords.search",
+      "entityToFilter": "works",
+      "entityToSelect": null,
+      "displayName": "title/abstract/keywords",
+      "displayNameVerbatim": false,
+      "type": "search",
+      "actions": [
+        "filter"
+      ],
+      "actionsPopular": [
+        "filter"
+      ],
+      "isId": false,
+      "hasExport": false
+    },
     "citation_normalized_percentile.is_in_top_1_percent": {
       "key": "citation_normalized_percentile.is_in_top_1_percent",
       "entityToFilter": "works",
@@ -4102,6 +4118,18 @@
       "isId": false,
       "hasExport": false
     },
+    "description": {
+      "key": "description",
+      "entityToFilter": "keywords",
+      "entityToSelect": null,
+      "displayName": "description",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "collection": {
       "key": "collection",
       "entityToFilter": "keywords",
@@ -4128,6 +4156,18 @@
       ],
       "actionsPopular": null,
       "isId": false,
+      "hasExport": false
+    },
+    "ids.wikidata": {
+      "key": "ids.wikidata",
+      "entityToFilter": "keywords",
+      "entityToSelect": null,
+      "displayName": "Wikidata ID",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [],
+      "actionsPopular": [],
+      "isId": true,
       "hasExport": false
     },
     "works_count": {

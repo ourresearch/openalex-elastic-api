@@ -330,7 +330,12 @@ CAP_COLUMN = "column"
 # 14.4.0 (oxjob #1464, 2026-10-02; Jason's ship yes 2026-10-02 05:00 CT): keywords
 # `display_name_alternatives` (select-only, label "alternate names"). Purely additive:
 # classify_properties_diff.py says MINOR.
-PROPERTIES_VERSION = "14.4.0"
+# 14.5.0 (oxjob #1521, 2026-10-03; Jason's ship yes for the whole title-abstract-keywords package,
+# 2026-10-03 05:31 CT): works gains the filters `title_abstract_keywords.search` and `.search.exact`
+# (title/abstract text OR the keywords a query phrase names; OQL "title/abstract/keywords") and the
+# select column `rerank_score` (Jev's p(relevant) under rerank=true). Purely additive:
+# classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "14.5.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

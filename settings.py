@@ -65,6 +65,19 @@ SEMANTIC_TEXT_BOOST = os.environ.get("SEMANTIC_TEXT_BOOST", "true").lower() == "
 CITATION_PIVOT = int(os.environ.get("CITATION_PIVOT", "100"))
 CITATION_MAX_BOOST = float(os.environ.get("CITATION_MAX_BOOST", "0.5"))
 CITATION_KNN_FLOOR = float(os.environ.get("CITATION_KNN_FLOOR", "0.5"))
+# Works keyword search citation boost (oxjob #1521): "sat" = 1 + CITATION_MAX_BOOST * c / (c + CITATION_PIVOT),
+# "sqrt" = the old 1 + sqrt(c). Set CITATION_SCALING=sqrt to revert in a minute.
+CITATION_SCALING = os.environ.get("CITATION_SCALING", "sat").lower()
+# Top-level search= / default.search also match keywords (title + abstract + fulltext + keywords, oxjob #1521).
+SEARCH_KEYWORDS = os.environ.get("SEARCH_KEYWORDS", "true").lower() == "true"
+# rerank=true (oxjob #1521): Jev reorders the top RERANK_WINDOW results of a relevance-sorted works search.
+RERANK_ENABLED = os.environ.get("RERANK_ENABLED", "true").lower() == "true"
+RERANK_WINDOW = 100
+RERANK_TIMEOUT_S = float(os.environ.get("RERANK_TIMEOUT_S", "0.6"))
+RERANK_CACHE_SECONDS = 24 * 3600
+JEV_URL = os.environ.get("JEV_URL", "https://api.typesafe.ai/v1/systemone")
+JEV_MODEL = os.environ.get("JEV_MODEL", "jev-1.13.0")
+TYPESAFE_API_KEY = os.environ.get("TYPESAFE_API_KEY")
 GROUPBY_VALUES_INDEX = "groupby_values"
 RAW_AFFILIATION_STRINGS_INDEX = "raw-affiliation-strings-v3"
 

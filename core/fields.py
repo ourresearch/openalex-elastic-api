@@ -10,6 +10,8 @@ import country_list
 from core.exceptions import APIQueryParamsError
 from core.search import (
     SearchOpenAlex,
+    works_citation_scaling,
+    works_keyword_search_query,
     full_search_query,
     full_search_query_exact,
     strip_singleton_wildcard_quotes,
@@ -17,6 +19,7 @@ from core.search import (
     validate_wildcards,
 )
 from core.utils import get_full_openalex_id, normalize_openalex_id
+import settings
 from settings import CONTINENT_PARAMS, EXTERNAL_ID_FIELDS, VERSIONS, WORKS_INDEX
 
 
@@ -847,7 +850,31 @@ class SearchField(Field):
         # default.search is its alternate_of on every non-works entity. All three route
         # through full_search_query, which dispatches on index — so they are
         # byte-identical per entity.
-        if self.param in ("default.search", "fulltext.search", "text.search"):
+        is_works = bool(self.index) and self.index.lower().startswith("works")
+        scaling = works_citation_scaling() if is_works else "sqrt"
+
+        def make_search(**kwargs):  # every branch below gets the index's citation scaling
+            return SearchOpenAlex(citation_scaling=scaling, **kwargs)
+
+        if self.param in ("title_abstract_keywords.search", "title_abstract_keywords.search.exact"):
+            # Title + abstract + keywords (oxjob #1521): title/abstract text OR the
+            # keywords a query phrase names, plus the keyword bonus.
+            q = works_keyword_search_query(
+                self.value, "exact" if self.param.endswith(".exact") else "default",
+                with_fulltext=False,
+            )
+        elif (
+            self.param in ("default.search", "default.search.exact", "fulltext.search", "fulltext.search.exact")
+            and is_works and settings.SEARCH_KEYWORDS
+        ):
+            # The broad works search (search=, its echo fulltext.search, and the
+            # deprecated alias default.search) gains keywords as one query, so
+            # search= and its OQL echo stay byte-identical (oxjob #1521).
+            q = works_keyword_search_query(
+                self.value, "exact" if self.param.endswith(".exact") else "default",
+                with_fulltext=True,
+            )
+        elif self.param in ("default.search", "fulltext.search", "text.search"):
             q = full_search_query(self.index, self.value)
         elif self.param in ("default.search.exact", "fulltext.search.exact"):
             # No-stem sibling of the broad search (#364) — the exact target a
@@ -857,7 +884,7 @@ class SearchField(Field):
             # Locations title search (oxjob #850): analyzed `title.text` (v3+).
             # Locations docs have no cited_by_count, so skip the citation boost
             # (same reason as the awards display_name.search branch below).
-            search_oa = SearchOpenAlex(
+            search_oa = make_search(
                 search_terms=self.value, primary_field=self.es_field()
             )
             q = search_oa.primary_match_query()
@@ -871,37 +898,37 @@ class SearchField(Field):
             or self.param == "title.search"
             or self.param == "title.search.exact"
         ):
-            search_oa = SearchOpenAlex(
+            search_oa = make_search(
                 search_terms=self.value, primary_field=self.es_field()
             )
             q = search_oa.build_query()
         elif self.param == "display_name.search" and self.unique_id == "author_search":
-            search_oa = SearchOpenAlex(
+            search_oa = make_search(
                 search_terms=self.value,
                 is_author_name_query=True,
             )
             q = search_oa.build_query()
         elif self.param == "display_name.search" and self.index == "awards":
             # Awards doesn't have cited_by_count, so skip citation boost
-            search_oa = SearchOpenAlex(
+            search_oa = make_search(
                 search_terms=self.value,
                 primary_field=self.es_field(),
             )
             q = search_oa.primary_match_query()
         elif self.param == "display_name.search.exact":
-            search_oa = SearchOpenAlex(
+            search_oa = make_search(
                 search_terms=self.value,
                 primary_field=self.es_field(),
             )
             q = search_oa.build_query()
         elif self.param == "raw_author_name.search":
-            search_oa = SearchOpenAlex(
+            search_oa = make_search(
                 search_terms=self.value,
                 primary_field="authorships.raw_author_name",
             )
             q = search_oa.build_query()
         elif self.param == "title_and_abstract.search":
-            search_oa = SearchOpenAlex(
+            search_oa = make_search(
                 search_terms=self.value,
                 primary_field="display_name",
                 secondary_field="abstract",
@@ -909,7 +936,7 @@ class SearchField(Field):
             )
             q = search_oa.build_query()
         elif self.param == "title_and_abstract.search.exact":
-            search_oa = SearchOpenAlex(
+            search_oa = make_search(
                 search_terms=self.value,
                 primary_field="display_name.no_stem",
                 secondary_field="abstract.no_stem",
@@ -917,13 +944,13 @@ class SearchField(Field):
             )
             q = search_oa.build_query()
         elif self.param == "semantic.search":
-            search_oa = SearchOpenAlex(
+            search_oa = make_search(
                 search_terms=self.value,
                 is_semantic_query=True,
             )
             q = search_oa.build_query()
         else:
-            search_oa = SearchOpenAlex(search_terms=self.value)
+            search_oa = make_search(search_terms=self.value)
             q = search_oa.build_query()
         return q
 

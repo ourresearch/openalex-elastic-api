@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "0db456c86193b38af90915c083c4c84cef1bbd45393f25fe44bd82406082c28a",
-    "property_count": 872,
-    "version": "14.4.0"
+    "fingerprint": "c8ca50597237ae8fe6108adba3ed9bc61dc3c4360a6561d886b5d913dc927237",
+    "property_count": 875,
+    "version": "14.5.0"
   },
   "properties": {
     "authors": {
@@ -18065,6 +18065,22 @@
         "supported_by": [],
         "type": "openalex_id"
       },
+      "rerank_score": {
+        "actions": [
+          "column"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "rerank score",
+        "entity_type": null,
+        "name": "rerank_score",
+        "operators": [],
+        "supported_by": [],
+        "type": null
+      },
       "semantic.search": {
         "actions": [
           "search"
@@ -18226,6 +18242,48 @@
         "operators": [],
         "supported_by": [],
         "type": null
+      },
+      "title_abstract_keywords.search": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [
+          "title abstract keywords",
+          "title/abs/keywords",
+          "title_abstract_keywords"
+        ],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "other",
+        "display_name": "title/abstract/keywords",
+        "entity_type": null,
+        "name": "title_abstract_keywords.search",
+        "operators": [
+          "search"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "search"
+      },
+      "title_abstract_keywords.search.exact": {
+        "actions": [
+          "search"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "title abstract keywords",
+        "entity_type": null,
+        "name": "title_abstract_keywords.search.exact",
+        "operators": [
+          "search"
+        ],
+        "supported_by": [],
+        "type": "search"
       },
       "title_and_abstract.search": {
         "actions": [

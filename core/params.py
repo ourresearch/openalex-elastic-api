@@ -50,6 +50,8 @@ def _extract_all_search_params(request):
         "search.title.exact": ("exact", "title"),
         "search.title_and_abstract": ("default", "title_and_abstract"),
         "search.title_and_abstract.exact": ("exact", "title_and_abstract"),
+        "search.title_abstract_keywords": ("default", "title_abstract_keywords"),
+        "search.title_abstract_keywords.exact": ("exact", "title_abstract_keywords"),
     }
 
     results = []
@@ -76,10 +78,11 @@ def _extract_search_params(request):
         search.title.exact=query             -> ("exact", "title", "query")
         search.title_and_abstract=query      -> ("default", "title_and_abstract", "query")
         search.title_and_abstract.exact=query-> ("exact", "title_and_abstract", "query")
+        search.title_abstract_keywords=query -> ("default", "title_abstract_keywords", "query")
         (no search param)                    -> (None, None, None)
     """
     # Check for field-scoped params first
-    for scope in ("title_and_abstract", "title"):
+    for scope in ("title_abstract_keywords", "title_and_abstract", "title"):
         exact_key = f"search.{scope}.exact"
         default_key = f"search.{scope}"
         if request.args.get(exact_key):

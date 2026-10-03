@@ -7,6 +7,7 @@ from core.knn import KNNQuery
 from core.search_negation import has_leading_not, whole_query_negation_operand
 import requests
 
+import settings
 from settings import ES_URL_WALDEN
 
 
@@ -121,6 +122,7 @@ WILDCARD_REQUIRES_EXACT = {
     "fulltext.search": "fulltext.search.exact",
     "display_name.search": "display_name.search.exact",
     "title_and_abstract.search": "title_and_abstract.search.exact",
+    "title_abstract_keywords.search": "title_abstract_keywords.search.exact",
 }
 
 
@@ -499,6 +501,7 @@ class SearchOpenAlex:
         is_author_name_query=False,
         is_semantic_query=False,
         combine_fields=False,
+        citation_scaling="sqrt",
     ):
         self.search_terms = normalize_search_input(search_terms)
         self.primary_field = primary_field if primary_field else "display_name"
@@ -516,6 +519,9 @@ class SearchOpenAlex:
         # default.search/fulltext.search columns (#399). Set only on works fan-out search
         # builders; the entity searches that share these functions never set it.
         self.combine_fields = combine_fields
+        # Works searches pass works_citation_scaling() ("sat" since oxjob #1521);
+        # every other entity keeps sqrt.
+        self.citation_scaling = citation_scaling
 
     def build_query(self, skip_citation_boost=False):
         if not self.search_terms:
@@ -540,11 +546,12 @@ class SearchOpenAlex:
                 tertiary_field=self.tertiary_field,
                 is_author_name_query=self.is_author_name_query,
                 combine_fields=self.combine_fields,
+                citation_scaling=self.citation_scaling,
             ).build_query(skip_citation_boost=True)
             raw_query = Q("bool", must=[self.match_all()], must_not=[positive])
             if skip_citation_boost:
                 return raw_query
-            return self.citation_boost_query(raw_query)
+            return self.citation_boost_query(raw_query, scaling_type=self.citation_scaling)
 
         # Wildcard inside a quoted proximity phrase (`"smart phone*"~3`) — query_string
         # silently drops the wildcard, so build an ES `intervals` query instead (#355).
@@ -552,7 +559,7 @@ class SearchOpenAlex:
             raw_query = self.proximity_wildcard_query()
             if skip_citation_boost:
                 return raw_query
-            return self.citation_boost_query(raw_query)
+            return self.citation_boost_query(raw_query, scaling_type=self.citation_scaling)
 
         # Wildcard inside a multi-token quoted phrase WITHOUT proximity (`"smart* phone"`)
         # — adjacency; same `intervals` fix, ordered with max_gaps=0 (#355 Goal A).
@@ -560,7 +567,7 @@ class SearchOpenAlex:
             raw_query = self.adjacent_wildcard_query()
             if skip_citation_boost:
                 return raw_query
-            return self.citation_boost_query(raw_query)
+            return self.citation_boost_query(raw_query, scaling_type=self.citation_scaling)
 
         # A single wildcard token the analyzer splits (`e-cigarette*`, `APP/PS1*`) —
         # query_string would run a literal prefix on a term the index never contains
@@ -570,7 +577,7 @@ class SearchOpenAlex:
             raw_query = self.split_wildcard_token_query()
             if skip_citation_boost:
                 return raw_query
-            return self.citation_boost_query(raw_query)
+            return self.citation_boost_query(raw_query, scaling_type=self.citation_scaling)
 
         # Binary proximity `"A"~N~"B"` — two separate operands NEAR each other (WoS
         # `NEAR/N`); `match_phrase`+slop can't express it (slop is whole-phrase), so it
@@ -580,7 +587,7 @@ class SearchOpenAlex:
             raw_query = self.binary_proximity_query()
             if skip_citation_boost:
                 return raw_query
-            return self.citation_boost_query(raw_query)
+            return self.citation_boost_query(raw_query, scaling_type=self.citation_scaling)
 
         # K-ary list proximity `"A"~N~"B"~"C"[...]` — the binary path generalized to K
         # operands NEAR each other in one window (oxjob #514, OQL `within N (a, b, c)`).
@@ -589,7 +596,7 @@ class SearchOpenAlex:
             raw_query = self.list_proximity_query()
             if skip_citation_boost:
                 return raw_query
-            return self.citation_boost_query(raw_query)
+            return self.citation_boost_query(raw_query, scaling_type=self.citation_scaling)
 
         if (
             self.primary_field == "authorships.raw_affiliation_strings"
@@ -612,7 +619,7 @@ class SearchOpenAlex:
 
         if skip_citation_boost:
             return raw_query
-        return self.citation_boost_query(raw_query)
+        return self.citation_boost_query(raw_query, scaling_type=self.citation_scaling)
 
     @staticmethod
     def match_all():
@@ -1115,7 +1122,8 @@ class SearchOpenAlex:
     @staticmethod
     def citation_boost_query(query, scaling_type="sqrt"):
         """Uses cited_by_count to boost query results with a conditional script.
-        Supports two types of scaling: 'sqrt' for square root, and 'log' for logarithmic scaling.
+        Scaling: 'sqrt' (square root; non-works entities), 'sat' (saturation; works since
+        oxjob #1521, switchable by CITATION_SCALING), 'log' (semantic search).
         """
         if scaling_type == "sqrt":
             script_source = """
@@ -1125,6 +1133,14 @@ class SearchOpenAlex:
                 return 1 + Math.sqrt(doc['cited_by_count'].value);
             }
             """
+        elif scaling_type == "sat":
+            # Saturation (oxjob #1258 lever 1, shipped by #1521): 1 + max * c / (c + pivot).
+            # A 5,000-citation paper gets ~1.5x instead of sqrt's ~72x. Same constants as
+            # the semantic search's citation prior (core/vector_index.py).
+            script_source = (
+                "double c = doc['cited_by_count'].size() == 0 ? 0 : doc['cited_by_count'].value; "
+                f"return 1 + {float(settings.CITATION_MAX_BOOST)} * c / (c + {float(settings.CITATION_PIVOT)});"
+            )
         elif scaling_type == "log":
             script_source = """
             if (doc['cited_by_count'].size() == 0 || doc['cited_by_count'].value <= 1) {
@@ -1134,7 +1150,7 @@ class SearchOpenAlex:
             }
             """
         else:
-            raise ValueError("Invalid scaling_type. Choose 'sqrt' or 'log'.")
+            raise ValueError("Invalid scaling_type. Choose 'sqrt', 'sat' or 'log'.")
 
         return Q(
             "function_score",
@@ -1309,6 +1325,7 @@ def full_search_query(index_name, search_terms, skip_citation_boost=False):
             secondary_field="abstract",
             tertiary_field="fulltext",
             combine_fields=True,  # cross-field: a b == a AND b == two-filter (#399)
+            citation_scaling=works_citation_scaling(),
         )
     elif index_name.lower().startswith("locations"):
         # Locations (oxjob #850): docs carry `title` (keyword) + an analyzed
@@ -1395,23 +1412,57 @@ def full_search_query_exact(search_terms, skip_citation_boost=False):
         secondary_field="abstract.no_stem",
         tertiary_field="fulltext.no_stem",
         combine_fields=True,  # cross-field: a b == a AND b == two-filter (#399)
+        citation_scaling=works_citation_scaling(),
     )
     return search_oa.build_query(skip_citation_boost=skip_citation_boost)
+
+
+def works_citation_scaling():
+    """The citation boost every works search uses: "sat" (oxjob #1521) unless the
+    CITATION_SCALING env var says "sqrt" (the one-minute revert)."""
+    return "sqrt" if settings.CITATION_SCALING == "sqrt" else "sat"
+
+
+def works_keyword_search_query(search_terms, search_type="default", with_fulltext=False,
+                               skip_citation_boost=False):
+    """Title + abstract (+ fulltext) + keywords, oxjob #1521: the text rule ORed with
+    its keyword version (core/keyword_search.py), plus the keyword bonus, then the
+    works citation boost. with_fulltext=False is `title_abstract_keywords.search`;
+    True is the top-level `search=` / `default.search`."""
+    from core.keyword_search import keyword_search_query
+
+    if with_fulltext:
+        base = (
+            full_search_query_exact(search_terms, skip_citation_boost=True)
+            if search_type == "exact"
+            else full_search_query("works", search_terms, skip_citation_boost=True)
+        )
+    else:
+        base = scoped_search_query(search_terms, "title_and_abstract", search_type, skip_citation_boost=True)
+    return keyword_search_query(
+        search_terms, base, search_type=search_type, with_fulltext=with_fulltext,
+        skip_citation_boost=skip_citation_boost,
+    )
 
 
 def scoped_search_query(search_terms, scope, search_type, skip_citation_boost=False):
     """Build a search query scoped to specific fields.
 
-    scope: "title" or "title_and_abstract"
+    scope: "title", "title_and_abstract" or "title_abstract_keywords" (oxjob #1521)
     search_type: "default" (stemmed) or "exact" (no stemming)
     """
     is_exact = search_type == "exact"
 
+    if scope == "title_abstract_keywords":
+        return works_keyword_search_query(
+            search_terms, search_type, with_fulltext=False, skip_citation_boost=skip_citation_boost,
+        )
     if scope == "title":
         field = "display_name.no_stem" if is_exact else "display_name"
         search_oa = SearchOpenAlex(
             search_terms=search_terms,
             primary_field=field,
+            citation_scaling=works_citation_scaling(),
         )
     elif scope == "title_and_abstract":
         primary = "display_name.no_stem" if is_exact else "display_name"
@@ -1423,6 +1474,7 @@ def scoped_search_query(search_terms, scope, search_type, skip_citation_boost=Fa
             # Cross-field so search.title_and_abstract= agrees with the
             # title_and_abstract.search filter (#191.7 boolean + #399 plain).
             combine_fields=True,
+            citation_scaling=works_citation_scaling(),
         )
     else:
         raise ValueError(f"Unknown search scope: {scope}")
@@ -1449,6 +1501,8 @@ def check_is_search_query(filter_params, search):
         "title.search.exact",
         "title_and_abstract.search",
         "title_and_abstract.search.exact",
+        "title_abstract_keywords.search",
+        "title_abstract_keywords.search.exact",
     ]
 
     if search and search != '""':

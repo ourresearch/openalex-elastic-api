@@ -19,6 +19,9 @@ class MetaSchema(Schema):
     apc_list_sum_usd = fields.Int()
     apc_paid_sum_usd = fields.Int()
     cited_by_count_sum = fields.Int()
+    # rerank=true (oxjob #1521): whether this page's order came from Jev. Present
+    # only when rerank was asked for.
+    reranked = fields.Bool()
     # Private, unstable query echo {oql, oqo, url} the GUI rehydrates from (oxjob
     # #373/#378). `fields.Raw` is a pass-through: marshmallow drops undeclared meta
     # keys on dump, so this field is what lets `core.shared_view`'s injected

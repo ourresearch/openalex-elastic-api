@@ -765,6 +765,18 @@ fields = [
         docstring="Free text search within the work's title and abstract, without stemming",
         documentation_link="https://developers.openalex.org/guides/searching",
     ),
+    SearchField(
+        param="title_abstract_keywords.search",
+        index="works",
+        docstring="Free text search within the work's title and abstract, plus the keywords a phrase in the query names",
+        documentation_link="https://developers.openalex.org/guides/searching",
+    ),
+    SearchField(
+        param="title_abstract_keywords.search.exact",
+        index="works",
+        docstring="Free text search within the work's title and abstract (without stemming), plus the keywords a phrase in the query names",
+        documentation_link="https://developers.openalex.org/guides/searching",
+    ),
     TermField(param="apc_list.currency"),
     TermField(param="apc_list.provenance"),
     TermField(param="apc_paid.currency"),
@@ -1047,5 +1059,11 @@ annotate_entity_types(fields)
 for f in fields:
     if f.param in ("ids.openalex", "openalex", "openalex_id") and f.entity_type is None:
         f.entity_type = "works"
+
+# Every works search field builds with the works citation boost (oxjob #1521), so
+# each must know its index; some entries above predate the index argument.
+for f in fields:
+    if isinstance(f, SearchField) and not f.index:
+        f.index = "works"
 
 fields_dict = {f.param: f for f in fields}

@@ -436,6 +436,8 @@ DISPLAY_NAME_OVERRIDES: Dict[str, Dict[str, dict]] = {
         'x_sdgs.id': {"display_name": 'experimental SDGs', "aliases": ['x sdgs', 'x_sdgs', 'experimental SDG', 'shadow SDG']},
         'title.search': {"display_name": 'title'},
         'title_and_abstract.search': {"display_name": 'title/abstract', "aliases": ['title/abs', 'title & abstract', 'title and abstract', 'title&abstract', 'title_and_abstract']},
+        # oxjob #1521: title + abstract text OR the keywords a query phrase names.
+        'title_abstract_keywords.search': {"display_name": 'title/abstract/keywords', "aliases": ['title abstract keywords', 'title_abstract_keywords', 'title/abs/keywords']},
         'topics.id': {"display_name": 'topics'},
         'type': {"display_name": 'type'},
     },

@@ -152,6 +152,9 @@ _f("title", "display_name", "search", aliases=["display_name.search", "display_n
 # the old "title & abstract" spelling stays a parse alias for back-compat.
 _f("title/abstract", "title_and_abstract", "search",
    aliases=["title/abs", "title & abstract", "title and abstract", "title_and_abstract.search", "title_and_abstract", "title&abstract"])
+# oxjob #1521: title/abstract text OR the keywords a phrase in the query names.
+_f("title/abstract/keywords", "title_abstract_keywords", "search",
+   aliases=["title abstract keywords", "title_abstract_keywords.search", "title_abstract_keywords", "title/abs/keywords"])
 _f("abstract", "abstract", "search", aliases=["abstract.search"])
 # "full text" is the canonical broad full-text scope: title + abstract + full text
 # (oxjob #374; render word = the registry display_name, #381 Phase 5). All broad-search

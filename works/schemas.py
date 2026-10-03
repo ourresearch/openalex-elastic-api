@@ -337,6 +337,9 @@ class WorksSchema(Schema):
     title = fields.Str()
     display_name = fields.Str()
     relevance_score = fields.Method("get_relevance_score")
+    # rerank=true (oxjob #1521): Jev's probability that the work is a relevant
+    # result, on the reranked top 100 only.
+    rerank_score = fields.Float()
     publication_year = fields.Int()
     publication_date = fields.Str()
     ids = fields.Nested(IDsSchema)

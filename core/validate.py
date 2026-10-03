@@ -8,6 +8,7 @@ VALID_SEARCH_TYPES = [
     "search", "search.semantic", "search.exact",
     "search.title", "search.title.exact",
     "search.title_and_abstract", "search.title_and_abstract.exact",
+    "search.title_abstract_keywords", "search.title_abstract_keywords.exact",
 ]
 
 
@@ -159,10 +160,10 @@ def validate_search_param(request):
     # deduplicated by the Cloudflare API proxy before reaching Flask, so
     # Flask only ever sees one value per param name. No validation needed here.
 
-    # Cap at 7 search params (one per valid search type)
-    if len(search_params_present) > 7:
+    # Cap at one per valid search type
+    if len(search_params_present) > len(VALID_SEARCH_TYPES):
         raise APIQueryParamsError(
-            f"Maximum 7 search parameters per request. "
+            f"Maximum {len(VALID_SEARCH_TYPES)} search parameters per request. "
             f"You provided {len(search_params_present)}."
         )
 
@@ -225,6 +226,7 @@ def _parse_search_param_name(param_name):
     search.title.exact              -> ("title", "exact")
     search.title_and_abstract       -> ("title_and_abstract", "default")
     search.title_and_abstract.exact -> ("title_and_abstract", "exact")
+    search.title_abstract_keywords  -> ("title_abstract_keywords", "default")
     """
     if param_name == "search":
         return "bare", "default"

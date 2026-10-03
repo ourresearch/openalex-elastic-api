@@ -4,6 +4,7 @@ from elasticsearch.exceptions import RequestError
 from elasticsearch_dsl import Search
 
 import settings
+from core import rerank
 from core.cursor import get_next_cursor, handle_cursor
 from core.exceptions import APIPaginationError, APIQueryParamsError
 from core.filter import filter_records
@@ -29,7 +30,7 @@ from core.knn import KNNQueryWithFilter
 from core.paginate import get_pagination
 from core.params import parse_params
 from core.preference import clean_preference, combine_preferences, set_preference_for_filter_search
-from core.search import SearchOpenAlex, check_is_search_query, full_search_query, full_search_query_exact, scoped_search_query, strip_singleton_wildcard_quotes, validate_search_terms, validate_top_level_search_wildcard
+from core.search import SearchOpenAlex, check_is_search_query, full_search_query, full_search_query_exact, scoped_search_query, works_citation_scaling, works_keyword_search_query, strip_singleton_wildcard_quotes, validate_search_terms, validate_top_level_search_wildcard
 from core.semantic_search import embed_query, VECTOR_FIELD
 from core.sort import (
     get_sort_fields,
@@ -65,9 +66,35 @@ def shared_view(request, fields_dict, index_name, default_sort, connection=None,
     if is_semantic and settings.USE_VECTOR_INDEX:
         return vector_semantic_search(params, index_name, connection)
 
+    # rerank=true (oxjob #1521): Jev reorders the top 100 of a relevance-sorted works
+    # search. A rerank cursor ("rr.") implies it, so a walk that started reranked
+    # stays consistent even if a later request drops the param.
+    rerank_on = index_name.lower().startswith("works") and (
+        rerank.rerank_requested(request) or rerank.is_rerank_cursor(params.get("cursor"))
+    )
+    if rerank_on:
+        rerank.validate(params, index_name)
+        got = None
+        if settings.RERANK_ENABLED:
+            got = rerank.reranked_response(
+                request, params, index_name,
+                lambda p: construct_query(p, fields_dict, index_name, default_sort, connection).params(timeout="5s"),
+            )
+        if got is not None:
+            response, meta_overrides = got
+            result = format_response(response, params, index_name, fields_dict, None, connection)
+            result["meta"].update(meta_overrides)
+            attach_x_query(result, request, index_name)
+            return result
+        if rerank.is_rerank_cursor(params.get("cursor")):
+            # RERANK_ENABLED is off mid-walk: the reranked window can't be served.
+            raise APIPaginationError("This cursor came from a reranked search, and rerank is off right now. Start again with cursor=*.")
+
     s = construct_query(params, fields_dict, index_name, default_sort, connection)
     response = execute_search(s, params)
     result = format_response(response, params, index_name, fields_dict, s, connection)
+    if rerank_on:
+        result["meta"]["reranked"] = False
     attach_x_query(result, request, index_name)
     if settings.DEBUG:
         print(s.to_dict())
@@ -143,6 +170,8 @@ def attach_x_query(result, request, index_name):
                     "search.title.exact",
                     "search.title_and_abstract",
                     "search.title_and_abstract.exact",
+                    "search.title_abstract_keywords",
+                    "search.title_abstract_keywords.exact",
                 )
                 if request.args.get(p)
             }
@@ -297,6 +326,13 @@ def _build_one_search_operand(
             query_str, search_scope, search_type,
             skip_citation_boost=skip_citation_boost,
         )
+    if index_name.lower().startswith("works") and settings.SEARCH_KEYWORDS:
+        # search= / search.exact= on works: title + abstract + fulltext + keywords
+        # (oxjob #1521); SEARCH_KEYWORDS=false reverts to text only.
+        return works_keyword_search_query(
+            query_str, search_type, with_fulltext=True,
+            skip_citation_boost=skip_citation_boost,
+        )
     if search_type == "exact" and index_name.lower().startswith("works"):
         return full_search_query_exact(
             query_str, skip_citation_boost=skip_citation_boost
@@ -304,6 +340,10 @@ def _build_one_search_operand(
     return full_search_query(
         index_name, query_str, skip_citation_boost=skip_citation_boost
     )
+
+
+def _scaling_for(index_name):
+    return works_citation_scaling() if index_name.lower().startswith("works") else "sqrt"
 
 
 def build_search_value_query(
@@ -359,7 +399,7 @@ def build_search_value_query(
         return _negate(combined)
     if skip_citation_boost:
         return combined
-    return SearchOpenAlex.citation_boost_query(combined)
+    return SearchOpenAlex.citation_boost_query(combined, scaling_type=_scaling_for(index_name))
 
 
 def add_search_query(params, index_name, s):
@@ -425,7 +465,9 @@ def add_search_query(params, index_name, s):
 
     combined = Q("bool", must=sub_queries)
     # Only pay for citation scoring when _score actually drives ordering (#520).
-    query = combined if skip_boost else SearchOpenAlex.citation_boost_query(combined)
+    query = combined if skip_boost else SearchOpenAlex.citation_boost_query(
+        combined, scaling_type=_scaling_for(index_name)
+    )
 
     if params["sample"]:
         s = s.filter(query)
@@ -441,7 +483,7 @@ SEARCH_FILTER_KEYS = {
     "abstract.search", "default.search", "display_name.search",
     "fulltext.search", "keyword.search", "raw_affiliation_strings.search",
     "raw_author_name.search", "text.search", "title.search",
-    "title_and_abstract.search",
+    "title_and_abstract.search", "title_abstract_keywords.search",
 }
 
 

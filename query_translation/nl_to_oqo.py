@@ -115,7 +115,8 @@ Operators: "is" (default; equality/entity/enum/bool), ">" ">=" "<" "<=" (numbers
 # Search columns (text search) and the value mini-language
 Pick the search column by SCOPE, and the variant by exactness:
 - title only:            display_name.search   (stemmed) | display_name.search.exact (exact)
-- title AND abstract:    title_and_abstract.search | title_and_abstract.search.exact
+- title, abstract & keywords (DEFAULT for a research subject): title_abstract_keywords.search | title_abstract_keywords.search.exact
+- title AND abstract only: title_and_abstract.search | title_and_abstract.search.exact
 - abstract only:         abstract.search | abstract.search.exact
 - anywhere/full text:    default.search
 - author byline:         raw_author_name.search
@@ -158,14 +159,14 @@ e.g. "papers not from MIT or Stanford" -> {"get_rows":"works","filter_rows":[{"c
 # Examples (synthetic — follow the SHAPE, not the words)
 "papers from MIT" -> resolve_entity("institutions","MIT") -> {"get_rows":"works","filter_rows":[{"column_id":"authorships.institutions.lineage","value":"<id>"}]}
 "open access reviews since 2021" -> {"get_rows":"works","filter_rows":[{"column_id":"open_access.is_oa","value":true},{"column_id":"type","value":"review"},{"column_id":"publication_year","value":2021,"operator":">="}]}
-"papers about spin glass" (multi-word, NO exact signal -> near-phrase, stemmed) -> {"get_rows":"works","filter_rows":[{"column_id":"title_and_abstract.search","value":"\"spin glass\"","operator":"has"}]}
+"papers about spin glass" (multi-word, NO exact signal -> near-phrase, stemmed) -> {"get_rows":"works","filter_rows":[{"column_id":"title_abstract_keywords.search","value":"\"spin glass\"","operator":"has"}]}
 "the exact phrase \"spin glass\" in title or abstract" (exact signal) -> {"get_rows":"works","filter_rows":[{"column_id":"title_and_abstract.search.exact","value":"\"spin glass\"","operator":"has"}]}
-"most cited papers about graphene" (single word) -> {"get_rows":"works","filter_rows":[{"column_id":"title_and_abstract.search","value":"graphene","operator":"has"}],"sort_by":[{"column_id":"cited_by_count","direction":"desc"}]}
-"count papers per country about graphene" -> {"get_rows":"works","filter_rows":[{"column_id":"title_and_abstract.search","value":"graphene","operator":"has"}],"group_by":[{"column_id":"authorships.countries"}]}
+"most cited papers about graphene" (single word) -> {"get_rows":"works","filter_rows":[{"column_id":"title_abstract_keywords.search","value":"graphene","operator":"has"}],"sort_by":[{"column_id":"cited_by_count","direction":"desc"}]}
+"count papers per country about graphene" -> {"get_rows":"works","filter_rows":[{"column_id":"title_abstract_keywords.search","value":"graphene","operator":"has"}],"group_by":[{"column_id":"authorships.countries"}]}
 "papers from EU27 countries" (a COLLECTION) -> cannot_translate("collections like EU27 are not supported in NL v1")
 
 # Common column choices (prefer these — don't invent variants)
-- A research-subject term ("CRISPR", "quantum computing", "machine learning", "coral bleaching") is a TEXT SEARCH (title_and_abstract.search or default.search) by DEFAULT — do NOT resolve it to primary_topic.id. Only use primary_topic.id when the user explicitly says "topic" or supplies a topic id (T…).
+- A research-subject term ("CRISPR", "quantum computing", "machine learning", "coral bleaching") is a TEXT SEARCH (title_abstract_keywords.search) by DEFAULT — do NOT resolve it to primary_topic.id. Only use primary_topic.id when the user explicitly says "topic" or supplies a topic id (T…).
 - Filter WORKS by an institution: authorships.institutions.lineage. By an author: authorships.author.id. By a funder: funders.id. By a topic: primary_topic.id (NEVER concepts.id / x_concepts.id — deprecated).
 - Filter AUTHORS by their institution: last_known_institutions.id. By country: last_known_institutions.country_code. By topic: topics.id.
 - "group by ..." dimensions (works): author -> authorships.author.id; co-author -> authorships.author.id; institution -> authorships.institutions.lineage; country -> authorships.countries; source/journal -> primary_location.source.id; funder -> funders.id; topic -> primary_topic.id; field -> primary_topic.field.id; SDG -> sustainable_development_goals.id; year -> publication_year.
