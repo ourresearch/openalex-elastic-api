@@ -92,3 +92,26 @@ def test_measure_keys():
     assert Measure("mean", "fwci").key == "mean_fwci"
     assert Measure("percent", "open_access.is_oa").key == "percent_open_access_is_oa"
     assert Measure("percent_of_those").key == "percent_of_those"
+
+
+def test_a_negated_list_of_groups_is_an_exclude_set():
+    # `that institution is not in (A, B)` parses to a negated OR; in negation normal
+    # form it's an AND of negated leaves, which the key-set rules read (one request)
+    oqo = A._nnf_group_filters(_oqo(
+        "get works where topic is (T10878); then group those works by institution where "
+        "that institution is not in (I63966007, I97018004)"))
+    m, k = A._split_where(oqo.group_by[0].where)
+    assert m == [] and len(k) == 2 and all(p.is_negated for p in k)
+
+
+def test_condition_labels_read_by_name():
+    assert A._ANNOTATED_VALUE.sub(lambda m: m.group(2),
+                                  "institution is (I99464096 [KU Leuven])") == (
+        "institution is (KU Leuven)")
+
+
+@pytest.mark.parametrize("s,said", [
+    (1, "1 second"), (14.4, "14 seconds"), (200, "about 3 minutes"),
+    (1089880, "about 13 days")])
+def test_say_seconds(s, said):
+    assert A.say_seconds(s) == said
