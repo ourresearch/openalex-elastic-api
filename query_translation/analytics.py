@@ -17,7 +17,7 @@ Group filters on a group's own fields (an author's h-index), `co-author` and
 `collaborator` need one lookup call first (measured in #1512: 2 calls, 3-6 s after a
 count filter); their key sets become the terms `include` / `exclude`.
 
-Every ES call gets the time left of the query's deadline (15 s, Jason 2026-10-03); a call
+Every ES call gets the time left of the query's deadline (11 s, under gunicorn's 12; Jason 2026-10-03); a call
 that runs out is abandoned (closing the connection cancels the search in ES) and the
 query answers with a message saying how to narrow it.
 """
@@ -38,9 +38,11 @@ from query_translation.oqo import (
     OQO, BranchFilter, GroupBy, LeafFilter, Measure, MeasureFilter)
 
 # Limits (Jason, 2026-10-03; #1512 measured the costs).
-# The engine cancels anything still running at 15 s (Heroku cuts at 30 s). The env
-# var exists for tests that need a short deadline.
-QUERY_DEADLINE_S = float(os.environ.get("OQL_QUERY_DEADLINE_S", "15"))
+# The engine cancels anything still running at 11 s: Jason's ceiling is 15, but
+# gunicorn kills the worker at 12 (Procfile --timeout 12, #521), which would end the
+# request with no message (found by #1535). The env var exists for tests that need a
+# short deadline.
+QUERY_DEADLINE_S = float(os.environ.get("OQL_QUERY_DEADLINE_S", "11"))
 MAX_LEVEL_GROUPS = 10_000      # a nested split returns at most this many groups per split
 MAX_RESPONSE_BUCKETS = 65_536  # ES search.max_buckets
 FILTERED_CANDIDATES = 20_000   # a single split with a group filter checks this many groups
@@ -91,6 +93,16 @@ class Deadline:
 
     def mark(self, what: str):
         self.log.append({"step": what, "at_ms": self.elapsed_ms()})
+
+
+def say_seconds(s: float) -> str:
+    """`14 seconds`, `about 3 minutes`, `about 13 days`."""
+    for unit, size in (("day", 86400), ("hour", 3600), ("minute", 60)):
+        if s >= 2 * size:
+            n = round(s / size)
+            return f"about {n:,} {unit}s"
+    n = round(s)
+    return f"{n} second" if n == 1 else f"{n} seconds"
 
 
 def too_slow(what: str) -> AnalyticsError:
@@ -434,6 +446,16 @@ def build_level(i: int, g: GroupBy, oqo: OQO, fields_dict, index_name: str) -> L
 # ---------------------------------------------------------------------------
 # Group filters: measures -> selector; own fields, co-author, collaborator -> key sets
 # ---------------------------------------------------------------------------
+def _nnf_group_filters(oqo: OQO) -> OQO:
+    """Group filters in negation normal form: `that author is not in (A1, A2)` parses
+    to a negated OR; the key-set rules read an AND of negated leaves."""
+    from dataclasses import replace
+    from query_translation.oqo_canonicalizer import _canonicalize_tree
+    return replace(oqo, group_by=[
+        replace(g, where=_canonicalize_tree(g.where, sort_operands=False))
+        if g.where is not None else g for g in oqo.group_by])
+
+
 def _split_where(where) -> Tuple[List, List]:
     """(measure-only parts, key-set parts) of a group filter, ANDed. An OR that mixes
     calculations with the group's own fields can't run in one pass."""
@@ -835,6 +857,36 @@ def build_body(levels: List[Level], base_query, measure_aggs: Dict[str, dict]) -
     return {"size": 0, "track_total_hits": True, "query": base_query, "aggs": aggs}
 
 
+_ANNOTATED_VALUE = re.compile(r"([^\s(]+) \[([^\]]+)\]")
+MAX_NAMED_CONDITION_IDS = 20
+
+
+def _name_conditions(levels: List[Level], entity: str) -> None:
+    """Condition groups read by name, `institution is (KU Leuven)`; the key keeps the
+    ids. One display-name lookup per id."""
+    from query_translation.oql_pipeline import _expr_text
+    from query_translation.oql_renderer import make_engine_resolver
+    from query_translation.x_query import safe_get_display_name
+    for lv in levels:
+        if lv.split.conditions is None:
+            continue
+        # shortcut: one lookup per id; past 20 ids the labels keep the ids
+        ids = set()
+        for c in lv.split.conditions:
+            ids.update(re.findall(r"\b[A-Z]\d{4,}\b", _expr_text(c)))
+        if len(ids) > MAX_NAMED_CONDITION_IDS:
+            continue
+        resolver = make_engine_resolver(safe_get_display_name, entity=entity)
+        for k, c in zip(lv.order_keys, lv.split.conditions):
+            try:
+                named = _ANNOTATED_VALUE.sub(
+                    lambda m: m.group(1) if m.group(2) == "no entity found" else m.group(2),
+                    _expr_text(c, resolver))
+            except Exception:
+                continue
+            lv.labels[k] = (lv.labels[k][0], named)
+
+
 def _display_names(lv: Level, raw_keys: List, connection) -> Dict:
     """bucket key -> display name, the legacy group-by's way."""
     from elasticsearch_dsl import AttrDict
@@ -900,7 +952,7 @@ def _id_names(keys: List, connection) -> Optional[Dict]:
             chunk = ks[start:start + 1000]
             res = es.search(index=idx, body={
                 "size": len(chunk), "_source": ["id", "display_name"],
-                "query": {"terms": {"id": chunk}}}, request_timeout=10)
+                "query": {"terms": {"id": chunk}}}, request_timeout=3)
             for h in res["hits"]["hits"]:
                 names[h["_source"]["id"]] = h["_source"].get("display_name")
     return names
@@ -922,29 +974,9 @@ def _bucket_rows(lv: Level, agg: dict) -> List[Tuple[str, dict]]:
 
 
 def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
-                  total_count: int, index_name: str, connection) -> List[dict]:
-    """Rows for every level, with names resolved once per level."""
+                  total_count: int, index_name: str) -> List[dict]:
+    """Rows for every level, unnamed: `name_rows` names the ones that are returned."""
     from core.group_by.results import format_key
-
-    # pass 1: collect raw keys per terms/listed level for display names
-    raw_by_level: Dict[int, set] = {lv.index: set() for lv in levels}
-
-    def collect(level_i: int, agg: dict):
-        lv = levels[level_i]
-        for k, b in _bucket_rows(lv, agg):
-            if lv.kind == "terms":
-                raw_by_level[lv.index].add(k)
-            elif lv.kind == "filters" and lv.labels.get(k, (None, None))[1] is None:
-                raw_by_level[lv.index].add(lv.labels[k][0])
-            nxt = f"s{level_i + 1}"
-            if level_i + 1 < len(levels) and nxt in b:
-                collect(level_i + 1, b[nxt])
-
-    collect(0, agg_root["s0"])
-    if len(levels) > 1 and "s1" in agg_root:
-        collect(1, agg_root["s1"])          # the total row's inner splits
-    names = {lv.index: _display_names(lv, sorted(raw_by_level[lv.index], key=str), connection)
-             for lv in levels if raw_by_level[lv.index]}
 
     def rows(level_i: int, agg: dict, parent_count: int) -> List[dict]:
         lv = levels[level_i]
@@ -957,20 +989,17 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
                 if lv.composite and ((lv.include is not None and k not in lv.include)
                                      or (lv.exclude and k in lv.exclude)):
                     continue   # composite has no include/exclude
-                if lv.column_id in ("authorships.author.id",) and not names.get(lv.index, {}).get(k):
-                    continue  # merged/deleted author ids (the legacy group-by drops them too)
                 key = format_key(k, lv.column_id, index_name) if isinstance(k, str) else str(k)
                 if isinstance(k, (int, float)) and "openalex.org" not in str(k) and lv.column_id \
                         and lv.column_id.endswith(".id") and lv.group_entity:
                     key = f"{ID_PREFIX}{lv.group_entity}/{k}"
-                label = names.get(lv.index, {}).get(k)
-                label = str(k) if label is None else str(label)
+                label, raw = None, k
             elif lv.kind == "filters":
                 key, label = lv.labels[k]
+                raw = None
                 if label is None:
                     raw = key
                     key = format_key(raw, lv.column_id, index_name)
-                    label = names.get(lv.index, {}).get(raw, raw)
                 if lv.post_keep is not None and key not in lv.post_keep:
                     continue
                 if lv.include is not None and key not in lv.include:
@@ -989,6 +1018,8 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
                     label = _num(lo) if hi == int(lo) else f"{_num(lo)}-{hi}"
                 key = label
             row = {"key": key, "key_display_name": label, "count": count}
+            if lv.kind in ("terms", "filters") and raw is not None:
+                row["_raw"] = (level_i, raw)
             for m in measures:
                 if m.measure != "count":
                     row[m.key] = _measure_value(m, b, count, parent_count)
@@ -1002,6 +1033,39 @@ def format_levels(levels: List[Level], measures: List[Measure], agg_root: dict,
     total_groups = (rows(1, agg_root["s1"], total_count)
                     if len(levels) > 1 and "s1" in agg_root else None)
     return out, total_groups
+
+
+def name_rows(levels: List[Level], rows: List[dict], connection) -> List[dict]:
+    """Display names for the rows being returned (the page, not every candidate
+    group): one lookup per level. Drops merged or deleted authors, as the legacy
+    group-by does."""
+    raw_by_level: Dict[int, set] = {}
+
+    def collect(rs):
+        for r in rs:
+            if "_raw" in r:
+                raw_by_level.setdefault(r["_raw"][0], set()).add(r["_raw"][1])
+            collect(r.get("groups") or [])
+
+    collect(rows)
+    names = {i: _display_names(levels[i], sorted(ks, key=str), connection)
+             for i, ks in raw_by_level.items()}
+
+    def fill(rs):
+        out = []
+        for r in rs:
+            if "_raw" in r:
+                i, k = r.pop("_raw")
+                name = names.get(i, {}).get(k)
+                if levels[i].column_id == "authorships.author.id" and not name:
+                    continue
+                r["key_display_name"] = str(k) if name is None else str(name)
+            if r.get("groups"):
+                r["groups"] = fill(r["groups"])
+            out.append(r)
+        return out
+
+    return fill(rows)
 
 
 def fill_own_values(levels: List[Level], rows: List[dict], measures: List[Measure],
@@ -1074,6 +1138,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
     per_page = per_page or DEFAULT_PER_PAGE
     page = page or 1
     measures = list(oqo.calculate) or [Measure("count")]
+    oqo = _nnf_group_filters(oqo)
     levels = [build_level(i, g, oqo, fields_dict, index_name) for i, g in enumerate(oqo.group_by)]
     nested = len(levels) > 1
 
@@ -1173,9 +1238,9 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             if est > QUERY_DEADLINE_S:
                 raise AnalyticsError(
                     "query_too_slow",
-                    f"This query is estimated at {est:,.0f} seconds ({n_works:,} works "
+                    f"This query is estimated at {say_seconds(est)} ({n_works:,} works "
                     f"split {len(levels)} ways); queries get about "
-                    f"{int(TIME_BUDGET_S)}, so it wasn't run.",
+                    f"{int(TIME_BUDGET_S)} seconds, so it wasn't run.",
                     "Narrow the starting set (a shorter year range, a smaller institution "
                     "or topic), split by something coarser, or drop a split.")
 
@@ -1213,9 +1278,9 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
             lv = levels[idx]
             keys = sorted(_keys_at(levels, aggs, idx))
             lv.post_keep = survivors_lookup(lv, parts, keys, deadline)
-        deadline.mark("naming the groups")
+        _name_conditions(levels, oqo.get_rows)
         group_rows, total_groups = format_levels(levels, measures, aggs, total_count,
-                                                 index_name, connection)
+                                                 index_name)
         if total_groups is not None:
             total_row["groups"] = total_groups
         top = levels[0]
@@ -1249,6 +1314,13 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
                 group_rows = group_rows[start:start + per_page]
                 more_groups = start + per_page < groups_count
 
+    if levels:
+        deadline.mark("naming the groups")
+        group_rows = name_rows(levels, group_rows, connection)   # the page only
+        if total_row.get("groups"):
+            total_row["groups"] = name_rows(levels, total_row["groups"], connection)
+        if nested:
+            groups_count = len(group_rows)
     if group_rows:
         fill_own_values(levels, group_rows, measures, deadline)   # the page only
         if total_row.get("groups"):
@@ -1404,6 +1476,7 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
     group guard's distinct counts, a count of an own-field filter's matches);
     never the query itself."""
     deadline = deadline or Deadline()
+    oqo = _nnf_group_filters(oqo)
     limits: List[dict] = []
     base_search = any(_tree_has_search(f) for f in oqo.filter_rows)
     call_s = EST_CALL_SEARCH_SET_S if base_search else EST_CALL_ID_SET_S
@@ -1493,8 +1566,8 @@ def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dic
     if est > TIME_BUDGET_S and not any(x["error"] == "query_too_slow" for x in limits):
         limits.append({
             "error": "query_too_slow",
-            "message": (f"This query is estimated at {est:.0f} seconds; queries get about "
-                        f"{int(TIME_BUDGET_S)}."),
+            "message": (f"This query is estimated at {say_seconds(est)}; queries get about "
+                        f"{int(TIME_BUDGET_S)} seconds."),
             "fix": ("Narrow the starting set, list fewer searches, or add a count filter "
                     "before filters on the groups' own fields."),
         })

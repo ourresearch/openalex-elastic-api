@@ -129,6 +129,26 @@ def test_the_launch_switch_renders_every_query_as_a_pipeline(monkeypatch):
         "get works where type is not (review)")
 
 
+def test_a_plain_query_in_the_pipeline_style_keeps_its_url_and_builder_tree(monkeypatch):
+    # the website's builder reads oql_render_v2; the flip changes only the text, and a
+    # plain query keeps today's executor, so it gets no pipeline check (#1536)
+    from flask import Flask
+    from query_translation import oql_lang
+    from query_translation.validator import ValidationResult
+    from query_translation.views import render_all_formats
+    monkeypatch.setattr(oql_lang, "CANONICAL_STYLE", "pipeline")
+    oqo = parse("works where year >= 1976 group by topic, year")
+    with Flask(__name__).test_request_context("/"):
+        out = render_all_formats(oqo, ValidationResult(valid=True, errors=[], warnings=[]),
+                                 sort_operands=False)
+    assert out["oql_oneline"] == (
+        "get works where year >= (1976); then group those works by topic; then group "
+        "those works again by year")
+    assert out["oql_render_v2"]["lines"]
+    assert out["oxurl"].startswith("/works?")
+    assert "check" not in out and out["validation"]["errors"] == []
+
+
 def test_classic_queries_render_classic():
     assert render(_canon("works where year >= 2020 group by year, type")) == (
         "works where year >= (2020) group by year, type")
