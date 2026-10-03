@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "ca6323cb065b1946746574ecda386c4bff3e56e050f5b88e653b94666705aceb",
-    "property_count": 876,
-    "version": "14.6.0"
+    "fingerprint": "7ff97801760e925f9765c4aed5e517b53cc660d2a0b9a96697ecdd85373c3651",
+    "property_count": 885,
+    "version": "14.7.0"
   },
   "properties": {
     "authors": {
@@ -1032,6 +1032,56 @@
         "supported_by": [],
         "type": null
       },
+      "topics.domain.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "domain",
+        "entity_type": "domains",
+        "name": "topics.domain.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
+      "topics.field.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "field",
+        "entity_type": "fields",
+        "name": "topics.field.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
       "topics.id": {
         "actions": [
           "filter",
@@ -1046,6 +1096,31 @@
         "display_name": "topic",
         "entity_type": "topics",
         "name": "topics.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
+      "topics.subfield.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "subfield",
+        "entity_type": "subfields",
+        "name": "topics.subfield.id",
         "operators": [
           "eq",
           "not",
@@ -6323,6 +6398,56 @@
         "supported_by": [],
         "type": null
       },
+      "geo.city": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "geo",
+        "display_name": "city",
+        "entity_type": null,
+        "name": "geo.city",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
+      "geo.region": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": "geo",
+        "display_name": "region",
+        "entity_type": null,
+        "name": "geo.region",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
       "has_ror": {
         "actions": [
           "filter",
@@ -6899,6 +7024,56 @@
         "supported_by": [],
         "type": null
       },
+      "topics.domain.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "domain",
+        "entity_type": "domains",
+        "name": "topics.domain.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
+      "topics.field.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "field",
+        "entity_type": "fields",
+        "name": "topics.field.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
       "topics.id": {
         "actions": [
           "filter",
@@ -6913,6 +7088,31 @@
         "display_name": "topic",
         "entity_type": "topics",
         "name": "topics.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
+      "topics.subfield.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "subfield",
+        "entity_type": "subfields",
+        "name": "topics.subfield.id",
         "operators": [
           "eq",
           "not",
@@ -11923,6 +12123,31 @@
         "display_name": "topic",
         "entity_type": "topics",
         "name": "topics.id",
+        "operators": [
+          "eq",
+          "not",
+          "null",
+          "or"
+        ],
+        "supported_by": [
+          "gui"
+        ],
+        "type": "string"
+      },
+      "topics.subfield.id": {
+        "actions": [
+          "filter",
+          "group_by",
+          "sort"
+        ],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "subfield",
+        "entity_type": "subfields",
+        "name": "topics.subfield.id",
         "operators": [
           "eq",
           "not",

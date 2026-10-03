@@ -2293,6 +2293,36 @@
       "isId": false,
       "hasExport": false
     },
+    "topics.domain.id": {
+      "key": "topics.domain.id",
+      "entityToFilter": "authors",
+      "entityToSelect": "domains",
+      "displayName": "Domain",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "topics.field.id": {
+      "key": "topics.field.id",
+      "entityToFilter": "authors",
+      "entityToSelect": "fields",
+      "displayName": "Field",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
     "summary_stats.h_index": {
       "key": "summary_stats.h_index",
       "entityToFilter": "authors",
@@ -2515,6 +2545,21 @@
       "entityToFilter": "authors",
       "entityToSelect": "institution-types",
       "displayName": "Past institutions type",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "topics.subfield.id": {
+      "key": "topics.subfield.id",
+      "entityToFilter": "authors",
+      "entityToSelect": "subfields",
+      "displayName": "Subfield",
       "displayNameVerbatim": false,
       "type": "selectEntity",
       "actions": [
@@ -2964,6 +3009,21 @@
       "type": "selectEntity",
       "actions": [
         "filter"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "topics.subfield.id": {
+      "key": "topics.subfield.id",
+      "entityToFilter": "sources",
+      "entityToSelect": "subfields",
+      "displayName": "Subfield",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
       ],
       "actionsPopular": [],
       "isId": false,
@@ -3651,8 +3711,11 @@
       "entityToSelect": null,
       "displayName": "city",
       "displayNameVerbatim": false,
-      "type": "text",
-      "actions": [],
+      "type": "search",
+      "actions": [
+        "filter",
+        "column"
+      ],
       "actionsPopular": [],
       "isId": false,
       "hasExport": false
@@ -3698,6 +3761,36 @@
       ],
       "isId": false,
       "hasExport": true
+    },
+    "topics.domain.id": {
+      "key": "topics.domain.id",
+      "entityToFilter": "institutions",
+      "entityToSelect": "domains",
+      "displayName": "Domain",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
+    },
+    "topics.field.id": {
+      "key": "topics.field.id",
+      "entityToFilter": "institutions",
+      "entityToSelect": "fields",
+      "displayName": "Field",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
+      "hasExport": false
     },
     "summary_stats.h_index": {
       "key": "summary_stats.h_index",
@@ -3866,8 +3959,11 @@
       "entityToSelect": null,
       "displayName": "region",
       "displayNameVerbatim": false,
-      "type": "text",
-      "actions": [],
+      "type": "search",
+      "actions": [
+        "filter",
+        "column"
+      ],
       "actionsPopular": [],
       "isId": false,
       "hasExport": false
@@ -3894,6 +3990,21 @@
       "actions": [],
       "actionsPopular": null,
       "isId": true,
+      "hasExport": false
+    },
+    "topics.subfield.id": {
+      "key": "topics.subfield.id",
+      "entityToFilter": "institutions",
+      "entityToSelect": "subfields",
+      "displayName": "Subfield",
+      "displayNameVerbatim": false,
+      "type": "selectEntity",
+      "actions": [
+        "filter",
+        "group_by"
+      ],
+      "actionsPopular": [],
+      "isId": false,
       "hasExport": false
     },
     "topics.id": {
