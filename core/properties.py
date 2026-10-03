@@ -335,7 +335,11 @@ CAP_COLUMN = "column"
 # (title/abstract text OR the keywords a query phrase names; OQL "title/abstract/keywords") and the
 # select column `rerank_score` (Jev's p(relevant) under rerank=true). Purely additive:
 # classify_properties_diff.py says MINOR.
-PROPERTIES_VERSION = "14.5.0"
+# 14.6.0 (oxjob #1524, 2026-10-03; Jason's yes to locations as a collection type, 2026-10-03
+# 07:32 CT): locations gains the same-type `collection` filter (`/locations?filter=collection:col_x`),
+# matching the namespaced location ids a locations collection holds. Purely additive:
+# classify_properties_diff.py says MINOR.
+PROPERTIES_VERSION = "14.6.0"
 
 # ┌─ AGENT/HUMAN: keep in lockstep with query_translation/views.py:_resolve_entity ─┐
 # │ OQO entity support lives in TWO places (#334): this dict (auto-introspected →   │

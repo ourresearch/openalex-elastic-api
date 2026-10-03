@@ -1,9 +1,9 @@
 {
   "meta": {
     "entity_count": 26,
-    "fingerprint": "c8ca50597237ae8fe6108adba3ed9bc61dc3c4360a6561d886b5d913dc927237",
-    "property_count": 875,
-    "version": "14.5.0"
+    "fingerprint": "ca6323cb065b1946746574ecda386c4bff3e56e050f5b88e653b94666705aceb",
+    "property_count": 876,
+    "version": "14.6.0"
   },
   "properties": {
     "authors": {
@@ -7983,6 +7983,22 @@
       }
     },
     "locations": {
+      "collection": {
+        "actions": [],
+        "aliases": [],
+        "alternate_keys": [],
+        "bool_false": null,
+        "bool_true": null,
+        "category": null,
+        "display_name": "collection",
+        "entity_type": "locations",
+        "name": "collection",
+        "operators": [
+          "collection"
+        ],
+        "supported_by": [],
+        "type": "collection"
+      },
       "endpoint_id": {
         "actions": [
           "column",

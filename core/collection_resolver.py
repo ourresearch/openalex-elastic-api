@@ -6,6 +6,7 @@ Labels are user-owned named collections of one entity type each. See oxjob #228
 module, which then becomes a `terms` clause in the ES query.
 """
 import logging
+import re
 
 import requests
 from flask import g, request, has_request_context
@@ -146,6 +147,36 @@ def resolve_collection(collection_id):
             )
         state["resolved"][collection_id] = (entity_type, entity_ids)
     return (entity_type, entity_ids)
+
+
+# A collection's `id` is the URL `https://openalex.org/collections/col_x` (oxjob #1524),
+# and like every OpenAlex ID it works wherever the short `col_x` does. One rewrite of
+# the query string, before any view reads it, covers every reader: URL filters, the
+# cross-type pre-pass, OQL and the URL->OQO parser. Raw or percent-encoded.
+_COLLECTION_URL_IN_QUERY_RE = re.compile(
+    r"(?:https?(?::|%3A)(?:/|%2F){1,2})?(?:www\.)?openalex\.org(?:/|%2F)collections(?:/|%2F)(?=col_)",
+    re.IGNORECASE,
+)
+
+
+def short_collection_ids_in_query(query_string):
+    """`filter=collection:https://openalex.org/collections/col_x` -> `filter=collection:col_x`."""
+    if "collections" not in query_string:
+        return query_string
+    return _COLLECTION_URL_IN_QUERY_RE.sub("", query_string)
+
+
+class CollectionUrlIdsInQuery:
+    """WSGI middleware applying short_collection_ids_in_query to every request."""
+
+    def __init__(self, wsgi_app):
+        self.wsgi_app = wsgi_app
+
+    def __call__(self, environ, start_response):
+        qs = environ.get("QUERY_STRING")
+        if qs:
+            environ["QUERY_STRING"] = short_collection_ids_in_query(qs)
+        return self.wsgi_app(environ, start_response)
 
 
 def _request_state():

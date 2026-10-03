@@ -45,6 +45,7 @@ import suggest
 import topics
 import works
 import work_types
+from core.collection_resolver import CollectionUrlIdsInQuery
 from core.exceptions import APIError
 from extensions import cache
 
@@ -56,6 +57,7 @@ def create_app(config_object="settings"):
     register_blueprints(app)
     register_extensions(app)
     register_errorhandlers(app)
+    app.wsgi_app = CollectionUrlIdsInQuery(app.wsgi_app)
 
     @app.after_request
     def add_cors_headers(response):

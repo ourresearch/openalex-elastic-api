@@ -288,7 +288,8 @@ class TestCanonicalizePathSegments:
         from core.properties import ENTITY_FIELDS_MODULES
 
         native = {"works", "authors", "sources", "institutions", "concepts",
-                  "funders", "publishers", "topics", "awards"}
+                  "funders", "publishers", "topics", "awards",
+                  "locations"}  # verbatim namespaced ids, no prefix (#1524)
         registered = set()
         for entity_type, module_name in ENTITY_FIELDS_MODULES.items():
             mod = importlib.import_module(module_name)
@@ -301,6 +302,60 @@ class TestCanonicalizePathSegments:
             f"CollectionField registered for {sorted(unknown)} but they're neither "
             f"known-native nor in ID_PATH_SEGMENT_BY_ENTITY_TYPE"
         )
+
+
+class TestLocationsCollections:
+    """Collections of locations (oxjob #1524): the ES `id` is the namespaced id itself."""
+
+    IDS = ["doi:10.7717/peerj.4375", "pmh:oai:arXiv.org:cond-mat/0404022"]
+
+    def test_location_ids_kept_verbatim(self):
+        from core.fields import _canonicalize_entity_ids
+        assert _canonicalize_entity_ids(self.IDS, "locations") == self.IDS
+
+    def test_locations_endpoint_takes_collection_filter(self, monkeypatch):
+        from locations.fields import fields_dict as locations_fields_dict
+        monkeypatch.setattr("core.filter.resolve_collection", lambda lid: ("locations", self.IDS))
+        s, remaining = _apply_collection_filters(
+            locations_fields_dict, [{"collection": "col_Loc"}], Search(),
+        )
+        assert remaining == []
+        assert {"terms": {"id": self.IDS}} in s.to_dict()["query"]["bool"]["filter"]
+
+    def test_works_collection_on_locations_rejected(self, monkeypatch):
+        from locations.fields import fields_dict as locations_fields_dict
+        monkeypatch.setattr("core.filter.resolve_collection", lambda lid: ("works", ["W1"]))
+        with pytest.raises(APIQueryParamsError) as exc:
+            _apply_collection_filters(locations_fields_dict, [{"collection": "col_W"}], Search())
+        assert "/locations" in str(exc.value)
+
+
+class TestCollectionUrlIdsInQuery:
+    """A collection's URL `id` works wherever `col_x` does (oxjob #1524)."""
+
+    @pytest.mark.parametrize("raw,want", [
+        ("filter=collection:https://openalex.org/collections/col_ab1", "filter=collection:col_ab1"),
+        ("filter=collection:!https://openalex.org/collections/col_ab1", "filter=collection:!col_ab1"),
+        ("filter=collection:https%3A%2F%2Fopenalex.org%2Fcollections%2Fcol_ab1", "filter=collection:col_ab1"),
+        ("filter=authorships.author.id:openalex.org/collections/col_ab1", "filter=authorships.author.id:col_ab1"),
+        ("filter=collection:HTTPS://OpenAlex.org/collections/col_ab1&per_page=5", "filter=collection:col_ab1&per_page=5"),
+        ("filter=collection:col_ab1", "filter=collection:col_ab1"),
+        ("search=collections", "search=collections"),
+        ("filter=x:https://openalex.org/collections/other", "filter=x:https://openalex.org/collections/other"),
+    ])
+    def test_rewrite(self, raw, want):
+        assert collection_resolver.short_collection_ids_in_query(raw) == want
+
+    def test_middleware_rewrites_query_string(self):
+        seen = {}
+
+        def app(environ, start_response):
+            seen["qs"] = environ["QUERY_STRING"]
+            return []
+
+        mw = collection_resolver.CollectionUrlIdsInQuery(app)
+        mw({"QUERY_STRING": "filter=collection:https://openalex.org/collections/col_ab1"}, None)
+        assert seen["qs"] == "filter=collection:col_ab1"
 
 
 # ---------- _apply_collection_filters (intersection) ----------

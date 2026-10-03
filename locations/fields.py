@@ -1,5 +1,6 @@
 from core.fields import (
     BooleanField,
+    CollectionField,
     DateTimeField,
     OpenAlexIDField,
     SearchField,
@@ -54,6 +55,8 @@ fields = [
     TermField(param="language", custom_es_field="language"),
     TermField(param="publisher", custom_es_field="publisher",
               entity_type="publishers"),
+    # A collection of locations holds their namespaced ids verbatim (oxjob #1524).
+    CollectionField(entity_type="locations"),
 ]
 
 fields_dict = {f.param: f for f in fields}

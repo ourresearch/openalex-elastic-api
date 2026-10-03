@@ -1944,6 +1944,11 @@ def _canonicalize_entity_ids(ids, entity_type=None):
     for v in ids or []:
         if not v:
             continue
+        if entity_type == "locations":
+            # The ES `id` is the namespaced id itself (`doi:10.7717/peerj.4375`),
+            # case-sensitive: no URL prefix, no case change (oxjob #1524).
+            out.append(v)
+            continue
         if v.startswith("https://openalex.org/"):
             out.append(v)
             continue
