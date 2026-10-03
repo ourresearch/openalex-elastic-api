@@ -226,7 +226,7 @@ def _build_params_from_oqo(oqo: OQO, request):
     # and build/format nested buckets. This is the execution half of corpus case
     # 48 ("top topics each year") — render already worked; this makes it run.
     group_by = None
-    if oqo.group_by:
+    if oqo.group_by and not oqo.uses_pipeline:  # pipeline splits run in analytics.py
         group_by = ",".join(g.column_id for g in oqo.group_by)
 
     # OQO value wins; request arg is the back-compat fallback.
@@ -472,6 +472,12 @@ def _execute_oqo(oqo_or_dict, view_params=None):
         semantic_value, _ = _extract_semantic(oqo.filter_rows)
     except URLRenderError as e:
         return _error_response(str(e), "translation_error", status=400)
+    if oqo.uses_pipeline and (semantic_value is not None or oqo.sample):
+        return _error_response(
+            "Calculations and the new splits don't combine with "
+            + ("semantic search" if semantic_value is not None else "sample")
+            + " yet. Drop it, or run the calculation on the whole set.",
+            "invalid_params", status=400)
     if semantic_value is not None:
         if not index_name.lower().startswith("works"):
             return _error_response(
@@ -527,6 +533,14 @@ def _execute_oqo(oqo_or_dict, view_params=None):
     # match meta.count. Plain dict keys; legacy never sets them, so it's untouched.
     params["_oqo_search_q"] = search_q
     params["_oqo_filter_qs"] = ([filter_q] if filter_q is not None else []) + extra_qs
+
+    # The pipeline language's analytics (oxjob #1530): splits by listed values,
+    # searches, bins or conditions, group filters, calculations. One ES request
+    # (plus a lookup for group filters on a group's own fields), its own response
+    # shape: group rows with measures and a total row.
+    if oqo.uses_pipeline:
+        return _execute_analytics(oqo, index_name, connection, fields_dict,
+                                  search_q, filter_q, extra_qs, params)
 
     def build_search(p):
         s = Search(index=index_name, using=connection)
@@ -610,6 +624,31 @@ def _execute_oqo(oqo_or_dict, view_params=None):
     if rerank_on:
         result["meta"]["reranked"] = False
     return _finalize_oqo_response(result, oqo, MessageSchema)
+
+
+def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filter_q,
+                       extra_qs, params):
+    """Run a pipeline-language OQO (oxjob #1530) and answer with its own shape:
+    `group_by` rows with one key per measure, a `total` row, `meta.measures`."""
+    from query_translation import analytics
+
+    filters = [q for q in [search_q, filter_q] + list(extra_qs) if q is not None]
+    base_query = Q("bool", filter=filters).to_dict() if filters else {"match_all": {}}
+    sort = None
+    if oqo.sort_by:
+        s0 = oqo.sort_by[0]
+        sort = (s0.column_id, s0.direction or "desc")
+    try:
+        body = analytics.run(
+            oqo, index_name=index_name, connection=connection, fields_dict=fields_dict,
+            base_query=base_query, per_page=oqo.per_page, page=oqo.page, sort=sort)
+    except analytics.AnalyticsError as e:
+        return jsonify({"error": e.code, "message": e.message, "fix": e.fix,
+                        "oqo": oqo.to_dict()}), e.status
+    except APIError:
+        raise
+    body["meta"]["x_query"] = build_x_query(oqo, sort_operands=False)
+    return jsonify(body), 200
 
 
 def _finalize_oqo_response(result, oqo: OQO, MessageSchema):

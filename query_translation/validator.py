@@ -307,7 +307,13 @@ class OQOValidator:
         # applied per element. Locations are indexed (`sort_by[i].…`) so a caller
         # can point at the offending key in a multi-column sort.
         has_search = _has_search_clause(oqo.filter_rows)
+        # A calculated column sorts its groups (display sorting, oxjob #1530):
+        # `sort=mean_fwci:desc`, `count`, `key`.
+        measure_keys = ({m.key for m in oqo.calculate} | {"count", "key"}
+                        if oqo.uses_pipeline else set())
         for i, key in enumerate(oqo.sort_by):
+            if key.column_id in measure_keys and key.aggregate is None:
+                continue
             errors.extend(self._validate_sort_key(
                 key, i, columns, capabilities, has_search, bool(oqo.group_by),
                 oqo.get_rows,

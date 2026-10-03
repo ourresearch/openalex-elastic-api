@@ -39,6 +39,14 @@ def _entity_fields_and_index(entity):
     if entity == "publishers":
         from publishers.fields import fields_dict
         return fields_dict, settings.PUBLISHERS_INDEX
+    if entity == "authors":
+        # group filters on an author's own fields (oxjob #1530)
+        from authors.fields import fields_dict
+        return fields_dict, settings.AUTHORS_INDEX_WALDEN
+    if entity in ("topics", "keywords", "subfields", "fields", "domains", "sdgs"):
+        import importlib
+        fields_mod = importlib.import_module(f"{entity}.fields")
+        return fields_mod.fields_dict, getattr(settings, f"{entity.upper()}_INDEX")
     raise ValueError(f"no query-time join configured for entity {entity!r}")
 
 
@@ -86,17 +94,7 @@ def resolve_ids(entity, param, value, label):
             f"can look up at once. Narrow the value, or filter by the {entity} ids directly."
         )
 
-    short_ids = []
-    after = None
-    while True:
-        s = base.extra(size=0)
-        params = {"after": after} if after else {}
-        s.aggs.bucket("ids", A("composite", size=COMPOSITE_PAGE, sources=[{"id": {"terms": {"field": "id"}}}], **params))
-        res = s.execute().aggregations.ids
-        short_ids.extend(b.key.id.replace(ID_PREFIX, "", 1) for b in res.buckets)
-        if len(res.buckets) < COMPOSITE_PAGE or "after_key" not in res:
-            break
-        after = res.after_key.to_dict()
+    short_ids = list_short_ids(base)
 
     # Big lists (e.g. an h-index range over most sources) aren't cached: arbitrary range values
     # could otherwise fill Redis with multi-MB entries.
@@ -106,6 +104,59 @@ def resolve_ids(entity, param, value, label):
         except Exception:
             pass
     return [ID_PREFIX + i for i in short_ids]
+
+
+def list_short_ids(base, request_timeout=None):
+    """Every `id` (short form) of the documents `base` (a Search) matches, by composite
+    pages. The caller bounds the size first."""
+    short_ids = []
+    after = None
+    while True:
+        s = base.extra(size=0)
+        if request_timeout is not None:
+            s = s.params(request_timeout=request_timeout)
+        params = {"after": after} if after else {}
+        s.aggs.bucket("ids", A("composite", size=COMPOSITE_PAGE, sources=[{"id": {"terms": {"field": "id"}}}], **params))
+        res = s.execute().aggregations.ids
+        short_ids.extend(b.key.id.replace(ID_PREFIX, "", 1) for b in res.buckets)
+        if len(res.buckets) < COMPOSITE_PAGE or "after_key" not in res:
+            break
+        after = res.after_key.to_dict()
+    return short_ids
+
+
+def resolve_query_ids(entity, q, cache_text, limit, request_timeout=None):
+    """Full ids of the `entity` rows matching `q` (an ES query on that entity's own
+    index), or None when more than `limit` match. For group filters on a group's own
+    fields (oxjob #1530: authors with h-index > 20). Cached like `resolve_ids` when
+    the list is small; `cache_text` names the query (its canonical OQO JSON)."""
+    key = _cache_key(entity, "q", cache_text)
+    try:
+        cached = _cache().get(key)
+    except Exception:
+        cached = None
+    if cached is not None:
+        return [ID_PREFIX + i for i in cached]
+    _fields, index = _entity_fields_and_index(entity)
+    base = Search(index=index).filter(q)
+    count_s = base.extra(size=0, track_total_hits=True)
+    if request_timeout is not None:
+        count_s = count_s.params(request_timeout=request_timeout)
+    total = count_s.execute().hits.total.value
+    if total > limit:
+        return None
+    short_ids = list_short_ids(base, request_timeout)
+    if len(short_ids) <= settings.JOIN_CACHE_MAX_IDS:
+        try:
+            _cache().set(key, short_ids, timeout=settings.JOIN_CACHE_SECONDS)
+        except Exception:
+            pass
+    return [ID_PREFIX + i for i in short_ids]
+
+
+def entity_index(entity):
+    """(fields_dict, index) of an entity a join or a group filter looks up."""
+    return _entity_fields_and_index(entity)
 
 
 def terms_query(local_field, ids):

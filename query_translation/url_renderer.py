@@ -41,6 +41,11 @@ def render_oqo_to_url(oqo: OQO) -> Dict[str, Any]:
         URLRenderError: If the OQO contains structures that cannot be
                        expressed in URL format (e.g., nested boolean logic)
     """
+    # The pipeline language's calculations and splits (oxjob #1530) have no URL form.
+    if oqo.uses_pipeline:
+        raise URLRenderError(
+            "calculations and splits by listed values, searches, bins or conditions "
+            "have no URL form; use OQL")
     # Corpus selection (#481) renders as the first-class `?corpus=` param
     # (oxjob #763 gave classic REST that spelling; before #763 a non-core
     # corpus was OQL-only and this raised URLRenderError). "core" is the
