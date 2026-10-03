@@ -134,6 +134,11 @@ def _pipeline_clause(cn: ClauseNode) -> ClauseNode:
     if meta.operator == "in collection" and leaf is not None:
         val = L._render_value(L._BY_COLUMN.get(leaf.column_id), leaf.value)
         verb = " is not in " if leaf.is_negated else " is in "
+        rel = L._RELATION_SET_RENDER.get(leaf.column_id)
+        if rel is not None:
+            # a collection of works on a relation (oxjob #1535): `it cites works in (col_x)`
+            subj, verb = rel[1] if leaf.is_negated else rel[0]
+            col = L._seg("column", subj, column_id=leaf.column_id)
         new = [col, L._seg("operator", verb), _text("("),
                L._seg("value", val, value=leaf.value), _text(")")]
         return ClauseNode(segments=new, clause_kind=cn.clause_kind,
@@ -543,3 +548,8 @@ def render_pipeline_tree(oqo: OQO, resolver=None):
 
 def render_pipeline(oqo: OQO, resolver=None) -> str:
     return render_pipeline_tree(oqo, resolver)[0]
+
+
+def render_pipeline_line(oqo: OQO, resolver=None) -> str:
+    """The canonical text on one line (a query inside another's parentheses)."""
+    return stringify_pipeline(build_pipeline_tree(oqo, resolver))
