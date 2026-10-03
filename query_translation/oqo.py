@@ -41,7 +41,9 @@ class LeafFilter:
     def to_dict(self) -> Dict[str, Any]:
         result = {
             "column_id": self.column_id,
-            "value": self.value.to_dict() if isinstance(self.value, OQO) else self.value,
+            # a nested query, or a set resolved while running (walk_exec.IdSet)
+            "value": (self.value.to_dict() if hasattr(self.value, "to_dict")
+                      else self.value),
         }
         if self.operator != "is":
             result["operator"] = self.operator

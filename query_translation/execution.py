@@ -444,6 +444,17 @@ def _execute_oqo(oqo_or_dict, view_params=None):
 
     # Dispatch to per-entity fields_dict + index_name + serialization schema.
     connection = get_data_version_connection(request)
+
+    # Walks and sets defined by a whole query (oxjob #1535): resolved here into ids,
+    # so the rest of this path runs a plain works query (or answers outright). The
+    # echo (`meta.x_query`) stays the query as written.
+    from query_translation import walk_exec
+    if walk_exec.needs_walk(oqo):
+        resolved = _run_walks(oqo, connection)
+        if not isinstance(resolved, OQO):
+            return resolved
+        oqo = resolved
+
     try:
         fields_dict, index_name, default_sort, MessageSchema = _resolve_entity(
             oqo.get_rows, connection
@@ -626,6 +637,34 @@ def _execute_oqo(oqo_or_dict, view_params=None):
     return _finalize_oqo_response(result, oqo, MessageSchema)
 
 
+def _run_walks(oqo: OQO, connection):
+    """Resolve an OQO's walks and sets (oxjob #1535). Returns the OQO to run on the
+    works path, or a finished Flask response. One deadline covers the whole query."""
+    from flask import g
+    from query_translation import analytics, walk_exec
+    g.oql_echo_oqo = oqo
+    g.oql_deadline = deadline = analytics.Deadline()
+    try:
+        kind, val = walk_exec.prepare(oqo, connection, deadline)
+    except analytics.AnalyticsError as e:
+        return jsonify({"error": e.code, "message": e.message, "fix": e.fix,
+                        "oqo": oqo.to_dict()}), e.status
+    if kind == "oqo":
+        return val
+    val["meta"]["x_query"] = build_x_query(oqo, sort_operands=False)
+    val["meta"]["cost_usd"] = val["meta"]["cost"]["usd"]
+    response = jsonify(val)
+    response.headers["X-Credits-Cost"] = str(val["meta"]["cost"]["credits"])
+    return response, 200
+
+
+def _echo_oqo(oqo: OQO) -> OQO:
+    """The query as written, for `meta.x_query`: a walk's OQO, not the resolved one
+    it ran as (oxjob #1535)."""
+    from flask import g
+    return getattr(g, "oql_echo_oqo", None) or oqo
+
+
 def _extra_qs(oqo, connection):
     """The implicit filters every executed OQO carries: the corpus (is_xpac) and the
     /authors works_count > 0 default."""
@@ -677,16 +716,23 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
                     "cost": cost}), 429
         except (TypeError, ValueError):
             pass
+    from flask import g
     try:
         body = analytics.run(
             oqo, index_name=index_name, connection=connection, fields_dict=fields_dict,
-            base_query=base_query, per_page=oqo.per_page, page=oqo.page, sort=sort)
+            base_query=base_query, per_page=oqo.per_page, page=oqo.page, sort=sort,
+            deadline=getattr(g, "oql_deadline", None))
     except analytics.AnalyticsError as e:
         return jsonify({"error": e.code, "message": e.message, "fix": e.fix,
-                        "oqo": oqo.to_dict()}), e.status
+                        "oqo": _echo_oqo(oqo).to_dict()}), e.status
     except APIError:
         raise
-    body["meta"]["x_query"] = build_x_query(oqo, sort_operands=False)
+    if _echo_oqo(oqo) is not oqo:
+        # a walk ran as this works query (oxjob #1535): price the walk as written
+        from query_translation import walk_exec
+        cost = walk_exec.walk_price(_echo_oqo(oqo), body["meta"].get("es_calls"))
+        body["meta"]["cost"] = cost
+    body["meta"]["x_query"] = build_x_query(_echo_oqo(oqo), sort_operands=False)
     body["meta"]["cost_usd"] = cost["usd"]
     response = jsonify(body)
     # the proxy reconciles what it charged up front against this (as for the
@@ -738,7 +784,18 @@ def _finalize_oqo_response(result, oqo: OQO, MessageSchema):
     # is the OQL/builder execute path, and the SERP rebuilds `?oql=` from x_query, so
     # sorting commutative value-bag members here would silently alphabetize the user's
     # values. Sorting stays on the legacy-URL path (shared_view) and dedup hash-keys.
-    serialized.setdefault("meta", {})["x_query"] = build_x_query(oqo, sort_operands=False)
+    serialized.setdefault("meta", {})["x_query"] = build_x_query(_echo_oqo(oqo),
+                                                                 sort_operands=False)
+    if _echo_oqo(oqo) is not oqo:
+        # a walk or set ran as this list (oxjob #1535): its price from the plan
+        from flask import g
+        from query_translation import walk_exec
+        deadline = getattr(g, "oql_deadline", None)
+        cost = walk_exec.walk_price(_echo_oqo(oqo), (deadline.calls + 1) if deadline else None)
+        serialized["meta"]["cost"] = cost
+        response = jsonify(serialized)
+        response.headers["X-Credits-Cost"] = str(cost["credits"])
+        return response, 200
     return jsonify(serialized), 200
 
 

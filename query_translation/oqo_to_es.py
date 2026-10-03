@@ -188,6 +188,21 @@ def _cross_type_collection_query(field, collection_id: str) -> Q:
 
 
 def _translate_leaf(leaf: LeafFilter, fields_dict) -> Q:
+    value_type = type(leaf.value).__name__
+    if value_type == "IdSet":
+        # a set resolved to its ids (walk_exec, oxjob #1535): exact-match terms on
+        # the column's raw field, chunked under the per-clause cap
+        from core.join_resolver import terms_query
+        if leaf.column_id == "ids.openalex":
+            es_field = "id"
+        else:
+            fld = get_field(fields_dict, leaf.column_id)
+            es_field = fld.alias if getattr(fld, "alias", None) else fld.es_sort_field()
+        q = terms_query(es_field, leaf.value.ids)
+        return ~q if leaf.is_negated else q
+    if value_type == "OQO":
+        raise OQOTranslationError(
+            "a query in parentheses must be resolved before it's translated")
     try:
         field = get_field(fields_dict, leaf.column_id)
     except APIQueryParamsError as e:
