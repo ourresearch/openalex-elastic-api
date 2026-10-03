@@ -68,6 +68,10 @@ def create_app(config_object="settings"):
 
     @app.after_request
     def inject_cost_usd(response):
+        # A query priced from its plan (oxjob #1530) carries its own cost; the
+        # proxy's up-front charge (X-Cost-USD) doesn't apply to it.
+        if response.headers.get("X-Credits-Cost") is not None:
+            return response
         cost_header = response.headers.get("X-Cost-USD") or request.headers.get("X-Cost-USD")
         if (
             cost_header is not None

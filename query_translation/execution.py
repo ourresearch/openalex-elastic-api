@@ -626,6 +626,26 @@ def _execute_oqo(oqo_or_dict, view_params=None):
     return _finalize_oqo_response(result, oqo, MessageSchema)
 
 
+def _extra_qs(oqo, connection):
+    """The implicit filters every executed OQO carries: the corpus (is_xpac) and the
+    /authors works_count > 0 default."""
+    extra = []
+    corpus = _effective_corpus(oqo, connection)
+    if corpus is not None:
+        extra.append(Q("term", is_xpac="false" if corpus == "core" else "true"))
+    if oqo.get_rows == "authors" and not _oqo_mentions_column(oqo.filter_rows, "works_count"):
+        extra.append(Q("range", works_count={"gt": 0}))
+    return extra
+
+
+def _base_query_for(oqo, fields_dict, connection) -> dict:
+    """The starting set as one filter-context ES query (the analytics path and its
+    check; no scoring needed)."""
+    _search_q, filter_q = oqo_to_search_and_filter_q(oqo, fields_dict, scoring=False)
+    filters = [q for q in [filter_q] + _extra_qs(oqo, connection) if q is not None]
+    return Q("bool", filter=filters).to_dict() if filters else {"match_all": {}}
+
+
 def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filter_q,
                        extra_qs, params):
     """Run a pipeline-language OQO (oxjob #1530) and answer with its own shape:
@@ -638,6 +658,25 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
     if oqo.sort_by:
         s0 = oqo.sort_by[0]
         sort = (s0.column_id, s0.direction or "desc")
+    # Priced from the plan (Jason, 2026-10-03). The proxy charged its list price up
+    # front (X-Cost-USD) and says what the caller has left (X-Credits-Remaining);
+    # refuse before running when the rest of the price doesn't fit.
+    cost = analytics.price(oqo)
+    remaining = request.headers.get("X-Credits-Remaining")
+    charged_usd = request.headers.get("X-Cost-USD")
+    if remaining is not None:
+        try:
+            charged = round(float(charged_usd or 0) / analytics.CREDIT_USD)
+            if cost["credits"] - charged > int(remaining):
+                return jsonify({
+                    "error": "not_enough_credits",
+                    "message": (f"This query costs {cost['credits']} credits "
+                                f"(${cost['usd']}); you have {int(remaining) + charged} "
+                                f"left today."),
+                    "fix": "Run it tomorrow, add credits, or narrow it (fewer listed searches).",
+                    "cost": cost}), 429
+        except (TypeError, ValueError):
+            pass
     try:
         body = analytics.run(
             oqo, index_name=index_name, connection=connection, fields_dict=fields_dict,
@@ -648,7 +687,12 @@ def _execute_analytics(oqo, index_name, connection, fields_dict, search_q, filte
     except APIError:
         raise
     body["meta"]["x_query"] = build_x_query(oqo, sort_operands=False)
-    return jsonify(body), 200
+    body["meta"]["cost_usd"] = cost["usd"]
+    response = jsonify(body)
+    # the proxy reconciles what it charged up front against this (as for the
+    # content worker's X-Credits-Cost)
+    response.headers["X-Credits-Cost"] = str(cost["credits"])
+    return response, 200
 
 
 def _finalize_oqo_response(result, oqo: OQO, MessageSchema):

@@ -400,6 +400,27 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
     resolver = make_engine_resolver(safe_get_display_name,
                                     entity=canonical_oqo.get_rows)
 
+    if canonical_oqo.uses_pipeline:
+        # The pipeline language (oxjob #1530): its own renderer; the builder tree
+        # (oql_render_v2) doesn't know steps yet, so it's null and the website shows
+        # the text. Plus the free check: limits, time estimate, price.
+        from query_translation.oql_pipeline import render_pipeline_tree, stringify_pipeline
+        oql_output, tree = render_pipeline_tree(canonical_oqo, resolver)
+        out = {
+            "oxurl": None, "oql": oql_output, "oql_oneline": stringify_pipeline(tree),
+            "oql_render_v2": None, "oqo": canonical_oqo.to_dict(),
+            "validation": {"valid": True, "errors": [], "warnings": [
+                {"type": w.type, "message": w.message, "location": w.location}
+                for w in warnings if w.type != "url_not_representable"]},
+        }
+        out["check"] = _pipeline_check(canonical_oqo)
+        if not out["check"]["valid"]:
+            out["validation"]["valid"] = False
+            out["validation"]["errors"] = [
+                {"type": x["error"], "message": f'{x["message"]} {x["fix"]}'.strip(),
+                 "location": None} for x in out["check"]["limits"]]
+        return out
+
     # ONE render walk (#566): oql_render v2 (oxjob #428) — OQO-faithful,
     # layout-bearing tree + logical `lines` projection — plus the canonical OQL
     # string it was laid out from. The v1 `oql_render` key was dropped (#566;
@@ -426,6 +447,27 @@ def render_all_formats(oqo: OQO, validation_result: ValidationResult, sort_opera
             ]
         }
     }
+
+
+def _pipeline_check(oqo: OQO) -> dict:
+    """The free check for a pipeline-language OQO (oxjob #1530): every limit it hits
+    with its fix, the estimated time against the 10 s budget, and the price. Runs
+    cheap probes only (group counts), never the query."""
+    from query_translation import analytics
+    from query_translation.execution import _base_query_for, _resolve_entity
+    from core.utils import get_data_version_connection
+    try:
+        connection = get_data_version_connection(request)
+        fields_dict, index_name, _sort, _schema = _resolve_entity(oqo.get_rows, connection)
+        base_query = _base_query_for(oqo, fields_dict, connection)
+        return analytics.check(oqo, index_name=index_name, connection=connection,
+                               fields_dict=fields_dict, base_query=base_query)
+    except analytics.AnalyticsError as e:
+        return {"valid": False, "limits": [e.to_dict()], "estimate": None,
+                "cost": analytics.price(oqo)}
+    except Exception as e:  # the check never 500s a translation
+        return {"valid": True, "limits": [], "estimate": None, "cost": analytics.price(oqo),
+                "note": f"the time estimate is unavailable: {e}"}
 
 
 @blueprint.route("/query/natural-language/<path:natural_language_query>", methods=["GET"])

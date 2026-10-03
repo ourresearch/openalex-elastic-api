@@ -929,6 +929,7 @@ def run(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
         "es_calls": deadline.calls,
         "elapsed_ms": deadline.elapsed_ms(),
         "steps": deadline.log,
+        "cost": price(oqo),
     }
     return {"meta": meta, "total": total_row, "group_by": group_rows, "results": []}
 
@@ -946,6 +947,196 @@ def _keys_at(levels: List[Level], aggs: dict, idx: int) -> set:
 
     walk(0, aggs["s0"])
     return {k for k in out if isinstance(k, str)}
+
+
+# ---------------------------------------------------------------------------
+# Price and the free check (`/query`): validity, limits, time, cost
+# ---------------------------------------------------------------------------
+CREDIT_USD = 0.0001       # 10,000 credits = $1 (the proxy's creditsToUsd)
+SEARCH_CREDITS = 10       # what one search costs on its own (the proxy's search price)
+LOOKUP_CREDITS = 1        # one extra call to look up groups
+TIME_BUDGET_S = 10.0      # the check refuses plans estimated over this (Jason, 2026-10-03)
+
+# Measured rates (#1512 work/engine_capabilities.md, 2026-10-02/03): one aggregation
+# over an id-defined set up to ~1M works 0.1-0.6 s; over a title-abstract search set
+# 2.6-3.0 s per call; 15 ms per listed search; own-field lookups 0.1-0.4 s after a
+# count filter; listing ids about 40,000 a second; co-author sets 0.4-3 s.
+EST_CALL_ID_SET_S = 0.6
+EST_CALL_SEARCH_SET_S = 3.0
+EST_PER_LISTED_SEARCH_S = 0.015
+EST_LOOKUP_S = 0.4
+EST_COAUTHOR_S = 1.5
+EST_IDS_PER_S = 40_000
+EST_NAMES_S = 0.6
+
+
+def _tree_has_search(node) -> bool:
+    if isinstance(node, LeafFilter):
+        return isinstance(node.column_id, str) and ".search" in node.column_id
+    if isinstance(node, BranchFilter):
+        return any(_tree_has_search(c) for c in node.filters)
+    return False
+
+
+def price(oqo: OQO) -> dict:
+    """Credits from the query plan (Jason, 2026-10-03: price from the plan; each
+    searched phrase costs what that search costs alone). The starting set costs what
+    a list (1) or a search (10) costs; each listed search or condition with a search
+    adds a search; each lookup call adds 1."""
+    steps = []
+    base_search = any(_tree_has_search(f) for f in oqo.filter_rows)
+    steps.append({"what": "the starting set" + (" (a search)" if base_search else ""),
+                  "credits": SEARCH_CREDITS if base_search else 1})
+    for i, g in enumerate(oqo.group_by):
+        n = 0
+        if g.values is not None and g.column_id and g.column_id.endswith(".search"):
+            n = len(g.values)
+        elif g.conditions is not None:
+            n = sum(1 for c in g.conditions if _tree_has_search(c))
+        if n:
+            steps.append({"what": f"split {i + 1}: {n} search{'es' if n > 1 else ''}",
+                          "credits": n * SEARCH_CREDITS})
+        if g.where is not None:
+            lookups = _lookup_kinds(g.where)
+            if lookups:
+                steps.append({"what": f"split {i + 1}: {len(lookups)} lookup"
+                                      f"{'s' if len(lookups) > 1 else ''} ({', '.join(lookups)})",
+                              "credits": len(lookups) * LOOKUP_CREDITS})
+    credits = sum(s["credits"] for s in steps)
+    return {"credits": credits, "usd": round(credits * CREDIT_USD, 6), "steps": steps}
+
+
+def _lookup_kinds(where) -> List[str]:
+    """The extra calls a group filter needs: co-author / collaborator sets and the
+    group's own fields (one lookup each); ids and collections ride along free."""
+    parts = where.filters if (isinstance(where, BranchFilter) and where.join == "and"
+                              and not where.is_negated) else [where]
+    kinds = []
+    for p in parts:
+        if _has_measure(p):
+            continue
+        cols = set()
+
+        def walk(n):
+            if isinstance(n, LeafFilter):
+                cols.add(n.column_id)
+            elif isinstance(n, BranchFilter):
+                for c in n.filters:
+                    walk(c)
+        walk(p)
+        if cols <= {"ids.openalex", "collection"}:
+            continue
+        if cols <= {"co_author"}:
+            kinds.append("co-authors")
+        elif cols <= {"collaborator"}:
+            kinds.append("collaborators")
+        else:
+            kinds.append("the groups' own fields")
+    return kinds
+
+
+def check(oqo: OQO, *, index_name: str, connection, fields_dict, base_query: dict,
+          deadline: Optional[Deadline] = None) -> dict:
+    """The free check: every limit the query hits (with its fix), the estimated
+    time against the 10-second budget, and the price. Runs only cheap probes (the
+    group guard's distinct counts, a count of an own-field filter's matches);
+    never the query itself."""
+    deadline = deadline or Deadline()
+    limits: List[dict] = []
+    base_search = any(_tree_has_search(f) for f in oqo.filter_rows)
+    call_s = EST_CALL_SEARCH_SET_S if base_search else EST_CALL_ID_SET_S
+    est = call_s
+    calls = 1
+    levels: List[Level] = []
+    try:
+        levels = [build_level(i, g, oqo, fields_dict, index_name)
+                  for i, g in enumerate(oqo.group_by)]
+    except AnalyticsError as e:
+        limits.append(e.to_dict())
+    except APIQueryParamsError as e:
+        limits.append({"error": "invalid_query", "message": str(e), "fix": ""})
+    nested = len(levels) > 1
+    for g in oqo.group_by:
+        if g.values is not None and g.column_id and g.column_id.endswith(".search"):
+            est += EST_PER_LISTED_SEARCH_S * len(g.values)
+    for lv in levels:
+        where = lv.split.where
+        if where is None:
+            continue
+        try:
+            m_parts, k_parts = _split_where(where)
+        except AnalyticsError as e:
+            limits.append(e.to_dict())
+            continue
+        for p in k_parts:
+            kinds = _lookup_kinds(p)
+            if not kinds:
+                continue
+            calls += 1
+            if kinds[0] in ("co-authors", "collaborators"):
+                est += EST_COAUTHOR_S
+            elif m_parts:
+                est += EST_LOOKUP_S       # survivors of the count filter
+            else:
+                # the reverse lookup: how many of the group entity match?
+                n = _count_entity_matches(lv, p, deadline)
+                if n is None:
+                    continue
+                if n > LOOKUP_LIMIT:
+                    limits.append({
+                        "error": "query_too_slow",
+                        "message": (f"The filter on the {lv.group_entity}' own fields matches "
+                                    f"{n:,} {lv.group_entity}; without a count filter every "
+                                    f"group in the set would be looked up, which takes longer "
+                                    f"than the {int(TIME_BUDGET_S)}-second budget."),
+                        "fix": ("Add a count filter so only the busiest groups are looked "
+                                "up: where count of those works > (5) and ..., or narrow "
+                                "the starting set."),
+                    })
+                else:
+                    est += 0.2 + n / EST_IDS_PER_S
+    if nested and any(lv.kind == "terms" for lv in levels):
+        try:
+            cards = _cardinalities(levels, index_name, connection, base_query, deadline)
+            calls += 1
+            est += call_s
+            plan_levels(levels, cards, True, DEFAULT_PER_PAGE, 1, None)
+        except AnalyticsError as e:
+            limits.append(e.to_dict())
+    est += EST_NAMES_S if levels else 0
+    estimate = {"seconds": round(est, 1), "es_calls": calls,
+                "budget_seconds": TIME_BUDGET_S, "within_budget": est <= TIME_BUDGET_S}
+    if est > TIME_BUDGET_S and not any(x["error"] == "query_too_slow" for x in limits):
+        limits.append({
+            "error": "query_too_slow",
+            "message": (f"This query is estimated at {est:.0f} seconds; queries get about "
+                        f"{int(TIME_BUDGET_S)}."),
+            "fix": ("Narrow the starting set, list fewer searches, or add a count filter "
+                    "before filters on the groups' own fields."),
+        })
+    return {"valid": not limits, "limits": limits, "estimate": estimate, "cost": price(oqo)}
+
+
+def _count_entity_matches(lv: Level, part, deadline: Deadline) -> Optional[int]:
+    from query_translation.oqo_to_es import _translate
+    from core.join_resolver import entity_index
+    from elasticsearch_dsl.connections import get_connection
+    try:
+        g_fields, g_index = entity_index(lv.group_entity)
+        q = _translate(part, g_fields).to_dict()
+    except Exception:
+        return None
+    filters = [q] + ([{"range": {"works_count": {"gt": 0}}}]
+                     if lv.group_entity == "authors" else [])
+    body = {"size": 0, "track_total_hits": True,
+            "query": {"bool": {"filter": filters}}}
+    try:
+        res = get_connection().search(
+            index=g_index, body=body,
+            request_timeout=deadline.timeout("counting the groups' own-field matches"))
+    except ConnectionTimeout:
+        return None
+    return res["hits"]["total"]["value"]
 
 
 def _measure_meta(m: Measure, entity: str) -> dict:
