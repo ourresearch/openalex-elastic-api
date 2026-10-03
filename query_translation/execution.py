@@ -485,7 +485,7 @@ def _execute_oqo(oqo_or_dict, view_params=None):
         refused = _credit_refusal(
             analytics_mod.plain_price(
                 oqo, reranked=_rerank_asked() and index_name.lower().startswith("works"),
-                grandfathered=_grandfathered()),
+                grandfathered=_grandfathered(), website=_website()),
             "use a filter instead of a search")
         if refused is not None:
             return refused
@@ -719,6 +719,12 @@ def _grandfathered() -> bool:
     return request.headers.get("X-Credits-Grandfathered") == "1"
 
 
+def _website() -> bool:
+    """The proxy marks the website's requests (UI token or openalex.org origin), whose
+    facet group-bys stay cheap (Jason, 2026-10-03); a caller can't set it (#1533)."""
+    return request.headers.get("X-Credits-Website") == "1"
+
+
 def _rerank_asked() -> bool:
     from flask import g
     value = getattr(g, "rerank_param", None)
@@ -775,7 +781,7 @@ def _finalize_oqo_response(result, oqo: OQO, MessageSchema):
         # priced like the same query as a URL; the proxy settles against this header
         cost = analytics_mod.plain_price(
             oqo, reranked=serialized["meta"].get("reranked") is True,
-            grandfathered=_grandfathered())
+            grandfathered=_grandfathered(), website=_website())
         serialized["meta"]["cost"] = cost
         serialized["meta"]["cost_usd"] = cost["usd"]
         response = jsonify(serialized)

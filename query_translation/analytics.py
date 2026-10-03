@@ -1513,17 +1513,22 @@ def _tree_has_search(node) -> bool:
     return False
 
 
-def plain_price(oqo: OQO, reranked: bool = False, grandfathered: bool = False) -> dict:
+def plain_price(oqo: OQO, reranked: bool = False, grandfathered: bool = False,
+                website: bool = False) -> dict:
     """A query with no pipeline features costs what the same query costs as a URL
-    (the proxy's endpointClassifier): any group by 1, a search 10 (semantic
-    included; 1 for a grandfathered key, as on the URL), anything else 1. A rerank
-    that ran adds 10."""
-    if oqo.group_by:
-        credits, what = 1, "a group by"
-    elif any(_tree_has_search(f) for f in oqo.filter_rows):
-        credits, what = (1, "a search (grandfathered key)") if grandfathered else (10, "a search")
+    (Jason, 2026-10-03: OQL priced like the API): a search 10 (semantic included; 1
+    for a grandfathered key), grouped or not; anything else 1. The website's facets
+    (a group by the proxy marks as the website's) stay at 1. A rerank that ran
+    adds 10."""
+    search = any(_tree_has_search(f) for f in oqo.filter_rows)
+    if oqo.group_by and website:
+        credits, what = 1, "a website facet"
+    elif search and grandfathered:
+        credits, what = 1, "a search (grandfathered key)"
+    elif search:
+        credits, what = 10, "a search"
     else:
-        credits, what = 1, "a list"
+        credits, what = 1, "a group by" if oqo.group_by else "a list"
     steps = [{"credits": credits, "what": what}]
     if reranked:
         credits += RERANK_CREDITS
