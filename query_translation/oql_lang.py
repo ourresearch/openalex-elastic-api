@@ -1727,6 +1727,26 @@ class _Parser:
                                     "a calculation must be the last step",
                                     "move `calculate ...` to the end of the query",
                                     nt.pos if nt else t.pos)
+                if (self.word_is("get") and cur == "works" and not group_by
+                        and self.word_is("works", k=1) and self.word_is("where", k=2)):
+                    # `then get works where B` on works narrows them: accepted and
+                    # folded into the step that made them (#1512 open question 7:
+                    # the canonical form merges them), the start's conditions or the
+                    # walk back's `where`
+                    self.i += 3
+                    cond = self._parse_expr(top=True)
+                    extra = (_flatten_and(cond) if isinstance(cond, BranchFilter)
+                             and cond.join == "and" and not cond.is_negated else [cond])
+                    if walks and walks[-1].to is not None:
+                        prev = walks[-1].where
+                        parts = ((_flatten_and(prev) if isinstance(prev, BranchFilter)
+                                  and prev.join == "and" else [prev]) if prev else [])
+                        merged = parts + extra
+                        walks[-1] = replace(walks[-1], where=merged[0] if len(merged) == 1
+                                            else BranchFilter("and", merged))
+                    else:
+                        filters = filters + extra
+                    continue
                 if self.word_is("get"):
                     # a walk (oxjob #1535): the current things change
                     w = self._parse_walk(cur, cur_each, walks, group_by)
@@ -4899,14 +4919,21 @@ def _query_leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
     """`author is in (get works where ...; then get authors of those works)`, `it
     cites works in (get works where ...)`: a set defined by a whole query."""
     from query_translation.oql_pipeline import render_pipeline_line
-    inner = render_pipeline_line(f.value, resolver)
-    rel = _RELATION_SET_RENDER.get(f.column_id)
+    column = f.column_id
+    if isinstance(f.value, OQO):
+        inner = render_pipeline_line(f.value, resolver)
+    else:
+        # a set already resolved while running (walk_exec.IdSet): the query it came
+        # from, so a group's label reads as written
+        inner = f.value.label
+        column = getattr(f.value, "column", None) or column
+    rel = _RELATION_SET_RENDER.get(column)
     if rel is not None:
         subj, verb = rel[1] if f.is_negated else rel[0]
-        name = _ROW_SUBJECT_RENDER[f.column_id][2]
+        name = _ROW_SUBJECT_RENDER[column][2]
     else:
-        fld = _BY_COLUMN.get(f.column_id)
-        subj = name = fld.oql if fld else f.column_id
+        fld = _BY_COLUMN.get(column)
+        subj = name = fld.oql if fld else column
         verb = " is not in " if f.is_negated else " is in "
     segs = [_seg("column", subj, column_id=f.column_id), _seg("operator", verb),
             _seg("text", "("), _seg("value", inner, value=None), _seg("text", ")")]
@@ -4915,7 +4942,7 @@ def _query_leaf_node(f: LeafFilter, resolver=None) -> ClauseNode:
 
 
 def _leaf_node_inner(f: LeafFilter, resolver=None) -> ClauseNode:
-    if isinstance(f.value, OQO):
+    if isinstance(f.value, OQO) or type(f.value).__name__ == "IdSet":
         return _query_leaf_node(f, resolver)
     # #554: a condition's value is ALWAYS a parenthesized group in canonical
     # OQL — every leaf clause below wraps its value in `( … )` (bare singletons
