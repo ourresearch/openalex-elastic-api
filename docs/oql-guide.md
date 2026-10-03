@@ -180,9 +180,11 @@ display them.
 Up to three splits; up to 100 items in a list; at most 5 AND/OR/NOT in each listed search; a
 nested split up to 10,000 groups per split (a single split pages through any number); about
 ten seconds a query. Anything over a limit is refused before it runs, with the limit and how
-to fix it. A query is priced from what it does: the starting set costs what a list (1 credit)
-or a search (10) costs, each listed search 10, each lookup 1. The check tells you the price
-for free.
+to fix it. A query with a `calculate` step, a split by a list, bins or conditions, or a filter
+on its groups is priced from what it does: the starting set costs what a list (1 credit) or a
+search (10) costs, each listed search 10, each lookup 1. Nothing else adds to the price:
+splits by a field, counts, means and percentages are free. Any other query costs 1 credit.
+The check tells you the price for free, and a response shows what it cost in `meta.cost`.
 
 ## OQL never guesses
 
