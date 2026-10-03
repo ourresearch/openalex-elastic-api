@@ -19,7 +19,7 @@ from typing import Optional
 from elasticsearch_dsl import Q
 
 from core.exceptions import APIError, APIQueryParamsError
-from core.fields import CollectionField
+from core.fields import CollectionField, any_of_terms
 from core.collection_resolver import check_collection_reference_count
 from core.filter import MAX_RESOLVED_IDS_PER_REQUEST, resolve_collection_for_field
 from core.utils import get_field
@@ -184,7 +184,7 @@ def _cross_type_collection_query(field, collection_id: str) -> Q:
             f"cross-type collection filter resolved to too many entities "
             f"(max {MAX_RESOLVED_IDS_PER_REQUEST})"
         )
-    return field.build_terms_query(ids)
+    return any_of_terms(field.build_terms_query, ids)
 
 
 def _translate_leaf(leaf: LeafFilter, fields_dict) -> Q:

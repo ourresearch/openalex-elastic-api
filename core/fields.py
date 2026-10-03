@@ -563,6 +563,12 @@ class DateTimeField(DateField):
             raise APIQueryParamsError(invalid_date_message)
 
 
+# A native OpenAlex ID already in canonical short form, as core.utils.normalize_openalex_id
+# would return it (no lowercase, no URL, nothing around it).
+_CANONICAL_SHORT_ID_RE = re.compile(r"[WAICFVPSTG]\d{2,}")
+ID_URL_PREFIX = "https://openalex.org/"
+
+
 class OpenAlexIDField(Field):
     field_type = "openalex_id"
     operators = ["eq", "or", "not", "null"]
@@ -693,6 +699,11 @@ class OpenAlexIDField(Field):
         polymorphically across field classes."""
         formatted_values = []
         for val in values:
+            # Fast path: a collection's members arrive in canonical short form (`S123`),
+            # so a 260,000-ID filter skips the per-ID regex search (~0.5 s; oxjob #1527).
+            if _CANONICAL_SHORT_ID_RE.fullmatch(val):
+                formatted_values.append(ID_URL_PREFIX + val)
+                continue
             self.value = val
             formatted = self._get_formatted_value()
             if formatted is None:
@@ -1896,7 +1907,8 @@ class CollectionField(Field):
                 f"not valid for /{self.entity_type}"
             )
 
-        q = Q("terms", id=_canonicalize_entity_ids(entity_ids, self.entity_type))
+        ids = _canonicalize_entity_ids(entity_ids, self.entity_type)
+        q = any_of_terms(lambda chunk: Q("terms", id=chunk), ids)
         if negated:
             q = ~Q("bool", must=q)
         return q
@@ -1999,6 +2011,22 @@ ID_PATH_SEGMENT_BY_ENTITY_TYPE = {
 # forward-compat gate can store an off-case code (`us`), so fix case at read
 # time rather than matching nothing.
 _UPPERCASE_CODE_ENTITY_TYPES = {"countries", "continents"}
+
+
+# One `terms` clause takes at most 65,536 values (index.max_terms_count); a collection
+# filter of up to 300,000 IDs is ORed from clauses of 60,000 (oxjob #1527, as #1526's
+# join filters do). 100,000 author IDs in two clauses took 893 ms in ES (scale Table 1).
+TERMS_CHUNK = 60_000
+
+
+def any_of_terms(build, values):
+    """`build(chunk)` for each chunk of at most TERMS_CHUNK `values`, ORed: one clause
+    when they fit in one. `build` returns a terms query, e.g. a field's build_terms_query."""
+    chunks = [values[i:i + TERMS_CHUNK] for i in range(0, len(values), TERMS_CHUNK)] or [values]
+    queries = [build(c) for c in chunks]
+    if len(queries) == 1:
+        return queries[0]
+    return Q("bool", should=queries, minimum_should_match=1)
 
 
 def _canonicalize_entity_ids(ids, entity_type=None):

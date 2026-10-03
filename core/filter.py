@@ -3,8 +3,12 @@ import re
 from elasticsearch_dsl import Q
 
 from core.exceptions import APIQueryParamsError
-from core.fields import CollectionField, TermField, _canonicalize_entity_ids
-from core.collection_resolver import check_collection_reference_count, resolve_collection
+from core.fields import CollectionField, TermField, _canonicalize_entity_ids, any_of_terms
+from core.collection_resolver import (
+    MAX_RESOLVED_IDS_PER_REQUEST,
+    check_collection_reference_count,
+    resolve_collection,
+)
 from core.utils import get_field
 from settings import MAX_IDS_IN_FILTER
 
@@ -214,7 +218,6 @@ def handle_and_query(field, s, value):
 # triggers an outbound HTTP resolve to users-api, and each resolved ID list
 # becomes part of an ES `terms` clause.
 MAX_COLLECTIONS_PER_REQUEST = 1
-MAX_RESOLVED_IDS_PER_REQUEST = 10_000
 
 
 def _apply_collection_filters(fields_dict, filter_params, s):
@@ -295,7 +298,7 @@ def _apply_collection_filters(fields_dict, filter_params, s):
         etype, ids = resolve_collection(lid)
         _budget(len(ids))
         _check_type(lid, etype)
-        s = s.filter(Q("terms", id=_canonicalize_entity_ids(ids, endpoint_entity_type)))
+        s = s.filter(_ids_query(ids, endpoint_entity_type))
 
     # Negated collection (at most one — enforced above, and only when positives is empty).
     if negatives:
@@ -305,10 +308,14 @@ def _apply_collection_filters(fields_dict, filter_params, s):
         _budget(len(ids))
         if ids:
             s = s.filter(
-                ~Q("bool", must=Q("terms", id=_canonicalize_entity_ids(ids, endpoint_entity_type)))
+                ~Q("bool", must=_ids_query(ids, endpoint_entity_type))
             )
 
     return s, other
+
+
+def _ids_query(ids, entity_type):
+    return any_of_terms(lambda chunk: Q("terms", id=chunk), _canonicalize_entity_ids(ids, entity_type))
 
 
 def _value_has_collection_ref(value):
@@ -445,7 +452,7 @@ def _apply_cross_type_collection_filters(fields_dict, filter_params, s):
             s = s.filter(Q("terms", **{field.es_field(): []}))
             continue
 
-        clause = field.build_terms_query(ids)
+        clause = any_of_terms(field.build_terms_query, ids)
         if negate:
             s = s.filter(~Q("bool", must=clause))
         else:
